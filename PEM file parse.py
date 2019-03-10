@@ -1,7 +1,3 @@
-"""
-Will probably all be in a function in the future, so it can iterate through multiple files
-"""
-
 import re
 import matplotlib.pyplot as plt
 import numpy as np #Not used yet, not sure if it's needed yet. 
@@ -42,15 +38,8 @@ with open("Z.PEM", "rt") as in_file:
     unique_stations={int(n) for n in station_number} #Creates a set out of all the stations, which automatically removes duplicates.
     print (sorted(unique_stations))
 
-    # for station in ([x for i, x in enumerate(station_number) if station_number.index(x) == i]):
+    # for station in ([x for i, x in enumerate(station_number) if station_number.index(x) == i]): # Only have unique stations
     #     print (station_number.index(station))
     
-    """
-     Plotting section below. Will probably be a function in the future.
-    """
-    # x=station_number 
-    # y=[y[6] for y in decay]
-    # plt.plot(x,y)
-    # plt.show()
- 
+
 
