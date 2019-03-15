@@ -7,13 +7,21 @@ import pprint
 
 def main():
     parser = PEM_Parser()
-    z = parser.parse("Z.PEM")
     ch = parser.parse("CH934ZM.PEM")
+    z = parser.parse("Z.PEM")
+
 
     #print(z.get_headers())
     #pprint.pprint(ch.get_survey())
     pprint.pprint((z.get_headers()))
     pprint.pprint((ch.get_headers()))
+
+    pprint.pprint(ch.get_tags())
+    pprint.pprint(z.get_tags())
+
+    pprint.pprint(ch.get_survey())
+    pprint.pprint(z.get_survey())
+
 
     #z.get_unique_stations()
 
