@@ -10,9 +10,6 @@ def main():
     ch = parser.parse("CH934ZM.PEM")
     z = parser.parse("Z.PEM")
 
-
-    #print(z.get_headers())
-    #pprint.pprint(ch.get_survey())
     pprint.pprint((z.get_headers()))
     pprint.pprint((ch.get_headers()))
 
@@ -21,7 +18,6 @@ def main():
 
     pprint.pprint(ch.get_survey())
     pprint.pprint(z.get_survey())
-
 
     #z.get_unique_stations()
 
