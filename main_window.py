@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QAction, QFileDialog
+from PyQt5.QtWidgets import *
 from PyQt5 import uic
 import os
 
@@ -30,9 +30,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         filename = dlg.getOpenFileName()[0]
         print("Opening " + filename + "...")
 
-        file_widget = PEMFileWidget()
+        # For debug
+        # filename = "/home/victor/Desktop/Crone/CH934ZM.PEM"
+
+        file_widget = PEMFileWidget(self)
         file_widget.open_file(os.path.basename(filename))
         self.setCentralWidget(file_widget)
+        # self.centralWidget().layout().addWidget(file_widget)
+
+        # # For debug
+        # p = self.centralWidget().palette()
+        # p.setColor(self.centralWidget().backgroundRole(), Qt.cyan)
+        # self.centralWidget().setPalette(p)
+        # self.label.setParent(None)
 
 
 if __name__ == "__main__":
