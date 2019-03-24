@@ -20,7 +20,7 @@ class PEMFileEditor:
         plots_dict = {}
 
         for reading in self.active_file.get_survey():
-            station_number = reading['station_number']
+            station_number = reading['StationNumber']
 
             if station_number not in plots_dict:
                 fig = Figure()
@@ -34,7 +34,7 @@ class PEMFileEditor:
                 plots_dict[station_number]['ax'] = ax
 
             ax = plots_dict[station_number]['ax']
-            y = reading['decay']
+            y = reading['Decay']
             ax.plot(range(len(y)), y, '-', linewidth=0.8)
 
         plots = [plot_data['fig'] for station_number, plot_data in plots_dict.items()]

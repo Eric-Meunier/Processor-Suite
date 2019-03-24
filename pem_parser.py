@@ -193,10 +193,10 @@ class PEM_Parser:
 
         survey = []
         for i in range(len(station_number)):
-            survey.append({'station_number': int(station_number[i]),
-                           'reading_index': reading_index[i],
-                           'decay': decay[i],
-                           'component': component[i]})
+            survey.append({'StationNumber': int(station_number[i]),
+                           'ReadingIndex': reading_index[i],
+                           'Decay': decay[i],
+                           'Component': component[i]})
 
         # for station in ([x for i, x in enumerate(station_number) if station_number.index(x) == i]):
         #     print (station_number.index(station))
