@@ -1,6 +1,7 @@
 from pem_parser import PEM_Parser, PEM_File
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+from collections import OrderedDict
 
 
 class PEMFileEditor:
@@ -17,12 +18,13 @@ class PEMFileEditor:
     def generate_placeholder_plots(self):
         # Temporary placeholder plots
         # Use as guide for creating generate_plots
-        plots_dict = {}
+        plots_dict = OrderedDict()
 
         for reading in self.active_file.get_survey():
             station_number = reading['StationNumber']
 
             if station_number not in plots_dict:
+                print(station_number)
                 fig = Figure()
                 ax = fig.add_subplot(111)
                 ax.set_title('Station Number ' + str(station_number))
@@ -38,7 +40,6 @@ class PEMFileEditor:
             ax.plot(range(len(y)), y, '-', linewidth=0.8)
 
         plots = [plot_data['fig'] for station_number, plot_data in plots_dict.items()]
-
         return plots
 
     def generate_plots(self):

@@ -58,8 +58,9 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
             canvas_widget.layout().addWidget(canvas)
 
             layout = self.scroll_content_layout
-            # layout.insertWidget(layout.count() - 1, canvas)
-            layout.addWidget(canvas_widget)
+            # if layout.count() == 0:
+            #     layout.addWidget(canvas_widget)
+            layout.insertWidget(layout.count(), canvas_widget)
 
             canvas.setFixedHeight(350)
             canvas.draw()
