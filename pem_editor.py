@@ -24,7 +24,6 @@ class PEMFileEditor:
             station_number = reading['StationNumber']
 
             if station_number not in plots_dict:
-                print(station_number)
                 fig = Figure()
                 ax = fig.add_subplot(111)
                 ax.set_title('Station Number ' + str(station_number))

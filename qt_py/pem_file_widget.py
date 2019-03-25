@@ -5,7 +5,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from PyQt5.QtCore import Qt
 
-qtCreatorFile = "pem_file_form.ui"  # Enter file here.
+qtCreatorFile = "qt_ui/pem_file_form.ui"  # Enter file here.
 Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 

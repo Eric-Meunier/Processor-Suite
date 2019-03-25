@@ -3,9 +3,9 @@ from PyQt5.QtWidgets import *
 from PyQt5 import uic
 import os
 
-from pem_file_widget import PEMFileWidget
+from qt_py.pem_file_widget import PEMFileWidget
 
-qtCreatorFile = "main_window.ui"  # Enter file here.
+qtCreatorFile = "qt_ui/main_window.ui"  # Enter file here.
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 
