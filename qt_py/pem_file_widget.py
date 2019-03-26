@@ -5,7 +5,8 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from PyQt5.QtCore import Qt
 
-qtCreatorFile = "qt_ui/pem_file_form.ui"  # Enter file here.
+# Load Qt ui file into a class
+qtCreatorFile = "qt_ui/pem_file_form.ui"
 Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 
@@ -22,18 +23,20 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
         # p.setColor(self.backgroundRole(), Qt.red)
         # self.setPalette(p)
 
-        # Container Widget
+        # Container Widget to hold scrollable content
         self.scroll_content_widget = QWidget()
 
         # Layout of Container Widget
         self.scroll_content_layout = QVBoxLayout(self.scroll_content_widget)
         self.scroll_content_widget.setLayout(self.scroll_content_layout)
 
+        # Create scroll area to allow for scrolling of scroll_content_widget
         self.scroll = QScrollArea()
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.scroll.setWidgetResizable(True)
         self.scroll.setWidget(self.scroll_content_widget)
 
+        # Add the scroll area to the forms highest level layout
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.addWidget(self.scroll)
 
@@ -49,6 +52,7 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
 
         figures = self.editor.generate_placeholder_plots()
 
+        # Create a FigureCanvas for each figure to display plots in Qt
         for fig in figures:
             canvas = FigureCanvas(fig)
 
@@ -58,8 +62,6 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
             canvas_widget.layout().addWidget(canvas)
 
             layout = self.scroll_content_layout
-            # if layout.count() == 0:
-            #     layout.addWidget(canvas_widget)
             layout.insertWidget(layout.count(), canvas_widget)
 
             canvas.setFixedHeight(350)

@@ -1,21 +1,27 @@
-from pem_parser import PEM_Parser, PEM_File
-import matplotlib.pyplot as plt
+from pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
 from collections import OrderedDict
 
 
 class PEMFileEditor:
     """
-    Class for making edits and generating plots from PEM_Files
+    Class for making edits to and generating plots from PEM_Files
     """
     def __init__(self):
         self.active_file = None
-        self.parser = PEM_Parser()
+        self.parser = PEMParser()
 
     def open_file(self, file_path):
+        """
+        Sets the active file. All subsequent operations will be done on the file contained at file_path.
+        :param file_path: string containing path to a PEM file
+        """
         self.active_file = self.parser.parse(file_path)
 
     def generate_placeholder_plots(self):
+        """
+        :return: A list of matplotlib.figure objects representing the data found inside of the active file
+        """
         # Temporary placeholder plots
         # Use as guide for creating generate_plots
         plots_dict = OrderedDict()
@@ -43,7 +49,7 @@ class PEMFileEditor:
 
     def generate_plots(self):
         """
-        :return: A list of Figure objects representing plots of the data found inside active_file
+        :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
         raise NotImplementedError
 

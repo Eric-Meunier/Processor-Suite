@@ -8,18 +8,18 @@ FILE_HEADERS = ['Client', 'Grid', 'LineHole', 'Loop', 'Date', 'TypeOfSurvey', 'T
                 'Receiver', 'ReceiverInfo', 'ChannelTimes', 'NumReadings']
 
 
-class PEM_File:
+class PEMFile:
     """
     Class for storing PEM file data for easy access
     """
 
     # Constructor
     def __init__(self, tags, header_results, survey):
-        # TODO Organize header_results into separate fields like survey?
         self.header_results = header_results
         self.survey = survey
         self.tags = tags
 
+    # TODO Make individual getters for each field
     def get_tags(self):
         return self.tags
 
@@ -36,7 +36,7 @@ class PEM_File:
         return sorted(unique_stations)
 
 
-class PEM_Parser:
+class PEMParser:
     """
     Class for parsing PEM files into PEM_File objects
     """
@@ -62,21 +62,16 @@ class PEM_Parser:
             r'(?P<Data>[\W\d]+[\n\r])',
             re.MULTILINE)
 
-        #self.re_tag_content = re.compile(r'<(?P<Tag>.+)>(?P<Content>.*)(~|$)')
-
-        self.re_tags = re.compile(r'^<((?P<Format>FMT)|'
-                                  r'(?P<Unit>UNI)|'
-                                  r'(?P<Operator>OPR)|'
-                                  r'(?P<XYProbe>XYP)|'
-                                  r'(?P<PeakLoopCurrent>CUR)|'
-                                  r'(?P<LoopSize>TXS)|'
-                                  r'((?P<LoopCoords>L)(?P<LoopNumber>\d\d))|'
-                                  r'((?P<HoleCoords>P)(?P<HoleNumber>\d\d))'
-                                  r')>(?P<Content>[^~\r\n]*)(~|$)', re.MULTILINE)
-
-    def tag_content(self, line):
-        line_matches = re.match(self.re_tag_content, line)
-        return line_matches.group('Tag'), line_matches.group('Content')
+        self.re_tags = re.compile( # Parsing the tags at beginning of file
+            r'^<((?P<Format>FMT)|'
+            r'(?P<Unit>UNI)|'
+            r'(?P<Operator>OPR)|'
+            r'(?P<XYProbe>XYP)|'
+            r'(?P<PeakLoopCurrent>CUR)|'
+            r'(?P<LoopSize>TXS)|'
+            r'((?P<LoopCoords>L)(?P<LoopNumber>\d\d))|'
+            r'((?P<HoleCoords>P)(?P<HoleNumber>\d\d))'
+            r')>(?P<Content>[^~\r\n]*)(~|$)', re.MULTILINE)
 
     def parse_tags(self, file):
         result = {}
@@ -146,26 +141,7 @@ class PEM_Parser:
 
         return result
 
-    def parse(self, filename):
-        """
-        :param filename: string containing path to a PEM file
-        :return: A PEM_File object representing the data found inside of filename
-        """
-        file = None
-        with open(filename, "rt") as in_file:
-            file = in_file.read()
-
-        self.parse_tags(file)
-
-        # Parse tags section
-        tags = self.parse_tags(file)
-
-        # for line in file.splitlines():
-        #     if line[0] not in ['<','~']:
-        #         break
-        #     if line[0] == '<':
-
-        # Parse header section
+    def parse_header(self, file):
         header_results = {}
         header_matches = re.match(self.re_header, file)
         for i in range(len(FILE_HEADERS)):  # Compiles the header information from the PEM file into a dictionary
@@ -173,11 +149,9 @@ class PEM_Parser:
 
         # Extract numbers from strings
         header_results['ChannelTimes'] = [Decimal(x) for x in header_results['ChannelTimes'].split()]
+        return header_results
 
-        # TODO units is unused, perhaps make units a field in PEM_file
-        units = re.search(r"<UNI> (\w.+)", file, re.MULTILINE)
-
-        # Parse the EM data in the PEM files
+    def parse_data(self, file):
         station_number = []
         reading_index = []
         decay = []
@@ -200,5 +174,24 @@ class PEM_Parser:
 
         # for station in ([x for i, x in enumerate(station_number) if station_number.index(x) == i]):
         #     print (station_number.index(station))
+        return survey
 
-        return PEM_File(tags, header_results, survey)
+    def parse(self, filename):
+        """
+        :param filename: string containing path to a PEM file
+        :return: A PEM_File object representing the data found inside of filename
+        """
+        file = None
+        with open(filename, "rt") as in_file:
+            file = in_file.read()
+
+        # Parse tags section
+        tags = self.parse_tags(file)
+
+        # Parse header section
+        header_results = self.parse_header(file)
+
+        # Parse the EM data in the PEM files
+        survey = self.parse_data(file)
+
+        return PEMFile(tags, header_results, survey)

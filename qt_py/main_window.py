@@ -5,7 +5,8 @@ import os
 
 from qt_py.pem_file_widget import PEMFileWidget
 
-qtCreatorFile = "qt_ui/main_window.ui"  # Enter file here.
+# Load Qt ui file into a class
+qtCreatorFile = "qt_ui/main_window.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 
@@ -15,12 +16,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
 
-        # Connect signals to slots
-        self.action_open_file.triggered.connect(self.on_file_open)
         self.menubar.setNativeMenuBar(False)
 
+        # Connect signals to slots
+        self.action_open_file.triggered.connect(self.on_file_open)
+
     def on_file_open(self):
-        # Will eventually hold logic for choosing between different filetypes
+        # Will eventually hold logic for choosing between different file types
         # TODO Add logger class
         print("Entering file dialog")
         dlg = QFileDialog()
@@ -33,12 +35,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # For debug
         # filename = "/home/victor/Desktop/Crone/CH934ZM.PEM"
 
+        # Set the central widget to a contain content for working with PEMFile
         file_widget = PEMFileWidget(self)
         file_widget.open_file(os.path.basename(filename))
         self.setCentralWidget(file_widget)
         # self.centralWidget().layout().addWidget(file_widget)
 
-        # # For debug
+        # For debug
         # p = self.centralWidget().palette()
         # p.setColor(self.centralWidget().backgroundRole(), Qt.cyan)
         # self.centralWidget().setPalette(p)

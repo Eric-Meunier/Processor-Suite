@@ -1,12 +1,14 @@
-import re
-import matplotlib.pyplot as plt
+"""
+Module for testing the parser. This is not used in the Crone Plots application.
+"""
+
 import numpy as np # Not used yet, not sure if it's needed yet.
-from pem_parser import PEM_Parser
+from pem_parser import PEMParser
 import pprint
 
 
 def main():
-    parser = PEM_Parser()
+    parser = PEMParser()
     ch = parser.parse("CH934ZM.PEM")
     z = parser.parse("Z.PEM")
 
