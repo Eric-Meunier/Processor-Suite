@@ -62,7 +62,7 @@ class PEMParser:
             r'(?P<Data>[\W\d]+[\n\r])',
             re.MULTILINE)
 
-        self.re_tags = re.compile( # Parsing the tags at beginning of file
+        self.re_tags = re.compile(  # Parsing the tags at beginning of file
             r'^<((?P<Format>FMT)|'
             r'(?P<Unit>UNI)|'
             r'(?P<Operator>OPR)|'
