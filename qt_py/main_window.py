@@ -17,6 +17,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
 
         self.menubar.setNativeMenuBar(False)
+        self.setAcceptDrops(True)
 
         # Connect signals to slots
         self.action_open_file.triggered.connect(self.on_file_open)
@@ -35,17 +36,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # For debug
         # filename = "/home/victor/Desktop/Crone/CH934ZM.PEM"
 
+        self.open_file(filename)
+
+    def dragEnterEvent(self, e):
+        #if e.mimeData().hasFormat('text/plain'):
+        e.accept()
+
+    def dropEvent(self, e):
+        print('reached')
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        if len(urls) > 1:
+            # Currently do nothing when multiple files are dropped in
+            print('Multiple files not yet supported!')
+            # TODO When tabs are implemented, ensure multiple files can be dragged in
+            pass
+        elif len(urls) == 1:
+            self.open_file(urls[0])
+
+    def open_file(self, filename):
         # Set the central widget to a contain content for working with PEMFile
         file_widget = PEMFileWidget(self)
         file_widget.open_file(os.path.basename(filename))
         self.setCentralWidget(file_widget)
         # self.centralWidget().layout().addWidget(file_widget)
-
-        # For debug
-        # p = self.centralWidget().palette()
-        # p.setColor(self.centralWidget().backgroundRole(), Qt.cyan)
-        # self.centralWidget().setPalette(p)
-        # self.label.setParent(None)
 
 
 if __name__ == "__main__":
