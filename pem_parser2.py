@@ -105,6 +105,7 @@ class PEMParser:
         for match in self.re_loop_coords.finditer(file):
             for group, index in self.re_loop_coords.groupindex.items():
                 loop_coords.append(match.group(index))
+
         return loop_coords
 
     def parse_line(self, file):
@@ -112,6 +113,7 @@ class PEMParser:
         for match in self.re_loop_coords.finditer(file):
             for group, index in self.re_loop_coords.groupindex.items():
                 line_coords.append(match.group(index))
+
         return line_coords
 
     def parse_notes(self, file):
@@ -119,16 +121,20 @@ class PEMParser:
         for match in self.re_notes.finditer(file):
                 for group, index in self.re_notes.groupindex.items():
                     notes.append(match.group(index))
+
         return notes
 
     def parse_header(self, file):
         header = {}
+
         for match in self.re_header.finditer(file):
+
             for group, index in self.re_header.groupindex.items():
                 # pprint.pprint(group)
                 if group is not 'ChannelTimes':
                     header[group] = match.group(index)
             header['ChannelTimes']=([Decimal(x) for x in match.group('ChannelTimes').split()])
+
         return header
 
     def parse_data(self, file):
@@ -140,8 +146,7 @@ class PEMParser:
                     data[group] = match.group(index)
             data['Data'] = ([Decimal(x) for x in match.group('Data').split()])
             survey_data.append(data)
-            # pprint.pprint(data)
-    # pprint.pprint(survey_data)
+
         return survey_data
 
     def parse(self, filename):
