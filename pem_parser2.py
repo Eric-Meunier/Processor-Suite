@@ -23,7 +23,7 @@ class PEMFile:
         return self.loop_coords
 
     def get_line_coords(self):
-        return self.line_coords()
+        return self.line_coords
 
     def get_notes(self):
         return self.notes
@@ -110,8 +110,8 @@ class PEMParser:
 
     def parse_line(self, file):
         line_coords = []
-        for match in self.re_loop_coords.finditer(file):
-            for group, index in self.re_loop_coords.groupindex.items():
+        for match in self.re_line_coords.finditer(file):
+            for group, index in self.re_line_coords.groupindex.items():
                 line_coords.append(match.group(index))
 
         return line_coords
