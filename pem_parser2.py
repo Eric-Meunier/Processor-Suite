@@ -1,6 +1,6 @@
 import re
 from decimal import Decimal
-
+from pprint import pprint
 
 class PEMFile:
     """
@@ -67,11 +67,13 @@ class PEMParser:
             re.MULTILINE
         )
 
+        # Notes i.e. GEN and HE tags
         self.re_notes = re.compile(  # Parsing the notes i.e. GEN tags and HE tags
             r'(?P<Notes><GEN>.*|<HE\d>.*)',
             re.MULTILINE
         )
 
+        # Header starting from 'Client' to the channel start-end times
         self.re_header = re.compile(  # Parsing the header
             r'(^(<|~).*[\r\n])'
             r'(?P<Client>\w.*)[\r\n]'
@@ -84,7 +86,7 @@ class PEMParser:
             r'[\r\n](?P<ChannelTimes>[\W\d]+)[\r\n]\$',
             re.MULTILINE)
 
-
+        # Data section
         self.re_data = re.compile(  # Parsing the EM data information
             r'^(?P<Station>^\d+[NSEW]?)\s(?P<Component>[XYZ])R(?P<ReadingIndex>\d+)\s(?P<Gain>\d)\s(?P<RxType>[AM\?])\s(?P<ZTS>\d+\.\d+)\s(?P<CoilDelay>\d+)\s(?P<NumStacks>\d+)\s(?P<ReadingsPerSet>\d)\s(?P<ReadingNumber>\d+)[\r\n]'
             r'^(?P<RADTool>D\d.*)[\r\n]'
@@ -139,13 +141,18 @@ class PEMParser:
 
     def parse_data(self, file):
         survey_data = []
-        data = {}
-        for match in self.re_data.finditer(file):
+
+        for match in self.re_data.finditer(file):  # Each reading is a dictionary
+            reading = {}
+
             for group, index in self.re_data.groupindex.items():
-                if group is not 'Data':
-                    data[group] = match.group(index)
-            data['Data'] = ([Decimal(x) for x in match.group('Data').split()])
-            survey_data.append(data)
+                if group == 'Data':
+                    reading[group] = ([Decimal (x) for x in match.group(index).split()])
+
+                else:
+                    reading[group] = match.group(index)
+
+            survey_data.append(reading)
 
         return survey_data
 
