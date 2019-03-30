@@ -34,6 +34,11 @@ class PEMFile:
     def get_data(self):
         return self.data
 
+    def get_unique_stations(self):
+        unique_stations = {n for n in
+                           [reading['Station'] for reading in self.data]}
+        return unique_stations
+
 
 class PEMParser:
     """
