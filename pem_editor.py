@@ -25,23 +25,25 @@ class PEMFileEditor:
         # Temporary placeholder plots
         # Use as guide for creating generate_plots
         plots_dict = OrderedDict()
+        print(self.active_file.get_data())
 
-        for reading in self.active_file.get_survey():
-            station_number = reading['StationNumber']
+        for reading in self.active_file.get_data():
+            station_number = reading['Station']
+            print('hi')
 
             if station_number not in plots_dict:
                 fig = Figure()
                 ax = fig.add_subplot(111)
-                ax.set_title('Station Number ' + str(station_number))
+                ax.set_title('Station ' + str(station_number))
                 ax.set_xlabel('Channel Number (By Index)')
-                ax.set_ylabel('Amplitude (' + self.active_file.get_tags()['Unit'] + ')')
+                ax.set_ylabel('Amplitude (' + self.active_file.get_tags()['Units'] + ')')
                 fig.subplots_adjust(bottom=0.15)
 
                 plots_dict[station_number] = {'fig': fig}
-                plots_dict[station_number]['ax'] = ax
+                plots_dict[station_number]g['ax'] = ax
 
             ax = plots_dict[station_number]['ax']
-            y = reading['Decay']
+            y = reading['Data']
             ax.plot(range(len(y)), y, '-', linewidth=0.8)
 
         plots = [plot_data['fig'] for station_number, plot_data in plots_dict.items()]
