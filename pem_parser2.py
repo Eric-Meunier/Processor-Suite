@@ -93,7 +93,7 @@ class PEMParser:
 
         # Data section
         self.re_data = re.compile(  # Parsing the EM data information
-            r'^(?P<Station>^\d+[NSEW]?)\s(?P<Component>[XYZ])R(?P<ReadingIndex>\d+)\s(?P<Gain>\d)\s(?P<RxType>[AM\?])\s(?P<ZTS>\d+\.\d+)\s(?P<CoilDelay>\d+)\s(?P<NumStacks>\d+)\s(?P<ReadingsPerSet>\d)\s(?P<ReadingNumber>\d+)[\r\n]'
+            r'^(?P<Station>^\d+[NSEW]?)\s(?P<Component>[XYZ])R(?P<ReadingIndex>\d+)\s(?P<Gain>\d)\s(?P<RxType>[AM\?]\d?)\s(?P<ZTS>\d+\.\d+)\s(?P<CoilDelay>\d+)\s(?P<NumStacks>\d+)\s(?P<ReadingsPerSet>\d+|\w+)\s(?P<ReadingNumber>\d+).+[\r\n]'
             r'^(?P<RADTool>D\d.*)[\r\n]'
             r'(?P<Data>[\W\d]+[\n\r])',
             re.MULTILINE)
