@@ -3,10 +3,10 @@ from PyQt5.QtWidgets import *
 from PyQt5 import uic
 import os
 
-from qt_py.pem_file_widget import PEMFileWidget
+from src.qt_py.pem_file_widget import PEMFileWidget
 
 # Load Qt ui file into a class
-qtCreatorFile = "qt_ui/main_window.ui"
+qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)),  "../qt_ui/main_window.ui")
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 
@@ -56,7 +56,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def open_file(self, filename):
         # Set the central widget to a contain content for working with PEMFile
         file_widget = PEMFileWidget(self)
-        file_widget.open_file(os.path.basename(filename))
+        file_widget.open_file(filename)
         self.setCentralWidget(file_widget)
         # self.centralWidget().layout().addWidget(file_widget)
 

@@ -1,4 +1,4 @@
-from pem_parser import PEMParser, PEMFile
+from src.pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
 from collections import OrderedDict
 
@@ -40,7 +40,7 @@ class PEMFileEditor:
                 fig.subplots_adjust(bottom=0.15)
 
                 plots_dict[station_number] = {'fig': fig}
-                plots_dict[station_number]g['ax'] = ax
+                plots_dict[station_number]['ax'] = ax
 
             ax = plots_dict[station_number]['ax']
             y = reading['Data']
