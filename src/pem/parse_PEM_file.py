@@ -3,7 +3,7 @@ Module for testing the parser. This is not used in the Crone Plots application.
 """
 
 # import numpy as np # Not used yet, not sure if it's needed yet.
-from pem_parser import PEMParser
+from src.pem.pem_parser import PEMParser
 import pprint
 
 
