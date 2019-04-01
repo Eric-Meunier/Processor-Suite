@@ -1,4 +1,4 @@
-from src.pem.pem_parser import PEMParser, PEMFile
+from pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
 from collections import OrderedDict
 
