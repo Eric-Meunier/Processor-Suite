@@ -43,7 +43,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         e.accept()
 
     def dropEvent(self, e):
-        print('reached')
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
         if len(urls) > 1:
             # Currently do nothing when multiple files are dropped in
