@@ -26,13 +26,13 @@ class PEMParser:
 
         #  Tx loop coordinates section
         self.re_loop_coords = re.compile(  # Parsing the loop coordinates
-            r'(?P<LoopCoordinates><L\d*>.*[\r\n])',
+            r'^(?P<Tag><L\d*>)(?P<LoopCoordinates>.*)[\r\n]',
             re.MULTILINE
         )
 
         #  Line/Hole coordinates section
         self.re_line_coords = re.compile(  # Parsing the line/hole coordinates
-            r'(?P<LineCoordinates><P\d*>.*[\r\n])',
+            r'^(?P<Tag><P\d*>)(?P<LineCoordinates>.*)[\r\n]',
             re.MULTILINE
         )
 
@@ -50,8 +50,8 @@ class PEMParser:
             r'(?P<LineHole>.*)[\r\n]'
             r'(?P<Loop>.*)[\r\n]'
             r'(?P<Date>.*)[\r\n]'
-            r'^(?P<SurveyType>.*)\s(Metric|Imperial)\s(Crystal-(Master|Slave)|(Cable))\s(?P<Timebase>\d+\.?\d+)\s(?P<Ramp>\d+)\s(?P<NumChannels>\d+)\s(?P<NumReadings>\d+)[\r\n]'
-            r'^(?P<Receiver>#\d+)\s(?P<RxSoftwareVer>\d+\.?\d?\d?)\s(?P<RxSoftwareVerDate>.*,\d+.*)\s(?P<RxFileName>.*)\s(N|Y)\s(?P<PrimeFieldValue>\d+)\s(?P<CoilArea>\d+).*[\n\r]'
+            r'^(?P<SurveyType>.*\s(Metric|Imperial)\s(Crystal-(Master|Slave)|(Cable)))\s(?P<Timebase>\d+\.?\d+)\s(?P<Ramp>\d+)\s(?P<NumChannels>\d+)\s(?P<NumReadings>\d+)[\r\n]'
+            r'^(?P<Receiver>#\d+)\s(?P<RxSoftwareVer>\d+\.?\d?\d?)\s(?P<RxSoftwareVerDate>.*,\d+.*)\s(?P<RxFileName>.*)\s(?P<IsNormalized>N|Y)\s(?P<PrimeFieldValue>\d+)\s(?P<CoilArea>\d+).*[\n\r]'
             r'[\r\n](?P<ChannelTimes>[\W\d]+)[\r\n]\$',
             re.MULTILINE)
 
@@ -74,16 +74,28 @@ class PEMParser:
     def parse_loop(self, file):
         loop_coords = []
         for match in self.re_loop_coords.finditer(file):
+            loop_coords.append({'Tag': None,
+                                'LoopCoordinates': None})
+
             for group, index in self.re_loop_coords.groupindex.items():
-                loop_coords.append(match.group(index))
+                if group == 'Tag':
+                    loop_coords[-1]['Tag'] = match.group(index)
+                elif group == 'LoopCoordinates':
+                    loop_coords[-1]['LoopCoordinates'] = match.group(index)
 
         return loop_coords
 
     def parse_line(self, file):
         line_coords = []
         for match in self.re_line_coords.finditer(file):
+            line_coords.append({'Tag': None,
+                                'LineCoordinates': None})
+
             for group, index in self.re_line_coords.groupindex.items():
-                line_coords.append(match.group(index))
+                if group == 'Tag':
+                    line_coords[-1]['Tag'] = match.group(index)
+                elif group == 'LineCoordinates':
+                    line_coords[-1]['LineCoordinates'] = match.group(index)
 
         return line_coords
 
@@ -116,7 +128,7 @@ class PEMParser:
 
             for group, index in self.re_data.groupindex.items():
                 if group == 'Data':
-                    reading[group] = ([Decimal (x) for x in match.group(index).split()])
+                    reading[group] = ([Decimal(x) for x in match.group(index).split()])
 
                 else:
                     reading[group] = match.group(index)
