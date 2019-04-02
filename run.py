@@ -1,7 +1,15 @@
-from src.qt_py.main_window import MainWindow
+import os
+import sys
+src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
+print(src_dir)
+
+# Needed to keep run.py outside of src directory
+os.chdir(src_dir)
+sys.path.append(src_dir)
+
+from qt_py.main_window import MainWindow
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QTimer
-import sys
 
 
 def main():

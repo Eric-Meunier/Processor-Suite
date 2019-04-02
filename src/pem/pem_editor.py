@@ -1,4 +1,4 @@
-from src.pem.pem_parser import PEMParser, PEMFile
+from pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
 from collections import OrderedDict
 
@@ -29,7 +29,6 @@ class PEMFileEditor:
 
         for reading in self.active_file.get_data():
             station_number = reading['Station']
-            print('hi')
 
             if station_number not in plots_dict:
                 fig = Figure()

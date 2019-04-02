@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import *
 from PyQt5 import uic
 import os
 
-from src.qt_py.pem_file_widget import PEMFileWidget
+from qt_py.pem_file_widget import PEMFileWidget
 
 # Load Qt ui file into a class
 qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)),  "../qt_ui/main_window.ui")
@@ -43,7 +43,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         e.accept()
 
     def dropEvent(self, e):
-        print('reached')
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
         if len(urls) > 1:
             # Currently do nothing when multiple files are dropped in
