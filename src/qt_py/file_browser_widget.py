@@ -11,9 +11,18 @@ class FileBrowser(QTabWidget):
         super(FileBrowser, self).__init__(parent)
         # self.setWindowTitle("tab demo")
 
+        # TODO Make model to deal with these together
         self.editors = []
         self.widgets = []
         self.active_editor = None
+        self.original_indices = []
+
+        # TODO Make custom TabBar Widget to make detachable
+        self.setTabsClosable(True)
+        self.setMovable(True)
+
+        self.tabCloseRequested.connect(self.on_tab_close)
+        self.tabBar().tabMoved.connect(self.on_tab_move)
 
     def open_file(self, file_name):
         # TODO Logic for different file types
@@ -22,9 +31,25 @@ class FileBrowser(QTabWidget):
         self.editors[-1].open_file(file_name)
         self.active_editor = self.editors[-1]
 
+        self.original_indices.append(len(self.widgets))
+
         self.widgets.append( PEMFileWidget() )
         self.widgets[-1].open_file(file_name)
         self.addTab(self.widgets[-1], file_name)
+
+    def on_tab_close(self, index):
+        print(index)
+        self.removeTab(index)
+        self.editors.pop(index)
+        self.widgets.pop(index)
+        self.original_indices.pop(index)
+
+    def on_tab_move(self, from_index, to_index):
+        self.editors.insert(to_index, self.editors.pop(from_index))
+        self.widgets.insert(to_index, self.widgets.pop(from_index))
+        self.original_indices.insert(to_index, self.original_indices.pop(from_index))
+
+        print('moved ' + str(from_index) + ' ' + str(to_index) + ' to new order ' + str(self.original_indices))
 
 
 def main():
