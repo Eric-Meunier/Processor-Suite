@@ -4,6 +4,7 @@ from PyQt5 import uic
 import os
 
 from qt_py.pem_file_widget import PEMFileWidget
+from qt_py.file_browser_widget import FileBrowser
 
 # Load Qt ui file into a class
 qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)),  "../qt_ui/main_window.ui")
@@ -21,6 +22,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Connect signals to slots
         self.action_open_file.triggered.connect(self.on_file_open)
+        self.file_browser = None
 
     def on_file_open(self):
         # Will eventually hold logic for choosing between different file types
@@ -53,11 +55,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.open_file(urls[0])
 
     def open_file(self, filename):
-        # Set the central widget to a contain content for working with PEMFile
-        file_widget = PEMFileWidget(self)
-        file_widget.open_file(filename)
-        self.setCentralWidget(file_widget)
-        # self.centralWidget().layout().addWidget(file_widget)
+        # # Set the central widget to a contain content for working with PEMFile
+        # file_widget = PEMFileWidget(self)
+        # file_widget.open_file(filename)
+        # self.setCentralWidget(file_widget)
+        # # self.centralWidget().layout().addWidget(file_widget)
+
+        if not self.file_browser:
+            self.file_browser = FileBrowser()
+            self.setCentralWidget(self.file_browser)
+
+        self.file_browser.open_file(filename)
 
 
 if __name__ == "__main__":

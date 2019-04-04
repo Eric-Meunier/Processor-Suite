@@ -2,9 +2,8 @@ from src.pem.pem_parser import PEMParser
 from pprint import pprint
 from collections import OrderedDict
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import numpy as np
-
+import re
 
 class PEMFileEditor:
     """
@@ -34,6 +33,15 @@ class PEMFileEditor:
         # plt.grid(True)
         return out
 
+    def convert_stations(self, data):
+        stations = [d['Station'] for d in data]
+        for station in stations:
+            if re.match("\d+(E|N)", station):
+                return int(re.findall("(\d+)\w",station))
+            # elif re.match("\d+(S|W)", station):
+            #     return int(-(station))
+        # return station
+
 
     # def remove_ontime(self):
     #     """
@@ -47,33 +55,48 @@ path = r'C:/Users/Eric/PycharmProjects/Crone/sample_files/2400NAv.PEM'
 
 file = pem.open_file(path)
 header = file.get_header()
+units = file.get_tags()['Units']
 channels = header['NumChannels']
 data = file.get_data()
-# data_keys = [keys for keys, vals in data.items()]
-x_data = list(filter(lambda d: d['Component'] == 'X', data))
-# pprint(x_data)
 
-for i in x_data:
-    pprint(i['Component'])
-# for reading in data:
+x_data = list(filter(lambda d: d['Component'] == 'X', data))
+z_data = list(filter(lambda d: d['Component'] == 'Z', data))
+z_stations = []
+# pprint(pem.convert_stations(z_data))
+station  = '10E'
+result = station.replace()
+pprint(result.group())
+pprint(type(result.group()))
+
+# pprint(z_stations)
+# stations = np.array(stations)
+# pprint(sorted(stations))
+# pprint(type(stations))
+
+
+# for station in stations:
+#     # if re.match(r'W|S',station):
+#     pprint(station)
+
+
+
+
+
 #
-#     if reading['Component'] == 'X':
-#         x_data.append(reading['Data'])
+# fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 8))
+# pp = []
+# data_set = []
 #
-# x_data = np.array(x_data)
-# pprint(data[0]['Component'])
-# pprint(x_data)
+# for reading in z_data:
+#     pp.append(reading['Data'][0])
+#     data_set.append(reading['Data'])
 #
+# ax1.plot(pp)
 #
-# x = range(len(pp))
-# fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8.5, 11))
-# pem.lin_plotter(ax1, x, pp)
-# pem.lin_plotter(ax2, x, ch1)
-# pem.lin_plotter(ax3, x, ch2)
+# fig2, ax1 = plt.subplots(1,1, figsize=(8.5, 11))
 #
+# ax1.plot(stations, data_set,'k',linewidth=0.6)
+# plt.yscale('symlog')
 #
-# plt.tight_layout()
-# plt.show()
-#
-# plt.close('all')
+# # plt.show()
 
