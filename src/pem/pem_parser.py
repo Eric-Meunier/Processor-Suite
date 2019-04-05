@@ -1,7 +1,7 @@
 import re
 from decimal import Decimal
 from pprint import pprint
-from pem.pem_file import PEMFile
+from src.pem.pem_file import PEMFile
 
 
 class PEMParser:
