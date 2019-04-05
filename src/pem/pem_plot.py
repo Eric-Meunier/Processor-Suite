@@ -34,33 +34,52 @@ class PEMFileEditor:
         # plt.grid(True)
         return out
 
+    # def convert_stations(self, data):
+    #     """
+    #     Converts station names into numbers, producing a negative number of the station is S or W
+    #     :param data: EM data section of a PEM file
+    #     :return: List of integer station numbers
+    #     """
+    #     # TODO Probably isn't needed, the dictionary based converter below is probably better
+    #     stations = np.array([d['Station'] for d in data])
+    #     # stations = np.unique(stations)
+    #
+    #     converted_stations = []
+    #
+    #     for station in stations:
+    #
+    #         if re.match(r"\d+(S|W)", station):
+    #             converted_stations.append(-int(re.sub(r"\D","",station)))
+    #
+    #         else:
+    #             converted_stations.append(int(re.sub(r"\D","",station)))
+    #
+    #     return converted_stations
+
     def convert_stations(self, data):
         """
-        Converts station names into numbers, producing a negative number of the station is S or W
-        :param data: EM data section of a PEM file
-        :return: List of integer station numbers
+        Converts all the station names in the data into a number, negative if the stations was S or W
+        :param data: Data from a PEM file
+        :return: Data for a PEM file
         """
-        # TODO This probably belongs in pem_parser
-        stations = np.array([d['Station'] for d in data])
-        # stations = np.unique(stations)
 
-        converted_stations = []
+        stations = [d['Station'] for d in data]
 
-        for station in stations:
+        for index, station in enumerate(stations):
 
             if re.match(r"\d+(S|W)", station):
-                converted_stations.append(-int(re.sub(r"\D","",station)))
+                data[index]['Station'] = (-int(re.sub(r"\D","",station)))
 
             else:
-                converted_stations.append(int(re.sub(r"\D","",station)))
+                data[index]['Station'] = (int(re.sub(r"\D","",station)))
 
-        return converted_stations
+        return data
 
     def get_components(self, data):
         """
         Retrieve the unique components of the survey file
         :param data: EM data section of a PEM file
-        :return: List of string components
+        :return: List of components in str format
         """
         unique_components = []
 
@@ -81,25 +100,26 @@ class PEMFileEditor:
     #     pprint(self.open_file(path))
 
 pem = PEMFileEditor()
-path = r'C:/Users/Mortulo/PycharmProjects/Crone/sample_files/2400NAv.PEM'
+path = r'C:/Users/Eric/PycharmProjects/Crone/sample_files/2400NAv.PEM'
 
 file = pem.open_file(path)
 header = file.get_header()
 units = file.get_tags()['Units']
 number_channels = header['NumChannels']
-data = file.get_data()
+data = sorted(pem.convert_stations(file.get_data()), key=lambda k: k['Station'])
+
 components = pem.get_components(data)
 profile_data = {}
 
 
-for component in components[0]:
-    filtered_data = list(filter(lambda d: d['Component'] == component, data))
-    # pprint(filtered_data)
-
-    for station in filtered_data:
-        # pprint(station['Data'])
-        pp = list(map(lambda x: x, station['Data']))
-        pprint(pp)
+# for component in components[0]:
+#     filtered_data = list(filter(lambda d: d['Component'] == component, data))
+#
+#     for station in filtered_data:
+#         data = station['Data']
+#         # pp = list(map(lambda x: x, station['Data']))
+#         for channel in data:
+#             profile_data[channel] =
 
 
 
