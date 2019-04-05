@@ -104,7 +104,6 @@ for component in components[0]:
 
 
 
-
 # def profile_data(data):
 #     components =
 #     profiled_data = []
