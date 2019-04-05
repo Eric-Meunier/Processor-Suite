@@ -27,15 +27,18 @@ class FileBrowser(QTabWidget):
     def open_file(self, file_name):
         # TODO Logic for different file types
 
-        self.editors.append(PEMFileEditor())
-        self.editors[-1].open_file(file_name)
-        self.active_editor = self.editors[-1]
+        new_editor = PEMFileEditor()
+        new_file_widget = PEMFileWidget(editor=new_editor)
 
+        self.editors.append(new_editor)
+        self.widgets.append(new_file_widget)
         self.original_indices.append(len(self.widgets))
 
-        self.widgets.append( PEMFileWidget() )
-        self.widgets[-1].open_file(file_name)
-        self.addTab(self.widgets[-1], file_name)
+        self.addTab(new_file_widget, file_name)
+        self.setCurrentWidget(new_file_widget)
+
+        new_file_widget.open_file(file_name)
+        self.active_editor = new_editor
 
     def on_tab_close(self, index):
         print(index)
