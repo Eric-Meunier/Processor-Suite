@@ -13,11 +13,14 @@ Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 class PEMFileWidget(QWidget, Ui_PEMFileWidget):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, editor=None):
         QWidget.__init__(self, parent=parent)
         Ui_PEMFileWidget.__init__(self)
         self.setupUi(self)
-        self.editor = PEMFileEditor()
+        if not editor:
+            self.editor = PEMFileEditor()
+        else:
+            self.editor = editor
 
         # For debug
         # p = self.palette()
@@ -46,10 +49,20 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
 
         self.nav_bars_visible = False
 
+        # Hide widgets by default since no file has been loaded
+        self.show_nav_bars_button.hide()
+        self.scroll.hide()
+
     def open_file(self, file_name):
+        # Hide widgets and display loading text
+        self.show_nav_bars_button.hide()
+        self.scroll.hide()
+        self.label.show()
+        self.label.setText('Loading ' + os.path.basename(file_name) + '...')
+        QApplication.processEvents()
+        # TODO Find alternative to calling processEvents()?
+
         self.editor.open_file(file_name)
-        self.label.setText(file_name)
-        self.label.setParent(None)
 
         figures = self.editor.generate_placeholder_plots()
 
@@ -67,6 +80,11 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
 
             canvas.setFixedHeight(350)
             canvas.draw()
+
+        # Hide loading screen and show results
+        self.show_nav_bars_button.show()
+        self.scroll.show()
+        self.label.hide()
 
         # print(str(self.width()) + ", " + str(self.height()))
 

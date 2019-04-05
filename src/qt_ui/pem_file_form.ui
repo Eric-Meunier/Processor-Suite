@@ -2,9 +2,17 @@
 <ui version="4.0">
  <class>pem_file_form</class>
  <widget class="QWidget" name="pem_file_form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>239</width>
+    <height>101</height>
+   </rect>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="show_nav_bars_button" native="true">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QPushButton" name="show_nav_bars">
