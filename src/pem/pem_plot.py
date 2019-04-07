@@ -91,6 +91,20 @@ class PEMFileEditor:
 
         return unique_components
 
+    def get_profile_data(self, component_data):
+        profile_data = {}
+
+        for channel in range(0, num_channels):
+            profile_data[channel] = []
+
+            for station in component_data:
+                reading = station['Data']
+                # station_number = station['Station']
+                # profile_data[channel].append({reading[channel]:station_number})
+                profile_data[channel].append(reading)
+
+
+        return profile_data
 
     # def remove_ontime(self):
     #     """
@@ -100,54 +114,38 @@ class PEMFileEditor:
     #     pprint(self.open_file(path))
 
 pem = PEMFileEditor()
-path = r'C:/Users/Eric/PycharmProjects/Crone/sample_files/2400NAv.PEM'
+path = r'C:/Users/Mortulo/PycharmProjects/Crone/sample_files/2400NAv.PEM'
 
 file = pem.open_file(path)
 header = file.get_header()
 units = file.get_tags()['Units']
-number_channels = header['NumChannels']
+num_channels = int(header['NumChannels'])
+
 data = sorted(pem.convert_stations(file.get_data()), key=lambda k: k['Station'])
-
 components = pem.get_components(data)
-profile_data = {}
 
+# Each component has their own plot
+for component in components:
+    fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 8))
+    component_data = list(filter(lambda d: d['Component'] == component, data))
+    channel_data = pem.get_profile_data(component_data)
+    pprint(channel_data)
 
-# for component in components[0]:
-#     filtered_data = list(filter(lambda d: d['Component'] == component, data))
-#
-#     for station in filtered_data:
-#         data = station['Data']
-#         # pp = list(map(lambda x: x, station['Data']))
-#         for channel in data:
-#             profile_data[channel] =
+    ax1.plot(channel_data[0]) # First channel has its own plot
+    num_channels_per_plot = int((num_channels-1)/4) # remaining channels are plotted evenly on the remaining subplots
 
-
-
-
-# def profile_data(data):
-#     components =
-#     profiled_data = []
-#     for station in stations:
-#         for channel in data:
+    for i in range(0, num_channels_per_plot):
+        ax2.plot(channel_data[i])
+        ax3.plot(channel_data[i + (num_channels_per_plot * 1)])
+        ax4.plot(channel_data[i + (num_channels_per_plot * 2)])
+        ax5.plot(channel_data[i + (num_channels_per_plot * 3)])
 
 
 
-
-
-# fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 8))
-# pp = []
-# data_set = []
-#
-# for reading in z_data:
-#     pp.append(reading['Data'][0])
-#     data_set.append(reading['Data'])
-#
-# ax1.plot(pp)
-#
 # fig2, ax1 = plt.subplots(1,1, figsize=(8.5, 11))
 #
 # ax1.plot(z_stations, data_set,'k',linewidth=0.6)
 # plt.yscale('symlog')
 #
-# plt.show()
+plt.show()
 
