@@ -23,17 +23,6 @@ class PEMFileEditor:
 
         return self.active_file
 
-    def lin_plotter(self, ax, x, y):
-        """
-        LIN plots for final PEM data
-        :return:
-        """
-        out = ax.plot(x, y)
-        ax.set(xlabel='Station', ylabel='Response (nT/s)')
-        ax.grid()
-        # plt.grid(True)
-        return out
-
     # def convert_stations(self, data):
     #     """
     #     Converts station names into numbers, producing a negative number of the station is S or W
@@ -91,7 +80,8 @@ class PEMFileEditor:
 
         return unique_components
 
-    def get_profile_data(self, component_data):
+    def get_profile_data(self, component_data, num_channels):
+
         profile_data = {}
 
         for channel in range(0, num_channels):
@@ -99,9 +89,12 @@ class PEMFileEditor:
 
             for station in component_data:
                 reading = station['Data']
-                # station_number = station['Station']
-                # profile_data[channel].append({reading[channel]:station_number})
-                profile_data[channel].append(reading)
+                station_number = station['Station']
+
+                # thing = {station_number: reading[channel]}
+                # profile_data[channel].append(thing)
+
+                profile_data[channel].append(reading[channel])
 
 
         return profile_data
@@ -113,39 +106,69 @@ class PEMFileEditor:
     #     """
     #     pprint(self.open_file(path))
 
+    def mk_plots(self, path):
+
+        # pem = PEMFileEditor()
+        # path = r'C:/Users/Mortulo/PycharmProjects/Crone/sample_files/2400NAv.PEM'
+
+        file = pem.open_file(path)
+        header = file.get_header()
+        units = file.get_tags()['Units']
+        if units == 'nanoTesla/sec':
+            units = 'nT/s'
+        else:
+            units = 'pT'
+
+        num_channels = int(header['NumChannels'])
+
+        data = sorted(pem.convert_stations(file.get_data()), key=lambda k: k['Station'])
+
+        components = pem.get_components(data)
+
+
+        # Each component has their own figure
+        for component in components:
+            fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
+            line_width = 0.7
+
+            component_data = list(filter(lambda d: d['Component'] == component, data))
+
+            profile_data = pem.get_profile_data(component_data, num_channels)
+
+            stations = [reading['Station'] for reading in component_data]
+
+            ax1.plot(stations, profile_data[0], 'k', linewidth=line_width) # First channel has its own plot
+            ax1.set_ylabel("Primary Pulse\n("+units+")")
+            num_channels_per_plot = int((num_channels-1)/4) # remaining channels are plotted evenly on the remaining subplots
+
+            for i in range(0, num_channels_per_plot):
+
+                ax2.plot(stations, profile_data[i], 'k', linewidth=0.6)
+                # ax2.x_axis('off')
+                ax2.set_ylabel("Channel 1 - "+ str(num_channels_per_plot)+"\n("+units+")")
+
+                ax3.plot(stations, profile_data[i + (num_channels_per_plot * 1)], 'k', linewidth=line_width)
+                ax3.set_ylabel("Channel " + str(num_channels_per_plot+1)+" - "+str(num_channels_per_plot*2)+"\n("+units+")")
+                ax4.plot(stations, profile_data[i + (num_channels_per_plot * 2)], 'k', linewidth=line_width)
+                ax4.set_ylabel("Channel " + str(num_channels_per_plot*2 + 1) + " - " + str(num_channels_per_plot * 3)+"\n("+units+")")
+                ax5.plot(stations, profile_data[i + (num_channels_per_plot * 3)], 'k', linewidth=line_width)
+                ax5.set_ylabel("Channel " + str(num_channels_per_plot*3 + 1) + " - " + str(num_channels_per_plot * 4)+"\n("+units+")")
+
+            fig.align_ylabels()
+            fig.suptitle('Crone Geophysics & Exploration\n'
+                         +header['Client']+' Line: '+header['LineHole'])
+            fig.subplots_adjust(hspace=0.25)
+            # fig2, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
+            #
+            # for i in range(0, num_channels):
+            #
+            #     ax1.plot(stations, profile_data[i], 'k', linewidth=0.6)
+            #     plt.yscale('symlog')
+
+        return fig
+
 pem = PEMFileEditor()
 path = r'C:/Users/Mortulo/PycharmProjects/Crone/sample_files/2400NAv.PEM'
-
-file = pem.open_file(path)
-header = file.get_header()
-units = file.get_tags()['Units']
-num_channels = int(header['NumChannels'])
-
-data = sorted(pem.convert_stations(file.get_data()), key=lambda k: k['Station'])
-components = pem.get_components(data)
-
-# Each component has their own plot
-for component in components:
-    fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 8))
-    component_data = list(filter(lambda d: d['Component'] == component, data))
-    channel_data = pem.get_profile_data(component_data)
-    pprint(channel_data)
-
-    ax1.plot(channel_data[0]) # First channel has its own plot
-    num_channels_per_plot = int((num_channels-1)/4) # remaining channels are plotted evenly on the remaining subplots
-
-    for i in range(0, num_channels_per_plot):
-        ax2.plot(channel_data[i])
-        ax3.plot(channel_data[i + (num_channels_per_plot * 1)])
-        ax4.plot(channel_data[i + (num_channels_per_plot * 2)])
-        ax5.plot(channel_data[i + (num_channels_per_plot * 3)])
-
-
-
-# fig2, ax1 = plt.subplots(1,1, figsize=(8.5, 11))
-#
-# ax1.plot(z_stations, data_set,'k',linewidth=0.6)
-# plt.yscale('symlog')
-#
+pem.mk_plots(path)
 plt.show()
 
