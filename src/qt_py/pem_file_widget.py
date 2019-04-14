@@ -3,7 +3,7 @@ from PyQt5 import uic
 from pem.pem_editor import PEMFileEditor
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal, QEvent
 import os
 
 # Load Qt ui file into a class
@@ -35,7 +35,7 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
         self.scroll_content_widget.setLayout(self.scroll_content_layout)
 
         # Create scroll area to allow for scrolling of scroll_content_widget
-        self.scroll = QScrollArea()
+        self.scroll = PlotScrollArea()
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.scroll.setWidgetResizable(True)
         self.scroll.setWidget(self.scroll_content_widget)
@@ -52,6 +52,42 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
         # Hide widgets by default since no file has been loaded
         self.show_nav_bars_button.hide()
         self.scroll.hide()
+
+        #self.keyPressed.connect(self.on_key)
+        self.scroll.arrowKeyPressed.connect(self.on_arrow_key)
+        self.scroll.verticalScrollBar().valueChanged.connect(self.on_scroll_change)
+
+        self.PLOT_FIXED_HEIGHT = 350
+
+    def scroll_page(self, direction):
+
+        def layout_widgets(layout):
+            return (layout.itemAt(i).widget() for i in range(layout.count()))
+
+        page_distance = self.scroll.verticalScrollBar().value()
+        page = 0
+
+        heights = [widget.y() for widget in layout_widgets(self.scroll_content_layout)]
+
+        for height in heights:
+            if height > page_distance:
+                break
+            page += 1
+
+        if direction < 0:
+            page -= 1
+
+        new_page = page + direction
+
+        if new_page < 0:
+            new_page = 0
+
+        elif new_page >= len(heights):
+            new_page = len(heights) - 1
+
+        page_distance = heights[new_page]
+
+        self.scroll.verticalScrollBar().setValue(page_distance)
 
     def open_file(self, file_name):
         # Hide widgets and display loading text
@@ -78,7 +114,7 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
             layout = self.scroll_content_layout
             layout.insertWidget(layout.count(), canvas_widget)
 
-            canvas.setFixedHeight(350)
+            canvas.setFixedHeight(self.PLOT_FIXED_HEIGHT)
             canvas.draw()
 
         # Hide loading screen and show results
@@ -106,3 +142,31 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
             self.nav_bars_visible = False
 
         print("Toggled navigation bars " + ('on' if self.nav_bars_visible else 'off'))
+
+    def on_arrow_key(self, event):
+        if event.key() == Qt.Key_Left:
+            self.scroll_page(-1)
+        if event.key() == Qt.Key_Right:
+            self.scroll_page(1)
+
+    def on_scroll_change(self, x):
+        pass
+
+    # def keyPressEvent(self, event):
+    #     super(PEMFileWidget, self).keyPressEvent(event)
+    #     self.keyPressed.emit(event)
+
+
+class PlotScrollArea(QScrollArea):
+    arrowKeyPressed = pyqtSignal(QEvent)
+
+    def __init__(self, *args):
+        QScrollBar.__init__(self, *args)
+
+    def event(self, event):
+        if (event.type() == QEvent.KeyPress) and (event.key() == Qt.Key_Left or
+                                                  event.key() == Qt.Key_Right):
+            self.arrowKeyPressed.emit(event)
+            return True
+
+        return QScrollArea.event(self, event)
