@@ -46,8 +46,11 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
 
         # Connect signals to slots
         self.show_nav_bars.clicked.connect(self.on_show_nav_bars)
+        self.toggle_page_view.clicked.connect(self.on_toggle_page_view)
 
         self.nav_bars_visible = False
+        self.page_view = False
+        self.page = -1
 
         # Hide widgets by default since no file has been loaded
         self.show_nav_bars_button.hide()
@@ -61,13 +64,10 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
 
     def scroll_page(self, direction):
 
-        def layout_widgets(layout):
-            return (layout.itemAt(i).widget() for i in range(layout.count()))
-
         page_distance = self.scroll.verticalScrollBar().value()
         page = 0
 
-        heights = [widget.y() for widget in layout_widgets(self.scroll_content_layout)]
+        heights = [widget.y() for widget in self.layout_widgets(self.scroll_content_layout)]
 
         for height in heights:
             if height > page_distance:
@@ -124,30 +124,68 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
 
         # print(str(self.width()) + ", " + str(self.height()))
 
+    # TODO Perhaps make into a stored list field
+    @staticmethod
+    def layout_widgets(layout):
+        return (layout.itemAt(i).widget() for i in range(layout.count()))
+
     def on_show_nav_bars(self):
-        def layout_widgets(layout):
-            return (layout.itemAt(i).widget() for i in range(layout.count()))
 
         if not self.nav_bars_visible:
-            for widget in layout_widgets(self.scroll_content_layout):
+            for widget in self.layout_widgets(self.scroll_content_layout):
                 # TODO store list of widgets and their canvases
                 toolbar = NavigationToolbar(widget.layout().itemAt(0).widget(), widget)
                 widget.layout().addWidget(toolbar)
             self.nav_bars_visible = True
 
         else:
-            for widget in layout_widgets(self.scroll_content_layout):
+            for widget in self.layout_widgets(self.scroll_content_layout):
                 # TODO store list of widgets and their canvases
                 widget.layout().itemAt(1).widget().setParent(None)
             self.nav_bars_visible = False
 
         print("Toggled navigation bars " + ('on' if self.nav_bars_visible else 'off'))
 
+    def on_toggle_page_view(self):
+        plot_widgets = list(self.layout_widgets(self.scroll_content_layout))
+        if self.page_view:
+            for widget in plot_widgets:
+                widget.show()
+            self.page = -1
+        else:
+            for widget in plot_widgets[1:]:
+                widget.hide()
+            self.page = (0 if plot_widgets else -1)
+
+        #self.setStyleSheet("border: 1px solid red;");
+
+        self.page_view = not self.page_view
+
     def on_arrow_key(self, event):
-        if event.key() == Qt.Key_Left:
-            self.scroll_page(-1)
-        if event.key() == Qt.Key_Right:
-            self.scroll_page(1)
+        # Must be != since 0 would not count
+        if self.page_view and self.page != -1:
+            # TODO Move logic into separate function like the else statement below
+            plot_widgets = list(self.layout_widgets(self.scroll_content_layout))
+
+            new_page = -1
+            if event.key() == Qt.Key_Left:
+                new_page = self.page - 1
+            elif event.key() == Qt.Key_Right:
+                new_page = self.page + 1
+
+            if new_page != -1:
+                new_page = max(0, min(new_page, len(plot_widgets) - 1))
+
+
+                self.scroll_content_layout.itemAt(self.page).widget().hide()
+                self.page = new_page
+                self.scroll_content_layout.itemAt(self.page).widget().show()
+
+        else:
+            if event.key() == Qt.Key_Left:
+                self.scroll_page(-1)
+            elif event.key() == Qt.Key_Right:
+                self.scroll_page(1)
 
     def on_scroll_change(self, x):
         pass

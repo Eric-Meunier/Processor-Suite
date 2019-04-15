@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>239</width>
-    <height>101</height>
+    <width>561</width>
+    <height>317</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -18,6 +18,13 @@
        <widget class="QPushButton" name="show_nav_bars">
         <property name="text">
          <string>Show Navigation Bars</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="toggle_page_view">
+        <property name="text">
+         <string>Page View</string>
         </property>
        </widget>
       </item>
