@@ -1,7 +1,7 @@
 import re
 from decimal import Decimal
 from pprint import pprint
-from src.pem.pem_file import PEMFile
+from pem.pem_file import PEMFile
 
 
 class PEMParser:
@@ -44,13 +44,13 @@ class PEMParser:
 
         # Header starting from 'Client' to the channel start-end times
         self.re_header = re.compile(  # Parsing the header
-            r'(^(<|~).*[\r\n])'
+            r'(^<|~.*[\r\n])'
             r'(?P<Client>\w.*)[\r\n]'
             r'(?P<Grid>.*)[\r\n]'
             r'(?P<LineHole>.*)[\r\n]'
             r'(?P<Loop>.*)[\r\n]'
             r'(?P<Date>.*)[\r\n]'
-            r'^(?P<SurveyType>.*)\s(?P<Convension>Metric|Imperial)\s(?P<Sync>Crystal-Master|Slave|Cable)\s(?P<Timebase>\d+\.?\d+)\s(?P<Ramp>\d+)\s(?P<NumChannels>\d+)\s(?P<NumReadings>\d+)[\r\n]'
+            r'^(?P<SurveyType>.*)\s(?P<Convension>Metric|Imperial)\s(?P<Sync>Crystal-Master|Crystal-Slave|Cable)\s(?P<Timebase>\d+\.?\d+)\s(?P<Ramp>\d+)\s(?P<NumChannels>\d+)\s(?P<NumReadings>\d+)[\r\n]'
             r'^(?P<Receiver>#\d+)\s(?P<RxSoftwareVer>\d+\.?\d?\d?)\s(?P<RxSoftwareVerDate>.*,\d+.*)\s(?P<RxFileName>.*)\s(?P<IsNormalized>N|Y)\s(?P<PrimeFieldValue>\d+)\s(?P<CoilArea>\d+).*[\n\r]'
             r'[\r\n](?P<ChannelTimes>[\W\d]+)[\r\n]\$',
             re.MULTILINE)
