@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 from pem.pem_editor import PEMFileEditor
+from qt_py.pem_plot_widget import PEMPlotWidget
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent
@@ -67,7 +68,7 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
         page_distance = self.scroll.verticalScrollBar().value()
         page = 0
 
-        heights = [widget.y() for widget in self.layout_widgets(self.scroll_content_layout)]
+        heights = [widget.y() for widget in self.plot_widgets()]
 
         for height in heights:
             if height > page_distance:
@@ -104,18 +105,10 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
 
         # Create a FigureCanvas for each figure to display plots in Qt
         for fig in figures:
-            canvas = FigureCanvas(fig)
-
-            canvas_widget = QWidget()
-            canvas_widget_layout = QVBoxLayout(canvas_widget)
-            canvas_widget.setLayout(canvas_widget_layout)
-            canvas_widget.layout().addWidget(canvas)
-
+            canvas_widget = PEMPlotWidget(editor=self.editor,
+                                          figure=fig)
             layout = self.scroll_content_layout
             layout.insertWidget(layout.count(), canvas_widget)
-
-            canvas.setFixedHeight(self.PLOT_FIXED_HEIGHT)
-            canvas.draw()
 
         # Hide loading screen and show results
         self.show_nav_bars_button.show()
@@ -124,30 +117,19 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
 
         # print(str(self.width()) + ", " + str(self.height()))
 
-    # TODO Perhaps make into a stored list field
-    @staticmethod
-    def layout_widgets(layout):
-        return (layout.itemAt(i).widget() for i in range(layout.count()))
+    # TODO Create seperate plot widget
+    def plot_widgets(self):
+        return [self.scroll_content_layout.itemAt(i).widget() for i in range(self.scroll_content_layout.count())]
 
     def on_show_nav_bars(self):
+        for widget in self.plot_widgets():
+            widget.toggle_nav_bar()
 
-        if not self.nav_bars_visible:
-            for widget in self.layout_widgets(self.scroll_content_layout):
-                # TODO store list of widgets and their canvases
-                toolbar = NavigationToolbar(widget.layout().itemAt(0).widget(), widget)
-                widget.layout().addWidget(toolbar)
-            self.nav_bars_visible = True
-
-        else:
-            for widget in self.layout_widgets(self.scroll_content_layout):
-                # TODO store list of widgets and their canvases
-                widget.layout().itemAt(1).widget().setParent(None)
-            self.nav_bars_visible = False
-
+        self.nav_bars_visible = not self.nav_bars_visible
         print("Toggled navigation bars " + ('on' if self.nav_bars_visible else 'off'))
 
     def on_toggle_page_view(self):
-        plot_widgets = list(self.layout_widgets(self.scroll_content_layout))
+        plot_widgets = list(self.plot_widgets())
         if self.page_view:
             for widget in plot_widgets:
                 widget.show()
@@ -165,7 +147,7 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
         # Must be != since 0 would not count
         if self.page_view and self.page != -1:
             # TODO Move logic into separate function like the else statement below
-            plot_widgets = list(self.layout_widgets(self.scroll_content_layout))
+            plot_widgets = list(self.plot_widgets())
 
             new_page = -1
             if event.key() == Qt.Key_Left:
