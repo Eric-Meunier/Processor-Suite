@@ -4,11 +4,11 @@ from collections import OrderedDict
 import matplotlib.pyplot as plt
 import numpy as np
 import re
-plt.style.use('seaborn-whitegrid')
+# plt.style.use('seaborn-whitegrid')
 # plt.style.use('bmh')
 # plt.style.use('ggplot')
 # plt.style.use('seaborn-white')
-
+# plt.style.use('grayscale')
 
 class PEMFileEditor:
     """
@@ -52,8 +52,8 @@ class PEMFileEditor:
     def convert_stations(self, data):
         """
         Converts all the station names in the data into a number, negative if the stations was S or W
-        :param data: Data from a PEM file
-        :return: Data for a PEM file
+        :param data: Dictionary of data from a PEM file
+        :return: Dictionary of data for a PEM file with the station numbers now integers
         """
 
         stations = [d['Station'] for d in data]
@@ -70,8 +70,8 @@ class PEMFileEditor:
 
     def get_components(self, data):
         """
-        Retrieve the unique components of the survey file
-        :param data: EM data section of a PEM file
+        Retrieve the unique components of the survey file (i.e. Z, X, or Y)
+        :param data: EM data dictionary of a PEM file
         :return: List of components in str format
         """
         unique_components = []
@@ -85,6 +85,13 @@ class PEMFileEditor:
         return unique_components
 
     def get_profile_data(self, component_data, num_channels):
+        """
+        Transforms the data so it is ready to be plotted for LIN and LOG plots
+        :param component_data: Data (dict) for a single component (i.e. Z, X, or Y)
+        :param num_channels: Int number of channels
+        :return: Dictionary where each key is a channel, and the
+        values are a list of the EM responses of that channel at each station
+        """
 
         profile_data = {}
 
@@ -93,26 +100,21 @@ class PEMFileEditor:
 
             for station in component_data:
                 reading = station['Data']
+                # TODO Station number should probably be in this dictionary, and will be the X axis of the plots
                 station_number = station['Station']
-
-                # thing = {station_number: reading[channel]}
-                # profile_data[channel].append(thing)
 
                 profile_data[channel].append(reading[channel])
 
-
         return profile_data
 
-    # def remove_ontime(self):
-    #     """
-    #     Removes the on-time channels from the data.
-    #     :return:
-    #     """
-    #     pprint(self.open_file(path))
-
     def mk_plots(self):
+        """
+        Plot the LIN and LOG plots.
+        :return: LIN plot figure and LOG plot figure
+        """
 
         file = self.active_file
+        # Header info mostly just for the title of the plots
         header = file.get_header()
         client = header['Client']
         loop = header['Loop']
@@ -136,11 +138,13 @@ class PEMFileEditor:
         else:
             units = 'pT'
 
+        # sort the data by station. Station names must first be converted into a number
         data = sorted(editor.convert_stations(file.get_data()), key=lambda k: k['Station'])
         components = editor.get_components(data)
 
         # Each component has their own figure
         for component in components:
+            # The LIN plot always has 5 axes. LOG only ever has one.
             lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
             line_width = 0.7
 
@@ -150,10 +154,15 @@ class PEMFileEditor:
 
             stations = [reading['Station'] for reading in component_data]
 
-            ax1.plot(stations, profile_data[0], 'k', linewidth=line_width)  # First channel has its own plot
+            # First channel always has its own plot
+            ax1.plot(stations, profile_data[0], 'k', linewidth=line_width)
+            # TODO 'Primary Pulse' must become 'On-time' for Fluxgate data
             ax1.set_ylabel("Primary Pulse\n("+units+")")
-            num_channels_per_plot = int((num_channels-1)/4)  # remaining channels are plotted evenly on the remaining subplots
 
+            # remaining channels are plotted evenly on the remaining subplots
+            num_channels_per_plot = int((num_channels-1)/4)
+
+            # Creating the LIN plot
             for i in range(0, num_channels_per_plot):
 
                 ax2.plot(stations, profile_data[i], linewidth=0.6)
@@ -178,6 +187,7 @@ class PEMFileEditor:
 
             log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
 
+            # Creating the LOG plot
             for i in range(0, num_channels):
 
                 ax1.plot(stations, profile_data[i], linewidth=0.6)
@@ -193,10 +203,11 @@ class PEMFileEditor:
 
         return lin_fig, log_fig
 
+
 if __name__ == "__main__":
 
     # Code to test PEMFileEditor
-    path = r'C:/Users/Mortulo/PycharmProjects/Crone/sample_files/2400NAv.PEM'
+    path = r'C:/Users/Eric/PycharmProjects/Crone/sample_files/2400NAv.PEM'
     editor = PEMFileEditor()
     editor.open_file(path)
     editor.mk_plots()
