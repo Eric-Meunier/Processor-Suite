@@ -61,7 +61,7 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
         self.scroll.arrowKeyPressed.connect(self.on_arrow_key)
         self.scroll.verticalScrollBar().valueChanged.connect(self.on_scroll_change)
 
-        self.PLOT_FIXED_HEIGHT = 350
+        self.PLOT_FIXED_HEIGHT = 500
 
     def scroll_page(self, direction):
 
@@ -101,12 +101,14 @@ class PEMFileWidget(QWidget, Ui_PEMFileWidget):
 
         self.editor.open_file(file_name)
 
-        figures = self.editor.generate_placeholder_plots()
+        #figures = self.editor.generate_placeholder_plots()
+        figures = self.editor.generate_plots()
 
         # Create a FigureCanvas for each figure to display plots in Qt
         for fig in figures:
             canvas_widget = PEMPlotWidget(editor=self.editor,
-                                          figure=fig)
+                                          figure=fig,
+                                          plot_height=self.PLOT_FIXED_HEIGHT)
             layout = self.scroll_content_layout
             layout.insertWidget(layout.count(), canvas_widget)
 
