@@ -90,12 +90,12 @@ class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
         heights = [widget.y() for widget in self.plot_widgets()]
 
         for height in heights:
-            if height > page_distance:
+            if height >= page_distance:
                 break
             page += 1
 
-        if direction < 0:
-            page -= 1
+        # if direction < 0:
+        #     page -= 1
 
         new_page = page + direction
 
