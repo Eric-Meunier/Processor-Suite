@@ -126,6 +126,9 @@ class PEMFileEditor:
         data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
         components = self.get_components(data)
 
+        log_figs = []
+        lin_figs = []
+
         # Each component has their own figure
         for component in components:
             # The LIN plot always has 5 axes. LOG only ever has one.
@@ -160,7 +163,10 @@ class PEMFileEditor:
                 ax4.set_ylabel("Channel " + str(num_channels_per_plot*2 + 1) + " - " + str(num_channels_per_plot * 3)+"\n("+units+")")
                 ax5.plot(stations, profile_data[i + (num_channels_per_plot * 3)], linewidth=line_width)
                 ax5.set_ylabel("Channel " + str(num_channels_per_plot*3 + 1) + " - " + str(num_channels_per_plot * 4)+"\n("+units+")")
-
+            # TODO Much of the slow loading time comes from the following block up to the End of block comment.
+            # This is mostly due to matplotlib being oriented towards publication-quality graphics, and not being very
+            # well optimized for speed.  If speed is desired in the future we will need to switch to a faster plotting
+            # library such as pyqtgraph or vispy.
             lin_fig.align_ylabels()
             lin_fig.suptitle('Crone Geophysics & Exploration Ltd.\n'
                          + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
@@ -184,9 +190,10 @@ class PEMFileEditor:
             ax1.set_ylabel('Primary Pulse to Channel ' + str(num_channels-1) + '\n(' + str(units) + ')')
             ax1.set_xlabel('Station')
             log_fig.tight_layout(rect=[0, 0, 1, 0.825])
+            # TODO End of block
 
-        log_figs = [log_fig]
-        lin_figs = [lin_fig]
+            lin_figs.append(lin_fig)
+            log_figs.append(log_fig)
 
         return lin_figs, log_figs
 
