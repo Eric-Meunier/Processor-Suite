@@ -27,9 +27,8 @@ class PEMFileEditor:
         """
         :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
-
         lin_fig, log_fig = self.mk_plots()
-        return log_fig
+        return lin_fig, log_fig
 
         # raise NotImplementedError
 

@@ -10,7 +10,7 @@ import os
 # qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/pem_file_form.ui")
 # Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
-class PEMPlotWidget(QWidget):
+class PlotWidget(QWidget):
 
     def __init__(self, parent=None, editor=None, figure=None, plot_height=350):
         QWidget.__init__(self, parent=parent)
@@ -44,6 +44,7 @@ class PEMPlotWidget(QWidget):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         self.layout().addWidget(self.canvas)
+        self.layout().setContentsMargins(0, 0, 0, 0)
 
         self.canvas.setFixedHeight(self.plot_height)
         self.canvas.draw()

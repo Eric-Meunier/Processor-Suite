@@ -28,13 +28,14 @@ class FileBrowser(QTabWidget):
         # TODO Logic for different file types
 
         new_editor = PEMFileEditor()
-        new_file_widget = PEMFileWidget(editor=new_editor)
+        new_file_widget = PEMFileWidget(parent=self, editor=new_editor)
 
         self.editors.append(new_editor)
         self.widgets.append(new_file_widget)
         self.original_indices.append(len(self.widgets))
 
-        self.addTab(new_file_widget, file_name)
+        tab_index = self.addTab(new_file_widget, file_name)
+        # tab_widget = self.widget(tab_index)
         self.setCurrentWidget(new_file_widget)
 
         new_file_widget.open_file(file_name)
