@@ -1,4 +1,6 @@
 from pem.pem_file import PEMFile
+from log import Logger
+logger = Logger(__name__)
 
 
 class PEMSerializer:
@@ -121,9 +123,15 @@ class PEMSerializer:
         :return: A string in PEM file format containing the data found inside of pem_file
         """
 
-        return self.serialize_tags(pem_file.get_tags()) + \
-                self.serialize_loop_coords(pem_file.get_loop_coords()) + \
-                self.serialize_line_coords(pem_file.get_line_coords()) + '~\n' + \
-                self.serialize_notes(pem_file.get_notes()) + \
-                self.serialize_header(pem_file.get_header()) + \
-                self.serialize_data(pem_file.get_data())
+        logger.info("Serializing file...")
+
+        result = self.serialize_tags(pem_file.get_tags()) + \
+                 self.serialize_loop_coords(pem_file.get_loop_coords()) + \
+                 self.serialize_line_coords(pem_file.get_line_coords()) + '~\n' + \
+                 self.serialize_notes(pem_file.get_notes()) + \
+                 self.serialize_header(pem_file.get_header()) + \
+                 self.serialize_data(pem_file.get_data())
+
+        logger.info("Finished serializing")
+
+        return result

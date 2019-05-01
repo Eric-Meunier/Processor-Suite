@@ -2,6 +2,8 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 import os
+from log import Logger
+logger = Logger(__name__)
 
 from qt_py.pem_file_widget import PEMFileWidget
 from qt_py.file_browser_widget import FileBrowser
@@ -27,13 +29,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_file_open(self):
         # Will eventually hold logic for choosing between different file types
         # TODO Add logger class
-        print("Entering file dialog")
+        logger.info("Entering file dialog")
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.ExistingFile)
         #dlg.setFilter("Text files (*.txt)")
 
         filename = dlg.getOpenFileName()[0]
-        print("Opening " + filename + "...")
 
         # For debug
         # filename = "/home/victor/Desktop/Crone/CH934ZM.PEM"
@@ -45,10 +46,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         e.accept()
 
     def dropEvent(self, e):
+        logger.info("File dropped into main window")
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
         if len(urls) > 1:
             # Currently do nothing when multiple files are dropped in
-            print('Multiple files not yet supported!')
+            logger.error('Multiple files not yet supported!')
             # TODO When tabs are implemented, ensure multiple files can be dragged in
             pass
         elif len(urls) == 1:
@@ -60,6 +62,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # file_widget.open_file(filename)
         # self.setCentralWidget(file_widget)
         # # self.centralWidget().layout().addWidget(file_widget)
+
+        logger.info("Opening " + filename + "...")
 
         if not self.file_browser:
             self.file_browser = FileBrowser()

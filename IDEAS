@@ -1,9 +1,0 @@
-Allow instant switching between feet and meters - parse unit data
-
-
-
-parsing: add aliases
-
-
-"The next string is the component which was measured, and is a maximum of 3 characters.  Raw data from the digital receiver consists of an X, Y, or Z followed by an 'R' and a repeat number (for sequential repeat readings) from 0 to 9. "
-Ensure that ZR10's are being read 

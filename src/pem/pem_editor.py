@@ -4,6 +4,8 @@ from collections import OrderedDict
 
 import matplotlib.pyplot as plt
 import re
+from log import Logger
+logger = Logger(__name__)
 
 
 class PEMFileEditor:
@@ -27,7 +29,9 @@ class PEMFileEditor:
         """
         :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
+        logger.info("Generating plots...")
         lin_fig, log_fig = self.mk_plots()
+        logger.info("Finished generating plots")
         return lin_fig, log_fig
 
         # raise NotImplementedError
@@ -130,6 +134,7 @@ class PEMFileEditor:
 
         # Each component has their own figure
         for component in components:
+            logger.info("Plotting component " + component)
             # The LIN plot always has 5 axes. LOG only ever has one.
             lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
             line_width = 0.7
@@ -204,7 +209,6 @@ class PEMFileEditor:
         # Temporary placeholder plots
         # Use as guide for creating generate_plots
         plots_dict = OrderedDict()
-        print(self.active_file.get_data())
 
         for reading in self.active_file.get_data():
             station_number = reading['Station']

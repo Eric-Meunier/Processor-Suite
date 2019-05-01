@@ -4,6 +4,8 @@ from pem.pem_editor import PEMFileEditor
 from qt_py.plot_widget import PlotWidget
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent
 import os
+from log import Logger
+logger = Logger(__name__)
 
 # Load Qt ui file into a class
 qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/pem_file_form.ui")
@@ -74,13 +76,11 @@ class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
 
         # Create a FigureCanvas for each figure to display plots in Qt
         for fig in figures:
-            print('hi')
             canvas_widget = PlotWidget(editor=self.editor,
                                        figure=fig,
                                        plot_height=self.PLOT_FIXED_HEIGHT)
             layout = self.scroll_content_layout
             layout.insertWidget(layout.count(), canvas_widget)
-
 
     def scroll_page(self, direction):
 
@@ -118,7 +118,7 @@ class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
             widget.toggle_nav_bar()
 
         self.nav_bars_visible = not self.nav_bars_visible
-        print("Toggled navigation bars " + ('on' if self.nav_bars_visible else 'off'))
+        logger.info("Toggled navigation bars " + ('on' if self.nav_bars_visible else 'off'))
 
     def on_toggle_page_view(self):
         plot_widgets = list(self.plot_widgets())
@@ -131,8 +131,8 @@ class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
                 widget.hide()
             self.page = (0 if plot_widgets else -1)
 
-
         self.page_view = not self.page_view
+        logger.info("Toggled page view " + ('on' if self.page_view else 'off'))
 
     def on_arrow_key(self, event):
         # Must be != since 0 would not count
@@ -176,6 +176,12 @@ class PlotScrollArea(QScrollArea):
     def event(self, event):
         if (event.type() == QEvent.KeyPress) and (event.key() == Qt.Key_Left or
                                                   event.key() == Qt.Key_Right):
+            # TODO When page view logic is encapsulated move info prints to on_arrow_key
+            if event.key() == Qt.Key_Left:
+                logger.info("Left arrow key pressed")
+            elif event.key() == Qt.Key_Right:
+                logger.info("Right arrow key pressed")
+
             self.arrowKeyPressed.emit(event)
             return True
 

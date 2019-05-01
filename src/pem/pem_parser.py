@@ -2,6 +2,8 @@ import re
 from decimal import Decimal
 from pprint import pprint
 from pem.pem_file import PEMFile
+from log import Logger
+logger = Logger(__name__)
 
 
 class PEMParser:
@@ -146,11 +148,15 @@ class PEMParser:
         with open(filename, "rt") as in_file:
             file = in_file.read()
 
+        logger.info("Parsing " + filename + "...")
+
         tags = self.parse_tags(file)
         loop_coords = self.parse_loop(file)
         line_coords = self.parse_line(file)
         notes = self.parse_notes(file)
         header = self.parse_header(file)
         data = self.parse_data(file)
+
+        logger.info("Finished parsing " + filename)
 
         return PEMFile(tags, loop_coords, line_coords, notes, header, data)

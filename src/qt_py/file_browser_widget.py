@@ -4,6 +4,8 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from pem.pem_editor import PEMFileEditor
 from qt_py.pem_file_widget import PEMFileWidget
+from log import Logger
+logger = Logger(__name__)
 
 
 class FileBrowser(QTabWidget):
@@ -42,7 +44,7 @@ class FileBrowser(QTabWidget):
         self.active_editor = new_editor
 
     def on_tab_close(self, index):
-        print(index)
+        logger.info("Close tab ", index)
         self.removeTab(index)
         self.editors.pop(index)
         self.widgets.pop(index)
@@ -53,7 +55,7 @@ class FileBrowser(QTabWidget):
         self.widgets.insert(to_index, self.widgets.pop(from_index))
         self.original_indices.insert(to_index, self.original_indices.pop(from_index))
 
-        print('moved ' + str(from_index) + ' ' + str(to_index) + ' to new order ' + str(self.original_indices))
+        logger.debug('moved ' + str(from_index) + ' ' + str(to_index) + ' to new order ' + str(self.original_indices))
 
 
 def main():
