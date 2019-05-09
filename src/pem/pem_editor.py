@@ -1,4 +1,4 @@
-from pem.pem_parser import PEMParser, PEMFile
+from src.pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
 from collections import OrderedDict
 
@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import re
 from log import Logger
 logger = Logger(__name__)
-
+plt.style.use('seaborn-whitegrid')
 
 class PEMFileEditor:
     """
@@ -95,6 +95,13 @@ class PEMFileEditor:
         return profile_data
 
     def mk_plots(self):
+        def annotate_plot(self, str_annotation,obj_plt,channel):
+            i = 0
+            spacing = 8
+            while i < len(stations):
+                xy = (stations[i],profile_data[channel][i])
+                obj_plt.annotate(str_annotation,xy=xy,textcoords='data')
+                i += spacing
         """
         Plot the LIN and LOG plots.
         :return: LIN plot figure and LOG plot figure
@@ -138,6 +145,7 @@ class PEMFileEditor:
             # The LIN plot always has 5 axes. LOG only ever has one.
             lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
             line_width = 0.7
+            line_colour = 'black'
 
             component_data = list(filter(lambda d: d['Component'] == component, data))
 
@@ -147,6 +155,7 @@ class PEMFileEditor:
 
             # First channel always has its own plot
             ax1.plot(stations, profile_data[0], 'k', linewidth=line_width)
+            annotate_plot(self,"PP",ax1,0)
             # TODO 'Primary Pulse' must become 'On-time' for Fluxgate data
             ax1.set_ylabel("Primary Pulse\n("+units+")")
 
@@ -154,39 +163,54 @@ class PEMFileEditor:
             num_channels_per_plot = int((num_channels-1)/4)
 
             # Creating the LIN plot
+            j = 2
             for i in range(0, num_channels_per_plot):
 
-                ax2.plot(stations, profile_data[i], linewidth=0.6)
-                ax2.set_ylabel("Channel 1 - " + str(num_channels_per_plot)+"\n("+units+")")
-                ax2.locator_params(axis='y', tight=True, nbins=4)
+                ax2.plot(stations, profile_data[i], color=line_colour, linewidth=0.6)
+                annotate_plot(self, str(i+1), ax2, i)
+                # ax2.locator_params(axis='y', tight=True, nbins=4)
                 # ax2.ticklabel_format(scilimits=(-3,3))
+                j += 2
 
-                ax3.plot(stations, profile_data[i + (num_channels_per_plot * 1)], linewidth=line_width)
-                ax3.set_ylabel("Channel " + str(num_channels_per_plot+1)+" - "+str(num_channels_per_plot*2)+"\n("+units+")")
-                ax4.plot(stations, profile_data[i + (num_channels_per_plot * 2)], linewidth=line_width)
-                ax4.set_ylabel("Channel " + str(num_channels_per_plot*2 + 1) + " - " + str(num_channels_per_plot * 3)+"\n("+units+")")
-                ax5.plot(stations, profile_data[i + (num_channels_per_plot * 3)], linewidth=line_width)
-                ax5.set_ylabel("Channel " + str(num_channels_per_plot*3 + 1) + " - " + str(num_channels_per_plot * 4)+"\n("+units+")")
+                ax3.plot(stations, profile_data[i + (num_channels_per_plot * 1)], color=line_colour, linewidth=line_width)
+                annotate_plot(self,str(i + (num_channels_per_plot * 1)+1),ax3,i + (num_channels_per_plot * 1))
+                j += 2
+
+                ax4.plot(stations, profile_data[i + (num_channels_per_plot * 2)], color=line_colour, linewidth=line_width)
+                annotate_plot(self,str(i + (num_channels_per_plot * 2)+1),ax4,i + (num_channels_per_plot * 2))
+                j += 2
+
+                ax5.plot(stations, profile_data[i + (num_channels_per_plot * 3)], color=line_colour, linewidth=line_width)
+                annotate_plot(self,str(i + (num_channels_per_plot * 3)+1),ax5,i + (num_channels_per_plot * 3))
+
             # TODO Much of the slow loading time comes from the following block up to the End of block comment.
             # This is mostly due to matplotlib being oriented towards publication-quality graphics, and not being very
             # well optimized for speed.  If speed is desired in the future we will need to switch to a faster plotting
             # library such as pyqtgraph or vispy.
+            ax2.set_ylabel("Channel 1 - " + str(num_channels_per_plot) + "\n(" + units + ")")
+            ax3.set_ylabel("Channel " + str(num_channels_per_plot + 1) + " - " + str(
+                num_channels_per_plot * 2) + "\n(" + units + ")")
+            ax4.set_ylabel(
+                "Channel " + str(num_channels_per_plot * 2 + 1) + " - " + str(num_channels_per_plot * 3) + "\n(" + units + ")")
+            ax5.set_ylabel(
+                "Channel " + str(num_channels_per_plot * 3 + 1) + " - " + str(num_channels_per_plot * 4) + "\n(" + units + ")")
+
             lin_fig.align_ylabels()
             lin_fig.suptitle('Crone Geophysics & Exploration Ltd.\n'
                          + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
                          + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
                          + date)
-            lin_fig.subplots_adjust(hspace=0.25)
-            lin_fig.tight_layout(rect=[0, 0, 1, 0.825])
+            # lin_fig.subplots_adjust(hspace=0.25)
+            lin_fig.tight_layout(rect=[0, 0, 1, 0.9])
 
             log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
 
             # Creating the LOG plot
             for i in range(0, num_channels):
 
-                ax1.plot(stations, profile_data[i], linewidth=0.6)
+                ax1.plot(stations, profile_data[i], color=line_colour, linewidth=0.6)
 
-            plt.yscale('symlog')
+            plt.yscale('symlog', linthreshy=10)
             log_fig.suptitle('Crone Geophysics & Exploration Ltd.\n'
                  + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
                  + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
