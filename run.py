@@ -8,7 +8,7 @@ os.chdir(src_dir)
 sys.path.append(src_dir)
 
 from qt_py.main_window import MainWindow
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtCore import QTimer
 
 
@@ -16,8 +16,9 @@ def main():
     # TODO Make dedicated Application class
     app = QApplication(sys.argv)
     window = MainWindow()
+    window.resize(850, 1000)
+    window.move(300, 0)
     window.show()
-
     timer = QTimer()
     timer.timeout.connect(lambda: None)
     timer.start(100)

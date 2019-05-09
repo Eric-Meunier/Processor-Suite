@@ -24,6 +24,7 @@ class PEMFileEditor:
         :param file_path: string containing path to a PEM file
         """
         self.active_file = self.parser.parse(file_path)
+        pprint(self.active_file)
 
         return self.active_file
 
@@ -116,6 +117,7 @@ class PEMFileEditor:
         file = self.active_file
         # Header info mostly just for the title of the plots
         header = file.get_header()
+        pprint(file.get_header())
         client = header['Client']
         loop = header['Loop']
         linehole = header['LineHole']
@@ -207,7 +209,7 @@ class PEMFileEditor:
 if __name__ == "__main__":
 
     # Code to test PEMFileEditor
-    path = r'C:/Users/Eric/PycharmProjects/Crone/sample_files/2400NAv.PEM'
+    path = r'C:/Users/Eric/PycharmProjects/Crone/sample_files/7600N.PEM'
     editor = PEMFileEditor()
     editor.open_file(path)
     editor.mk_plots()

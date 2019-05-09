@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import re
 from log import Logger
 logger = Logger(__name__)
-plt.style.use('seaborn-whitegrid')
+# plt.style.use('seaborn-whitegrid')
+# plt.style.use('seaborn-white')
 
 class PEMFileEditor:
     """
@@ -97,10 +98,10 @@ class PEMFileEditor:
     def mk_plots(self):
         def annotate_plot(self, str_annotation,obj_plt,channel):
             i = 0
-            spacing = 8
+            spacing = 6
             while i < len(stations):
                 xy = (stations[i],profile_data[channel][i])
-                obj_plt.annotate(str_annotation,xy=xy,textcoords='data')
+                obj_plt.annotate(str_annotation,xy=xy,textcoords='data', size=7)
                 i += spacing
         """
         Plot the LIN and LOG plots.
@@ -195,13 +196,29 @@ class PEMFileEditor:
             ax5.set_ylabel(
                 "Channel " + str(num_channels_per_plot * 3 + 1) + " - " + str(num_channels_per_plot * 4) + "\n(" + units + ")")
 
+            for ax in lin_fig.axes:
+                ax.axhline(y=0, xmin=0, xmax=1, color='black', linewidth=0.6)
+                ax.spines['right'].set_visible(False)
+                ax.spines['top'].set_visible(False)
+                ax.spines['bottom'].set_position(('data', 0))
+                ax.tick_params(axis='x', which='major', direction='inout', length=4)
+                # ax.xaxis.set_ticks_position('bottom')
+
+            ax5.set_xlabel("Station", size=12)
+            ax5.xaxis.set_label_coords(0.5,-0.2)
+
+            ax5.tick_params(axis='x', which='major', direction='out', length=5, width=1.5, labelsize=12,
+                            bottom = True)
+            ax5.tick_params(axis='x', which='minor', direction='out', length=2, width=0.5)
+            # ax5.axhline(y=0, xmin=0, xmax=1, color='black', linewidth=0.6)
+
             lin_fig.align_ylabels()
             lin_fig.suptitle('Crone Geophysics & Exploration Ltd.\n'
                          + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
                          + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
                          + date)
             # lin_fig.subplots_adjust(hspace=0.25)
-            lin_fig.tight_layout(rect=[0, 0, 1, 0.9])
+            lin_fig.tight_layout(rect=[0, 0.02, 1, 0.9])
 
             log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
 
@@ -209,6 +226,7 @@ class PEMFileEditor:
             for i in range(0, num_channels):
 
                 ax1.plot(stations, profile_data[i], color=line_colour, linewidth=0.6)
+                # annotate_plot(self, str(i + 1), ax1, i + 1)
 
             plt.yscale('symlog', linthreshy=10)
             log_fig.suptitle('Crone Geophysics & Exploration Ltd.\n'
