@@ -16,8 +16,6 @@ def main():
     # TODO Make dedicated Application class
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.resize(850, 1000)
-    window.move(300, 0)
     window.show()
     timer = QTimer()
     timer.timeout.connect(lambda: None)

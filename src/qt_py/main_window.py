@@ -26,6 +26,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_open_file.triggered.connect(self.on_file_open)
         self.file_browser = None
 
+        self.resize(850, 1000)
+        self.move(300, 0)
+
     def on_file_open(self):
         # Will eventually hold logic for choosing between different file types
         # TODO Add logger class
