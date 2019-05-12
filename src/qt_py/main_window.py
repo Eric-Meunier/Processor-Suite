@@ -37,12 +37,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         dlg.setFileMode(QFileDialog.ExistingFile)
         #dlg.setFilter("Text files (*.txt)")
 
-        filename = dlg.getOpenFileName()[0]
-
+        filenames = dlg.getOpenFileNames()[0]
         # For debug
         # filename = "/home/victor/Desktop/Crone/CH934ZM.PEM"
 
-        self.open_file(filename)
+        self.open_files(filenames)
 
     def dragEnterEvent(self, e):
         #if e.mimeData().hasFormat('text/plain'):
@@ -51,28 +50,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def dropEvent(self, e):
         logger.info("File dropped into main window")
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
-        if len(urls) > 1:
-            # Currently do nothing when multiple files are dropped in
-            logger.error('Multiple files not yet supported!')
-            # TODO When tabs are implemented, ensure multiple files can be dragged in
-            pass
-        elif len(urls) == 1:
-            self.open_file(urls[0])
 
-    def open_file(self, filename):
+        self.open_files(urls)
+
+    def open_files(self, filenames):
         # # Set the central widget to a contain content for working with PEMFile
         # file_widget = PEMFileWidget(self)
         # file_widget.open_file(filename)
         # self.setCentralWidget(file_widget)
         # # self.centralWidget().layout().addWidget(file_widget)
 
-        logger.info("Opening " + filename + "...")
+        if not isinstance(filenames, list) and isinstance(filenames, str):
+            filenames = [filenames]
+
+        logger.info("Opening " + ', '.join(filenames) + "...")
 
         if not self.file_browser:
             self.file_browser = FileBrowser()
             self.setCentralWidget(self.file_browser)
 
-        self.file_browser.open_file(filename)
+        self.file_browser.open_files(filenames)
 
 
 if __name__ == "__main__":

@@ -43,6 +43,31 @@ class FileBrowser(QTabWidget):
         new_file_widget.open_file(file_name)
         self.active_editor = new_editor
 
+    def open_files(self, file_names):
+        # Creates new tabs first before beginning the process of loading in files as opposed to calling
+        # open_file in a loop which will create each tab sequentially as the files are loaded
+        new_editors = []
+        new_file_widgets = []
+
+        for file_name in file_names:
+            new_editors.append(PEMFileEditor())
+            new_file_widgets.append(PEMFileWidget(parent=self, editor=new_editors[-1]))
+
+            self.editors.append(new_editors[-1])
+            self.widgets.append(new_file_widgets[-1])
+            self.original_indices.append(len(self.widgets))
+
+            tab_index = self.addTab(new_file_widgets[-1], file_name)
+            # tab_widget = self.widget(tab_index)
+
+        self.setCurrentWidget(new_file_widgets[0])
+        self.active_editor = new_editors[0]
+
+        for file_name, new_file_widget in zip(file_names, new_file_widgets):
+            # Opening the file takes the longer so this is done in this separate
+            # loop after the required widgets are generated
+            new_file_widget.open_file(file_name)
+
     def on_tab_close(self, index):
         logger.info("Close tab ", index)
         self.removeTab(index)
