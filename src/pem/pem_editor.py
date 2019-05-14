@@ -150,6 +150,7 @@ class PEMFileEditor:
             # The LIN plot always has 5 axes. LOG only ever has one.
             lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
             ax6 = ax5.twiny()
+            ax6.get_shared_x_axes().join(ax5, ax6)
             # lin_fig.subplots_adjust(bottom=0.15)
             # newax = lin_fig.add_axes(ax.get_position())
 
@@ -198,7 +199,7 @@ class PEMFileEditor:
                     # ax.patch.set_visible(False)
                     # ax.yaxis.set_visible(False)
 
-                    ax.set_xlim(min(stations), max(stations))
+                    # ax.set_xlim(min(stations), max(stations))
                     # ax.set_xticks(ax1.get_xticks())
                 #     ax.set_xticklabels(stations)
                     ax.xaxis.set_ticks_position('bottom')
@@ -212,9 +213,7 @@ class PEMFileEditor:
 
                     # ax.tick_params(axis='x', which='major', direction='in', length=6)
                     plt.setp(ax.get_xticklabels(), visible=True)
-                    ax.set_xlabel("Station", size=11)
-
-
+                    ax.set_xlabel("Station", size=10)
 
 
             # ax5.setxticklabels()
