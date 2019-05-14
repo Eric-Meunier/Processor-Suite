@@ -148,7 +148,14 @@ class PEMFileEditor:
         for component in components:
             logger.info("Plotting component " + component)
             # The LIN plot always has 5 axes. LOG only ever has one.
-            lin_fig, (ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(6, 1, figsize=(8.5, 11), sharex=True)
+            lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
+            ax6 = ax5.twiny()
+            # lin_fig.subplots_adjust(bottom=0.15)
+            # newax = lin_fig.add_axes(ax.get_position())
+
+            # newax.patch.set_visible(False)
+            # newax.yaxis.set_visible(False)
+
             line_width = 0.5
             line_colour = 'black'
 
@@ -176,19 +183,38 @@ class PEMFileEditor:
             ax5.set_ylabel(
                 "Channel " + str(num_channels_per_plot * 3 + 1) + " - " + str(num_channels_per_plot * 4) + "\n(" + units + ")")
 
-            ax5.set_xlabel("Station", size=12)
-
-
             for index, ax in enumerate(lin_fig.axes):
+
                 if index != 5:
                     ax.spines['right'].set_visible(False)
                     ax.spines['bottom'].set_visible(False)
-
                     ax.spines['top'].set_position(('data', 0))
                     ax.xaxis.set_ticks_position('top')
                     ax.xaxis.set_minor_locator(minor_locator)
                     ax.tick_params(axis='x', which='major', direction='inout', length=6)
                     plt.setp(ax.get_xticklabels(), visible=False)
+
+                if index == 5:
+                    # ax.patch.set_visible(False)
+                    # ax.yaxis.set_visible(False)
+
+                    ax.set_xlim(min(stations), max(stations))
+                    # ax.set_xticks(ax1.get_xticks())
+                #     ax.set_xticklabels(stations)
+                    ax.xaxis.set_ticks_position('bottom')
+                    ax.xaxis.set_label_position('bottom')
+
+
+                    ax.spines['right'].set_visible(False)
+                    ax.spines['top'].set_visible(False)
+                    ax.spines['bottom'].set_visible(False)
+                    ax.spines["bottom"].set_position(("axes", -0.15))
+
+                    # ax.tick_params(axis='x', which='major', direction='in', length=6)
+                    plt.setp(ax.get_xticklabels(), visible=True)
+                    ax.set_xlabel("Station", size=11)
+
+
 
 
             # ax5.setxticklabels()
