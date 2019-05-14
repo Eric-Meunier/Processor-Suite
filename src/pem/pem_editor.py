@@ -1,5 +1,6 @@
 from src.pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
+from matplotlib.ticker import (FormatStrFormatter, AutoMinorLocator, MaxNLocator)
 from collections import OrderedDict
 
 import matplotlib.pyplot as plt
@@ -8,6 +9,9 @@ from log import Logger
 logger = Logger(__name__)
 # plt.style.use('seaborn-whitegrid')
 # plt.style.use('seaborn-white')
+# plt.style.use('bmh')
+# plt.style.use('ggplot')
+plt.style.use('seaborn-paper')
 
 class PEMFileEditor:
     """
@@ -144,8 +148,8 @@ class PEMFileEditor:
         for component in components:
             logger.info("Plotting component " + component)
             # The LIN plot always has 5 axes. LOG only ever has one.
-            lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
-            line_width = 0.7
+            lin_fig, (ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(6, 1, figsize=(8.5, 11), sharex=True)
+            line_width = 0.5
             line_colour = 'black'
 
             component_data = list(filter(lambda d: d['Component'] == component, data))
@@ -153,15 +157,61 @@ class PEMFileEditor:
             profile_data = self.get_profile_data(component_data, num_channels)
 
             stations = [reading['Station'] for reading in component_data]
+            plt.xlim(min(stations), max(stations))
 
-            # First channel always has its own plot
-            ax1.plot(stations, profile_data[0], 'k', linewidth=line_width)
-            annotate_plot(self,"PP",ax1,0)
+            minor_locator = AutoMinorLocator(5)
+            major_formatter = FormatStrFormatter('%d')
+
             # TODO 'Primary Pulse' must become 'On-time' for Fluxgate data
             ax1.set_ylabel("Primary Pulse\n("+units+")")
 
             # remaining channels are plotted evenly on the remaining subplots
             num_channels_per_plot = int((num_channels-1)/4)
+
+            ax2.set_ylabel("Channel 1 - " + str(num_channels_per_plot) + "\n(" + units + ")")
+            ax3.set_ylabel("Channel " + str(num_channels_per_plot + 1) + " - " + str(
+                num_channels_per_plot * 2) + "\n(" + units + ")")
+            ax4.set_ylabel(
+                "Channel " + str(num_channels_per_plot * 2 + 1) + " - " + str(num_channels_per_plot * 3) + "\n(" + units + ")")
+            ax5.set_ylabel(
+                "Channel " + str(num_channels_per_plot * 3 + 1) + " - " + str(num_channels_per_plot * 4) + "\n(" + units + ")")
+
+            ax5.set_xlabel("Station", size=12)
+
+
+            for index, ax in enumerate(lin_fig.axes):
+                if index != 5:
+                    ax.spines['right'].set_visible(False)
+                    ax.spines['bottom'].set_visible(False)
+
+                    ax.spines['top'].set_position(('data', 0))
+                    ax.xaxis.set_ticks_position('top')
+                    ax.xaxis.set_minor_locator(minor_locator)
+                    ax.tick_params(axis='x', which='major', direction='inout', length=6)
+                    plt.setp(ax.get_xticklabels(), visible=False)
+
+
+            # ax5.setxticklabels()
+            # ax5.xaxis.set_major_formatter(major_formatter)
+
+            # ax5.xaxis.set_ticks_position('top')
+            # ax5.tick_params(axis='x', which='major', direction='out', length=5, width=1.5, labelsize=12,
+            #                 bottom = True)
+            # ax5.set_ticklabels(stations)
+            # ax5.xaxis.set_label_coords(0.5,-0.225)
+            # ax5.axhline(y=0, xmin=0, xmax=1, color='black', linewidth=0.6)
+
+            lin_fig.align_ylabels()
+            lin_fig.suptitle('Crone Geophysics & Exploration Ltd.\n'
+                         + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
+                         + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
+                         + date)
+            # lin_fig.subplots_adjust(hspace=0.25)
+            lin_fig.tight_layout(rect=[0, 0.02, 1, 0.9])
+
+            # First channel always has its own plot
+            ax1.plot(stations, profile_data[0], 'k', linewidth=line_width)
+            annotate_plot(self,"PP",ax1,0)
 
             # Creating the LIN plot
             j = 2
@@ -188,37 +238,6 @@ class PEMFileEditor:
             # This is mostly due to matplotlib being oriented towards publication-quality graphics, and not being very
             # well optimized for speed.  If speed is desired in the future we will need to switch to a faster plotting
             # library such as pyqtgraph or vispy.
-            ax2.set_ylabel("Channel 1 - " + str(num_channels_per_plot) + "\n(" + units + ")")
-            ax3.set_ylabel("Channel " + str(num_channels_per_plot + 1) + " - " + str(
-                num_channels_per_plot * 2) + "\n(" + units + ")")
-            ax4.set_ylabel(
-                "Channel " + str(num_channels_per_plot * 2 + 1) + " - " + str(num_channels_per_plot * 3) + "\n(" + units + ")")
-            ax5.set_ylabel(
-                "Channel " + str(num_channels_per_plot * 3 + 1) + " - " + str(num_channels_per_plot * 4) + "\n(" + units + ")")
-
-            for ax in lin_fig.axes:
-                ax.axhline(y=0, xmin=0, xmax=1, color='black', linewidth=0.6)
-                ax.spines['right'].set_visible(False)
-                ax.spines['top'].set_visible(False)
-                ax.spines['bottom'].set_position(('data', 0))
-                ax.tick_params(axis='x', which='major', direction='inout', length=4)
-                # ax.xaxis.set_ticks_position('bottom')
-
-            ax5.set_xlabel("Station", size=12)
-            ax5.xaxis.set_label_coords(0.5,-0.2)
-
-            ax5.tick_params(axis='x', which='major', direction='out', length=5, width=1.5, labelsize=12,
-                            bottom = True)
-            ax5.tick_params(axis='x', which='minor', direction='out', length=2, width=0.5)
-            # ax5.axhline(y=0, xmin=0, xmax=1, color='black', linewidth=0.6)
-
-            lin_fig.align_ylabels()
-            lin_fig.suptitle('Crone Geophysics & Exploration Ltd.\n'
-                         + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
-                         + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
-                         + date)
-            # lin_fig.subplots_adjust(hspace=0.25)
-            lin_fig.tight_layout(rect=[0, 0.02, 1, 0.9])
 
             log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
 
