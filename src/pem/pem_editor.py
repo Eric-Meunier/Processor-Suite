@@ -1,6 +1,7 @@
 from src.pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
 from matplotlib.ticker import (FormatStrFormatter, AutoMinorLocator, MaxNLocator)
+import matplotlib.font_manager
 from collections import OrderedDict
 
 import matplotlib.pyplot as plt
@@ -151,11 +152,6 @@ class PEMFileEditor:
             lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
             ax6 = ax5.twiny()
             ax6.get_shared_x_axes().join(ax5, ax6)
-            # lin_fig.subplots_adjust(bottom=0.15)
-            # newax = lin_fig.add_axes(ax.get_position())
-
-            # newax.patch.set_visible(False)
-            # newax.yaxis.set_visible(False)
 
             line_width = 0.5
             line_colour = 'black'
@@ -168,13 +164,19 @@ class PEMFileEditor:
             plt.xlim(min(stations), max(stations))
 
             minor_locator = AutoMinorLocator(5)
-            major_formatter = FormatStrFormatter('%d')
+            # major_formatter = FormatStrFormatter('%d')
 
             # TODO 'Primary Pulse' must become 'On-time' for Fluxgate data
             ax1.set_ylabel("Primary Pulse\n("+units+")")
 
+            # TODO channel rules are incorrect
             # remaining channels are plotted evenly on the remaining subplots
             num_channels_per_plot = int((num_channels-1)/4)
+
+            # TODO Much of the slow loading time comes from the following block up to the End of block comment.
+            # This is mostly due to matplotlib being oriented towards publication-quality graphics, and not being very
+            # well optimized for speed.  If speed is desired in the future we will need to switch to a faster plotting
+            # library such as pyqtgraph or vispy.
 
             ax2.set_ylabel("Channel 1 - " + str(num_channels_per_plot) + "\n(" + units + ")")
             ax3.set_ylabel("Channel " + str(num_channels_per_plot + 1) + " - " + str(
@@ -183,7 +185,9 @@ class PEMFileEditor:
                 "Channel " + str(num_channels_per_plot * 2 + 1) + " - " + str(num_channels_per_plot * 3) + "\n(" + units + ")")
             ax5.set_ylabel(
                 "Channel " + str(num_channels_per_plot * 3 + 1) + " - " + str(num_channels_per_plot * 4) + "\n(" + units + ")")
+            lin_fig.align_ylabels()
 
+            # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
 
                 if index != 5:
@@ -194,26 +198,19 @@ class PEMFileEditor:
                     ax.xaxis.set_minor_locator(minor_locator)
                     ax.tick_params(axis='x', which='major', direction='inout', length=6)
                     plt.setp(ax.get_xticklabels(), visible=False)
+                    # ax.grid(axis='x', linestyle=':')
 
                 if index == 5:
-                    # ax.patch.set_visible(False)
-                    # ax.yaxis.set_visible(False)
-
-                    # ax.set_xlim(min(stations), max(stations))
-                    # ax.set_xticks(ax1.get_xticks())
-                #     ax.set_xticklabels(stations)
                     ax.xaxis.set_ticks_position('bottom')
                     ax.xaxis.set_label_position('bottom')
-
-
                     ax.spines['right'].set_visible(False)
                     ax.spines['top'].set_visible(False)
                     ax.spines['bottom'].set_visible(False)
-                    ax.spines["bottom"].set_position(("axes", -0.15))
-
-                    # ax.tick_params(axis='x', which='major', direction='in', length=6)
-                    plt.setp(ax.get_xticklabels(), visible=True)
-                    ax.set_xlabel("Station", size=10)
+                    ax.spines["bottom"].set_position(("axes", -0.1))
+                    ax.tick_params(axis='x', which='major', direction='in', length=6)
+                    plt.setp(ax.get_xticklabels(), visible=True, size=12)
+                    # ax.grid(axis='x', linestyle=':')
+                    # ax.set_xlabel("Station", size=10)
 
 
             # ax5.setxticklabels()
@@ -226,26 +223,28 @@ class PEMFileEditor:
             # ax5.xaxis.set_label_coords(0.5,-0.225)
             # ax5.axhline(y=0, xmin=0, xmax=1, color='black', linewidth=0.6)
 
-            lin_fig.align_ylabels()
-            lin_fig.suptitle('Crone Geophysics & Exploration Ltd.\n'
-                         + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
-                         + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
-                         + date)
-            # lin_fig.subplots_adjust(hspace=0.25)
-            lin_fig.tight_layout(rect=[0, 0.02, 1, 0.9])
+
+            # lin_fig.suptitle('Crone Geophysics & Exploration Ltd.\n'
+            #              + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
+            #              + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
+            #              + date)
+
 
             # First channel always has its own plot
             ax1.plot(stations, profile_data[0], 'k', linewidth=line_width)
             annotate_plot(self,"PP",ax1,0)
 
-            # Creating the LIN plot
+            ax1.set_title('Crone Geophysics & Exploration Ltd.\n'
+                         + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
+                         + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
+                         + date)
+
+            # Plotting section
             j = 2
             for i in range(0, num_channels_per_plot):
 
                 ax2.plot(stations, profile_data[i], color=line_colour, linewidth=0.6)
                 annotate_plot(self, str(i+1), ax2, i)
-                # ax2.locator_params(axis='y', tight=True, nbins=4)
-                # ax2.ticklabel_format(scilimits=(-3,3))
                 j += 2
 
                 ax3.plot(stations, profile_data[i + (num_channels_per_plot * 1)], color=line_colour, linewidth=line_width)
@@ -259,10 +258,10 @@ class PEMFileEditor:
                 ax5.plot(stations, profile_data[i + (num_channels_per_plot * 3)], color=line_colour, linewidth=line_width)
                 annotate_plot(self,str(i + (num_channels_per_plot * 3)+1),ax5,i + (num_channels_per_plot * 3))
 
-            # TODO Much of the slow loading time comes from the following block up to the End of block comment.
-            # This is mostly due to matplotlib being oriented towards publication-quality graphics, and not being very
-            # well optimized for speed.  If speed is desired in the future we will need to switch to a faster plotting
-            # library such as pyqtgraph or vispy.
+            # lin_fig.subplots_adjust(hspace=0.25)
+            # lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.9])
+            lin_fig.tight_layout(pad=1.5)
+            lin_fig.savefig(r'C:\Users\Eric\Desktop\lin.pdf', dpi=lin_fig.dpi)
 
             log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
 
@@ -273,13 +272,14 @@ class PEMFileEditor:
                 # annotate_plot(self, str(i + 1), ax1, i + 1)
 
             plt.yscale('symlog', linthreshy=10)
-            log_fig.suptitle('Crone Geophysics & Exploration Ltd.\n'
+            ax1.set_title('Crone Geophysics & Exploration Ltd.\n'
                  + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
                  + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
                  + date)
             ax1.set_ylabel('Primary Pulse to Channel ' + str(num_channels-1) + '\n(' + str(units) + ')')
-            ax1.set_xlabel('Station')
-            log_fig.tight_layout(rect=[0, 0, 1, 0.825])
+            # ax1.set_xlabel('Station')
+            # log_fig.tight_layout(rect=[0, 0, 1, 0.825])
+            log_fig.tight_layout()
             # TODO End of block
 
             lin_figs.append(lin_fig)

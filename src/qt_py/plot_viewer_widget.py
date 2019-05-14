@@ -14,7 +14,7 @@ Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
 
-    def __init__(self, parent=None, editor=None, figures=[], plot_heights=500):
+    def __init__(self, parent=None, editor=None, figures=[], plot_heights=500, plot_widths=750):
         QWidget.__init__(self, parent=parent)
         Ui_PEMFileWidget.__init__(self)
         self.setupUi(self)
@@ -70,6 +70,7 @@ class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
         self.scroll.verticalScrollBar().valueChanged.connect(self.on_scroll_change)
 
         self.PLOT_FIXED_HEIGHT = plot_heights
+        self.PLOT_FIXED_WIDTH = plot_widths
 
         self.label.hide()
         # self.line.setContentMargins(0,0,0,0)
@@ -78,7 +79,8 @@ class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
         for fig in figures:
             canvas_widget = PlotWidget(editor=self.editor,
                                        figure=fig,
-                                       plot_height=self.PLOT_FIXED_HEIGHT)
+                                       plot_height=self.PLOT_FIXED_HEIGHT,
+                                       plot_width=self.PLOT_FIXED_WIDTH)
             layout = self.scroll_content_layout
             layout.insertWidget(layout.count(), canvas_widget)
 

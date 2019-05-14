@@ -12,7 +12,7 @@ import os
 
 class PlotWidget(QWidget):
 
-    def __init__(self, parent=None, editor=None, figure=None, plot_height=350):
+    def __init__(self, parent=None, editor=None, figure=None, plot_height=350, plot_width=300):
         QWidget.__init__(self, parent=parent)
 
         # TODO Store file or editor?
@@ -32,6 +32,7 @@ class PlotWidget(QWidget):
 
         self.nav_bar_visible = False
         self.plot_height = plot_height
+        self.plot_width = plot_width
 
         # TODO Ensure these are checked for None in following code
         self.canvas = None
@@ -47,6 +48,7 @@ class PlotWidget(QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
 
         self.canvas.setFixedHeight(self.plot_height)
+        self.canvas.setFixedWidth(self.plot_width)
         self.canvas.draw()
 
         self.toolbar = NavigationToolbar(self.layout().itemAt(0).widget(), self)
