@@ -131,10 +131,14 @@ class PEMFileEditor:
             survey_type = 'Borehole Induction'
         elif survey_type.casefold() == 's-flux':
             survey_type = 'Surface Fluxgate'
+        elif survey_type.casefold() == 'bh-flux':
+            survey_type = 'Borehole Fluxgate'
+        elif survey_type.casefold() == 's-squid':
+            survey_type = 'SQUID'
 
-        if units == 'nanoTesla/sec':
+        if units.casefold() == 'nanotesla/sec':
             units = 'nT/s'
-        else:
+        elif units.casefold() == 'picoteslas':
             units = 'pT'
 
         # sort the data by station. Station names must first be converted into a number
@@ -237,6 +241,7 @@ class PEMFileEditor:
                 plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
                 plt.setp(ax.spines['left'], alpha=alpha)
                 plt.setp(ax.spines['top'], alpha=alpha)
+                plt.setp(ax.spines['bottom'], alpha=alpha)
 
                 # Creates a minimum Y axis tick range
                 if max(ax.get_ylim()) - min(ax.get_ylim()) < 4:
@@ -250,7 +255,8 @@ class PEMFileEditor:
                     ax.spines['top'].set_position(('data', 0))
                     ax.xaxis.set_ticks_position('top')
                     ax.xaxis.set_minor_locator(minor_locator)
-                    ax.tick_params(axis='x', which='major', direction='inout', length=6, grid_alpha=alpha)
+                    ax.tick_params(axis='x', which='major', direction='inout', length=6)
+                    ax.tick_params(axis='x', which='minor', direction='inout', length=3)
                     plt.setp(ax.spines['top'], alpha=alpha)
                     plt.setp(ax.get_xticklabels(), visible=False)
 
