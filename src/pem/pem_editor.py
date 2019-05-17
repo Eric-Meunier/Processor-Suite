@@ -77,10 +77,8 @@ class PEMFileEditor:
             if component not in unique_components:
                 unique_components.append(component)
 
-        z_index = unique_components.index('Z')
-
-        if z_index:
-            unique_components.insert(0, unique_components.pop(z_index))
+        if 'Z' in unique_components:
+            unique_components.insert(0, unique_components.pop(unique_components.index('Z')))
 
         return unique_components
 
@@ -155,9 +153,25 @@ class PEMFileEditor:
         # font = "Century Gothic"
         font = "Tahoma"
 
-        def annotate_plot(self, str_annotation, obj_plt, channel):
-            i = 0
-            spacing = 6
+        def annotate_plot(self, str_annotation, obj_plt, channel, offset):
+
+            # This is eventually used for free floating annotations not tied to data points
+            # uniquestations = self.active_file.get_unique_stations()
+            # xspacing = (abs(max(stations)) - abs(min(stations))) / num_stns
+            # yaxes = obj_plt.axes.get_ylim()
+            # yspacing = yaxes[1] - yaxes[0]
+            # stations = list(sorted(uniquestations))
+            num_stns = len(stations)
+            spacing = 16
+            if num_stns < 6:
+                spacing = 3
+            elif num_stns < 16:
+                spacing = 8
+            elif num_stns < 32:
+                spacing = 16
+            elif num_stns < 50:
+                spacing = 20
+            i = offset
             while i < len(stations):
                 xy = (stations[i], profile_data[channel][i])
                 obj_plt.annotate(str_annotation, xy=xy, textcoords='data', size=7, alpha=alpha)
@@ -208,7 +222,7 @@ class PEMFileEditor:
 
             # First channel always has its own plot
             ax1.plot(stations, profile_data[0], 'k', linewidth=line_width, alpha=alpha)
-            annotate_plot(self, "PP", ax1, 0)
+            annotate_plot(self, "PP", ax1, 0,0)
 
             ax1.set_title('Crone Geophysics & Exploration Ltd.\n'
                           + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
@@ -216,26 +230,23 @@ class PEMFileEditor:
                           + date, fontname=font, alpha=alpha, fontsize=10)
 
             # Plotting section
-            j = 2
+            offset_slant = 0
             for i in range(0, num_channels_per_plot):
                 ax2.plot(stations, profile_data[i + 1], color=line_colour, linewidth=0.6, alpha=alpha)
-                annotate_plot(self, str(i + 1), ax2, i + 1)
-                j += 2
+                annotate_plot(self, str(i + 1), ax2, i + 1,offset_slant)
 
                 ax3.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 1)],
                          color=line_colour, linewidth=line_width, alpha=alpha)
-                annotate_plot(self, str(i + 1 + (num_channels_per_plot * 1)), ax3, i + 1 + (num_channels_per_plot * 1))
-                j += 2
+                annotate_plot(self, str(i + 1 + (num_channels_per_plot * 1)), ax3, i + 1 + (num_channels_per_plot * 1),offset_slant)
 
                 ax4.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 2)],
                          color=line_colour, linewidth=line_width, alpha=alpha)
-                annotate_plot(self, str(i + 1 + (num_channels_per_plot * 2)), ax4, i + 1 + (num_channels_per_plot * 2))
-                j += 2
+                annotate_plot(self, str(i + 1 + (num_channels_per_plot * 2)), ax4, i + 1 + (num_channels_per_plot * 2),offset_slant)
 
                 ax5.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 3)],
                          color=line_colour, linewidth=line_width, alpha=alpha)
-                annotate_plot(self, str(i + 1 + (num_channels_per_plot * 3)), ax5, i + 1 + (num_channels_per_plot * 3))
-
+                annotate_plot(self, str(i + 1 + (num_channels_per_plot * 3)), ax5, i + 1 + (num_channels_per_plot * 3),offset_slant)
+                offset_slant += 4
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
                 ax.spines['right'].set_visible(False)
@@ -264,7 +275,7 @@ class PEMFileEditor:
                     plt.setp(ax.get_xticklabels(), visible=False)
 
                 # The 6th subplot, only used for station tick labelling
-                if index == 5:
+                elif index == 5:
                     ax.spines['top'].set_visible(False)
                     ax.spines["top"].set_position(("axes", -0.1))
                     ax.xaxis.set_ticks_position('bottom')
