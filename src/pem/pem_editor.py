@@ -3,6 +3,7 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import (FormatStrFormatter, AutoMinorLocator, MaxNLocator)
 from collections import OrderedDict
 import matplotlib.pyplot as plt
+# from PIL import ImageDraw
 import re
 from log import Logger
 
@@ -176,7 +177,8 @@ class PEMFileEditor:
             profile_data = self.get_profile_data(component_data, num_channels)
 
             stations = [reading['Station'] for reading in component_data]
-            plt.xlim(min(stations), max(stations))
+            x_limit = min(stations), max(stations)
+            plt.xlim(x_limit)
 
             minor_locator = AutoMinorLocator(5)
             # major_formatter = FormatStrFormatter('%d')
@@ -192,7 +194,8 @@ class PEMFileEditor:
 
             # TODO 'Primary Pulse' must become 'On-time' for Fluxgate data
             ax1.set_ylabel("Primary Pulse\n(" + units + ")", fontname=font, alpha=alpha)
-            ax2.set_ylabel("Channel 1 - " + str(num_channels_per_plot) + "\n(" + units + ")", fontname=font, alpha=alpha)
+            ax2.set_ylabel("Channel 1 - " + str(num_channels_per_plot) + "\n(" + units + ")", fontname=font,
+                           alpha=alpha)
             ax3.set_ylabel("Channel " + str(num_channels_per_plot + 1) + " - " + str(
                 num_channels_per_plot * 2) + "\n(" + units + ")", fontname=font, alpha=alpha)
             ax4.set_ylabel(
@@ -272,6 +275,11 @@ class PEMFileEditor:
 
             # lin_fig.subplots_adjust(hspace=0.25)
             # lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.9])
+            # try:
+            #     plt.gca().add_patch(Rectangle((50,100),40,30,linewidth=1,edgecolor='r',facecolor='none'))
+            # except:
+            #     print('problem with add_patch')
+            #     pass
 
             lin_fig.tight_layout(pad=1.5)
             try:
@@ -284,18 +292,29 @@ class PEMFileEditor:
 
             # Creating the LOG plot
             for i in range(0, num_channels):
-                ax1.plot(stations, profile_data[i], color=line_colour, linewidth=0.6)
+                ax1.plot(stations, profile_data[i], color=line_colour, linewidth=line_width, alpha=alpha)
                 # annotate_plot(self, str(i + 1), ax1, i + 1)
-
             plt.yscale('symlog', linthreshy=10)
+            plt.xlim(x_limit)
+
             ax1.set_title('Crone Geophysics & Exploration Ltd.\n'
                           + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
                           + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
-                          + date)
-            ax1.set_ylabel('Primary Pulse to Channel ' + str(num_channels) + '\n(' + str(units) + ')')
-            # ax1.set_xlabel('Station')
+                          + date, fontname=font, alpha=alpha, fontsize=10)
+            ax1.set_ylabel('Primary Pulse to Channel ' + str(num_channels) + '\n(' + str(units) + ')', fontname=font,
+                           alpha=alpha)
+
+            for index, ax in enumerate(log_fig.axes):
+                ax.spines['right'].set_visible(False)
+                ax.spines['bottom'].set_visible(False)
+                ax.spines['top'].set_visible(False)
+                # ax.locator_params(axis='y', nbins=5)
+                plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
+                # plt.setp(ax.spines['left'], alpha=alpha)
+                # plt.setp(ax.spines['top'], alpha=alpha)
+                # plt.setp(ax.spines['bottom'], alpha=alpha)
             # log_fig.tight_layout(rect=[0, 0, 1, 0.825])
-            log_fig.tight_layout()
+            # log_fig.tight_layout()
             # TODO End of block
 
             lin_figs.append(lin_fig)

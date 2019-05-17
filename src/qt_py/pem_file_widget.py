@@ -39,7 +39,7 @@ class PEMFileWidget(QWidget):
         self.layout.addWidget(self.tab_widget)
 
         self.lin_view_widget = PlotViewerWidget(editor=self.editor, figures=lin_figs, plot_heights=900)
-        self.log_view_widget = PlotViewerWidget(editor=self.editor, figures=log_figs)
+        self.log_view_widget = PlotViewerWidget(editor=self.editor, figures=log_figs, plot_heights=900)
 
         self.tab_widget.tabBar().setExpanding(True)
         # new_file_widget.setTabPosition(QTabWidget.West)
