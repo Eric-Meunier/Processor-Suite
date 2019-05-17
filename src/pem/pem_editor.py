@@ -313,7 +313,13 @@ class PEMFileEditor:
 
             # Creating the LOG plot
             offset_slant = 0
+            offset_adjust = 2
+            if len(stations) > 24:
+                offset_adjust = 4
+            elif len(stations) > 40:
+                offset_adjust = 6
             k = 0
+
             for i in range(0, num_channels):
                 ax1.plot(stations, profile_data[i], color=line_colour, linewidth=line_width, alpha=alpha)
                 if k == 0:  # Plot the PP
