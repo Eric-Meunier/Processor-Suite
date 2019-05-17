@@ -77,10 +77,8 @@ class PEMFileEditor:
             if component not in unique_components:
                 unique_components.append(component)
 
-        z_index = unique_components.index('Z')
-
-        if z_index:
-            unique_components.insert(0, unique_components.pop(z_index))
+        if 'Z' in unique_components:
+            unique_components.insert(0, unique_components.pop(unique_components.index('Z')))
 
         return unique_components
 
