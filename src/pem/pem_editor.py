@@ -171,7 +171,7 @@ class PEMFileEditor:
                 spacing = 16
             elif num_stns < 50:
                 spacing = 20
-            i = offset
+            i = offset % len(stations)
             while i < len(stations):
                 xy = (stations[i], profile_data[channel][i])
                 obj_plt.annotate(str_annotation, xy=xy, textcoords='data', size=7, alpha=alpha)
@@ -231,7 +231,14 @@ class PEMFileEditor:
 
             # Plotting section
             offset_slant = 0
-            
+
+            # For longer profiles you can add a switch case to this
+            offset_adjust = 4
+            if len(stations) > 24:
+                offset_adjust = 6
+            elif len(stations) > 40:
+                offset_adjust = 10
+
             for i in range(0, num_channels_per_plot):
                 ax2.plot(stations, profile_data[i + 1], color=line_colour, linewidth=0.6, alpha=alpha)
                 annotate_plot(self, str(i + 1), ax2, i + 1,offset_slant)
@@ -247,7 +254,7 @@ class PEMFileEditor:
                 ax5.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 3)],
                          color=line_colour, linewidth=line_width, alpha=alpha)
                 annotate_plot(self, str(i + 1 + (num_channels_per_plot * 3)), ax5, i + 1 + (num_channels_per_plot * 3),offset_slant)
-                offset_slant += 4
+                offset_slant += offset_adjust
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
                 ax.spines['right'].set_visible(False)
@@ -261,11 +268,11 @@ class PEMFileEditor:
                 # Creates a minimum Y axis tick range
                 ylimits = ax.get_ylim()
                 if (ylimits[1] - ylimits[0]) < 4:
-                    new_high = ((int(ylimits[1]) - ylimits[0]) / 2) + 2
-                    new_low = ((int(ylimits[1]) - ylimits[0]) / 2) - 2
+                    new_high = int(((ylimits[1]) - ylimits[0]) / 2) + 2
+                    new_low = int(((ylimits[1]) - ylimits[0]) / 2) - 2
                     ax.set_ylim(new_low, new_high)
 
-                ax.set_yticks(ax.get_yticks()[::1])
+                ax.set_yticks(ax.get_yticks()[::])
                 plt.setp(ax.spines['top'], alpha=alpha)
                 if index != 5:
                     ax.spines['top'].set_position(('data', 0))
@@ -287,7 +294,6 @@ class PEMFileEditor:
                     plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname=font)
                     # plt.setp(ax.get_xtick(), alpha=alpha)
 
-
             # lin_fig.subplots_adjust(hspace=0.25)
             # lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.9])
             # try:
@@ -306,9 +312,16 @@ class PEMFileEditor:
             log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
 
             # Creating the LOG plot
+            offset_slant = 0
+            k = 0
             for i in range(0, num_channels):
                 ax1.plot(stations, profile_data[i], color=line_colour, linewidth=line_width, alpha=alpha)
-                # annotate_plot(self, str(i + 1), ax1, i + 1)
+                if k == 0:  # Plot the PP
+                    annotate_plot(self, "PP", ax1, 0, 0)
+                else:
+                    annotate_plot(self, str(k), ax1, k, offset_slant)
+                k += 1
+                offset_slant += offset_adjust
             plt.yscale('symlog', linthreshy=10)
             plt.xlim(x_limit)
 
