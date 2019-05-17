@@ -62,7 +62,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if not isinstance(filenames, list) and isinstance(filenames, str):
             filenames = [filenames]
-
+        if len(filenames) == 0:
+            return
         logger.info("Opening " + ', '.join(filenames) + "...")
 
         if not self.file_browser:
