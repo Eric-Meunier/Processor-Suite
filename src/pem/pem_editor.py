@@ -231,6 +231,7 @@ class PEMFileEditor:
 
             # Plotting section
             offset_slant = 0
+            
             for i in range(0, num_channels_per_plot):
                 ax2.plot(stations, profile_data[i + 1], color=line_colour, linewidth=0.6, alpha=alpha)
                 annotate_plot(self, str(i + 1), ax2, i + 1,offset_slant)
@@ -258,20 +259,21 @@ class PEMFileEditor:
                 plt.setp(ax.spines['bottom'], alpha=alpha)
 
                 # Creates a minimum Y axis tick range
-                if max(ax.get_ylim()) - min(ax.get_ylim()) < 4:
-                    new_high = int(max(ax.get_ylim()) - min(ax.get_ylim()) / 2) + 2
-                    new_low = int(max(ax.get_ylim()) - min(ax.get_ylim()) / 2) - 2
+                ylimits = ax.get_ylim()
+                if (ylimits[1] - ylimits[0]) < 4:
+                    new_high = ((int(ylimits[1]) - ylimits[0]) / 2) + 2
+                    new_low = ((int(ylimits[1]) - ylimits[0]) / 2) - 2
                     ax.set_ylim(new_low, new_high)
 
                 ax.set_yticks(ax.get_yticks()[::1])
-
+                plt.setp(ax.spines['top'], alpha=alpha)
                 if index != 5:
                     ax.spines['top'].set_position(('data', 0))
                     ax.xaxis.set_ticks_position('top')
                     ax.xaxis.set_minor_locator(minor_locator)
                     ax.tick_params(axis='x', which='major', direction='inout', length=6)
                     ax.tick_params(axis='x', which='minor', direction='inout', length=3)
-                    plt.setp(ax.spines['top'], alpha=alpha)
+
                     plt.setp(ax.get_xticklabels(), visible=False)
 
                 # The 6th subplot, only used for station tick labelling
@@ -281,8 +283,10 @@ class PEMFileEditor:
                     ax.xaxis.set_ticks_position('bottom')
                     ax.xaxis.set_label_position('bottom')
                     ax.tick_params(axis='x', which='major', direction='out', length=6)
+
                     plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname=font)
                     # plt.setp(ax.get_xtick(), alpha=alpha)
+
 
             # lin_fig.subplots_adjust(hspace=0.25)
             # lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.9])
