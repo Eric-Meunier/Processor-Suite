@@ -22,7 +22,7 @@ class PEMParser:
             r'<OPR>\s(?P<Operator>\w+\s?\w+)\s*~?.*[\r\n]'
             r'<XYP>\s(?P<XYProbe>\d*)\s(?P<SOA>\d*)\s(?P<Tool>\d*)\s(?P<ToolID>\d*)\s*~?.*[\r\n]'
             r'<CUR>\s(?P<Current>\d+\.?\d?)\s*~?.*[\r\n]'
-            r'<TXS>\s(?P<LoopSize>.*)\s{2}.*[\n\r]',
+            r'<TXS>\s(?P<LoopSize>[\d\.\s]*).*[\r\n]',
             re.MULTILINE
         )
 
