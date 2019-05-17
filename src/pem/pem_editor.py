@@ -170,6 +170,7 @@ class PEMFileEditor:
                 spacing = 8
             elif num_stns < 32:
                 spacing = 16
+            elif num_stns < 50:
                 spacing = 20
             i = offset
             while i < len(stations):
