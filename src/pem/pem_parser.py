@@ -20,7 +20,7 @@ class PEMParser:
             r'<FMT>\s(?P<Format>.*)[\r\n]'
             r'<UNI>\s(?P<Units>.*)[\r\n]'
             r'<OPR>\s(?P<Operator>.*)[\r\n]'
-            r'<XYP>\s(?P<XYProbe>\d*)\s(?P<SOA>\d*)\s(?P<Tool>\d*)\s(?P<ToolID>\d*)[\r\n]'
+            r'<XYP>\s(?P<XYProbe>\d*)\s(?P<SOA>\d*)\s(?P<Tool>\d*)\s(?P<ToolID>\d*).*[\r\n]'
             r'<CUR>\s(?P<Current>.*)[\r\n]'
             r'<TXS>\s(?P<LoopSize>.*)',
             re.MULTILINE
