@@ -38,11 +38,13 @@ class PEMFileEditor:
         :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
         logger.info("Generating plots...")
-        lin_fig, log_fig = self.mk_plots()
-        logger.info("Finished generating plots")
-        return lin_fig, log_fig
-
-        # raise NotImplementedError
+        try:
+            lin_fig, log_fig = self.mk_plots()
+            logger.info("Finished generating plots")
+            return lin_fig, log_fig
+        except KeyError:
+            logger.info("KeyError - is the file parsed correctly into dictionary?")
+            raise KeyError
 
     def convert_stations(self, data):
         """
@@ -224,7 +226,7 @@ class PEMFileEditor:
             ax5.set_ylabel(
                 "Channel " + str(num_channels_per_plot * 3 + 1) + " - " + str(
                     num_channels_per_plot * 4) + "\n(" + units + ")", fontname=font, alpha=alpha)
-            lin_fig.align_ylabels()
+            #lin_fig.align_ylabels()
 
             # First channel always has its own plot
             ax1.plot(stations, profile_data[0], color=line_colour, linewidth=line_width, alpha=alpha)

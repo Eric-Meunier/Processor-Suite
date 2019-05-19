@@ -33,15 +33,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Will eventually hold logic for choosing between different file types
         # TODO Add logger class
         logger.info("Entering file dialog")
+
         dlg = QFileDialog()
-        dlg.setFileMode(QFileDialog.ExistingFile)
-        #dlg.setFilter("Text files (*.txt)")
+        dlg.setNameFilter("PEM(*.pem)");
 
         filenames = dlg.getOpenFileNames()[0]
-        # For debug
-        # filename = "/home/victor/Desktop/Crone/CH934ZM.PEM"
 
-        self.open_files(filenames)
+        if len(filenames) == 0:
+            logger.info("No Files Selected")
+            return
+        else:
+            self.open_files(filenames)
 
     def dragEnterEvent(self, e):
         #if e.mimeData().hasFormat('text/plain'):
