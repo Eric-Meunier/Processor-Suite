@@ -53,7 +53,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         logger.info("Entering file dialog")
 
         dlg = QFileDialog()
-        dlg.setNameFilter("PEM(*.pem)");
+        dlg.setNameFilter("PEM (*.pem)");
 
         filenames = dlg.getOpenFileNames()[0]
 
@@ -89,8 +89,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.file_browser = FileBrowser()
             self.setCentralWidget(self.file_browser)
 
-        self.file_browser.open_files(filenames)
-
+        try:
+            self.file_browser.open_files(filenames)
+        except TypeError:
+            logger.info("Invalid File Type")
 
 if __name__ == "__main__":
     # Code to test MainWindow if running main_window.py
