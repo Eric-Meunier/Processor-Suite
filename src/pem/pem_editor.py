@@ -212,22 +212,40 @@ class PEMFileEditor:
             # library such as pyqtgraph or vispy.
 
             # remaining channels are plotted evenly on the remaining subplots
-            # num_channels_per_plot = int((num_channels) / 4)
+            # total_num_channels_per_plot = int((num_channels) / 4)
             num_channels_per_plot = int((num_channels - 1) / 4)
             remainder_channels = int((num_channels - 1) % 4)
 
-            # TODO 'Primary Pulse' must become 'On-time' for Fluxgate data
             ax1.set_ylabel(first_channel_label + "\n(" + units + ")", fontname=font, alpha=alpha)
-            ax2.set_ylabel("Channel 1 - " + str(num_channels_per_plot) + "\n(" + units + ")", fontname=font,
-                           alpha=alpha)
-            ax3.set_ylabel("Channel " + str(num_channels_per_plot + 1) + " - " + str(
-                num_channels_per_plot * 2) + "\n(" + units + ")", fontname=font, alpha=alpha)
+            ax2.set_ylabel(
+                "Channel 1 - " + str(
+                    num_channels_per_plot + (1 if remainder_channels > 0 else 0)) + "\n(" + units + ")",
+                fontname=font,
+                alpha=alpha)
+
+            ax3.set_ylabel(
+                "Channel " + str(num_channels_per_plot + 1 + (
+                    1 if remainder_channels > 1 else 0)) + " - " + str(
+                    num_channels_per_plot * 2 + (
+                        2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0)) + "\n(" + units + ")",
+                fontname=font,
+                alpha=alpha)
+
             ax4.set_ylabel(
-                "Channel " + str(num_channels_per_plot * 2 + 1) + " - " + str(
-                    num_channels_per_plot * 3) + "\n(" + units + ")", fontname=font, alpha=alpha)
+                "Channel " + str(num_channels_per_plot * 2 + 1 + (
+                    2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0) + 2) + " - " + str(
+                    num_channels_per_plot * 3 + (
+                        3 if remainder_channels > 2 else 2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0)) + "\n(" + units + ")",
+                fontname=font,
+                alpha=alpha)
+
             ax5.set_ylabel(
-                "Channel " + str(num_channels_per_plot * 3 + 1) + " - " + str(
-                    num_channels_per_plot * 4) + "\n(" + units + ")", fontname=font, alpha=alpha)
+                "Channel " + str(num_channels_per_plot * 3 + 1 + (
+                    3 if remainder_channels > 2 else 2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0) + 2) + " - " + str(
+                    num_channels_per_plot * 4 + (
+                        3 if remainder_channels > 2 else 2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0)) + "\n(" + units + ")",
+                fontname=font,
+                alpha=alpha)
             lin_fig.align_ylabels()
 
             # First channel always has its own plot
@@ -251,46 +269,76 @@ class PEMFileEditor:
             elif len(stations) > 40:
                 offset_adjust = 10
 
-            for i in range(0, num_channels_per_plot):
-                ax2.plot(stations, profile_data[i + 1], color=line_colour, linewidth=line_width, alpha=alpha)
-                annotate_plot(self, str(i + 1), ax2, i + 1, offset_slant)
+            for i in range(0, num_channels):
+                if i < num_channels_per_plot + (1 if remainder_channels > 0 else 0):
+                    ax2.plot(stations, profile_data[i + 1], color=line_colour, linewidth=line_width, alpha=alpha)
+                    annotate_plot(self, str(i + 1), ax2, i + 1, offset_slant)
+                    offset_slant += offset_adjust
 
-                ax3.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 1)],
-                         color=line_colour, linewidth=line_width, alpha=alpha)
-                annotate_plot(self, str(i + 1 + (num_channels_per_plot * 1)), ax3, i + 1 + (num_channels_per_plot * 1),
-                              offset_slant)
-
-                ax4.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 2)],
-                         color=line_colour, linewidth=line_width, alpha=alpha)
-                annotate_plot(self, str(i + 1 + (num_channels_per_plot * 2)), ax4, i + 1 + (num_channels_per_plot * 2),
-                              offset_slant)
-
-                ax5.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 3)],
-                         color=line_colour, linewidth=line_width, alpha=alpha)
-                annotate_plot(self, str(i + 1 + (num_channels_per_plot * 3)), ax5, i + 1 + (num_channels_per_plot * 3),
-                              offset_slant)
-                offset_slant += offset_adjust
-
-            if remainder_channels > 0:
-                try:
-                    ax2.plot(stations, profile_data[(num_channels_per_plot * 4) + 2], color=line_colour,
-                             linewidth=line_width, alpha=alpha)
-                    annotate_plot(self, str((num_channels_per_plot * 4) + 1 + 1), ax2, (num_channels_per_plot * 4) + 1,
+                elif i < num_channels_per_plot * 2 + (1 if remainder_channels > 0 else 0):
+                    ax3.plot(stations, profile_data[i + 1],
+                             color=line_colour, linewidth=line_width, alpha=alpha)
+                    annotate_plot(self, str(i + 1), ax3, i + 1,
                                   offset_slant)
+                    offset_slant += offset_adjust
 
-                    ax3.plot(stations, profile_data[(num_channels_per_plot * 4) + 3], color=line_colour,
-                             linewidth=line_width, alpha=alpha)
-                    annotate_plot(self, str((num_channels_per_plot * 4) + 1 + 1), ax2, (num_channels_per_plot * 4) + 2,
+                elif i < num_channels_per_plot * 3 + (
+                        2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0):
+                    ax4.plot(stations, profile_data[i + 1],
+                             color=line_colour, linewidth=line_width, alpha=alpha)
+                    annotate_plot(self, str(i + 1), ax4, i + 1,
                                   offset_slant)
+                    offset_slant += offset_adjust
 
-                    ax4.plot(stations, profile_data[(num_channels_per_plot * 4) + 4], color=line_colour,
-                             linewidth=line_width, alpha=alpha)
-                    annotate_plot(self, str((num_channels_per_plot * 4) + 4), ax2, (num_channels_per_plot * 4) + 3,
+                elif i < num_channels_per_plot * 4 + (
+                        2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0):
+                    ax5.plot(stations, profile_data[i + 1],
+                             color=line_colour, linewidth=line_width, alpha=alpha)
+                    annotate_plot(self, str(i + 1), ax5, i + 1,
                                   offset_slant)
+                    offset_slant += offset_adjust
 
-                except:
-                    pass
-
+            # remainder_channels = int((num_channels - 1) % 4)
+            #
+            # for i in range(0, num_channels_per_plot):
+            #     ax2.plot(stations, profile_data[i + 1], color=line_colour, linewidth=line_width, alpha=alpha)
+            #     annotate_plot(self, str(i + 1), ax2, i + 1, offset_slant)
+            #
+            #     ax3.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 1)],
+            #              color=line_colour, linewidth=line_width, alpha=alpha)
+            #     annotate_plot(self, str(i + 1 + (num_channels_per_plot * 1)), ax3, i + 1 + (num_channels_per_plot * 1),
+            #                   offset_slant)
+            #
+            #     ax4.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 2)],
+            #              color=line_colour, linewidth=line_width, alpha=alpha)
+            #     annotate_plot(self, str(i + 1 + (num_channels_per_plot * 2)), ax4, i + 1 + (num_channels_per_plot * 2),
+            #                   offset_slant)
+            #
+            #     ax5.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 3)],
+            #              color=line_colour, linewidth=line_width, alpha=alpha)
+            #     annotate_plot(self, str(i + 1 + (num_channels_per_plot * 3)), ax5, i + 1 + (num_channels_per_plot * 3),
+            #                   offset_slant)
+            #     offset_slant += offset_adjust
+            #
+            # if remainder_channels > 0:
+            #     try:
+            #         ax2.plot(stations, profile_data[(num_channels_per_plot * 4) + 1], color=line_colour,
+            #                  linewidth=line_width, alpha=alpha)
+            #         annotate_plot(self, str((num_channels_per_plot * 4) + 1), ax2, (num_channels_per_plot * 4),
+            #                       offset_slant)
+            #
+            #         ax3.plot(stations, profile_data[(num_channels_per_plot * 4) + 2], color=line_colour,
+            #                  linewidth=line_width, alpha=alpha)
+            #         annotate_plot(self, str((num_channels_per_plot * 4) + 2), ax2, (num_channels_per_plot * 4) + 1,
+            #                       offset_slant)
+            #
+            #         ax4.plot(stations, profile_data[(num_channels_per_plot * 4) + 3], color=line_colour,
+            #                  linewidth=line_width, alpha=alpha)
+            #         annotate_plot(self, str((num_channels_per_plot * 4) + 3), ax2, (num_channels_per_plot * 4) + 2,
+            #                       offset_slant)
+            #
+            #     except:
+            #         pass
 
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
@@ -377,6 +425,7 @@ class PEMFileEditor:
                 # ax.locator_params(axis='y', nbins=5)
                 plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
                 plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname=font)
+                ax.set_yticks(ax.get_yticks())
                 # plt.setp(ax.spines['left'], alpha=alpha)
                 # plt.setp(ax.spines['top'], alpha=alpha)
                 # plt.setp(ax.spines['bottom'], alpha=alpha)
