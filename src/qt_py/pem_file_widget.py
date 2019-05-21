@@ -142,12 +142,12 @@ class PEMFileWidget(QWidget):
             os.makedirs(dir_name)
 
         lin_figs = [x.figure for x in self.lin_view_widget.plot_widgets()]
-        log_figs = [x.figure for x in self.lin_view_widget.plot_widgets()]
+        log_figs = [x.figure for x in self.log_view_widget.plot_widgets()]
 
-        with PdfPages(os.path.join(dir_name, "LinearPlots.pdf")) as pdf:
+        with PdfPages(os.path.join(dir_name, "lin.pdf")) as pdf:
             for fig in lin_figs:
                 pdf.savefig(fig)
 
-        with PdfPages(os.path.join(dir_name, "LogarithmicPlots.pdf")) as pdf:
+        with PdfPages(os.path.join(dir_name, "log.pdf")) as pdf:
             for fig in log_figs:
                 pdf.savefig(fig)

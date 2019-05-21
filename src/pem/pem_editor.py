@@ -226,7 +226,7 @@ class PEMFileEditor:
             ax5.set_ylabel(
                 "Channel " + str(num_channels_per_plot * 3 + 1) + " - " + str(
                     num_channels_per_plot * 4) + "\n(" + units + ")", fontname=font, alpha=alpha)
-            #lin_fig.align_ylabels()
+            lin_fig.align_ylabels()
 
             # First channel always has its own plot
             ax1.plot(stations, profile_data[0], color=line_colour, linewidth=line_width, alpha=alpha)
