@@ -3,6 +3,7 @@ from PyQt5 import uic
 from pem.pem_editor import PEMFileEditor
 from qt_py.plot_viewer_widget import PlotViewerWidget
 from qt_py.plot_widget import PlotWidget
+from log import Logger
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent
@@ -10,7 +11,7 @@ from PyQt5 import QtGui
 from PyQt5.QtPrintSupport import QPrinter
 import os
 from matplotlib.backends.backend_pdf import PdfPages
-
+logger = Logger(__name__)
 
 class PEMFileWidget(QWidget):
 
@@ -41,12 +42,12 @@ class PEMFileWidget(QWidget):
         self.tab_widget = QTabWidget(self)
         self.layout.addWidget(self.tab_widget)
 
-        self.lin_view_widget = PlotViewerWidget(editor=self.editor, figures=lin_figs, plot_heights=900)
-        self.log_view_widget = PlotViewerWidget(editor=self.editor, figures=log_figs, plot_heights=900)
+        self.lin_view_widget = PlotViewerWidget(editor=self.editor, figures=lin_figs, plot_heights=1000)
+        self.log_view_widget = PlotViewerWidget(editor=self.editor, figures=log_figs, plot_heights=1000)
 
         self.tab_widget.tabBar().setExpanding(True)
         # new_file_widget.setTabPosition(QTabWidget.West)
-        self.tab_widget.addTab(self.lin_view_widget, 'Linear Plots')
+        self.tab_widget.addTab(self.lin_view_widget, 'Lin Plots')
         self.tab_widget.addTab(self.log_view_widget, 'Log Plots')
 
         # Hide loading screen and show results
@@ -146,8 +147,10 @@ class PEMFileWidget(QWidget):
 
         with PdfPages(os.path.join(dir_name, "lin.pdf")) as pdf:
             for fig in lin_figs:
-                pdf.savefig(fig)
+                pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
 
         with PdfPages(os.path.join(dir_name, "log.pdf")) as pdf:
             for fig in log_figs:
-                pdf.savefig(fig)
+                pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
+
+        logger.info('File save complete.')

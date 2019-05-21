@@ -47,6 +47,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         logger.info('Saving plots to PDFs in directory "{}"'.format(name))
         self.file_browser.currentWidget().print(name)
 
+
     def on_file_open(self):
         # Will eventually hold logic for choosing between different file types
         # TODO Add logger class

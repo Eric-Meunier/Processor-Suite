@@ -123,7 +123,7 @@ class PEMFileEditor:
         date = header['Date']
         grid = header['Grid']
         timebase = float(header['Timebase'])
-        timebase_freq = ((1 / (timebase/1000)) / 4)
+        timebase_freq = ((1 / (timebase / 1000)) / 4)
         survey_type = header['SurveyType']
         num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
         units = file.get_tags()['Units']
@@ -212,7 +212,9 @@ class PEMFileEditor:
             # library such as pyqtgraph or vispy.
 
             # remaining channels are plotted evenly on the remaining subplots
-            num_channels_per_plot = int((num_channels) / 4)
+            # num_channels_per_plot = int((num_channels) / 4)
+            num_channels_per_plot = int((num_channels - 1) / 4)
+            remainder_channels = int((num_channels - 1) % 4)
 
             # TODO 'Primary Pulse' must become 'On-time' for Fluxgate data
             ax1.set_ylabel(first_channel_label + "\n(" + units + ")", fontname=font, alpha=alpha)
@@ -233,11 +235,10 @@ class PEMFileEditor:
             annotate_plot(self, "PP", ax1, 0, 0)
 
             ax1.set_title('Crone Geophysics & Exploration Ltd.\n'
-                          + client + '      ' + grid + '\n'
+                          + client + '      ' + grid + '    ' + survey_type + ' Pulse EM Survey      ' + '\n'
                           + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
-                          + survey_type + ' Pulse EM Survey      ' + 'Timebase: ' + str(timebase) + 'ms (' +
-                          str(round(timebase_freq, 2)) + 'Hz)\n'
-                          + date,
+                          + 'Timebase: ' + str(timebase) + 'ms (' +
+                          str(round(timebase_freq, 2)) + 'Hz)' + '   ' + date + '\n',
                           fontname=font, alpha=alpha, fontsize=10)
 
             # Plotting section
@@ -270,6 +271,27 @@ class PEMFileEditor:
                               offset_slant)
                 offset_slant += offset_adjust
 
+            if remainder_channels > 0:
+                try:
+                    ax2.plot(stations, profile_data[(num_channels_per_plot * 4) + 2], color=line_colour,
+                             linewidth=line_width, alpha=alpha)
+                    annotate_plot(self, str((num_channels_per_plot * 4) + 1 + 1), ax2, (num_channels_per_plot * 4) + 1,
+                                  offset_slant)
+
+                    ax3.plot(stations, profile_data[(num_channels_per_plot * 4) + 3], color=line_colour,
+                             linewidth=line_width, alpha=alpha)
+                    annotate_plot(self, str((num_channels_per_plot * 4) + 1 + 1), ax2, (num_channels_per_plot * 4) + 2,
+                                  offset_slant)
+
+                    ax4.plot(stations, profile_data[(num_channels_per_plot * 4) + 4], color=line_colour,
+                             linewidth=line_width, alpha=alpha)
+                    annotate_plot(self, str((num_channels_per_plot * 4) + 4), ax2, (num_channels_per_plot * 4) + 3,
+                                  offset_slant)
+
+                except:
+                    pass
+
+
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
                 ax.spines['right'].set_visible(False)
@@ -288,7 +310,6 @@ class PEMFileEditor:
                     ax.set_ylim(new_low, new_high)
 
                 ax.set_yticks(ax.get_yticks())
-                plt.setp(ax.spines['top'], alpha=alpha)
 
                 if index != 5:
                     ax.spines['top'].set_position(('data', 0))
@@ -296,7 +317,6 @@ class PEMFileEditor:
                     ax.xaxis.set_minor_locator(minor_locator)
                     ax.tick_params(axis='x', which='major', direction='inout', length=6)
                     ax.tick_params(axis='x', which='minor', direction='inout', length=3)
-
                     plt.setp(ax.get_xticklabels(), visible=False)
 
                 # The 6th subplot, only used for station tick labelling
@@ -306,7 +326,6 @@ class PEMFileEditor:
                     ax.xaxis.set_ticks_position('bottom')
                     ax.xaxis.set_label_position('bottom')
                     ax.tick_params(axis='x', which='major', direction='out', length=6)
-
                     plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname=font)
                     # plt.setp(ax.get_xtick(), alpha=alpha)
 
@@ -314,11 +333,11 @@ class PEMFileEditor:
             lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.98])
             # lin_fig.tight_layout(pad=1.5)
 
-            try:
-                lin_fig.savefig(r'C:\Users\Eric\Desktop\lin.pdf', dpi=lin_fig.dpi)
-            except:
-                print('lin.pdf open, cannot be saved.')
-                pass
+            # try:
+            #     lin_fig.savefig(r'C:\Users\Eric\Desktop\lin.pdf', dpi=lin_fig.dpi)
+            # except:
+            #     print('lin.pdf open, cannot be saved.')
+            #     pass
 
             log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
 
@@ -364,11 +383,11 @@ class PEMFileEditor:
             log_fig.tight_layout(rect=[0.015, 0.025, 1, 0.98])
             # log_fig.tight_layout()
             # TODO End of block
-            try:
-                log_fig.savefig(r'C:\Users\Eric\Desktop\log.pdf', dpi=lin_fig.dpi)
-            except:
-                print('lin.pdf open, cannot be saved.')
-                pass
+            # try:
+            #     log_fig.savefig(r'C:\Users\Eric\Desktop\log.pdf', dpi=lin_fig.dpi)
+            # except:
+            #     print('lin.pdf open, cannot be saved.')
+            #     pass
 
             lin_figs.append(lin_fig)
             log_figs.append(log_fig)
