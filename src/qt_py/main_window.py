@@ -1,6 +1,7 @@
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
+from PyQt5.QtWidgets import QFileDialog
 import os
 from log import Logger
 logger = Logger(__name__)
@@ -24,10 +25,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Connect signals to slots
         self.action_open_file.triggered.connect(self.on_file_open)
+        self.action_print.triggered.connect(self.on_print)
+        self.action_print.setShortcut("Ctrl+P")
         self.file_browser = None
 
         self.resize(850, 1000)
         self.move(300, 0)
+
+    def on_print(self):
+        logger.info("Entering directory dialog for saving to PDF")
+        file_dialog = QFileDialog()
+        file_dialog.setFileMode(QFileDialog.Directory)
+        file_dialog.setOption(QFileDialog.ShowDirsOnly)
+        name = QFileDialog.getExistingDirectory(self, '', 'Plots')
+
+        if name == "":
+            logger.info("No directory chosen, aborted save to PDF")
+            return
+
+        # TODO Make sure active editor field is valid
+        logger.info('Saving plots to PDFs in directory "{}"'.format(name))
+        self.file_browser.currentWidget().print(name)
 
     def on_file_open(self):
         # Will eventually hold logic for choosing between different file types
