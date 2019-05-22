@@ -112,12 +112,12 @@ class PEMFileEditor:
         def mkSubplot(ax, objPEMEdit, channel_low, channel_high, stations, profile_data):
 
             offset_slant = 0
-            offset_adjust = 2
+            offset_adjust = 3
 
             if len(stations) > 24:
-                offset_adjust = 3
-            elif len(stations) > 40:
                 offset_adjust = 4
+            elif len(stations) > 40:
+                offset_adjust = 6
 
             for k in range(channel_low, (channel_high + 1)):
                 ax.plot(stations, profile_data[k], color=line_colour, linewidth=line_width, alpha=alpha)
@@ -136,19 +136,15 @@ class PEMFileEditor:
             # yspacing = yaxes[1] - yaxes[0]
             # stations = list(sorted(uniquestations))
             num_stns = len(stations)
-            spacing = 16
-            if num_stns < 12:
+            spacing = 12
+            if num_stns < 6:
                 spacing = 2
-            elif num_stns < 24:
+            elif num_stns < 16:
                 spacing = 4
-            elif num_stns < 36:
-                spacing = 6
-            elif num_stns < 48:
+            elif num_stns < 32:
                 spacing = 8
-            elif num_stns < 60:
+            elif num_stns < 50:
                 spacing = 10
-            elif num_stns < 80:
-                spacing = 12
             i = offset % len(stations)
             while i < len(stations):
                 xy = (stations[i], profile_data[channel][i])
