@@ -119,7 +119,7 @@ class PEMFileEditor:
             for k in range(channel_low, (channel_high + 1)):
                 ax.plot(stations, profile_data[k], color=line_colour, linewidth=line_width, alpha=alpha)
                 if k == 0:
-                    annotate_plot("PP", ax,0,0)
+                    annotate_plot("PP", ax, 0, 0)
                 else:
                     annotate_plot(str(k), ax, k, offset_slant)
                 offset_slant += offset_adjust
@@ -182,6 +182,11 @@ class PEMFileEditor:
         elif survey_type.casefold() == 's-squid':
             survey_type = 'SQUID'
 
+        if 'borehole' in survey_type.casefold():
+            s_title = 'Hole'
+        else:
+            s_title = 'Line'
+
         if units.casefold() == 'nanotesla/sec':
             units = 'nT/s'
         elif 'picotesla' in units.casefold():
@@ -242,9 +247,10 @@ class PEMFileEditor:
                 channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
                 for k in range(i + 1, len(channel_bounds)):
                     channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
-            # SUBTRACTS THE ONTIME/PP CHANNEL
+            # SUBTRACTS THE ON-TIME/PP CHANNEL
             channel_bounds[3] = (channel_bounds[3][0], num_channels - 1)
 
+            # Set the Y-axis labels
             ax1.set_ylabel(first_channel_label + "\n(" + units + ")", fontname=font, alpha=alpha)
             ax2.set_ylabel("Channel 1 - " + str(channel_bounds[0][1]) +
                            "\n(" + units + ")", fontname=font, alpha=alpha)
@@ -256,28 +262,36 @@ class PEMFileEditor:
                            str(channel_bounds[3][1]) + "\n(" + units + ")", fontname=font, alpha=alpha)
             lin_fig.align_ylabels()
 
+            # Setting the titles
+            plt.figtext(0.555, 0.97, 'Crone Geophysics & Exploration Ltd.',
+                         fontname=font, alpha=alpha, fontsize=11, ha='center')
+
+            plt.figtext(0.132, 0.964, 'Timebase: ' + str(timebase) + ' ms\n' +
+                        'Frequency: ' + str(round(timebase_freq, 2)) + ' Hz',
+                        fontname=font, alpha=alpha, fontsize=9, va='top')
+
+            plt.figtext(0.555, 0.964, survey_type + ' Pulse EM Survey\n'
+                        + s_title + ': ' + linehole + '      Component: ' + component + '\n'
+                        + 'Loop: ' + loop,
+                        fontname=font, alpha=alpha, fontsize=10, va='top', ha='center')
+
+            plt.figtext(0.975, 0.964, client + '\n' + grid + '\n' + date + '\n',
+                        fontname=font, alpha=alpha, fontsize=9, va='top', ha='right')
+
             # PLOT PP
             mkSubplot(ax1, self, 0, 0, stations, profile_data)
-
-            ax1.set_title('Crone Geophysics & Exploration Ltd.\n'
-                          + survey_type + ' Pulse EM Survey' + '\n'
-                          + 'Timebase: ' + str(timebase) + 'ms (' +
-                          str(round(timebase_freq, 2)) + 'Hz)' + '   ' + date + '\n'
-                          + client + '      ' + grid + '    '
-                          + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n',
-                          fontname=font, alpha=alpha, fontsize=10)
-
             # Plotting each subplot
             mkSubplot(ax2, self, channel_bounds[0][0], channel_bounds[0][1], stations, profile_data)
             mkSubplot(ax3, self, channel_bounds[1][0], channel_bounds[1][1], stations, profile_data)
             mkSubplot(ax4, self, channel_bounds[2][0], channel_bounds[2][1], stations, profile_data)
             mkSubplot(ax5, self, channel_bounds[3][0], channel_bounds[3][1], stations, profile_data)
-
+            plt.getp(ax1)
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
+
                 ax.spines['right'].set_visible(False)
                 ax.spines['bottom'].set_visible(False)
-                #if index != 5: ax.locator_params(axis='y', nbins=5)
+                # if index != 5: ax.locator_params(axis='y', nbins=5)
                 plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
                 plt.setp(ax.spines['left'], alpha=alpha)
                 plt.setp(ax.spines['top'], alpha=alpha)
@@ -289,8 +303,8 @@ class PEMFileEditor:
                     new_high = math.ceil((y_limits[1] - y_limits[0]) / 2 + 2)
                     new_low = math.floor((y_limits[1] - y_limits[0]) / 2 - 2)
                 elif index != 5:
-                    new_high = math.ceil(max(y_limits[1],0))
-                    new_low = math.floor(min(y_limits[0],0))
+                    new_high = math.ceil(max(y_limits[1], 0))
+                    new_low = math.floor(min(y_limits[0], 0))
                 ax.set_ylim(new_low, new_high)
                 ax.set_yticks(ax.get_yticks())
 
@@ -308,11 +322,10 @@ class PEMFileEditor:
                     ax.xaxis.set_ticks_position('bottom')
                     ax.xaxis.set_label_position('bottom')
                     ax.tick_params(axis='x', which='major', direction='out', length=6)
-                    plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname=font)
-                    # plt.setp(ax.get_xtick(), alpha=alpha)
+                    plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname="Century Gothic")
 
             # lin_fig.subplots_adjust(hspace=0.25)
-            lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.98])
+            lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
             # lin_fig.tight_layout(pad=1.5)
 
             log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
@@ -323,31 +336,49 @@ class PEMFileEditor:
             plt.yscale('symlog', linthreshy=10)
             plt.xlim(x_limit)
 
-            ax1.set_title('Crone Geophysics & Exploration Ltd.\n'
-                          + survey_type + ' Pulse EM Survey      ' + client + '      ' + grid + '\n'
-                          + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
-                          + date, fontname=font, alpha=alpha, fontsize=10)
+            # Setting the titles
+            plt.figtext(0.555, 0.97, 'Crone Geophysics & Exploration Ltd.',
+                        fontname=font, alpha=alpha, fontsize=11, ha='center')
+
+            plt.figtext(0.132, 0.964, 'Timebase: ' + str(timebase) + ' ms\n' +
+                        'Frequency: ' + str(round(timebase_freq, 2)) + ' Hz',
+                        fontname=font, alpha=alpha, fontsize=9, va='top')
+
+            plt.figtext(0.555, 0.964, survey_type + ' Pulse EM Survey\n'
+                        + s_title + ': ' + linehole + '      Component: ' + component + '\n'
+                        + 'Loop: ' + loop,
+                        fontname=font, alpha=alpha, fontsize=10, va='top', ha='center')
+
+            plt.figtext(0.975, 0.964, client + '\n' + grid + '\n' + date + '\n',
+                        fontname=font, alpha=alpha, fontsize=9, va='top', ha='right')
+
             ax1.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
                            fontname=font,
                            alpha=alpha)
+
             # SET LOG PLOT LIMITS
             y_limits = ax1.get_ylim()
-            new_high = 10.0**math.ceil(math.log(max(y_limits[1], 100), 11))
-            new_low = -1*10.0**math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
+            new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 100), 11))
+            new_low = -1 * 10.0 ** math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
             ax1.set_ylim(new_low, new_high)
             # SET LOG PLOT LIMITS
 
             for index, ax in enumerate(log_fig.axes):
                 ax.spines['right'].set_visible(False)
                 ax.spines['bottom'].set_visible(False)
-                ax.spines['top'].set_visible(False)
+                ax.spines['top'].set_position(('data', 0))
+                ax.xaxis.set_ticks_position('top')
+                ax.xaxis.set_minor_locator(minor_locator)
+                ax.tick_params(axis='x', which='major', direction='inout', length=6)
+                ax.tick_params(axis='x', which='minor', direction='inout', length=3)
                 plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
-                plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname=font)
+                plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname="Century Gothic")
                 ax.set_yticks(ax.get_yticks())
                 # plt.setp(ax.spines['left'], alpha=alpha)
                 # plt.setp(ax.spines['top'], alpha=alpha)
                 # plt.setp(ax.spines['bottom'], alpha=alpha)
-            log_fig.tight_layout(rect=[0.015, 0.025, 1, 0.98])
+            log_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
+            # log_fig.tight_layout()
             # TODO End of block
 
             lin_figs.append(lin_fig)
@@ -383,6 +414,7 @@ class PEMFileEditor:
 
         plots = [plot_data['fig'] for station_number, plot_data in plots_dict.items()]
         return plots
+
 
 if __name__ == "__main__":
     # Code to test PEMFileEditor
