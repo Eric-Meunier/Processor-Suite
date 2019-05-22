@@ -1,6 +1,7 @@
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
+from PyQt5 import QtCore
 from PyQt5.QtWidgets import QFileDialog
 import os
 from log import Logger
@@ -13,6 +14,21 @@ from qt_py.file_browser_widget import FileBrowser
 qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)),  "../qt_ui/main_window.ui")
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
+class ExceptionHandler(QtCore.QObject):
+
+    errorSignal = QtCore.pyqtSignal()
+    silentSignal = QtCore.pyqtSignal()
+
+    def __init__(self):
+        super(ExceptionHandler, self).__init__()
+
+    def handler(self, exctype, value, traceback):
+        self.errorSignal.emit()
+        sys._excepthook(exctype, value, traceback)
+
+exceptionHandler = ExceptionHandler()
+sys._excepthook = sys.excepthook
+sys.excepthook = exceptionHandler.handler
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -90,10 +106,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.file_browser = FileBrowser()
             self.setCentralWidget(self.file_browser)
 
-        try:
-            self.file_browser.open_files(filenames)
-        except TypeError:
-            logger.info("Invalid File Type")
+        self.file_browser.open_files(filenames)
 
 if __name__ == "__main__":
     # Code to test MainWindow if running main_window.py

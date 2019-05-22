@@ -38,13 +38,9 @@ class PEMFileEditor:
         :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
         logger.info("Generating plots...")
-        try:
-            lin_fig, log_fig = self.mk_plots()
-            logger.info("Finished generating plots")
-            return lin_fig, log_fig
-        except KeyError:
-            logger.info("KeyError - is the file parsed correctly into dictionary?")
-            raise KeyError
+        lin_fig, log_fig = self.mk_plots()
+        logger.info("Finished generating plots")
+        return lin_fig, log_fig
 
     def convert_stations(self, data):
         """
