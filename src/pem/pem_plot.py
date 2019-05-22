@@ -158,7 +158,6 @@ class PEMFileEditor:
 
             # First channel always has its own plot
             ax1.plot(stations, profile_data[0], 'k', linewidth=line_width)
-            # TODO 'Primary Pulse' must become 'On-time' for Fluxgate data
             ax1.set_ylabel("Primary Pulse\n("+units+")")
 
             # remaining channels are plotted evenly on the remaining subplots

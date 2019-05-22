@@ -3,6 +3,7 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import (FormatStrFormatter, AutoMinorLocator, MaxNLocator)
 from collections import OrderedDict
 import matplotlib.pyplot as plt
+import math
 # from PIL import ImageDraw
 import re
 from log import Logger
@@ -244,7 +245,6 @@ class PEMFileEditor:
             # SUBTRACTS THE ONTIME/PP CHANNEL
             channel_bounds[3] = (channel_bounds[3][0], num_channels - 1)
 
-            # TODO 'Primary Pulse' must become 'On-time' for Fluxgate data
             ax1.set_ylabel(first_channel_label + "\n(" + units + ")", fontname=font, alpha=alpha)
             ax2.set_ylabel("Channel 1 - " + str(channel_bounds[0][1]) +
                            "\n(" + units + ")", fontname=font, alpha=alpha)
@@ -286,11 +286,11 @@ class PEMFileEditor:
                 # Creates a minimum Y axis tick range
                 y_limits = ax.get_ylim()
                 if (y_limits[1] - y_limits[0]) < 2:
-                    new_high = round((y_limits[1] - y_limits[0]) / 2 + 2)
-                    new_low = round((y_limits[1] - y_limits[0]) / 2 - 2)
-                else:
-                    new_high = max(y_limits[1],0)
-                    new_low = min(y_limits[0],0)
+                    new_high = math.ceil((y_limits[1] - y_limits[0]) / 2 + 2)
+                    new_low = math.floor((y_limits[1] - y_limits[0]) / 2 - 2)
+                elif index != 5:
+                    new_high = math.ceil(max(y_limits[1],0))
+                    new_low = math.floor(min(y_limits[0],0))
                 ax.set_ylim(new_low, new_high)
                 ax.set_yticks(ax.get_yticks())
 
@@ -330,12 +330,17 @@ class PEMFileEditor:
             ax1.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
                            fontname=font,
                            alpha=alpha)
+            # SET LOG PLOT LIMITS
+            y_limits = ax1.get_ylim()
+            new_high = 10.0**math.ceil(math.log(max(y_limits[1], 100), 11))
+            new_low = -1*10.0**math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
+            ax1.set_ylim(new_low, new_high)
+            # SET LOG PLOT LIMITS
 
             for index, ax in enumerate(log_fig.axes):
                 ax.spines['right'].set_visible(False)
                 ax.spines['bottom'].set_visible(False)
                 ax.spines['top'].set_visible(False)
-                # ax.locator_params(axis='y', nbins=5)
                 plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
                 plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname=font)
                 ax.set_yticks(ax.get_yticks())
@@ -343,7 +348,6 @@ class PEMFileEditor:
                 # plt.setp(ax.spines['top'], alpha=alpha)
                 # plt.setp(ax.spines['bottom'], alpha=alpha)
             log_fig.tight_layout(rect=[0.015, 0.025, 1, 0.98])
-            # log_fig.tight_layout()
             # TODO End of block
 
             lin_figs.append(lin_fig)
