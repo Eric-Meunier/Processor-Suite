@@ -61,7 +61,7 @@ class FileBrowser(QTabWidget):
                 tab_index = self.addTab(new_file_widgets[-1], file_name)
                 # tab_widget = self.widget(tab_index)
             else:
-                raise TypeError
+                logger.exception('Bad Filetype', TypeError)
 
         for file_name, new_file_widget in zip(file_names, new_file_widgets):
             # Opening the file takes the longer so this is done in this separate

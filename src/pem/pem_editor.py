@@ -256,7 +256,7 @@ class PEMFileEditor:
                            str(channel_bounds[3][1]) + "\n(" + units + ")", fontname=font, alpha=alpha)
             lin_fig.align_ylabels()
 
-            # First channel always has its own plot
+            # PLOT PP
             mkSubplot(ax1, self, 0, 0, stations, profile_data)
 
             ax1.set_title('Crone Geophysics & Exploration Ltd.\n'
@@ -277,7 +277,7 @@ class PEMFileEditor:
             for index, ax in enumerate(lin_fig.axes):
                 ax.spines['right'].set_visible(False)
                 ax.spines['bottom'].set_visible(False)
-                if index != 5: ax.locator_params(axis='y', nbins=5)
+                #if index != 5: ax.locator_params(axis='y', nbins=5)
                 plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
                 plt.setp(ax.spines['left'], alpha=alpha)
                 plt.setp(ax.spines['top'], alpha=alpha)
@@ -288,7 +288,10 @@ class PEMFileEditor:
                 if (y_limits[1] - y_limits[0]) < 2:
                     new_high = round((y_limits[1] - y_limits[0]) / 2 + 2)
                     new_low = round((y_limits[1] - y_limits[0]) / 2 - 2)
-                    ax.set_ylim(new_low, new_high)
+                else:
+                    new_high = max(y_limits[1],0)
+                    new_low = min(y_limits[0],0)
+                ax.set_ylim(new_low, new_high)
                 ax.set_yticks(ax.get_yticks())
 
                 if index != 5:
@@ -376,7 +379,6 @@ class PEMFileEditor:
 
         plots = [plot_data['fig'] for station_number, plot_data in plots_dict.items()]
         return plots
-
 
 if __name__ == "__main__":
     # Code to test PEMFileEditor
