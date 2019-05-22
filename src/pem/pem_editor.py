@@ -109,7 +109,7 @@ class PEMFileEditor:
 
     def mk_plots(self):
 
-        def mkLINsubplot(ax, objPEMEdit, channel_low, channel_high, stations, profile_data):
+        def mkSubplot(ax, objPEMEdit, channel_low, channel_high, stations, profile_data):
 
             offset_slant = 0
             offset_adjust = 3
@@ -121,7 +121,10 @@ class PEMFileEditor:
 
             for k in range(channel_low, (channel_high + 1)):
                 ax.plot(stations, profile_data[k], color=line_colour, linewidth=line_width, alpha=alpha)
-                annotate_plot(str(k), ax, k, offset_slant)
+                if k == 0:
+                    annotate_plot("PP", ax,0,0)
+                else:
+                    annotate_plot(str(k), ax, k, offset_slant)
                 offset_slant += offset_adjust
 
         def annotate_plot(str_annotation, obj_plt, channel, offset):
@@ -180,7 +183,7 @@ class PEMFileEditor:
 
         if units.casefold() == 'nanotesla/sec':
             units = 'nT/s'
-        elif units.casefold() == 'picoteslas':
+        elif 'picotesla' in units.casefold():
             units = 'pT'
 
         if units == 'nT/s':
@@ -254,8 +257,7 @@ class PEMFileEditor:
             lin_fig.align_ylabels()
 
             # First channel always has its own plot
-            ax1.plot(stations, profile_data[0], color=line_colour, linewidth=line_width, alpha=alpha)
-            annotate_plot("PP", ax1, 0, 0)
+            mkSubplot(ax1, self, 0, 0, stations, profile_data)
 
             ax1.set_title('Crone Geophysics & Exploration Ltd.\n'
                           + survey_type + ' Pulse EM Survey' + '\n'
@@ -266,10 +268,10 @@ class PEMFileEditor:
                           fontname=font, alpha=alpha, fontsize=10)
 
             # Plotting each subplot
-            mkLINsubplot(ax2, self, channel_bounds[0][0], channel_bounds[0][1], stations, profile_data)
-            mkLINsubplot(ax3, self, channel_bounds[1][0], channel_bounds[1][1], stations, profile_data)
-            mkLINsubplot(ax4, self, channel_bounds[2][0], channel_bounds[2][1], stations, profile_data)
-            mkLINsubplot(ax5, self, channel_bounds[3][0], channel_bounds[3][1], stations, profile_data)
+            mkSubplot(ax2, self, channel_bounds[0][0], channel_bounds[0][1], stations, profile_data)
+            mkSubplot(ax3, self, channel_bounds[1][0], channel_bounds[1][1], stations, profile_data)
+            mkSubplot(ax4, self, channel_bounds[2][0], channel_bounds[2][1], stations, profile_data)
+            mkSubplot(ax5, self, channel_bounds[3][0], channel_bounds[3][1], stations, profile_data)
 
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
@@ -313,21 +315,8 @@ class PEMFileEditor:
             log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
 
             # Creating the LOG plot
-            offset_slant = 0
-            offset_adjust = 2
-            if len(stations) > 24:
-                offset_adjust = 4
-            elif len(stations) > 40:
-                offset_adjust = 6
-
-            for i in range(0, num_channels):
-                ax1.plot(stations, profile_data[i], color=line_colour, linewidth=line_width, alpha=alpha)
-                if i == 0:  # Plot the PP
-                    annotate_plot("PP", ax1, 0, 0)
-                else:
-                    annotate_plot(str(k), ax1, k, offset_slant)
-                offset_slant += offset_adjust
-
+            mkSubplot(ax1, self, 0, channel_bounds[3][1], stations, profile_data)
+            # Creating the LOG plot
             plt.yscale('symlog', linthreshy=10)
             plt.xlim(x_limit)
 
