@@ -109,6 +109,45 @@ class PEMFileEditor:
 
     def mk_plots(self):
 
+        def mkLINsubplot(ax, objPEMEdit, channel_low, channel_high, stations, profile_data):
+
+            offset_slant = 0
+            offset_adjust = 3
+
+            if len(stations) > 24:
+                offset_adjust = 4
+            elif len(stations) > 40:
+                offset_adjust = 6
+
+            for k in range(channel_low, (channel_high + 1)):
+                ax.plot(stations, profile_data[k], color=line_colour, linewidth=line_width, alpha=alpha)
+                annotate_plot(str(k), ax, k, offset_slant)
+                offset_slant += offset_adjust
+
+        def annotate_plot(str_annotation, obj_plt, channel, offset):
+
+            # This is eventually used for free floating annotations not tied to data points
+            # uniquestations = self.active_file.get_unique_stations()
+            # xspacing = (abs(max(stations)) - abs(min(stations))) / num_stns
+            # yaxes = obj_plt.axes.get_ylim()
+            # yspacing = yaxes[1] - yaxes[0]
+            # stations = list(sorted(uniquestations))
+            num_stns = len(stations)
+            spacing = 12
+            if num_stns < 6:
+                spacing = 2
+            elif num_stns < 16:
+                spacing = 4
+            elif num_stns < 32:
+                spacing = 8
+            elif num_stns < 50:
+                spacing = 10
+            i = offset % len(stations)
+            while i < len(stations):
+                xy = (stations[i], profile_data[channel][i])
+                obj_plt.annotate(str_annotation, xy=xy, textcoords='data', size=7, alpha=alpha)
+                i += spacing
+
         """
         Plot the LIN and LOG plots.
         :return: LIN plot figure and LOG plot figure
@@ -162,30 +201,6 @@ class PEMFileEditor:
         # font = "Century Gothic"
         font = "Tahoma"
 
-        def annotate_plot(self, str_annotation, obj_plt, channel, offset):
-
-            # This is eventually used for free floating annotations not tied to data points
-            # uniquestations = self.active_file.get_unique_stations()
-            # xspacing = (abs(max(stations)) - abs(min(stations))) / num_stns
-            # yaxes = obj_plt.axes.get_ylim()
-            # yspacing = yaxes[1] - yaxes[0]
-            # stations = list(sorted(uniquestations))
-            num_stns = len(stations)
-            spacing = 16
-            if num_stns < 6:
-                spacing = 3
-            elif num_stns < 16:
-                spacing = 8
-            elif num_stns < 32:
-                spacing = 16
-            elif num_stns < 50:
-                spacing = 20
-            i = offset % len(stations)
-            while i < len(stations):
-                xy = (stations[i], profile_data[channel][i])
-                obj_plt.annotate(str_annotation, xy=xy, textcoords='data', size=7, alpha=alpha)
-                i += spacing
-
         # Each component has their own figure
         for component in components:
             logger.info("Plotting component " + component)
@@ -211,140 +226,56 @@ class PEMFileEditor:
             # well optimized for speed.  If speed is desired in the future we will need to switch to a faster plotting
             # library such as pyqtgraph or vispy.
 
-            # remaining channels are plotted evenly on the remaining subplots
-            # total_num_channels_per_plot = int((num_channels) / 4)
-            num_channels_per_plot = int((num_channels - 1) / 4)
-            remainder_channels = int((num_channels - 1) % 4)
+            # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
+            channel_bounds = [None] * 4
+            num_channels_per_plot = int(num_channels // 4)
+            remainder_channels = int(num_channels % 4)
 
+            for k in range(0, len(channel_bounds)):
+                channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
+
+            for i in range(0, remainder_channels):
+                channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
+                for k in range(i + 1, len(channel_bounds)):
+                    channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+            # SUBTRACTS THE ONTIME/PP CHANNEL
+            channel_bounds[3] = (channel_bounds[3][0], num_channels - 1)
+
+            # TODO 'Primary Pulse' must become 'On-time' for Fluxgate data
             ax1.set_ylabel(first_channel_label + "\n(" + units + ")", fontname=font, alpha=alpha)
-            ax2.set_ylabel(
-                "Channel 1 - " + str(
-                    num_channels_per_plot + (1 if remainder_channels > 0 else 0)) + "\n(" + units + ")",
-                fontname=font,
-                alpha=alpha)
-
-            ax3.set_ylabel(
-                "Channel " + str(num_channels_per_plot + 1 + (
-                    1 if remainder_channels > 1 else 0)) + " - " + str(
-                    num_channels_per_plot * 2 + (
-                        2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0)) + "\n(" + units + ")",
-                fontname=font,
-                alpha=alpha)
-
-            ax4.set_ylabel(
-                "Channel " + str(num_channels_per_plot * 2 + 1 + (
-                    2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0) + 2) + " - " + str(
-                    num_channels_per_plot * 3 + (
-                        3 if remainder_channels > 2 else 2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0)) + "\n(" + units + ")",
-                fontname=font,
-                alpha=alpha)
-
-            ax5.set_ylabel(
-                "Channel " + str(num_channels_per_plot * 3 + 1 + (
-                    3 if remainder_channels > 2 else 2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0) + 2) + " - " + str(
-                    num_channels_per_plot * 4 + (
-                        3 if remainder_channels > 2 else 2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0)) + "\n(" + units + ")",
-                fontname=font,
-                alpha=alpha)
+            ax2.set_ylabel("Channel 1 - " + str(channel_bounds[0][1]) +
+                           "\n(" + units + ")", fontname=font, alpha=alpha)
+            ax3.set_ylabel("Channel " + str(channel_bounds[1][0]) + " - " +
+                           str(channel_bounds[1][1]) + "\n(" + units + ")", fontname=font, alpha=alpha)
+            ax4.set_ylabel("Channel " + str(channel_bounds[2][0]) + " - " +
+                           str(channel_bounds[2][1]) + "\n(" + units + ")", fontname=font, alpha=alpha)
+            ax5.set_ylabel("Channel " + str(channel_bounds[3][0]) + " - " +
+                           str(channel_bounds[3][1]) + "\n(" + units + ")", fontname=font, alpha=alpha)
             lin_fig.align_ylabels()
 
             # First channel always has its own plot
             ax1.plot(stations, profile_data[0], color=line_colour, linewidth=line_width, alpha=alpha)
-            annotate_plot(self, "PP", ax1, 0, 0)
+            annotate_plot("PP", ax1, 0, 0)
 
             ax1.set_title('Crone Geophysics & Exploration Ltd.\n'
-                          + client + '      ' + grid + '    ' + survey_type + ' Pulse EM Survey      ' + '\n'
-                          + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n'
+                          + survey_type + ' Pulse EM Survey' + '\n'
                           + 'Timebase: ' + str(timebase) + 'ms (' +
-                          str(round(timebase_freq, 2)) + 'Hz)' + '   ' + date + '\n',
+                          str(round(timebase_freq, 2)) + 'Hz)' + '   ' + date + '\n'
+                          + client + '      ' + grid + '    '
+                          + 'Line: ' + linehole + '      Loop: ' + loop + '      Component: ' + component + '\n',
                           fontname=font, alpha=alpha, fontsize=10)
 
-            # Plotting section
-            offset_slant = 0
-
-            # For longer profiles you can add a switch case to this
-            offset_adjust = 4
-            if len(stations) > 24:
-                offset_adjust = 6
-            elif len(stations) > 40:
-                offset_adjust = 10
-
-            for i in range(0, num_channels):
-                if i < num_channels_per_plot + (1 if remainder_channels > 0 else 0):
-                    ax2.plot(stations, profile_data[i + 1], color=line_colour, linewidth=line_width, alpha=alpha)
-                    annotate_plot(self, str(i + 1), ax2, i + 1, offset_slant)
-                    offset_slant += offset_adjust
-
-                elif i < num_channels_per_plot * 2 + (1 if remainder_channels > 0 else 0):
-                    ax3.plot(stations, profile_data[i + 1],
-                             color=line_colour, linewidth=line_width, alpha=alpha)
-                    annotate_plot(self, str(i + 1), ax3, i + 1,
-                                  offset_slant)
-                    offset_slant += offset_adjust
-
-                elif i < num_channels_per_plot * 3 + (
-                        2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0):
-                    ax4.plot(stations, profile_data[i + 1],
-                             color=line_colour, linewidth=line_width, alpha=alpha)
-                    annotate_plot(self, str(i + 1), ax4, i + 1,
-                                  offset_slant)
-                    offset_slant += offset_adjust
-
-                elif i < num_channels_per_plot * 4 + (
-                        2 if remainder_channels > 1 else 1 if remainder_channels > 0 else 0):
-                    ax5.plot(stations, profile_data[i + 1],
-                             color=line_colour, linewidth=line_width, alpha=alpha)
-                    annotate_plot(self, str(i + 1), ax5, i + 1,
-                                  offset_slant)
-                    offset_slant += offset_adjust
-
-            # remainder_channels = int((num_channels - 1) % 4)
-            #
-            # for i in range(0, num_channels_per_plot):
-            #     ax2.plot(stations, profile_data[i + 1], color=line_colour, linewidth=line_width, alpha=alpha)
-            #     annotate_plot(self, str(i + 1), ax2, i + 1, offset_slant)
-            #
-            #     ax3.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 1)],
-            #              color=line_colour, linewidth=line_width, alpha=alpha)
-            #     annotate_plot(self, str(i + 1 + (num_channels_per_plot * 1)), ax3, i + 1 + (num_channels_per_plot * 1),
-            #                   offset_slant)
-            #
-            #     ax4.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 2)],
-            #              color=line_colour, linewidth=line_width, alpha=alpha)
-            #     annotate_plot(self, str(i + 1 + (num_channels_per_plot * 2)), ax4, i + 1 + (num_channels_per_plot * 2),
-            #                   offset_slant)
-            #
-            #     ax5.plot(stations, profile_data[i + 1 + (num_channels_per_plot * 3)],
-            #              color=line_colour, linewidth=line_width, alpha=alpha)
-            #     annotate_plot(self, str(i + 1 + (num_channels_per_plot * 3)), ax5, i + 1 + (num_channels_per_plot * 3),
-            #                   offset_slant)
-            #     offset_slant += offset_adjust
-            #
-            # if remainder_channels > 0:
-            #     try:
-            #         ax2.plot(stations, profile_data[(num_channels_per_plot * 4) + 1], color=line_colour,
-            #                  linewidth=line_width, alpha=alpha)
-            #         annotate_plot(self, str((num_channels_per_plot * 4) + 1), ax2, (num_channels_per_plot * 4),
-            #                       offset_slant)
-            #
-            #         ax3.plot(stations, profile_data[(num_channels_per_plot * 4) + 2], color=line_colour,
-            #                  linewidth=line_width, alpha=alpha)
-            #         annotate_plot(self, str((num_channels_per_plot * 4) + 2), ax2, (num_channels_per_plot * 4) + 1,
-            #                       offset_slant)
-            #
-            #         ax4.plot(stations, profile_data[(num_channels_per_plot * 4) + 3], color=line_colour,
-            #                  linewidth=line_width, alpha=alpha)
-            #         annotate_plot(self, str((num_channels_per_plot * 4) + 3), ax2, (num_channels_per_plot * 4) + 2,
-            #                       offset_slant)
-            #
-            #     except:
-            #         pass
+            # Plotting each subplot
+            mkLINsubplot(ax2, self, channel_bounds[0][0], channel_bounds[0][1], stations, profile_data)
+            mkLINsubplot(ax3, self, channel_bounds[1][0], channel_bounds[1][1], stations, profile_data)
+            mkLINsubplot(ax4, self, channel_bounds[2][0], channel_bounds[2][1], stations, profile_data)
+            mkLINsubplot(ax5, self, channel_bounds[3][0], channel_bounds[3][1], stations, profile_data)
 
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
                 ax.spines['right'].set_visible(False)
                 ax.spines['bottom'].set_visible(False)
-                ax.locator_params(axis='y', nbins=5)
+                if index != 5: ax.locator_params(axis='y', nbins=5)
                 plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
                 plt.setp(ax.spines['left'], alpha=alpha)
                 plt.setp(ax.spines['top'], alpha=alpha)
@@ -352,11 +283,10 @@ class PEMFileEditor:
 
                 # Creates a minimum Y axis tick range
                 y_limits = ax.get_ylim()
-                if (y_limits[1] - y_limits[0]) < 4:
+                if (y_limits[1] - y_limits[0]) < 2:
                     new_high = round((y_limits[1] - y_limits[0]) / 2 + 2)
                     new_low = round((y_limits[1] - y_limits[0]) / 2 - 2)
                     ax.set_ylim(new_low, new_high)
-
                 ax.set_yticks(ax.get_yticks())
 
                 if index != 5:
@@ -366,7 +296,6 @@ class PEMFileEditor:
                     ax.tick_params(axis='x', which='major', direction='inout', length=6)
                     ax.tick_params(axis='x', which='minor', direction='inout', length=3)
                     plt.setp(ax.get_xticklabels(), visible=False)
-
                 # The 6th subplot, only used for station tick labelling
                 elif index == 5:
                     ax.spines['top'].set_visible(False)
@@ -381,12 +310,6 @@ class PEMFileEditor:
             lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.98])
             # lin_fig.tight_layout(pad=1.5)
 
-            # try:
-            #     lin_fig.savefig(r'C:\Users\Eric\Desktop\lin.pdf', dpi=lin_fig.dpi)
-            # except:
-            #     print('lin.pdf open, cannot be saved.')
-            #     pass
-
             log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
 
             # Creating the LOG plot
@@ -396,15 +319,13 @@ class PEMFileEditor:
                 offset_adjust = 4
             elif len(stations) > 40:
                 offset_adjust = 6
-            k = 0
 
             for i in range(0, num_channels):
                 ax1.plot(stations, profile_data[i], color=line_colour, linewidth=line_width, alpha=alpha)
-                if k == 0:  # Plot the PP
-                    annotate_plot(self, "PP", ax1, 0, 0)
+                if i == 0:  # Plot the PP
+                    annotate_plot("PP", ax1, 0, 0)
                 else:
-                    annotate_plot(self, str(k), ax1, k, offset_slant)
-                k += 1
+                    annotate_plot(str(k), ax1, k, offset_slant)
                 offset_slant += offset_adjust
 
             plt.yscale('symlog', linthreshy=10)
@@ -432,15 +353,9 @@ class PEMFileEditor:
             log_fig.tight_layout(rect=[0.015, 0.025, 1, 0.98])
             # log_fig.tight_layout()
             # TODO End of block
-            # try:
-            #     log_fig.savefig(r'C:\Users\Eric\Desktop\log.pdf', dpi=lin_fig.dpi)
-            # except:
-            #     print('lin.pdf open, cannot be saved.')
-            #     pass
 
             lin_figs.append(lin_fig)
             log_figs.append(log_fig)
-
         return lin_figs, log_figs
 
     # Legacy function, leave as reference
