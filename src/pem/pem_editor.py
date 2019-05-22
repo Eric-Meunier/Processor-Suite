@@ -285,7 +285,7 @@ class PEMFileEditor:
             mkSubplot(ax3, self, channel_bounds[1][0], channel_bounds[1][1], stations, profile_data)
             mkSubplot(ax4, self, channel_bounds[2][0], channel_bounds[2][1], stations, profile_data)
             mkSubplot(ax5, self, channel_bounds[3][0], channel_bounds[3][1], stations, profile_data)
-            plt.getp(ax1)
+
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
 
@@ -328,55 +328,69 @@ class PEMFileEditor:
             lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
             # lin_fig.tight_layout(pad=1.5)
 
-            log_fig, ax1 = plt.subplots(1, 1, figsize=(8.5, 11))
-
+            log_fig, axlog1 = plt.subplots(1, 1, figsize=(8.5, 11))
+            axlog2 = axlog1.twiny()
+            axlog2.get_shared_x_axes().join(axlog1, axlog2)
             # Creating the LOG plot
-            mkSubplot(ax1, self, 0, channel_bounds[3][1], stations, profile_data)
+            mkSubplot(axlog1, self, 0, channel_bounds[3][1], stations, profile_data)
             # Creating the LOG plot
             plt.yscale('symlog', linthreshy=10)
             plt.xlim(x_limit)
 
             # Setting the titles
             plt.figtext(0.555, 0.97, 'Crone Geophysics & Exploration Ltd.',
-                        fontname=font, alpha=alpha, fontsize=11, ha='center')
+                        fontname=font, alpha=alpha, fontsize=10, ha='center')
 
             plt.figtext(0.132, 0.964, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Frequency: ' + str(round(timebase_freq, 2)) + ' Hz',
                         fontname=font, alpha=alpha, fontsize=9, va='top')
 
             plt.figtext(0.555, 0.964, survey_type + ' Pulse EM Survey\n'
-                        + s_title + ': ' + linehole + '      Component: ' + component + '\n'
-                        + 'Loop: ' + loop,
-                        fontname=font, alpha=alpha, fontsize=10, va='top', ha='center')
+                        + 'Loop: ' + loop+'      Component: ' + component + '\n'
+                        + s_title + ': ' + linehole,
+                        fontname=font, alpha=alpha, fontsize=9, va='top', ha='center')
 
             plt.figtext(0.975, 0.964, client + '\n' + grid + '\n' + date + '\n',
                         fontname=font, alpha=alpha, fontsize=9, va='top', ha='right')
 
-            ax1.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
+            axlog1.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
                            fontname=font,
                            alpha=alpha)
 
             # SET LOG PLOT LIMITS
-            y_limits = ax1.get_ylim()
+            y_limits = axlog1.get_ylim()
             new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 100), 11))
             new_low = -1 * 10.0 ** math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
-            ax1.set_ylim(new_low, new_high)
+            axlog1.set_ylim(new_low, new_high)
             # SET LOG PLOT LIMITS
 
             for index, ax in enumerate(log_fig.axes):
                 ax.spines['right'].set_visible(False)
                 ax.spines['bottom'].set_visible(False)
-                ax.spines['top'].set_position(('data', 0))
-                ax.xaxis.set_ticks_position('top')
-                ax.xaxis.set_minor_locator(minor_locator)
-                ax.tick_params(axis='x', which='major', direction='inout', length=6)
-                ax.tick_params(axis='x', which='minor', direction='inout', length=3)
-                plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
-                plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname="Century Gothic")
-                ax.set_yticks(ax.get_yticks())
+                print(index)
+
+                if index == 0:
+                    ax.spines['top'].set_position(('data', 0))
+                    ax.xaxis.set_ticks_position('top')
+                    ax.xaxis.set_minor_locator(minor_locator)
+                    ax.tick_params(axis='x', which='major', direction='inout', length=6)
+                    ax.tick_params(axis='x', which='minor', direction='inout', length=3)
+                    plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
+                    plt.setp(ax.get_xticklabels(), visible=False)
+                    ax.set_yticks(ax.get_yticks())
+
+                elif index == 1:
+                    ax.spines['top'].set_visible(False)
+                    ax.spines["top"].set_position(("axes", -0.1))
+                    ax.xaxis.set_ticks_position('bottom')
+                    ax.xaxis.set_label_position('bottom')
+                    ax.tick_params(axis='x', which='major', direction='out', length=6)
+                    plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname="Century Gothic")
+                    ax.set_yticks(ax.get_yticks())
                 # plt.setp(ax.spines['left'], alpha=alpha)
                 # plt.setp(ax.spines['top'], alpha=alpha)
                 # plt.setp(ax.spines['bottom'], alpha=alpha)
+
             log_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
             # log_fig.tight_layout()
             # TODO End of block
