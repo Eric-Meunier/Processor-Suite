@@ -1,8 +1,10 @@
 from src.pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
-from matplotlib.ticker import (FormatStrFormatter, AutoMinorLocator, MaxNLocator)
+from matplotlib.ticker import (FormatStrFormatter, AutoMinorLocator, MaxNLocator, Locator)
+import matplotlib.ticker as ticker
 from collections import OrderedDict
 import matplotlib.pyplot as plt
+import numpy as np
 import math
 # from PIL import ImageDraw
 import re
@@ -106,7 +108,7 @@ class PEMFileEditor:
 
     def mk_plots(self):
 
-        def mkSubplot(ax, objPEMEdit, channel_low, channel_high, stations, profile_data):
+        def mkSubplot(ax, channel_low, channel_high, stations, profile_data):
 
             offset_slant = 0
             offset_adjust = 1
@@ -135,17 +137,17 @@ class PEMFileEditor:
             num_stns = len(stations)
             spacing = 12
             if num_stns < 12:
-                spacing = 2
-            elif num_stns < 24:
-                spacing = 3
-            elif num_stns < 36:
-                spacing = 4
-            elif num_stns < 48:
-                spacing = 6
-            elif num_stns < 60:
                 spacing = 8
+            elif num_stns < 24:
+                spacing = 12
+            elif num_stns < 36:
+                spacing = 16
+            elif num_stns < 48:
+                spacing = 24
+            elif num_stns < 60:
+                spacing = 32
             elif num_stns < 80:
-                spacing = 10
+                spacing = 40
             i = offset % len(stations)
             while i < len(stations):
                 xy = (stations[i], profile_data[channel][i])
@@ -270,27 +272,30 @@ class PEMFileEditor:
 
             # Setting the titles
             plt.figtext(0.555, 0.97, 'Crone Geophysics & Exploration Ltd.',
-                         fontname=font, alpha=alpha, fontsize=11, ha='center')
+                        fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
 
-            plt.figtext(0.132, 0.964, 'Timebase: ' + str(timebase) + ' ms\n' +
+            plt.figtext(0.555, 0.955,  survey_type + ' Pulse EM Survey', family='cursive', style='italic',
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
+
+            plt.figtext(0.125, 0.945, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Frequency: ' + str(round(timebase_freq, 2)) + ' Hz',
-                        fontname=font, alpha=alpha, fontsize=9, va='top')
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
 
-            plt.figtext(0.555, 0.964, survey_type + ' Pulse EM Survey\n'
-                        + s_title + ': ' + linehole + '      Component: ' + component + '\n'
-                        + 'Loop: ' + loop,
-                        fontname=font, alpha=alpha, fontsize=10, va='top', ha='center')
+            plt.figtext(0.555, 0.945, 'Loop: ' + loop + '\n'
+                        + s_title + ': ' + linehole + '\n'
+                        + component + ' Component',
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='center')
 
-            plt.figtext(0.975, 0.964, client + '\n' + grid + '\n' + date + '\n',
-                        fontname=font, alpha=alpha, fontsize=9, va='top', ha='right')
+            plt.figtext(0.975, 0.945, client + '\n' + grid + '\n' + date + '\n',
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='right')
 
             # PLOT PP
-            mkSubplot(ax1, self, 0, 0, stations, profile_data)
+            mkSubplot(ax1, 0, 0, stations, profile_data)
             # Plotting each subplot
-            mkSubplot(ax2, self, channel_bounds[0][0], channel_bounds[0][1], stations, profile_data)
-            mkSubplot(ax3, self, channel_bounds[1][0], channel_bounds[1][1], stations, profile_data)
-            mkSubplot(ax4, self, channel_bounds[2][0], channel_bounds[2][1], stations, profile_data)
-            mkSubplot(ax5, self, channel_bounds[3][0], channel_bounds[3][1], stations, profile_data)
+            mkSubplot(ax2, channel_bounds[0][0], channel_bounds[0][1], stations, profile_data)
+            mkSubplot(ax3, channel_bounds[1][0], channel_bounds[1][1], stations, profile_data)
+            mkSubplot(ax4, channel_bounds[2][0], channel_bounds[2][1], stations, profile_data)
+            mkSubplot(ax5, channel_bounds[3][0], channel_bounds[3][1], stations, profile_data)
 
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
@@ -340,30 +345,33 @@ class PEMFileEditor:
             axlog2 = axlog1.twiny()
             axlog2.get_shared_x_axes().join(axlog1, axlog2)
             # Creating the LOG plot
-            mkSubplot(axlog1, self, 0, channel_bounds[3][1], stations, profile_data)
+            mkSubplot(axlog1, 0, channel_bounds[3][1], stations, profile_data)
             # Creating the LOG plot
             plt.yscale('symlog', linthreshy=10)
             plt.xlim(x_limit)
 
             # Setting the titles
             plt.figtext(0.555, 0.97, 'Crone Geophysics & Exploration Ltd.',
-                        fontname=font, alpha=alpha, fontsize=10, ha='center')
+                        fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
 
-            plt.figtext(0.132, 0.964, 'Timebase: ' + str(timebase) + ' ms\n' +
+            plt.figtext(0.555, 0.955,  survey_type + ' Pulse EM Survey', family='cursive', style='italic',
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
+
+            plt.figtext(0.125, 0.945, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Frequency: ' + str(round(timebase_freq, 2)) + ' Hz',
-                        fontname=font, alpha=alpha, fontsize=9, va='top')
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
 
-            plt.figtext(0.555, 0.964, survey_type + ' Pulse EM Survey\n'
-                        + 'Loop: ' + loop+'      Component: ' + component + '\n'
-                        + s_title + ': ' + linehole,
-                        fontname=font, alpha=alpha, fontsize=9, va='top', ha='center')
+            plt.figtext(0.555, 0.945, 'Loop: ' + loop + '\n'
+                        + s_title + ': ' + linehole + '\n'
+                        + component + ' Component',
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='center')
 
-            plt.figtext(0.975, 0.964, client + '\n' + grid + '\n' + date + '\n',
-                        fontname=font, alpha=alpha, fontsize=9, va='top', ha='right')
+            plt.figtext(0.975, 0.945, client + '\n' + grid + '\n' + date + '\n',
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='right')
 
             axlog1.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
-                           fontname=font,
-                           alpha=alpha)
+                              fontname=font,
+                              alpha=alpha)
 
             # SET LOG PLOT LIMITS
             y_limits = axlog1.get_ylim()
@@ -380,6 +388,8 @@ class PEMFileEditor:
                     ax.spines['top'].set_position(('data', 0))
                     ax.xaxis.set_ticks_position('top')
                     ax.xaxis.set_minor_locator(minor_locator)
+                    # ax.yaxis.set_minor_locator(ticker.SymmetricalLogLocator(base=9, linthresh=10))
+                    # ax.yaxis.set_minor_locator(AutoMinorLocator())
                     ax.tick_params(axis='x', which='major', direction='inout', length=6)
                     ax.tick_params(axis='x', which='minor', direction='inout', length=3)
                     plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
@@ -435,6 +445,44 @@ class PEMFileEditor:
 
         plots = [plot_data['fig'] for station_number, plot_data in plots_dict.items()]
         return plots
+
+
+# class MinorSymLogLocator(Locator):
+#     """
+#     Dynamically find minor tick positions based on the positions of
+#     major ticks for a symlog scaling.
+#     """
+#     def __init__(self, linthresh):
+#         """
+#         Ticks will be placed between the major ticks.
+#         The placement is linear for x between -linthresh and linthresh,
+#         otherwise its logarithmically
+#         """
+#         self.linthresh = linthresh
+#
+#     def __call__(self):
+#         'Return the locations of the ticks'
+#         majorlocs = self.axis.get_majorticklocs()
+#
+#         # iterate through minor locs
+#         minorlocs = []
+#
+#         # handle the lowest part
+#         for i in xrange(1, len(majorlocs)):
+#             majorstep = majorlocs[i] - majorlocs[i-1]
+#             if abs(majorlocs[i-1] + majorstep/2) < self.linthresh:
+#                 ndivs = 10
+#             else:
+#                 ndivs = 9
+#             minorstep = majorstep / ndivs
+#             locs = np.arange(majorlocs[i-1], majorlocs[i], minorstep)[1:]
+#             minorlocs.extend(locs)
+#
+#         return self.raise_if_exceeds(np.array(minorlocs))
+#
+#     def tick_values(self, vmin, vmax):
+#         raise NotImplementedError('Cannot get tick locations for a '
+#                                   '%s type.' % type(self))
 
 
 if __name__ == "__main__":
