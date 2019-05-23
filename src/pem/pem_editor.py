@@ -109,12 +109,12 @@ class PEMFileEditor:
         def mkSubplot(ax, objPEMEdit, channel_low, channel_high, stations, profile_data):
 
             offset_slant = 0
-            offset_adjust = 2
+            offset_adjust = 1
 
             if len(stations) > 24:
                 offset_adjust = 3
             elif len(stations) > 40:
-                offset_adjust = 4
+                offset_adjust = 5
 
             for k in range(channel_low, (channel_high + 1)):
                 ax.plot(stations, profile_data[k], color=line_colour, linewidth=line_width, alpha=alpha)
@@ -133,19 +133,19 @@ class PEMFileEditor:
             # yspacing = yaxes[1] - yaxes[0]
             # stations = list(sorted(uniquestations))
             num_stns = len(stations)
-            spacing = 16
+            spacing = 12
             if num_stns < 12:
                 spacing = 2
             elif num_stns < 24:
-                spacing = 4
+                spacing = 3
             elif num_stns < 36:
-                spacing = 6
+                spacing = 4
             elif num_stns < 48:
-                spacing = 8
+                spacing = 6
             elif num_stns < 60:
-                spacing = 10
+                spacing = 8
             elif num_stns < 80:
-                spacing = 12
+                spacing = 10
             i = offset % len(stations)
             while i < len(stations):
                 xy = (stations[i], profile_data[channel][i])
@@ -181,6 +181,8 @@ class PEMFileEditor:
             survey_type = 'Borehole Fluxgate'
         elif survey_type.casefold() == 's-squid':
             survey_type = 'SQUID'
+        else:
+            survey_type = 'UNDEF_SURV'
 
         if 'borehole' in survey_type.casefold():
             s_title = 'Hole'
@@ -191,11 +193,15 @@ class PEMFileEditor:
             units = 'nT/s'
         elif 'picotesla' in units.casefold():
             units = 'pT'
+        else:
+            units = "UNDEF_UNIT"
 
         if units == 'nT/s':
             first_channel_label = "Primary Pulse"
         elif units == 'pT':
             first_channel_label = 'On-time'
+        else:
+            first_channel_label = 'UNDEF_CHAN'
 
         # sort the data by station. Station names must first be converted into a number
         data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
@@ -302,11 +308,13 @@ class PEMFileEditor:
                 if (y_limits[1] - y_limits[0]) < 2:
                     new_high = math.ceil((y_limits[1] - y_limits[0]) / 2 + 2)
                     new_low = math.floor((y_limits[1] - y_limits[0]) / 2 - 2)
+                    ax.set_ylim(new_low, new_high)
+                    ax.set_yticks(ax.get_yticks())
                 elif index != 5:
                     new_high = math.ceil(max(y_limits[1], 0))
                     new_low = math.floor(min(y_limits[0], 0))
-                ax.set_ylim(new_low, new_high)
-                ax.set_yticks(ax.get_yticks())
+                    ax.set_ylim(new_low, new_high)
+                    ax.set_yticks(ax.get_yticks())
 
                 if index != 5:
                     ax.spines['top'].set_position(('data', 0))
@@ -359,7 +367,7 @@ class PEMFileEditor:
 
             # SET LOG PLOT LIMITS
             y_limits = axlog1.get_ylim()
-            new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 100), 11))
+            new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 11), 10))
             new_low = -1 * 10.0 ** math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
             axlog1.set_ylim(new_low, new_high)
             # SET LOG PLOT LIMITS
@@ -367,7 +375,6 @@ class PEMFileEditor:
             for index, ax in enumerate(log_fig.axes):
                 ax.spines['right'].set_visible(False)
                 ax.spines['bottom'].set_visible(False)
-                print(index)
 
                 if index == 0:
                     ax.spines['top'].set_position(('data', 0))

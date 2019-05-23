@@ -1,10 +1,12 @@
 import sys
+import os
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from pem.pem_editor import PEMFileEditor
 from qt_py.pem_file_widget import PEMFileWidget
 from log import Logger
+
 logger = Logger(__name__)
 
 
@@ -44,6 +46,18 @@ class FileBrowser(QTabWidget):
         self.active_editor = new_editor
 
     def open_files(self, file_names):
+
+        def get_filename(file_path, have_suffix):
+            # have_suffix will determine whether or not to include filetype in the name
+            if have_suffix:
+                return os.path.basename(file_path)
+            else:
+                st = os.path.basename(file_path)
+                for i in range(len(st)-1, -1, -1):
+                    if st[i] == '.':
+                        return st[0:i]
+                return 'Invalid File Name'
+
         # Creates new tabs first before beginning the process of loading in files as opposed to calling
         # open_file in a loop which will create each tab sequentially as the files are loaded
         new_editors = []
@@ -56,9 +70,11 @@ class FileBrowser(QTabWidget):
 
                 self.editors.append(new_editors[-1])
                 self.widgets.append(new_file_widgets[-1])
+
                 self.original_indices.append(len(self.widgets))
 
-                tab_index = self.addTab(new_file_widgets[-1], file_name)
+                # Add a new file tab
+                self.addTab(new_file_widgets[-1], get_filename(file_name, True))
                 # tab_widget = self.widget(tab_index)
             else:
                 logger.exception('Bad Filetype', TypeError)
