@@ -42,6 +42,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Connect signals to slots
         self.action_open_file.triggered.connect(self.on_file_open)
         self.action_print.triggered.connect(self.on_print)
+        self.action_print_all.triggered.connect(self.on_print_all)
         self.action_print.setShortcut("Ctrl+P")
         self.file_browser = None
 
@@ -62,6 +63,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # TODO Make sure active editor field is valid
         logger.info('Saving plots to PDFs in directory "{}"'.format(name))
         self.file_browser.currentWidget().print(name)
+
+    def on_print_all(self):
+        # TODO Add method of sorting between PEM and other file types.
+        logger.info("Entering directory dialog for saving to PDF")
+        file_dialog = QFileDialog()
+        file_dialog.setFileMode(QFileDialog.Directory)
+        file_dialog.setOption(QFileDialog.ShowDirsOnly)
+        name = QFileDialog.getExistingDirectory(self, '', 'Plots')
+
+        if name == "":
+            logger.info("No directory chosen, aborted save to PDF")
+            return
+
+        # TODO Make sure active editor field is valid
+        logger.info('Saving plots to PDFs in directory "{}"'.format(name))
+        self.file_browser.print_files(name)
 
 
     def on_file_open(self):

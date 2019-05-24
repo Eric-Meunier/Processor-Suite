@@ -56,6 +56,7 @@ class PEMFileWidget(QWidget):
         # print(str(self.width()) + ", " + str(self.height()))
 
     def print(self, dir_name):
+        # TODO Refactor?  Put in same place as print_all (In FileBrowser) and add helper?
 
         # Code for making pdf by printing widgets
         # Conclusion: This rasterizes the plots, making them blurry.

@@ -7,6 +7,8 @@ from pem.pem_editor import PEMFileEditor
 from qt_py.pem_file_widget import PEMFileWidget
 from log import Logger
 
+from matplotlib.backends.backend_pdf import PdfPages
+
 logger = Logger(__name__)
 
 
@@ -86,6 +88,39 @@ class FileBrowser(QTabWidget):
 
         self.setCurrentWidget(new_file_widgets[0])
         self.active_editor = new_editors[0]
+
+    def print_files(self, dir_name):
+        lin_figs = {}
+        log_figs = {}
+
+        # Order figures by line name in ascending order
+        for file_widget in self.widgets:
+            lin_figs[file_widget.editor.active_file.get_header()['LineHole']] = \
+                [x.figure for x in file_widget.lin_view_widget.plot_widgets()]
+            log_figs[file_widget.editor.active_file.get_header()['LineHole']] = \
+                [x.figure for x in file_widget.log_view_widget.plot_widgets()]
+
+        ordered_lin_figs = sorted(lin_figs.items(), key=lambda s: s[0])
+        ordered_log_figs = sorted(log_figs.items(), key=lambda s: s[0])
+
+        # Has form:
+        # [('2400N', [<Figure size 750x1000 with 6 Axes>, <Figure size 750x1000 with 6 Axes>]),
+        #  ('7600N', [<Figure size 850x1100 with 6 Axes>, <Figure size 850x1100 with 6 Axes>, <Figure size 850x1100 with 6 Axes>])]
+
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+
+        with PdfPages(os.path.join(dir_name, "lin.pdf")) as pdf:
+            for line, figs in ordered_lin_figs:
+                for fig in figs:
+                    pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
+
+        with PdfPages(os.path.join(dir_name, "log.pdf")) as pdf:
+            for line, figs in ordered_log_figs:
+                for fig in figs:
+                    pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
+
+        logger.info('File save complete.')
 
     def on_tab_close(self, index):
         logger.info("Close tab ", index)

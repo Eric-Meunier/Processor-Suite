@@ -34,6 +34,7 @@
     </property>
     <addaction name="action_open_file"/>
     <addaction name="action_print"/>
+    <addaction name="action_print_all"/>
    </widget>
    <addaction name="menuCrone_Plots"/>
   </widget>
@@ -48,6 +49,11 @@
   <action name="action_print">
    <property name="text">
     <string>Save as PDF...</string>
+   </property>
+  </action>
+  <action name="action_print_all">
+   <property name="text">
+    <string>Save All as PDF...</string>
    </property>
   </action>
  </widget>
