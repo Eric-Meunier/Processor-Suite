@@ -284,6 +284,9 @@ class PEMFileEditor:
             # The LIN plot always has 5 axes. LOG only ever has one.
             lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
             # Using subplots_adjust instead of tight_layout since it's significantly faster (3 secs -> 0.3 secs)
+            # NOTE: Subplots y-axis' are now always at the same distance from the left edge. As a result, the y-axis
+            #       labels may get cutoff if the y-axis numbers are too long. With tight_layout the y-axis distance from
+            #       the left edge is changed to ensure the y-axis labels are always the same distance away.
             lin_fig.subplots_adjust(left=0.14, bottom=0.05, right=0.970, top=0.9)
             ax6 = ax5.twiny()
             ax6.get_shared_x_axes().join(ax5, ax6)
