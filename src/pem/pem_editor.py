@@ -108,7 +108,7 @@ class PEMFileEditor:
 
     def mk_plots(self):
 
-        def mkSubplot(ax, channel_low, channel_high, stations, profile_data):
+        def mk_subplot(ax, channel_low, channel_high, stations, profile_data):
 
             offset_slant = 0
             offset_adjust = 1
@@ -153,6 +153,29 @@ class PEMFileEditor:
                 xy = (stations[i], profile_data[channel][i])
                 obj_plt.annotate(str_annotation, xy=xy, textcoords='data', size=7, alpha=alpha)
                 i += spacing
+
+        def add_titles():
+            """
+            Adds the titles to the plots
+            """
+
+            plt.figtext(0.555, 0.97, 'Crone Geophysics & Exploration Ltd.',
+                        fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
+
+            plt.figtext(0.555, 0.955,  survey_type + ' Pulse EM Survey', family='cursive', style='italic',
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
+
+            plt.figtext(0.125, 0.945, 'Timebase: ' + str(timebase) + ' ms\n' +
+                        'Frequency: ' + str(round(timebase_freq, 2)) + ' Hz',
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
+
+            plt.figtext(0.555, 0.945, s_title + ': ' + linehole + '\n'
+                        + component + ' Component' + '\n'
+                        + 'Loop: ' + loop,
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='center')
+
+            plt.figtext(0.975, 0.945, client + '\n' + grid + '\n' + date + '\n',
+                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='right')
 
         """
         Plot the LIN and LOG plots.
@@ -270,32 +293,15 @@ class PEMFileEditor:
                            str(channel_bounds[3][1]) + "\n(" + units + ")", fontname=font, alpha=alpha)
             lin_fig.align_ylabels()
 
-            # Setting the titles
-            plt.figtext(0.555, 0.97, 'Crone Geophysics & Exploration Ltd.',
-                        fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
-
-            plt.figtext(0.555, 0.955,  survey_type + ' Pulse EM Survey', family='cursive', style='italic',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
-
-            plt.figtext(0.125, 0.945, 'Timebase: ' + str(timebase) + ' ms\n' +
-                        'Frequency: ' + str(round(timebase_freq, 2)) + ' Hz',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
-
-            plt.figtext(0.555, 0.945, 'Loop: ' + loop + '\n'
-                        + s_title + ': ' + linehole + '\n'
-                        + component + ' Component',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='center')
-
-            plt.figtext(0.975, 0.945, client + '\n' + grid + '\n' + date + '\n',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='right')
+            add_titles()
 
             # PLOT PP
-            mkSubplot(ax1, 0, 0, stations, profile_data)
+            mk_subplot(ax1, 0, 0, stations, profile_data)
             # Plotting each subplot
-            mkSubplot(ax2, channel_bounds[0][0], channel_bounds[0][1], stations, profile_data)
-            mkSubplot(ax3, channel_bounds[1][0], channel_bounds[1][1], stations, profile_data)
-            mkSubplot(ax4, channel_bounds[2][0], channel_bounds[2][1], stations, profile_data)
-            mkSubplot(ax5, channel_bounds[3][0], channel_bounds[3][1], stations, profile_data)
+            mk_subplot(ax2, channel_bounds[0][0], channel_bounds[0][1], stations, profile_data)
+            mk_subplot(ax3, channel_bounds[1][0], channel_bounds[1][1], stations, profile_data)
+            mk_subplot(ax4, channel_bounds[2][0], channel_bounds[2][1], stations, profile_data)
+            mk_subplot(ax5, channel_bounds[3][0], channel_bounds[3][1], stations, profile_data)
 
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
@@ -344,30 +350,13 @@ class PEMFileEditor:
             log_fig, axlog1 = plt.subplots(1, 1, figsize=(8.5, 11))
             axlog2 = axlog1.twiny()
             axlog2.get_shared_x_axes().join(axlog1, axlog2)
+
             # Creating the LOG plot
-            mkSubplot(axlog1, 0, channel_bounds[3][1], stations, profile_data)
-            # Creating the LOG plot
+            mk_subplot(axlog1, 0, channel_bounds[3][1], stations, profile_data)
             plt.yscale('symlog', linthreshy=10)
             plt.xlim(x_limit)
 
-            # Setting the titles
-            plt.figtext(0.555, 0.97, 'Crone Geophysics & Exploration Ltd.',
-                        fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
-
-            plt.figtext(0.555, 0.955,  survey_type + ' Pulse EM Survey', family='cursive', style='italic',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
-
-            plt.figtext(0.125, 0.945, 'Timebase: ' + str(timebase) + ' ms\n' +
-                        'Frequency: ' + str(round(timebase_freq, 2)) + ' Hz',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
-
-            plt.figtext(0.555, 0.945, 'Loop: ' + loop + '\n'
-                        + s_title + ': ' + linehole + '\n'
-                        + component + ' Component',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='center')
-
-            plt.figtext(0.975, 0.945, client + '\n' + grid + '\n' + date + '\n',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='right')
+            add_titles()
 
             axlog1.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
                               fontname=font,
