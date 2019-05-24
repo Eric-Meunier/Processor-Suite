@@ -177,6 +177,33 @@ class PEMFileEditor:
             plt.figtext(0.975, 0.945, client + '\n' + grid + '\n' + date + '\n',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='right')
 
+        def format_spine():
+            ax.spines['right'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            plt.setp(ax.spines['left'], alpha=alpha)
+            plt.setp(ax.spines['top'], alpha=alpha)
+            ax.spines['top'].set_position(('data', 0))
+            ax.xaxis.set_ticks_position('top')
+            ax.xaxis.set_minor_locator(minor_locator)
+            ax.set_yticks(ax.get_yticks())
+            ax.tick_params(axis='x', which='major', direction='inout', length=6)
+            ax.tick_params(axis='x', which='minor', direction='inout', length=3)
+            plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
+            plt.setp(ax.get_xticklabels(), visible=False)
+
+        def format_xlabel_spine():
+            ax.spines['right'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            plt.setp(ax.spines['left'], alpha=alpha)
+            plt.setp(ax.spines['top'], alpha=alpha)
+            ax.spines['top'].set_visible(False)
+            ax.spines["top"].set_position(("axes", -0.1))
+            ax.xaxis.set_ticks_position('bottom')
+            ax.xaxis.set_label_position('bottom')
+            ax.set_yticks(ax.get_yticks())
+            ax.tick_params(axis='x', which='major', direction='out', length=6)
+            plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname="Century Gothic")
+
         """
         Plot the LIN and LOG plots.
         :return: LIN plot figure and LOG plot figure
@@ -305,17 +332,9 @@ class PEMFileEditor:
 
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
-
-                ax.spines['right'].set_visible(False)
-                ax.spines['bottom'].set_visible(False)
-                # if index != 5: ax.locator_params(axis='y', nbins=5)
-                plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
-                plt.setp(ax.spines['left'], alpha=alpha)
-                plt.setp(ax.spines['top'], alpha=alpha)
-                plt.setp(ax.spines['bottom'], alpha=alpha)
-
                 # Creates a minimum Y axis tick range
                 y_limits = ax.get_ylim()
+
                 if (y_limits[1] - y_limits[0]) < 2:
                     new_high = math.ceil((y_limits[1] - y_limits[0]) / 2 + 2)
                     new_low = math.floor((y_limits[1] - y_limits[0]) / 2 - 2)
@@ -328,20 +347,11 @@ class PEMFileEditor:
                     ax.set_yticks(ax.get_yticks())
 
                 if index != 5:
-                    ax.spines['top'].set_position(('data', 0))
-                    ax.xaxis.set_ticks_position('top')
-                    ax.xaxis.set_minor_locator(minor_locator)
-                    ax.tick_params(axis='x', which='major', direction='inout', length=6)
-                    ax.tick_params(axis='x', which='minor', direction='inout', length=3)
-                    plt.setp(ax.get_xticklabels(), visible=False)
+                    format_spine()
+
                 # The 6th subplot, only used for station tick labelling
                 elif index == 5:
-                    ax.spines['top'].set_visible(False)
-                    ax.spines["top"].set_position(("axes", -0.1))
-                    ax.xaxis.set_ticks_position('bottom')
-                    ax.xaxis.set_label_position('bottom')
-                    ax.tick_params(axis='x', which='major', direction='out', length=6)
-                    plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname="Century Gothic")
+                    format_xlabel_spine()
 
             # lin_fig.subplots_adjust(hspace=0.25)
             lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
@@ -369,33 +379,13 @@ class PEMFileEditor:
             axlog1.set_ylim(new_low, new_high)
             # SET LOG PLOT LIMITS
 
+            # Modify the axes spines
             for index, ax in enumerate(log_fig.axes):
-                ax.spines['right'].set_visible(False)
-                ax.spines['bottom'].set_visible(False)
-
                 if index == 0:
-                    ax.spines['top'].set_position(('data', 0))
-                    ax.xaxis.set_ticks_position('top')
-                    ax.xaxis.set_minor_locator(minor_locator)
-                    # ax.yaxis.set_minor_locator(ticker.SymmetricalLogLocator(base=9, linthresh=10))
-                    # ax.yaxis.set_minor_locator(AutoMinorLocator())
-                    ax.tick_params(axis='x', which='major', direction='inout', length=6)
-                    ax.tick_params(axis='x', which='minor', direction='inout', length=3)
-                    plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
-                    plt.setp(ax.get_xticklabels(), visible=False)
-                    ax.set_yticks(ax.get_yticks())
+                    format_spine()
 
                 elif index == 1:
-                    ax.spines['top'].set_visible(False)
-                    ax.spines["top"].set_position(("axes", -0.1))
-                    ax.xaxis.set_ticks_position('bottom')
-                    ax.xaxis.set_label_position('bottom')
-                    ax.tick_params(axis='x', which='major', direction='out', length=6)
-                    plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname="Century Gothic")
-                    ax.set_yticks(ax.get_yticks())
-                # plt.setp(ax.spines['left'], alpha=alpha)
-                # plt.setp(ax.spines['top'], alpha=alpha)
-                # plt.setp(ax.spines['bottom'], alpha=alpha)
+                    format_xlabel_spine()
 
             log_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
             # log_fig.tight_layout()
@@ -403,6 +393,7 @@ class PEMFileEditor:
 
             lin_figs.append(lin_fig)
             log_figs.append(log_fig)
+
         return lin_figs, log_figs
 
     # Legacy function, leave as reference
