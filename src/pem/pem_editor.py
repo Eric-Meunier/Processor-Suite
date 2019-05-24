@@ -1,6 +1,7 @@
 from src.pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
-from matplotlib.ticker import (FormatStrFormatter, AutoMinorLocator, MaxNLocator, Locator)
+from matplotlib.ticker import (IndexLocator, AutoLocator, AutoMinorLocator, MaxNLocator, Locator,
+                               FixedLocator)
 import matplotlib.ticker as ticker
 from collections import OrderedDict
 import matplotlib.pyplot as plt
@@ -107,6 +108,10 @@ class PEMFileEditor:
         return profile_data
 
     def mk_plots(self):
+        """
+        Plot the LIN and LOG plots.
+        :return: LIN plot figure and LOG plot figure
+        """
 
         def mk_subplot(ax, channel_low, channel_high, stations, profile_data):
 
@@ -184,10 +189,11 @@ class PEMFileEditor:
             plt.setp(ax.spines['top'], alpha=alpha)
             ax.spines['top'].set_position(('data', 0))
             ax.xaxis.set_ticks_position('top')
-            ax.xaxis.set_minor_locator(minor_locator)
+            # ax.xaxis.set_minor_locator(minor_locator)
+            ax.xaxis.set_major_locator(major_locator)
             ax.set_yticks(ax.get_yticks())
-            ax.tick_params(axis='x', which='major', direction='inout', length=6)
-            ax.tick_params(axis='x', which='minor', direction='inout', length=3)
+            ax.tick_params(axis='x', which='major', direction='inout', length=3)
+            # ax.tick_params(axis='x', which='minor', direction='inout', length=3)
             plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
             plt.setp(ax.get_xticklabels(), visible=False)
 
@@ -198,16 +204,12 @@ class PEMFileEditor:
             plt.setp(ax.spines['top'], alpha=alpha)
             ax.spines['top'].set_visible(False)
             ax.spines["top"].set_position(("axes", -0.1))
+            ax.xaxis.set_major_locator(x_label_locator)
             ax.xaxis.set_ticks_position('bottom')
             ax.xaxis.set_label_position('bottom')
             ax.set_yticks(ax.get_yticks())
             ax.tick_params(axis='x', which='major', direction='out', length=6)
             plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname="Century Gothic")
-
-        """
-        Plot the LIN and LOG plots.
-        :return: LIN plot figure and LOG plot figure
-        """
 
         file = self.active_file
         # Header info mostly just for the title of the plots
@@ -248,12 +250,13 @@ class PEMFileEditor:
         else:
             units = "UNDEF_UNIT"
 
-        if units == 'nT/s':
-            first_channel_label = "Primary Pulse"
-        elif units == 'pT':
-            first_channel_label = 'On-time'
-        else:
-            first_channel_label = 'UNDEF_CHAN'
+        first_channel_label = "Primary Pulse"
+        # if units == 'nT/s':
+        #     first_channel_label = "Primary Pulse"
+        # elif units == 'pT':
+        #     first_channel_label = 'On-time'
+        # else:
+        #     first_channel_label = 'UNDEF_CHAN'
 
         # sort the data by station. Station names must first be converted into a number
         data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
@@ -265,7 +268,6 @@ class PEMFileEditor:
         line_width = 0.5
         line_colour = 'black'
         alpha = 0.8
-        # font = "Century Gothic"
         font = "Tahoma"
 
         # Each component has their own figure
@@ -285,8 +287,9 @@ class PEMFileEditor:
             x_limit = min(stations), max(stations)
             plt.xlim(x_limit)
 
-            minor_locator = AutoMinorLocator(5)
-            # major_formatter = FormatStrFormatter('%d')
+            # minor_locator = AutoMinorLocator(5)
+            major_locator = FixedLocator(stations)
+            x_label_locator = AutoLocator()
 
             # TODO Much of the slow loading time comes from the following block up to the End of block comment.
             # This is mostly due to matplotlib being oriented towards publication-quality graphics, and not being very
@@ -340,6 +343,7 @@ class PEMFileEditor:
                     new_low = math.floor((y_limits[1] - y_limits[0]) / 2 - 2)
                     ax.set_ylim(new_low, new_high)
                     ax.set_yticks(ax.get_yticks())
+
                 elif index != 5:
                     new_high = math.ceil(max(y_limits[1], 0))
                     new_low = math.floor(min(y_limits[0], 0))
@@ -425,44 +429,6 @@ class PEMFileEditor:
 
         plots = [plot_data['fig'] for station_number, plot_data in plots_dict.items()]
         return plots
-
-
-# class MinorSymLogLocator(Locator):
-#     """
-#     Dynamically find minor tick positions based on the positions of
-#     major ticks for a symlog scaling.
-#     """
-#     def __init__(self, linthresh):
-#         """
-#         Ticks will be placed between the major ticks.
-#         The placement is linear for x between -linthresh and linthresh,
-#         otherwise its logarithmically
-#         """
-#         self.linthresh = linthresh
-#
-#     def __call__(self):
-#         'Return the locations of the ticks'
-#         majorlocs = self.axis.get_majorticklocs()
-#
-#         # iterate through minor locs
-#         minorlocs = []
-#
-#         # handle the lowest part
-#         for i in xrange(1, len(majorlocs)):
-#             majorstep = majorlocs[i] - majorlocs[i-1]
-#             if abs(majorlocs[i-1] + majorstep/2) < self.linthresh:
-#                 ndivs = 10
-#             else:
-#                 ndivs = 9
-#             minorstep = majorstep / ndivs
-#             locs = np.arange(majorlocs[i-1], majorlocs[i], minorstep)[1:]
-#             minorlocs.extend(locs)
-#
-#         return self.raise_if_exceeds(np.array(minorlocs))
-#
-#     def tick_values(self, vmin, vmax):
-#         raise NotImplementedError('Cannot get tick locations for a '
-#                                   '%s type.' % type(self))
 
 
 if __name__ == "__main__":
