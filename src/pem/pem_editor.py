@@ -18,6 +18,11 @@ logger = Logger(__name__)
 # plt.style.use('ggplot')
 plt.style.use('seaborn-paper')
 
+# import matplotlib.style as mplstyle
+# mplstyle.use('fast')
+
+import time
+
 
 class PEMFileEditor:
     """
@@ -274,8 +279,12 @@ class PEMFileEditor:
         for component in components:
             logger.info("Plotting component " + component)
 
+            # t1 = time.time()
+
             # The LIN plot always has 5 axes. LOG only ever has one.
             lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
+            # Using subplots_adjust instead of tight_layout since it's significantly faster (3 secs -> 0.3 secs)
+            lin_fig.subplots_adjust(left=0.14, bottom=0.05, right=0.970, top=0.9)
             ax6 = ax5.twiny()
             ax6.get_shared_x_axes().join(ax5, ax6)
 
@@ -358,10 +367,11 @@ class PEMFileEditor:
                     format_xlabel_spine()
 
             # lin_fig.subplots_adjust(hspace=0.25)
-            lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
+            # lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
             # lin_fig.tight_layout(pad=1.5)
 
             log_fig, axlog1 = plt.subplots(1, 1, figsize=(8.5, 11))
+            log_fig.subplots_adjust(left=0.1225, bottom=0.05, right=0.970, top=0.9)
             axlog2 = axlog1.twiny()
             axlog2.get_shared_x_axes().join(axlog1, axlog2)
 
@@ -391,7 +401,10 @@ class PEMFileEditor:
                 elif index == 1:
                     format_xlabel_spine()
 
-            log_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
+            # log_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
+            # t2 = time.time()
+            # print(t2 - t1)
+
             # log_fig.tight_layout()
             # TODO End of block
 
