@@ -232,7 +232,9 @@ class PEMFileEditor:
 
         if survey_type.casefold() == 's-coil':
             survey_type = 'Surface Induction'
-        elif survey_type.casefold() == 'borehole' or survey_type == 'b-rad':
+        elif survey_type.casefold() == 'borehole':
+            survey_type = 'Borehole Induction'
+        elif survey_type.casefold() == 'b-rad':
             survey_type = 'Borehole Induction'
         elif survey_type.casefold() == 's-flux':
             survey_type = 'Surface Fluxgate'
