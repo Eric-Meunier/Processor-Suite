@@ -143,7 +143,7 @@ class PEMFileEditor:
             TODO What if the survey has more than 100 stations already?
             """
             readings = np.array(profile_data, dtype='float64')
-            step = abs((max(stations) - min(stations)) / 100)
+            step = abs((max(stations) - min(stations)) / 1000)
             x_intervals = np.arange(min(stations), max(stations) + 1, step)
 
             interp_data = np.interp(x_intervals, stations, readings)
@@ -157,9 +157,8 @@ class PEMFileEditor:
             :param channel_low: The smallest channel being plotted in the axes
             :param channel_high: The largest channel being plotted in the axes
             :param profile_data: The data in profile mode. Gets interpolated.
-            :return:
             """
-            offset = 10
+            offset = 100
 
             # rect = plt.Rectangle((0.2, 0.75), 0.4, 0.15, color='k', alpha=0.3, transform=ax.transAxes)
             # ax.add_patch(rect)
@@ -171,9 +170,9 @@ class PEMFileEditor:
                 # Interpolates the channel data, also returns the corresponding x intervals
                 interp_data, x_intervals = get_interp_data(channel_data, stations)
 
-                ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
+                ax.plot(stations, channel_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
-                for i, x_position in enumerate(x_intervals[offset::40]):
+                for i, x_position in enumerate(x_intervals[offset::400]):
                     y = interp_data[list(x_intervals).index(x_position)]
 
                     if k == 0:
@@ -183,10 +182,10 @@ class PEMFileEditor:
                     else:
                         ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7,
                                     va='center_baseline', ha='center', alpha=alpha)
-                offset += 15
+                offset += 150
 
-                if offset >= 85:
-                    offset = 10
+                if offset >= 850:
+                    offset = 100
 
         # def calc_y(x_position_percent, stations_percent, array):
         #     """
