@@ -10,6 +10,11 @@ import math
 # from PIL import ImageDraw
 import re
 from log import Logger
+from math import atan2, degrees
+import warnings
+from matplotlib.dates import date2num, DateConverter, num2date
+from matplotlib.container import ErrorbarContainer
+from datetime import datetime
 
 logger = Logger(__name__)
 # plt.style.use('seaborn-whitegrid')
@@ -89,28 +94,38 @@ class PEMFileEditor:
 
         return unique_components
 
-    def get_profile_data(self, component_data, num_channels):
+    def get_profile_data(self, component_data):
         """
         Transforms the data so it is ready to be plotted for LIN and LOG plots
         :param component_data: Data (dict) for a single component (i.e. Z, X, or Y)
-        :param num_channels: Int number of channels
-        :return: Dictionary where each key is a channel, and the
-        values are a list of the EM responses of that channel at each station
+        :return: Dictionary where each key is a channel, and the values of those keys are a list of
+        dictionaries which contain the stations and readings of all readings of that channel
         """
-
         profile_data = {}
+        num_channels = len(component_data[0]['Data'])
 
         for channel in range(0, num_channels):
-            profile_data[channel] = []
+            # profile_data[channel] = {}
+            channel_data = []
 
-            for station in component_data:
-                reading = station['Data']
-                # TODO Station number should probably be in this dictionary, and will be the X axis of the plots
+            for i, station in enumerate(component_data):
+                reading = station['Data'][channel]
                 station_number = station['Station']
+                channel_data.append({'Station': station_number, 'Reading': reading})
 
-                profile_data[channel].append(reading[channel])
+            profile_data[channel] = channel_data
 
         return profile_data
+
+    def get_channel_data(self, channel, profile_data):
+        data = []
+        stations = []
+        for station in profile_data[channel]:
+            data.append(station['Reading'])
+            stations.append(station['Station'])
+
+        return data, stations
+
 
     def mk_plots(self):
         """
@@ -118,51 +133,72 @@ class PEMFileEditor:
         :return: LIN plot figure and LOG plot figure
         """
 
-        def mk_subplot(ax, channel_low, channel_high, stations, profile_data):
+        def get_interp_data(profile_data, stations):
+            readings = np.array(profile_data, dtype='float64')
+            step = abs((max(stations) - min(stations)) / 100)
+            x_intervals = np.arange(min(stations), max(stations), step)
 
-            offset_slant = 0
-            offset_adjust = 1
+            interp_data = np.interp(x_intervals, stations, readings)
 
-            if len(stations) > 24:
-                offset_adjust = 3
-            elif len(stations) > 40:
-                offset_adjust = 5
+            return interp_data, x_intervals
+
+        def mk_subplot(ax, channel_low, channel_high, profile_data):
+            offset = 10
 
             for k in range(channel_low, (channel_high + 1)):
-                ax.plot(stations, profile_data[k], color=line_colour, linewidth=line_width, alpha=alpha)
-                if k == 0:
-                    annotate_plot("PP", ax, 0, 0)
-                else:
-                    annotate_plot(str(k), ax, k, offset_slant)
-                offset_slant += offset_adjust
+                # Gets the profile data for a single channel, along with the stations
+                channel_data, stations = self.get_channel_data(k, profile_data)
 
-        def annotate_plot(str_annotation, obj_plt, channel, offset):
+                # Interpolates the channel data, also returns the corresponding x intervals
+                interp_data, x_intervals = get_interp_data(channel_data, stations)
 
-            # This is eventually used for free floating annotations not tied to data points
-            # uniquestations = self.active_file.get_unique_stations()
-            # xspacing = (abs(max(stations)) - abs(min(stations))) / num_stns
-            # yaxes = obj_plt.axes.get_ylim()
-            # yspacing = yaxes[1] - yaxes[0]
-            # stations = list(sorted(uniquestations))
-            num_stns = len(stations)
-            spacing = 12
-            if num_stns < 12:
-                spacing = 8
-            elif num_stns < 24:
-                spacing = 12
-            elif num_stns < 36:
-                spacing = 16
-            elif num_stns < 48:
-                spacing = 24
-            elif num_stns < 60:
-                spacing = 32
-            elif num_stns < 80:
-                spacing = 40
-            i = offset % len(stations)
-            while i < len(stations):
-                xy = (stations[i], profile_data[channel][i])
-                obj_plt.annotate(str_annotation, xy=xy, textcoords='data', size=7, alpha=alpha)
-                i += spacing
+                ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
+
+                for i, x_position in enumerate(x_intervals[offset::40]):
+                    y = interp_data[list(x_intervals).index(x_position)]
+
+                    if k == 0:
+                        ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7,
+                                    va='center_baseline', ha='center', alpha=alpha)
+
+                    else:
+                        ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7,
+                                    va='center_baseline', ha='center', alpha=alpha)
+                offset += 15
+
+                if offset >= 85:
+                    offset = 10
+
+
+        # def calc_y(x_position_percent, stations_percent, array):
+        #     """
+        #     Calculate the Y value at a given position
+        #     :param x_position_percent: Percentage along the x-axis
+        #     :param array: Profile data for a given channel
+        #     :return: The Y axis value at the x_position_percent
+        #     """
+        #     # x_index = x_position_percent * len(array)
+        #     # xp = np.arange(0, len(array), 1, dtype='float64')
+        #
+        #     fp = np.asarray(array, dtype='float64')
+        #     # if ax.get_yscale()=='symlog':
+        #     #     y_value = np.interp(x_position_percent, stations_percent, fp)
+        #     y_value = np.interp(x_position_percent, stations_percent, fp)
+        #
+        #     return y_value
+
+        # def annotate_plot(str_annotation, obj_plt, channel, offset):
+        #     # TODO Make plotting interp based, and also probably make annotations not interp based.
+        #     # List of stations but using a percent to represent their position
+        #     stations_percent = [(abs(stations[x] - stations[0]) / abs(stations[0] - stations[-1])) for x in
+        #                         range(len(stations))]
+        #
+        #     for i in range(0, 100, 40):
+        #         x_percent = i / 100 + offset
+        #         y = calc_y(x_percent, stations_percent, profile_data[channel])
+        #
+        #         obj_plt.annotate(str_annotation, xy=(x_percent, y), xycoords=("axes fraction", "data"), size=7,
+        #                          va='center_baseline', ha='center', alpha=alpha)
 
         def add_titles():
             """
@@ -172,7 +208,7 @@ class PEMFileEditor:
             plt.figtext(0.555, 0.97, 'Crone Geophysics & Exploration Ltd.',
                         fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
 
-            plt.figtext(0.555, 0.955,  survey_type + ' Pulse EM Survey', family='cursive', style='italic',
+            plt.figtext(0.555, 0.955, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
 
             plt.figtext(0.125, 0.945, 'Timebase: ' + str(timebase) + ' ms\n' +
@@ -189,11 +225,11 @@ class PEMFileEditor:
 
         def format_spine():
             ax.spines['right'].set_visible(False)
-            ax.spines['bottom'].set_visible(False)
+            ax.spines['top'].set_visible(False)
             plt.setp(ax.spines['left'], alpha=alpha)
             plt.setp(ax.spines['top'], alpha=alpha)
-            ax.spines['top'].set_position(('data', 0))
-            ax.xaxis.set_ticks_position('top')
+            ax.spines['bottom'].set_position(('data', 0))
+            ax.xaxis.set_ticks_position('bottom')
             # ax.xaxis.set_minor_locator(minor_locator)
             ax.xaxis.set_major_locator(major_locator)
             ax.set_yticks(ax.get_yticks())
@@ -295,9 +331,9 @@ class PEMFileEditor:
 
             component_data = list(filter(lambda d: d['Component'] == component, data))
 
-            profile_data = self.get_profile_data(component_data, num_channels)
+            profile_data = self.get_profile_data(component_data)
 
-            stations = [reading['Station'] for reading in component_data]
+            stations = [station['Station'] for station in component_data]
             x_limit = min(stations), max(stations)
             plt.xlim(x_limit)
 
@@ -340,12 +376,12 @@ class PEMFileEditor:
             add_titles()
 
             # PLOT PP
-            mk_subplot(ax1, 0, 0, stations, profile_data)
+            mk_subplot(ax1, 0, 0, profile_data)
             # Plotting each subplot
-            mk_subplot(ax2, channel_bounds[0][0], channel_bounds[0][1], stations, profile_data)
-            mk_subplot(ax3, channel_bounds[1][0], channel_bounds[1][1], stations, profile_data)
-            mk_subplot(ax4, channel_bounds[2][0], channel_bounds[2][1], stations, profile_data)
-            mk_subplot(ax5, channel_bounds[3][0], channel_bounds[3][1], stations, profile_data)
+            mk_subplot(ax2, channel_bounds[0][0], channel_bounds[0][1], profile_data)
+            mk_subplot(ax3, channel_bounds[1][0], channel_bounds[1][1], profile_data)
+            mk_subplot(ax4, channel_bounds[2][0], channel_bounds[2][1], profile_data)
+            mk_subplot(ax5, channel_bounds[3][0], channel_bounds[3][1], profile_data)
 
             # Formatting the styling of the subplots
             for index, ax in enumerate(lin_fig.axes):
@@ -375,28 +411,27 @@ class PEMFileEditor:
             # lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
             # lin_fig.tight_layout(pad=1.5)
 
-            log_fig, axlog1 = plt.subplots(1, 1, figsize=(8.5, 11))
-            log_fig.subplots_adjust(left=0.1225, bottom=0.05, right=0.970, top=0.9)
-            axlog2 = axlog1.twiny()
-            axlog2.get_shared_x_axes().join(axlog1, axlog2)
-
             # Creating the LOG plot
-            mk_subplot(axlog1, 0, channel_bounds[3][1], stations, profile_data)
+            log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
+            log_fig.subplots_adjust(left=0.1225, bottom=0.05, right=0.970, top=0.9)
+            axlog2 = ax.twiny()
+            axlog2.get_shared_x_axes().join(ax, axlog2)
             plt.yscale('symlog', linthreshy=10)
             plt.xlim(x_limit)
 
             add_titles()
 
-            axlog1.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
+            ax.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
                               fontname=font,
                               alpha=alpha)
 
+            mk_subplot(ax, 0, channel_bounds[3][1], profile_data)
+
             # SET LOG PLOT LIMITS
-            y_limits = axlog1.get_ylim()
+            y_limits = ax.get_ylim()
             new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 11), 10))
             new_low = -1 * 10.0 ** math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
-            axlog1.set_ylim(new_low, new_high)
-            # SET LOG PLOT LIMITS
+            ax.set_ylim(new_low, new_high)
 
             # Modify the axes spines
             for index, ax in enumerate(log_fig.axes):
@@ -405,13 +440,6 @@ class PEMFileEditor:
 
                 elif index == 1:
                     format_xlabel_spine()
-
-            # log_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
-            # t2 = time.time()
-            # print(t2 - t1)
-
-            # log_fig.tight_layout()
-            # TODO End of block
 
             lin_figs.append(lin_fig)
             log_figs.append(log_fig)
