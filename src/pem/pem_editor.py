@@ -5,6 +5,7 @@ from matplotlib.ticker import (IndexLocator, AutoLocator, AutoMinorLocator, MaxN
 import matplotlib.ticker as ticker
 from collections import OrderedDict
 import matplotlib.pyplot as plt
+from matplotlib import patches
 import numpy as np
 import math
 # from PIL import ImageDraw
@@ -126,7 +127,6 @@ class PEMFileEditor:
 
         return data, stations
 
-
     def mk_plots(self):
         """
         Plot the LIN and LOG plots.
@@ -134,16 +134,35 @@ class PEMFileEditor:
         """
 
         def get_interp_data(profile_data, stations):
+            """
+            Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
+            into 100 segments.
+            :param profile_data: The EM data in profile mode
+            :param stations: The stations of the EM data
+            :return: The interpolated data and stations, in 100 segments
+            TODO What if the survey has more than 100 stations already?
+            """
             readings = np.array(profile_data, dtype='float64')
             step = abs((max(stations) - min(stations)) / 100)
-            x_intervals = np.arange(min(stations), max(stations), step)
+            x_intervals = np.arange(min(stations), max(stations) + 1, step)
 
             interp_data = np.interp(x_intervals, stations, readings)
 
             return interp_data, x_intervals
 
         def mk_subplot(ax, channel_low, channel_high, profile_data):
+            """
+            Plots and annotates the data in the LIN and LOG plots
+            :param ax: Axes object
+            :param channel_low: The smallest channel being plotted in the axes
+            :param channel_high: The largest channel being plotted in the axes
+            :param profile_data: The data in profile mode. Gets interpolated.
+            :return:
+            """
             offset = 10
+
+            # rect = plt.Rectangle((0.2, 0.75), 0.4, 0.15, color='k', alpha=0.3, transform=ax.transAxes)
+            # ax.add_patch(rect)
 
             for k in range(channel_low, (channel_high + 1)):
                 # Gets the profile data for a single channel, along with the stations
@@ -168,7 +187,6 @@ class PEMFileEditor:
 
                 if offset >= 85:
                     offset = 10
-
 
         # def calc_y(x_position_percent, stations_percent, array):
         #     """
@@ -227,7 +245,7 @@ class PEMFileEditor:
             ax.spines['right'].set_visible(False)
             ax.spines['top'].set_visible(False)
             plt.setp(ax.spines['left'], alpha=alpha)
-            plt.setp(ax.spines['top'], alpha=alpha)
+            plt.setp(ax.spines['bottom'], alpha=alpha)
             ax.spines['bottom'].set_position(('data', 0))
             ax.xaxis.set_ticks_position('bottom')
             # ax.xaxis.set_minor_locator(minor_locator)
@@ -251,6 +269,14 @@ class PEMFileEditor:
             ax.set_yticks(ax.get_yticks())
             ax.tick_params(axis='x', which='major', direction='out', length=6)
             plt.setp(ax.get_xticklabels(), visible=True, size=12, alpha=alpha, fontname="Century Gothic")
+
+        def add_rectangle():
+            fig = plt.gcf()
+            rect = patches.Rectangle(xy=(0.01, 0.01), width=0.98, height=0.98, linewidth=0.7, edgecolor='black',
+                                     facecolor='none', transform=fig.transFigure)
+            # box = patches.FancyBboxPatch(xy=(0.01, 0.01), width=0.98, height=0.98, linewidth=0.8, edgecolor='black',
+            #                              facecolor='none', transform=fig.transFigure, boxstyle="round,pad=0.1")
+            fig.patches.append(rect)
 
         file = self.active_file
         # Header info mostly just for the title of the plots
@@ -310,7 +336,7 @@ class PEMFileEditor:
 
         line_width = 0.5
         line_colour = 'black'
-        alpha = 0.8
+        alpha = 1
         font = "Tahoma"
 
         # Each component has their own figure
@@ -325,7 +351,8 @@ class PEMFileEditor:
             # NOTE: Subplots y-axis' are now always at the same distance from the left edge. As a result, the y-axis
             #       labels may get cutoff if the y-axis numbers are too long. With tight_layout the y-axis distance from
             #       the left edge is changed to ensure the y-axis labels are always the same distance away.
-            lin_fig.subplots_adjust(left=0.14, bottom=0.05, right=0.970, top=0.9)
+            lin_fig.subplots_adjust(left=0.14, bottom=0.05, right=0.960, top=0.9)
+            add_rectangle()
             ax6 = ax5.twiny()
             ax6.get_shared_x_axes().join(ax5, ax6)
 
@@ -341,7 +368,7 @@ class PEMFileEditor:
             major_locator = FixedLocator(stations)
             x_label_locator = AutoLocator()
 
-            # TODO Much of the slow loading time comes from the following block up to the End of block comment.
+            # Much of the slow loading time comes from the following block up to the End of block comment.
             # This is mostly due to matplotlib being oriented towards publication-quality graphics, and not being very
             # well optimized for speed.  If speed is desired in the future we will need to switch to a faster plotting
             # library such as pyqtgraph or vispy.
@@ -407,13 +434,10 @@ class PEMFileEditor:
                 elif index == 5:
                     format_xlabel_spine()
 
-            # lin_fig.subplots_adjust(hspace=0.25)
-            # lin_fig.tight_layout(rect=[0.015, 0.025, 1, 0.92])
-            # lin_fig.tight_layout(pad=1.5)
-
             # Creating the LOG plot
             log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
-            log_fig.subplots_adjust(left=0.1225, bottom=0.05, right=0.970, top=0.9)
+            log_fig.subplots_adjust(left=0.1225, bottom=0.05, right=0.960, top=0.9)
+            add_rectangle()
             axlog2 = ax.twiny()
             axlog2.get_shared_x_axes().join(ax, axlog2)
             plt.yscale('symlog', linthreshy=10)
@@ -422,8 +446,8 @@ class PEMFileEditor:
             add_titles()
 
             ax.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
-                              fontname=font,
-                              alpha=alpha)
+                          fontname=font,
+                          alpha=alpha)
 
             mk_subplot(ax, 0, channel_bounds[3][1], profile_data)
 
