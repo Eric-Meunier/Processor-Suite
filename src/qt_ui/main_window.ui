@@ -47,6 +47,9 @@
         <property name="singleStep">
          <number>10</number>
         </property>
+        <property name="value">
+         <number>500</number>
+        </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -79,6 +82,9 @@
         </property>
         <property name="digitCount">
          <number>4</number>
+        </property>
+        <property name="value" stdset="0">
+         <double>500.000000000000000</double>
         </property>
        </widget>
       </item>

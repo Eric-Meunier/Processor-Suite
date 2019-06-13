@@ -133,7 +133,9 @@ class FileBrowser(QTabWidget):
         self.editors.insert(to_index, self.editors.pop(from_index))
         self.widgets.insert(to_index, self.widgets.pop(from_index))
         self.original_indices.insert(to_index, self.original_indices.pop(from_index))
-
+        temp = list_of_files[from_index]
+        list_of_files[from_index] = list_of_files[to_index]
+        list_of_files[to_index] = temp
         logger.debug('moved ' + str(from_index) + ' ' + str(to_index) + ' to new order ' + str(self.original_indices))
 
 

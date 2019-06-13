@@ -1,5 +1,6 @@
 import sys
 import copy
+import inspect
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 from PyQt5 import QtCore
@@ -16,6 +17,7 @@ from qt_py.file_browser_widget import FileBrowser
 qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)),  "../qt_ui/main_window.ui")
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
+
 class ExceptionHandler(QtCore.QObject):
 
     errorSignal = QtCore.pyqtSignal()
@@ -28,9 +30,11 @@ class ExceptionHandler(QtCore.QObject):
         self.errorSignal.emit()
         sys._excepthook(exctype, value, traceback)
 
+
 exceptionHandler = ExceptionHandler()
 sys._excepthook = sys.excepthook
 sys.excepthook = exceptionHandler.handler
+
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -47,6 +51,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_print_all.triggered.connect(self.on_print_all)
         self.sldInterp.valueChanged.connect(self.update_lcd)
         self.pshRecalc.clicked.connect(self.regen_plots)
+        self.sldInterp.setValue(100)
 
         self.action_print.setShortcut("Ctrl+P")
 
@@ -139,6 +144,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             filenames = [filenames]
 
         self.pshRecalc.setEnabled(False)
+        self.pshRecalc.setText('Processing...')
         logger.info("Opening " + ', '.join(filenames) + "...")
 
         if not self.file_browser:
@@ -147,10 +153,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if self.labeltest.isVisible():
                 self.labeltest.hide()
                 self.plotLayout.addWidget(self.file_browser)
-
-        self.file_browser.open_files(filenames)
-        self.pshRecalc.setEnabled(True)
+        try:
+            self.file_browser.open_files(filenames)
+        except:
+            self.pshRecalc.setText('Error in input, please restart')
+        else:
+            self.pshRecalc.setText('Regen Plots')
+            self.pshRecalc.setEnabled(True)
         list_of_files.extend(filenames)
+
+
 if __name__ == "__main__":
     # Code to test MainWindow if running main_window.py
     app = QApplication(sys.argv)
