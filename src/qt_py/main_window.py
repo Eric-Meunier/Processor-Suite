@@ -1,9 +1,11 @@
 import sys
+import copy
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QMainWindow, QLabel, QGridLayout, QWidget, QDesktopWidget
 import os
+from cfg import list_of_files
 from log import Logger
 logger = Logger(__name__)
 
@@ -43,11 +45,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_open_file.triggered.connect(self.on_file_open)
         self.action_print.triggered.connect(self.on_print)
         self.action_print_all.triggered.connect(self.on_print_all)
+        self.sldInterp.valueChanged.connect(self.update_lcd)
+        self.pshRecalc.clicked.connect(self.regen_plots)
+
         self.action_print.setShortcut("Ctrl+P")
+
         self.file_browser = None
 
-        self.resize(850, 1000)
-        self.move(300, 0)
+        self.move(400, 0)
+
+    def update_lcd(self):
+        val = self.sldInterp.value()
+        self.lcdInterp.display(val)
+
+    def regen_plots(self):
+        templist = copy.deepcopy(list_of_files)
+        if len(list_of_files) != 0:
+            for i in range(0,len(list_of_files)):
+                self.file_browser.removeTab(0)
+            self.labeltest.show()
+            item = self.plotLayout.takeAt(1)
+            widget = item.widget()
+            widget.deleteLater()
+            list_of_files.clear()
+            self.open_files(templist)
 
     def on_print(self):
         logger.info("Entering directory dialog for saving to PDF")
@@ -117,14 +138,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not isinstance(filenames, list) and isinstance(filenames, str):
             filenames = [filenames]
 
+        self.pshRecalc.setEnabled(False)
         logger.info("Opening " + ', '.join(filenames) + "...")
 
         if not self.file_browser:
             self.file_browser = FileBrowser()
-            self.setCentralWidget(self.file_browser)
+
+            if self.labeltest.isVisible():
+                self.labeltest.hide()
+                self.plotLayout.addWidget(self.file_browser)
 
         self.file_browser.open_files(filenames)
-
+        self.pshRecalc.setEnabled(True)
+        list_of_files.extend(filenames)
 if __name__ == "__main__":
     # Code to test MainWindow if running main_window.py
     app = QApplication(sys.argv)

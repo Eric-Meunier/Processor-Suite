@@ -11,7 +11,6 @@ from qt_py.main_window import MainWindow
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtCore import QTimer
 
-
 def main():
     # TODO Make dedicated Application class
     app = QApplication(sys.argv)
