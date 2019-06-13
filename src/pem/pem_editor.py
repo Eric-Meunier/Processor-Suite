@@ -1,15 +1,15 @@
 from src.pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
-from matplotlib.ticker import (IndexLocator, AutoLocator, AutoMinorLocator, MaxNLocator, Locator,
-                               FixedLocator)
-import matplotlib.ticker as ticker
+from matplotlib.ticker import (AutoLocator, AutoMinorLocator, FixedLocator)
+# import matplotlib.ticker as ticker
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 from matplotlib import patches
 import numpy as np
 import math
-# from PIL import ImageDraw
 import re
+from itertools import chain
+from scipy import interpolate
 from log import Logger
 from math import atan2, degrees
 import warnings
@@ -133,7 +133,25 @@ class PEMFileEditor:
         :return: LIN plot figure and LOG plot figure
         """
 
-        def get_interp_data(profile_data, stations):
+        # # Using np.interp.
+        # def get_interp_data(profile_data, stations, segments):
+        #     """
+        #     Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
+        #     into 100 segments.
+        #     :param profile_data: The EM data in profile mode
+        #     :param stations: The stations of the EM data
+        #     :return: The interpolated data and stations, in 100 segments
+        #     TODO What if the survey has more than 100 stations already?
+        #     """
+        #     readings = np.array(profile_data, dtype='float64')
+        #     x_intervals = np.linspace(stations[0], stations[-1], segments)
+        #
+        #     interp_data = np.interp(x_intervals, stations, readings)
+        #
+        #     return interp_data, x_intervals
+
+        # Using scipy.interpolate
+        def get_interp_data(profile_data, stations, segments):
             """
             Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
             into 100 segments.
@@ -143,12 +161,28 @@ class PEMFileEditor:
             TODO What if the survey has more than 100 stations already?
             """
             readings = np.array(profile_data, dtype='float64')
-            step = abs((max(stations) - min(stations)) / 1000)
-            x_intervals = np.arange(min(stations), max(stations) + 1, step)
+            x_intervals = np.linspace(stations[0], stations[-1], segments)
+            f = interpolate.interp1d(stations, readings)
+            interpolated_y = f(x_intervals)
 
-            interp_data = np.interp(x_intervals, stations, readings)
+            return interpolated_y, x_intervals
 
-            return interp_data, x_intervals
+        def get_segmented_data(profile_data, stations, segments):
+
+            profile_data = np.array(profile_data, dtype='float64')
+            segmented_x = []
+            segmented_y = []
+            for i in range(len(profile_data)-1):
+                num = abs(stations[i] - stations[i+1])/abs(stations[0]-stations[-1]) * segments
+                x_values = np.linspace(stations[i], stations[i + 1], num=num, endpoint=False)
+                y_values = np.linspace(profile_data[i], profile_data[i + 1], num=num, endpoint=False)
+                segmented_x.append(x_values)
+                segmented_y.append(y_values)
+
+            x = list(chain.from_iterable(segmented_x))
+            y = list(chain.from_iterable(segmented_y))
+
+            return x, y
 
         def mk_subplot(ax, channel_low, channel_high, profile_data):
             """
@@ -158,7 +192,8 @@ class PEMFileEditor:
             :param channel_high: The largest channel being plotted in the axes
             :param profile_data: The data in profile mode. Gets interpolated.
             """
-            offset = 100
+            segments = 1000
+            offset = segments * 0.1
 
             # rect = plt.Rectangle((0.2, 0.75), 0.4, 0.15, color='k', alpha=0.3, transform=ax.transAxes)
             # ax.add_patch(rect)
@@ -168,12 +203,13 @@ class PEMFileEditor:
                 channel_data, stations = self.get_channel_data(k, profile_data)
 
                 # Interpolates the channel data, also returns the corresponding x intervals
-                interp_data, x_intervals = get_interp_data(channel_data, stations)
+                segmented_data, x_intervals = get_interp_data(channel_data, stations, segments)
+                # interp_data, x_intervals = get_interp_data(channel_data, stations, segments)
+                # segmented_data - interp_data
+                ax.plot(x_intervals, segmented_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
-                ax.plot(stations, channel_data, color=line_colour, linewidth=line_width, alpha=alpha)
-
-                for i, x_position in enumerate(x_intervals[offset::400]):
-                    y = interp_data[list(x_intervals).index(x_position)]
+                for i, x_position in enumerate(x_intervals[int(offset)::int(segments * 0.4)]):
+                    y = segmented_data[list(x_intervals).index(x_position)]
 
                     if k == 0:
                         ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7,
@@ -182,10 +218,10 @@ class PEMFileEditor:
                     else:
                         ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7,
                                     va='center_baseline', ha='center', alpha=alpha)
-                offset += 150
+                offset += segments * 0.15
 
-                if offset >= 850:
-                    offset = 100
+                if offset >= segments * 0.85:
+                    offset = segments * 0.10
 
         # def calc_y(x_position_percent, stations_percent, array):
         #     """
@@ -229,7 +265,8 @@ class PEMFileEditor:
                         fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
 
             plt.figtext(0.125, 0.945, 'Timebase: ' + str(timebase) + ' ms\n' +
-                        'Frequency: ' + str(round(timebase_freq, 2)) + ' Hz',
+                        'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
+                        'Current: ' + str(current) + 'A',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
 
             plt.figtext(0.555, 0.945, s_title + ': ' + linehole + '\n'
@@ -250,18 +287,19 @@ class PEMFileEditor:
             # ax.xaxis.set_minor_locator(minor_locator)
             ax.xaxis.set_major_locator(major_locator)
             ax.set_yticks(ax.get_yticks())
-            ax.tick_params(axis='x', which='major', direction='inout', length=3)
+            ax.tick_params(axis='x', which='major', direction='inout', length=4)
             # ax.tick_params(axis='x', which='minor', direction='inout', length=3)
             plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
             plt.setp(ax.get_xticklabels(), visible=False)
 
         def format_xlabel_spine():
             ax.spines['right'].set_visible(False)
-            ax.spines['bottom'].set_visible(False)
-            plt.setp(ax.spines['left'], alpha=alpha)
-            plt.setp(ax.spines['top'], alpha=alpha)
             ax.spines['top'].set_visible(False)
-            ax.spines["top"].set_position(("axes", -0.1))
+            plt.setp(ax.spines['left'], alpha=alpha)
+            plt.setp(ax.spines['bottom'], alpha=alpha)
+            ax.spines['bottom'].set_visible(False)
+            # fig = plt.gcf()
+            ax.spines["bottom"].set_position(("outward", 0.1))
             ax.xaxis.set_major_locator(x_label_locator)
             ax.xaxis.set_ticks_position('bottom')
             ax.xaxis.set_label_position('bottom')
@@ -279,12 +317,15 @@ class PEMFileEditor:
 
         file = self.active_file
         # Header info mostly just for the title of the plots
+        # TODO Negative coil area in PEM file breaks the parsing
         header = file.get_header()
+        tags = file.get_tags()
         client = header['Client']
         loop = header['Loop']
         linehole = header['LineHole']
         date = header['Date']
         grid = header['Grid']
+        current = tags['Current']
         timebase = float(header['Timebase'])
         timebase_freq = ((1 / (timebase / 1000)) / 4)
         survey_type = header['SurveyType']
@@ -439,7 +480,7 @@ class PEMFileEditor:
             add_rectangle()
             axlog2 = ax.twiny()
             axlog2.get_shared_x_axes().join(ax, axlog2)
-            plt.yscale('symlog', linthreshy=10)
+            plt.yscale('symlog', linthreshy=10, linscaley=1./math.log(10), subsy=list(np.arange(2,10,1)))
             plt.xlim(x_limit)
 
             add_titles()
@@ -447,7 +488,9 @@ class PEMFileEditor:
             ax.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
                           fontname=font,
                           alpha=alpha)
-
+            # x = np.r_[-1:1:2000j]
+            # y = 1e2 ** (-x) - 0.02
+            # plt.plot(x, y)
             mk_subplot(ax, 0, channel_bounds[3][1], profile_data)
 
             # SET LOG PLOT LIMITS
