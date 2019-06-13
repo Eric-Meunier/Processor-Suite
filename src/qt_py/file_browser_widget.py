@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import *
 from pem.pem_editor import PEMFileEditor
 from qt_py.pem_file_widget import PEMFileWidget
 from log import Logger
-
+from cfg import list_of_files
 from matplotlib.backends.backend_pdf import PdfPages
 
 logger = Logger(__name__)
@@ -14,7 +14,7 @@ logger = Logger(__name__)
 
 class FileBrowser(QTabWidget):
     def __init__(self, parent=None):
-        super(FileBrowser, self).__init__(parent)
+        super().__init__()
         # self.setWindowTitle("tab demo")
 
         # TODO Make model to deal with these together
@@ -48,7 +48,6 @@ class FileBrowser(QTabWidget):
         self.active_editor = new_editor
 
     def open_files(self, file_names):
-
         def get_filename(file_path, have_suffix):
             # have_suffix will determine whether or not to include filetype in the name
             if have_suffix:
@@ -128,12 +127,15 @@ class FileBrowser(QTabWidget):
         self.editors.pop(index)
         self.widgets.pop(index)
         self.original_indices.pop(index)
+        list_of_files.pop(index)
 
     def on_tab_move(self, from_index, to_index):
         self.editors.insert(to_index, self.editors.pop(from_index))
         self.widgets.insert(to_index, self.widgets.pop(from_index))
         self.original_indices.insert(to_index, self.original_indices.pop(from_index))
-
+        temp = list_of_files[from_index]
+        list_of_files[from_index] = list_of_files[to_index]
+        list_of_files[to_index] = temp
         logger.debug('moved ' + str(from_index) + ' ' + str(to_index) + ' to new order ' + str(self.original_indices))
 
 

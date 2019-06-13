@@ -416,7 +416,7 @@ class PEMFileEditor:
             # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
             channel_bounds = [None] * 4
             num_channels_per_plot = int(num_channels // 4)
-            remainder_channels = int(num_channels % 4)
+            remainder_channels = int((num_channels-1) % 4)
 
             for k in range(0, len(channel_bounds)):
                 channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
