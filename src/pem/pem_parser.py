@@ -46,14 +46,14 @@ class PEMParser:
 
         # Header starting from 'Client' to the channel start-end times
         self.re_header = re.compile(  # Parsing the header
-            r'(^<|~.*[\r\n])'
+            r'(^(<|~).*[\r\n]+)'
             r'(?P<Client>\w.*)[\r\n]'
             r'(?P<Grid>.*)[\r\n]'
             r'(?P<LineHole>.*)[\r\n]'
             r'(?P<Loop>.*)[\r\n]'
             r'(?P<Date>.*)[\r\n]'
             r'^(?P<SurveyType>.*)\s(?P<Convension>Metric|Imperial)\s(?P<Sync>Crystal-Master|Crystal-Slave|Cable)\s(?P<Timebase>\d+\.?\d+)\s(?P<Ramp>\d+)\s(?P<NumChannels>\d+)\s(?P<NumReadings>\d+)[\r\n]'
-            r'^(?P<Receiver>#\d+)\s(?P<RxSoftwareVer>\d+\.?\d?\d?)\s(?P<RxSoftwareVerDate>.*,\d+.*)\s(?P<RxFileName>.*)\s(?P<IsNormalized>N|Y)\s(?P<PrimeFieldValue>\d+)\s(?P<CoilArea>\d+).*[\n\r]'
+            r'^(?P<Receiver>#\d+)\s(?P<RxSoftwareVer>[\d.]+)\s(?P<RxSoftwareVerDate>[\w]+,[\w]+)\s(?P<RxFileName>[^\s]+)\s(?P<IsNormalized>[\w]+)\s(?P<PrimeFieldValue>\d+)\s(?P<CoilArea>\d+).*[\n\r]'
             r'[\r\n](?P<ChannelTimes>[\W\w]+)[\r\n]\$',
             re.MULTILINE)
 
@@ -61,7 +61,7 @@ class PEMParser:
         self.re_data = re.compile(  # Parsing the EM data information
             r'^(?P<Station>^\d+[NSEW]?)\s(?P<Component>[XYZ])R(?P<ReadingIndex>\d+)\s(?P<Gain>\d)\s(?P<RxType>[AM\?])\s(?P<ZTS>\d+\.\d+)\s(?P<CoilDelay>\d+)\s(?P<NumStacks>\d+)\s(?P<ReadingsPerSet>\d+)\s(?P<ReadingNumber>\d+).*[\r\n]'
             r'^(?P<RADTool>D\d.*)[\r\n]'
-            r'(?P<Data>[\W\d]+[\n\r])',
+            r'(?P<Data>[\W\de]+[\n\r])',
             re.MULTILINE)
 
     def parse_tags(self, file):

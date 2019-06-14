@@ -1,20 +1,15 @@
 from src.pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
 from matplotlib.ticker import (AutoLocator, AutoMinorLocator, FixedLocator)
-# import matplotlib.ticker as ticker
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 from matplotlib import patches
 import numpy as np
 import math
-from PyQt5.QtWidgets import QFileDialog, QMainWindow
-# from PIL import ImageDraw
 import re
-from itertools import chain
 from scipy import interpolate
 from scipy import stats
 from log import Logger
-from math import atan2, degrees
 import warnings
 from matplotlib.dates import date2num, DateConverter, num2date
 from matplotlib.container import ErrorbarContainer
@@ -59,6 +54,26 @@ class PEMFileEditor:
         lin_fig, log_fig = self.mk_plots(lbound, rbound)
         logger.info("Finished generating plots")
         return lin_fig, log_fig
+
+    def get_survey_type(self):
+        survey_type = self.active_file.get_header()['SurveyType']
+
+        if survey_type.casefold() == 's-coil':
+            survey_type = 'Surface Induction'
+        elif survey_type.casefold() == 'borehole':
+            survey_type = 'Borehole Induction'
+        elif survey_type.casefold() == 'b-rad':
+            survey_type = 'Borehole Induction'
+        elif survey_type.casefold() == 's-flux':
+            survey_type = 'Surface Fluxgate'
+        elif survey_type.casefold() == 'bh-flux':
+            survey_type = 'Borehole Fluxgate'
+        elif survey_type.casefold() == 's-squid':
+            survey_type = 'SQUID'
+        else:
+            survey_type = 'UNDEF_SURV'
+
+        return survey_type
 
     def convert_stations(self, data):
         """
@@ -122,6 +137,12 @@ class PEMFileEditor:
         return profile_data
 
     def get_channel_data(self, channel, profile_data):
+        """
+        Get the profile-mode data for a given channel
+        :param channel: int, channel number
+        :param profile_data: dict, data in profile-mode
+        :return: data in list form and corresponding stations as a list
+        """
         data = []
         stations = []
         for station in profile_data[channel]:
@@ -162,19 +183,31 @@ class PEMFileEditor:
             :param stations: The stations of the EM data
             :return: The interpolated data and stations
             """
+            survey_type = self.get_survey_type()
             readings = np.array(profile_data, dtype='float64')
             x_intervals = np.linspace(stations[0], stations[-1], segments)
             f = interpolate.interp1d(stations, readings)
 
             interpolated_y = f(x_intervals)
 
+            # TODO Add toggle option in UI and box to manually input desired gap
             hide_gaps = True
 
             if hide_gaps == True:
+
+                if 'borehole' in survey_type.casefold():
+                    min_gap = 50
+                elif 'surface' in survey_type.casefold():
+                    min_gap = 200
+
                 station_gaps = np.diff(stations)
-                if gap is None: gap = int(stats.mode(station_gaps)[0])
+
+                if gap is None:
+                    gap = max(int(stats.mode(station_gaps)[0]), min_gap)
+
                 gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
                                  station_gaps[i] > gap]
+
                 for gap in gap_intervals:
                     interpolated_y = np.ma.masked_where((x_intervals >= gap[0]) & (x_intervals <= gap[1]),
                                                         interpolated_y)
@@ -257,7 +290,7 @@ class PEMFileEditor:
 
             plt.figtext(0.125, 0.945, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
-                        'Current: ' + str(current) + 'A',
+                        'Current: ' + str(current) + ' A',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
 
             plt.figtext(0.555, 0.945, s_title + ': ' + linehole + '\n'
@@ -319,24 +352,9 @@ class PEMFileEditor:
         current = tags['Current']
         timebase = float(header['Timebase'])
         timebase_freq = ((1 / (timebase / 1000)) / 4)
-        survey_type = header['SurveyType']
+        survey_type = self.get_survey_type()
         num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
         units = file.get_tags()['Units']
-
-        if survey_type.casefold() == 's-coil':
-            survey_type = 'Surface Induction'
-        elif survey_type.casefold() == 'borehole':
-            survey_type = 'Borehole Induction'
-        elif survey_type.casefold() == 'b-rad':
-            survey_type = 'Borehole Induction'
-        elif survey_type.casefold() == 's-flux':
-            survey_type = 'Surface Fluxgate'
-        elif survey_type.casefold() == 'bh-flux':
-            survey_type = 'Borehole Fluxgate'
-        elif survey_type.casefold() == 's-squid':
-            survey_type = 'SQUID'
-        else:
-            survey_type = 'UNDEF_SURV'
 
         if 'borehole' in survey_type.casefold():
             s_title = 'Hole'
