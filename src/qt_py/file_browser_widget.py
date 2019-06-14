@@ -47,7 +47,7 @@ class FileBrowser(QTabWidget):
         new_file_widget.open_file(file_name)
         self.active_editor = new_editor
 
-    def open_files(self, file_names, lbound = None, rbound = None):
+    def open_files(self, file_names):
         def get_filename(file_path, have_suffix):
             # have_suffix will determine whether or not to include filetype in the name
             if have_suffix:
@@ -83,7 +83,7 @@ class FileBrowser(QTabWidget):
         for file_name, new_file_widget in zip(file_names, new_file_widgets):
             # Opening the file takes the longer so this is done in this separate
             # loop after the required widgets are generated
-            new_file_widget.open_file(file_name, lbound, rbound)
+            new_file_widget.open_file(file_name)
 
         self.setCurrentWidget(new_file_widgets[0])
         self.active_editor = new_editors[0]

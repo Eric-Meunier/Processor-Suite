@@ -1,10 +1,10 @@
 import sys
 import copy
-
+import inspect
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QFileDialog, QMainWindow
+from PyQt5.QtWidgets import QFileDialog, QMainWindow, QLabel, QGridLayout, QWidget, QDesktopWidget
 import os
 from cfg import list_of_files
 from log import Logger
@@ -49,13 +49,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_open_file.triggered.connect(self.on_file_open)
         self.action_print.triggered.connect(self.on_print)
         self.action_print_all.triggered.connect(self.on_print_all)
+        self.sldInterp.valueChanged.connect(self.update_lcd)
         self.pshRecalc.clicked.connect(self.regen_plots)
+        self.sldInterp.setValue(100)
 
         self.action_print.setShortcut("Ctrl+P")
 
         self.file_browser = None
 
         self.move(400, 0)
+
+    def update_lcd(self):
+        val = self.sldInterp.value()
+        self.lcdInterp.display(val)
 
     def regen_plots(self):
         templist = copy.deepcopy(list_of_files)
@@ -141,11 +147,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pshRecalc.setText('Processing...')
         logger.info("Opening " + ', '.join(filenames) + "...")
 
-        try: lbound = float(self.lineLeft.text())
-        except ValueError: lbound = None
-        try: rbound = float(self.lineRight.text())
-        except ValueError: rbound = None
-
         if not self.file_browser:
             self.file_browser = FileBrowser()
 
@@ -153,7 +154,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.labeltest.hide()
                 self.plotLayout.addWidget(self.file_browser)
         try:
-            self.file_browser.open_files(filenames,lbound,rbound)
+            self.file_browser.open_files(filenames)
         except:
             self.pshRecalc.setText('Error in input, please restart')
         else:

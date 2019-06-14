@@ -28,7 +28,7 @@ class PEMFileWidget(QWidget):
         self.label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.label)
 
-    def open_file(self, file_name, lbound = None, rbound = None):
+    def open_file(self, file_name):
         # Display loading text
         self.label.show()
         self.label.setText('Loading ' + os.path.basename(file_name) + '...')
@@ -37,7 +37,7 @@ class PEMFileWidget(QWidget):
 
         self.editor.open_file(file_name)
 
-        lin_figs, log_figs = self.editor.generate_plots(lbound,rbound)
+        lin_figs, log_figs = self.editor.generate_plots()
 
         self.tab_widget = QTabWidget(self)
         self.layout.addWidget(self.tab_widget)

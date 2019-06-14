@@ -7,7 +7,6 @@ from collections import OrderedDict
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-from PyQt5.QtWidgets import QFileDialog, QMainWindow
 # from PIL import ImageDraw
 import re
 from log import Logger
@@ -48,12 +47,12 @@ class PEMFileEditor:
 
     # File plotting functions
 
-    def generate_plots(self,lbound = None,rbound = None):
+    def generate_plots(self):
         """
         :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
         logger.info("Generating plots...")
-        lin_fig, log_fig = self.mk_plots(lbound,rbound)
+        lin_fig, log_fig = self.mk_plots()
         logger.info("Finished generating plots")
         return lin_fig, log_fig
 
@@ -128,7 +127,7 @@ class PEMFileEditor:
         return data, stations
 
 
-    def mk_plots(self,leftbound = None, rightbound = None):
+    def mk_plots(self):
         """
         Plot the LIN and LOG plots.
         :return: LIN plot figure and LOG plot figure
@@ -153,12 +152,6 @@ class PEMFileEditor:
                 # Interpolates the channel data, also returns the corresponding x intervals
                 interp_data, x_intervals = get_interp_data(channel_data, stations)
 
-                if leftbound is not None and rightbound is not None:
-                    ax.set_xlim(leftbound,rightbound)
-                elif leftbound is not None:
-                    ax.set_xlim(left=leftbound)
-                elif rightbound is not None:
-                    ax.set_xlim(right=rightbound)
                 ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
                 for i, x_position in enumerate(x_intervals[offset::40]):
