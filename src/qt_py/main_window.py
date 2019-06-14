@@ -82,7 +82,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             absmax = max(maximum)
             self.lineLeft.setText(str(absmin))
             self.lineRight.setText(str(absmax))
-        self.pshMinMax.setText('Get MIN/MAX Plot Extents')
+        self.pshMinMax.setText('Auto-calculate Bounds')
         self.pshMinMax.setEnabled(True)
 
     def regen_plots(self):
