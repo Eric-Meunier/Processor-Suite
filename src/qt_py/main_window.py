@@ -164,7 +164,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if not isinstance(filenames, list) and isinstance(filenames, str):
             filenames = [filenames]
-
+        list_of_files.extend(filenames)
+        self.get_minmax()
         self.pshRecalc.setEnabled(False)
         self.pshMinMax.setEnabled(False)
         self.pshReset.setEnabled(False)
@@ -188,11 +189,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except:
             self.pshRecalc.setText('Error in input, please restart')
         else:
-            self.pshRecalc.setText('Regen Plots')
+            self.pshRecalc.setText('Redraw Plots')
             self.pshRecalc.setEnabled(True)
             self.pshMinMax.setEnabled(True)
             self.pshReset.setEnabled(True)
-        list_of_files.extend(filenames)
+
 
 
 if __name__ == "__main__":
