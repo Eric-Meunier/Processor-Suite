@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import QFileDialog, QMainWindow
 import re
 from itertools import chain
 from scipy import interpolate
+from scipy import stats
 from log import Logger
 from math import atan2, degrees
 import warnings
@@ -50,12 +51,12 @@ class PEMFileEditor:
 
     # File plotting functions
 
-    def generate_plots(self,lbound = None,rbound = None):
+    def generate_plots(self, lbound=None, rbound=None):
         """
         :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
         logger.info("Generating plots...")
-        lin_fig, log_fig = self.mk_plots(lbound,rbound)
+        lin_fig, log_fig = self.mk_plots(lbound, rbound)
         logger.info("Finished generating plots")
         return lin_fig, log_fig
 
@@ -129,7 +130,7 @@ class PEMFileEditor:
 
         return data, stations
 
-    def mk_plots(self,leftbound = None, rightbound = None):
+    def mk_plots(self, leftbound=None, rightbound=None):
         """
         Plot the LIN and LOG plots.
         :return: LIN plot figure and LOG plot figure
@@ -153,7 +154,7 @@ class PEMFileEditor:
         #     return interp_data, x_intervals
 
         # Using scipy.interpolate
-        def get_interp_data(profile_data, stations, segments):
+        def get_interp_data(profile_data, stations, segments, gap=None):
             """
             Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
             into 100 segments.
@@ -164,15 +165,21 @@ class PEMFileEditor:
             readings = np.array(profile_data, dtype='float64')
             x_intervals = np.linspace(stations[0], stations[-1], segments)
             f = interpolate.interp1d(stations, readings)
-            y_data = f(x_intervals)
 
-            # interp_data = list(zip(x_intervals, y_data))
-            # hide_gaps = False
-            #
-            # if hide_gaps == False:
-            #     interp_data = np.ma.masked_where(x_intervals <= 700, interp_data)
+            interpolated_y = f(x_intervals)
 
-            return y_data, x_intervals
+            hide_gaps = True
+
+            if hide_gaps == True:
+                station_gaps = np.diff(stations)
+                if gap is None: gap = int(stats.mode(station_gaps)[0])
+                gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
+                                 station_gaps[i] > gap]
+                for gap in gap_intervals:
+                    interpolated_y = np.ma.masked_where((x_intervals >= gap[0]) & (x_intervals <= gap[1]),
+                                                        interpolated_y)
+
+            return interpolated_y, x_intervals
 
         # def get_segmented_data(profile_data, stations, segments):
         #
@@ -214,7 +221,7 @@ class PEMFileEditor:
                 ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
                 if leftbound is not None and rightbound is not None:
-                    ax.set_xlim(leftbound,rightbound)
+                    ax.set_xlim(leftbound, rightbound)
                 elif leftbound is not None:
                     ax.set_xlim(left=leftbound)
                 elif rightbound is not None:
@@ -236,36 +243,6 @@ class PEMFileEditor:
 
                 if offset >= segments * 0.85:
                     offset = segments * 0.10
-
-        # def calc_y(x_position_percent, stations_percent, array):
-        #     """
-        #     Calculate the Y value at a given position
-        #     :param x_position_percent: Percentage along the x-axis
-        #     :param array: Profile data for a given channel
-        #     :return: The Y axis value at the x_position_percent
-        #     """
-        #     # x_index = x_position_percent * len(array)
-        #     # xp = np.arange(0, len(array), 1, dtype='float64')
-        #
-        #     fp = np.asarray(array, dtype='float64')
-        #     # if ax.get_yscale()=='symlog':
-        #     #     y_value = np.interp(x_position_percent, stations_percent, fp)
-        #     y_value = np.interp(x_position_percent, stations_percent, fp)
-        #
-        #     return y_value
-
-        # def annotate_plot(str_annotation, obj_plt, channel, offset):
-        #     # TODO Make plotting interp based, and also probably make annotations not interp based.
-        #     # List of stations but using a percent to represent their position
-        #     stations_percent = [(abs(stations[x] - stations[0]) / abs(stations[0] - stations[-1])) for x in
-        #                         range(len(stations))]
-        #
-        #     for i in range(0, 100, 40):
-        #         x_percent = i / 100 + offset
-        #         y = calc_y(x_percent, stations_percent, profile_data[channel])
-        #
-        #         obj_plt.annotate(str_annotation, xy=(x_percent, y), xycoords=("axes fraction", "data"), size=7,
-        #                          va='center_baseline', ha='center', alpha=alpha)
 
         def add_titles():
             """

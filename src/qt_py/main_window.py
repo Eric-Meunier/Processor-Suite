@@ -188,6 +188,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.file_browser.open_files(filenames,lbound,rbound)
         except:
             self.pshRecalc.setText('Error in input, please restart')
+            raise
         else:
             self.pshRecalc.setText('Redraw Plots')
             self.pshRecalc.setEnabled(True)
