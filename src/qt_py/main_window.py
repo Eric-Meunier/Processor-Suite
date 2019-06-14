@@ -6,6 +6,7 @@ from PyQt5 import uic
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QFileDialog, QMainWindow
 import os
+from src.pem.pem_editor import PEMFileEditor
 from cfg import list_of_files
 from log import Logger
 logger = Logger(__name__)
@@ -50,12 +51,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_print.triggered.connect(self.on_print)
         self.action_print_all.triggered.connect(self.on_print_all)
         self.pshRecalc.clicked.connect(self.regen_plots)
-
+        self.pshMinMax.clicked.connect(self.get_minmax)
+        self.pshReset.clicked.connect(self.reset_all)
         self.action_print.setShortcut("Ctrl+P")
 
         self.file_browser = None
 
         self.move(400, 0)
+
+    def reset_all(self):
+        self.lineLeft.setText(None)
+        self.lineRight.setText(None)
+
+    def get_minmax(self):
+        self.pshMinMax.setEnabled(False)
+        self.pshMinMax.setText('Working...')
+        if len(list_of_files) != 0:
+            minimum = []
+            maximum = []
+
+            for f in list_of_files:
+                pemfile = PEMFileEditor()
+                pemfile.open_file(f)
+                stations = pemfile.convert_stations(pemfile.active_file.data)
+                stations = [x['Station'] for x in stations]
+                minimum.append(min(stations))
+                maximum.append(max(stations))
+
+            absmin = min(minimum)
+            absmax = max(maximum)
+            self.lineLeft.setText(str(absmin))
+            self.lineRight.setText(str(absmax))
+        self.pshMinMax.setText('Get MIN/MAX Plot Extents')
+        self.pshMinMax.setEnabled(True)
 
     def regen_plots(self):
         templist = copy.deepcopy(list_of_files)
@@ -138,7 +166,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             filenames = [filenames]
 
         self.pshRecalc.setEnabled(False)
+        self.pshMinMax.setEnabled(False)
+        self.pshReset.setEnabled(False)
         self.pshRecalc.setText('Processing...')
+
         logger.info("Opening " + ', '.join(filenames) + "...")
 
         try: lbound = float(self.lineLeft.text())
@@ -159,6 +190,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             self.pshRecalc.setText('Regen Plots')
             self.pshRecalc.setEnabled(True)
+            self.pshMinMax.setEnabled(True)
+            self.pshReset.setEnabled(True)
         list_of_files.extend(filenames)
 
 
