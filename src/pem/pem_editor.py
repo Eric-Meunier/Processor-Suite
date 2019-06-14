@@ -157,32 +157,37 @@ class PEMFileEditor:
             into 100 segments.
             :param profile_data: The EM data in profile mode
             :param stations: The stations of the EM data
-            :return: The interpolated data and stations, in 100 segments
-            TODO What if the survey has more than 100 stations already?
+            :return: The interpolated data and stations
             """
             readings = np.array(profile_data, dtype='float64')
             x_intervals = np.linspace(stations[0], stations[-1], segments)
             f = interpolate.interp1d(stations, readings)
-            interpolated_y = f(x_intervals)
+            y_data = f(x_intervals)
 
-            return interpolated_y, x_intervals
+            interp_data = list(zip(x_intervals, y_data))
+            hide_gaps = False
 
-        def get_segmented_data(profile_data, stations, segments):
+            if hide_gaps == False:
+                interp_data = np.ma.masked_where(x_intervals <= 700, interp_data)
 
-            profile_data = np.array(profile_data, dtype='float64')
-            segmented_x = []
-            segmented_y = []
-            for i in range(len(profile_data)-1):
-                num = abs(stations[i] - stations[i+1])/abs(stations[0]-stations[-1]) * segments
-                x_values = np.linspace(stations[i], stations[i + 1], num=num, endpoint=False)
-                y_values = np.linspace(profile_data[i], profile_data[i + 1], num=num, endpoint=False)
-                segmented_x.append(x_values)
-                segmented_y.append(y_values)
+            return interp_data, x_intervals
 
-            x = list(chain.from_iterable(segmented_x))
-            y = list(chain.from_iterable(segmented_y))
-
-            return x, y
+        # def get_segmented_data(profile_data, stations, segments):
+        #
+        #     profile_data = np.array(profile_data, dtype='float64')
+        #     segmented_x = []
+        #     segmented_y = []
+        #     for i in range(len(profile_data)-1):
+        #         num = abs(stations[i] - stations[i+1])/abs(stations[0]-stations[-1]) * segments
+        #         x_values = np.linspace(stations[i], stations[i + 1], num=num, endpoint=False)
+        #         y_values = np.linspace(profile_data[i], profile_data[i + 1], num=num, endpoint=False)
+        #         segmented_x.append(x_values)
+        #         segmented_y.append(y_values)
+        #
+        #     x = list(chain.from_iterable(segmented_x))
+        #     y = list(chain.from_iterable(segmented_y))
+        #
+        #     return x, y
 
         def mk_subplot(ax, channel_low, channel_high, profile_data):
             """
@@ -203,20 +208,18 @@ class PEMFileEditor:
                 channel_data, stations = self.get_channel_data(k, profile_data)
 
                 # Interpolates the channel data, also returns the corresponding x intervals
-                segmented_data, x_intervals = get_interp_data(channel_data, stations, segments)
-                # interp_data, x_intervals = get_interp_data(channel_data, stations, segments)
-                # segmented_data - interp_data
-                ax.plot(x_intervals, segmented_data, color=line_colour, linewidth=line_width, alpha=alpha)
+                interp_data, x_intervals = get_interp_data(channel_data, stations, segments)
+                ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
                 for i, x_position in enumerate(x_intervals[int(offset)::int(segments * 0.4)]):
-                    y = segmented_data[list(x_intervals).index(x_position)]
+                    y = interp_data[list(x_intervals).index(x_position)]
 
                     if k == 0:
-                        ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7,
+                        ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7, color=line_colour,
                                     va='center_baseline', ha='center', alpha=alpha)
 
                     else:
-                        ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7,
+                        ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7, color=line_colour,
                                     va='center_baseline', ha='center', alpha=alpha)
                 offset += segments * 0.15
 
@@ -375,7 +378,7 @@ class PEMFileEditor:
         lin_figs = []
 
         line_width = 0.5
-        line_colour = 'black'
+        line_colour = '#1B2631'
         alpha = 1
         font = "Tahoma"
 
@@ -416,7 +419,7 @@ class PEMFileEditor:
             # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
             channel_bounds = [None] * 4
             num_channels_per_plot = int(num_channels // 4)
-            remainder_channels = int((num_channels-1) % 4)
+            remainder_channels = int((num_channels - 1) % 4)
 
             for k in range(0, len(channel_bounds)):
                 channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
@@ -477,20 +480,19 @@ class PEMFileEditor:
             # Creating the LOG plot
             log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
             log_fig.subplots_adjust(left=0.1225, bottom=0.05, right=0.960, top=0.9)
-            add_rectangle()
+
             axlog2 = ax.twiny()
             axlog2.get_shared_x_axes().join(ax, axlog2)
-            plt.yscale('symlog', linthreshy=10, linscaley=1./math.log(10), subsy=list(np.arange(2,10,1)))
+            plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
             plt.xlim(x_limit)
 
             add_titles()
+            add_rectangle()
 
             ax.set_ylabel(first_channel_label + ' to Channel ' + str(num_channels - 1) + '\n(' + str(units) + ')',
                           fontname=font,
                           alpha=alpha)
-            # x = np.r_[-1:1:2000j]
-            # y = 1e2 ** (-x) - 0.02
-            # plt.plot(x, y)
+
             mk_subplot(ax, 0, channel_bounds[3][1], profile_data)
 
             # SET LOG PLOT LIMITS
