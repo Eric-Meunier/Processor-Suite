@@ -203,13 +203,13 @@ class PEMFileEditor:
                 station_gaps = np.diff(stations)
 
                 if gap is None:
-                    gap = max(int(stats.mode(station_gaps)[0]), min_gap)
+                    gap = max(int(stats.mode(station_gaps)[0]*2), min_gap)
 
                 gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
                                  station_gaps[i] > gap]
 
                 for gap in gap_intervals:
-                    interpolated_y = np.ma.masked_where((x_intervals >= gap[0]) & (x_intervals <= gap[1]),
+                    interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
                                                         interpolated_y)
 
             return interpolated_y, x_intervals
@@ -290,7 +290,7 @@ class PEMFileEditor:
 
             plt.figtext(0.125, 0.945, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
-                        'Current: ' + str(current) + ' A',
+                        'Current: ' + str(round(current, 1)) + ' A',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
 
             plt.figtext(0.555, 0.945, s_title + ': ' + linehole + '\n'
@@ -349,7 +349,7 @@ class PEMFileEditor:
         linehole = header['LineHole']
         date = header['Date']
         grid = header['Grid']
-        current = tags['Current']
+        current = float(tags['Current'])
         timebase = float(header['Timebase'])
         timebase_freq = ((1 / (timebase / 1000)) / 4)
         survey_type = self.get_survey_type()
