@@ -95,7 +95,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             widget = item.widget()
             widget.deleteLater()
             list_of_files.clear()
-            self.open_files(templist)
+            self.open_files(templist,True)
 
     def on_print(self):
         logger.info("Entering directory dialog for saving to PDF")
@@ -155,7 +155,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.open_files(urls)
 
-    def open_files(self, filenames):
+    def open_files(self, filenames, redraw = False):
         # # Set the central widget to a contain content for working with PEMFile
         # file_widget = PEMFileWidget(self)
         # file_widget.open_file(filename)
@@ -165,7 +165,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not isinstance(filenames, list) and isinstance(filenames, str):
             filenames = [filenames]
         list_of_files.extend(filenames)
-        self.get_minmax()
+        if not redraw:
+            self.get_minmax()
         self.pshRecalc.setEnabled(False)
         self.pshMinMax.setEnabled(False)
         self.pshReset.setEnabled(False)
