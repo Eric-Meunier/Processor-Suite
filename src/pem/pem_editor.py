@@ -1,6 +1,6 @@
 from src.pem.pem_parser import PEMParser, PEMFile
 from matplotlib.figure import Figure
-from matplotlib.ticker import (AutoLocator, AutoMinorLocator, FixedLocator)
+import matplotlib.ticker as ticker
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 from matplotlib import patches
@@ -207,6 +207,7 @@ class PEMFileEditor:
                 gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
                                  station_gaps[i] > gap]
 
+                # Masks the intervals that are between gap[0] and gap[1]
                 for gap in gap_intervals:
                     interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
                                                         interpolated_y)
@@ -319,6 +320,10 @@ class PEMFileEditor:
             plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
             plt.setp(ax.get_xticklabels(), visible=False)
 
+            if ax.get_yscale() == 'symlog':
+                ax.tick_params(axis='y', which='major', labelrotation=90)
+                ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0i'))
+
         def format_xlabel_spine():
             ax.spines['right'].set_visible(False)
             ax.spines['top'].set_visible(False)
@@ -417,8 +422,8 @@ class PEMFileEditor:
             plt.xlim(x_limit)
 
             # minor_locator = AutoMinorLocator(5)
-            major_locator = FixedLocator(stations)
-            x_label_locator = AutoLocator()
+            major_locator = ticker.FixedLocator(stations)
+            x_label_locator = ticker.AutoLocator()
 
             # Much of the slow loading time comes from the following block up to the End of block comment.
             # This is mostly due to matplotlib being oriented towards publication-quality graphics, and not being very
