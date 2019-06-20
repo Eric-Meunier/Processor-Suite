@@ -165,7 +165,6 @@ class PEMFileEditor:
         #     :param profile_data: The EM data in profile mode
         #     :param stations: The stations of the EM data
         #     :return: The interpolated data and stations, in 100 segments
-        #     TODO What if the survey has more than 100 stations already?
         #     """
         #     readings = np.array(profile_data, dtype='float64')
         #     x_intervals = np.linspace(stations[0], stations[-1], segments)
@@ -186,14 +185,14 @@ class PEMFileEditor:
             survey_type = self.get_survey_type()
             readings = np.array(profile_data, dtype='float64')
             x_intervals = np.linspace(stations[0], stations[-1], segments)
-            f = interpolate.interp1d(stations, readings)
+            f = interpolate.interp1d(stations, readings, kind='linear')
 
             interpolated_y = f(x_intervals)
 
-            # TODO Add toggle option in UI and box to manually input desired gap
+            # TODO Add toggle option in UI and box to manually input desired gap threshold
             hide_gaps = True
 
-            if hide_gaps == True:
+            if hide_gaps:
 
                 if 'borehole' in survey_type.casefold():
                     min_gap = 50
@@ -203,7 +202,7 @@ class PEMFileEditor:
                 station_gaps = np.diff(stations)
 
                 if gap is None:
-                    gap = max(int(stats.mode(station_gaps)[0]*2), min_gap)
+                    gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
 
                 gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
                                  station_gaps[i] > gap]
@@ -231,7 +230,7 @@ class PEMFileEditor:
         #
         #     return x, y
 
-        def mk_subplot(ax, channel_low, channel_high, profile_data):
+        def mk_subplot(ax, channel_low, channel_high, profile_data, segments=1000):
             """
             Plots and annotates the data in the LIN and LOG plots
             :param ax: Axes object
@@ -239,9 +238,8 @@ class PEMFileEditor:
             :param channel_high: The largest channel being plotted in the axes
             :param profile_data: The data in profile mode. Gets interpolated.
             """
-            segments = 1000
+            # segments = 1000
             offset = segments * 0.1
-
             # rect = plt.Rectangle((0.2, 0.75), 0.4, 0.15, color='k', alpha=0.3, transform=ax.transAxes)
             # ax.add_patch(rect)
 
@@ -262,7 +260,11 @@ class PEMFileEditor:
 
                 ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
-                for i, x_position in enumerate(x_intervals[int(offset)::int(segments * 0.4)]):
+                mask = np.isclose(interp_data, interp_data.astype('float64'))
+                x_intervals = x_intervals[mask]
+                interp_data = interp_data[mask]
+
+                for i, x_position in enumerate(x_intervals[int(offset)::int(len(x_intervals) * 0.4)]):
                     y = interp_data[list(x_intervals).index(x_position)]
 
                     if k == 0:
@@ -272,10 +274,11 @@ class PEMFileEditor:
                     else:
                         ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7, color=line_colour,
                                     va='center_baseline', ha='center', alpha=alpha)
-                offset += segments * 0.15
 
-                if offset >= segments * 0.85:
-                    offset = segments * 0.10
+                offset += len(x_intervals) * 0.15
+
+                if offset >= len(x_intervals) * 0.85:
+                    offset = len(x_intervals) * 0.10
 
         def add_titles():
             """
@@ -424,7 +427,7 @@ class PEMFileEditor:
 
             # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
             channel_bounds = [None] * 4
-            num_channels_per_plot = int(num_channels // 4)
+            num_channels_per_plot = int((num_channels - 1) // 4)
             remainder_channels = int((num_channels - 1) % 4)
 
             for k in range(0, len(channel_bounds)):
