@@ -51,7 +51,7 @@ class PEMFileEditor:
         :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
         logger.info("Generating plots...")
-        lin_fig, log_fig = self.mk_plots(lbound, rbound)
+        lin_fig, log_fig = self.mk_linlog_plots(lbound, rbound)
         logger.info("Finished generating plots")
         return lin_fig, log_fig
 
@@ -151,11 +151,100 @@ class PEMFileEditor:
 
         return data, stations
 
-    def mk_plots(self, leftbound=None, rightbound=None):
+    def get_interp_data(self, profile_data, stations, segments, gap=None):
+        """
+        Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
+        into 100 segments.
+        :param profile_data: The EM data in profile mode
+        :param stations: The stations of the EM data
+        :return: The interpolated data and stations
+        """
+        survey_type = self.get_survey_type()
+        readings = np.array(profile_data, dtype='float64')
+        x_intervals = np.linspace(stations[0], stations[-1], segments)
+        f = interpolate.interp1d(stations, readings, kind='linear')
+
+        interpolated_y = f(x_intervals)
+
+        # TODO Add toggle option in UI and box to manually input desired gap threshold
+        hide_gaps = True
+
+        if hide_gaps:
+
+            if 'borehole' in survey_type.casefold():
+                min_gap = 50
+            elif 'surface' in survey_type.casefold():
+                min_gap = 200
+
+            station_gaps = np.diff(stations)
+
+            if gap is None:
+                gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
+
+            gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
+                             station_gaps[i] > gap]
+
+            # Masks the intervals that are between gap[0] and gap[1]
+            for gap in gap_intervals:
+                interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
+                                                    interpolated_y)
+
+        return interpolated_y, x_intervals
+
+    def mk_linlog_plots(self, leftbound=None, rightbound=None):
         """
         Plot the LIN and LOG plots.
         :return: LIN plot figure and LOG plot figure
         """
+
+        file = self.active_file
+        # Header info mostly just for the title of the plots
+        # TODO Negative coil area in PEM file breaks the parsing
+        header = file.get_header()
+        tags = file.get_tags()
+        client = header['Client']
+        loop = header['Loop']
+        linehole = header['LineHole']
+        date = header['Date']
+        grid = header['Grid']
+        current = float(tags['Current'])
+        timebase = float(header['Timebase'])
+        timebase_freq = ((1 / (timebase / 1000)) / 4)
+        survey_type = self.get_survey_type()
+        num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
+        units = file.get_tags()['Units']
+
+        if 'borehole' in survey_type.casefold():
+            s_title = 'Hole'
+        else:
+            s_title = 'Line'
+
+        if units.casefold() == 'nanotesla/sec':
+            units = 'nT/s'
+        elif 'picotesla' in units.casefold():
+            units = 'pT'
+        else:
+            units = "UNDEF_UNIT"
+
+        first_channel_label = "Primary Pulse"
+        # if units == 'nT/s':
+        #     first_channel_label = "Primary Pulse"
+        # elif units == 'pT':
+        #     first_channel_label = 'On-time'
+        # else:
+        #     first_channel_label = 'UNDEF_CHAN'
+
+        # sort the data by station. Station names must first be converted into a number
+        data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
+        components = self.get_components(data)
+
+        log_figs = []
+        lin_figs = []
+
+        line_width = 0.5
+        line_colour = '#1B2631'
+        alpha = 1
+        font = "Tahoma"
 
         # # Using np.interp.
         # def get_interp_data(profile_data, stations, segments):
@@ -174,45 +263,7 @@ class PEMFileEditor:
         #     return interp_data, x_intervals
 
         # Using scipy.interpolate
-        def get_interp_data(profile_data, stations, segments, gap=None):
-            """
-            Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
-            into 100 segments.
-            :param profile_data: The EM data in profile mode
-            :param stations: The stations of the EM data
-            :return: The interpolated data and stations
-            """
-            survey_type = self.get_survey_type()
-            readings = np.array(profile_data, dtype='float64')
-            x_intervals = np.linspace(stations[0], stations[-1], segments)
-            f = interpolate.interp1d(stations, readings, kind='linear')
 
-            interpolated_y = f(x_intervals)
-
-            # TODO Add toggle option in UI and box to manually input desired gap threshold
-            hide_gaps = True
-
-            if hide_gaps:
-
-                if 'borehole' in survey_type.casefold():
-                    min_gap = 50
-                elif 'surface' in survey_type.casefold():
-                    min_gap = 200
-
-                station_gaps = np.diff(stations)
-
-                if gap is None:
-                    gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
-
-                gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
-                                 station_gaps[i] > gap]
-
-                # Masks the intervals that are between gap[0] and gap[1]
-                for gap in gap_intervals:
-                    interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
-                                                        interpolated_y)
-
-            return interpolated_y, x_intervals
 
         # def get_segmented_data(profile_data, stations, segments):
         #
@@ -249,7 +300,7 @@ class PEMFileEditor:
                 channel_data, stations = self.get_channel_data(k, profile_data)
 
                 # Interpolates the channel data, also returns the corresponding x intervals
-                interp_data, x_intervals = get_interp_data(channel_data, stations, segments)
+                interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments)
                 ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
                 if leftbound is not None and rightbound is not None:
@@ -322,7 +373,8 @@ class PEMFileEditor:
 
             if ax.get_yscale() == 'symlog':
                 ax.tick_params(axis='y', which='major', labelrotation=90)
-                ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0i'))
+                plt.setp(ax.get_yticklabels(), va='center')
+                ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
 
         def format_xlabel_spine():
             ax.spines['right'].set_visible(False)
@@ -346,55 +398,6 @@ class PEMFileEditor:
             # box = patches.FancyBboxPatch(xy=(0.01, 0.01), width=0.98, height=0.98, linewidth=0.8, edgecolor='black',
             #                              facecolor='none', transform=fig.transFigure, boxstyle="round,pad=0.1")
             fig.patches.append(rect)
-
-        file = self.active_file
-        # Header info mostly just for the title of the plots
-        # TODO Negative coil area in PEM file breaks the parsing
-        header = file.get_header()
-        tags = file.get_tags()
-        client = header['Client']
-        loop = header['Loop']
-        linehole = header['LineHole']
-        date = header['Date']
-        grid = header['Grid']
-        current = float(tags['Current'])
-        timebase = float(header['Timebase'])
-        timebase_freq = ((1 / (timebase / 1000)) / 4)
-        survey_type = self.get_survey_type()
-        num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
-        units = file.get_tags()['Units']
-
-        if 'borehole' in survey_type.casefold():
-            s_title = 'Hole'
-        else:
-            s_title = 'Line'
-
-        if units.casefold() == 'nanotesla/sec':
-            units = 'nT/s'
-        elif 'picotesla' in units.casefold():
-            units = 'pT'
-        else:
-            units = "UNDEF_UNIT"
-
-        first_channel_label = "Primary Pulse"
-        # if units == 'nT/s':
-        #     first_channel_label = "Primary Pulse"
-        # elif units == 'pT':
-        #     first_channel_label = 'On-time'
-        # else:
-        #     first_channel_label = 'UNDEF_CHAN'
-
-        # sort the data by station. Station names must first be converted into a number
-        data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
-        components = self.get_components(data)
-
-        log_figs = []
-        lin_figs = []
-
-        line_width = 0.5
-        line_colour = '#1B2631'
-        alpha = 1
-        font = "Tahoma"
 
         # Each component has their own figure
         for component in components:
@@ -527,6 +530,48 @@ class PEMFileEditor:
             log_figs.append(log_fig)
 
         return lin_figs, log_figs
+
+    # def mk_qt_plot(self):
+    #     import pyqtgraph as pg
+    #     pg.setConfigOption('background', 'w')
+    #
+    #     file = self.active_file
+    #     # Header info mostly just for the title of the plots
+    #     # TODO Negative coil area in PEM file breaks the parsing
+    #     header = file.get_header()
+    #     tags = file.get_tags()
+    #     client = header['Client']
+    #     loop = header['Loop']
+    #     linehole = header['LineHole']
+    #     date = header['Date']
+    #     grid = header['Grid']
+    #     current = float(tags['Current'])
+    #     timebase = float(header['Timebase'])
+    #     timebase_freq = ((1 / (timebase / 1000)) / 4)
+    #     survey_type = self.get_survey_type()
+    #     num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
+    #     units = file.get_tags()['Units']
+    #
+    #     if 'borehole' in survey_type.casefold():
+    #         s_title = 'Hole'
+    #     else:
+    #         s_title = 'Line'
+    #
+    #     if units.casefold() == 'nanotesla/sec':
+    #         units = 'nT/s'
+    #     elif 'picotesla' in units.casefold():
+    #         units = 'pT'
+    #     else:
+    #         units = "UNDEF_UNIT"
+    #
+    #     data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
+    #     components = self.get_components(data)
+    #
+    #     for component in components:
+    #         component_data = list(filter(lambda d: d['Component'] == component, data))
+    #         profile_data = self.get_profile_data(component_data)
+    #         stations = [station['Station'] for station in component_data]
+    #         x_limit = min(stations), max(stations)
 
     # Legacy function, leave as reference
     def generate_placeholder_plots(self):

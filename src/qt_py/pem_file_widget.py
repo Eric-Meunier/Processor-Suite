@@ -13,6 +13,7 @@ import os
 from matplotlib.backends.backend_pdf import PdfPages
 logger = Logger(__name__)
 
+
 class PEMFileWidget(QWidget):
 
     def __init__(self, parent=None, editor=None):

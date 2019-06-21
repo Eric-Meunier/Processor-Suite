@@ -50,7 +50,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_open_file.triggered.connect(self.on_file_open)
         self.action_print.triggered.connect(self.on_print)
         self.action_print_all.triggered.connect(self.on_print_all)
-        self.pshRecalc.clicked.connect(self.regen_plots)
+        self.pshRecalc.clicked.connect(self.redraw_plots)
         self.pshMinMax.clicked.connect(self.get_minmax)
         self.pshReset.clicked.connect(self.reset_all)
         self.action_print.setShortcut("Ctrl+P")
@@ -82,10 +82,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             absmax = max(maximum)
             self.lineLeft.setText(str(absmin))
             self.lineRight.setText(str(absmax))
-        self.pshMinMax.setText('Auto-calculate Bounds')
+        self.pshMinMax.setText('Auto-Calculate Limits')
         self.pshMinMax.setEnabled(True)
 
-    def regen_plots(self):
+    def redraw_plots(self):
         templist = copy.deepcopy(list_of_files)
         if len(list_of_files) != 0:
             for i in range(0,len(list_of_files)):
