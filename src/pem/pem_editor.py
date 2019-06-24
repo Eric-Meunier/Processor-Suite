@@ -1,9 +1,9 @@
 from src.pem.pem_parser import PEMParser, PEMFile
-from matplotlib.figure import Figure
-import matplotlib.ticker as ticker
-from collections import OrderedDict
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+from matplotlib.figure import Figure
 from matplotlib import patches
+from collections import OrderedDict
 import numpy as np
 import math
 import re
@@ -15,12 +15,12 @@ from matplotlib.dates import date2num, DateConverter, num2date
 from matplotlib.container import ErrorbarContainer
 from datetime import datetime
 
-logger = Logger(__name__)
-# plt.style.use('seaborn-whitegrid')
 # plt.style.use('seaborn-white')
 # plt.style.use('bmh')
 # plt.style.use('ggplot')
+
 plt.style.use('seaborn-paper')
+logger = Logger(__name__)
 
 # import matplotlib.style as mplstyle
 # mplstyle.use('fast')
@@ -151,7 +151,24 @@ class PEMFileEditor:
 
         return data, stations
 
-    def get_interp_data(self, profile_data, stations, segments, gap=None):
+    def calc_gaps(self, stations, gap=None):
+        survey_type = self.get_survey_type()
+
+        if 'borehole' in survey_type.casefold():
+            min_gap = 50
+        elif 'surface' in survey_type.casefold():
+            min_gap = 200
+        station_gaps = np.diff(stations)
+
+        if gap is None:
+            gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
+
+        gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
+                         station_gaps[i] > gap]
+
+        return gap_intervals
+
+    def get_interp_data(self, profile_data, stations, segments, hide_gaps=True):
         """
         Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
         into 100 segments.
@@ -159,30 +176,15 @@ class PEMFileEditor:
         :param stations: The stations of the EM data
         :return: The interpolated data and stations
         """
-        survey_type = self.get_survey_type()
+
         readings = np.array(profile_data, dtype='float64')
         x_intervals = np.linspace(stations[0], stations[-1], segments)
         f = interpolate.interp1d(stations, readings, kind='linear')
 
         interpolated_y = f(x_intervals)
 
-        # TODO Add toggle option in UI and box to manually input desired gap threshold
-        hide_gaps = True
-
         if hide_gaps:
-
-            if 'borehole' in survey_type.casefold():
-                min_gap = 50
-            elif 'surface' in survey_type.casefold():
-                min_gap = 200
-
-            station_gaps = np.diff(stations)
-
-            if gap is None:
-                gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
-
-            gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
-                             station_gaps[i] > gap]
+            gap_intervals = self.calc_gaps(stations)
 
             # Masks the intervals that are between gap[0] and gap[1]
             for gap in gap_intervals:

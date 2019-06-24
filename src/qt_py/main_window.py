@@ -52,6 +52,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_print_all.triggered.connect(self.on_print_all)
         self.pshRecalc.clicked.connect(self.redraw_plots)
         self.pshMinMax.clicked.connect(self.get_minmax)
+        self.hideGapsToggle.clicked.connect(self.hide_gaps)
         self.pshReset.clicked.connect(self.reset_all)
         self.action_print.setShortcut("Ctrl+P")
 
@@ -84,6 +85,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.lineRight.setText(str(absmax))
         self.pshMinMax.setText('Auto-Calculate Limits')
         self.pshMinMax.setEnabled(True)
+
+    def hide_gaps(self):
+        if self.hideGapsToggle.isChecked():
+            self.gapThresh.setEnabled(True)
+        else:
+            self.gapThresh.setEnabled(False)
+
+    def calc_gap_thresh(self):
+
+        if len(list_of_files) != 0:
+            gap = []
+            pemfile = PEMFileEditor()
+            for f in list_of_files:
+                pemfile.open_file(f)
+
+
 
     def redraw_plots(self):
         templist = copy.deepcopy(list_of_files)
@@ -170,6 +187,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pshRecalc.setEnabled(False)
         self.pshMinMax.setEnabled(False)
         self.pshReset.setEnabled(False)
+        self.gapThresh.setEnabled(True)
         self.pshRecalc.setText('Processing...')
 
         logger.info("Opening " + ', '.join(filenames) + "...")
