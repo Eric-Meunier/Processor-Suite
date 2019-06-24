@@ -9,18 +9,20 @@ import os
 from src.pem.pem_editor import PEMFileEditor
 from cfg import list_of_files
 from log import Logger
+import numpy as np
+from scipy import stats
+
 logger = Logger(__name__)
 
 from qt_py.pem_file_widget import PEMFileWidget
 from qt_py.file_browser_widget import FileBrowser
 
 # Load Qt ui file into a class
-qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)),  "../qt_ui/main_window.ui")
+qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/main_window.ui")
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 
 class ExceptionHandler(QtCore.QObject):
-
     errorSignal = QtCore.pyqtSignal()
     silentSignal = QtCore.pyqtSignal()
 
@@ -53,6 +55,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pshRecalc.clicked.connect(self.redraw_plots)
         self.pshMinMax.clicked.connect(self.get_minmax)
         self.hideGapsToggle.clicked.connect(self.hide_gaps)
+        self.calcGapThresh.clicked.connect(self.calc_gap_thresh)
+
         self.pshReset.clicked.connect(self.reset_all)
         self.action_print.setShortcut("Ctrl+P")
 
@@ -89,30 +93,48 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def hide_gaps(self):
         if self.hideGapsToggle.isChecked():
             self.gapThresh.setEnabled(True)
+            self.calcGapThresh.setEnabled(True)
         else:
             self.gapThresh.setEnabled(False)
+            self.calcGapThresh.setEnabled(False)
 
     def calc_gap_thresh(self):
-
         if len(list_of_files) != 0:
-            gap = []
+            gap_list = []
             pemfile = PEMFileEditor()
+
             for f in list_of_files:
                 pemfile.open_file(f)
+                stations = pemfile.convert_stations(pemfile.active_file.data)
+                stations = [x['Station'] for x in stations]
+                survey_type = pemfile.get_survey_type()
 
+                if 'borehole' in survey_type.casefold():
+                    min_gap = 50
+                elif 'surface' in survey_type.casefold():
+                    min_gap = 200
 
+                station_gaps = np.diff(stations)
+                gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
+
+                gap_list.append(gap)
+
+            self.gapThresh.setText(str(min(gap_list)))
+
+    def title_info(self):
+        pass
 
     def redraw_plots(self):
         templist = copy.deepcopy(list_of_files)
         if len(list_of_files) != 0:
-            for i in range(0,len(list_of_files)):
+            for i in range(0, len(list_of_files)):
                 self.file_browser.removeTab(0)
             self.labeltest.show()
             item = self.plotLayout.takeAt(1)
             widget = item.widget()
             widget.deleteLater()
             list_of_files.clear()
-            self.open_files(templist,True)
+            self.open_files(templist, True)
 
     def on_print(self):
         logger.info("Entering directory dialog for saving to PDF")
@@ -145,7 +167,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         logger.info('Saving plots to PDFs in directory "{}"'.format(name))
         self.file_browser.print_files(name)
 
-
     def on_file_open(self):
         # Will eventually hold logic for choosing between different file types
         # TODO Add logger class
@@ -163,7 +184,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.open_files(filenames)
 
     def dragEnterEvent(self, e):
-        #if e.mimeData().hasFormat('text/plain'):
+        # if e.mimeData().hasFormat('text/plain'):
         e.accept()
 
     def dropEvent(self, e):
@@ -172,7 +193,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.open_files(urls)
 
-    def open_files(self, filenames, redraw = False):
+    def open_files(self, filenames, redraw=False):
         # # Set the central widget to a contain content for working with PEMFile
         # file_widget = PEMFileWidget(self)
         # file_widget.open_file(filename)
@@ -187,15 +208,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pshRecalc.setEnabled(False)
         self.pshMinMax.setEnabled(False)
         self.pshReset.setEnabled(False)
-        self.gapThresh.setEnabled(True)
         self.pshRecalc.setText('Processing...')
 
         logger.info("Opening " + ', '.join(filenames) + "...")
 
-        try: lbound = float(self.lineLeft.text())
-        except ValueError: lbound = None
-        try: rbound = float(self.lineRight.text())
-        except ValueError: rbound = None
+        try:
+            lbound = float(self.lineLeft.text())
+        except ValueError:
+            lbound = None
+        try:
+            rbound = float(self.lineRight.text())
+        except ValueError:
+            rbound = None
+
+        try:
+            gap = float(self.gapThresh.text())
+        except ValueError:
+            gap = None
+
+        kwargs = {"lbound": lbound,
+                  "rbound": rbound,
+                  "hide_gaps": self.hideGapsToggle.isChecked(),
+                  "gap": gap}
 
         if not self.file_browser:
             self.file_browser = FileBrowser()
@@ -204,7 +238,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.labeltest.hide()
                 self.plotLayout.addWidget(self.file_browser)
         try:
-            self.file_browser.open_files(filenames,lbound,rbound)
+            self.file_browser.open_files(filenames, **kwargs)
         except:
             self.pshRecalc.setText('Error in input, please restart')
             raise
@@ -213,7 +247,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.pshRecalc.setEnabled(True)
             self.pshMinMax.setEnabled(True)
             self.pshReset.setEnabled(True)
-
 
 
 if __name__ == "__main__":

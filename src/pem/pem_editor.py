@@ -46,12 +46,18 @@ class PEMFileEditor:
 
     # File plotting functions
 
-    def generate_plots(self, lbound=None, rbound=None):
+    def generate_plots(self, **kwargs):
         """
         :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
         logger.info("Generating plots...")
-        lin_fig, log_fig = self.mk_linlog_plots(lbound, rbound)
+
+        # lbound = kwargs['lbound']
+        # rbound = kwargs['rbound']
+        # hide_gaps = kwargs['hide_gaps']
+        # gap = kwargs['gap']
+
+        lin_fig, log_fig = self.mk_linlog_plots(**kwargs)
         logger.info("Finished generating plots")
         return lin_fig, log_fig
 
@@ -151,7 +157,7 @@ class PEMFileEditor:
 
         return data, stations
 
-    def calc_gaps(self, stations, gap=None):
+    def calc_gaps(self, stations, gap):
         survey_type = self.get_survey_type()
 
         if 'borehole' in survey_type.casefold():
@@ -168,7 +174,7 @@ class PEMFileEditor:
 
         return gap_intervals
 
-    def get_interp_data(self, profile_data, stations, segments, hide_gaps=True):
+    def get_interp_data(self, profile_data, stations, segments, hide_gaps, gap):
         """
         Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
         into 100 segments.
@@ -184,7 +190,7 @@ class PEMFileEditor:
         interpolated_y = f(x_intervals)
 
         if hide_gaps:
-            gap_intervals = self.calc_gaps(stations)
+            gap_intervals = self.calc_gaps(stations, gap)
 
             # Masks the intervals that are between gap[0] and gap[1]
             for gap in gap_intervals:
@@ -193,7 +199,7 @@ class PEMFileEditor:
 
         return interpolated_y, x_intervals
 
-    def mk_linlog_plots(self, leftbound=None, rightbound=None):
+    def mk_linlog_plots(self, **kwargs):
         """
         Plot the LIN and LOG plots.
         :return: LIN plot figure and LOG plot figure
@@ -266,24 +272,6 @@ class PEMFileEditor:
 
         # Using scipy.interpolate
 
-
-        # def get_segmented_data(profile_data, stations, segments):
-        #
-        #     profile_data = np.array(profile_data, dtype='float64')
-        #     segmented_x = []
-        #     segmented_y = []
-        #     for i in range(len(profile_data)-1):
-        #         num = abs(stations[i] - stations[i+1])/abs(stations[0]-stations[-1]) * segments
-        #         x_values = np.linspace(stations[i], stations[i + 1], num=num, endpoint=False)
-        #         y_values = np.linspace(profile_data[i], profile_data[i + 1], num=num, endpoint=False)
-        #         segmented_x.append(x_values)
-        #         segmented_y.append(y_values)
-        #
-        #     x = list(chain.from_iterable(segmented_x))
-        #     y = list(chain.from_iterable(segmented_y))
-        #
-        #     return x, y
-
         def mk_subplot(ax, channel_low, channel_high, profile_data, segments=1000):
             """
             Plots and annotates the data in the LIN and LOG plots
@@ -297,12 +285,17 @@ class PEMFileEditor:
             # rect = plt.Rectangle((0.2, 0.75), 0.4, 0.15, color='k', alpha=0.3, transform=ax.transAxes)
             # ax.add_patch(rect)
 
+            leftbound = kwargs['lbound']
+            rightbound = kwargs['rbound']
+            hide_gaps = kwargs['hide_gaps']
+            gap = kwargs['gap']
+
             for k in range(channel_low, (channel_high + 1)):
                 # Gets the profile data for a single channel, along with the stations
                 channel_data, stations = self.get_channel_data(k, profile_data)
 
                 # Interpolates the channel data, also returns the corresponding x intervals
-                interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments)
+                interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments, hide_gaps, gap)
                 ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
                 if leftbound is not None and rightbound is not None:

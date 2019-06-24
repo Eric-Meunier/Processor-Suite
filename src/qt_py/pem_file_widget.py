@@ -11,6 +11,7 @@ from PyQt5 import QtGui
 from PyQt5.QtPrintSupport import QPrinter
 import os
 from matplotlib.backends.backend_pdf import PdfPages
+
 logger = Logger(__name__)
 
 
@@ -29,7 +30,7 @@ class PEMFileWidget(QWidget):
         self.label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.label)
 
-    def open_file(self, file_name, lbound = None, rbound = None):
+    def open_file(self, file_name, **kwargs):
         # Display loading text
         self.label.show()
         self.label.setText('Loading ' + os.path.basename(file_name) + '...')
@@ -38,7 +39,12 @@ class PEMFileWidget(QWidget):
 
         self.editor.open_file(file_name)
 
-        lin_figs, log_figs = self.editor.generate_plots(lbound,rbound)
+        # lbound = kwargs['lbound']
+        # rbound = kwargs['rbound']
+        # hide_gaps = kwargs['hide_gaps']
+        # gap = kwargs['gap']
+
+        lin_figs, log_figs = self.editor.generate_plots(**kwargs)
 
         self.tab_widget = QTabWidget(self)
         self.layout.addWidget(self.tab_widget)

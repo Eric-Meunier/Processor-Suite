@@ -47,14 +47,14 @@ class FileBrowser(QTabWidget):
         new_file_widget.open_file(file_name)
         self.active_editor = new_editor
 
-    def open_files(self, file_names, lbound = None, rbound = None):
+    def open_files(self, file_names, **kwargs):
         def get_filename(file_path, have_suffix):
             # have_suffix will determine whether or not to include filetype in the name
             if have_suffix:
                 return os.path.basename(file_path)
             else:
                 st = os.path.basename(file_path)
-                for i in range(len(st)-1, -1, -1):
+                for i in range(len(st) - 1, -1, -1):
                     if st[i] == '.':
                         return st[0:i]
                 return 'Invalid File Name'
@@ -65,7 +65,7 @@ class FileBrowser(QTabWidget):
         new_file_widgets = []
 
         for file_name in file_names:
-            if file_name[(len(file_name)-4):len(file_name)].lower() == '.pem':
+            if file_name[(len(file_name) - 4):len(file_name)].lower() == '.pem':
                 new_editors.append(PEMFileEditor())
                 new_file_widgets.append(PEMFileWidget(parent=self, editor=new_editors[-1]))
 
@@ -83,7 +83,7 @@ class FileBrowser(QTabWidget):
         for file_name, new_file_widget in zip(file_names, new_file_widgets):
             # Opening the file takes the longer so this is done in this separate
             # loop after the required widgets are generated
-            new_file_widget.open_file(file_name, lbound, rbound)
+            new_file_widget.open_file(file_name, **kwargs)
 
         self.setCurrentWidget(new_file_widgets[0])
         self.active_editor = new_editors[0]
