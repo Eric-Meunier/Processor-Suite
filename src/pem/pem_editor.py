@@ -210,11 +210,24 @@ class PEMFileEditor:
         # TODO Negative coil area in PEM file breaks the parsing
         header = file.get_header()
         tags = file.get_tags()
-        client = header['Client']
-        loop = header['Loop']
+
+        if kwargs['Client']:
+            client = kwargs['Client']
+        else:
+            client = header['Client']
+
+        if kwargs['Loop']:
+            loop = kwargs['Loop']
+        else:
+            loop = header['Loop']
+
+        if kwargs['Grid']:
+            grid = kwargs['Grid']
+        else:
+            grid = header['Grid']
+
         linehole = header['LineHole']
         date = header['Date']
-        grid = header['Grid']
         current = float(tags['Current'])
         timebase = float(header['Timebase'])
         timebase_freq = ((1 / (timebase / 1000)) / 4)
@@ -280,10 +293,7 @@ class PEMFileEditor:
             :param channel_high: The largest channel being plotted in the axes
             :param profile_data: The data in profile mode. Gets interpolated.
             """
-            # segments = 1000
             offset = segments * 0.1
-            # rect = plt.Rectangle((0.2, 0.75), 0.4, 0.15, color='k', alpha=0.3, transform=ax.transAxes)
-            # ax.add_patch(rect)
 
             leftbound = kwargs['lbound']
             rightbound = kwargs['rbound']

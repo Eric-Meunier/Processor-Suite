@@ -121,8 +121,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             self.gapThresh.setText(str(min(gap_list)))
 
-    def title_info(self):
-        pass
+    def fill_header_info(self):
+        if len(list_of_files) != 0:
+            pemfile = PEMFileEditor()
+
+            f=list_of_files[0]
+            pemfile.open_file(f)
+            header = pemfile.active_file.get_header()
+
+            if not self.clientEdit.text():
+                self.clientEdit.setText(header['Client'])
+            if not self.gridEdit.text():
+                self.gridEdit.setText(header['Grid'])
+            if not self.loopEdit.text():
+                self.loopEdit.setText(header['Loop'])
 
     def redraw_plots(self):
         templist = copy.deepcopy(list_of_files)
@@ -229,7 +241,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         kwargs = {"lbound": lbound,
                   "rbound": rbound,
                   "hide_gaps": self.hideGapsToggle.isChecked(),
-                  "gap": gap}
+                  "gap": gap,
+                  "Client": self.clientEdit.text(),
+                  "Grid": self.gridEdit.text(),
+                  "Loop": self.loopEdit.text()}
 
         if not self.file_browser:
             self.file_browser = FileBrowser()
@@ -247,6 +262,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.pshRecalc.setEnabled(True)
             self.pshMinMax.setEnabled(True)
             self.pshReset.setEnabled(True)
+        self.fill_header_info()
+        self.calc_gap_thresh()
 
 
 if __name__ == "__main__":
