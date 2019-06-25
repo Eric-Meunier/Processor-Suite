@@ -30,6 +30,10 @@ class PEMFile:
     def get_data(self):
         return self.data
 
+    def get_components(self):
+        components = [reading['component'] for reading in self.data]
+        return components
+
     def get_unique_stations(self):
         unique_stations = {n for n in
                            [reading['Station'] for reading in self.data]}

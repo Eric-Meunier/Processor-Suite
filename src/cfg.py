@@ -1,5 +1,6 @@
 # Initializes global variable, do not edit
 list_of_files = []
+Plotted = []
 
 #///# Edit Below this Line #///#
 bound_left = 100

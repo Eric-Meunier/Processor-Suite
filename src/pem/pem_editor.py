@@ -1,4 +1,5 @@
 from src.pem.pem_parser import PEMParser, PEMFile
+from cfg import Plotted
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.figure import Figure
@@ -117,6 +118,7 @@ class PEMFileEditor:
         if 'Z' in unique_components:
             unique_components.insert(0, unique_components.pop(unique_components.index('Z')))
 
+        Plotted.extend(unique_components)
         return unique_components
 
     def get_profile_data(self, component_data):

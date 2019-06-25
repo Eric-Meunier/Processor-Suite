@@ -7,7 +7,7 @@ from PyQt5 import QtCore
 from PyQt5.QtWidgets import QFileDialog, QMainWindow
 import os
 from src.pem.pem_editor import PEMFileEditor
-from cfg import list_of_files
+from cfg import list_of_files, Plotted
 from log import Logger
 import numpy as np
 from scipy import stats
@@ -53,24 +53,52 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_print.triggered.connect(self.on_print)
         self.action_print_all.triggered.connect(self.on_print_all)
         self.pshRecalc.clicked.connect(self.redraw_plots)
-        self.pshMinMax.clicked.connect(self.get_minmax)
-        self.hideGapsToggle.clicked.connect(self.hide_gaps)
-        self.calcGapThresh.clicked.connect(self.calc_gap_thresh)
-
-        self.pshReset.clicked.connect(self.reset_all)
+        # self.pushCalcLimits.clicked.connect(self.calc_stn_limits)
+        self.hideGapsToggle.clicked.connect(self.toggle_gaps)
+        # self.calcGapThresh.clicked.connect(self.calc_gap_thresh)
+        self.shareTitleToggle.clicked.connect(self.toggle_header_info)
+        self.stnLimitToggle.clicked.connect(self.toggle_station_limits)
+        # self.pshReset.clicked.connect(self.reset_all)
         self.action_print.setShortcut("Ctrl+P")
 
         self.file_browser = None
 
         self.move(400, 0)
 
-    def reset_all(self):
-        self.lineLeft.setText(None)
-        self.lineRight.setText(None)
+    def progress(self, plotted_plots = 0):
 
-    def get_minmax(self):
-        self.pshMinMax.setEnabled(False)
-        self.pshMinMax.setText('Working...')
+        if len(list_of_files) != 0:
+            current_plot = 0
+            for f in list_of_files:
+                pemfile = PEMFileEditor()
+                pemfile.open_file(f)
+
+                components = pemfile.get_components(pemfile.active_file.data)
+                for component in components:
+                    current_plot += 1
+
+        while plotted_plots < len(Plotted):
+            plotted_plots += int(1/Plotted) * 100
+            self.progressBar.setValue(plotted_plots)
+
+    def toggle_station_limits(self):
+        if self.stnLimitToggle.isChecked():
+            self.lineRight.setEnabled(True)
+            self.lineLeft.setEnabled(True)
+            self.calc_stn_limits()
+        else:
+            self.lineLeft.setText(None)
+            self.lineRight.setText(None)
+            self.lineRight.setEnabled(False)
+            self.lineLeft.setEnabled(False)
+
+    # def reset_all(self):
+    #     self.lineLeft.setText(None)
+    #     self.lineRight.setText(None)
+
+    def calc_stn_limits(self):
+        # self.pushCalcLimits.setEnabled(False)
+        # self.pushCalcLimits.setText('Working...')
         if len(list_of_files) != 0:
             minimum = []
             maximum = []
@@ -87,16 +115,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             absmax = max(maximum)
             self.lineLeft.setText(str(absmin))
             self.lineRight.setText(str(absmax))
-        self.pshMinMax.setText('Auto-Calculate Limits')
-        self.pshMinMax.setEnabled(True)
+        # self.pushCalcLimits.setText('Calculate Limits')
+        # self.pushCalcLimits.setEnabled(True)
 
-    def hide_gaps(self):
+    def toggle_gaps(self):
         if self.hideGapsToggle.isChecked():
-            self.gapThresh.setEnabled(True)
-            self.calcGapThresh.setEnabled(True)
+            self.calc_gap_thresh()
+            self.editGapThresh.setEnabled(True)
+            # self.calcGapThresh.setEnabled(True)
         else:
-            self.gapThresh.setEnabled(False)
-            self.calcGapThresh.setEnabled(False)
+            self.editGapThresh.setEnabled(False)
+            # self.calcGapThresh.setEnabled(False)
 
     def calc_gap_thresh(self):
         if len(list_of_files) != 0:
@@ -119,13 +148,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
                 gap_list.append(gap)
 
-            self.gapThresh.setText(str(min(gap_list)))
+            self.editGapThresh.setText(str(min(gap_list)))
+
+    def toggle_header_info(self):
+        if self.shareTitleToggle.isChecked():
+            self.clientEdit.setEnabled(True)
+            self.gridEdit.setEnabled(True)
+            self.loopEdit.setEnabled(True)
+            self.fill_header_info()
+        else:
+            self.clientEdit.setEnabled(False)
+            self.gridEdit.setEnabled(False)
+            self.loopEdit.setEnabled(False)
 
     def fill_header_info(self):
         if len(list_of_files) != 0:
             pemfile = PEMFileEditor()
 
-            f=list_of_files[0]
+            f = list_of_files[0]
             pemfile.open_file(f)
             header = pemfile.active_file.get_header()
 
@@ -139,7 +179,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def redraw_plots(self):
         templist = copy.deepcopy(list_of_files)
         if len(list_of_files) != 0:
-            for i in range(0, len(list_of_files)):
+            for i in range(len(list_of_files)):
                 self.file_browser.removeTab(0)
             self.labeltest.show()
             item = self.plotLayout.takeAt(1)
@@ -185,7 +225,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         logger.info("Entering file dialog")
 
         dlg = QFileDialog()
-        dlg.setNameFilter("PEM (*.pem)");
+        dlg.setNameFilter("PEM (*.pem)")
 
         filenames = dlg.getOpenFileNames()[0]
 
@@ -216,10 +256,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             filenames = [filenames]
         list_of_files.extend(filenames)
         if not redraw:
-            self.get_minmax()
+            self.toggle_station_limits()
+        #     self.calc_stn_limits()
+
+        # self.progress()
         self.pshRecalc.setEnabled(False)
-        self.pshMinMax.setEnabled(False)
-        self.pshReset.setEnabled(False)
+        # self.pushCalcLimits.setEnabled(False)
+        # self.pshReset.setEnabled(False)
         self.pshRecalc.setText('Processing...')
 
         logger.info("Opening " + ', '.join(filenames) + "...")
@@ -234,7 +277,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             rbound = None
 
         try:
-            gap = float(self.gapThresh.text())
+            gap = float(self.editGapThresh.text())
         except ValueError:
             gap = None
 
@@ -260,10 +303,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             self.pshRecalc.setText('Redraw Plots')
             self.pshRecalc.setEnabled(True)
-            self.pshMinMax.setEnabled(True)
-            self.pshReset.setEnabled(True)
+            # self.pushCalcLimits.setEnabled(True)
+            # self.pshReset.setEnabled(True)
+        self.toggle_station_limits()
         self.fill_header_info()
-        self.calc_gap_thresh()
+        self.toggle_gaps()
 
 
 if __name__ == "__main__":
