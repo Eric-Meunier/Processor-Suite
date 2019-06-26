@@ -524,7 +524,7 @@
      </item>
     </layout>
    </widget>
-   <widget class="QFrame" name="gapFrame">
+   <widget class="QFrame" name="frame_DataGaps">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -684,7 +684,7 @@
      <bool>false</bool>
     </property>
    </widget>
-   <widget class="QFrame" name="titleFrame">
+   <widget class="QFrame" name="frame_TitleInfo">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -698,7 +698,7 @@
     </property>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
-      <widget class="QLabel" name="titleLabel">
+      <widget class="QLabel" name="label_TitleInfo">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -893,7 +893,7 @@
      </item>
     </layout>
    </widget>
-   <widget class="QFrame" name="frame">
+   <widget class="QFrame" name="frame_StationLimits">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -1044,18 +1044,70 @@
      <number>0</number>
     </property>
    </widget>
-   <widget class="Line" name="line_3">
+   <widget class="QFrame" name="verticalFrame_InterpMethod">
     <property name="geometry">
      <rect>
-      <x>510</x>
-      <y>960</y>
-      <width>191</width>
-      <height>16</height>
+      <x>20</x>
+      <y>460</y>
+      <width>160</width>
+      <height>51</height>
      </rect>
     </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
     </property>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QLabel" name="label_InterpMethod">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Interpolation Method</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBoxInterpMethod">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="frame">
+        <bool>true</bool>
+       </property>
+       <item>
+        <property name="text">
+         <string>Linear (Default)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Cubic</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Quadratic</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">

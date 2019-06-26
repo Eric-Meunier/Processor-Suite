@@ -87,8 +87,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.lineLeft.setEnabled(True)
             self.calc_stn_limits()
         else:
-            self.lineLeft.setText(None)
-            self.lineRight.setText(None)
+            # self.lineLeft.setText(None)
+            # self.lineRight.setText(None)
             self.lineRight.setEnabled(False)
             self.lineLeft.setEnabled(False)
 
@@ -287,7 +287,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                   "gap": gap,
                   "Client": self.clientEdit.text(),
                   "Grid": self.gridEdit.text(),
-                  "Loop": self.loopEdit.text()}
+                  "Loop": self.loopEdit.text(),
+                  "Interp": self.comboBoxInterpMethod.currentText()}
 
         if not self.file_browser:
             self.file_browser = FileBrowser()

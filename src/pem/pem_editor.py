@@ -176,7 +176,7 @@ class PEMFileEditor:
 
         return gap_intervals
 
-    def get_interp_data(self, profile_data, stations, segments, hide_gaps, gap):
+    def get_interp_data(self, profile_data, stations, segments, hide_gaps, gap, interp_method = 'linear'):
         """
         Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
         into 100 segments.
@@ -187,7 +187,7 @@ class PEMFileEditor:
 
         readings = np.array(profile_data, dtype='float64')
         x_intervals = np.linspace(stations[0], stations[-1], segments)
-        f = interpolate.interp1d(stations, readings, kind='linear')
+        f = interpolate.interp1d(stations, readings, kind= interp_method)
 
         interpolated_y = f(x_intervals)
 
@@ -227,6 +227,8 @@ class PEMFileEditor:
             grid = kwargs['Grid']
         else:
             grid = header['Grid']
+
+        interp_method = kwargs['Interp'].split()[0].lower()
 
         linehole = header['LineHole']
         date = header['Date']
@@ -307,7 +309,7 @@ class PEMFileEditor:
                 channel_data, stations = self.get_channel_data(k, profile_data)
 
                 # Interpolates the channel data, also returns the corresponding x intervals
-                interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments, hide_gaps, gap)
+                interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments, hide_gaps, gap, interp_method)
                 ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
                 if leftbound is not None and rightbound is not None:
@@ -344,23 +346,23 @@ class PEMFileEditor:
             Adds the titles to the plots
             """
 
-            plt.figtext(0.555, 0.97, 'Crone Geophysics & Exploration Ltd.',
+            plt.figtext(0.555, 0.96, 'Crone Geophysics & Exploration Ltd.',
                         fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
 
-            plt.figtext(0.555, 0.955, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
+            plt.figtext(0.555, 0.935, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
 
-            plt.figtext(0.125, 0.945, 'Timebase: ' + str(timebase) + ' ms\n' +
+            plt.figtext(0.175, 0.925, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
                         'Current: ' + str(round(current, 1)) + ' A',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
 
-            plt.figtext(0.555, 0.945, s_title + ': ' + linehole + '\n'
+            plt.figtext(0.555, 0.925, s_title + ': ' + linehole + '\n'
                         + component + ' Component' + '\n'
                         + 'Loop: ' + loop,
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='center')
 
-            plt.figtext(0.975, 0.945, client + '\n' + grid + '\n' + date + '\n',
+            plt.figtext(0.955, 0.925, client + '\n' + grid + '\n' + date + '\n',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='right')
 
         def format_spine():
@@ -400,7 +402,7 @@ class PEMFileEditor:
 
         def add_rectangle():
             fig = plt.gcf()
-            rect = patches.Rectangle(xy=(0.01, 0.01), width=0.98, height=0.98, linewidth=0.7, edgecolor='black',
+            rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
                                      facecolor='none', transform=fig.transFigure)
             # box = patches.FancyBboxPatch(xy=(0.01, 0.01), width=0.98, height=0.98, linewidth=0.8, edgecolor='black',
             #                              facecolor='none', transform=fig.transFigure, boxstyle="round,pad=0.1")
@@ -413,12 +415,12 @@ class PEMFileEditor:
             # t1 = time.time()
 
             # The LIN plot always has 5 axes. LOG only ever has one.
-            lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
+            lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), dpi=100, sharex=True)
             # Using subplots_adjust instead of tight_layout since it's significantly faster (3 secs -> 0.3 secs)
             # NOTE: Subplots y-axis' are now always at the same distance from the left edge. As a result, the y-axis
             #       labels may get cutoff if the y-axis numbers are too long. With tight_layout the y-axis distance from
             #       the left edge is changed to ensure the y-axis labels are always the same distance away.
-            lin_fig.subplots_adjust(left=0.14, bottom=0.05, right=0.960, top=0.9)
+            lin_fig.subplots_adjust(left=0.15, bottom=0.07, right=0.958, top=0.885)
             add_rectangle()
             ax6 = ax5.twiny()
             ax6.get_shared_x_axes().join(ax5, ax6)
@@ -502,7 +504,7 @@ class PEMFileEditor:
                     format_xlabel_spine()
 
             # Creating the LOG plot
-            log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
+            log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11), dpi=100)
             log_fig.subplots_adjust(left=0.1225, bottom=0.05, right=0.960, top=0.9)
 
             axlog2 = ax.twiny()
