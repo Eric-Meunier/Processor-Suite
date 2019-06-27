@@ -356,7 +356,7 @@ class PEMFileEditor:
             plt.figtext(0.555, 0.940, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
 
-            plt.figtext(0.175, 0.930, 'Timebase: ' + str(timebase) + ' ms\n' +
+            plt.figtext(0.15, 0.930, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
                         'Current: ' + str(round(current, 1)) + ' A',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
@@ -424,7 +424,7 @@ class PEMFileEditor:
             # NOTE: Subplots y-axis' are now always at the same distance from the left edge. As a result, the y-axis
             #       labels may get cutoff if the y-axis numbers are too long. With tight_layout the y-axis distance from
             #       the left edge is changed to ensure the y-axis labels are always the same distance away.
-            lin_fig.subplots_adjust(left=0.15, bottom=0.07, right=0.958, top=0.885)
+            lin_fig.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
             add_rectangle()
             ax6 = ax5.twiny()
             ax6.get_shared_x_axes().join(ax5, ax6)
@@ -489,7 +489,7 @@ class PEMFileEditor:
                 y_limits = ax.get_ylim()
 
                 if (y_limits[1] - y_limits[0]) < 3:
-                    new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 2)
+                    new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
                     # new_low = math.floor(((y_limits[1] - y_limits[0]) / 2) - 2)
                     new_low = new_high * -1
                     ax.set_ylim(new_low, new_high)
@@ -511,7 +511,7 @@ class PEMFileEditor:
             self.increase_plot_count()
             # Creating the LOG plot
             log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11), dpi=100)
-            log_fig.subplots_adjust(left=0.15, bottom=0.07, right=0.958, top=0.885)
+            log_fig.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
 
             axlog2 = ax.twiny()
             axlog2.get_shared_x_axes().join(ax, axlog2)

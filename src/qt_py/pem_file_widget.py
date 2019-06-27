@@ -40,11 +40,6 @@ class PEMFileWidget(QWidget):
 
         self.editor.open_file(file_name)
 
-        # lbound = kwargs['lbound']
-        # rbound = kwargs['rbound']
-        # hide_gaps = kwargs['hide_gaps']
-        # gap = kwargs['gap']
-
         lin_figs, log_figs = self.editor.generate_plots(**kwargs)
 
         self.tab_widget = QTabWidget(self)
