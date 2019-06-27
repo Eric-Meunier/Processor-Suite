@@ -50,8 +50,10 @@ class PEMFileWidget(QWidget):
         self.tab_widget = QTabWidget(self)
         self.layout.addWidget(self.tab_widget)
 
-        self.lin_view_widget = PlotViewerWidget(editor=self.editor, figures=lin_figs, plot_heights = 100, plot_widths=850)#, plot_heights = lin_figs[0].bbox.size[1], plot_widths = lin_figs[0].bbox.size[0]) #, plot_heights=1000)
-        self.log_view_widget = PlotViewerWidget(editor=self.editor, figures=log_figs, plot_heights = log_figs[0].bbox.size[1], plot_widths = log_figs[0].bbox.size[0]) #, plot_heights=1000)
+        self.lin_view_widget = PlotViewerWidget(editor=self.editor, figures=lin_figs, plot_heights=1100,
+                                                plot_widths=850)
+        self.log_view_widget = PlotViewerWidget(editor=self.editor, figures=log_figs, plot_heights=1100,
+                                                plot_widths=850)
 
         self.tab_widget.tabBar().setExpanding(True)
         # new_file_widget.setTabPosition(QTabWidget.West)
