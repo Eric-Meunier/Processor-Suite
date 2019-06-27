@@ -12,7 +12,7 @@ import os
 
 class PlotWidget(QWidget):
 
-    def __init__(self, parent=None, editor=None, figure=None, plot_height=350, plot_width=300):
+    def __init__(self, parent=None, editor=None, figure=None, plot_height=1100, plot_width=850):
         QWidget.__init__(self, parent=parent)
 
         # TODO Store file or editor?
@@ -28,7 +28,6 @@ class PlotWidget(QWidget):
         # p = self.palette()
         # p.setColor(self.backgroundRole(), Qt.red)
         # self.setPalette(p)
-
 
         self.nav_bar_visible = False
         self.plot_height = plot_height

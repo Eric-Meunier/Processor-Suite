@@ -1,5 +1,4 @@
 from src.pem.pem_parser import PEMParser, PEMFile
-from cfg import Plotted
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.figure import Figure
@@ -37,6 +36,7 @@ class PEMFileEditor:
     def __init__(self):
         self.active_file = None
         self.parser = PEMParser()
+        self.plot_count = 0
 
     def open_file(self, file_path):
         """
@@ -61,6 +61,9 @@ class PEMFileEditor:
         lin_fig, log_fig = self.mk_linlog_plots(**kwargs)
         logger.info("Finished generating plots")
         return lin_fig, log_fig
+
+    def increase_plot_count(self):
+        self.plot_count += 1
 
     def get_survey_type(self):
         survey_type = self.active_file.get_header()['SurveyType']
@@ -118,7 +121,7 @@ class PEMFileEditor:
         if 'Z' in unique_components:
             unique_components.insert(0, unique_components.pop(unique_components.index('Z')))
 
-        Plotted.extend(unique_components)
+        # Plotted.extend(unique_components)
         return unique_components
 
     def get_profile_data(self, component_data):
@@ -176,7 +179,7 @@ class PEMFileEditor:
 
         return gap_intervals
 
-    def get_interp_data(self, profile_data, stations, segments, hide_gaps, gap, interp_method = 'linear'):
+    def get_interp_data(self, profile_data, stations, segments, hide_gaps, gap, interp_method='linear'):
         """
         Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
         into 100 segments.
@@ -187,7 +190,7 @@ class PEMFileEditor:
 
         readings = np.array(profile_data, dtype='float64')
         x_intervals = np.linspace(stations[0], stations[-1], segments)
-        f = interpolate.interp1d(stations, readings, kind= interp_method)
+        f = interpolate.interp1d(stations, readings, kind=interp_method)
 
         interpolated_y = f(x_intervals)
 
@@ -309,7 +312,8 @@ class PEMFileEditor:
                 channel_data, stations = self.get_channel_data(k, profile_data)
 
                 # Interpolates the channel data, also returns the corresponding x intervals
-                interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments, hide_gaps, gap, interp_method)
+                interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments, hide_gaps, gap,
+                                                                interp_method)
                 ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
                 if leftbound is not None and rightbound is not None:
@@ -346,23 +350,23 @@ class PEMFileEditor:
             Adds the titles to the plots
             """
 
-            plt.figtext(0.555, 0.96, 'Crone Geophysics & Exploration Ltd.',
+            plt.figtext(0.555, 0.955, 'Crone Geophysics & Exploration Ltd.',
                         fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
 
-            plt.figtext(0.555, 0.935, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
+            plt.figtext(0.555, 0.940, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
 
-            plt.figtext(0.175, 0.925, 'Timebase: ' + str(timebase) + ' ms\n' +
+            plt.figtext(0.175, 0.930, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
                         'Current: ' + str(round(current, 1)) + ' A',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
 
-            plt.figtext(0.555, 0.925, s_title + ': ' + linehole + '\n'
+            plt.figtext(0.555, 0.930, s_title + ': ' + linehole + '\n'
                         + component + ' Component' + '\n'
                         + 'Loop: ' + loop,
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='center')
 
-            plt.figtext(0.955, 0.925, client + '\n' + grid + '\n' + date + '\n',
+            plt.figtext(0.955, 0.930, client + '\n' + grid + '\n' + date + '\n',
                         fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='right')
 
         def format_spine():
@@ -379,11 +383,11 @@ class PEMFileEditor:
             # ax.tick_params(axis='x', which='minor', direction='inout', length=3)
             plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
             plt.setp(ax.get_xticklabels(), visible=False)
-
+            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
             if ax.get_yscale() == 'symlog':
                 ax.tick_params(axis='y', which='major', labelrotation=90)
                 plt.setp(ax.get_yticklabels(), va='center')
-                ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
+                # ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
 
         def format_xlabel_spine():
             ax.spines['right'].set_visible(False)
@@ -484,9 +488,10 @@ class PEMFileEditor:
                 # Creates a minimum Y axis tick range
                 y_limits = ax.get_ylim()
 
-                if (y_limits[1] - y_limits[0]) < 2:
-                    new_high = math.ceil((y_limits[1] - y_limits[0]) / 2 + 2)
-                    new_low = math.floor((y_limits[1] - y_limits[0]) / 2 - 2)
+                if (y_limits[1] - y_limits[0]) < 3:
+                    new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 2)
+                    # new_low = math.floor(((y_limits[1] - y_limits[0]) / 2) - 2)
+                    new_low = new_high * -1
                     ax.set_ylim(new_low, new_high)
                     ax.set_yticks(ax.get_yticks())
 
@@ -503,9 +508,10 @@ class PEMFileEditor:
                 elif index == 5:
                     format_xlabel_spine()
 
+            self.increase_plot_count()
             # Creating the LOG plot
             log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11), dpi=100)
-            log_fig.subplots_adjust(left=0.1225, bottom=0.05, right=0.960, top=0.9)
+            log_fig.subplots_adjust(left=0.15, bottom=0.07, right=0.958, top=0.885)
 
             axlog2 = ax.twiny()
             axlog2.get_shared_x_axes().join(ax, axlog2)
@@ -535,6 +541,7 @@ class PEMFileEditor:
                 elif index == 1:
                     format_xlabel_spine()
 
+            self.increase_plot_count()
             lin_figs.append(lin_fig)
             log_figs.append(log_fig)
 

@@ -6,16 +6,16 @@ from PyQt5 import uic
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QFileDialog, QMainWindow
 import os
-from src.pem.pem_editor import PEMFileEditor
-from cfg import list_of_files, Plotted
+from cfg import list_of_files
 from log import Logger
 import numpy as np
 from scipy import stats
 
-logger = Logger(__name__)
-
+from src.pem.pem_editor import PEMFileEditor
 from qt_py.pem_file_widget import PEMFileWidget
 from qt_py.file_browser_widget import FileBrowser
+
+logger = Logger(__name__)
 
 # Load Qt ui file into a class
 qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/main_window.ui")
@@ -63,10 +63,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.file_browser = None
 
-        self.move(400, 0)
+        self.move(-1500, 0)
 
-    def progress(self, plotted_plots = 0):
-
+    def progress_bar(self):
+        plotted_plots = len(Plotted)
         if len(list_of_files) != 0:
             current_plot = 0
             for f in list_of_files:
@@ -298,6 +298,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.plotLayout.addWidget(self.file_browser)
         try:
             self.file_browser.open_files(filenames, **kwargs)
+            # self.progress_bar()
         except:
             self.pshRecalc.setText('Error in input, please restart')
             raise

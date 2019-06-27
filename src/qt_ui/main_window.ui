@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1113</width>
+    <width>1200</width>
     <height>1000</height>
    </rect>
   </property>
@@ -470,7 +470,7 @@
      <rect>
       <x>210</x>
       <y>10</y>
-      <width>811</width>
+      <width>950</width>
       <height>961</height>
      </rect>
     </property>
@@ -654,9 +654,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>940</y>
+      <y>932</y>
       <width>181</width>
-      <height>23</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -720,6 +720,25 @@
       </widget>
      </item>
      <item>
+      <widget class="QCheckBox" name="shareTitleToggle">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="layoutDirection">
+        <enum>Qt::RightToLeft</enum>
+       </property>
+       <property name="text">
+        <string>Share Title Information</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QFrame" name="formFrame">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -730,7 +749,7 @@
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>60</height>
+         <height>50</height>
         </size>
        </property>
        <layout class="QFormLayout" name="formLayout">
@@ -872,19 +891,6 @@
          <widget class="QLabel" name="loopLabel">
           <property name="text">
            <string>Loop</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0" colspan="2">
-         <widget class="QCheckBox" name="shareTitleToggle">
-          <property name="layoutDirection">
-           <enum>Qt::RightToLeft</enum>
-          </property>
-          <property name="text">
-           <string>Share Title Information</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -1035,20 +1041,29 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>730</y>
+      <y>500</y>
       <width>181</width>
-      <height>23</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="value">
      <number>0</number>
+    </property>
+    <property name="textVisible">
+     <bool>false</bool>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+    <property name="format">
+     <string>%p%</string>
     </property>
    </widget>
    <widget class="QFrame" name="verticalFrame_InterpMethod">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>460</y>
+      <y>440</y>
       <width>160</width>
       <height>51</height>
      </rect>
@@ -1115,7 +1130,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1113</width>
+     <width>1200</width>
      <height>21</height>
     </rect>
    </property>

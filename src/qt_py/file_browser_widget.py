@@ -88,6 +88,9 @@ class FileBrowser(QTabWidget):
         self.setCurrentWidget(new_file_widgets[0])
         self.active_editor = new_editors[0]
 
+    def plotting_progress(self):
+        plotted = int(0)
+
     def print_files(self, dir_name):
         lin_figs = {}
         log_figs = {}
@@ -112,11 +115,13 @@ class FileBrowser(QTabWidget):
         with PdfPages(os.path.join(dir_name, "lin.pdf")) as pdf:
             for line, figs in ordered_lin_figs:
                 for fig in figs:
+                    fig.set_size_inches(8.5, 11)
                     pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
 
         with PdfPages(os.path.join(dir_name, "log.pdf")) as pdf:
             for line, figs in ordered_log_figs:
                 for fig in figs:
+                    fig.set_size_inches(8.5, 11)
                     pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
 
         logger.info('File save complete.')

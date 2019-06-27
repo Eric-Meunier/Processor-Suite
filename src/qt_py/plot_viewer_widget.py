@@ -14,7 +14,7 @@ Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
 
-    def __init__(self, parent=None, editor=None, figures=[], plot_heights=500, plot_widths=750):
+    def __init__(self, parent=None, editor=None, figures=[], plot_heights=1100, plot_widths=850):
         QWidget.__init__(self, parent=parent)
         Ui_PEMFileWidget.__init__(self)
         self.setupUi(self)
