@@ -1,7 +1,9 @@
 import os
 import sys
+import PyQt5
+
 src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
-print(src_dir)
+print('src directory: '+src_dir)
 
 # Needed to keep run.py outside of src directory
 os.chdir(src_dir)

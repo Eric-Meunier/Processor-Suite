@@ -333,11 +333,11 @@ class PEMFileEditor:
                     y = interp_data[list(x_intervals).index(x_position)]
 
                     if k == 0:
-                        ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7, color=line_colour,
+                        ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7.5, color=line_colour,
                                     va='center_baseline', ha='center', alpha=alpha)
 
                     else:
-                        ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7, color=line_colour,
+                        ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, color=line_colour,
                                     va='center_baseline', ha='center', alpha=alpha)
 
                 offset += len(x_intervals) * 0.15
@@ -351,23 +351,23 @@ class PEMFileEditor:
             """
 
             plt.figtext(0.555, 0.955, 'Crone Geophysics & Exploration Ltd.',
-                        fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
+                        fontname='Century Gothic', alpha=alpha, fontsize=11, ha='center')
 
             plt.figtext(0.555, 0.940, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, ha='center')
+                        fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
 
-            plt.figtext(0.15, 0.930, 'Timebase: ' + str(timebase) + ' ms\n' +
+            plt.figtext(0.14, 0.930, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
                         'Current: ' + str(round(current, 1)) + ' A',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top')
+                        fontname='Century Gothic', alpha=alpha, fontsize=10, va='top')
 
             plt.figtext(0.555, 0.930, s_title + ': ' + linehole + '\n'
                         + component + ' Component' + '\n'
                         + 'Loop: ' + loop,
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='center')
+                        fontname='Century Gothic', alpha=alpha, fontsize=10, va='top', ha='center')
 
             plt.figtext(0.955, 0.930, client + '\n' + grid + '\n' + date + '\n',
-                        fontname='Century Gothic', alpha=alpha, fontsize=9, va='top', ha='right')
+                        fontname='Century Gothic', alpha=alpha, fontsize=10, va='top', ha='right')
 
         def format_spine():
             ax.spines['right'].set_visible(False)

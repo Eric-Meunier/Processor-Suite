@@ -1,9 +1,11 @@
 import sys
 import copy
 
+import PyQt5
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 from PyQt5 import QtCore
+from PyQt5 import QtGui
 from PyQt5.QtWidgets import QFileDialog, QMainWindow
 import os
 from cfg import list_of_files
@@ -47,7 +49,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.menubar.setNativeMenuBar(False)
         self.setAcceptDrops(True)
-
+        self.setWindowIcon(QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/crone_logo.ico")))
         # Connect signals to slots
         self.action_open_file.triggered.connect(self.on_file_open)
         self.action_print.triggered.connect(self.on_print)
@@ -63,7 +65,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.file_browser = None
 
-        self.move(-1500, 0)
+        self.move(350, 0)
 
     def progress_bar(self):
         plotted_plots = len(Plotted)
