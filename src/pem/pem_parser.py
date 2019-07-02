@@ -1,9 +1,7 @@
 import re
 from decimal import Decimal
 from pprint import pprint
-from pem.pem_file import PEMFile
-from log import Logger
-logger = Logger(__name__)
+from src.pem.pem_file import PEMFile
 
 
 class PEMParser:
@@ -83,7 +81,9 @@ class PEMParser:
                 if group == 'Tag':
                     loop_coords[-1]['Tag'] = match.group(index)
                 elif group == 'LoopCoordinates':
-                    loop_coords[-1]['LoopCoordinates'] = match.group(index)
+                    line = match.group(index)
+                    line = line.partition('~')
+                    loop_coords[-1]['LoopCoordinates'] = line[0]
 
         return loop_coords
 
@@ -97,8 +97,9 @@ class PEMParser:
                 if group == 'Tag':
                     line_coords[-1]['Tag'] = match.group(index)
                 elif group == 'LineCoordinates':
-                    line_coords[-1]['LineCoordinates'] = match.group(index)
-
+                    line = match.group(index)
+                    line = line.partition('~')
+                    line_coords[-1]['LineCoordinates'] = line[0]
         return line_coords
 
     def parse_notes(self, file):
@@ -148,8 +149,6 @@ class PEMParser:
         with open(filename, "rt") as in_file:
             file = in_file.read()
 
-        logger.info("Parsing " + filename + "...")
-
         tags = self.parse_tags(file)
         loop_coords = self.parse_loop(file)
         line_coords = self.parse_line(file)
@@ -157,6 +156,5 @@ class PEMParser:
         header = self.parse_header(file)
         data = self.parse_data(file)
 
-        logger.info("Finished parsing " + filename)
 
         return PEMFile(tags, loop_coords, line_coords, notes, header, data)
