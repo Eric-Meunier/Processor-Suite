@@ -108,7 +108,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for f in list_of_files:
                 pemfile = PEMFileEditor()
                 pemfile.open_file(f)
-                stations = pemfile.convert_stations(pemfile.active_file.data)
+                stations = pemfile.convert_stations()
                 stations = [x['Station'] for x in stations]
                 minimum.append(min(stations))
                 maximum.append(max(stations))
@@ -136,7 +136,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             for f in list_of_files:
                 pemfile.open_file(f)
-                stations = pemfile.convert_stations(pemfile.active_file.data)
+                stations = pemfile.convert_stations()
                 stations = [x['Station'] for x in stations]
                 survey_type = pemfile.get_survey_type()
 

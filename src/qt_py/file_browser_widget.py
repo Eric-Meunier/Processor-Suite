@@ -8,6 +8,8 @@ from pem.pem_editor import PEMFileEditor
 from qt_py.pem_file_widget import PEMFileWidget
 from log import Logger
 from cfg import list_of_files
+from operator import itemgetter
+from collections import OrderedDict
 from matplotlib.backends.backend_pdf import PdfPages
 
 logger = Logger(__name__)
@@ -93,37 +95,52 @@ class FileBrowser(QTabWidget):
         plotted = int(0)
 
     def print_files(self, dir_name):
-        lin_figs = {}
-        log_figs = {}
+        lin_figs = OrderedDict()
+        log_figs = OrderedDict()
 
         # Order figures by line name in ascending order
         for file_widget in self.widgets:
-            lin_figs[file_widget.editor.active_file.get_header()['LineHole']] = \
-                [x.figure for x in file_widget.lin_view_widget.plot_widgets()]
-            log_figs[file_widget.editor.active_file.get_header()['LineHole']] = \
-                [x.figure for x in file_widget.log_view_widget.plot_widgets()]
+            components = ''.join(file_widget.editor.active_file.components)
+            figures = [x.figure for x in file_widget.lin_view_widget.plot_widgets()]
 
+            if file_widget.editor.active_file.get_header()['LineHole'] in lin_figs:
+                lin_figs[file_widget.editor.active_file.get_header()['LineHole']].update({components: figures})
+            else:
+                lin_figs[file_widget.editor.active_file.get_header()['LineHole']] = OrderedDict({components: figures})
+
+            if file_widget.editor.active_file.get_header()['LineHole'] in log_figs:
+                log_figs[file_widget.editor.active_file.get_header()['LineHole']].update({components: figures})
+            else:
+                log_figs[file_widget.editor.active_file.get_header()['LineHole']] = OrderedDict({components: figures})
+
+        for line in lin_figs.values():
+            sorted(line.items(), key=lambda r: r[0])
+            if 'Z' in line.items():
+                line.move_to_end('Z', last=False)
         ordered_lin_figs = sorted(lin_figs.items(), key=lambda s: s[0])
-        ordered_log_figs = sorted(log_figs.items(), key=lambda s: s[0])
 
-        # Has form:
-        # [('2400N', [<Figure size 750x1000 with 6 Axes>, <Figure size 750x1000 with 6 Axes>]),
-        #  ('7600N', [<Figure size 850x1100 with 6 Axes>, <Figure size 850x1100 with 6 Axes>, <Figure size 850x1100 with 6 Axes>])]
+        for line in log_figs.values():
+            sorted(line.items(), key=lambda r: r[0])
+            if 'Z' in line.items():
+                line.move_to_end('Z', last=False)
+        ordered_log_figs = sorted(log_figs.items(), key=lambda s: s[0])
 
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
 
         with PdfPages(os.path.join(dir_name, "lin.pdf")) as pdf:
-            for line, figs in ordered_lin_figs:
-                for fig in figs:
-                    fig.set_size_inches(8.5, 11)
-                    pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
+            for line, components in ordered_lin_figs:
+                for figs in components.values():
+                    for fig in figs:
+                        fig.set_size_inches(8.5, 11)
+                        pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
 
         with PdfPages(os.path.join(dir_name, "log.pdf")) as pdf:
-            for line, figs in ordered_log_figs:
-                for fig in figs:
-                    fig.set_size_inches(8.5, 11)
-                    pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
+            for line, components in ordered_log_figs:
+                for figs in components.values():
+                    for fig in figs:
+                        fig.set_size_inches(8.5, 11)
+                        pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
 
         logger.info('File save complete.')
 

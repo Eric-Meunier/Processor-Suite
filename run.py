@@ -1,6 +1,5 @@
 import os
 import sys
-import PyQt5
 
 src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
 print('src directory: '+src_dir)

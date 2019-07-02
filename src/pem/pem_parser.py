@@ -140,6 +140,21 @@ class PEMParser:
 
         return survey_data
 
+    def components(self, file):
+        data = self.parse_data(file)
+        unique_components = []
+
+        for reading in data:
+            component = reading['Component']
+
+            if component not in unique_components:
+                unique_components.append(component)
+
+        if 'Z' in unique_components:
+            unique_components.insert(0, unique_components.pop(unique_components.index('Z')))
+
+        return unique_components
+
     def parse(self, filename):
         """
         :param filename: string containing path to a PEM file
@@ -155,6 +170,6 @@ class PEMParser:
         notes = self.parse_notes(file)
         header = self.parse_header(file)
         data = self.parse_data(file)
+        components = self.components(file)
 
-
-        return PEMFile(tags, loop_coords, line_coords, notes, header, data)
+        return PEMFile(tags, loop_coords, line_coords, notes, header, data, components)

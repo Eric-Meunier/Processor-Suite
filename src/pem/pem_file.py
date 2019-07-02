@@ -4,13 +4,14 @@ class PEMFile:
     """
 
     # Constructor
-    def __init__(self, tags, loop_coords, line_coords, notes, header, data):
+    def __init__(self, tags, loop_coords, line_coords, notes, header, data, components):
         self.tags = tags
         self.loop_coords = loop_coords
         self.line_coords = line_coords
         self.notes = notes
         self.header = header
         self.data = data
+        self.components = components
 
     def get_tags(self):
         return self.tags

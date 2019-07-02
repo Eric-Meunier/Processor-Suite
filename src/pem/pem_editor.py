@@ -35,6 +35,7 @@ class PEMFileEditor:
 
     def __init__(self):
         self.active_file = None
+        self.components = None
         self.parser = PEMParser()
         self.plot_count = 0
 
@@ -85,13 +86,13 @@ class PEMFileEditor:
 
         return survey_type
 
-    def convert_stations(self, data):
+    def convert_stations(self):
         """
         Converts all the station names in the data into a number, negative if the stations was S or W
         :param data: Dictionary of data from a PEM file
         :return: Dictionary of data for a PEM file with the station numbers now integers
         """
-
+        data = self.active_file.get_data()
         stations = [d['Station'] for d in data]
 
         for index, station in enumerate(stations):
@@ -104,12 +105,14 @@ class PEMFileEditor:
 
         return data
 
-    def get_components(self, data):
+    def get_components(self):
         """
         Retrieve the unique components of the survey file (i.e. Z, X, or Y)
         :param data: EM data dictionary of a PEM file
         :return: List of components in str format
         """
+        # sort the data by station. Station names must first be converted into a number
+        data = sorted(self.convert_stations(), key=lambda k: k['Station'])
         unique_components = []
 
         for reading in data:
@@ -121,7 +124,7 @@ class PEMFileEditor:
         if 'Z' in unique_components:
             unique_components.insert(0, unique_components.pop(unique_components.index('Z')))
 
-        # Plotted.extend(unique_components)
+        self.components = unique_components
         return unique_components
 
     def get_profile_data(self, component_data):
@@ -187,7 +190,7 @@ class PEMFileEditor:
         :param stations: The stations of the EM data
         :return: The interpolated data and stations
         """
-
+        stations = np.array(stations, dtype='float64')
         readings = np.array(profile_data, dtype='float64')
         x_intervals = np.linspace(stations[0], stations[-1], segments)
         f = interpolate.interp1d(stations, readings, kind=interp_method)
@@ -262,9 +265,7 @@ class PEMFileEditor:
         # else:
         #     first_channel_label = 'UNDEF_CHAN'
 
-        # sort the data by station. Station names must first be converted into a number
-        data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
-        components = self.get_components(data)
+        components = self.get_components()
 
         log_figs = []
         lin_figs = []
@@ -429,7 +430,7 @@ class PEMFileEditor:
             ax6 = ax5.twiny()
             ax6.get_shared_x_axes().join(ax5, ax6)
 
-            component_data = list(filter(lambda d: d['Component'] == component, data))
+            component_data = list(filter(lambda d: d['Component'] == component, self.active_file.get_data()))
 
             profile_data = self.get_profile_data(component_data)
 
