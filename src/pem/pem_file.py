@@ -4,7 +4,7 @@ class PEMFile:
     """
 
     # Constructor
-    def __init__(self, tags, loop_coords, line_coords, notes, header, data, components):
+    def __init__(self, tags, loop_coords, line_coords, notes, header, data, components, survey_type):
         self.tags = tags
         self.loop_coords = loop_coords
         self.line_coords = line_coords
@@ -12,6 +12,7 @@ class PEMFile:
         self.header = header
         self.data = data
         self.components = components
+        self.survey_type = survey_type
 
     def get_tags(self):
         return self.tags

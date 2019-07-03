@@ -155,6 +155,26 @@ class PEMParser:
 
         return unique_components
 
+    def survey_type(self, file):
+        survey_type = self.parse_header(file)['SurveyType']
+
+        if survey_type.casefold() == 's-coil':
+            survey_type = 'Surface Induction'
+        elif survey_type.casefold() == 'borehole':
+            survey_type = 'Borehole Induction'
+        elif survey_type.casefold() == 'b-rad':
+            survey_type = 'Borehole Induction'
+        elif survey_type.casefold() == 's-flux':
+            survey_type = 'Surface Fluxgate'
+        elif survey_type.casefold() == 'bh-flux':
+            survey_type = 'Borehole Fluxgate'
+        elif survey_type.casefold() == 's-squid':
+            survey_type = 'SQUID'
+        else:
+            survey_type = 'UNDEF_SURV'
+
+        return survey_type
+
     def parse(self, filename):
         """
         :param filename: string containing path to a PEM file
@@ -171,5 +191,6 @@ class PEMParser:
         header = self.parse_header(file)
         data = self.parse_data(file)
         components = self.components(file)
+        survey_type = self.survey_type(file)
 
-        return PEMFile(tags, loop_coords, line_coords, notes, header, data, components)
+        return PEMFile(tags, loop_coords, line_coords, notes, header, data, components, survey_type)

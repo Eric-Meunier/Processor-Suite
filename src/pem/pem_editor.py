@@ -36,6 +36,7 @@ class PEMFileEditor:
     def __init__(self):
         self.active_file = None
         self.components = None
+        self.survey_type = None
         self.parser = PEMParser()
         self.plot_count = 0
 
@@ -84,6 +85,7 @@ class PEMFileEditor:
         else:
             survey_type = 'UNDEF_SURV'
 
+        self.survey_type = survey_type
         return survey_type
 
     def convert_stations(self):

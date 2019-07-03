@@ -95,52 +95,66 @@ class FileBrowser(QTabWidget):
         plotted = int(0)
 
     def print_files(self, dir_name):
-        lin_figs = OrderedDict()
-        log_figs = OrderedDict()
+        lin_figs = []
+        log_figs = []
 
-        # Order figures by line name in ascending order
+        # Order figures by multiple orders
         for file_widget in self.widgets:
-            components = ''.join(file_widget.editor.active_file.components)
-            figures = [x.figure for x in file_widget.lin_view_widget.plot_widgets()]
+            lin_fig_dict = OrderedDict({
+                'Line': file_widget.lin_view_widget.editor.active_file.get_header()['LineHole'],
+                'Loop': file_widget.lin_view_widget.editor.active_file.get_header()['Loop'],
+                'Components': ''.join(file_widget.lin_view_widget.editor.active_file.components),
+                'SurveyType': file_widget.lin_view_widget.editor.active_file.survey_type,
+                'Timebase': file_widget.lin_view_widget.editor.active_file.get_header()['Timebase'],
+                'Figures': [x.figure for x in file_widget.lin_view_widget.plot_widgets()]
+            })
+            lin_figs.append(lin_fig_dict)
 
-            if file_widget.editor.active_file.get_header()['LineHole'] in lin_figs:
-                lin_figs[file_widget.editor.active_file.get_header()['LineHole']].update({components: figures})
-            else:
-                lin_figs[file_widget.editor.active_file.get_header()['LineHole']] = OrderedDict({components: figures})
+            log_fig_dict = OrderedDict({
+                'Line': file_widget.log_view_widget.editor.active_file.get_header()['LineHole'],
+                'Loop': file_widget.log_view_widget.editor.active_file.get_header()['Loop'],
+                'Components': ''.join(file_widget.log_view_widget.editor.active_file.components),
+                'SurveyType': file_widget.log_view_widget.editor.active_file.survey_type,
+                'Timebase': file_widget.log_view_widget.editor.active_file.get_header()['Timebase'],
+                'Figures': [x.figure for x in file_widget.log_view_widget.plot_widgets()]
+            })
+            log_figs.append(log_fig_dict)
 
-            if file_widget.editor.active_file.get_header()['LineHole'] in log_figs:
-                log_figs[file_widget.editor.active_file.get_header()['LineHole']].update({components: figures})
-            else:
-                log_figs[file_widget.editor.active_file.get_header()['LineHole']] = OrderedDict({components: figures})
+            # if file_widget.editor.active_file.get_header()['LineHole'] in log_figs:
+            #     log_figs[file_widget.editor.active_file.get_header()['LineHole']].update({components: figures})
+            # else:
+            #     log_figs[file_widget.editor.active_file.get_header()['LineHole']] = OrderedDict({components: figures})
 
-        for line in lin_figs.values():
-            sorted(line.items(), key=lambda r: r[0])
-            if 'Z' in line.items():
-                line.move_to_end('Z', last=False)
-        ordered_lin_figs = sorted(lin_figs.items(), key=lambda s: s[0])
+        lin_figs.sort(key=itemgetter('Components'), reverse=True)
+        lin_figs.sort(key=itemgetter('SurveyType', 'Timebase', 'Line', 'Loop'))
 
-        for line in log_figs.values():
-            sorted(line.items(), key=lambda r: r[0])
-            if 'Z' in line.items():
-                line.move_to_end('Z', last=False)
-        ordered_log_figs = sorted(log_figs.items(), key=lambda s: s[0])
+        log_figs.sort(key=itemgetter('Components'), reverse=True)
+        log_figs.sort(key=itemgetter('SurveyType', 'Timebase', 'Line', 'Loop'))
+
+        # ordered_log_figs = sorted(log_figs.items(), key=lambda s: s[0])
 
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
 
         with PdfPages(os.path.join(dir_name, "lin.pdf")) as pdf:
-            for line, components in ordered_lin_figs:
-                for figs in components.values():
-                    for fig in figs:
-                        fig.set_size_inches(8.5, 11)
-                        pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
+            for line in lin_figs:
+                for fig in line['Figures']:
+                    fig.set_size_inches(8.5, 11)
+                    pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
 
         with PdfPages(os.path.join(dir_name, "log.pdf")) as pdf:
-            for line, components in ordered_log_figs:
-                for figs in components.values():
-                    for fig in figs:
-                        fig.set_size_inches(8.5, 11)
-                        pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
+            for line in log_figs:
+                for fig in line['Figures']:
+                    fig.set_size_inches(8.5, 11)
+                    pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
+
+
+        # with PdfPages(os.path.join(dir_name, "log.pdf")) as pdf:
+        #     for line, components in ordered_log_figs:
+        #         for figs in components.values():
+        #             for fig in figs:
+        #                 fig.set_size_inches(8.5, 11)
+        #                 pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
 
         logger.info('File save complete.')
 
