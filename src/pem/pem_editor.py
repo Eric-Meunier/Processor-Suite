@@ -22,9 +22,6 @@ from datetime import datetime
 plt.style.use('seaborn-paper')
 logger = Logger(__name__)
 
-# import matplotlib.style as mplstyle
-# mplstyle.use('fast')
-
 import time
 
 
@@ -35,10 +32,7 @@ class PEMFileEditor:
 
     def __init__(self):
         self.active_file = None
-        self.components = None
-        self.survey_type = None
         self.parser = PEMParser()
-        self.plot_count = 0
 
     def open_file(self, file_path):
         """
@@ -55,17 +49,9 @@ class PEMFileEditor:
         """
         logger.info("Generating plots...")
 
-        # lbound = kwargs['lbound']
-        # rbound = kwargs['rbound']
-        # hide_gaps = kwargs['hide_gaps']
-        # gap = kwargs['gap']
-
         lin_fig, log_fig = self.mk_linlog_plots(**kwargs)
         logger.info("Finished generating plots")
         return lin_fig, log_fig
-
-    def increase_plot_count(self):
-        self.plot_count += 1
 
     def get_survey_type(self):
         survey_type = self.active_file.get_header()['SurveyType']
@@ -85,7 +71,6 @@ class PEMFileEditor:
         else:
             survey_type = 'UNDEF_SURV'
 
-        self.survey_type = survey_type
         return survey_type
 
     def convert_stations(self):
@@ -260,12 +245,6 @@ class PEMFileEditor:
             units = "UNDEF_UNIT"
 
         first_channel_label = "Primary Pulse"
-        # if units == 'nT/s':
-        #     first_channel_label = "Primary Pulse"
-        # elif units == 'pT':
-        #     first_channel_label = 'On-time'
-        # else:
-        #     first_channel_label = 'UNDEF_CHAN'
 
         components = self.get_components()
 
@@ -276,24 +255,6 @@ class PEMFileEditor:
         line_colour = '#1B2631'
         alpha = 1
         font = "Tahoma"
-
-        # # Using np.interp.
-        # def get_interp_data(profile_data, stations, segments):
-        #     """
-        #     Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
-        #     into 100 segments.
-        #     :param profile_data: The EM data in profile mode
-        #     :param stations: The stations of the EM data
-        #     :return: The interpolated data and stations, in 100 segments
-        #     """
-        #     readings = np.array(profile_data, dtype='float64')
-        #     x_intervals = np.linspace(stations[0], stations[-1], segments)
-        #
-        #     interp_data = np.interp(x_intervals, stations, readings)
-        #
-        #     return interp_data, x_intervals
-
-        # Using scipy.interpolate
 
         def mk_subplot(ax, channel_low, channel_high, profile_data, segments=1000):
             """
@@ -391,7 +352,6 @@ class PEMFileEditor:
             if ax.get_yscale() == 'symlog':
                 ax.tick_params(axis='y', which='major', labelrotation=90)
                 plt.setp(ax.get_yticklabels(), va='center')
-                # ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
 
         def format_xlabel_spine():
             ax.spines['right'].set_visible(False)
@@ -399,7 +359,6 @@ class PEMFileEditor:
             plt.setp(ax.spines['left'], alpha=alpha)
             plt.setp(ax.spines['bottom'], alpha=alpha)
             ax.spines['bottom'].set_visible(False)
-            # fig = plt.gcf()
             ax.spines["bottom"].set_position(("outward", 0.1))
             ax.xaxis.set_major_locator(x_label_locator)
             ax.xaxis.set_ticks_position('bottom')
@@ -412,22 +371,21 @@ class PEMFileEditor:
             fig = plt.gcf()
             rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
                                      facecolor='none', transform=fig.transFigure)
-            # box = patches.FancyBboxPatch(xy=(0.01, 0.01), width=0.98, height=0.98, linewidth=0.8, edgecolor='black',
-            #                              facecolor='none', transform=fig.transFigure, boxstyle="round,pad=0.1")
             fig.patches.append(rect)
 
         # Each component has their own figure
         for component in components:
             logger.info("Plotting component " + component)
-
             # t1 = time.time()
 
             # The LIN plot always has 5 axes. LOG only ever has one.
             lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), dpi=100, sharex=True)
+
             # Using subplots_adjust instead of tight_layout since it's significantly faster (3 secs -> 0.3 secs)
             # NOTE: Subplots y-axis' are now always at the same distance from the left edge. As a result, the y-axis
             #       labels may get cutoff if the y-axis numbers are too long. With tight_layout the y-axis distance from
             #       the left edge is changed to ensure the y-axis labels are always the same distance away.
+
             lin_fig.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
             add_rectangle()
             ax6 = ax5.twiny()
@@ -512,7 +470,6 @@ class PEMFileEditor:
                 elif index == 5:
                     format_xlabel_spine()
 
-            self.increase_plot_count()
             # Creating the LOG plot
             log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11), dpi=100)
             log_fig.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
@@ -545,7 +502,6 @@ class PEMFileEditor:
                 elif index == 1:
                     format_xlabel_spine()
 
-            self.increase_plot_count()
             lin_figs.append(lin_fig)
             log_figs.append(log_fig)
 
