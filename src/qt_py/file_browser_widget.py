@@ -148,7 +148,6 @@ class FileBrowser(QTabWidget):
                     fig.set_size_inches(8.5, 11)
                     pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
 
-
         # with PdfPages(os.path.join(dir_name, "log.pdf")) as pdf:
         #     for line, components in ordered_log_figs:
         #         for figs in components.values():

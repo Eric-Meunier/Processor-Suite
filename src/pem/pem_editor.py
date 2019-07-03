@@ -382,6 +382,7 @@ class PEMFileEditor:
             # ax.xaxis.set_minor_locator(minor_locator)
             ax.xaxis.set_major_locator(major_locator)
             ax.set_yticks(ax.get_yticks())
+            ax.get_yaxis().set_label_coords(-0.08, 0.5)
             ax.tick_params(axis='x', which='major', direction='inout', length=4)
             # ax.tick_params(axis='x', which='minor', direction='inout', length=3)
             plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
@@ -474,7 +475,7 @@ class PEMFileEditor:
                            str(channel_bounds[2][1]) + "\n(" + units + ")", fontname=font, alpha=alpha)
             ax5.set_ylabel("Channel " + str(channel_bounds[3][0]) + " - " +
                            str(channel_bounds[3][1]) + "\n(" + units + ")", fontname=font, alpha=alpha)
-            lin_fig.align_ylabels()
+            # lin_fig.align_ylabels()
 
             add_titles()
 
