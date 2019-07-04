@@ -1,6 +1,5 @@
 import sys
 import os
-import PyQt5
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -13,6 +12,19 @@ from collections import OrderedDict
 from matplotlib.backends.backend_pdf import PdfPages
 
 logger = Logger(__name__)
+
+
+class ProgressBar(QProgressBar):
+    def __init__(self, num_plotted=0, num_files=0, parent=None):
+        super().__init__()
+        self.initUI()
+        # self.num_plotted = num_plotted
+        # self.num_files = num_files
+
+    def initUI(self):
+        self.progress = QProgressBar()
+        # self.progress.setMaximum(100)
+        # self.progress.setValue(float((self.num_plotted / self.num_files) * 100))
 
 
 class FileBrowser(QTabWidget):
@@ -32,6 +44,9 @@ class FileBrowser(QTabWidget):
 
         self.tabCloseRequested.connect(self.on_tab_close)
         self.tabBar().tabMoved.connect(self.on_tab_move)
+
+        self.num_files = None
+        self.num_plotted = None
 
     def open_file(self, file_name):
         # TODO Logic for different file types
@@ -62,6 +77,7 @@ class FileBrowser(QTabWidget):
                         return st[0:i]
                 return 'Invalid File Name'
 
+        self.num_files = len(file_names)
         # Creates new tabs first before beginning the process of loading in files as opposed to calling
         # open_file in a loop which will create each tab sequentially as the files are loaded
         new_editors = []
@@ -86,13 +102,46 @@ class FileBrowser(QTabWidget):
         for file_name, new_file_widget in zip(file_names, new_file_widgets):
             # Opening the file takes the longer so this is done in this separate
             # loop after the required widgets are generated
+            self.num_plotted = int(file_names.index(file_name) + 1)
+
+            # progress_bar = ProgressBar(self.num_plotted, self.num_files)
+            # progress_bar.update()
             new_file_widget.open_file(file_name, **kwargs)
 
         self.setCurrentWidget(new_file_widgets[0])
         self.active_editor = new_editors[0]
 
-    def plotting_progress(self):
-        plotted = int(0)
+    # def progress(self):
+    #     if self.num_plotted:
+    #         num_plotted = self.num_plotted
+    #     else: num_plotted = 0
+    #     if self.num_files:
+    #         num_files = self.num_files
+    #     else: num_files = 0
+    #
+    #     if num_plotted == 0 and num_files == 0:
+    #         return 0
+    #     else:
+    #         return float((num_plotted/num_files)*100)
+
+    # def progress_bar(self):
+    #     pbar = ProgressBar()
+    #     pbar.progress.setMaximum(100)
+    #     pbar.setGeometry(500, 0, 150, 10)
+    #
+    #     if self.num_plotted:
+    #         num_plotted = self.num_plotted
+    #     else: num_plotted = 0
+    #     if self.num_files:
+    #         num_files = self.num_files
+    #     else: num_files = 0
+    #
+    #     if num_plotted == 0 and num_files == 0:
+    #         pbar.setValue(0)
+    #         return pbar
+    #     else:
+    #         pbar.setValue(float((num_plotted / num_files) * 100))
+    #         return pbar
 
     def print_files(self, dir_name):
         lin_figs = []

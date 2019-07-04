@@ -11,11 +11,12 @@ import os
 from cfg import list_of_files
 from log import Logger
 import numpy as np
+import time
 from scipy import stats
 
 from src.pem.pem_editor import PEMFileEditor
 from qt_py.pem_file_widget import PEMFileWidget
-from qt_py.file_browser_widget import FileBrowser
+from qt_py.file_browser_widget import FileBrowser, ProgressBar
 
 logger = Logger(__name__)
 
@@ -48,40 +49,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
 
         self.menubar.setNativeMenuBar(False)
+        self.statusBar().showMessage('Ready')
+
         self.setAcceptDrops(True)
-        self.setWindowIcon(QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/crone_logo.ico")))
+        self.setWindowIcon(
+            QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/crone_logo.ico")))
         # Connect signals to slots
         self.action_open_file.triggered.connect(self.on_file_open)
         self.action_print.triggered.connect(self.on_print)
-        self.action_print_all.triggered.connect(self.on_print_all)
-        self.pshRecalc.clicked.connect(self.redraw_plots)
-        # self.pushCalcLimits.clicked.connect(self.calc_stn_limits)
-        self.hideGapsToggle.clicked.connect(self.toggle_gaps)
-        # self.calcGapThresh.clicked.connect(self.calc_gap_thresh)
-        self.shareTitleToggle.clicked.connect(self.toggle_header_info)
-        self.stnLimitToggle.clicked.connect(self.toggle_station_limits)
-        # self.pshReset.clicked.connect(self.reset_all)
         self.action_print.setShortcut("Ctrl+P")
+        self.action_print_all.triggered.connect(self.on_print_all)
+        self.action_print_all.setShortcut('Ctrl+Alt+P')
+        self.pshRecalc.clicked.connect(self.draw_plots)
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.handleTimer)
+        self.num_plots = 0
+        # self.pushCalcLimits.clicked.connect(self.calc_stn_limits)
+        self.hideGapsToggle.stateChanged.connect(self.toggle_gaps)
+        # self.calcGapThresh.clicked.connect(self.calc_gap_thresh)
+        self.shareTitleToggle.stateChanged.connect(self.toggle_header_info)
+        self.stnLimitToggle.stateChanged.connect(self.toggle_station_limits)
+        # self.pshReset.clicked.connect(self.reset_all)
+
+        self.progress_bar = QProgressBar()
+        # self.progress_bar.setGeometry(450, 5, 500, 10)
+        self.statusBar().addPermanentWidget(self.progress_bar)
+        self.progress_bar.setGeometry(0, 0, 30, 10)
+
+        self.editor = PEMFileEditor()
+        # self.listWidget_files.setAlternatingRowColors(True)
 
         self.file_browser = None
 
         self.move(350, 0)
-
-    def progress_bar(self):
-        plotted_plots = len(Plotted)
-        if len(list_of_files) != 0:
-            current_plot = 0
-            for f in list_of_files:
-                pemfile = PEMFileEditor()
-                pemfile.open_file(f)
-
-                components = pemfile.get_components(pemfile.active_file.data)
-                for component in components:
-                    current_plot += 1
-
-        while plotted_plots < len(Plotted):
-            plotted_plots += int(1/Plotted) * 100
-            self.progressBar.setValue(plotted_plots)
 
     def toggle_station_limits(self):
         if self.stnLimitToggle.isChecked():
@@ -94,9 +94,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.lineRight.setEnabled(False)
             self.lineLeft.setEnabled(False)
 
-    # def reset_all(self):
-    #     self.lineLeft.setText(None)
-    #     self.lineRight.setText(None)
+    def fill_station_limits(self):
+        if self.lineLeft.isEnabled():
+            try:
+                lbound = float(self.lineLeft.text())
+            except ValueError:
+                lbound = None
+        else:
+            lbound = None
+
+        if self.lineRight.isEnabled():
+            try:
+                rbound = float(self.lineRight.text())
+            except ValueError:
+                rbound = None
+        else:
+            rbound = None
+        return lbound, rbound
 
     def calc_stn_limits(self):
         # self.pushCalcLimits.setEnabled(False)
@@ -106,10 +120,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             maximum = []
 
             for f in list_of_files:
-                pemfile = PEMFileEditor()
-                pemfile.open_file(f)
-                stations = pemfile.convert_stations()
-                stations = [x['Station'] for x in stations]
+                self.editor.open_file(f)
+                stations = self.editor.get_stations()
                 minimum.append(min(stations))
                 maximum.append(max(stations))
 
@@ -132,13 +144,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def calc_gap_thresh(self):
         if len(list_of_files) != 0:
             gap_list = []
-            pemfile = PEMFileEditor()
 
             for f in list_of_files:
-                pemfile.open_file(f)
-                stations = pemfile.convert_stations()
-                stations = [x['Station'] for x in stations]
-                survey_type = pemfile.get_survey_type()
+                self.editor.open_file(f)
+                stations = self.editor.get_stations()
+                survey_type = self.editor.active_file.survey_type
 
                 if 'borehole' in survey_type.casefold():
                     min_gap = 50
@@ -151,6 +161,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 gap_list.append(gap)
 
             self.editGapThresh.setText(str(min(gap_list)))
+
+    def get_gap_input(self):
+        try:
+            gap = float(self.editGapThresh.text())
+        except ValueError:
+            gap = None
+        return gap
 
     def toggle_header_info(self):
         if self.shareTitleToggle.isChecked():
@@ -165,11 +182,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def fill_header_info(self):
         if len(list_of_files) != 0:
-            pemfile = PEMFileEditor()
 
             f = list_of_files[0]
-            pemfile.open_file(f)
-            header = pemfile.active_file.get_header()
+            self.editor.open_file(f)
+            header = self.editor.active_file.get_header()
 
             if not self.clientEdit.text():
                 self.clientEdit.setText(header['Client'])
@@ -178,7 +194,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if not self.loopEdit.text():
                 self.loopEdit.setText(header['Loop'])
 
-    def redraw_plots(self):
+    def handleTimer(self):
+        value = self.progress_bar.value()
+
+        if value < 100:
+            value += (1 / self.num_plots) * 100 * 2
+            self.progress_bar.setValue(value)
+        else:
+            self.timer.stop()
+
+    def draw_plots(self):
         templist = copy.deepcopy(list_of_files)
         if len(list_of_files) != 0:
             for i in range(len(list_of_files)):
@@ -247,41 +272,52 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.open_files(urls)
 
-    def open_files(self, filenames, redraw=False):
+    def open_files(self, filepaths, redraw=False):
         # # Set the central widget to a contain content for working with PEMFile
         # file_widget = PEMFileWidget(self)
         # file_widget.open_file(filename)
         # self.setCentralWidget(file_widget)
         # # self.centralWidget().layout().addWidget(file_widget)
 
-        if not isinstance(filenames, list) and isinstance(filenames, str):
-            filenames = [filenames]
-        list_of_files.extend(filenames)
-        if not redraw:
-            self.toggle_station_limits()
-        #     self.calc_stn_limits()
+        if not isinstance(filepaths, list) and isinstance(filepaths, str):
+            filepaths = [filepaths]
+        list_of_files.extend(filepaths)
 
-        # self.progress()
+        if not self.file_browser:
+            self.file_browser = FileBrowser()
+
+            if self.labeltest.isVisible():
+                self.labeltest.hide()
+                self.plotLayout.addWidget(self.file_browser)
+
+        self.progress_bar.setGeometry(450, 5, 500, 10)
+        self.progress_bar.setValue(0)
+
+        # num_plots = 0
+        for i, file in enumerate(list_of_files):
+            f = list_of_files[i]
+            self.editor.open_file(f)
+            components = self.editor.active_file.get_components()
+            self.num_plots += len(components)
+            header = self.editor.active_file.get_header()
+            survey_type = self.editor.active_file.get_survey_type()
+            item = header['LineHole'] + ' (' + ', '.join(components) + ')' + ' - ' + survey_type
+            self.listWidget_files.addItem(item)
+
+        # if not redraw:
+        #     self.toggle_station_limits()
+
+        self.toggle_station_limits()
+        self.fill_header_info()
+        self.toggle_gaps()
+
         self.pshRecalc.setEnabled(False)
-        # self.pushCalcLimits.setEnabled(False)
-        # self.pshReset.setEnabled(False)
         self.pshRecalc.setText('Processing...')
 
-        logger.info("Opening " + ', '.join(filenames) + "...")
+        logger.info("Opening " + ', '.join(filepaths) + "...")
 
-        try:
-            lbound = float(self.lineLeft.text())
-        except ValueError:
-            lbound = None
-        try:
-            rbound = float(self.lineRight.text())
-        except ValueError:
-            rbound = None
-
-        try:
-            gap = float(self.editGapThresh.text())
-        except ValueError:
-            gap = None
+        lbound, rbound = self.fill_station_limits()
+        gap = self.get_gap_input()
 
         kwargs = {"lbound": lbound,
                   "rbound": rbound,
@@ -292,26 +328,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                   "Loop": self.loopEdit.text(),
                   "Interp": self.comboBoxInterpMethod.currentText()}
 
-        if not self.file_browser:
-            self.file_browser = FileBrowser()
-
-            if self.labeltest.isVisible():
-                self.labeltest.hide()
-                self.plotLayout.addWidget(self.file_browser)
         try:
-            self.file_browser.open_files(filenames, **kwargs)
-            # self.progress_bar()
+            self.timer.start(self.num_plots)
+            self.file_browser.open_files(filepaths, **kwargs)
+            self.progress_bar.setValue(100)
         except:
             self.pshRecalc.setText('Error in input, please restart')
             raise
         else:
-            self.pshRecalc.setText('Redraw Plots')
+            self.pshRecalc.setText('Draw Plots')
             self.pshRecalc.setEnabled(True)
             # self.pushCalcLimits.setEnabled(True)
             # self.pshReset.setEnabled(True)
-        self.toggle_station_limits()
-        self.fill_header_info()
-        self.toggle_gaps()
 
 
 if __name__ == "__main__":

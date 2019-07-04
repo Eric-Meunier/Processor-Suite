@@ -33,10 +33,33 @@ class PEMFile:
         return self.data
 
     def get_components(self):
-        components = [reading['component'] for reading in self.data]
-        return components
+        components = {reading['Component'] for reading in self.data}
+        sorted_components = (sorted(components, reverse=False))
+        if 'Z' in sorted_components:
+            sorted_components.insert(0, sorted_components.pop(sorted_components.index('Z')))
+        return sorted_components
 
     def get_unique_stations(self):
         unique_stations = {n for n in
                            [reading['Station'] for reading in self.data]}
         return unique_stations
+
+    def get_survey_type(self):
+        survey_type = self.header['SurveyType']
+
+        if survey_type.casefold() == 's-coil':
+            survey_type = 'Surface Induction'
+        elif survey_type.casefold() == 'borehole':
+            survey_type = 'Borehole Induction'
+        elif survey_type.casefold() == 'b-rad':
+            survey_type = 'Borehole Induction'
+        elif survey_type.casefold() == 's-flux':
+            survey_type = 'Surface Fluxgate'
+        elif survey_type.casefold() == 'bh-flux':
+            survey_type = 'Borehole Fluxgate'
+        elif survey_type.casefold() == 's-squid':
+            survey_type = 'SQUID'
+        else:
+            survey_type = 'UNDEF_SURV'
+
+        return survey_type

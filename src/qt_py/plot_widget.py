@@ -11,6 +11,7 @@ import os
 # qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/pem_file_form.ui")
 # Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
+
 class PlotWidget(QWidget):
 
     def __init__(self, parent=None, editor=None, figure=None, plot_height=1100, plot_width=850):

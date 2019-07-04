@@ -53,27 +53,7 @@ class PEMFileEditor:
         logger.info("Finished generating plots")
         return lin_fig, log_fig
 
-    def get_survey_type(self):
-        survey_type = self.active_file.get_header()['SurveyType']
-
-        if survey_type.casefold() == 's-coil':
-            survey_type = 'Surface Induction'
-        elif survey_type.casefold() == 'borehole':
-            survey_type = 'Borehole Induction'
-        elif survey_type.casefold() == 'b-rad':
-            survey_type = 'Borehole Induction'
-        elif survey_type.casefold() == 's-flux':
-            survey_type = 'Surface Fluxgate'
-        elif survey_type.casefold() == 'bh-flux':
-            survey_type = 'Borehole Fluxgate'
-        elif survey_type.casefold() == 's-squid':
-            survey_type = 'SQUID'
-        else:
-            survey_type = 'UNDEF_SURV'
-
-        return survey_type
-
-    def convert_stations(self):
+    def get_stations(self):
         """
         Converts all the station names in the data into a number, negative if the stations was S or W
         :param data: Dictionary of data from a PEM file
@@ -82,37 +62,21 @@ class PEMFileEditor:
         data = self.active_file.get_data()
         stations = [d['Station'] for d in data]
 
-        for index, station in enumerate(stations):
+        return [self.convert_station(station) for station in stations]
 
-            if re.match(r"\d+(S|W)", station):
-                data[index]['Station'] = (-int(re.sub(r"\D", "", station)))
 
-            else:
-                data[index]['Station'] = (int(re.sub(r"\D", "", station)))
-
-        return data
-
-    def get_components(self):
+    def convert_station(self, station):
         """
-        Retrieve the unique components of the survey file (i.e. Z, X, or Y)
-        :param data: EM data dictionary of a PEM file
-        :return: List of components in str format
+        Converts a single station name into a number, negative if the stations was S or W
+        :return: Integer station number
         """
-        # sort the data by station. Station names must first be converted into a number
-        data = sorted(self.convert_stations(), key=lambda k: k['Station'])
-        unique_components = []
+        if re.match(r"\d+(S|W)", station):
+            station = (-int(re.sub(r"\D", "", station)))
 
-        for reading in data:
-            component = reading['Component']
+        else:
+            station = (int(re.sub(r"\D", "", station)))
 
-            if component not in unique_components:
-                unique_components.append(component)
-
-        if 'Z' in unique_components:
-            unique_components.insert(0, unique_components.pop(unique_components.index('Z')))
-
-        self.components = unique_components
-        return unique_components
+        return station
 
     def get_profile_data(self, component_data):
         """
@@ -130,7 +94,7 @@ class PEMFileEditor:
 
             for i, station in enumerate(component_data):
                 reading = station['Data'][channel]
-                station_number = station['Station']
+                station_number = int(self.convert_station(station['Station']))
                 channel_data.append({'Station': station_number, 'Reading': reading})
 
             profile_data[channel] = channel_data
@@ -153,7 +117,7 @@ class PEMFileEditor:
         return data, stations
 
     def calc_gaps(self, stations, gap):
-        survey_type = self.get_survey_type()
+        survey_type = self.active_file.survey_type
 
         if 'borehole' in survey_type.casefold():
             min_gap = 50
@@ -228,7 +192,9 @@ class PEMFileEditor:
         current = float(tags['Current'])
         timebase = float(header['Timebase'])
         timebase_freq = ((1 / (timebase / 1000)) / 4)
-        survey_type = self.get_survey_type()
+        survey_type = file.survey_type
+        components = file.components
+
         num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
         units = file.get_tags()['Units']
 
@@ -246,7 +212,7 @@ class PEMFileEditor:
 
         first_channel_label = "Primary Pulse"
 
-        components = self.get_components()
+        # components = self.get_components()
 
         log_figs = []
         lin_figs = []
@@ -395,7 +361,7 @@ class PEMFileEditor:
 
             profile_data = self.get_profile_data(component_data)
 
-            stations = [station['Station'] for station in component_data]
+            stations = [self.convert_station(station['Station']) for station in component_data]
             x_limit = min(stations), max(stations)
             plt.xlim(x_limit)
 
