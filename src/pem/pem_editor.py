@@ -284,18 +284,18 @@ class PEMFileEditor:
             Adds the titles to the plots
             """
 
-            plt.figtext(0.555, 0.955, 'Crone Geophysics & Exploration Ltd.',
+            plt.figtext(0.550, 0.955, 'Crone Geophysics & Exploration Ltd.',
                         fontname='Century Gothic', alpha=alpha, fontsize=11, ha='center')
 
-            plt.figtext(0.555, 0.940, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
+            plt.figtext(0.550, 0.940, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
                         fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
 
-            plt.figtext(0.14, 0.930, 'Timebase: ' + str(timebase) + ' ms\n' +
+            plt.figtext(0.145, 0.930, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
                         'Current: ' + str(round(current, 1)) + ' A',
                         fontname='Century Gothic', alpha=alpha, fontsize=10, va='top')
 
-            plt.figtext(0.555, 0.930, s_title + ': ' + linehole + '\n'
+            plt.figtext(0.550, 0.930, s_title + ': ' + linehole + '\n'
                         + component + ' Component' + '\n'
                         + 'Loop: ' + loop,
                         fontname='Century Gothic', alpha=alpha, fontsize=10, va='top', ha='center')

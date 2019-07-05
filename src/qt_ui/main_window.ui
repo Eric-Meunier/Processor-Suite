@@ -1121,7 +1121,7 @@
           <bool>false</bool>
          </property>
          <property name="text">
-          <string>Draw Plots</string>
+          <string>Redraw Plots</string>
          </property>
          <property name="checkable">
           <bool>false</bool>

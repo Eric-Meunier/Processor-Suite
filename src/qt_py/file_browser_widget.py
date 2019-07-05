@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import *
 from pem.pem_editor import PEMFileEditor
 from qt_py.pem_file_widget import PEMFileWidget
 from log import Logger
-from cfg import list_of_files
+# from cfg import list_of_files
 from operator import itemgetter
 from collections import OrderedDict
 from matplotlib.backends.backend_pdf import PdfPages
@@ -19,6 +19,7 @@ class FileBrowser(QTabWidget):
         super().__init__()
 
         self.editor = PEMFileEditor()
+
         # TODO Make model to deal with these together
         self.editors = []
         self.widgets = []
@@ -32,6 +33,7 @@ class FileBrowser(QTabWidget):
         self.tabCloseRequested.connect(self.on_tab_close)
         self.tabBar().tabMoved.connect(self.on_tab_move)
 
+        self.files = []
         self.num_files = None
         self.num_plotted = None
 
@@ -41,10 +43,10 @@ class FileBrowser(QTabWidget):
     def open_file(self, file_name):
         # TODO Logic for different file types
 
-        new_editor = PEMFileEditor()
-        new_file_widget = PEMFileWidget(parent=self, editor=new_editor)
+        # new_editor = PEMFileEditor()
+        new_file_widget = PEMFileWidget(parent=self, editor=self.editor)
 
-        self.editors.append(new_editor)
+        self.editors.append(self.editor)
         self.widgets.append(new_file_widget)
         self.original_indices.append(len(self.widgets))
 
@@ -53,9 +55,13 @@ class FileBrowser(QTabWidget):
         self.setCurrentWidget(new_file_widget)
 
         new_file_widget.open_file(file_name)
-        self.active_editor = new_editor
+        self.active_editor = self.editor
 
     def open_files(self, file_names, **kwargs):
+        self.files = list(file_names)
+        self.num_files = len(file_names)
+        self.num_plotted = 0
+
         def get_filename(file_path, have_suffix):
             # have_suffix will determine whether or not to include filetype in the name
             if have_suffix:
@@ -75,8 +81,6 @@ class FileBrowser(QTabWidget):
             item = header['LineHole'] + ' (' + ', '.join(components) + ')' + ' - ' + survey_type
             return str(item)
 
-        self.num_files = len(file_names)
-
         # Creates new tabs first before beginning the process of loading in files as opposed to calling
         # open_file in a loop which will create each tab sequentially as the files are loaded
         new_editors = []
@@ -87,6 +91,7 @@ class FileBrowser(QTabWidget):
                 new_editors.append(PEMFileEditor())
                 new_file_widgets.append(PEMFileWidget(parent=self, editor=new_editors[-1]))
 
+                # self.files.append(file_name)
                 self.editors.append(new_editors[-1])
                 self.widgets.append(new_file_widgets[-1])
 
@@ -181,7 +186,8 @@ class FileBrowser(QTabWidget):
         self.widgets.pop(index)
         self.list_widget.takeItem(index)
         self.original_indices.pop(index)
-        list_of_files.pop(index)
+        self.files.pop(index)
+        # list_of_files.pop(index)
 
     def on_tab_move(self, from_index, to_index):
         self.editors.insert(to_index, self.editors.pop(from_index))
@@ -189,9 +195,11 @@ class FileBrowser(QTabWidget):
         self.original_indices.insert(to_index, self.original_indices.pop(from_index))
         item = self.list_widget.takeItem(from_index)
         self.list_widget.insertItem(to_index, item)
-        temp = list_of_files[from_index]
-        list_of_files[from_index] = list_of_files[to_index]
-        list_of_files[to_index] = temp
+        file = self.files.pop(from_index)
+        self.files.insert(to_index, file)
+        # temp = list_of_files[from_index]
+        # list_of_files[from_index] = list_of_files[to_index]
+        # list_of_files[to_index] = temp
         logger.debug('moved ' + str(from_index) + ' ' + str(to_index) + ' to new order ' + str(self.original_indices))
 
 
