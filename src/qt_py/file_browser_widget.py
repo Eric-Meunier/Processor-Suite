@@ -32,13 +32,14 @@ class FileBrowser(QTabWidget):
 
         self.tabCloseRequested.connect(self.on_tab_close)
         self.tabBar().tabMoved.connect(self.on_tab_move)
+        self.currentChanged.connect(self.on_tab_change)
 
         self.files = []
         self.num_files = None
         self.num_plotted = None
 
         self.list_widget = QListWidget()
-        self.list_widget.itemClicked.connect(self.on_item_click)
+        self.list_widget.itemClicked.connect(self.on_list_item_click)
         self.pbar = QProgressBar()
 
     def open_file(self, file_name):
@@ -121,6 +122,7 @@ class FileBrowser(QTabWidget):
 
         self.setCurrentWidget(new_file_widgets[0])
         self.active_editor = new_editors[0]
+        self.list_widget.setCurrentRow(0)
 
     def update_pbar(self):
         i = (float(((self.num_plotted-1) / self.num_files) * 100))
@@ -213,8 +215,14 @@ class FileBrowser(QTabWidget):
         self.files.insert(to_index, file)
         logger.debug('moved ' + str(from_index) + ' ' + str(to_index) + ' to new order ' + str(self.original_indices))
 
-    def on_item_click(self):
+    def on_list_item_click(self):
         self.setCurrentIndex(self.list_widget.currentRow())
+
+    def on_tab_change(self):
+        try:
+            self.list_widget.setCurrentRow(self.currentIndex())
+        except:
+            pass
 
 
 def main():
