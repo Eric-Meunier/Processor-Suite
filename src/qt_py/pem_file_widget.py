@@ -52,6 +52,7 @@ class PEMFileWidget(QWidget):
                                                 plot_widths=850)
 
         self.tab_widget.tabBar().setExpanding(True)
+
         # new_file_widget.setTabPosition(QTabWidget.West)
         self.tab_widget.addTab(self.lin_view_widget, 'Lin Plots')
         self.tab_widget.addTab(self.log_view_widget, 'Log Plots')

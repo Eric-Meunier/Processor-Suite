@@ -8,7 +8,6 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QFileDialog, QMainWindow
 import os
-# from cfg import list_of_files
 from log import Logger
 import numpy as np
 import time
@@ -53,6 +52,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.menubar.setNativeMenuBar(False)
         self.statusBar().showMessage('Ready')
+        self.statusBar().setSizeGripEnabled(False)
 
         self.setAcceptDrops(True)
         self.setWindowIcon(
@@ -133,7 +133,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.list_of_files.extend(urls)
         self.open_files(urls)
 
-    def open_files(self, filepaths): #, redraw=False):
+    def open_files(self, filepaths, redraw=False): #, redraw=False):
         # # Set the central widget to a contain content for working with PEMFile
         # file_widget = PEMFileWidget(self)
         # file_widget.open_file(filename)
@@ -145,8 +145,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not isinstance(filepaths, list) and isinstance(filepaths, str):
             filepaths = [filepaths]
 
-        # list_of_files.extend(filepaths)
-
         # if not self.file_browser:
         #     self.file_browser = FileBrowser()
 
@@ -154,17 +152,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.labeltest.hide()
             self.plotLayout.addWidget(self.file_browser)
 
-        # self.progress_bar = QProgressBar()
         self.statusBar().addPermanentWidget(self.file_browser.pbar)
+        self.file_browser.pbar.show()
         # self.progress_bar.setGeometry(0, 0, 500, 10)
-        # self.progress_bar.setValue(0)
-
-        # for i, file in enumerate(filepaths):
-        #     f = filepaths[i]
-        #     self.editor.open_file(f)
-        #     components = self.editor.active_file.get_components()
-        #     header = self.editor.active_file.get_header()
-        #     survey_type = self.editor.active_file.get_survey_type()
 
         self.toggle_station_limits()
         self.fill_header_info()
@@ -187,8 +177,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                   "Interp": self.comboBoxInterpMethod.currentText()}
 
         try:
-            # self.timer.start()
-            self.file_browser.open_files(filepaths, **kwargs)
+            if redraw:
+                self.file_browser.open_files(filepaths, True, **kwargs)
+            else:
+                self.file_browser.open_files(filepaths, False, **kwargs)
             self.file_browser.pbar.setValue(100)
             time.sleep(0.5)
             self.statusBar().removeWidget(self.file_browser.pbar)
@@ -207,7 +199,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for i in range(len( self.list_of_files)):
                 self.file_browser.removeTab(0)
             self.file_browser.list_widget.clear()
-            self.open_files(self.list_of_files)
+            self.open_files(self.list_of_files, True)
 
     def toggle_station_limits(self):
         if self.stnLimitToggle.isChecked():

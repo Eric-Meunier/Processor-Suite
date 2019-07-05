@@ -284,23 +284,23 @@ class PEMFileEditor:
             Adds the titles to the plots
             """
 
-            plt.figtext(0.550, 0.955, 'Crone Geophysics & Exploration Ltd.',
+            plt.figtext(0.550, 0.960, 'Crone Geophysics & Exploration Ltd.',
                         fontname='Century Gothic', alpha=alpha, fontsize=11, ha='center')
 
-            plt.figtext(0.550, 0.940, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
+            plt.figtext(0.550, 0.945, survey_type + ' Pulse EM Survey', family='cursive', style='italic',
                         fontname='Century Gothic', alpha=alpha, fontsize=10, ha='center')
 
-            plt.figtext(0.145, 0.930, 'Timebase: ' + str(timebase) + ' ms\n' +
+            plt.figtext(0.145, 0.935, 'Timebase: ' + str(timebase) + ' ms\n' +
                         'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
                         'Current: ' + str(round(current, 1)) + ' A',
                         fontname='Century Gothic', alpha=alpha, fontsize=10, va='top')
 
-            plt.figtext(0.550, 0.930, s_title + ': ' + linehole + '\n'
+            plt.figtext(0.550, 0.935, s_title + ': ' + linehole + '\n'
                         + component + ' Component' + '\n'
                         + 'Loop: ' + loop,
                         fontname='Century Gothic', alpha=alpha, fontsize=10, va='top', ha='center')
 
-            plt.figtext(0.955, 0.930, client + '\n' + grid + '\n' + date + '\n',
+            plt.figtext(0.955, 0.935, client + '\n' + grid + '\n' + date + '\n',
                         fontname='Century Gothic', alpha=alpha, fontsize=10, va='top', ha='right')
 
         def format_spine():
@@ -319,6 +319,7 @@ class PEMFileEditor:
             plt.setp(ax.get_yticklabels(), alpha=alpha, fontname=font)
             plt.setp(ax.get_xticklabels(), visible=False)
             ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
+
             if ax.get_yscale() == 'symlog':
                 ax.tick_params(axis='y', which='major', labelrotation=90)
                 plt.setp(ax.get_yticklabels(), va='center')

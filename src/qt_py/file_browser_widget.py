@@ -38,6 +38,7 @@ class FileBrowser(QTabWidget):
         self.num_plotted = None
 
         self.list_widget = QListWidget()
+        self.list_widget.itemClicked.connect(self.on_item_click)
         self.pbar = QProgressBar()
 
     def open_file(self, file_name):
@@ -57,10 +58,15 @@ class FileBrowser(QTabWidget):
         new_file_widget.open_file(file_name)
         self.active_editor = self.editor
 
-    def open_files(self, file_names, **kwargs):
-        self.files = list(file_names)
+    def open_files(self, file_names, redraw = False, **kwargs):
+        if redraw:
+            self.files = list(file_names)
+        else:
+            self.files.extend(file_names)
+
         self.num_files = len(file_names)
         self.num_plotted = 0
+        self.pbar.setValue(0)
 
         def get_filename(file_path, have_suffix):
             # have_suffix will determine whether or not to include filetype in the name
@@ -110,11 +116,19 @@ class FileBrowser(QTabWidget):
             self.num_plotted = int(file_names.index(file_name) + 1)
 
             new_file_widget.open_file(file_name, **kwargs)
-
-            self.pbar.setValue(float((self.num_plotted / self.num_files) * 100))
+            update = self.update_pbar()
+            # self.pbar.setValue(float((self.num_plotted / self.num_files) * 100))
 
         self.setCurrentWidget(new_file_widgets[0])
         self.active_editor = new_editors[0]
+
+    def update_pbar(self):
+        i = (float(((self.num_plotted-1) / self.num_files) * 100))
+        logger.info('start')
+        while i < (float((self.num_plotted / self.num_files) * 100)):
+            i+=.0001
+            self.pbar.setValue(i)
+        logger.info('end')
 
     def print_files(self, dir_name):
         lin_figs = []
@@ -197,10 +211,10 @@ class FileBrowser(QTabWidget):
         self.list_widget.insertItem(to_index, item)
         file = self.files.pop(from_index)
         self.files.insert(to_index, file)
-        # temp = list_of_files[from_index]
-        # list_of_files[from_index] = list_of_files[to_index]
-        # list_of_files[to_index] = temp
         logger.debug('moved ' + str(from_index) + ' ' + str(to_index) + ' to new order ' + str(self.original_indices))
+
+    def on_item_click(self):
+        self.setCurrentIndex(self.list_widget.currentRow())
 
 
 def main():
