@@ -16,7 +16,7 @@ from scipy import stats
 
 from src.pem.pem_editor import PEMFileEditor
 from qt_py.pem_file_widget import PEMFileWidget
-from qt_py.file_browser_widget import FileBrowser, ProgressBar
+from qt_py.file_browser_widget import FileBrowser
 
 logger = Logger(__name__)
 
@@ -54,32 +54,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setAcceptDrops(True)
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/crone_logo.ico")))
+
         # Connect signals to slots
         self.action_open_file.triggered.connect(self.on_file_open)
         self.action_print.triggered.connect(self.on_print)
         self.action_print.setShortcut("Ctrl+P")
         self.action_print_all.triggered.connect(self.on_print_all)
         self.action_print_all.setShortcut('Ctrl+Alt+P')
-        self.pshRecalc.clicked.connect(self.draw_plots)
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.handleTimer)
-        self.num_plots = 0
-        # self.pushCalcLimits.clicked.connect(self.calc_stn_limits)
+        self.btn_redraw.clicked.connect(self.draw_plots)
+
         self.hideGapsToggle.stateChanged.connect(self.toggle_gaps)
-        # self.calcGapThresh.clicked.connect(self.calc_gap_thresh)
         self.shareTitleToggle.stateChanged.connect(self.toggle_header_info)
         self.stnLimitToggle.stateChanged.connect(self.toggle_station_limits)
-        # self.pshReset.clicked.connect(self.reset_all)
 
-        self.progress_bar = QProgressBar()
-        # self.progress_bar.setGeometry(450, 5, 500, 10)
-        self.statusBar().addPermanentWidget(self.progress_bar)
-        self.progress_bar.setGeometry(0, 0, 30, 10)
+        # # Progress bar
+        # self.timer = QtCore.QTimer(self)
+        # self.timer.timeout.connect(self.handle_timer)
+        # self.num_plots = 0
 
         self.editor = PEMFileEditor()
-        # self.listWidget_files.setAlternatingRowColors(True)
-
-        self.file_browser = None
+        self.file_browser = FileBrowser()
+        self.list_widget_layout.addWidget(self.file_browser.list_widget)
 
         self.move(350, 0)
 
@@ -194,14 +189,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if not self.loopEdit.text():
                 self.loopEdit.setText(header['Loop'])
 
-    def handleTimer(self):
-        value = self.progress_bar.value()
-
-        if value < 100:
-            value += (1 / self.num_plots) * 100 * 2
-            self.progress_bar.setValue(value)
-        else:
-            self.timer.stop()
+    # def handle_timer(self):
+    #     value = self.progress_bar.value()
+    #
+    #     if value < 100:
+    #         value += (1 / self.num_plots) * 100
+    #         self.progress_bar.setValue(value)
+    #     else:
+    #         self.timer.stop()
 
     def draw_plots(self):
         templist = copy.deepcopy(list_of_files)
@@ -279,40 +274,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.setCentralWidget(file_widget)
         # # self.centralWidget().layout().addWidget(file_widget)
 
+        self.statusBar().showMessage('Loading...')
+
         if not isinstance(filepaths, list) and isinstance(filepaths, str):
             filepaths = [filepaths]
         list_of_files.extend(filepaths)
 
-        if not self.file_browser:
-            self.file_browser = FileBrowser()
+        # if not self.file_browser:
+        #     self.file_browser = FileBrowser()
 
-            if self.labeltest.isVisible():
-                self.labeltest.hide()
-                self.plotLayout.addWidget(self.file_browser)
+        if self.labeltest.isVisible():
+            self.labeltest.hide()
+            self.plotLayout.addWidget(self.file_browser)
 
-        self.progress_bar.setGeometry(450, 5, 500, 10)
+        self.progress_bar = QProgressBar()
+        self.statusBar().addPermanentWidget(self.file_browser.pbar)
+        # self.progress_bar.setGeometry(0, 0, 500, 10)
         self.progress_bar.setValue(0)
 
-        # num_plots = 0
         for i, file in enumerate(list_of_files):
             f = list_of_files[i]
             self.editor.open_file(f)
             components = self.editor.active_file.get_components()
-            self.num_plots += len(components)
+            # self.num_plots += len(components)
             header = self.editor.active_file.get_header()
             survey_type = self.editor.active_file.get_survey_type()
-            item = header['LineHole'] + ' (' + ', '.join(components) + ')' + ' - ' + survey_type
-            self.listWidget_files.addItem(item)
-
-        # if not redraw:
-        #     self.toggle_station_limits()
+            # item = header['LineHole'] + ' (' + ', '.join(components) + ')' + ' - ' + survey_type
+            # self.listWidget_files.addItem(item)
 
         self.toggle_station_limits()
         self.fill_header_info()
         self.toggle_gaps()
 
-        self.pshRecalc.setEnabled(False)
-        self.pshRecalc.setText('Processing...')
+        self.btn_redraw.setEnabled(False)
 
         logger.info("Opening " + ', '.join(filepaths) + "...")
 
@@ -329,17 +323,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                   "Interp": self.comboBoxInterpMethod.currentText()}
 
         try:
-            self.timer.start(self.num_plots)
+            # self.timer.start()
             self.file_browser.open_files(filepaths, **kwargs)
-            self.progress_bar.setValue(100)
+            self.file_browser.pbar.setValue(100)
+            time.sleep(0.5)
+            self.statusBar().removeWidget(self.file_browser.pbar)
+            self.statusBar().showMessage('Ready')
         except:
-            self.pshRecalc.setText('Error in input, please restart')
+            self.central_widget.setEnabled(False)
+            self.plotLayout.setEnabled(False)
+            self.statusBar().showMessage('Error in input, please restart')
             raise
         else:
-            self.pshRecalc.setText('Draw Plots')
-            self.pshRecalc.setEnabled(True)
-            # self.pushCalcLimits.setEnabled(True)
-            # self.pshReset.setEnabled(True)
+            self.btn_redraw.setEnabled(True)
 
 
 if __name__ == "__main__":

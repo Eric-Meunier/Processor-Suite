@@ -470,7 +470,7 @@
   <property name="windowTitle">
    <string>Crone Plots</string>
   </property>
-  <widget class="QWidget" name="centralwidget">
+  <widget class="QWidget" name="central_widget">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
      <horstretch>0</horstretch>
@@ -494,6 +494,12 @@
       </property>
       <property name="styleSheet">
        <string notr="true">alternate-background-color: rgb(0, 0, 0);</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::WinPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
@@ -1085,20 +1091,17 @@
            </widget>
           </item>
           <item>
-           <widget class="QListWidget" name="listWidget_files">
-            <property name="selectionMode">
-             <enum>QAbstractItemView::SingleSelection</enum>
+           <layout class="QVBoxLayout" name="list_widget_layout">
+            <property name="sizeConstraint">
+             <enum>QLayout::SetDefaultConstraint</enum>
             </property>
-            <property name="itemAlignment">
-             <set>Qt::AlignHCenter</set>
-            </property>
-           </widget>
+           </layout>
           </item>
          </layout>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pshRecalc">
+        <widget class="QPushButton" name="btn_redraw">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -1140,7 +1143,7 @@
        <string notr="true"/>
       </property>
       <property name="frameShape">
-       <enum>QFrame::Box</enum>
+       <enum>QFrame::NoFrame</enum>
       </property>
       <layout class="QVBoxLayout" name="plotLayout">
        <property name="sizeConstraint">

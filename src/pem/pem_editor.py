@@ -1,8 +1,12 @@
 from src.pem.pem_parser import PEMParser, PEMFile
+import matplotlib as mpl
+import matplotlib.style as mplstyle
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.figure import Figure
 from matplotlib import patches
+from matplotlib.dates import date2num, DateConverter, num2date
+from matplotlib.container import ErrorbarContainer
 from collections import OrderedDict
 import numpy as np
 import math
@@ -11,18 +15,19 @@ from scipy import interpolate
 from scipy import stats
 from log import Logger
 import warnings
-from matplotlib.dates import date2num, DateConverter, num2date
-from matplotlib.container import ErrorbarContainer
+import time
 from datetime import datetime
 
 # plt.style.use('seaborn-white')
 # plt.style.use('bmh')
 # plt.style.use('ggplot')
 
-plt.style.use('seaborn-paper')
-logger = Logger(__name__)
+mpl.rcParams['path.simplify'] = True
+mpl.rcParams['path.simplify_threshold'] = 1.0
+mpl.rcParams['agg.path.chunksize'] = 10000
 
-import time
+mplstyle.use(['seaborn-paper', 'fast'])
+logger = Logger(__name__)
 
 
 class PEMFileEditor:
@@ -244,7 +249,6 @@ class PEMFileEditor:
                 # Interpolates the channel data, also returns the corresponding x intervals
                 interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments, hide_gaps, gap,
                                                                 interp_method)
-                ax.plot(x_intervals, interp_data, color=line_colour, linewidth=line_width, alpha=alpha)
 
                 if leftbound is not None and rightbound is not None:
                     ax.set_xlim(leftbound, rightbound)
