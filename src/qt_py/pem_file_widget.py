@@ -15,12 +15,16 @@ import os
 from matplotlib.backends.backend_pdf import PdfPages
 
 logger = Logger(__name__)
-
+# Load Qt ui file into a class
+# qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/pem_file_widget.ui")
+# Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 class PEMFileWidget(QWidget):
 
     def __init__(self, parent=None, editor=None):
         QWidget.__init__(self, parent=parent)
+        # Ui_PEMFileWidget.__init__(self)
+        # self.setupUi(self)
 
         if not editor:
             self.editor = PEMFileEditor()
@@ -31,6 +35,16 @@ class PEMFileWidget(QWidget):
         self.label = QLabel()
         self.label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.label)
+
+        # # Tool bar
+        # showNavBar = QAction(self)
+        # showNavBar.setShortcut('N')
+        # showNavBar.triggered.connect(self.on_show_nav_bars)
+        #
+        # self.toolbar = QToolBar()
+        # self.toolbar_layout.addWidget(self.toolbar)
+        # self.toolbar.addAction(showNavBar)
+        # self.toolbar.setOrientation(Qt.Vertical)
 
     def open_file(self, file_name, **kwargs):
         # Display loading text
@@ -61,6 +75,27 @@ class PEMFileWidget(QWidget):
         self.label.hide()
 
         # print(str(self.width()) + ", " + str(self.height()))
+
+    def on_show_nav_bars(self):
+        for widget in self.plot_widgets():
+            widget.toggle_nav_bar()
+
+        self.nav_bars_visible = not self.nav_bars_visible
+        logger.info("Toggled navigation bars " + ('on' if self.nav_bars_visible else 'off'))
+
+    def on_toggle_page_view(self):
+        plot_widgets = list(self.plot_widgets())
+        if self.page_view:
+            for widget in plot_widgets:
+                widget.show()
+            self.page = -1
+        else:
+            for widget in plot_widgets[1:]:
+                widget.hide()
+            self.page = (0 if plot_widgets else -1)
+
+        self.page_view = not self.page_view
+        logger.info("Toggled page view " + ('on' if self.page_view else 'off'))
 
     def print(self, dir_name):
         # TODO Refactor?  Put in same place as print_all (In FileBrowser) and add helper?

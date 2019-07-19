@@ -25,6 +25,16 @@ class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
         else:
             self.editor = editor
 
+        # Tool bar
+        # showNavBar = QAction(self)
+        # showNavBar.setShortcut('N')
+        # showNavBar.triggered.connect(self.on_show_nav_bars)
+        #
+        # self.toolbar = QToolBar()
+        # self.toolbar_layout.addWidget(self.toolbar)
+        # self.toolbar.addAction(showNavBar)
+        # self.toolbar.setOrientation(Qt.Vertical)
+
         # For debug
         # p = self.palette()
         # p.setColor(self.backgroundRole(), Qt.red)
@@ -55,11 +65,11 @@ class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
         self.verticalLayout.addWidget(self.scroll)
 
         # Connect signals to slots
-        self.show_nav_bars.clicked.connect(self.on_show_nav_bars)
-        self.toggle_page_view.clicked.connect(self.on_toggle_page_view)
-
-        self.nav_bars_visible = False
-        self.page_view = False
+        # self.show_nav_bars.clicked.connect(self.on_show_nav_bars)
+        # self.toggle_page_view.clicked.connect(self.on_toggle_page_view)
+        #
+        # self.nav_bars_visible = False
+        # self.page_view = False
         self.page = -1
 
         # Hide widgets by default since no file has been loaded
@@ -144,10 +154,10 @@ class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
             plot_widgets = list(self.plot_widgets())
 
             new_page = -1
-            if event.key() == Qt.Key_Left:
-                new_page = self.page - 1
-            elif event.key() == Qt.Key_Right:
+            if event.key() == Qt.Key_Down:
                 new_page = self.page + 1
+            elif event.key() == Qt.Key_Up:
+                new_page = self.page - 1
 
             if new_page != -1:
                 new_page = max(0, min(new_page, len(plot_widgets) - 1))
@@ -157,10 +167,10 @@ class PlotViewerWidget(QWidget, Ui_PEMFileWidget):
                 self.scroll_content_layout.itemAt(self.page).widget().show()
 
         else:
-            if event.key() == Qt.Key_Left:
-                self.scroll_page(-1)
-            elif event.key() == Qt.Key_Right:
+            if event.key() == Qt.Key_Down:
                 self.scroll_page(1)
+            elif event.key() == Qt.Key_Up:
+                self.scroll_page(-1)
 
     def on_scroll_change(self, x):
         pass
@@ -177,13 +187,13 @@ class PlotScrollArea(QScrollArea):
         QScrollBar.__init__(self, *args)
 
     def event(self, event):
-        if (event.type() == QEvent.KeyPress) and (event.key() == Qt.Key_Left or
-                                                  event.key() == Qt.Key_Right):
+        if (event.type() == QEvent.KeyPress) and (event.key() == Qt.Key_Down or
+                                                  event.key() == Qt.Key_Up):
             # TODO When page view logic is encapsulated move info prints to on_arrow_key
-            if event.key() == Qt.Key_Left:
-                logger.info("Left arrow key pressed")
-            elif event.key() == Qt.Key_Right:
-                logger.info("Right arrow key pressed")
+            if event.key() == Qt.Key_Down:
+                logger.info("Down arrow key pressed")
+            elif event.key() == Qt.Key_Up:
+                logger.info("Up arrow key pressed")
 
             self.arrowKeyPressed.emit(event)
             return True

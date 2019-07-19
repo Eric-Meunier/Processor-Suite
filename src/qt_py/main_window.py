@@ -56,7 +56,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.setAcceptDrops(True)
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/crone_logo.ico")))
+            QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/icons/crone_logo.ico")))
 
         # Connect signals to slots
         self.action_open_file.triggered.connect(self.on_file_open)
@@ -157,7 +157,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.progress_bar.setGeometry(0, 0, 500, 10)
 
         self.toggle_station_limits()
-        self.fill_header_info()
+        if self.shareTitleToggle.isChecked():
+            self.fill_header_info()
         self.toggle_gaps()
 
         self.btn_redraw.setEnabled(False)
@@ -295,8 +296,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.fill_header_info()
         else:
             self.clientEdit.setEnabled(False)
+            self.clientEdit.setText('')
             self.gridEdit.setEnabled(False)
+            self.gridEdit.setText('')
             self.loopEdit.setEnabled(False)
+            self.loopEdit.setText('')
 
     def fill_header_info(self):
         if len(self.list_of_files) != 0:
