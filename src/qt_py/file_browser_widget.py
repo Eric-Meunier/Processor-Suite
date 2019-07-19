@@ -117,20 +117,20 @@ class FileBrowser(QTabWidget):
             self.num_plotted = int(file_names.index(file_name) + 1)
 
             new_file_widget.open_file(file_name, **kwargs)
-            update = self.update_pbar()
-            # self.pbar.setValue(float((self.num_plotted / self.num_files) * 100))
+            # update = self.update_pbar()
+            self.pbar.setValue(float((self.num_plotted / self.num_files) * 100))
 
         self.setCurrentWidget(new_file_widgets[0])
         self.active_editor = new_editors[0]
         self.list_widget.setCurrentRow(0)
 
-    def update_pbar(self):
-        i = (float(((self.num_plotted-1) / self.num_files) * 100))
-        logger.info('start')
-        while i < (float((self.num_plotted / self.num_files) * 100)):
-            i+=.0001
-            self.pbar.setValue(i)
-        logger.info('end')
+    # def update_pbar(self):
+    #     i = (float(((self.num_plotted-1) / self.num_files) * 100))
+    #     logger.info('start')
+    #     while i < (float((self.num_plotted / self.num_files) * 100)):
+    #         i+=.0001
+    #         self.pbar.setValue(i)
+    #     logger.info('end')
 
     def print_files(self, dir_name):
         lin_figs = []

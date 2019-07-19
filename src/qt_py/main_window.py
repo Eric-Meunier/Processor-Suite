@@ -157,8 +157,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.progress_bar.setGeometry(0, 0, 500, 10)
 
         self.toggle_station_limits()
-        if self.shareTitleToggle.isChecked():
-            self.fill_header_info()
+        self.fill_header_info()
         self.toggle_gaps()
 
         self.btn_redraw.setEnabled(False)
@@ -172,9 +171,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                   "rbound": rbound,
                   "hide_gaps": self.hideGapsToggle.isChecked(),
                   "gap": gap,
-                  "Client": self.clientEdit.text(),
-                  "Grid": self.gridEdit.text(),
-                  "Loop": self.loopEdit.text(),
+                  "Client": self.clientEdit.text() if self.shareTitleToggle.isChecked() else '',
+                  "Grid": self.gridEdit.text() if self.shareTitleToggle.isChecked() else '',
+                  "Loop": self.loopEdit.text() if self.shareTitleToggle.isChecked() else '',
                   "Interp": self.comboBoxInterpMethod.currentText()}
 
         try:
@@ -296,11 +295,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.fill_header_info()
         else:
             self.clientEdit.setEnabled(False)
-            self.clientEdit.setText('')
             self.gridEdit.setEnabled(False)
-            self.gridEdit.setText('')
             self.loopEdit.setEnabled(False)
-            self.loopEdit.setText('')
 
     def fill_header_info(self):
         if len(self.list_of_files) != 0:
