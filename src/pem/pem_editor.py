@@ -11,9 +11,10 @@ from collections import OrderedDict
 import numpy as np
 import math
 import re
+import os
 from scipy import interpolate
 from scipy import stats
-from log import Logger
+# from log import Logger
 import warnings
 import time
 from datetime import datetime
@@ -27,7 +28,7 @@ mpl.rcParams['path.simplify_threshold'] = 1.0
 mpl.rcParams['agg.path.chunksize'] = 10000
 
 mplstyle.use(['seaborn-paper', 'fast'])
-logger = Logger(__name__)
+# logger = Logger(__name__)
 
 
 class PEMFileEditor:
@@ -52,10 +53,10 @@ class PEMFileEditor:
         """
         :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
-        logger.info("Generating plots...")
+        # logger.info("Generating plots...")
 
         lin_fig, log_fig = self.mk_linlog_plots(**kwargs)
-        logger.info("Finished generating plots")
+        # logger.info("Finished generating plots")
         return lin_fig, log_fig
 
     def get_stations(self):
@@ -175,22 +176,25 @@ class PEMFileEditor:
         header = file.get_header()
         tags = file.get_tags()
 
-        if kwargs['Client']:
+        try:
             client = kwargs['Client']
-        else:
+        except KeyError:
             client = header['Client']
 
-        if kwargs['Loop']:
+        try:
             loop = kwargs['Loop']
-        else:
+        except KeyError:
             loop = header['Loop']
 
-        if kwargs['Grid']:
+        try:
             grid = kwargs['Grid']
-        else:
+        except KeyError:
             grid = header['Grid']
 
-        interp_method = kwargs['Interp'].split()[0].lower()
+        try:
+            interp_method = kwargs['Interp'].split()[0].lower()
+        except KeyError:
+            interp_method = 'linear'
 
         linehole = header['LineHole']
         date = header['Date']
@@ -237,10 +241,22 @@ class PEMFileEditor:
             """
             offset = segments * 0.1
 
-            leftbound = kwargs['lbound']
-            rightbound = kwargs['rbound']
-            hide_gaps = kwargs['hide_gaps']
-            gap = kwargs['gap']
+            try:
+                leftbound = kwargs['lbound']
+            except KeyError:
+                leftbound = None
+            try:
+                rightbound = kwargs['rbound']
+            except KeyError:
+                rightbound = None
+            try:
+                hide_gaps = kwargs['hide_gaps']
+            except KeyError:
+                hide_gaps = True
+            try:
+                gap = kwargs['gap']
+            except KeyError:
+                gap = None
 
             for k in range(channel_low, (channel_high + 1)):
                 # Gets the profile data for a single channel, along with the stations
@@ -346,7 +362,7 @@ class PEMFileEditor:
 
         # Each component has their own figure
         for component in components:
-            logger.info("Plotting component " + component)
+            # logger.info("Plotting component " + component)
             # t1 = time.time()
 
             # The LIN plot always has 5 axes. LOG only ever has one.
@@ -478,81 +494,83 @@ class PEMFileEditor:
 
         return lin_figs, log_figs
 
-    # def mk_qt_plot(self):
-    #     import pyqtgraph as pg
-    #     pg.setConfigOption('background', 'w')
-    #
-    #     file = self.active_file
-    #     # Header info mostly just for the title of the plots
-    #     # TODO Negative coil area in PEM file breaks the parsing
-    #     header = file.get_header()
-    #     tags = file.get_tags()
-    #     client = header['Client']
-    #     loop = header['Loop']
-    #     linehole = header['LineHole']
-    #     date = header['Date']
-    #     grid = header['Grid']
-    #     current = float(tags['Current'])
-    #     timebase = float(header['Timebase'])
-    #     timebase_freq = ((1 / (timebase / 1000)) / 4)
-    #     survey_type = self.get_survey_type()
-    #     num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
-    #     units = file.get_tags()['Units']
-    #
-    #     if 'borehole' in survey_type.casefold():
-    #         s_title = 'Hole'
-    #     else:
-    #         s_title = 'Line'
-    #
-    #     if units.casefold() == 'nanotesla/sec':
-    #         units = 'nT/s'
-    #     elif 'picotesla' in units.casefold():
-    #         units = 'pT'
-    #     else:
-    #         units = "UNDEF_UNIT"
-    #
-    #     data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
-    #     components = self.get_components(data)
-    #
-    #     for component in components:
-    #         component_data = list(filter(lambda d: d['Component'] == component, data))
-    #         profile_data = self.get_profile_data(component_data)
-    #         stations = [station['Station'] for station in component_data]
-    #         x_limit = min(stations), max(stations)
+    def mk_qt_plot(self):
+        import pyqtgraph as pg
+        pg.setConfigOption('background', 'w')
+
+        file = self.active_file
+        # Header info mostly just for the title of the plots
+        # TODO Negative coil area in PEM file breaks the parsing
+        header = file.get_header()
+        tags = file.get_tags()
+        client = header['Client']
+        loop = header['Loop']
+        linehole = header['LineHole']
+        date = header['Date']
+        grid = header['Grid']
+        current = float(tags['Current'])
+        timebase = float(header['Timebase'])
+        timebase_freq = ((1 / (timebase / 1000)) / 4)
+        survey_type = self.get_survey_type()
+        num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
+        units = file.get_tags()['Units']
+
+        if 'borehole' in survey_type.casefold():
+            s_title = 'Hole'
+        else:
+            s_title = 'Line'
+
+        if units.casefold() == 'nanotesla/sec':
+            units = 'nT/s'
+        elif 'picotesla' in units.casefold():
+            units = 'pT'
+        else:
+            units = "UNDEF_UNIT"
+
+        data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
+        components = self.get_components(data)
+
+        for component in components:
+            component_data = list(filter(lambda d: d['Component'] == component, data))
+            profile_data = self.get_profile_data(component_data)
+            stations = [station['Station'] for station in component_data]
+            x_limit = min(stations), max(stations)
 
     # Legacy function, leave as reference
-    def generate_placeholder_plots(self):
-        """
-        :return: A list of matplotlib.figure objects representing the data found inside of the active file
-        """
-        # Temporary placeholder plots
-        # Use as guide for creating generate_plots
-        plots_dict = OrderedDict()
-
-        for reading in self.active_file.get_data():
-            station_number = reading['Station']
-
-            if station_number not in plots_dict:
-                fig = Figure()
-                ax = fig.add_subplot(111)
-                ax.set_title('Station ' + str(station_number))
-                ax.set_xlabel('Channel Number (By Index)')
-                ax.set_ylabel('Amplitude (' + self.active_file.get_tags()['Units'] + ')')
-                fig.subplots_adjust(bottom=0.15)
-
-                plots_dict[station_number] = {'fig': fig}
-                plots_dict[station_number]['ax'] = ax
-
-            ax = plots_dict[station_number]['ax']
-            y = reading['Data']
-            ax.plot(range(len(y)), y, '-', linewidth=0.8)
-
-        plots = [plot_data['fig'] for station_number, plot_data in plots_dict.items()]
-        return plots
+    # def generate_placeholder_plots(self):
+    #     """
+    #     :return: A list of matplotlib.figure objects representing the data found inside of the active file
+    #     """
+    #     # Temporary placeholder plots
+    #     # Use as guide for creating generate_plots
+    #     plots_dict = OrderedDict()
+    #
+    #     for reading in self.active_file.get_data():
+    #         station_number = reading['Station']
+    #
+    #         if station_number not in plots_dict:
+    #             fig = Figure()
+    #             ax = fig.add_subplot(111)
+    #             ax.set_title('Station ' + str(station_number))
+    #             ax.set_xlabel('Channel Number (By Index)')
+    #             ax.set_ylabel('Amplitude (' + self.active_file.get_tags()['Units'] + ')')
+    #             fig.subplots_adjust(bottom=0.15)
+    #
+    #             plots_dict[station_number] = {'fig': fig}
+    #             plots_dict[station_number]['ax'] = ax
+    #
+    #         ax = plots_dict[station_number]['ax']
+    #         y = reading['Data']
+    #         ax.plot(range(len(y)), y, '-', linewidth=0.8)
+    #
+    #     plots = [plot_data['fig'] for station_number, plot_data in plots_dict.items()]
+    #     return plots
 
 
 if __name__ == "__main__":
     # Code to test PEMFileEditor
     editor = PEMFileEditor()
-    editor.open_file('CH934ZM.PEM')
-    editor.generate_placeholder_plots()
+    testing_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../sample_files/2400NAv.PEM")
+    editor.open_file(testing_file)
+    editor.generate_plots()
+    plt.show()

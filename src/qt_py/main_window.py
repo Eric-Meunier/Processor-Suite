@@ -133,7 +133,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.list_of_files.extend(urls)
         self.open_files(urls)
 
-    def open_files(self, filepaths, redraw=False): #, redraw=False):
+    def open_files(self, filepaths, redraw=False):
         # # Set the central widget to a contain content for working with PEMFile
         # file_widget = PEMFileWidget(self)
         # file_widget.open_file(filename)
