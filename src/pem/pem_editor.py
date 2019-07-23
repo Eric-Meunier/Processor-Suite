@@ -16,6 +16,7 @@ from scipy import interpolate
 from scipy import stats
 # from log import Logger
 import warnings
+import cProfile
 import time
 from datetime import datetime
 
@@ -26,8 +27,11 @@ from datetime import datetime
 mpl.rcParams['path.simplify'] = True
 mpl.rcParams['path.simplify_threshold'] = 1.0
 mpl.rcParams['agg.path.chunksize'] = 10000
-
+mpl.rcParams["figure.autolayout"] = False
+mpl.rcParams.update({'font.size': 3})
 mplstyle.use(['seaborn-paper', 'fast'])
+
+
 # logger = Logger(__name__)
 
 
@@ -69,7 +73,6 @@ class PEMFileEditor:
         stations = [d['Station'] for d in data]
 
         return [self.convert_station(station) for station in stations]
-
 
     def convert_station(self, station):
         """
@@ -363,10 +366,9 @@ class PEMFileEditor:
         # Each component has their own figure
         for component in components:
             # logger.info("Plotting component " + component)
-            # t1 = time.time()
 
             # The LIN plot always has 5 axes. LOG only ever has one.
-            lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), dpi=100, sharex=True)
+            lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
 
             # Using subplots_adjust instead of tight_layout since it's significantly faster (3 secs -> 0.3 secs)
             # NOTE: Subplots y-axis' are now always at the same distance from the left edge. As a result, the y-axis
@@ -421,7 +423,6 @@ class PEMFileEditor:
             ax5.set_ylabel("Channel " + str(channel_bounds[3][0]) + " - " +
                            str(channel_bounds[3][1]) + "\n(" + units + ")", fontname=font, alpha=alpha)
             # lin_fig.align_ylabels()
-
             add_titles()
 
             # PLOT PP
@@ -450,8 +451,8 @@ class PEMFileEditor:
                     ax.set_ylim(new_low, new_high)
                     ax.set_yticks(ax.get_yticks())
 
-                if index != 5:
-                    format_spine()
+                # if index != 5:
+                #     format_spine()
 
                 # The 6th subplot, only used for station tick labelling
                 elif index == 5:
@@ -494,47 +495,167 @@ class PEMFileEditor:
 
         return lin_figs, log_figs
 
-    def mk_qt_plot(self):
-        import pyqtgraph as pg
-        pg.setConfigOption('background', 'w')
-
+    def make_plots(self, **kwargs):
         file = self.active_file
-        # Header info mostly just for the title of the plots
-        # TODO Negative coil area in PEM file breaks the parsing
         header = file.get_header()
         tags = file.get_tags()
-        client = header['Client']
-        loop = header['Loop']
-        linehole = header['LineHole']
-        date = header['Date']
-        grid = header['Grid']
-        current = float(tags['Current'])
-        timebase = float(header['Timebase'])
-        timebase_freq = ((1 / (timebase / 1000)) / 4)
-        survey_type = self.get_survey_type()
-        num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
-        units = file.get_tags()['Units']
+        components = file.components
 
-        if 'borehole' in survey_type.casefold():
+        kwargs['Units'] = 'nT/s' if tags['Units'].casefold() == 'nanotesla/sec' else 'pT'
+        kwargs['SurveyType'] = file.survey_type
+        kwargs['Current'] = tags['Current']
+
+        try: kwargs['lbound']
+        except KeyError: kwargs['lbound'] = None
+
+        try: kwargs['rbound']
+        except KeyError: kwargs['rbound'] = None
+
+        try: kwargs['hide_gaps']
+        except KeyError: kwargs['hide_gaps'] = True
+
+        try: kwargs['gap']
+        except KeyError: kwargs['gap'] = None
+
+        lin_figs = []
+        log_figs = []
+
+        for component in components:
+            component_data = list(filter(lambda d: d['Component'] == component, self.active_file.get_data()))
+            lin_fig = CroneFigs(component_data, component, header, **kwargs).lin_plots()
+            lin_figs.append(lin_fig)
+
+
+class CroneFigs:
+    def __init__(self, component_data, component, header, **kwargs):
+        super().__init__()
+        self.editor = PEMFileEditor()
+        self.kwargs = kwargs
+        self.data = component_data
+        self.profile_data = self.editor.get_profile_data(self.data)
+        self.header = header
+        self.component = component
+        self.stations = [self.editor.convert_station(station['Station']) for station in self.data]
+        self.x_limit = min(self.stations) if kwargs['lbound'] is None else kwargs['lbound'], max(self.stations) if \
+        kwargs['rbound'] is None else kwargs['rbound']
+        self.num_channels = int(self.header['NumChannels']) + 1
+        self.units = self.kwargs['Units']
+
+    def format_plots(self):
+        plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
+        major_locator = ticker.FixedLocator(self.stations)
+        x_label_locator = ticker.AutoLocator()
+        plt.xlim(self.x_limit)
+
+    def lin_plots(self):
+        def add_ylabels():
+            ax1.set_ylabel('Primary Pulse ' + "\n(" + self.units + ")", fontname="Tahoma")
+            ax2.set_ylabel("Channel 1 - " + str(channel_bounds[0][1]) +
+                           "\n(" + self.units + ")", fontname="Tahoma")
+            ax3.set_ylabel("Channel " + str(channel_bounds[1][0]) + " - " +
+                           str(channel_bounds[1][1]) + "\n(" + self.units + ")", fontname="Tahoma")
+            ax4.set_ylabel("Channel " + str(channel_bounds[2][0]) + " - " +
+                           str(channel_bounds[2][1]) + "\n(" + self.units + ")", fontname="Tahoma")
+            ax5.set_ylabel("Channel " + str(channel_bounds[3][0]) + " - " +
+                           str(channel_bounds[3][1]) + "\n(" + self.units + ")", fontname="Tahoma")
+
+        def calc_channel_bounds():
+            # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
+            channel_bounds = [None] * 4
+            num_channels_per_plot = int((self.num_channels - 1) // 4)
+            remainder_channels = int((self.num_channels - 1) % 4)
+
+            for k in range(0, len(channel_bounds)):
+                channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
+
+            for i in range(0, remainder_channels):
+                channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
+                for k in range(i + 1, len(channel_bounds)):
+                    channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+            return channel_bounds
+
+        lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(5.5, 8), sharex=True)
+        ax6 = ax5.twiny()
+        ax6.get_shared_x_axes().join(ax5, ax6)
+
+        channel_bounds = calc_channel_bounds()
+
+        self.add_title()
+        self.format_plots()
+        add_ylabels()
+
+        return lin_fig
+
+    def add_title(self):
+
+        timebase_freq = ((1 / (float(self.header['Timebase']) / 1000)) / 4)
+
+        if 'borehole' in self.kwargs['SurveyType'].casefold():
             s_title = 'Hole'
         else:
             s_title = 'Line'
 
-        if units.casefold() == 'nanotesla/sec':
-            units = 'nT/s'
-        elif 'picotesla' in units.casefold():
-            units = 'pT'
-        else:
-            units = "UNDEF_UNIT"
+        plt.figtext(0.550, 0.960, 'Crone Geophysics & Exploration Ltd.',
+                    fontname='Century Gothic', fontsize=11, ha='center')
 
-        data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
-        components = self.get_components(data)
+        plt.figtext(0.550, 0.945, self.kwargs['SurveyType'] + ' Pulse EM Survey', family='cursive', style='italic',
+                    fontname='Century Gothic', fontsize=10, ha='center')
 
-        for component in components:
-            component_data = list(filter(lambda d: d['Component'] == component, data))
-            profile_data = self.get_profile_data(component_data)
-            stations = [station['Station'] for station in component_data]
-            x_limit = min(stations), max(stations)
+        plt.figtext(0.145, 0.935, 'Timebase: ' + str(self.header['Timebase']) + ' ms\n' +
+                    'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
+                    'Current: ' + str(round(float(self.kwargs['Current']), 1)) + ' A',
+                    fontname='Century Gothic', fontsize=10, va='top')
+
+        plt.figtext(0.550, 0.935, s_title + ': ' + self.header['LineHole'] + '\n'
+                    + self.component + ' Component' + '\n'
+                    + 'Loop: ' + self.header['Loop'],
+                    fontname='Century Gothic', fontsize=10, va='top', ha='center')
+
+        plt.figtext(0.955, 0.935,
+                    self.header['Client'] + '\n' + self.header['Grid'] + '\n' + self.header['Date'] + '\n',
+                    fontname='Century Gothic', fontsize=10, va='top', ha='right')
+
+    # def mk_qt_plot(self):
+    #     import pyqtgraph as pg
+    #     pg.setConfigOption('background', 'w')
+    #
+    #     file = self.active_file
+    #     # Header info mostly just for the title of the plots
+    #     # TODO Negative coil area in PEM file breaks the parsing
+    #     header = file.get_header()
+    #     tags = file.get_tags()
+    #     client = header['Client']
+    #     loop = header['Loop']
+    #     linehole = header['LineHole']
+    #     date = header['Date']
+    #     grid = header['Grid']
+    #     current = float(tags['Current'])
+    #     timebase = float(header['Timebase'])
+    #     timebase_freq = ((1 / (timebase / 1000)) / 4)
+    #     survey_type = self.get_survey_type()
+    #     num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
+    #     units = file.get_tags()['Units']
+    #
+    #     if 'borehole' in survey_type.casefold():
+    #         s_title = 'Hole'
+    #     else:
+    #         s_title = 'Line'
+    #
+    #     if units.casefold() == 'nanotesla/sec':
+    #         units = 'nT/s'
+    #     elif 'picotesla' in units.casefold():
+    #         units = 'pT'
+    #     else:
+    #         units = "UNDEF_UNIT"
+    #
+    #     data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
+    #     components = self.get_components(data)
+    #
+    #     for component in components:
+    #         component_data = list(filter(lambda d: d['Component'] == component, data))
+    #         profile_data = self.get_profile_data(component_data)
+    #         stations = [station['Station'] for station in component_data]
+    #         x_limit = min(stations), max(stations)
 
     # Legacy function, leave as reference
     # def generate_placeholder_plots(self):
@@ -570,7 +691,9 @@ class PEMFileEditor:
 if __name__ == "__main__":
     # Code to test PEMFileEditor
     editor = PEMFileEditor()
-    testing_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../sample_files/2400NAv.PEM")
+    testing_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../sample_files/9600NAv LP-100.PEM")
     editor.open_file(testing_file)
-    editor.generate_plots()
+    editor.make_plots()
+    # editor.generate_plots()
+    # cProfile.run('editor.make_plots()', sort='cumtime')
     plt.show()
