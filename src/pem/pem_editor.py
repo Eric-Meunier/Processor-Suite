@@ -538,11 +538,16 @@ class PEMFileEditor:
 
         for component in components:
             component_data = list(filter(lambda d: d['Component'] == component, self.active_file.get_data()))
-            lin_fig = CroneFigure(component_data, component, header, **kwargs).lin_plots()
+            lin_fig = CroneFigure(component_data, component, header, **kwargs).lin_plot()
+            # log_fig = CroneFigure(component_data, component, header, **kwargs).log_plot()
             lin_figs.append(lin_fig)
+            # log_figs.append(log_fig)
 
 
 class CroneFigure:
+    """
+    Class for creating Crone figures.
+    """
     def __init__(self, component_data, component, header, **kwargs):
         super().__init__()
         self.editor = PEMFileEditor()
@@ -559,15 +564,65 @@ class CroneFigure:
         self.line_colour = '#1B2631'
 
     def format_plots(self):
-        plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
         major_locator = ticker.FixedLocator(self.stations)
-        x_label_locator = ticker.AutoLocator()
-        plt.xlim(self.x_limit)
+        axes = plt.gcf().axes
 
-    def lin_plots(self):
+        def format_spines(ax):
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+
+            if ax != axes[-1]:
+                ax.spines['bottom'].set_position(('data', 0))
+                ax.tick_params(axis='x', which='major', direction='inout', length=4)
+                plt.setp(ax.get_xticklabels(), visible=False)
+            else:
+                ax.spines['bottom'].set_visible(False)
+                ax.xaxis.set_ticks_position('bottom')
+                ax.tick_params(axis='x', which='major', direction='out', length=6)
+                plt.setp(ax.get_xticklabels(), visible=True, size=12)
+
+            if ax.get_yscale() == 'symlog':
+                ax.tick_params(axis='y', which='major', labelrotation=90)
+                plt.setp(ax.get_yticklabels(), va='center')
+
+        def format_yaxis(ax):
+            y_limits = ax.get_ylim()
+
+            if (y_limits[1] - y_limits[0]) < 3:
+                new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+                new_low = new_high * -1
+                ax.set_ylim(new_low, new_high)
+                ax.set_yticks(ax.get_yticks())
+
+            elif ax != axes[-1]:
+                new_high = math.ceil(max(y_limits[1], 0))
+                new_low = math.floor(min(y_limits[0], 0))
+                ax.set_ylim(new_low, new_high)
+                ax.set_yticks(ax.get_yticks())
+                ax.get_yaxis().set_label_coords(-0.08, 0.5)
+
+            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
+
+        plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
+        plt.xlim(self.x_limit)
+        axes[0].xaxis.set_major_locator(major_locator)
+
+        for ax in axes:
+            format_spines(ax)
+            format_yaxis(ax)
+
+        x_label_locator = ticker.AutoLocator()
+
+        self.add_rectangle()
+
+    def lin_plot(self):
+        """
+        Creates the LIN plots
+        :return: LIN figure object
+        """
         def add_ylabels():
-            for i in range(5):
-                ax = lin_fig.add_subplot(5, 1, i+1)
+            for i in range(len(lin_fig.axes)-1):
+                ax = lin_fig.axes[i]
                 if i == 0:
                     ax.set_ylabel('Primary Pulse ' + "\n(" + self.units + ")")
                 else:
@@ -591,14 +646,14 @@ class CroneFigure:
             channel_bounds.insert(0, (0, 0))
             return channel_bounds
 
-        lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(5.5, 8), sharex=True)
+        lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
         ax6 = ax5.twiny()
         ax6.get_shared_x_axes().join(ax5, ax6)
 
         channel_bounds = calc_channel_bounds()
 
         for i, group in enumerate(channel_bounds):
-            ax = lin_fig.add_subplot(5,1,i+1)
+            ax = lin_fig.axes[i]
             self.draw_lines(ax, group[0], group[1])
 
         self.add_title()
@@ -606,6 +661,18 @@ class CroneFigure:
         add_ylabels()
 
         return lin_fig
+
+    def log_plot(self):
+        log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
+        ax2 = ax.twiny()
+        ax2.get_shared_x_axes().join(ax, ax2)
+        plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
+
+        self.draw_lines(ax, 0, self.num_channels-1)
+        self.add_title()
+        self.format_plots()
+
+        return log_fig
 
     def draw_lines(self, ax, channel_low, channel_high):
 
@@ -672,6 +739,11 @@ class CroneFigure:
                     self.header['Client'] + '\n' + self.header['Grid'] + '\n' + self.header['Date'] + '\n',
                     fontname='Century Gothic', fontsize=10, va='top', ha='right')
 
+    def add_rectangle(self):
+        fig = plt.gcf()
+        rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
+                                 facecolor='none', transform=fig.transFigure)
+        fig.patches.append(rect)
 
     # def mk_qt_plot(self):
     #     import pyqtgraph as pg
