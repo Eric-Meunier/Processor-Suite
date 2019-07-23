@@ -28,9 +28,11 @@ mpl.rcParams['path.simplify'] = True
 mpl.rcParams['path.simplify_threshold'] = 1.0
 mpl.rcParams['agg.path.chunksize'] = 10000
 mpl.rcParams["figure.autolayout"] = False
-mpl.rcParams.update({'font.size': 3})
-mplstyle.use(['seaborn-paper', 'fast'])
-
+mpl.rcParams['lines.linewidth'] = 0.5
+mpl.rcParams['lines.color'] = '#1B2631'
+mpl.rcParams['font.size'] = 9
+mpl.rcParams['font.sans-serif'] = 'Tahoma'
+# mplstyle.use(['seaborn-paper', 'fast'])  #Enabling this will override some of the above settings.
 
 # logger = Logger(__name__)
 
@@ -125,8 +127,8 @@ class PEMFileEditor:
 
         return data, stations
 
-    def calc_gaps(self, stations, gap):
-        survey_type = self.active_file.survey_type
+    def calc_gaps(self, survey_type, stations, gap):
+        # survey_type = self.active_file.survey_type
 
         if 'borehole' in survey_type.casefold():
             min_gap = 50
@@ -142,7 +144,7 @@ class PEMFileEditor:
 
         return gap_intervals
 
-    def get_interp_data(self, profile_data, stations, segments, hide_gaps, gap, interp_method='linear'):
+    def get_interp_data(self, survey_type, profile_data, stations, segments, hide_gaps, gap, interp_method='linear'):
         """
         Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
         into 100 segments.
@@ -150,6 +152,7 @@ class PEMFileEditor:
         :param stations: The stations of the EM data
         :return: The interpolated data and stations
         """
+        survey_type = survey_type
         stations = np.array(stations, dtype='float64')
         readings = np.array(profile_data, dtype='float64')
         x_intervals = np.linspace(stations[0], stations[-1], segments)
@@ -158,7 +161,7 @@ class PEMFileEditor:
         interpolated_y = f(x_intervals)
 
         if hide_gaps:
-            gap_intervals = self.calc_gaps(stations, gap)
+            gap_intervals = self.calc_gaps(survey_type, stations, gap)
 
             # Masks the intervals that are between gap[0] and gap[1]
             for gap in gap_intervals:
@@ -505,28 +508,41 @@ class PEMFileEditor:
         kwargs['SurveyType'] = file.survey_type
         kwargs['Current'] = tags['Current']
 
-        try: kwargs['lbound']
-        except KeyError: kwargs['lbound'] = None
+        try:
+            kwargs['lbound']
+        except KeyError:
+            kwargs['lbound'] = None
 
-        try: kwargs['rbound']
-        except KeyError: kwargs['rbound'] = None
+        try:
+            kwargs['rbound']
+        except KeyError:
+            kwargs['rbound'] = None
 
-        try: kwargs['hide_gaps']
-        except KeyError: kwargs['hide_gaps'] = True
+        try:
+            kwargs['HideGaps']
+        except KeyError:
+            kwargs['HideGaps'] = True
 
-        try: kwargs['gap']
-        except KeyError: kwargs['gap'] = None
+        try:
+            kwargs['Gap']
+        except KeyError:
+            kwargs['Gap'] = None
+
+        try:
+            kwargs['Interp']
+        except KeyError:
+            kwargs['Interp'] = 'linear'
 
         lin_figs = []
         log_figs = []
 
         for component in components:
             component_data = list(filter(lambda d: d['Component'] == component, self.active_file.get_data()))
-            lin_fig = CroneFigs(component_data, component, header, **kwargs).lin_plots()
+            lin_fig = CroneFigure(component_data, component, header, **kwargs).lin_plots()
             lin_figs.append(lin_fig)
 
 
-class CroneFigs:
+class CroneFigure:
     def __init__(self, component_data, component, header, **kwargs):
         super().__init__()
         self.editor = PEMFileEditor()
@@ -537,9 +553,10 @@ class CroneFigs:
         self.component = component
         self.stations = [self.editor.convert_station(station['Station']) for station in self.data]
         self.x_limit = min(self.stations) if kwargs['lbound'] is None else kwargs['lbound'], max(self.stations) if \
-        kwargs['rbound'] is None else kwargs['rbound']
+            kwargs['rbound'] is None else kwargs['rbound']
         self.num_channels = int(self.header['NumChannels']) + 1
         self.units = self.kwargs['Units']
+        self.line_colour = '#1B2631'
 
     def format_plots(self):
         plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
@@ -549,15 +566,13 @@ class CroneFigs:
 
     def lin_plots(self):
         def add_ylabels():
-            ax1.set_ylabel('Primary Pulse ' + "\n(" + self.units + ")", fontname="Tahoma")
-            ax2.set_ylabel("Channel 1 - " + str(channel_bounds[0][1]) +
-                           "\n(" + self.units + ")", fontname="Tahoma")
-            ax3.set_ylabel("Channel " + str(channel_bounds[1][0]) + " - " +
-                           str(channel_bounds[1][1]) + "\n(" + self.units + ")", fontname="Tahoma")
-            ax4.set_ylabel("Channel " + str(channel_bounds[2][0]) + " - " +
-                           str(channel_bounds[2][1]) + "\n(" + self.units + ")", fontname="Tahoma")
-            ax5.set_ylabel("Channel " + str(channel_bounds[3][0]) + " - " +
-                           str(channel_bounds[3][1]) + "\n(" + self.units + ")", fontname="Tahoma")
+            for i in range(5):
+                ax = lin_fig.add_subplot(5, 1, i+1)
+                if i == 0:
+                    ax.set_ylabel('Primary Pulse ' + "\n(" + self.units + ")")
+                else:
+                    ax.set_ylabel("Channel " + str(channel_bounds[i][0]) + " - " +
+                                   str(channel_bounds[i][1]) + "\n(" + self.units + ")")
 
         def calc_channel_bounds():
             # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
@@ -572,6 +587,8 @@ class CroneFigs:
                 channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
                 for k in range(i + 1, len(channel_bounds)):
                     channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+
+            channel_bounds.insert(0, (0, 0))
             return channel_bounds
 
         lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(5.5, 8), sharex=True)
@@ -580,11 +597,51 @@ class CroneFigs:
 
         channel_bounds = calc_channel_bounds()
 
+        for i, group in enumerate(channel_bounds):
+            ax = lin_fig.add_subplot(5,1,i+1)
+            self.draw_lines(ax, group[0], group[1])
+
         self.add_title()
         self.format_plots()
         add_ylabels()
 
         return lin_fig
+
+    def draw_lines(self, ax, channel_low, channel_high):
+
+        segments = 1000
+        offset = segments * 0.1
+
+        for k in range(channel_low, (channel_high + 1)):
+            # Gets the profile data for a single channel, along with the stations
+            channel_data, stations = self.editor.get_channel_data(k, self.profile_data)
+
+            # Interpolates the channel data, also returns the corresponding x intervals
+            interp_data, x_intervals = self.editor.get_interp_data(self.kwargs['SurveyType'],channel_data, stations, segments,
+                                                            self.kwargs['HideGaps'], self.kwargs['Gap'],
+                                                            self.kwargs['Interp'])
+
+            ax.plot(x_intervals, interp_data, color=self.line_colour)
+
+            mask = np.isclose(interp_data, interp_data.astype('float64'))
+            x_intervals = x_intervals[mask]
+            interp_data = interp_data[mask]
+
+            for i, x_position in enumerate(x_intervals[int(offset)::int(len(x_intervals) * 0.4)]):
+                y = interp_data[list(x_intervals).index(x_position)]
+
+                if k == 0:
+                    ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7.5, color=self.line_colour,
+                                va='center_baseline', ha='center')
+
+                else:
+                    ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, color=self.line_colour,
+                                va='center_baseline', ha='center')
+
+            offset += len(x_intervals) * 0.15
+
+            if offset >= len(x_intervals) * 0.85:
+                offset = len(x_intervals) * 0.10
 
     def add_title(self):
 
@@ -614,6 +671,7 @@ class CroneFigs:
         plt.figtext(0.955, 0.935,
                     self.header['Client'] + '\n' + self.header['Grid'] + '\n' + self.header['Date'] + '\n',
                     fontname='Century Gothic', fontsize=10, va='top', ha='right')
+
 
     # def mk_qt_plot(self):
     #     import pyqtgraph as pg
