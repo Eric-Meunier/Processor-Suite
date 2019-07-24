@@ -538,8 +538,8 @@ class PEMFileEditor:
 
         for component in components:
             component_data = list(filter(lambda d: d['Component'] == component, self.active_file.get_data()))
-            lin_fig = CroneFigure(component_data, component, header, **kwargs).lin_plot()
-            # log_fig = CroneFigure(component_data, component, header, **kwargs).log_plot()
+            lin_fig = CroneFigure(component_data, component, header, **kwargs).plot_lin()
+            # log_fig = CroneFigure(component_data, component, header, **kwargs).plot_log()
             lin_figs.append(lin_fig)
             # log_figs.append(log_fig)
 
@@ -562,10 +562,11 @@ class CroneFigure:
         self.num_channels = int(self.header['NumChannels']) + 1
         self.units = self.kwargs['Units']
         self.line_colour = '#1B2631'
+        self.lin_fig = None
+        self.log_fig = None
 
-    def format_plots(self):
-        major_locator = ticker.FixedLocator(self.stations)
-        axes = plt.gcf().axes
+    def format_figure(self, figure):
+        axes = figure.axes
 
         def format_spines(ax):
             ax.spines['right'].set_visible(False)
@@ -585,49 +586,31 @@ class CroneFigure:
                 ax.tick_params(axis='y', which='major', labelrotation=90)
                 plt.setp(ax.get_yticklabels(), va='center')
 
-        def format_yaxis(ax):
-            y_limits = ax.get_ylim()
-
-            if (y_limits[1] - y_limits[0]) < 3:
-                new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                new_low = new_high * -1
-                ax.set_ylim(new_low, new_high)
-                ax.set_yticks(ax.get_yticks())
-
-            elif ax != axes[-1]:
-                new_high = math.ceil(max(y_limits[1], 0))
-                new_low = math.floor(min(y_limits[0], 0))
-                ax.set_ylim(new_low, new_high)
-                ax.set_yticks(ax.get_yticks())
-                ax.get_yaxis().set_label_coords(-0.08, 0.5)
-
-            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
-
         plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
-        plt.xlim(self.x_limit)
-        axes[0].xaxis.set_major_locator(major_locator)
+        self.add_rectangle()
 
         for ax in axes:
             format_spines(ax)
-            format_yaxis(ax)
 
-        x_label_locator = ticker.AutoLocator()
+    def format_xaxis(self, figure):
+        # x_label_locator = ticker.AutoLocator()
+        major_locator = ticker.FixedLocator(self.stations)
+        plt.xlim(self.x_limit)
+        figure.axes[0].xaxis.set_major_locator(major_locator) # for some reason this seems to apply to all axes
 
-        self.add_rectangle()
-
-    def lin_plot(self):
+    def create_lin_figure(self):
         """
-        Creates the LIN plots
+        Creates the blank LIN figure
         :return: LIN figure object
         """
-        def add_ylabels():
-            for i in range(len(lin_fig.axes)-1):
-                ax = lin_fig.axes[i]
-                if i == 0:
-                    ax.set_ylabel('Primary Pulse ' + "\n(" + self.units + ")")
-                else:
-                    ax.set_ylabel("Channel " + str(channel_bounds[i][0]) + " - " +
-                                   str(channel_bounds[i][1]) + "\n(" + self.units + ")")
+        lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
+        ax6 = ax5.twiny()
+        ax6.get_shared_x_axes().join(ax5, ax6)
+
+        self.lin_fig = lin_fig
+        self.format_figure(self.lin_fig)
+
+    def plot_lin(self):
 
         def calc_channel_bounds():
             # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
@@ -646,33 +629,49 @@ class CroneFigure:
             channel_bounds.insert(0, (0, 0))
             return channel_bounds
 
-        lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
-        ax6 = ax5.twiny()
-        ax6.get_shared_x_axes().join(ax5, ax6)
+        def add_ylabels():
+            for i in range(len(self.lin_fig.axes)-1):
+                ax = self.lin_fig.axes[i]
+                if i == 0:
+                    ax.set_ylabel('Primary Pulse ' + "\n(" + self.units + ")")
+                else:
+                    ax.set_ylabel("Channel " + str(channel_bounds[i][0]) + " - " +
+                                   str(channel_bounds[i][1]) + "\n(" + self.units + ")")
 
+        if not self.lin_fig: self.create_lin_figure()
         channel_bounds = calc_channel_bounds()
 
         for i, group in enumerate(channel_bounds):
-            ax = lin_fig.axes[i]
+            ax = self.lin_fig.axes[i]
             self.draw_lines(ax, group[0], group[1])
 
         self.add_title()
-        self.format_plots()
+        self.format_yaxis(self.lin_fig)
+        self.format_xaxis(self.lin_fig)
         add_ylabels()
 
-        return lin_fig
-
-    def log_plot(self):
+    def create_log_figure(self):
+        """
+        Creates an empty but formatted LOG figure
+        :return:
+        """
         log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
         ax2 = ax.twiny()
         ax2.get_shared_x_axes().join(ax, ax2)
         plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
 
+        self.log_fig = log_fig
+        self.format_figure(self.log_fig)
+
+    def plot_log(self):
+
+        if not self.log_fig: self.create_log_figure()
+        ax = self.log_fig.axes[0]
+
         self.draw_lines(ax, 0, self.num_channels-1)
         self.add_title()
-        self.format_plots()
-
-        return log_fig
+        self.format_yaxis(self.log_fig)
+        self.format_xaxis(self.log_fig)
 
     def draw_lines(self, ax, channel_low, channel_high):
 
@@ -709,6 +708,28 @@ class CroneFigure:
 
             if offset >= len(x_intervals) * 0.85:
                 offset = len(x_intervals) * 0.10
+
+    def format_yaxis(self, figure):
+
+        axes = figure.axes
+
+        for ax in axes:
+            y_limits = ax.get_ylim()
+
+            if (y_limits[1] - y_limits[0]) < 3:
+                new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+                new_low = new_high * -1
+                ax.set_ylim(new_low, new_high)
+                ax.set_yticks(ax.get_yticks())
+
+            elif ax != axes[-1]:
+                new_high = math.ceil(max(y_limits[1], 0))
+                new_low = math.floor(min(y_limits[0], 0))
+                ax.set_ylim(new_low, new_high)
+                ax.set_yticks(ax.get_yticks())
+                ax.get_yaxis().set_label_coords(-0.08, 0.5)
+
+            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
 
     def add_title(self):
 
