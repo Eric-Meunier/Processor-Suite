@@ -18,7 +18,7 @@ import os
 import sys
 from scipy import interpolate
 from scipy import stats
-# from log import Logger
+from log import Logger
 import warnings
 import cProfile
 import time
@@ -38,7 +38,7 @@ mpl.rcParams['font.size'] = 9
 mpl.rcParams['font.sans-serif'] = 'Tahoma'
 # mplstyle.use(['seaborn-paper', 'fast'])  #Enabling this will override some of the above settings.
 
-# logger = Logger(__name__)
+logger = Logger(__name__)
 
 
 class PEMFileEditor:
@@ -62,11 +62,10 @@ class PEMFileEditor:
         """
         :return: A list of matplotlib.figure objects representing the data found inside of the active file
         """
-        # logger.info("Generating plots...")
+        logger.info("Generating plots...")
 
-        # lin_figs, log_figs = self.mk_linlog_plots(**kwargs)
         lin_figs, log_figs = self.make_plots(**kwargs)
-        # logger.info("Finished generating plots")
+        logger.info("Finished generating plots")
         return lin_figs, log_figs
 
     def get_stations(self):

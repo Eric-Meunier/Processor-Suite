@@ -199,6 +199,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for i in range(len( self.list_of_files)):
                 self.file_browser.removeTab(0)
             self.file_browser.list_widget.clear()
+            self.file_browser.widgets.clear()
             self.open_files(self.list_of_files, True)
 
     def toggle_station_limits(self):
