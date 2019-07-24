@@ -3,8 +3,11 @@ import matplotlib as mpl
 import matplotlib.style as mplstyle
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from matplotlib.figure import Figure
 from matplotlib import patches
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QVBoxLayout, QSizePolicy, QMessageBox, QWidget, QPushButton
 from matplotlib.dates import date2num, DateConverter, num2date
 from matplotlib.container import ErrorbarContainer
 from collections import OrderedDict
@@ -12,6 +15,7 @@ import numpy as np
 import math
 import re
 import os
+import sys
 from scipy import interpolate
 from scipy import stats
 # from log import Logger
@@ -60,9 +64,10 @@ class PEMFileEditor:
         """
         # logger.info("Generating plots...")
 
-        lin_fig, log_fig = self.mk_linlog_plots(**kwargs)
+        # lin_figs, log_figs = self.mk_linlog_plots(**kwargs)
+        lin_figs, log_figs = self.make_plots(**kwargs)
         # logger.info("Finished generating plots")
-        return lin_fig, log_fig
+        return lin_figs, log_figs
 
     def get_stations(self):
         """
@@ -156,7 +161,7 @@ class PEMFileEditor:
         stations = np.array(stations, dtype='float64')
         readings = np.array(profile_data, dtype='float64')
         x_intervals = np.linspace(stations[0], stations[-1], segments)
-        f = interpolate.interp1d(stations, readings, kind=interp_method)
+        f = interpolate.interp1d(stations, readings, kind='linear')
 
         interpolated_y = f(x_intervals)
 
@@ -543,6 +548,7 @@ class PEMFileEditor:
             lin_figs.append(lin_fig)
             log_figs.append(log_fig)
 
+        return lin_figs, log_figs
 
 class CroneFigure:
     """
@@ -619,7 +625,6 @@ class CroneFigure:
         """
         Plots the data into the LIN figure
         """
-
         def calc_channel_bounds():
             # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
             channel_bounds = [None] * 4
@@ -660,6 +665,8 @@ class CroneFigure:
         self.format_yaxis(self.lin_fig)
         self.format_xaxis(self.lin_fig)
 
+        return self.lin_fig
+
     def create_log_figure(self):
         """
         Creates an empty but formatted LOG figure
@@ -691,6 +698,8 @@ class CroneFigure:
         add_ylabel()
         self.format_yaxis(self.log_fig)
         self.format_xaxis(self.log_fig)
+
+        return self.log_fig
 
     def draw_lines(self, ax, channel_low, channel_high):
         """
@@ -885,6 +894,85 @@ class CroneFigure:
     #     return plots
 
 
+class App(QMainWindow):
+
+    def __init__(self):
+        super().__init__()
+        self.left = 10
+        self.top = 10
+        self.title = 'PyQt5 matplotlib example - pythonspot.com'
+        self.width = 640
+        self.height = 400
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+        m = PlotCanvas(self, width=5, height=4)
+        m.move(0,0)
+
+        button = QPushButton('PyQt5 button', self)
+        button.setToolTip('This s an example button')
+        button.move(500,0)
+        button.resize(140,100)
+
+        self.show()
+
+
+class PlotWidget(QWidget):
+
+    def __init__(self, parent=None, editor=None, figure=None, plot_height=1100, plot_width=850):
+        QWidget.__init__(self, parent=parent)
+
+        # TODO Store file or editor?
+        if not editor:
+            raise ValueError
+        self.editor = editor
+
+        if not figure:
+            raise ValueError
+        self.figure = figure
+
+        # For debug
+        # p = self.palette()
+        # p.setColor(self.backgroundRole(), Qt.red)
+        # self.setPalette(p)
+
+        self.nav_bar_visible = False
+        self.plot_height = plot_height
+        self.plot_width = plot_width
+
+        # TODO Ensure these are checked for None in following code
+        self.canvas = None
+        self.toolbar = None
+
+        self.configure_canvas(figure)
+
+    def configure_canvas(self, figure):
+        self.canvas = FigureCanvas(figure)
+        layout = QVBoxLayout(self)
+        self.setLayout(layout)
+        self.layout().addWidget(self.canvas)
+        self.layout().setContentsMargins(0, 0, 0, 0)
+
+        self.canvas.setFixedHeight(self.plot_height)
+        self.canvas.setFixedWidth(self.plot_width)
+        self.canvas.draw()
+
+        self.toolbar = NavigationToolbar(self.layout().itemAt(0).widget(), self)
+        self.layout().addWidget(self.toolbar)
+        self.toolbar.hide()
+
+    def toggle_nav_bar(self):
+        # TODO Make sure this is working and integrate
+        if self.nav_bar_visible:
+            self.toolbar.hide()
+        else:
+            self.toolbar.show()
+
+        self.nav_bar_visible = not self.nav_bar_visible
+
 if __name__ == "__main__":
     # Code to test PEMFileEditor
     editor = PEMFileEditor()
@@ -893,4 +981,8 @@ if __name__ == "__main__":
     editor.make_plots()
     # editor.generate_plots()
     # cProfile.run('editor.make_plots()', sort='cumtime')
-    plt.show()
+    # plt.show()
+    app = QApplication(sys.argv)
+    ex = App()
+    sys.exit(app.exec_())
+
