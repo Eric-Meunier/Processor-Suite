@@ -546,7 +546,7 @@ class PEMFileEditor:
 
 class CroneFigure:
     """
-    Class for creating Crone figures.
+    Class for creating Crone LIN and LOG figures.
     """
     def __init__(self, component_data, component, header, **kwargs):
         super().__init__()
@@ -566,6 +566,10 @@ class CroneFigure:
         self.log_fig = None
 
     def format_figure(self, figure):
+        """
+        Formats a figure, mainly the spines, adjusting the padding, and adding the rectangle.
+        :param figure: LIN or LOG figure object
+        """
         axes = figure.axes
 
         def format_spines(ax):
@@ -593,6 +597,10 @@ class CroneFigure:
             format_spines(ax)
 
     def format_xaxis(self, figure):
+        """
+        Formats the X axis of a figure
+        :param figure: LIN or LOG figure objects
+        """
         # x_label_locator = ticker.AutoLocator()
         major_locator = ticker.FixedLocator(self.stations)
         plt.xlim(self.x_limit)
@@ -601,7 +609,6 @@ class CroneFigure:
     def create_lin_figure(self):
         """
         Creates the blank LIN figure
-        :return: LIN figure object
         """
         lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
         ax6 = ax5.twiny()
@@ -611,6 +618,9 @@ class CroneFigure:
         self.format_figure(self.lin_fig)
 
     def plot_lin(self):
+        """
+        Plots the data into the LIN figure
+        """
 
         def calc_channel_bounds():
             # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
@@ -653,7 +663,6 @@ class CroneFigure:
     def create_log_figure(self):
         """
         Creates an empty but formatted LOG figure
-        :return:
         """
         log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
         ax2 = ax.twiny()
@@ -674,9 +683,15 @@ class CroneFigure:
         self.format_xaxis(self.log_fig)
 
     def draw_lines(self, ax, channel_low, channel_high):
+        """
+        Plots the lines into an axes of a figure
+        :param ax: Axes of a figure, either LIN or LOG figure objects
+        :param channel_low: The first channel to be plotted
+        :param channel_high: The last channel to be plotted
+        """
 
-        segments = 1000
-        offset = segments * 0.1
+        segments = 1000 # The data will be broken in this number of segments
+        offset = segments * 0.1 # Used for spacing the annotations
 
         for k in range(channel_low, (channel_high + 1)):
             # Gets the profile data for a single channel, along with the stations
@@ -689,10 +704,12 @@ class CroneFigure:
 
             ax.plot(x_intervals, interp_data, color=self.line_colour)
 
+            # Mask is used to hide data within gaps
             mask = np.isclose(interp_data, interp_data.astype('float64'))
             x_intervals = x_intervals[mask]
             interp_data = interp_data[mask]
 
+            # Annotating the lines
             for i, x_position in enumerate(x_intervals[int(offset)::int(len(x_intervals) * 0.4)]):
                 y = interp_data[list(x_intervals).index(x_position)]
 
@@ -710,6 +727,10 @@ class CroneFigure:
                 offset = len(x_intervals) * 0.10
 
     def format_yaxis(self, figure):
+        """
+        Formats the Y axis of a figure
+        :param figure: LIN or LOG figure object
+        """
 
         axes = figure.axes
 
@@ -732,6 +753,9 @@ class CroneFigure:
             ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
 
     def add_title(self):
+        """
+        Adds the title header to a figure
+        """
 
         timebase_freq = ((1 / (float(self.header['Timebase']) / 1000)) / 4)
 
@@ -761,6 +785,9 @@ class CroneFigure:
                     fontname='Century Gothic', fontsize=10, va='top', ha='right')
 
     def add_rectangle(self):
+        """
+        Draws a rectangle around a figure object
+        """
         fig = plt.gcf()
         rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
                                  facecolor='none', transform=fig.transFigure)
