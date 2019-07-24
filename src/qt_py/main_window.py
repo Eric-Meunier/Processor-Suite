@@ -169,11 +169,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         kwargs = {"lbound": lbound,
                   "rbound": rbound,
-                  "hide_gaps": self.hideGapsToggle.isChecked(),
-                  "gap": gap,
-                  "Client": self.clientEdit.text() if self.shareTitleToggle.isChecked() else '',
-                  "Grid": self.gridEdit.text() if self.shareTitleToggle.isChecked() else '',
-                  "Loop": self.loopEdit.text() if self.shareTitleToggle.isChecked() else '',
+                  "HideGaps": self.hideGapsToggle.isChecked(),
+                  "Gap": gap,
+                  "Client": self.clientEdit.text() if self.shareTitleToggle.isChecked() else None,
+                  "Grid": self.gridEdit.text() if self.shareTitleToggle.isChecked() else None,
+                  "Loop": self.loopEdit.text() if self.shareTitleToggle.isChecked() else None,
                   "Interp": self.comboBoxInterpMethod.currentText()}
 
         try:

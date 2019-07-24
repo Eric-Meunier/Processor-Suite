@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib import patches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QVBoxLayout, QSizePolicy, QMessageBox, QWidget, QPushButton
 from matplotlib.dates import date2num, DateConverter, num2date
@@ -504,6 +504,56 @@ class PEMFileEditor:
     #     return lin_figs, log_figs
 
     def make_plots(self, **kwargs):
+        def get_kwargs():
+            try:
+                kwargs['Client']
+            except KeyError:
+                kwargs['Client'] = header['Client']
+            else:
+                if kwargs['Client'] is None:
+                    kwargs['Client'] = header['Client']
+
+            try:
+                kwargs['Grid']
+            except KeyError:
+                kwargs['Grid'] = header['Grid']
+            else:
+                if kwargs['Grid'] is None:
+                    kwargs['Grid'] = header['Grid']
+
+            try:
+                kwargs['Loop']
+            except KeyError:
+                kwargs['Loop'] = header['Loop']
+            else:
+                if kwargs['Loop'] is None:
+                    kwargs['Loop'] = header['Loop']
+
+            try:
+                kwargs['lbound']
+            except KeyError:
+                kwargs['lbound'] = None
+
+            try:
+                kwargs['rbound']
+            except KeyError:
+                kwargs['rbound'] = None
+
+            try:
+                kwargs['HideGaps']
+            except KeyError:
+                kwargs['HideGaps'] = True
+
+            try:
+                kwargs['Gap']
+            except KeyError:
+                kwargs['Gap'] = None
+
+            try:
+                kwargs['Interp']
+            except KeyError:
+                kwargs['Interp'] = 'linear'
+
         file = self.active_file
         header = file.get_header()
         tags = file.get_tags()
@@ -513,30 +563,7 @@ class PEMFileEditor:
         kwargs['SurveyType'] = file.survey_type
         kwargs['Current'] = tags['Current']
 
-        try:
-            kwargs['lbound']
-        except KeyError:
-            kwargs['lbound'] = None
-
-        try:
-            kwargs['rbound']
-        except KeyError:
-            kwargs['rbound'] = None
-
-        try:
-            kwargs['HideGaps']
-        except KeyError:
-            kwargs['HideGaps'] = True
-
-        try:
-            kwargs['Gap']
-        except KeyError:
-            kwargs['Gap'] = None
-
-        try:
-            kwargs['Interp']
-        except KeyError:
-            kwargs['Interp'] = 'linear'
+        get_kwargs()
 
         lin_figs = []
         log_figs = []
@@ -547,8 +574,8 @@ class PEMFileEditor:
             log_fig = CroneFigure(component_data, component, header, **kwargs).plot_log()
             lin_figs.append(lin_fig)
             log_figs.append(log_fig)
-
         return lin_figs, log_figs
+
 
 class CroneFigure:
     """
@@ -805,11 +832,11 @@ class CroneFigure:
 
         plt.figtext(0.550, 0.935, s_title + ': ' + self.header['LineHole'] + '\n'
                     + self.component + ' Component' + '\n'
-                    + 'Loop: ' + self.header['Loop'],
+                    + 'Loop: ' + self.kwargs['Loop'],
                     fontname='Century Gothic', fontsize=10, va='top', ha='center')
 
         plt.figtext(0.955, 0.935,
-                    self.header['Client'] + '\n' + self.header['Grid'] + '\n' + self.header['Date'] + '\n',
+                    self.kwargs['Client'] + '\n' + self.kwargs['Grid'] + '\n' + self.header['Date'] + '\n',
                     fontname='Century Gothic', fontsize=10, va='top', ha='right')
 
     def add_rectangle(self):
@@ -894,95 +921,13 @@ class CroneFigure:
     #     return plots
 
 
-class App(QMainWindow):
-
-    def __init__(self):
-        super().__init__()
-        self.left = 10
-        self.top = 10
-        self.title = 'PyQt5 matplotlib example - pythonspot.com'
-        self.width = 640
-        self.height = 400
-        self.initUI()
-
-    def initUI(self):
-        self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
-
-        m = PlotCanvas(self, width=5, height=4)
-        m.move(0,0)
-
-        button = QPushButton('PyQt5 button', self)
-        button.setToolTip('This s an example button')
-        button.move(500,0)
-        button.resize(140,100)
-
-        self.show()
-
-
-class PlotWidget(QWidget):
-
-    def __init__(self, parent=None, editor=None, figure=None, plot_height=1100, plot_width=850):
-        QWidget.__init__(self, parent=parent)
-
-        # TODO Store file or editor?
-        if not editor:
-            raise ValueError
-        self.editor = editor
-
-        if not figure:
-            raise ValueError
-        self.figure = figure
-
-        # For debug
-        # p = self.palette()
-        # p.setColor(self.backgroundRole(), Qt.red)
-        # self.setPalette(p)
-
-        self.nav_bar_visible = False
-        self.plot_height = plot_height
-        self.plot_width = plot_width
-
-        # TODO Ensure these are checked for None in following code
-        self.canvas = None
-        self.toolbar = None
-
-        self.configure_canvas(figure)
-
-    def configure_canvas(self, figure):
-        self.canvas = FigureCanvas(figure)
-        layout = QVBoxLayout(self)
-        self.setLayout(layout)
-        self.layout().addWidget(self.canvas)
-        self.layout().setContentsMargins(0, 0, 0, 0)
-
-        self.canvas.setFixedHeight(self.plot_height)
-        self.canvas.setFixedWidth(self.plot_width)
-        self.canvas.draw()
-
-        self.toolbar = NavigationToolbar(self.layout().itemAt(0).widget(), self)
-        self.layout().addWidget(self.toolbar)
-        self.toolbar.hide()
-
-    def toggle_nav_bar(self):
-        # TODO Make sure this is working and integrate
-        if self.nav_bar_visible:
-            self.toolbar.hide()
-        else:
-            self.toolbar.show()
-
-        self.nav_bar_visible = not self.nav_bar_visible
-
 if __name__ == "__main__":
     # Code to test PEMFileEditor
     editor = PEMFileEditor()
     testing_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../sample_files/9600NAv LP-100.PEM")
     editor.open_file(testing_file)
-    editor.make_plots()
+    # editor.make_plots()
     # editor.generate_plots()
-    # cProfile.run('editor.make_plots()', sort='cumtime')
+    cProfile.run('editor.make_plots()', sort='cumtime')
     # plt.show()
-    app = QApplication(sys.argv)
-    ex = App()
-    sys.exit(app.exec_())
 
