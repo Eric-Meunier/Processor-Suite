@@ -14,33 +14,44 @@ pg.setConfigOption('foreground', 'k')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 # Load Qt ui file into a class
-qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "./damp_plot_widget.ui")
-Ui_DampPlotWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
+MW_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "./main_window.ui")
+DP_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "./damp_plot_widget.ui")
+Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_qtCreatorFile)
+Ui_DampPlotWidget, QtBaseClass = uic.loadUiType(DP_qtCreatorFile)
 
 
-class MainWindow(QMainWindow):
-
+class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
-
-        self.damp_parser = DampParser()
-        self.init_ui()
-        self.setAcceptDrops(True)
-
-    def init_ui(self):
-        logging.info("Setting up MainWindow ui")
-        centralwidget = QtWidgets.QWidget(self)
-        centralwidget.setObjectName("centralwidget")
-        self.setCentralWidget(centralwidget)
-
+        QMainWindow.__init__(self)
+        Ui_MainWindow.__init__(self)
+        self.setupUi(self)
         self.statusBar().showMessage('Ready')
         self.setWindowTitle("Damping Box Current Plot")
-        self.setGeometry(-1000, 300, 800, 600)
-
-        layout = QtWidgets.QVBoxLayout()
-        self.setLayout(layout)
+        self.move(-1000,300)
+        self.x = 0
+        self.y = 0
+        self.damp_parser = DampParser()
+        # self.init_ui()
+        self.setAcceptDrops(True)
 
         self.show()
+
+    # def init_ui(self):
+    #     # self.ui =
+    #     logging.info("Setting up MainWindow ui")
+    #     centralwidget = QtWidgets.QWidget(self)
+    #     centralwidget.setObjectName("centralwidget")
+    #     self.setCentralWidget(centralwidget)
+    #
+    #     self.statusBar().showMessage('Ready')
+    #     self.setWindowTitle("Damping Box Current Plot")
+    #     self.setGeometry(-1000, 300, 800, 600)
+    #
+    #     layout = QtWidgets.QVBoxLayout()
+    #     self.setLayout(layout)
+    #
+    #     self.show()
 
     def dragEnterEvent(self, e):
         e.accept()
@@ -55,12 +66,23 @@ class MainWindow(QMainWindow):
         self.open_files(urls)
 
     def open_files(self, files):
-        times, currents = self.damp_parser.parse(files)
-        damp_plot = DampPlot(times, currents)
-        self.add_plot(damp_plot)
+        # Only work with lists, so if input isn't a list, makes it one
+        if not isinstance(files, list) and isinstance(files, str):
+            files = [files]
 
-    def add_plot(self, widget):
-        self.layout().addWidget(widget)
+        for file in files:
+            times, currents = self.damp_parser.parse(file)
+            damp_plot = DampPlot(times, currents)
+            self.add_plot(damp_plot)
+
+    def add_plot(self, plot_widget):
+        self.gridLayout.addWidget(plot_widget, self.x, self.y)
+        self.x += 1
+        old_y = self.y
+        self.y = int((self.x)/3)+old_y
+
+        if old_y != self.y:
+            self.x = 0
 
 
 class DampParser:
@@ -88,28 +110,29 @@ class DampParser:
 
         return times, currents
 
-    def parse(self, files):
+    def parse(self, filename):
         file = None
 
-        # TODO Opening multiple files
-        for filename in files:
-            with open(filename, "rt") as in_file:
-                file = in_file.read()
+        with open(filename, "rt") as in_file:
+            file = in_file.read()
 
         damp_data = self.re_data.findall(file)
 
         return self.format_data(damp_data)
 
 
-class DampPlot(QWidget):
+class DampPlot(QWidget, Ui_DampPlotWidget):
 
     def __init__(self, times, currents, parent = None):
         super(DampPlot, self).__init__(parent=parent)
-        self.ui = Ui_DampPlotWidget()
-        self.ui.setupUi(self)
+        QWidget.__init__(self, parent=parent)
+        Ui_DampPlotWidget.__init__(self)
+        # self.ui = Ui_DampPlotWidget()
+        # self.ui.setupUi(self)
+        self.setupUi(self)
         self.times = times
         self.currents = currents
-        self.ui.plotWidget.plot(self.times, y=self.currents)
+        self.plotWidget.plot(self.times, y=self.currents)
 
 
 # class Ui_DampPlotWidget(object):
@@ -142,14 +165,13 @@ def main():
     # file = ['df.log']
     # damp_parser = DampParser()
     # times, currents = damp_parser.parse(file)
-    #
     # damp_plot = DampPlot(times, currents)
     # damp_plot.show()
 
     app.exec_()
 
-    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-        QtGui.QApplication.instance().exec_()
+    # if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+    #     QtGui.QApplication.instance().exec_()
 
 
 if __name__== '__main__':

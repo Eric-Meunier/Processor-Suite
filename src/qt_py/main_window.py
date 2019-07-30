@@ -3,9 +3,7 @@ import copy
 
 import PyQt5
 from PyQt5.QtWidgets import *
-from PyQt5 import uic
-from PyQt5 import QtCore
-from PyQt5 import QtGui
+from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtWidgets import QFileDialog, QMainWindow
 import os
 from log import Logger
