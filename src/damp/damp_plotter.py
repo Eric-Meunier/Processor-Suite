@@ -98,6 +98,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             raise
 
     def file_open(self, files):
+        # TODO make window bigger when other files are brought in
         # Only work with lists, so if input isn't a list, makes it one
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
@@ -120,6 +121,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.gridLayout.removeWidget(widget)
                 widget.deleteLater()
             self.open_widgets.clear()
+            self.x = 0
+            self.y = 0
         except Exception as e:
             logging.info(str(e))
             QtGui.QMessageBox.information(None, 'Error', str(e))
@@ -138,6 +141,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 class DampParser:
     def __init__(self):
+        self.re_file = re.compile(
+            r'read\s\d{8}([\r\n].*$)*',re.MULTILINE
+        )
         self.re_data = re.compile(
             r'(?P<Hours>\d{1,2})\s'
             r'(?P<Minutes>\d{1,2})\s'
@@ -157,15 +163,18 @@ class DampParser:
         times = []
         currents = []
 
-        for item in raw_data:
-            # time = datetime.time(int(item[0]), int(item[1]), int(item[2]), int(item[3]))
-            time = float(item[0]) + float(item[1]) / 60 + float(item[2]) / 60 / 60 + float(item[3]) / 60 / 60 / 1000
-            current = item[-1]
+        if raw_data:
+            for item in raw_data:
+                # time = datetime.time(int(item[0]), int(item[1]), int(item[2]), int(item[3]))
+                time = float(item[0]) + float(item[1]) / 60 + float(item[2]) / 60 / 60
+                current = item[-1]
 
-            times.append(time)
-            currents.append(float(int(current)/1000))
+                times.append(time)
+                currents.append(float(int(current)/1000))
 
-        return times, currents
+            return times, currents
+        else:
+            return None
 
     def get_date(self, dates):
         if dates:
@@ -185,10 +194,16 @@ class DampParser:
 
         with open(filename, "rt") as in_file:
             file = in_file.read()
+            split_file = re.split(self.re_file, file)[0]
 
-        self.damp_data = self.format_data(self.re_data.findall(file))
-        times = self.damp_data[0]
-        currents = self.damp_data[1]
+        self.damp_data = self.format_data(self.re_data.findall(split_file))
+
+        if self.damp_data:
+            times = self.damp_data[0]
+            currents = self.damp_data[1]
+        else:
+            times = None
+            currents = None
 
         self.survey_date = self.get_date(set(self.re_date.findall(file)))
 
@@ -218,10 +233,16 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         labelStyle = {'color':'black', 'font-size':'10pt', 'bold':True, 'font-family': 'Nimbus Roman No9 L', 'italic':True}
 
         pw = self.plotWidget
-        pw.plot(self.times, y=self.currents, pen=pg.mkPen('m', width=2))
 
-        min, max = (stats.median(self.currents)-1, stats.median(self.currents)+1)
-        pw.setYRange(min, max)
+        try:
+            pw.plot(self.times, y=self.currents, pen=pg.mkPen('m', width=2))
+            min, max = (stats.median(self.currents) - 1, stats.median(self.currents) + 1)
+            pw.setYRange(min, max)
+        except Exception as e:
+            logging.info(str(e))
+            QtGui.QMessageBox.information(None, 'Error', str(e))
+        finally:
+            pw.plot()
 
         if self.date:
             pw.setTitle('Damping Box Current '+self.date.strftime("%B %d, %Y"))
