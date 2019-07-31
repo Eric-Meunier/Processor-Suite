@@ -42,12 +42,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         openFile.setStatusTip('Open File')
         openFile.triggered.connect(self.open_file_dialog)
 
+        clearFiles = QtGui.QAction("&Clear Files", self)
+        clearFiles.setShortcut("C")
+        clearFiles.setStatusTip('Clear All Open Files')
+        clearFiles.triggered.connect(self.clear_files)
+
         fileMenu = mainMenu.addMenu('&File')
         fileMenu.addAction(openFile)
+        fileMenu.addAction(clearFiles)
 
         self.x = 0
         self.y = 0
         self.damp_parser = DampParser()
+
+        self.open_widgets = []
 
         self.show()
 
@@ -105,7 +113,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 damp_plot = DampPlot(damp_data)
                 self.add_plot(damp_plot)
 
+    def clear_files(self):
+        logging.info('All files deleted')
+        try:
+            for widget in self.open_widgets:
+                self.gridLayout.removeWidget(widget)
+                widget.deleteLater()
+            self.open_widgets.clear()
+        except Exception as e:
+            logging.info(str(e))
+            QtGui.QMessageBox.information(None, 'Error', str(e))
+            raise
+
     def add_plot(self, plot_widget):
+        self.open_widgets.append(plot_widget)
         self.gridLayout.addWidget(plot_widget, self.x, self.y)
         self.x += 1
         old_y = self.y
@@ -116,7 +137,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
 class DampParser:
-
     def __init__(self):
         self.re_data = re.compile(
             r'(?P<Hours>\d{1,2})\s'
@@ -131,7 +151,7 @@ class DampParser:
         )
 
         self.damp_data = None
-        self.survey_dates = None
+        self.survey_date = None
 
     def format_data(self, raw_data):
         times = []
@@ -147,15 +167,18 @@ class DampParser:
 
         return times, currents
 
-    def format_dates(self, dates):
-        formatted_dates = []
+    def get_date(self, dates):
+        if dates:
+            formatted_dates = []
 
-        for date in dates:
-            split_date = date.split('/')
-            date_obj = datetime.date(int(split_date[0]), int(split_date[1]), int(split_date[2]))
-            formatted_dates.append(date_obj)
+            for date in dates:
+                split_date = date.split('/')
+                date_obj = datetime.date(int(split_date[0]), int(split_date[1]), int(split_date[2]))
+                formatted_dates.append(date_obj)
 
-        return formatted_dates
+            return max(formatted_dates)
+        else:
+            return None
 
     def parse(self, filename):
         file = None
@@ -167,9 +190,9 @@ class DampParser:
         times = self.damp_data[0]
         currents = self.damp_data[1]
 
-        self.survey_dates = self.format_dates(set(self.re_date.findall(file)))
+        self.survey_date = self.get_date(set(self.re_date.findall(file)))
 
-        return {'times': times, 'currents': currents, 'dates': self.survey_dates}
+        return {'times': times, 'currents': currents, 'date': self.survey_date}
 
 
 class DampPlot(QWidget, Ui_DampPlotWidget):
@@ -182,7 +205,7 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
 
         self.times = file['times']
         self.currents = file['currents']
-        self.dates = file['dates']
+        self.date = file['date']
         self.grid = grid
 
         self.create_plot()
@@ -200,8 +223,12 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         min, max = (stats.median(self.currents)-1, stats.median(self.currents)+1)
         pw.setYRange(min, max)
 
-        pw.setTitle('Dampening Box Current '+self.format_date())
-        pw.showGrid(x=self.grid, y=self.grid, alpha=0.2)
+        if self.date:
+            pw.setTitle('Damping Box Current '+self.date.strftime("%B %d, %Y"))
+        else:
+            pw.setTitle('Damping Box Current ')
+
+        pw.showGrid(x=self.grid, y=self.grid, alpha=0.15)
 
         pw.showAxis('right', show=True)
         pw.showAxis('top', show=True)
@@ -217,18 +244,6 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
 
         pw.setLabel('left', "Current", units='A', **labelStyle)
         pw.setLabel('bottom', "Time", units='', **labelStyle)
-
-    def format_date(self):
-        min_date, max_date = min(self.dates), max(self.dates)
-        if min_date < max_date:
-            min_date_str = min_date.strftime("%b %d, %Y")
-            max_date_str = max_date.strftime("%b %d, %Y")
-            title_str = min_date_str + ' - ' + max_date_str
-            return title_str
-
-        else:
-            return min_date.strftime("%b %d, %Y")
-
 
 
 # class Ui_DampPlotWidget(object):
