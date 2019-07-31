@@ -146,7 +146,7 @@ class DampParser:
             r'read\s\d{8}([\r\n].*$)*',re.MULTILINE
         )
         self.re_data = re.compile(
-            r'(?P<Hours>\d{1,2})\s'
+            r'(?:\s|^)(?P<Hours>\d{1,2})\s'
             r'(?P<Minutes>\d{1,2})\s'
             r'(?P<Seconds>\d{1,2})\s'
             r'(?P<Num_Samples>\d{1,3})\s'
@@ -163,13 +163,11 @@ class DampParser:
     def format_data(self, raw_data):
         times = []
         currents = []
-        epoch = datetime.time(0,0,0)
 
         if raw_data:
             for item in raw_data:
                 timestamp = datetime.time(int(item[0]), int(item[1]), int(item[2]))
                 ts_seconds = int(datetime.timedelta(hours=timestamp.hour, minutes=timestamp.minute, seconds=timestamp.second).total_seconds())
-                # time = float(item[0]) + float(item[1]) / 60 + float(item[2]) / 60 / 60
                 current = item[-1]
 
                 times.append(ts_seconds)
@@ -238,10 +236,10 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
 
         labelStyle = {'color':'black', 'font-size':'10pt', 'bold':True, 'font-family': 'Nimbus Roman No9 L', 'italic':True}
 
-        self.pw = self.plotWidget
+        # self.pw = self.plotWidget
         # self.pw.axisItems={'bottom': self.__axisTime}
         self.pw = pg.PlotWidget(axisItems={'bottom': self.__axisTime})
-        self.gridLayout_2.addWidget(self.pw)
+        self.gridLayout.addWidget(self.pw)
 
         try:
             self.pw.plot(x=self.times, y=self.currents, pen=pg.mkPen('m', width=2))
@@ -297,13 +295,13 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
 
 def main():
     app = QtGui.QApplication(sys.argv)
-    # mw = MainWindow()
+    mw = MainWindow()
 
-    file = 'df.log'
-    damp_parser = DampParser()
-    damp_data = damp_parser.parse(file)
-    damp_plot = DampPlot(damp_data)
-    damp_plot.show()
+    # file = 'df.log'
+    # damp_parser = DampParser()
+    # damp_data = damp_parser.parse(file)
+    # damp_plot = DampPlot(damp_data)
+    # damp_plot.show()
 
     app.exec_()
 
