@@ -1,13 +1,14 @@
 import re
 import os
 import sys
+import time
 import datetime
 import statistics as stats
 import pyqtgraph as pg
-from time_axis import TimeAxisItem, timestamp
+from time_axis import AxisTime
 # from pyqtgraph.Qt import QtGui, QtCore
 import logging
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication)
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout)
 from PyQt5 import (QtCore, QtGui, QtWidgets, uic)
 
 pg.setConfigOption('background', 'w')
@@ -26,13 +27,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super().__init__()
         QMainWindow.__init__(self)
         Ui_MainWindow.__init__(self)
-
         self.setupUi(self)
+
         self.statusBar().showMessage('Ready')
         self.setWindowTitle("Damping Box Current Plot")
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/icons/crone_logo.ico")))
-        self.move(-1000, 300)
+        self.setGeometry(-1000, 300, 800, 600)
         self.setAcceptDrops(True)
 
         mainMenu = self.menuBar()
@@ -112,10 +113,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 raise
             else:
                 damp_plot = DampPlot(damp_data)
+                self.open_widgets.append(damp_plot)
+
                 self.add_plot(damp_plot)
 
     def clear_files(self):
-        logging.info('All files deleted')
         try:
             for widget in self.open_widgets:
                 self.gridLayout.removeWidget(widget)
@@ -129,7 +131,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             raise
 
     def add_plot(self, plot_widget):
-        self.open_widgets.append(plot_widget)
         self.gridLayout.addWidget(plot_widget, self.x, self.y)
         self.x += 1
         old_y = self.y
@@ -162,14 +163,16 @@ class DampParser:
     def format_data(self, raw_data):
         times = []
         currents = []
+        epoch = datetime.time(0,0,0)
 
         if raw_data:
             for item in raw_data:
-                # time = datetime.time(int(item[0]), int(item[1]), int(item[2]), int(item[3]))
-                time = float(item[0]) + float(item[1]) / 60 + float(item[2]) / 60 / 60
+                timestamp = datetime.time(int(item[0]), int(item[1]), int(item[2]))
+                ts_seconds = int(datetime.timedelta(hours=timestamp.hour, minutes=timestamp.minute, seconds=timestamp.second).total_seconds())
+                # time = float(item[0]) + float(item[1]) / 60 + float(item[2]) / 60 / 60
                 current = item[-1]
 
-                times.append(time)
+                times.append(ts_seconds)
                 currents.append(float(int(current)/1000))
 
             return times, currents
@@ -218,12 +221,15 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         Ui_DampPlotWidget.__init__(self)
         self.setupUi(self)
 
+        self.pw = None
         self.times = file['times']
         self.currents = file['currents']
         self.date = file['date']
         self.grid = grid
+        self.__axisTime = AxisTime(orientation='bottom')
 
         self.create_plot()
+
 
     def create_plot(self):
         tick_label_font = QtGui.QFont()
@@ -232,39 +238,42 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
 
         labelStyle = {'color':'black', 'font-size':'10pt', 'bold':True, 'font-family': 'Nimbus Roman No9 L', 'italic':True}
 
-        pw = self.plotWidget
+        self.pw = self.plotWidget
+        # self.pw.axisItems={'bottom': self.__axisTime}
+        self.pw = pg.PlotWidget(axisItems={'bottom': self.__axisTime})
+        self.gridLayout_2.addWidget(self.pw)
 
         try:
-            pw.plot(self.times, y=self.currents, pen=pg.mkPen('m', width=2))
+            self.pw.plot(x=self.times, y=self.currents, pen=pg.mkPen('m', width=2))
             min, max = (stats.median(self.currents) - 1, stats.median(self.currents) + 1)
-            pw.setYRange(min, max)
+            self.pw.setYRange(min, max)
         except Exception as e:
             logging.info(str(e))
             QtGui.QMessageBox.information(None, 'Error', str(e))
         finally:
-            pw.plot()
+            self.pw.plot()
 
         if self.date:
-            pw.setTitle('Damping Box Current '+self.date.strftime("%B %d, %Y"))
+            self.pw.setTitle('Damping Box Current '+self.date.strftime("%B %d, %Y"))
         else:
-            pw.setTitle('Damping Box Current ')
+            self.pw.setTitle('Damping Box Current ')
 
-        pw.showGrid(x=self.grid, y=self.grid, alpha=0.15)
+        self.pw.showGrid(x=self.grid, y=self.grid, alpha=0.15)
 
-        pw.showAxis('right', show=True)
-        pw.showAxis('top', show=True)
-        pw.showLabel('right', show=False)
-        pw.showLabel('top', show=False)
+        self.pw.showAxis('right', show=True)
+        self.pw.showAxis('top', show=True)
+        self.pw.showLabel('right', show=False)
+        self.pw.showLabel('top', show=False)
 
-        pw.getAxis("bottom").tickFont = tick_label_font
-        pw.getAxis("left").tickFont = tick_label_font
-        pw.getAxis("bottom").setStyle(tickTextOffset=10)
-        pw.getAxis("left").setStyle(tickTextOffset=10)
-        pw.getAxis("right").setStyle(showValues=False)
-        pw.getAxis("top").setStyle(showValues=False)
+        self.pw.getAxis("bottom").tickFont = tick_label_font
+        self.pw.getAxis("left").tickFont = tick_label_font
+        self.pw.getAxis("bottom").setStyle(tickTextOffset=10)
+        self.pw.getAxis("left").setStyle(tickTextOffset=10)
+        self.pw.getAxis("right").setStyle(showValues=False)
+        self.pw.getAxis("top").setStyle(showValues=False)
 
-        pw.setLabel('left', "Current", units='A', **labelStyle)
-        pw.setLabel('bottom', "Time", units='', **labelStyle)
+        self.pw.setLabel('left', "Current", units='A', **labelStyle)
+        self.pw.setLabel('bottom', "Time", units='', **labelStyle)
 
 
 # class Ui_DampPlotWidget(object):
@@ -288,13 +297,13 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
 
 def main():
     app = QtGui.QApplication(sys.argv)
-    mw = MainWindow()
+    # mw = MainWindow()
 
-    # file = 'df.log'
-    #     # damp_parser = DampParser()
-    #     # damp_data = damp_parser.parse(file)
-    #     # damp_plot = DampPlot(damp_data)
-    #     # damp_plot.show()
+    file = 'df.log'
+    damp_parser = DampParser()
+    damp_data = damp_parser.parse(file)
+    damp_plot = DampPlot(damp_data)
+    damp_plot.show()
 
     app.exec_()
 
