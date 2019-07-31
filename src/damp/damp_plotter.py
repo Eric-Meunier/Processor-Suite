@@ -2,6 +2,7 @@ import re
 import os
 import sys
 import datetime
+import statistics as stats
 import pyqtgraph as pg
 from time_axis import TimeAxisItem, timestamp
 # from pyqtgraph.Qt import QtGui, QtCore
@@ -25,15 +26,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super().__init__()
         QMainWindow.__init__(self)
         Ui_MainWindow.__init__(self)
+
         self.setupUi(self)
         self.statusBar().showMessage('Ready')
         self.setWindowTitle("Damping Box Current Plot")
-        self.move(-1000,300)
+        self.setWindowIcon(
+            QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/icons/crone_logo.ico")))
+        self.move(-1000, 300)
+        self.setAcceptDrops(True)
+
+        mainMenu = self.menuBar()
+
+        openFile = QtGui.QAction("&Open File", self)
+        openFile.setShortcut("Ctrl+O")
+        openFile.setStatusTip('Open File')
+        openFile.triggered.connect(self.open_file_dialog)
+
+        fileMenu = mainMenu.addMenu('&File')
+        fileMenu.addAction(openFile)
+
         self.x = 0
         self.y = 0
         self.damp_parser = DampParser()
-        # self.init_ui()
-        self.setAcceptDrops(True)
 
         self.show()
 
@@ -63,23 +77,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def dropEvent(self, e):
         logging.info("File dropped into main window")
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
-        self.open_files(urls)
+        self.file_open(urls)
 
-    def open_files(self, files):
+    def open_file_dialog(self):
+        try:
+            file = QtGui.QFileDialog.getOpenFileName(self, 'Open File')
+            # file = open(name, 'r')
+            self.file_open(file[0])
+        except Exception as e:
+            logging.warning(str(e))
+            QtGui.QMessageBox.information(None, 'Error', str(e))
+            raise
+
+    def file_open(self, files):
         # Only work with lists, so if input isn't a list, makes it one
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
 
         for file in files:
-            times, currents = self.damp_parser.parse(file)
-            damp_plot = DampPlot(times, currents)
-            self.add_plot(damp_plot)
+            try:
+                damp_data = self.damp_parser.parse(file)
+            except Exception as e:
+                logging.warning(str(e))
+                QtGui.QMessageBox.information(None, 'Error', str(e))
+                raise
+            else:
+                damp_plot = DampPlot(damp_data)
+                self.add_plot(damp_plot)
 
     def add_plot(self, plot_widget):
         self.gridLayout.addWidget(plot_widget, self.x, self.y)
         self.x += 1
         old_y = self.y
-        self.y = int((self.x)/3)+old_y
+        self.y = int(self.x / 3) + old_y
 
         if old_y != self.y:
             self.x = 0
@@ -89,12 +119,19 @@ class DampParser:
 
     def __init__(self):
         self.re_data = re.compile(
-            r'^(?P<Hours>\d\d?)\s'
-            r'(?P<Minutes>\d\d?)\s'
-            r'(?P<Seconds>\d\d?)\s'
-            r'(?P<Num_Samples>\d\d?)\s'
+            r'(?P<Hours>\d{1,2})\s'
+            r'(?P<Minutes>\d{1,2})\s'
+            r'(?P<Seconds>\d{1,2})\s'
+            r'(?P<Num_Samples>\d{1,3})\s'
             r'(?P<Avg_Current>\d+)\s',
-          re.MULTILINE)
+            re.MULTILINE)
+
+        self.re_date = re.compile(
+            r'\d{4}\/\d{2}\/\d{2}'
+        )
+
+        self.damp_data = None
+        self.survey_dates = None
 
     def format_data(self, raw_data):
         times = []
@@ -102,13 +139,23 @@ class DampParser:
 
         for item in raw_data:
             # time = datetime.time(int(item[0]), int(item[1]), int(item[2]), int(item[3]))
-            time = float(item[0]) + float(item[1])/60 + float(item[2])/60/60 + float(item[3])/60/60/1000
+            time = float(item[0]) + float(item[1]) / 60 + float(item[2]) / 60 / 60 + float(item[3]) / 60 / 60 / 1000
             current = item[-1]
 
             times.append(time)
-            currents.append(int(current))
+            currents.append(float(int(current)/1000))
 
         return times, currents
+
+    def format_dates(self, dates):
+        formatted_dates = []
+
+        for date in dates:
+            split_date = date.split('/')
+            date_obj = datetime.date(int(split_date[0]), int(split_date[1]), int(split_date[2]))
+            formatted_dates.append(date_obj)
+
+        return formatted_dates
 
     def parse(self, filename):
         file = None
@@ -116,23 +163,72 @@ class DampParser:
         with open(filename, "rt") as in_file:
             file = in_file.read()
 
-        damp_data = self.re_data.findall(file)
+        self.damp_data = self.format_data(self.re_data.findall(file))
+        times = self.damp_data[0]
+        currents = self.damp_data[1]
 
-        return self.format_data(damp_data)
+        self.survey_dates = self.format_dates(set(self.re_date.findall(file)))
+
+        return {'times': times, 'currents': currents, 'dates': self.survey_dates}
 
 
 class DampPlot(QWidget, Ui_DampPlotWidget):
 
-    def __init__(self, times, currents, parent = None):
+    def __init__(self, file, grid=True, parent=None):
         super(DampPlot, self).__init__(parent=parent)
         QWidget.__init__(self, parent=parent)
         Ui_DampPlotWidget.__init__(self)
-        # self.ui = Ui_DampPlotWidget()
-        # self.ui.setupUi(self)
         self.setupUi(self)
-        self.times = times
-        self.currents = currents
-        self.plotWidget.plot(self.times, y=self.currents)
+
+        self.times = file['times']
+        self.currents = file['currents']
+        self.dates = file['dates']
+        self.grid = grid
+
+        self.create_plot()
+
+    def create_plot(self):
+        tick_label_font = QtGui.QFont()
+        tick_label_font.setPixelSize(11)
+        tick_label_font.setBold(False)
+
+        labelStyle = {'color':'black', 'font-size':'10pt', 'bold':True, 'font-family': 'Nimbus Roman No9 L', 'italic':True}
+
+        pw = self.plotWidget
+        pw.plot(self.times, y=self.currents, pen=pg.mkPen('m', width=2))
+
+        min, max = (stats.median(self.currents)-1, stats.median(self.currents)+1)
+        pw.setYRange(min, max)
+
+        pw.setTitle('Dampening Box Current '+self.format_date())
+        pw.showGrid(x=self.grid, y=self.grid, alpha=0.2)
+
+        pw.showAxis('right', show=True)
+        pw.showAxis('top', show=True)
+        pw.showLabel('right', show=False)
+        pw.showLabel('top', show=False)
+
+        pw.getAxis("bottom").tickFont = tick_label_font
+        pw.getAxis("left").tickFont = tick_label_font
+        pw.getAxis("bottom").setStyle(tickTextOffset=10)
+        pw.getAxis("left").setStyle(tickTextOffset=10)
+        pw.getAxis("right").setStyle(showValues=False)
+        pw.getAxis("top").setStyle(showValues=False)
+
+        pw.setLabel('left', "Current", units='A', **labelStyle)
+        pw.setLabel('bottom', "Time", units='', **labelStyle)
+
+    def format_date(self):
+        min_date, max_date = min(self.dates), max(self.dates)
+        if min_date < max_date:
+            min_date_str = min_date.strftime("%b %d, %Y")
+            max_date_str = max_date.strftime("%b %d, %Y")
+            title_str = min_date_str + ' - ' + max_date_str
+            return title_str
+
+        else:
+            return min_date.strftime("%b %d, %Y")
+
 
 
 # class Ui_DampPlotWidget(object):
@@ -158,15 +254,11 @@ def main():
     app = QtGui.QApplication(sys.argv)
     mw = MainWindow()
 
-    # cw = QtGui.QWidget()
-    # mw.setCentralWidget(cw)
-    # layout = QtGui.QVBoxLayout(cw)
-
-    # file = ['df.log']
-    # damp_parser = DampParser()
-    # times, currents = damp_parser.parse(file)
-    # damp_plot = DampPlot(times, currents)
-    # damp_plot.show()
+    # file = 'df.log'
+    #     # damp_parser = DampParser()
+    #     # damp_data = damp_parser.parse(file)
+    #     # damp_plot = DampPlot(damp_data)
+    #     # damp_plot.show()
 
     app.exec_()
 
@@ -174,5 +266,5 @@ def main():
     #     QtGui.QApplication.instance().exec_()
 
 
-if __name__== '__main__':
+if __name__ == '__main__':
     main()
