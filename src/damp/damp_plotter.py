@@ -40,17 +40,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         openFile = QtGui.QAction("&Open File", self)
         openFile.setShortcut("Ctrl+O")
-        openFile.setStatusTip('Open File')
+        openFile.setStatusTip('Open file')
         openFile.triggered.connect(self.open_file_dialog)
 
         clearFiles = QtGui.QAction("&Clear Files", self)
         clearFiles.setShortcut("C")
-        clearFiles.setStatusTip('Clear All Open Files')
+        clearFiles.setStatusTip('Clear all open files')
         clearFiles.triggered.connect(self.clear_files)
+
+        resetRange = QtGui.QAction("&Reset Ranges", self)
+        resetRange.setShortcut(" ")
+        resetRange.setStatusTip("Reset the X and Y axes ranges of all plots")
+        resetRange.triggered.connect(self.reset_range)
 
         fileMenu = mainMenu.addMenu('&File')
         fileMenu.addAction(openFile)
         fileMenu.addAction(clearFiles)
+        fileMenu.addAction(resetRange)
+
         # TODO re-set Y range
         # TODO add height with added plots
         self.x = 0
@@ -137,6 +144,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             logging.info(str(e))
             QtGui.QMessageBox.information(None, 'Error', str(e))
             raise
+
+    def reset_range(self):
+        for widget in self.open_widgets:
+            min_cur, max_cur = (stats.median(widget.currents) - 1, stats.median(widget.currents) + 1)
+            widget.pw.setYRange(min_cur, max_cur)
+            widget.pw.setXRange(min(widget.times), max(widget.times))
 
     def add_plot(self, plot_widget):
         self.gridLayout.addWidget(plot_widget, self.x, self.y)
@@ -240,6 +253,9 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         self.__axisTime = AxisTime(orientation='bottom')
         self.file = file
         self.grid = grid
+        self.times = []
+        self.currents = []
+        self.date = None
 
         self.create_plot()
 
