@@ -5,6 +5,8 @@ import time
 import datetime
 import statistics as stats
 import pyqtgraph as pg
+import pyqtgraph.exporters
+from pyqtgraph.GraphicsScene import exportDialog
 from time_axis import AxisTime
 # from pyqtgraph.Qt import QtGui, QtCore
 import logging
@@ -29,34 +31,46 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
 
+        self.dialog = QtGui.QFileDialog()
         self.statusBar().showMessage('Ready')
         self.setWindowTitle("Damping Box Current Plot")
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/icons/crone_logo.ico")))
         self.setGeometry(-1000, 300, 800, 600)
+        self.win_width = self.frameGeometry().width()
+        self.win_height = self.frameGeometry().height()
         self.setAcceptDrops(True)
+        self.filename = None
 
-        mainMenu = self.menuBar()
+        self.mainMenu = self.menuBar()
 
-        openFile = QtGui.QAction("&Open File", self)
-        openFile.setShortcut("Ctrl+O")
-        openFile.setStatusTip('Open file')
-        openFile.triggered.connect(self.open_file_dialog)
+        self.openFile = QtGui.QAction("&Open File", self)
+        self.openFile.setShortcut("Ctrl+O")
+        self.openFile.setStatusTip('Open file')
+        self.openFile.triggered.connect(self.open_file_dialog)
 
-        clearFiles = QtGui.QAction("&Clear Files", self)
-        clearFiles.setShortcut("C")
-        clearFiles.setStatusTip('Clear all open files')
-        clearFiles.triggered.connect(self.clear_files)
+        self.clearFiles = QtGui.QAction("&Clear Files", self)
+        self.clearFiles.setShortcut("C")
+        self.clearFiles.setStatusTip('Clear all open files')
+        self.clearFiles.triggered.connect(self.clear_files)
 
-        resetRange = QtGui.QAction("&Reset Ranges", self)
-        resetRange.setShortcut(" ")
-        resetRange.setStatusTip("Reset the X and Y axes ranges of all plots")
-        resetRange.triggered.connect(self.reset_range)
+        self.resetRange = QtGui.QAction("&Reset Ranges", self)
+        self.resetRange.setShortcut(" ")
+        self.resetRange.setStatusTip("Reset the X and Y axes ranges of all plots")
+        self.resetRange.triggered.connect(self.reset_range)
 
-        fileMenu = mainMenu.addMenu('&File')
-        fileMenu.addAction(openFile)
-        fileMenu.addAction(clearFiles)
-        fileMenu.addAction(resetRange)
+        self.savePlots = QtGui.QAction("&Save Plots", self)
+        self.savePlots.setShortcut("Ctrl+S")
+        self.savePlots.setStatusTip("Save all plots as PNG")
+        self.savePlots.triggered.connect(self.save_plots)
+
+        self.fileMenu = self.mainMenu.addMenu('&File')
+        self.fileMenu.addAction(self.openFile)
+        self.fileMenu.addAction(self.clearFiles)
+        self.fileMenu.addAction(self.resetRange)
+        self.fileMenu.addAction(self.savePlots)
+
+        self.shortcutMenu = self.mainMenu.addMenu("&Shortcuts")
 
         # TODO re-set Y range
         # TODO add height with added plots
@@ -151,6 +165,38 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             widget.pw.setYRange(min_cur, max_cur)
             widget.pw.setXRange(min(widget.times), max(widget.times))
 
+    def save_plots(self):
+        default_path = self.open_widgets[-1].folderpath
+        min_date = min([widget.date for widget in self.open_widgets])
+        min_str_date = min_date.strftime("%B %d, %Y") if min_date else None
+        max_date = max([widget.date for widget in self.open_widgets])
+        max_str_date = max_date.strftime("%B %d, %Y") if max_date else None
+
+        if min_str_date:
+            if min_str_date != max_str_date:
+                file_name = '/'+min_str_date + '-'+ max_str_date + ' Current Logs.png'
+            else:
+                file_name = '/' + min_str_date + ' Current Logs.png'
+        else:
+            file_name = '/Current Logs.png'
+
+        self.mainMenu.hide()
+        self.statusBar().hide()
+
+        self.dialog.setFileMode(QtGui.QFileDialog.Directory)
+        self.dialog.setDirectory(default_path)
+        # file_dialog.setOption(QFileDialog.ShowDirsOnly)
+        file_dir = QtGui.QFileDialog.getExistingDirectory(self, '', default_path)
+
+        if file_dir:
+            self.grab().save(file_dir + file_name)
+        else:
+            logging.info("No directory chosen, aborted save")
+            pass
+
+        self.mainMenu.show()
+        self.statusBar().show()
+
     def add_plot(self, plot_widget):
         self.gridLayout.addWidget(plot_widget, self.x, self.y)
         self.x += 1
@@ -213,32 +259,36 @@ class DampParser:
         else:
             return None
 
-    def parse(self, filename):
+    def parse(self, filepath):
         file = None
-        self.damp_data = []
-        self.survey_date = None
+        damp_data = []
+        survey_date = None
+        filename = filepath.split('/')[-1].split('.')[0]
+        folderpath = '/'.join(filepath.split('/')[0:-1])
 
-        with open(filename, "rt") as in_file:
+        with open(filepath, "rt") as in_file:
             file = in_file.read()
             file_no_ramp = re.split(self.re_split_ramp, file)[0]
             split_file = re.split(self.re_split_file, file_no_ramp)
 
         for section in split_file:
-            damp_data = self.format_data(self.re_data.findall(section))
-            if damp_data is not None:
-                times = damp_data[0]
-                currents = damp_data[1]
-                self.damp_data.append({'times': times, 'currents': currents})
+            data = self.format_data(self.re_data.findall(section))
+            if data is not None:
+                times = data[0]
+                currents = data[1]
+                damp_data.append({'times': times, 'currents': currents})
             # else:
             #     times = None
             #     currents = None
 
-        self.survey_date = self.get_date(set(self.re_date.findall(file)))
+        survey_date = self.get_date(set(self.re_date.findall(file)))
 
-        for item in self.damp_data:
-            item['date'] = self.survey_date
+        for item in damp_data:
+            item['date'] = survey_date
+            item['filename'] = filename
+            item['folderpath'] = folderpath
 
-        return self.damp_data
+        return damp_data
 
 
 class DampPlot(QWidget, Ui_DampPlotWidget):
@@ -252,6 +302,8 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         self.pw = None
         self.__axisTime = AxisTime(orientation='bottom')
         self.file = file
+        self.filename = file[0]['filename']
+        self.folderpath = file[0]['folderpath']
         self.grid = grid
         self.times = []
         self.currents = []
@@ -306,25 +358,6 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
                 self.pw.setTitle('Damping Box Current ' + self.date.strftime("%B %d, %Y"))
             else:
                 self.pw.setTitle('Damping Box Current ')
-
-
-# class Ui_DampPlotWidget(object):
-#     def setupUi(self, CustomWidget):
-#         CustomWidget.setObjectName("CustomWidget")
-#         CustomWidget.resize(800, 600)
-#         self.gridLayout = QtWidgets.QGridLayout(CustomWidget)
-#         self.gridLayout.setObjectName("gridLayout")
-#         self.plotWidget = pg.PlotWidget(CustomWidget)
-#         self.plotWidget.setObjectName("plotWidget")
-#         self.gridLayout.addWidget(self.plotWidget, 0, 0, 1, 1)
-#
-#         self.retranslateUi(CustomWidget)
-#         QtCore.QMetaObject.connectSlotsByName(CustomWidget)
-#
-#     def retranslateUi(self, CustomWidget):
-#         _translate = QtCore.QCoreApplication.translate
-#         CustomWidget.setWindowTitle(_translate("CustomWidget", "Damping Box Plot"))
-#         # self.checkBox.setText(_translate("CustomWidget", "Mouse Enabled"))
 
 
 def main():
