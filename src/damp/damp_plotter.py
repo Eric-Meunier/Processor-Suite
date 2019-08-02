@@ -41,8 +41,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.win_height = self.frameGeometry().height()
         self.setAcceptDrops(True)
         self.filename = None
-
+        self.show_coords = False
+        self.show_grids = True
+        # self.setMouseTracking(True)
         self.mainMenu = self.menuBar()
+        # self.shortcutList = QtGui.QListWidget()
 
         self.openFile = QtGui.QAction("&Open File", self)
         self.openFile.setShortcut("Ctrl+O")
@@ -64,13 +67,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.savePlots.setStatusTip("Save all plots as PNG")
         self.savePlots.triggered.connect(self.save_plots)
 
+        self.showCoords = QtGui.QAction("%Show Mouse Values", self)
+        self.showCoords.setShortcut("V")
+        self.showCoords.setStatusTip("Show the plots values where the mouse is positioned")
+        self.showCoords.triggered.connect(self.toggle_coords)
+
+        self.showGrids = QtGui.QAction("%Show Grid Lines", self)
+        self.showGrids.setShortcut("G")
+        self.showGrids.setStatusTip("Show grid lines on the plots")
+        self.showGrids.triggered.connect(self.toggle_grid)
+
         self.fileMenu = self.mainMenu.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
+        self.fileMenu.addAction(self.savePlots)
         self.fileMenu.addAction(self.clearFiles)
         self.fileMenu.addAction(self.resetRange)
-        self.fileMenu.addAction(self.savePlots)
+        self.addAction(self.showCoords)
+        self.addAction(self.showGrids)
 
-        self.shortcutMenu = self.mainMenu.addMenu("&Shortcuts")
+        # self.viewShortcuts = QtGui.QAction("&Keyboard Shortcuts", self)
+        # self.viewShortcuts.setStatusTip("View keyboard shortcuts")
+        # self.viewShortcuts.triggered.connect(self.view_shortcuts)
+
+        # self.shortcutMenu = self.mainMenu.addMenu("&Keyboard Shortcuts")
+        # self.shortcutMenu.addAction(self.viewShortcuts)
+
+        # self.shortcutList.addItem('Clear All Plots: C')
+        # self.shortcutList.addItem('Reset X and Y Ranges: Space')
 
         # TODO re-set Y range
         # TODO add height with added plots
@@ -134,13 +157,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 QtGui.QMessageBox.information(None, 'Error', str(e))
                 raise
             else:
-                damp_plot = DampPlot(damp_data)
+                damp_plot = DampPlot(damp_data, grid=self.show_grids, show_coords=self.show_coords)
                 self.open_widgets.append(damp_plot)
 
                 mw_height, mw_width = self.frameGeometry().height(), self.frameGeometry().width()
                 dp_height, dp_width = damp_plot.frameGeometry().height(), damp_plot.frameGeometry().width()
-                if mw_height < dp_height*len(self.open_widgets):
-                    self.resize(mw_width, mw_height+dp_height)
+                if mw_height < dp_height * len(self.open_widgets):
+                    self.resize(mw_width, mw_height + dp_height)
                     # QDesktopWidget().availableGemetry()
                     # self.move(self.pos().x(), self.pos().y()-dp_height)
 
@@ -167,16 +190,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def save_plots(self):
         default_path = self.open_widgets[-1].folderpath
-        min_date = min([widget.date for widget in self.open_widgets])
-        min_str_date = min_date.strftime("%B %d, %Y") if min_date else None
-        max_date = max([widget.date for widget in self.open_widgets])
-        max_str_date = max_date.strftime("%B %d, %Y") if max_date else None
+        dates = [widget.date for widget in self.open_widgets if widget.date is not None]
 
-        if min_str_date:
+        if dates:
+            min_date, max_date = min(dates), max(dates)
+            min_str_date = min_date.strftime("%B %d, %Y") if min_date else None
+            max_str_date = max_date.strftime("%B %d, %Y") if max_date else None
+
             if min_str_date != max_str_date:
-                file_name = '/'+min_str_date + '-'+ max_str_date + ' Current Logs.png'
+                file_name = '/' + min_str_date + '-' + max_str_date + ' Current Logs.png'
             else:
-                file_name = '/' + min_str_date + ' Current Logs.png'
+                file_name = '/' + min_str_date + ' Current Logs.png' if min_str_date else '/' + max_str_date + ' Current Logs.png'
         else:
             file_name = '/Current Logs.png'
 
@@ -195,7 +219,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pass
 
         self.mainMenu.show()
-        self.statusBar().show()
+        self.statusBar().showMessage('Ready')
+
+    def toggle_coords(self):
+        # Toggle displaying the plot values at the location of the mouse
+        self.show_coords = not self.show_coords
+        if len(self.open_widgets)>0:
+            for widget in self.open_widgets:
+                widget.show_coords = self.show_coords
+                if self.show_coords:
+                    widget.text.setText('')
+                    widget.text.show()
+                else:
+                    widget.text.hide()
+
+    def toggle_grid(self):
+        self.show_grids = not self.show_grids
+        if len(self.open_widgets)>0:
+            for widget in self.open_widgets:
+                widget.pw.showGrid(x=self.show_grids, y=self.show_grids)
 
     def add_plot(self, plot_widget):
         self.gridLayout.addWidget(plot_widget, self.x, self.y)
@@ -210,7 +252,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 class DampParser:
     def __init__(self):
         self.re_split_ramp = re.compile(
-            r'read\s+\d{8}([\r\n].*$)*',re.MULTILINE
+            r'read\s+\d{8}([\r\n].*$)*', re.MULTILINE
         )
 
         self.re_data = re.compile(
@@ -236,11 +278,12 @@ class DampParser:
         if raw_data:
             for item in raw_data:
                 timestamp = datetime.time(int(item[0]), int(item[1]), int(item[2]))
-                ts_seconds = int(datetime.timedelta(hours=timestamp.hour, minutes=timestamp.minute, seconds=timestamp.second).total_seconds())
+                ts_seconds = int(datetime.timedelta(hours=timestamp.hour, minutes=timestamp.minute,
+                                                    seconds=timestamp.second).total_seconds())
                 current = item[-1]
 
                 times.append(ts_seconds)
-                currents.append(float(int(current)/1000))
+                currents.append(float(int(current) / 1000))
 
             return times, currents
         else:
@@ -293,7 +336,7 @@ class DampParser:
 
 class DampPlot(QWidget, Ui_DampPlotWidget):
 
-    def __init__(self, file, grid=True, parent=None):
+    def __init__(self, file, show_coords=False, grid=True, parent=None):
         super(DampPlot, self).__init__(parent=parent)
         QWidget.__init__(self, parent=parent)
         Ui_DampPlotWidget.__init__(self)
@@ -308,15 +351,25 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         self.times = []
         self.currents = []
         self.date = None
+        self.mouse_x_txt = 0
+        self.mouse_y_txt = 0
+        self.text = pg.TextItem(text='', color=(0,0,0), border='w',fill=(255,255,255), anchor=(1, 1.1))
+        # self.text.hide()
+        self.setMouseTracking(True)
+        self.show_coords = show_coords
 
         self.create_plot()
+
+    def leaveEvent(self, e):
+        self.text.hide()
 
     def create_plot(self):
         tick_label_font = QtGui.QFont()
         tick_label_font.setPixelSize(11)
         tick_label_font.setBold(False)
 
-        labelStyle = {'color':'black', 'font-size':'10pt', 'bold':True, 'font-family': 'Nimbus Roman No9 L', 'italic':True}
+        labelStyle = {'color': 'black', 'font-size': '10pt', 'bold': True, 'font-family': 'Nimbus Roman No9 L',
+                      'italic': True}
 
         self.pw = pg.PlotWidget(axisItems={'bottom': self.__axisTime})
         self.gridLayout.addWidget(self.pw)
@@ -336,7 +389,7 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         self.pw.getAxis("top").setStyle(showValues=False)
 
         self.pw.setLabel('left', "Current", units='A', **labelStyle)
-        self.pw.setLabel('bottom', "Time", units='', **labelStyle)
+        # self.pw.setLabel('bottom', "Time", units='', **labelStyle)
 
         # Plotting section
         for i, file in enumerate(self.file):
@@ -345,7 +398,7 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
             self.date = file['date']
 
             try:
-                self.pw.plot(x=self.times, y=self.currents, pen=pg.mkPen(color=pg.intColor(i+9), width=2))
+                self.pw.plot(x=self.times, y=self.currents, pen=pg.mkPen(color=pg.intColor(i + 9), width=2))
                 min, max = (stats.median(self.currents) - 1, stats.median(self.currents) + 1)
                 self.pw.setYRange(min, max)
             except Exception as e:
@@ -353,11 +406,27 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
                 QtGui.QMessageBox.information(None, 'Error', str(e))
             finally:
                 self.pw.plot()
+                self.pw.disableAutoRange()
+                self.pw.addItem(self.text)
 
             if self.date:
                 self.pw.setTitle('Damping Box Current ' + self.date.strftime("%B %d, %Y"))
             else:
                 self.pw.setTitle('Damping Box Current ')
+
+        def mouseMoved(e):
+            # Retrieves the coordinates of the mouse coordinates of the event
+            self.mouse_y_txt = str(round(self.pw.plotItem.vb.mapSceneToView(e).y(),4))
+            self.mouse_x_txt = str(datetime.timedelta(seconds=self.pw.plotItem.vb.mapSceneToView(e).x())).split('.')[0]
+            if self.show_coords:
+                self.text.show()
+                self.text.setText(text='Time: '+str(self.mouse_x_txt) + '\nCurrent: ' + str(self.mouse_y_txt))
+                self.text.setPos(self.pw.plotItem.vb.mapSceneToView(e))
+            else:
+                pass
+
+        # Connects the action of moving the mouse to mouseMoved function
+        self.pw.scene().sigMouseMoved.connect(mouseMoved)
 
 
 def main():
