@@ -1,14 +1,10 @@
 import re
 import os
 import sys
-import time
 import datetime
 import statistics as stats
 import pyqtgraph as pg
-import pyqtgraph.exporters
-from pyqtgraph.GraphicsScene import exportDialog
 from time_axis import AxisTime
-# from pyqtgraph.Qt import QtGui, QtCore
 import logging
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget)
 from PyQt5 import (QtCore, QtGui, QtWidgets, uic)
@@ -18,8 +14,11 @@ pg.setConfigOption('foreground', 'k')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 # Load Qt ui file into a class
-MW_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "./main_window.ui")
-DP_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "./damp_plot_widget.ui")
+# Had to be hard coded due to problems creating the .exe
+# MW_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "main_window.ui")
+MW_qtCreatorFile = r'C:\Users\Eric\PycharmProjects\Crone\src\damp\main_window.ui'
+# DP_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "damp_plot_widget.ui")
+DP_qtCreatorFile = r'C:\Users\Eric\PycharmProjects\Crone\src\damp\damp_plot_widget.ui'
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_qtCreatorFile)
 Ui_DampPlotWidget, QtBaseClass = uic.loadUiType(DP_qtCreatorFile)
 
@@ -36,7 +35,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle("Damping Box Current Plot")
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/icons/crone_logo.ico")))
-        self.setGeometry(-1000, 300, 800, 600)
+        # TODO Program where the window opens
+        self.setGeometry(500, 300, 800, 600)
         self.win_width = self.frameGeometry().width()
         self.win_height = self.frameGeometry().height()
         self.setAcceptDrops(True)
@@ -67,12 +67,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.savePlots.setStatusTip("Save all plots as PNG")
         self.savePlots.triggered.connect(self.save_plots)
 
-        self.showCoords = QtGui.QAction("%Show Mouse Values", self)
+        self.showCoords = QtGui.QAction("&Show Mouse Values", self)
         self.showCoords.setShortcut("V")
         self.showCoords.setStatusTip("Show the plots values where the mouse is positioned")
         self.showCoords.triggered.connect(self.toggle_coords)
 
-        self.showGrids = QtGui.QAction("%Show Grid Lines", self)
+        self.showGrids = QtGui.QAction("&Show Grid Lines", self)
         self.showGrids.setShortcut("G")
         self.showGrids.setStatusTip("Show grid lines on the plots")
         self.showGrids.triggered.connect(self.toggle_grid)
@@ -80,10 +80,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.fileMenu = self.mainMenu.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.savePlots)
-        self.fileMenu.addAction(self.clearFiles)
-        self.fileMenu.addAction(self.resetRange)
-        self.addAction(self.showCoords)
-        self.addAction(self.showGrids)
+
+        self.viewMenu = self.mainMenu.addMenu('&View')
+        self.viewMenu.addAction(self.showCoords)
+        self.viewMenu.addAction(self.showGrids)
+        self.viewMenu.addAction(self.clearFiles)
+        self.viewMenu.addAction(self.resetRange)
+
 
         # self.viewShortcuts = QtGui.QAction("&Keyboard Shortcuts", self)
         # self.viewShortcuts.setStatusTip("View keyboard shortcuts")
@@ -95,8 +98,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.shortcutList.addItem('Clear All Plots: C')
         # self.shortcutList.addItem('Reset X and Y Ranges: Space')
 
-        # TODO re-set Y range
-        # TODO add height with added plots
         self.x = 0
         self.y = 0
         self.damp_parser = DampParser()
