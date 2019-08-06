@@ -15,10 +15,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', date
 
 # Load Qt ui file into a class
 # Had to be hard coded due to problems creating the .exe
-# MW_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "main_window.ui")
-MW_qtCreatorFile = r'C:\Users\Eric\PycharmProjects\Crone\src\damp\main_window.ui'
-# DP_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "damp_plot_widget.ui")
-DP_qtCreatorFile = r'C:\Users\Eric\PycharmProjects\Crone\src\damp\damp_plot_widget.ui'
+MW_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "main_window.ui")
+# MW_qtCreatorFile = r'C:\Users\Eric\PycharmProjects\Crone\src\damp\main_window.ui'
+DP_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "damp_plot_widget.ui")
+# DP_qtCreatorFile = r'C:\Users\Eric\PycharmProjects\Crone\src\damp\damp_plot_widget.ui'
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_qtCreatorFile)
 Ui_DampPlotWidget, QtBaseClass = uic.loadUiType(DP_qtCreatorFile)
 
