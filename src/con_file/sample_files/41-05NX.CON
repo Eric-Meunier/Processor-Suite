@@ -48,9 +48,9 @@ RPLS MinWin4,		-1	/-1	/ Min value for Axis 4
 RPLS TickWin4,		1	/1	/ Tick interval for BARV (NOTE: use
 / (MaxWin4-MinWin4)/(TopCmWin4-BotCmWin4) for 1 cm. between horiz. grid lines.
 /
-RPLS Section,	0			/ 1 = Plot a defined section of line.
-RPLS StartStn,	50	/50		/ Start station of section to plot
-RPLS EndStn,	1100	/1100		/ End station of section to plot
+RPLS Section,	1			/ 1 = Plot a defined section of line.
+RPLS StartStn,	500	/50		/ Start station of section to plot
+RPLS EndStn,	10	/1100		/ End station of section to plot
 /
 RPLS ExpandWin,	0	/ if = 1 , axes expand to right using HScale
 RPLS RightGap,	-1	/ Space between axes & new right page limit (negative)
@@ -68,3 +68,4 @@ RPLS LSideCm,	3	/ Left X coordinate of all axes.
 RPLS RSideCm,	18	/ Right X coord. of all axes (changes if ExpandWin=1).
 /
 INCL step4v2
+

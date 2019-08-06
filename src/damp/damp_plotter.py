@@ -124,6 +124,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def dragEnterEvent(self, e):
         e.accept()
+        # TODO check file type, only accept damp files
         # if e.mimeData().hasFormat('text/plain'):
         #     e.accept()
         # else:
