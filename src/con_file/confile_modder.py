@@ -18,38 +18,55 @@ class ConFile:
     def __init__(self, filepath):
         self.filepath = filepath
 
-        self.re_line = re.compile(r'(?:Line|Hole)\s(?P<Line>.*?)\s+[ZXY]\s+Component', )
-        self.re_section = re.compile(r'RPLS Section,\s+(?P<Section>\d)\s+.*', )
-        self.re_start_stn = re.compile(r'RPLS StartStn,\s+(?P<StartStn>\d+)\s+.*', )
-        self.re_end_stn = re.compile(r'RPLS EndStn,\s+(?P<EndStn>\d+)\s+.*', )
+        self.re_line = re.compile(r'((?:Line|Hole)\s)(?P<Line>.*?)(\s+[ZXY]\s+Component)')
+        self.re_section = re.compile(r'(RPLS Section,\s+)(?P<Section>\d)(\s+.*)')
+        self.re_start_stn = re.compile(r'(RPLS StartStn,\s+)(?P<StartStn>[\W\d]+?)(\s+.*)')
+        self.re_end_stn = re.compile(r'(RPLS EndStn,\s+)(?P<EndStn>[\W\d]+?)(\s+.*)')
+        self.re_win2_max = re.compile(r'(RPLS MaxWin2,\s+)(?P<Max>[\W\d]+?)(\s+.*)')
+        self.re_win2_min = re.compile(r'(RPLS MinWin2,\s+)(?P<Min>[\W\d]+?)(\s+.*)')
+        self.re_win2_step = re.compile(r'(RPLS TickWin2,\s+)(?P<Step>\d+)(\s+.*)')
+
         self.filename = os.path.basename(self.filepath)  # With extension
         self.name = os.path.splitext(os.path.basename(self.filepath))[0]
 
         with open(self.filepath, 'rt') as in_file:
             self.file = in_file.read()
 
-        self.original_name = self.re_line.search(self.file).group(1)
+        self.original_name = self.re_line.search(self.file).group('Line')
         self.new_name = self.name[0:-1]
-        self.start_stn = int(self.re_start_stn.search(self.file).group(1))
-        self.end_stn = int(self.re_end_stn.search(self.file).group(1))
+        self.start_stn = int(self.re_start_stn.search(self.file).group('StartStn'))
+        self.end_stn = int(self.re_end_stn.search(self.file).group('EndStn'))
+
+        self.set_win2()
 
     def set_station_range(self, start_stn, end_stn):
-        old_start_stn = self.re_start_stn.search(self.file).group(0)
-        new_start_stn = old_start_stn.replace(self.re_start_stn.search(self.file).group(1), str(start_stn), 1)
-        self.file = re.sub(old_start_stn, new_start_stn, self.file)
+        self.file = re.sub(self.re_start_stn, r"\g<1>"+str(start_stn)+"\g<3>", self.file)
+        self.file = re.sub(self.re_end_stn, r"\g<1>"+str(end_stn)+"\g<3>", self.file)
+        self.file = re.sub(self.re_section, r"\g<1>"+str(1)+"\g<3>", self.file)
 
-        old_end_stn = self.re_end_stn.search(self.file).group(0)
-        new_end_stn = old_end_stn.replace(self.re_end_stn.search(self.file).group(1), str(end_stn), 1)
-        self.file = re.sub(old_end_stn, new_end_stn, self.file)
+    def set_win2(self):
+        win2_max = self.re_win2_max.search(self.file).group('Max')
+        win2_min = self.re_win2_min.search(self.file).group('Min')
 
-        old_section = self.re_section.search(self.file).group(0)
-        new_section = old_section.replace(self.re_section.search(self.file).group(1), str(1), 1)
-        self.file = re.sub(old_section, new_section, self.file)
+        if int(win2_max) - int(win2_min) < 25:
+            new_win2_step = 5
+
+            if abs(int(win2_max)) > abs(int(win2_min)):
+                new_win2_max = 15
+                new_win2_min = -10
+            else:
+                new_win2_max = 10
+                new_win2_min = -15
+
+            self.file = re.sub(self.re_win2_max, r"\g<1>"+str(new_win2_max)+"\g<3>", self.file)
+            self.file = re.sub(self.re_win2_min, r"\g<1>"+str(new_win2_min)+"\g<3>", self.file)
+            self.file = re.sub(self.re_win2_step, r"\g<1>"+str(new_win2_step)+"\g<3>", self.file)
+
+        else:
+            pass
 
     def rename_line(self):
-        old = self.re_line.search(self.file).group(0)
-        new = old.replace(self.re_line.search(self.file).group(1), self.new_name)
-        self.file = re.sub(old, new, self.file)
+        self.file = re.sub(self.re_line, r"\g<1>" + str(self.new_name) + "\g<3>", self.file)
 
     def save_file(self):
         print(self.file, file=open(self.filepath, 'w'))
@@ -131,7 +148,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             raise
 
     def save_files(self):
-        if len(self.files)>0:
+        if len(self.files) > 0:
             temp_filepaths = []
             new_range = self.get_range()
 
@@ -139,6 +156,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 temp_filepaths.append(file.filepath)
                 file.rename_line()
                 file.set_station_range(new_range[0], new_range[1])
+                file.set_win2()
                 file.save_file()
 
             self.clear_files()
@@ -182,13 +200,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.tableWidget.resizeColumnsToContents()
 
-        if self.tableWidget.item(row_pos,1).text() != self.tableWidget.item(row_pos, 2).text():
+        if self.tableWidget.item(row_pos, 1).text() != self.tableWidget.item(row_pos, 2).text():
             for column in range(self.tableWidget.columnCount()):
                 self.tableWidget.item(row_pos, column).setForeground(QtGui.QColor('red'))
 
     def clear_files(self):
         while self.tableWidget.rowCount() > 0:
-                self.tableWidget.removeRow(0)
+            self.tableWidget.removeRow(0)
         self.files.clear()
 
 

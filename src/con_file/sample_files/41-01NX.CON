@@ -29,9 +29,9 @@ RPLS TickWin1,		2000	/2000	/ Tick interval for BARV (NOTE: use
 /
 RPLS TopCmWin2,	19.0			/ Top coordinate of Axis 2 (in cm)
 RPLS BotCmWin2,	14.0			/ Bottom coordinate of Axis 2 (in cm)
-RPLS MaxWin2,		0	/0	/ Max value for Axis 2
-RPLS MinWin2,		-100	/-100	/ Min value for Axis 2
-RPLS TickWin2,		20	/20	/ Tick interval for BARV (NOTE: use
+RPLS MaxWin2,		5	/0	/ Max value for Axis 2
+RPLS MinWin2,		-1	/-100	/ Min value for Axis 2
+RPLS TickWin2,		2	/20	/ Tick interval for BARV (NOTE: use
 / (MaxWin2-MinWin2)/(TopCmWin2-BotCmWin2) for 1 cm. between horiz. grid lines.
 /
 RPLS TopCmWin3,	13.0			/ Top coordinate of Axis 3 (in cm)
