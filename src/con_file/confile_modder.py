@@ -30,8 +30,8 @@ class ConFile:
 
         self.original_name = self.re_line.search(self.file).group(1)
         self.new_name = self.name[0:-1]
-        self.end_stn = int(self.re_start_stn.search(self.file).group(1))
-        self.start_stn = int(self.re_end_stn.search(self.file).group(1))
+        self.start_stn = int(self.re_start_stn.search(self.file).group(1))
+        self.end_stn = int(self.re_end_stn.search(self.file).group(1))
 
     def set_station_range(self, start_stn, end_stn):
         old_start_stn = self.re_start_stn.search(self.file).group(0)
@@ -94,7 +94,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.clearFiles.setStatusTip("Clear all files")
         self.clearFiles.triggered.connect(self.clear_files)
 
-
         self.fileMenu = self.mainMenu.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.saveFiles)
@@ -132,7 +131,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             raise
 
     def save_files(self):
-        pass
+        if len(self.files)>0:
+            temp_filepaths = []
+            new_range = self.get_range()
+
+            for file in self.files:
+                temp_filepaths.append(file.filepath)
+                file.rename_line()
+                file.set_station_range(new_range[0], new_range[1])
+                file.save_file()
+
+            self.clear_files()
+
+            for filepath in temp_filepaths:
+                self.file_open(filepath)
+
+    def get_range(self):
+        if len(self.files) > 0:
+            mins, maxs = [], []
+            for file in self.files:
+                mins.append(file.start_stn)
+                maxs.append(file.end_stn)
+
+            min_stn = min(mins)
+            max_stn = max(maxs)
+        return min_stn, max_stn
 
     def create_table(self):
         self.tableWidget.setColumnCount(5)
@@ -159,9 +182,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.tableWidget.resizeColumnsToContents()
 
-        if self.tableWidget.itemAt(row_pos,1).text() == self.tableWidget.itemAt(row_pos, 2).text():
+        if self.tableWidget.item(row_pos,1).text() != self.tableWidget.item(row_pos, 2).text():
             for column in range(self.tableWidget.columnCount()):
-                self.tableWidget.item(row_pos, column).setForeground(QtGui.QColor('magenta'))
+                self.tableWidget.item(row_pos, column).setForeground(QtGui.QColor('red'))
 
     def clear_files(self):
         while self.tableWidget.rowCount() > 0:
