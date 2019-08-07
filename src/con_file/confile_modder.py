@@ -5,7 +5,7 @@ from os.path import isfile, join
 import logging
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QAction, QApplication, QGridLayout, QListWidget, QFileDialog,
-                             QTableWidgetItem, QHeaderView, QAbstractScrollArea)
+                             QTableWidgetItem, QHeaderView, QAbstractScrollArea, QMessageBox)
 
 
 if getattr(sys, 'frozen', False):
@@ -16,7 +16,7 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
-# samples_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sample_files")
+samples_path = os.path.join(application_path, "sample_files")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 # MW_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "con_file_mw.ui")
@@ -106,6 +106,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.gridLayout.addWidget(self.tableWidget)
 
         self.statusBar.showMessage('Ready')
+        self.message = QMessageBox()
 
         self.openFile = QAction("&Open File", self)
         self.openFile.setShortcut("Ctrl+O")
@@ -118,7 +119,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.saveFiles.triggered.connect(self.save_files)
 
         self.clearFiles = QAction("&Clear Files", self)
-        self.clearFiles.setShortcut("C")
+        self.clearFiles.setShortcut("Del")
         self.clearFiles.setStatusTip("Clear all files")
         self.clearFiles.triggered.connect(self.clear_files)
 
@@ -132,31 +133,50 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.show()
 
     def dragEnterEvent(self, e):
-        # TODO check file type, only accept CON files
         e.accept()
 
     def dropEvent(self, e):
         logging.info("File dropped into main window")
-        urls = [url.toLocalFile() for url in e.mimeData().urls()]  # if url.lower().endswith('.con')]
-        if len(urls) > 0:
-            for url in urls:
-                self.file_open(url)
-        else:
+        try:
+            urls = [url.toLocalFile() for url in e.mimeData().urls()]
+            if len(urls) > 0:
+                for url in urls:
+                    if url.lower().endswith('.con'):
+                        self.file_open(url)
+                    else:
+                        logging.warning(str('Invalid File Format'))
+                        self.message.information(None, 'Error', str('Invalid File Format'))
+                        pass
+            else:
+                self.message.information(None, 'Error', str('No Valid Files'))
+                pass
+        except Exception as e:
+            logging.warning(str(e))
+            self.message.information(None, 'Error', str(e))
             pass
 
     def file_open(self, file):
-        confile = ConFile
-        self.files.append(confile(file))
-        self.add_to_table(confile(file))
+        try:
+            confile = ConFile(file)
+        except Exception as e:
+            logging.warning(str(e))
+            self.message.information(None, 'Error', str(e))
+        else:
+            self.files.append(confile)
+            self.add_to_table(confile)
 
     def open_file_dialog(self):
         try:
             file = self.dialog.getOpenFileName(self, 'Open File')
-            self.file_open(file[0])
+            if file[0].lower().endswith('.con'):
+                self.file_open(file[0])
+            else:
+                self.message.information(None, 'Error', 'Invalid File Format')
+                return
         except Exception as e:
             logging.warning(str(e))
-            QtGui.QMessageBox.information(None, 'Error', str(e))
-            raise
+            self.message.information(None, 'Error', str(e))
+            pass
 
     def save_files(self):
         if len(self.files) > 0:
@@ -222,8 +242,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
 def main():
+
     app = QApplication(sys.argv)
     mw = MainWindow()
+    app.exec_()
 
     # file_names = [f for f in os.listdir(samples_path) if isfile(join(samples_path, f)) and f.lower().endswith('.con')]
     # file_paths = []
@@ -235,8 +257,6 @@ def main():
     #
     # for file in file_paths:
     #     confile(file)
-
-    app.exec_()
 
 
 if __name__ == '__main__':

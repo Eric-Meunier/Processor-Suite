@@ -148,7 +148,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception as e:
             logging.warning(str(e))
             QtGui.QMessageBox.information(None, 'Error', str(e))
-            raise
+            return
 
     def file_open(self, files):
         # TODO make window bigger when other files are brought in
