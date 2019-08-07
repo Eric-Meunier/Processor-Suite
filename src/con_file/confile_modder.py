@@ -7,10 +7,21 @@ from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QAction, QApplication, QGridLayout, QListWidget, QFileDialog,
                              QTableWidgetItem, QHeaderView, QAbstractScrollArea)
 
-samples_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sample_files")
+
+if getattr(sys, 'frozen', False):
+    # If the application is run as a bundle, the pyInstaller bootloader
+    # extends the sys module by a flag frozen=True and sets the app
+    # path into variable _MEIPASS'.
+    application_path = sys._MEIPASS
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
+# samples_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sample_files")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-MW_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "con_file_mw.ui")
+# MW_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "con_file_mw.ui")
+MW_qtCreatorFile = os.path.join(application_path, "con_file_mw.ui")
+# MW_qtCreatorFile = r'C:\Users\Eric\PycharmProjects\Crone\src\con_file\con_file_mw.ui'
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_qtCreatorFile)
 
 
@@ -88,7 +99,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setGeometry(500, 300, 600, 400)
         self.setWindowTitle('Con File Modder')
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/icons/crone_logo.ico")))
+            QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
         self.setAcceptDrops(True)
 
         self.setCentralWidget(self.centralWidget)

@@ -13,12 +13,17 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
+if getattr(sys, 'frozen', False):
+    # If the application is run as a bundle, the pyInstaller bootloader
+    # extends the sys module by a flag frozen=True and sets the app
+    # path into variable _MEIPASS'.
+    application_path = sys._MEIPASS
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
 # Load Qt ui file into a class
-# Had to be hard coded due to problems creating the .exe
-MW_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "main_window.ui")
-# MW_qtCreatorFile = r'C:\Users\Eric\PycharmProjects\Crone\src\damp\main_window.ui'
-DP_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "damp_plot_widget.ui")
-# DP_qtCreatorFile = r'C:\Users\Eric\PycharmProjects\Crone\src\damp\damp_plot_widget.ui'
+MW_qtCreatorFile = os.path.join(application_path, "main_window.ui")
+DP_qtCreatorFile = os.path.join(application_path, "damp_plot_widget.ui")
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_qtCreatorFile)
 Ui_DampPlotWidget, QtBaseClass = uic.loadUiType(DP_qtCreatorFile)
 
@@ -34,7 +39,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusBar().showMessage('Ready')
         self.setWindowTitle("Damping Box Current Plot")
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/icons/crone_logo.ico")))
+            QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
         # TODO Program where the window opens
         self.setGeometry(500, 300, 800, 600)
         self.win_width = self.frameGeometry().width()
