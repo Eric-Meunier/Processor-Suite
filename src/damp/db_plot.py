@@ -6,8 +6,8 @@ import statistics as stats
 import pyqtgraph as pg
 from time_axis import AxisTime
 import logging
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget)
-from PyQt5 import (QtCore, QtGui, QtWidgets, uic)
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox)
+from PyQt5 import (QtCore, QtGui, uic)
 
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
@@ -31,9 +31,33 @@ Ui_DampPlotWidget, QtBaseClass = uic.loadUiType(DP_qtCreatorFile)
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
-        QMainWindow.__init__(self)
-        Ui_MainWindow.__init__(self)
+        # QMainWindow.__init__(self)
+        # Ui_MainWindow.__init__(self)
         self.setupUi(self)
+        self.initUi()
+
+        self.setAcceptDrops(True)
+        self.filename = None
+        self.show_coords = False
+        self.show_grids = True
+        self.show_symbols = True
+
+        self.x = 0
+        self.y = 0
+
+        self.damp_parser = DampParser()
+        self.message = QMessageBox()
+
+        self.open_widgets = []
+
+    def initUi(self):
+
+        def center_window(self):
+            qtRectangle = self.frameGeometry()
+            centerPoint = QDesktopWidget().availableGeometry().center()
+            qtRectangle.moveCenter(centerPoint)
+            self.move(qtRectangle.topLeft())
+            self.show()
 
         self.dialog = QtGui.QFileDialog()
         self.statusBar().showMessage('Ready')
@@ -42,15 +66,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
         # TODO Program where the window opens
         self.setGeometry(500, 300, 800, 600)
-        self.win_width = self.frameGeometry().width()
-        self.win_height = self.frameGeometry().height()
-        self.setAcceptDrops(True)
-        self.filename = None
-        self.show_coords = False
-        self.show_grids = True
-        # self.setMouseTracking(True)
+
         self.mainMenu = self.menuBar()
-        # self.shortcutList = QtGui.QListWidget()
 
         self.openFile = QtGui.QAction("&Open File", self)
         self.openFile.setShortcut("Ctrl+O")
@@ -58,7 +75,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.openFile.triggered.connect(self.open_file_dialog)
 
         self.clearFiles = QtGui.QAction("&Clear Files", self)
-        self.clearFiles.setShortcut("C")
+        self.clearFiles.setShortcut("Del")
         self.clearFiles.setStatusTip('Clear all open files')
         self.clearFiles.triggered.connect(self.clear_files)
 
@@ -82,6 +99,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.showGrids.setStatusTip("Show grid lines on the plots")
         self.showGrids.triggered.connect(self.toggle_grid)
 
+        self.showSymbols = QtGui.QAction("&Show Symbols", self)
+        self.showSymbols.setShortcut("T")
+        self.showSymbols.setStatusTip("Show data points symbols on plots")
+        self.showSymbols.triggered.connect(self.toggle_symbols)
+
         self.fileMenu = self.mainMenu.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.savePlots)
@@ -91,25 +113,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.viewMenu.addAction(self.showGrids)
         self.viewMenu.addAction(self.clearFiles)
         self.viewMenu.addAction(self.resetRange)
+        self.viewMenu.addAction(self.showSymbols)
 
-
-        # self.viewShortcuts = QtGui.QAction("&Keyboard Shortcuts", self)
-        # self.viewShortcuts.setStatusTip("View keyboard shortcuts")
-        # self.viewShortcuts.triggered.connect(self.view_shortcuts)
-
-        # self.shortcutMenu = self.mainMenu.addMenu("&Keyboard Shortcuts")
-        # self.shortcutMenu.addAction(self.viewShortcuts)
-
-        # self.shortcutList.addItem('Clear All Plots: C')
-        # self.shortcutList.addItem('Reset X and Y Ranges: Space')
-
-        self.x = 0
-        self.y = 0
-        self.damp_parser = DampParser()
-
-        self.open_widgets = []
-
-        self.show()
+        center_window(self)
 
     # def init_ui(self):
     #     # self.ui =
@@ -128,52 +134,62 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     #     self.show()
 
     def dragEnterEvent(self, e):
-        e.accept()
-        # TODO check file type, only accept damp files
-        # if e.mimeData().hasFormat('text/plain'):
-        #     e.accept()
-        # else:
-        #     e.ignore()
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+
+        def check_extension(urls):
+            for url in urls:
+                if url.lower().endswith('log') or url.lower().endswith('txt') or url.lower().endswith('rtf'):
+                    continue
+                else:
+                    return False
+            return True
+
+        if check_extension(urls):
+            e.accept()
+        else:
+            e.ignore()
 
     def dropEvent(self, e):
-        logging.info("File dropped into main window")
-        urls = [url.toLocalFile() for url in e.mimeData().urls()]
-        self.file_open(urls)
+        try:
+            urls = [url.toLocalFile() for url in e.mimeData().urls()]
+            for url in urls:
+                self.file_open(url)
+            # Resize the window
+            if self.gridLayout.sizeHint().height() > self.size().height() or self.gridLayout.sizeHint().width() > self.size().width():
+                self.resize(self.gridLayout.sizeHint().width(), self.gridLayout.sizeHint().height())
+        except Exception as e:
+            logging.warning(str(e))
+            self.message.information(None, 'Error', str(e))
+            pass
 
     def open_file_dialog(self):
         try:
             file = QtGui.QFileDialog.getOpenFileName(self, 'Open File')
-            # file = open(name, 'r')
-            self.file_open(file[0])
+            if file[0].endswith('log') or file[0].endswith('txt') or file[0].endswith('rtf'):
+                self.file_open(file[0])
+            else:
+                self.message.information(None, 'Error', 'Invalid File Format')
+                return
         except Exception as e:
             logging.warning(str(e))
-            QtGui.QMessageBox.information(None, 'Error', str(e))
+            self.message.information(None, 'Error', str(e))
             return
 
     def file_open(self, files):
-        # TODO make window bigger when other files are brought in
-        # Only work with lists, so if input isn't a list, makes it one
+        # Only work with lists (to accomodate files with multiple logs, so if input isn't a list, makes it one
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
-
         for file in files:
             try:
                 damp_data = self.damp_parser.parse(file)
             except Exception as e:
                 logging.warning(str(e))
-                QtGui.QMessageBox.information(None, 'Error', str(e))
-                raise
+                self.message.information(None, 'Error', str(e))
+                return
             else:
-                damp_plot = DampPlot(damp_data, grid=self.show_grids, show_coords=self.show_coords)
+                damp_plot = DampPlot(damp_data, grid=self.show_grids, show_coords=self.show_coords,
+                                     show_symbols=self.show_symbols)
                 self.open_widgets.append(damp_plot)
-
-                mw_height, mw_width = self.frameGeometry().height(), self.frameGeometry().width()
-                dp_height, dp_width = damp_plot.frameGeometry().height(), damp_plot.frameGeometry().width()
-                if mw_height < dp_height * len(self.open_widgets):
-                    self.resize(mw_width, mw_height + dp_height)
-                    # QDesktopWidget().availableGemetry()
-                    # self.move(self.pos().x(), self.pos().y()-dp_height)
-
                 self.add_plot(damp_plot)
 
     def clear_files(self):
@@ -186,7 +202,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.y = 0
         except Exception as e:
             logging.info(str(e))
-            QtGui.QMessageBox.information(None, 'Error', str(e))
+            self.message.information(None, 'Error', str(e))
             raise
 
     def reset_range(self):
@@ -196,6 +212,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             widget.pw.setXRange(min(widget.times), max(widget.times))
 
     def save_plots(self):
+        # Save all plots on the window into a PNG image, basically a screen shot
         default_path = self.open_widgets[-1].folderpath
         dates = [widget.date for widget in self.open_widgets if widget.date is not None]
 
@@ -231,7 +248,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def toggle_coords(self):
         # Toggle displaying the plot values at the location of the mouse
         self.show_coords = not self.show_coords
-        if len(self.open_widgets)>0:
+        if len(self.open_widgets) > 0:
             for widget in self.open_widgets:
                 widget.show_coords = self.show_coords
                 if self.show_coords:
@@ -242,11 +259,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def toggle_grid(self):
         self.show_grids = not self.show_grids
-        if len(self.open_widgets)>0:
+        if len(self.open_widgets) > 0:
             for widget in self.open_widgets:
                 widget.pw.showGrid(x=self.show_grids, y=self.show_grids)
 
+    def toggle_symbols(self):
+        self.show_symbols = not self.show_symbols
+        if len(self.open_widgets) > 0:
+            for widget in self.open_widgets:
+                if self.show_symbols:
+                    widget.pw.removeItem(widget.symbols)
+                else:
+                    widget.pw.addItem(widget.symbols)
+        else:
+            pass
+
     def add_plot(self, plot_widget):
+        # Adding the plot object to the layout
         self.gridLayout.addWidget(plot_widget, self.x, self.y)
         self.x += 1
         old_y = self.y
@@ -343,7 +372,7 @@ class DampParser:
 
 class DampPlot(QWidget, Ui_DampPlotWidget):
 
-    def __init__(self, file, show_coords=False, grid=True, parent=None):
+    def __init__(self, file, show_coords=False, grid=True, show_symbols=True, parent=None):
         super(DampPlot, self).__init__(parent=parent)
         QWidget.__init__(self, parent=parent)
         Ui_DampPlotWidget.__init__(self)
@@ -360,11 +389,11 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         self.date = None
         self.mouse_x_txt = 0
         self.mouse_y_txt = 0
-        self.text = pg.TextItem(text='', color=(0,0,0), border='w',fill=(255,255,255), anchor=(1, 1.1))
+        self.text = pg.TextItem(text='', color=(0, 0, 0), border='w', fill=(255, 255, 255), anchor=(1, 1.1))
         # self.text.hide()
         self.setMouseTracking(True)
         self.show_coords = show_coords
-
+        self.show_symbols = show_symbols
         self.create_plot()
 
     def leaveEvent(self, e):
@@ -403,16 +432,25 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
             self.times = file['times']
             self.currents = file['currents']
             self.date = file['date']
+            self.pw.plot()
 
             try:
-                self.pw.plot(x=self.times, y=self.currents, pen=pg.mkPen(color=pg.intColor(i + 9), width=2))
+                custom_pen = pg.mkPen(color=pg.intColor(i), width=2)
+                # self.pw.plot(x=self.times, y=self.currents, pen=custom_pen)#, symbol='+', symbolSize=8, symbolPen='r')
+                self.curve = pg.PlotCurveItem(self.times, self.currents, pen=custom_pen)
+                self.symbols = pg.ScatterPlotItem(self.times, self.currents, symbol='+', symbolSize=8, symbolPen='r')
+
+                self.pw.addItem(self.curve)
+                if self.show_symbols:
+                    self.pw.addItem(self.symbols)
+
                 min, max = (stats.median(self.currents) - 1, stats.median(self.currents) + 1)
                 self.pw.setYRange(min, max)
             except Exception as e:
                 logging.info(str(e))
-                QtGui.QMessageBox.information(None, 'Error', str(e))
+                self.message.information(None, 'Error', str(e))
             finally:
-                self.pw.plot()
+                # self.pw.plot()
                 self.pw.disableAutoRange()
                 self.pw.addItem(self.text)
 
@@ -423,11 +461,11 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
 
         def mouseMoved(e):
             # Retrieves the coordinates of the mouse coordinates of the event
-            self.mouse_y_txt = str(round(self.pw.plotItem.vb.mapSceneToView(e).y(),4))
+            self.mouse_y_txt = str(round(self.pw.plotItem.vb.mapSceneToView(e).y(), 4))
             self.mouse_x_txt = str(datetime.timedelta(seconds=self.pw.plotItem.vb.mapSceneToView(e).x())).split('.')[0]
             if self.show_coords:
                 self.text.show()
-                self.text.setText(text='Time: '+str(self.mouse_x_txt) + '\nCurrent: ' + str(self.mouse_y_txt))
+                self.text.setText(text='Time: ' + str(self.mouse_x_txt) + '\nCurrent: ' + str(self.mouse_y_txt))
                 self.text.setPos(self.pw.plotItem.vb.mapSceneToView(e))
             else:
                 pass
@@ -439,14 +477,13 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
 def main():
     app = QtGui.QApplication(sys.argv)
     mw = MainWindow()
+    app.exec_()
 
     # file = 'df.log'
     # damp_parser = DampParser()
     # damp_data = damp_parser.parse(file)
     # damp_plot = DampPlot(damp_data)
     # damp_plot.show()
-
-    app.exec_()
 
     # if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
     #     QtGui.QApplication.instance().exec_()

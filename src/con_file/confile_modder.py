@@ -4,10 +4,11 @@ import sys
 from os.path import isfile, join
 import logging
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QAction, QApplication, QGridLayout, QListWidget, QFileDialog,
+from PyQt5.QtWidgets import (QMainWindow, QAction, QApplication, QGridLayout, QFileDialog, QDesktopWidget,
                              QTableWidgetItem, QHeaderView, QAbstractScrollArea, QMessageBox)
 from src.pem.pem_parser import PEMParser
 
+__version__ = '0.0.1'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -25,6 +26,12 @@ Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_qtCreatorFile)
 
 
 class ConFile:
+    """
+    Con file object is based on the .CON text-based files. It reads the .CON file, and
+    renames the current line name in the .CON file to that of the .CON file's filename. It
+    can also populate the client, grid, and loop names if they haven't been set by
+    pembat, and it can change the station ranges.
+    """
     def __init__(self, filepath):
         self.pem_file = None
 
@@ -32,8 +39,11 @@ class ConFile:
         self.filename = os.path.basename(self.filepath)  # With extension
         self.file_dir = os.path.dirname(self.filepath)
 
+        # Only used if pembat hasn't been run
         self.re_client = re.compile(r'(RPLS .t1.,\s\")(?P<Client>.*)(\")')
         self.re_holehole = re.compile(r'(RPLS .t2., \")(?P<Loop>.*\s?)(\s{4}[XYZ]\sComponent\")')
+
+        # Unused groups must be made for re.sub
         self.re_line = re.compile(r'((?:Line|Hole)\s)(?P<Line>.*?)(\s+[ZXY]\s+Component)')
         self.re_section = re.compile(r'(RPLS Section,\s+)(?P<Section>\d)(\s+.*)')
         self.re_start_stn = re.compile(r'(RPLS StartStn,\s+)(?P<StartStn>[\W\d]+?)(\s+.*)')
@@ -46,12 +56,12 @@ class ConFile:
             self.file = in_file.read()
 
         self.original_name = self.re_line.search(self.file).group('Line')
-        self.name = re.split('[XYZ]',os.path.splitext(os.path.basename(self.filepath))[0])[0]
+        self.name = re.split('[XYZ]\.CON',os.path.basename(self.filepath))[0]
         self.start_stn = int(self.re_start_stn.search(self.file).group('StartStn'))
         self.end_stn = int(self.re_end_stn.search(self.file).group('EndStn'))
 
-        self.set_win2()
         self.check_header()
+        self.set_win2()
 
     def check_header(self):
         """
@@ -142,9 +152,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.files = []
 
     def initUI(self):
+        def center_window(self):
+            qtRectangle = self.frameGeometry()
+            centerPoint = QDesktopWidget().availableGeometry().center()
+            qtRectangle.moveCenter(centerPoint)
+            self.move(qtRectangle.topLeft())
+            self.show()
 
         self.setGeometry(500, 300, 800, 600)
-        self.setWindowTitle('Con File Modder')
+        self.setWindowTitle('Con File Modder  v'+__version__)
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
         self.setAcceptDrops(True)
@@ -181,27 +197,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.create_table()
 
-        self.show()
+        center_window(self)
 
     def dragEnterEvent(self, e):
-        e.accept()
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        def check_extension(urls):
+            for url in urls:
+                if url.lower().endswith('con'):
+                    continue
+                else:
+                    return False
+            return True
+
+        if check_extension(urls):
+            e.accept()
+        else:
+            e.ignore()
 
     def dropEvent(self, e):
         try:
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
-            if len(urls) > 0:
-                for url in urls:
-                    if url.lower().endswith('.con'):
-                        self.file_open(url)
-                    else:
-                        logging.warning(str('Invalid File Format'))
-                        self.message.information(None, 'Error', str('Invalid File Format'))
-                        pass
-                # Resize the window
-                self.resize(self.gridLayout.sizeHint().width()+25, self.gridLayout.sizeHint().height())
-            else:
-                self.message.information(None, 'Error', str('No Valid Files'))
-                pass
+            for url in urls:
+                self.file_open(url)
+            # Resize the window
+            if self.gridLayout.sizeHint().height()+25>self.size().height():
+                self.resize(self.gridLayout.sizeHint().width()+25, self.gridLayout.sizeHint().height()+25)
         except Exception as e:
             logging.warning(str(e))
             self.message.information(None, 'Error', str(e))
