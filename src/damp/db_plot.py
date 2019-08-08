@@ -13,6 +13,8 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
+__version__ = '0.0.1'
+
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
     # extends the sys module by a flag frozen=True and sets the app
@@ -40,7 +42,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.filename = None
         self.show_coords = False
         self.show_grids = True
-        self.show_symbols = True
+        self.show_symbols = False
 
         self.x = 0
         self.y = 0
@@ -51,7 +53,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.open_widgets = []
 
     def initUi(self):
-
         def center_window(self):
             qtRectangle = self.frameGeometry()
             centerPoint = QDesktopWidget().availableGeometry().center()
@@ -61,7 +62,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.dialog = QtGui.QFileDialog()
         self.statusBar().showMessage('Ready')
-        self.setWindowTitle("Damping Box Current Plot")
+        self.setWindowTitle("Damping Box Current Plot  v"+str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
         # TODO Program where the window opens
@@ -100,7 +101,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.showGrids.triggered.connect(self.toggle_grid)
 
         self.showSymbols = QtGui.QAction("&Show Symbols", self)
-        self.showSymbols.setShortcut("T")
+        self.showSymbols.setShortcut("t")
         self.showSymbols.setStatusTip("Show data points symbols on plots")
         self.showSymbols.triggered.connect(self.toggle_symbols)
 
@@ -268,9 +269,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if len(self.open_widgets) > 0:
             for widget in self.open_widgets:
                 if self.show_symbols:
-                    widget.pw.removeItem(widget.symbols)
-                else:
                     widget.pw.addItem(widget.symbols)
+                else:
+                    widget.pw.removeItem(widget.symbols)
         else:
             pass
 
@@ -390,7 +391,7 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         self.mouse_x_txt = 0
         self.mouse_y_txt = 0
         self.text = pg.TextItem(text='', color=(0, 0, 0), border='w', fill=(255, 255, 255), anchor=(1, 1.1))
-        # self.text.hide()
+        self.text.setZValue(4)
         self.setMouseTracking(True)
         self.show_coords = show_coords
         self.show_symbols = show_symbols
@@ -435,10 +436,12 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
             self.pw.plot()
 
             try:
-                custom_pen = pg.mkPen(color=pg.intColor(i), width=2)
+                color = pg.intColor(i)
+                custom_pen = pg.mkPen(color=color, width=2)
                 # self.pw.plot(x=self.times, y=self.currents, pen=custom_pen)#, symbol='+', symbolSize=8, symbolPen='r')
                 self.curve = pg.PlotCurveItem(self.times, self.currents, pen=custom_pen)
-                self.symbols = pg.ScatterPlotItem(self.times, self.currents, symbol='+', symbolSize=8, symbolPen='r')
+                self.symbols = pg.PlotDataItem(self.times, self.currents, symbol='d', symbolSize=8,
+                                               symbolPen=color, symbolBrush=color)
 
                 self.pw.addItem(self.curve)
                 if self.show_symbols:
