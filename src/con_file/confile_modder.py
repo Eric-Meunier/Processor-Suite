@@ -6,6 +6,7 @@ import logging
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QMainWindow, QTextEdit, QAction, QApplication, QGridLayout, QListWidget, QFileDialog,
                              QTableWidgetItem, QHeaderView, QAbstractScrollArea, QMessageBox)
+from src.pem.pem_parser import PEMParser
 
 
 if getattr(sys, 'frozen', False):
@@ -19,16 +20,20 @@ else:
 samples_path = os.path.join(application_path, "sample_files")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-# MW_qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "con_file_mw.ui")
-MW_qtCreatorFile = os.path.join(application_path, "con_file_mw.ui")
-# MW_qtCreatorFile = r'C:\Users\Eric\PycharmProjects\Crone\src\con_file\con_file_mw.ui'
+MW_qtCreatorFile = os.path.join(application_path, "con_file_window.ui")
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_qtCreatorFile)
 
 
 class ConFile:
     def __init__(self, filepath):
-        self.filepath = filepath
+        self.pem_file = None
 
+        self.filepath = filepath
+        self.filename = os.path.basename(self.filepath)  # With extension
+        self.file_dir = os.path.dirname(self.filepath)
+
+        self.re_client = re.compile(r'(RPLS .t1.,\s\")(?P<Client>.*)(\")')
+        self.re_holehole = re.compile(r'(RPLS .t2., \")(?P<Loop>.*\s?)(\s{4}[XYZ]\sComponent\")')
         self.re_line = re.compile(r'((?:Line|Hole)\s)(?P<Line>.*?)(\s+[ZXY]\s+Component)')
         self.re_section = re.compile(r'(RPLS Section,\s+)(?P<Section>\d)(\s+.*)')
         self.re_start_stn = re.compile(r'(RPLS StartStn,\s+)(?P<StartStn>[\W\d]+?)(\s+.*)')
@@ -37,18 +42,60 @@ class ConFile:
         self.re_win2_min = re.compile(r'(RPLS MinWin2,\s+)(?P<Min>[\W\d]+?)(\s+.*)')
         self.re_win2_step = re.compile(r'(RPLS TickWin2,\s+)(?P<Step>\d+)(\s+.*)')
 
-        self.filename = os.path.basename(self.filepath)  # With extension
-        self.name = os.path.splitext(os.path.basename(self.filepath))[0]
-
         with open(self.filepath, 'rt') as in_file:
             self.file = in_file.read()
 
         self.original_name = self.re_line.search(self.file).group('Line')
-        self.new_name = self.name[0:-1]
+        self.name = re.split('[XYZ]',os.path.splitext(os.path.basename(self.filepath))[0])[0]
         self.start_stn = int(self.re_start_stn.search(self.file).group('StartStn'))
         self.end_stn = int(self.re_end_stn.search(self.file).group('EndStn'))
 
         self.set_win2()
+        self.check_header()
+
+    def check_header(self):
+        """
+        Checks if pembat.exe has been run. If not, it will fill in the header in its place.
+        """
+        def get_pem_file():
+            pem_file_names = [f for f in os.listdir(self.file_dir) if
+                              isfile(join(self.file_dir, f)) and f.lower().endswith('.pem')]
+            pem_file_paths = []
+
+            if len(pem_file_names) > 0:
+                for file in pem_file_names:
+                    pem_file_paths.append(join(self.file_dir, file))
+                pem_file = PEMParser().parse(pem_file_paths[0])
+
+                self.pem_file = pem_file
+            else:
+                pass
+
+        if self.re_client.search(self.file).group('Client').lower() == 'client':
+            if self.pem_file is None:
+                get_pem_file()
+
+            header = self.pem_file.get_header()
+            client = header['Client']
+            grid = header['Grid']
+
+            new_client_str = client+'   '+grid
+            self.file = re.sub(self.re_client, r"\g<1>"+str(new_client_str)+"\g<3>", self.file)
+        else:
+            pass
+
+        if self.re_holehole.search(self.file).group('Loop').lower() == 'hole hole ':
+            if self.pem_file is None:
+                get_pem_file()
+
+            header = self.pem_file.get_header()
+            loop = header['Loop']
+            survey_type = self.pem_file.get_survey_type()
+            line_type = 'Line' if 'surface' in survey_type.lower() else 'Hole'
+            new_loop_str = "Loop {0}, {1} {2}".format(loop, line_type, self.name)
+            self.file = re.sub(self.re_holehole, r"\g<1>"+str(new_loop_str)+"\g<3>", self.file)
+        else:
+            pass
 
     def set_station_range(self, start_stn, end_stn):
         self.file = re.sub(self.re_start_stn, r"\g<1>"+str(start_stn)+"\g<3>", self.file)
@@ -77,7 +124,7 @@ class ConFile:
             pass
 
     def rename_line(self):
-        self.file = re.sub(self.re_line, r"\g<1>" + str(self.new_name) + "\g<3>", self.file)
+        self.file = re.sub(self.re_line, r"\g<1>" + str(self.name) + "\g<3>", self.file)
 
     def save_file(self):
         print(self.file, file=open(self.filepath, 'w'))
@@ -96,17 +143,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def initUI(self):
 
-        self.setGeometry(500, 300, 600, 400)
+        self.setGeometry(500, 300, 800, 600)
         self.setWindowTitle('Con File Modder')
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
         self.setAcceptDrops(True)
 
         self.setCentralWidget(self.centralWidget)
-        self.gridLayout.addWidget(self.tableWidget)
 
         self.statusBar.showMessage('Ready')
         self.message = QMessageBox()
+
+        self.mkdxfButton.clicked.connect(self.run_mkdxf)
+        self.mkdxfButton.setShortcut("\r")
+
+        self.shareRangeCheckBox.stateChanged.connect(self.set_ranges)
 
         self.openFile = QAction("&Open File", self)
         self.openFile.setShortcut("Ctrl+O")
@@ -136,7 +187,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         e.accept()
 
     def dropEvent(self, e):
-        logging.info("File dropped into main window")
         try:
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
             if len(urls) > 0:
@@ -147,6 +197,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         logging.warning(str('Invalid File Format'))
                         self.message.information(None, 'Error', str('Invalid File Format'))
                         pass
+                # Resize the window
+                self.resize(self.gridLayout.sizeHint().width()+25, self.gridLayout.sizeHint().height())
             else:
                 self.message.information(None, 'Error', str('No Valid Files'))
                 pass
@@ -181,13 +233,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def save_files(self):
         if len(self.files) > 0:
             temp_filepaths = []
-            new_range = self.get_range()
 
             for file in self.files:
                 temp_filepaths.append(file.filepath)
                 file.rename_line()
-                file.set_station_range(new_range[0], new_range[1])
-                file.set_win2()
+
+                if self.shareRangeCheckBox.isChecked():
+                    new_min, new_max = self.get_shared_range()
+                    file.set_station_range(new_min, new_max)
+                else:
+                    file.set_station_range(file.start_stn, file.end_stn)
+
                 file.save_file()
 
             self.clear_files()
@@ -195,7 +251,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for filepath in temp_filepaths:
                 self.file_open(filepath)
 
-    def get_range(self):
+    def run_mkdxf(self):
+        if len(self.files)>0:
+            working_dir = os.path.split(self.files[0].filepath)[0]
+            os.chdir(working_dir)
+            os.system("start /wait cmd /c mkdxf")
+        else:
+            pass
+
+    def get_shared_range(self):
         if len(self.files) > 0:
             mins, maxs = [], []
             for file in self.files:
@@ -206,10 +270,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             max_stn = max(maxs)
         return min_stn, max_stn
 
+    def set_ranges(self):
+        if len(self.files)>0:
+            if self.shareRangeCheckBox.isChecked():
+                min_range, max_range = self.get_shared_range()
+                for file in self.files:
+                    file.set_station_range(min_range, max_range)
+                self.update_table()
+            else:
+                for file in self.files:
+                    min_range = int(file.start_stn)
+                    max_range = int(file.end_stn)
+                    file.set_station_range(min_range, max_range)
+                self.update_table()
+        else:
+            pass
+
+    def update_table(self):
+        while self.tableWidget.rowCount() > 0:
+            self.tableWidget.removeRow(0)
+        for file in self.files:
+            self.add_to_table(file)
+
     def create_table(self):
         self.tableWidget.setColumnCount(5)
         self.tableWidget.setHorizontalHeaderLabels(
-            ['File', 'Original Line Name', 'New Line Name', 'Start Station', 'End Station'])
+            ['File', 'Original Line Name', 'New Line Name', 'Original Station Range', 'New Station Range'])
         self.tableWidget.setSizeAdjustPolicy(
             QAbstractScrollArea.AdjustToContents)
         self.tableWidget.resizeColumnsToContents()
@@ -217,22 +303,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def add_to_table(self, confile):
         name = confile.filename
         current_name = confile.original_name
-        new_line_name = confile.new_name
-        start_stn = str(confile.start_stn)
-        end_stn = str(confile.end_stn)
+        new_line_name = confile.name
+        old_start_stn = str(confile.start_stn)
+        old_end_stn = str(confile.end_stn)
+
+        if self.shareRangeCheckBox.isChecked():
+            new_start_stn, new_end_stn = self.get_shared_range()
+        else:
+            new_start_stn, new_end_stn = old_start_stn, old_end_stn
 
         row_pos = self.tableWidget.rowCount()
         self.tableWidget.insertRow(row_pos)
         self.tableWidget.setItem(row_pos, 0, QTableWidgetItem(name))
         self.tableWidget.setItem(row_pos, 1, QTableWidgetItem(current_name))
         self.tableWidget.setItem(row_pos, 2, QTableWidgetItem(new_line_name))
-        self.tableWidget.setItem(row_pos, 3, QTableWidgetItem(start_stn))
-        self.tableWidget.setItem(row_pos, 4, QTableWidgetItem(end_stn))
+        self.tableWidget.setItem(row_pos, 3, QTableWidgetItem(old_start_stn+' to '+old_end_stn))
+        self.tableWidget.setItem(row_pos, 4, QTableWidgetItem(str(new_start_stn) + ' to ' + str(new_end_stn)))
 
         self.tableWidget.resizeColumnsToContents()
 
+        # if self.tableWidget.item(row_pos, 1).text() != self.tableWidget.item(row_pos, 2).text():
+        #     for column in range(self.tableWidget.columnCount()):
+        #         self.tableWidget.item(row_pos, column).setForeground(QtGui.QColor('red'))
         if self.tableWidget.item(row_pos, 1).text() != self.tableWidget.item(row_pos, 2).text():
-            for column in range(self.tableWidget.columnCount()):
+            for column in range (1, 3):
+                self.tableWidget.item(row_pos, column).setForeground(QtGui.QColor('red'))
+
+        if self.tableWidget.item(row_pos, 3).text() != self.tableWidget.item(row_pos, 4).text():
+            for column in range (3, 5):
                 self.tableWidget.item(row_pos, column).setForeground(QtGui.QColor('red'))
 
     def clear_files(self):

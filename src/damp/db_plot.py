@@ -22,8 +22,8 @@ else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
 # Load Qt ui file into a class
-MW_qtCreatorFile = os.path.join(application_path, "main_window.ui")
-DP_qtCreatorFile = os.path.join(application_path, "damp_plot_widget.ui")
+MW_qtCreatorFile = os.path.join(application_path, "db_plot_window.ui")
+DP_qtCreatorFile = os.path.join(application_path, "db_plot_widget.ui")
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_qtCreatorFile)
 Ui_DampPlotWidget, QtBaseClass = uic.loadUiType(DP_qtCreatorFile)
 
