@@ -207,10 +207,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             raise
 
     def reset_range(self):
-        for widget in self.open_widgets:
-            min_cur, max_cur = (stats.median(widget.currents) - 1, stats.median(widget.currents) + 1)
-            widget.pw.setYRange(min_cur, max_cur)
-            widget.pw.setXRange(min(widget.times), max(widget.times))
+        if len(self.open_widgets)>0:
+            try:
+                for widget in self.open_widgets:
+                    widget.set_ranges()
+
+            except Exception as e:
+                self.message.information(None, 'Error',str(e))
+                logging.info(str(e))
+                pass
 
     def save_plots(self):
         # Save all plots on the window into a PNG image, basically a screen shot
@@ -269,9 +274,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if len(self.open_widgets) > 0:
             for widget in self.open_widgets:
                 if self.show_symbols:
-                    widget.pw.addItem(widget.symbols)
+                    for symbols in widget.symbols:
+                        widget.pw.addItem(symbols)
                 else:
-                    widget.pw.removeItem(widget.symbols)
+                    for symbols in widget.symbols:
+                        widget.pw.removeItem(symbols)
         else:
             pass
 
@@ -388,6 +395,8 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         self.times = []
         self.currents = []
         self.date = None
+        self.curves = []
+        self.symbols = []
         self.mouse_x_txt = 0
         self.mouse_y_txt = 0
         self.text = pg.TextItem(text='', color=(0, 0, 0), border='w', fill=(255, 255, 255), anchor=(1, 1.1))
@@ -428,39 +437,43 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
         self.pw.setLabel('left', "Current", units='A', **labelStyle)
         # self.pw.setLabel('bottom', "Time", units='', **labelStyle)
 
+        self.pw.plot()
+
         # Plotting section
-        for i, file in enumerate(self.file):
-            self.times = file['times']
-            self.currents = file['currents']
-            self.date = file['date']
-            self.pw.plot()
+        try:
+            for i, file in enumerate(self.file):
+                times = file['times']
+                currents = file['currents']
+                self.date = file['date']
 
-            try:
+                self.times.append(times)
+                self.currents.append(currents)
+
                 color = pg.intColor(i)
-                custom_pen = pg.mkPen(color=color, width=2)
+                custom_pen = pg.mkPen(color=color, width=3)
                 # self.pw.plot(x=self.times, y=self.currents, pen=custom_pen)#, symbol='+', symbolSize=8, symbolPen='r')
-                self.curve = pg.PlotCurveItem(self.times, self.currents, pen=custom_pen)
-                self.symbols = pg.PlotDataItem(self.times, self.currents, symbol='d', symbolSize=8,
+                curve = pg.PlotCurveItem(times, currents, pen=custom_pen)
+                symbols = pg.PlotDataItem(times, currents, symbol='d', symbolSize=8,
                                                symbolPen=color, symbolBrush=color)
+                self.curves.append(curve)
+                self.symbols.append(symbols)
 
-                self.pw.addItem(self.curve)
+                self.pw.addItem(curve)
                 if self.show_symbols:
-                    self.pw.addItem(self.symbols)
+                    self.pw.addItem(symbols)
 
-                min, max = (stats.median(self.currents) - 1, stats.median(self.currents) + 1)
-                self.pw.setYRange(min, max)
-            except Exception as e:
-                logging.info(str(e))
-                self.message.information(None, 'Error', str(e))
-            finally:
-                # self.pw.plot()
-                self.pw.disableAutoRange()
-                self.pw.addItem(self.text)
+            self.pw.disableAutoRange()
+            self.pw.addItem(self.text)
+            self.set_ranges()
 
             if self.date:
                 self.pw.setTitle('Damping Box Current ' + self.date.strftime("%B %d, %Y"))
             else:
                 self.pw.setTitle('Damping Box Current ')
+
+        except Exception as e:
+            logging.info(str(e))
+            self.message.information(None, 'Error', str(e))
 
         def mouseMoved(e):
             # Retrieves the coordinates of the mouse coordinates of the event
@@ -475,6 +488,16 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
 
         # Connects the action of moving the mouse to mouseMoved function
         self.pw.scene().sigMouseMoved.connect(mouseMoved)
+
+    def set_ranges(self):
+
+        offset = 0.5*(max([stats.median(currents) for currents in self.currents]) - min([stats.median(currents) for currents in self.currents]))
+        median = stats.median([stats.median(currents) for currents in self.currents])
+        min_y, max_y = median - max(offset, 1), median + max(offset, 1)
+        min_x, max_x = min([item for sublist in self.times for item in sublist]), max([item for sublist in self.times for item in sublist])
+
+        self.pw.setYRange(min_y, max_y)
+        self.pw.setXRange(min_x, max_x)
 
 
 def main():
