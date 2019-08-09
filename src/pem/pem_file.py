@@ -1,10 +1,12 @@
+import re
+
 class PEMFile:
     """
     Class for storing PEM file data for easy access
     """
 
     # Constructor
-    def __init__(self, tags, loop_coords, line_coords, notes, header, data, components, survey_type):
+    def __init__(self, tags, loop_coords, line_coords, notes, header, data, components, survey_type, filepath):
         self.tags = tags
         self.loop_coords = loop_coords
         self.line_coords = line_coords
@@ -13,6 +15,7 @@ class PEMFile:
         self.data = data
         self.components = components
         self.survey_type = survey_type
+        self.filepath = filepath
 
     def get_tags(self):
         return self.tags
@@ -40,9 +43,22 @@ class PEMFile:
         return sorted_components
 
     def get_unique_stations(self):
-        unique_stations = {n for n in
+        unique_stations = {self.convert_station(n) for n in
                            [reading['Station'] for reading in self.data]}
         return unique_stations
+
+    def convert_station(self, station):
+        """
+        Converts a single station name into a number, negative if the stations was S or W
+        :return: Integer station number
+        """
+        if re.match(r"\d+(S|W)", station):
+            station = (-int(re.sub(r"\D", "", station)))
+
+        else:
+            station = (int(re.sub(r"\D", "", station)))
+
+        return station
 
     def get_survey_type(self):
         survey_type = self.header['SurveyType']

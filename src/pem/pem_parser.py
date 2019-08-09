@@ -192,5 +192,6 @@ class PEMParser:
         data = self.parse_data(file)
         components = self.components(file)
         survey_type = self.survey_type(file)
+        filepath = filename
 
-        return PEMFile(tags, loop_coords, line_coords, notes, header, data, components, survey_type)
+        return PEMFile(tags, loop_coords, line_coords, notes, header, data, components, survey_type, filepath)

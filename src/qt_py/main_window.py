@@ -1,12 +1,11 @@
 import sys
 import copy
-
+import logging
 import PyQt5
 from PyQt5.QtWidgets import *
 from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtWidgets import QFileDialog, QMainWindow
 import os
-from log import Logger
 import numpy as np
 import time
 from scipy import stats
@@ -15,10 +14,16 @@ from src.pem.pem_editor import PEMFileEditor
 from qt_py.pem_file_widget import PEMFileWidget
 from qt_py.file_browser_widget import FileBrowser
 
-logger = Logger(__name__)
+if getattr(sys, 'frozen', False):
+    # If the application is run as a bundle, the pyInstaller bootloader
+    # extends the sys module by a flag frozen=True and sets the app
+    # path into variable _MEIPASS'.
+    application_path = sys._MEIPASS
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
 
 # Load Qt ui file into a class
-qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/main_window.ui")
+qtCreatorFile = os.path.join(application_path, "../qt_ui/main_window.ui")
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 
@@ -38,6 +43,8 @@ exceptionHandler = ExceptionHandler()
 sys._excepthook = sys.excepthook
 sys.excepthook = exceptionHandler.handler
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -54,7 +61,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.setAcceptDrops(True)
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/icons/crone_logo.ico")))
+            QtGui.QIcon(os.path.join(application_path, "../qt_ui/icons/crone_logo.ico")))
 
         # Connect signals to slots
         self.action_open_file.triggered.connect(self.on_file_open)
@@ -75,30 +82,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.move(350, 0)
 
     def on_print(self):
-        logger.info("Entering directory dialog for saving to PDF")
+        logging.info("Entering directory dialog for saving to PDF")
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.Directory)
         file_dialog.setOption(QFileDialog.ShowDirsOnly)
         name = QFileDialog.getExistingDirectory(self, '', 'Plots')
 
         if name == "":
-            logger.info("No directory chosen, aborted save to PDF")
+            logging.info("No directory chosen, aborted save to PDF")
             return
 
         # TODO Make sure active editor field is valid
-        logger.info('Saving plots to PDFs in directory "{}"'.format(name))
+        logging.info('Saving plots to PDFs in directory "{}"'.format(name))
         self.file_browser.currentWidget().print(name)
 
     def on_print_all(self):
         # TODO Add method of sorting between PEM and other file types.
-        logger.info("Entering directory dialog for saving to PDF")
+        logging.info("Entering directory dialog for saving to PDF")
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.Directory)
         file_dialog.setOption(QFileDialog.ShowDirsOnly)
         name = QFileDialog.getExistingDirectory(self, '', 'Plots')
 
         if name == "":
-            logger.info("No directory chosen, aborted save to PDF")
+            logging.info("No directory chosen, aborted save to PDF")
             return
 
         # TODO Make sure active editor field is valid
@@ -108,7 +115,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_file_open(self):
         # Will eventually hold logic for choosing between different file types
         # TODO Add logger class
-        logger.info("Entering file dialog")
+        logging.info("Entering file dialog")
 
         dlg = QFileDialog()
         dlg.setNameFilter("PEM (*.pem)")
@@ -116,7 +123,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         filenames = dlg.getOpenFileNames()[0]
 
         if len(filenames) == 0:
-            logger.info("No Files Selected")
+            logging.info("No Files Selected")
             return
         else:
             self.open_files(filenames)
@@ -126,7 +133,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         e.accept()
 
     def dropEvent(self, e):
-        logger.info("File dropped into main window")
+        logging.info("File dropped into main window")
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
         self.list_of_files.extend(urls)
         self.open_files(urls)
@@ -160,7 +167,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.btn_redraw.setEnabled(False)
 
-        logger.info("Opening " + ', '.join(filepaths) + "...")
+        logging.info("Opening " + ', '.join(filepaths) + "...")
 
         lbound, rbound = self.fill_station_limits()
         gap = self.get_gap_input()
