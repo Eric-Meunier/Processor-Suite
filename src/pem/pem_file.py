@@ -1,10 +1,10 @@
+from pem_serializer import PEMSerializer
 import re
 
 class PEMFile:
     """
     Class for storing PEM file data for easy access
     """
-
     # Constructor
     def __init__(self, tags, loop_coords, line_coords, notes, header, data, components, survey_type, filepath):
         self.tags = tags
@@ -79,3 +79,8 @@ class PEMFile:
             survey_type = 'UNDEF_SURV'
 
         return survey_type
+
+    def save_file(self):
+        ps = PEMSerializer()
+        pem_file = ps.serialize(self)
+        return pem_file

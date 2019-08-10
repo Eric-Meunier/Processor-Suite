@@ -1,6 +1,8 @@
-from pem.pem_file import PEMFile
-from log import Logger
-logger = Logger(__name__)
+# from pem.pem_file import PEMFile
+# from log import Logger
+# logger = Logger(__name__)
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 
 class PEMSerializer:
@@ -21,10 +23,12 @@ class PEMSerializer:
         result += tag('FMT', tags['Format'])
         result += tag('UNI', tags['Units'])
         result += tag('OPR', tags['Operator'])
-        result += tag('XYP', ' '.join([tags['XYProbe'],
-                                       tags['SOA'],
-                                       tags['Tool'],
-                                       tags['ToolID']]))
+        # TODO Probes line are currently a single line, not individual
+        # result += tag('XYP', ' '.join([tags['XYProbe'],
+        #                                tags['SOA'],
+        #                                tags['Tool'],
+        #                                tags['ToolID']]))
+        result += tag('XYP', tags['Probes'])
         result += tag('CUR', tags['Current'])
         result += tag('TXS', tags['LoopSize'])
 
@@ -34,7 +38,9 @@ class PEMSerializer:
         result = '~ Transmitter Loop Co-ordinates:\n'
         cnt = 0
         for loop_coord in coords:
-            result += loop_coord['Tag'] + ' ' + ' '.join(loop_coord['LoopCoordinates']) + '\n'
+            # TODO Coordinates are a single line, should be separated
+            # result += loop_coord['Tag'] + ' ' + ' '.join(loop_coord['LoopCoordinates']) + '\n'
+            result += loop_coord['Tag'] + ' ' + loop_coord['LoopCoordinates'].strip() + '\n'
             cnt += 1
         return result
 
@@ -42,7 +48,8 @@ class PEMSerializer:
         result = '~ Hole/Profile Co-ordinates:\n'
         cnt = 0
         for hole_coord in coords:
-            result += hole_coord['Tag'] + ' ' + ' '.join(hole_coord['LineCoordinates']) + '\n'
+            # TODO Coordinates are a single line, should be separated
+            result += hole_coord['Tag'] + ' ' + hole_coord['LineCoordinates'].strip() + '\n'
             cnt += 1
         return result
 
@@ -58,6 +65,8 @@ class PEMSerializer:
                        header['Loop'],
                        header['Date'],
                        ' '.join([header['SurveyType'],
+                                 header['Convension'],
+                                 header['Sync'],
                                  header['Timebase'],
                                  header['Ramp'],
                                  header['NumChannels'],
@@ -84,6 +93,8 @@ class PEMSerializer:
 
             cnt += 1
 
+        result += '$\n'
+
         return result
 
     def serialize_data(self, data):
@@ -109,6 +120,15 @@ class PEMSerializer:
             for i in range(0, len(channel_readings), readings_per_line):
                 readings = channel_readings[i:i + readings_per_line]
 
+                # TODO Add the space infront of non-negative numbers?
+            #     for i, reading in enumerate(readings):
+            #         if reading[0] == '-':
+            #             pass
+            #         else:
+            #             readings.pop(i)
+            #             reading = str(' '+reading)
+            #             readings.slice(i, reading)
+
                 result += ' '.join([str(r) + max(0, reading_spacing - len(r))*' ' for r in readings]) + '\n'
 
                 cnt += 1
@@ -123,7 +143,7 @@ class PEMSerializer:
         :return: A string in PEM file format containing the data found inside of pem_file
         """
 
-        logger.info("Serializing file...")
+        logging.info("Serializing file...")
 
         result = self.serialize_tags(pem_file.get_tags()) + \
                  self.serialize_loop_coords(pem_file.get_loop_coords()) + \
@@ -132,6 +152,6 @@ class PEMSerializer:
                  self.serialize_header(pem_file.get_header()) + \
                  self.serialize_data(pem_file.get_data())
 
-        logger.info("Finished serializing")
+        logging.info("Finished serializing")
 
         return result
