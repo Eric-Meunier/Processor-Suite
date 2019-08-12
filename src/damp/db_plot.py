@@ -2,11 +2,9 @@ import re
 import os
 import sys
 import datetime
-import chardet
 import codecs
 import statistics as stats
 import pyqtgraph as pg
-from encoding_detect import EncodingDetectFile
 from time_axis import AxisTime
 import logging
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox)
@@ -16,7 +14,7 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
