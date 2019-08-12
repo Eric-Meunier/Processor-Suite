@@ -6,7 +6,7 @@ class PEMFile:
     """
 
     # Constructor
-    def __init__(self, tags, loop_coords, line_coords, notes, header, data, components, survey_type, filepath):
+    def __init__(self, tags, loop_coords, line_coords, notes, header, data, components, survey_type, filepath=None):
         self.tags = tags
         self.loop_coords = loop_coords
         self.line_coords = line_coords

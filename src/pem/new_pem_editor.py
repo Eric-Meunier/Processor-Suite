@@ -4,6 +4,7 @@ import sys
 import datetime
 import statistics as stats
 import logging
+import itertools
 from src.pem.pem_parser import PEMParser
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem)
@@ -24,6 +25,8 @@ else:
 # Load Qt ui file into a class
 editorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_widget.ui')
 Ui_PEMEditorWidget, QtBaseClass = uic.loadUiType(editorCreatorFile)
+
+# TODO Added filepath to pemparser, will need to go and fix broken code as a result
 
 
 class MainWindow(QMainWindow, Ui_PEMEditorWidget):
@@ -151,7 +154,6 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         while self.table.rowCount() > 0:
             self.table.removeRow(0)
         self.pem_files.clear()
-
 
 
 if __name__ == '__main__':

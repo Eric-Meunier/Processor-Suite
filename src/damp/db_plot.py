@@ -2,8 +2,11 @@ import re
 import os
 import sys
 import datetime
+import chardet
+import codecs
 import statistics as stats
 import pyqtgraph as pg
+from encoding_detect import EncodingDetectFile
 from time_axis import AxisTime
 import logging
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox)
@@ -353,10 +356,30 @@ class DampParser:
         filename = filepath.split('/')[-1].split('.')[0]
         folderpath = '/'.join(filepath.split('/')[0:-1])
 
-        with open(filepath, "rt") as in_file:
-            file = in_file.read()
-            file_no_ramp = re.split(self.re_split_ramp, file)[0]
-            split_file = re.split(self.re_split_file, file_no_ramp)
+        raw = open(filepath, 'rb').read()  # Read the file as bytes first...
+
+        # This try is only needed because some files are encoded in utf-16le (no bom) for some reason
+        # If a BOM is present, we know what to use to decode
+        if raw.startswith(codecs.BOM_UTF16_LE):
+            file = raw.decode('utf-16le')
+        elif raw.startswith(codecs.BOM_UTF16_BE):
+            file = raw.decode('utf-16be')
+        elif raw.startswith(codecs.BOM_UTF8):
+            file = raw.decode('utf-8')
+        else:
+            # If no BOM is present, becomes trial and error
+            try:
+                decoded = raw.decode('utf-16le').encode('ascii')
+                file = raw.decode('utf-16le')
+            except UnicodeEncodeError:
+                try:
+                    decoded = raw.decode('utf-16be').encode('ascii')
+                    file = raw.decode('utf-16be')
+                except UnicodeEncodeError:
+                    file = raw.decode('utf-8')
+
+        file_no_ramp = re.split(self.re_split_ramp, file)[0]
+        split_file = re.split(self.re_split_file, file_no_ramp)
 
         for section in split_file:
             data = self.format_data(self.re_data.findall(section))
@@ -364,9 +387,6 @@ class DampParser:
                 times = data[0]
                 currents = data[1]
                 damp_data.append({'times': times, 'currents': currents})
-            # else:
-            #     times = None
-            #     currents = None
 
         survey_date = self.get_date(set(self.re_date.findall(file)))
 

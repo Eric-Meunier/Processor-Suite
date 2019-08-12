@@ -137,7 +137,7 @@ class ConFile:
         self.file = re.sub(self.re_line, r"\g<1>" + str(self.name) + "\g<3>", self.file)
 
     def save_file(self):
-        print(self.file, file=open(self.filepath, 'w'))
+        print(self.file, file=open(self.filepath, 'w+'))
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
