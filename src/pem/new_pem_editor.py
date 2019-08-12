@@ -6,6 +6,7 @@ import statistics as stats
 import logging
 import itertools
 from src.pem.pem_parser import PEMParser
+from src.pem.pem_file import PEMFile
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem)
 from PyQt5 import (QtCore, QtGui, uic)
@@ -29,7 +30,7 @@ Ui_PEMEditorWidget, QtBaseClass = uic.loadUiType(editorCreatorFile)
 # TODO Added filepath to pemparser, will need to go and fix broken code as a result
 
 
-class MainWindow(QMainWindow, Ui_PEMEditorWidget):
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUi()
@@ -38,7 +39,6 @@ class MainWindow(QMainWindow, Ui_PEMEditorWidget):
         self.editor = PEMEditor()
         self.message = QMessageBox()
         self.layout().addWidget(self.editor)
-        self.show()
 
     def initUi(self):
         def center_window(self):
@@ -98,8 +98,6 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.parser = PEMParser
         self.create_table()
 
-        # self.show()
-
     def open_file(self, file):
         try:
             pem_file = self.parser().parse(file)
@@ -155,9 +153,38 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             self.table.removeRow(0)
         self.pem_files.clear()
 
+    def save_pem(self, pem_file):
+        try:
+            save_file = pem_file.save_file()
+            print(save_file)
+            # print(save_file, file=open(pem_file.filepath, 'w'))
+        except Exception as e:
+            self.message.information(None, 'Error', str(e))
+            logging.info(str(e))
+
+    def save_all_pems(self):
+        # TODO Add suffix to file names, and choose location
+        if len(self.pem_files)>0:
+            for pem_file in self.pem_files:
+                try:
+                    file = pem_file.save_file()
+                    print(file)
+                    # print(file, file=open(file.filepath, 'w'))
+                except Exception as e:
+                    self.message.information(None, 'Error', str(e))
+                    logging.info(str(e))
+        else:
+            pass
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     mw = MainWindow()
+    sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
+    file_names = [f for f in os.listdir(sample_files) if os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
+    file_paths = []
+
+    for file in file_names:
+        # file_paths.append(os.path.join(sample_files, file))
+        mw.editor.open_file(os.path.join(sample_files, file))
     # editor = PEMEditor()
     app.exec_()
