@@ -1,14 +1,9 @@
-import re
 import os
 import sys
-import datetime
-import statistics as stats
 import logging
-import itertools
 from itertools import chain
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.pem_parser import PEMParser
-from src.pem.pem_file import PEMFile
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu)
 from PyQt5 import (QtCore, QtGui, uic)
@@ -38,7 +33,7 @@ class MainWindow(QMainWindow):
         self.initUi()
         layout = QGridLayout(self)
         self.setLayout(layout)
-        self.editor = PEMEditor()
+        self.editor = PEMEditor(self)
         self.message = QMessageBox()
         self.layout().addWidget(self.editor)
         self.setCentralWidget(self.editor)
@@ -116,20 +111,21 @@ class MainWindow(QMainWindow):
         try:
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
             self.editor.open_files(urls)
-            # Resize the window
+            # #Resize the window
             # if self.gridLayout.sizeHint().height()+25>self.size().height():
             #     self.resize(self.gridLayout.sizeHint().width()+25, self.gridLayout.sizeHint().height()+25)
         except Exception as e:
             logging.warning(str(e))
-            self.message.information(None, 'Error', str(e))
+            self.message.information(None, 'Error - Could not open selected PEM files', str(e))
             pass
 
 
 class PEMEditor(QWidget, Ui_PEMEditorWidget):
-    def __init__(self):
-        super(PEMEditor, self).__init__()
+    def __init__(self, parent):
+        super(PEMEditor, self).__init__(parent)
         self.setupUi(self)
 
+        self.parent = parent
         self.message = QMessageBox()
         self.pem_files = []
         self.parser = PEMParser()
@@ -184,9 +180,11 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 self.message.information(None, 'Error', str(e))
 
         if len(self.pem_files) > 0:
+            self.parent.statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
             self.fill_share_range()
         # self.update_table()
 
+    # Creates the right-click context menu on the table
     def contextMenuEvent(self, event):
         if self.table.underMouse():
             if self.table.selectionModel().selectedIndexes():
@@ -200,22 +198,26 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         else:
             pass
 
+    # Un-selects items from the table when clicking away from the table
     def eventFilter(self, source, event):
         if (event.type() == QtCore.QEvent.MouseButtonPress and
-            source is self.table.viewport() and
-            self.table.itemAt(event.pos()) is None):
+                source is self.table.viewport() and
+                self.table.itemAt(event.pos()) is None):
             self.table.clearSelection()
         return super(QWidget, self).eventFilter(source, event)
 
+    # Remove a single file
     def remove_file(self):
         row = self.table.currentRow()
         if row != -1:
             self.table.removeRow(row)
+            self.parent.statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
             del self.pem_files[row]
             self.update_table()
         else:
             pass
 
+    # Creates the table when the editor is first opened
     def create_table(self):
         self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'First Station', 'Last Station']
         self.table.setColumnCount(len(self.columns))
@@ -225,6 +227,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.table.resizeColumnsToContents()
 
     def add_to_table(self, pem_file):
+
         header = pem_file.header
         file = os.path.basename(pem_file.filepath)
         client = self.client_edit.text() if self.share_header_checkbox.isChecked() else header.get('Client')
@@ -232,8 +235,10 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         loop = self.loop_edit.text() if self.share_header_checkbox.isChecked() else header.get('Loop')
 
         line = header.get('LineHole')
-        start_stn = self.min_range_edit.text() if self.share_range_checkbox.isChecked() else str(min(pem_file.get_unique_stations()))
-        end_stn = self.max_range_edit.text() if self.share_range_checkbox.isChecked() else str(max(pem_file.get_unique_stations()))
+        start_stn = self.min_range_edit.text() if self.share_range_checkbox.isChecked() else str(
+            min(pem_file.get_unique_stations()))
+        end_stn = self.max_range_edit.text() if self.share_range_checkbox.isChecked() else str(
+            max(pem_file.get_unique_stations()))
 
         new_row = [file, client, grid, line, loop, start_stn, end_stn]
 
@@ -245,14 +250,27 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
 
         self.table.resizeColumnsToContents()
 
-        # if self.table.item(row_pos, 1).text() != self.table.item(row_pos, 2).text():
-        #     for column in range (1, 3):
-        #         self.table.item(row_pos, column).setForeground(QtGui.QColor('red'))
+        boldFont = QtGui.QFont()
+        boldFont.setBold(True)
+        # Only used for table comparisons
+        pem_file_info_list = [
+            file,
+            header.get('Client'),
+            header.get('Grid'),
+            header.get('LineHole'),
+            header.get('Loop'),
+            str(min(pem_file.get_unique_stations())),
+            str(max(pem_file.get_unique_stations()))
+        ]
+        for column in range(self.table.columnCount()):
+            if self.table.item(row_pos, column).text() != pem_file_info_list[column]:
+                self.table.item(row_pos, column).setFont(boldFont)
         #
         # if self.table.item(row_pos, 3).text() != self.table.item(row_pos, 4).text():
         #     for column in range (3, 5):
         #         self.table.item(row_pos, column).setForeground(QtGui.QColor('red'))
 
+    # Deletes and re-creates the table with the new information
     def update_table(self):
         # self.update_header()
         if len(self.pem_files) > 0:
@@ -328,8 +346,10 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             for pem_file in self.pem_files:
                 save_file = self.serializer.serialize(pem_file)
                 print(save_file)
+                self.parent.statusBar().showMessage('{0} PEM files saved'.format(len(self.pem_files)), 2000)
                 # save_name = os.path.splitext(pem_file.filepath)
                 # print(save_file, file=open(pem_file.filepath, 'w+'))
+            self.update_table()
 
     # def save_pem(self, pem_file):
     #     try:
@@ -353,6 +373,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
     #                 logging.info(str(e))
     #     else:
     #         pass
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
