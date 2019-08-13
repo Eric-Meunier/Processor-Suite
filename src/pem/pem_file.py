@@ -1,4 +1,4 @@
-from pem_serializer import PEMSerializer
+from src.pem.pem_serializer import PEMSerializer
 import re
 
 class PEMFile:

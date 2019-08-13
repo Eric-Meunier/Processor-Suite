@@ -21,8 +21,8 @@ else:
 samples_path = os.path.join(application_path, "sample_files")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-MW_qtCreatorFile = os.path.join(application_path, "con_file_window.ui")
-Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_qtCreatorFile)
+ConderWindow_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\con_file_window.ui')
+Ui_Conder_Window, QtBaseClass = uic.loadUiType(ConderWindow_qtCreatorFile)
 
 
 class ConFile:
@@ -140,15 +140,14 @@ class ConFile:
         print(self.file, file=open(self.filepath, 'w+'))
 
 
-class MainWindow(QMainWindow, Ui_MainWindow):
+class Conder(QMainWindow, Ui_Conder_Window):
     def __init__(self):
         super().__init__()
-        # Ui_MainWindow.__init__(self)
-        self.setupUi(self)
-
         self.initUI()
+        self.initActions()
+
         self.dialog = QFileDialog()
-        self.setLayout = None
+        # self.setLayout = None
         self.files = []
 
     def initUI(self):
@@ -157,12 +156,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             centerPoint = QDesktopWidget().availableGeometry().center()
             qtRectangle.moveCenter(centerPoint)
             self.move(qtRectangle.topLeft())
-            self.show()
+            # self.show()
 
+        self.setupUi(self)
         self.setGeometry(500, 300, 800, 600)
-        self.setWindowTitle('Con File Modder  v'+__version__)
+        self.setWindowTitle('Conder  v'+__version__)
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
+        center_window(self)
+
+    def initActions(self):
         self.setAcceptDrops(True)
 
         self.setCentralWidget(self.centralWidget)
@@ -197,8 +200,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.create_table()
 
-        center_window(self)
-
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
         def check_extension(urls):
@@ -217,8 +218,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def dropEvent(self, e):
         try:
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
-            for url in urls:
-                self.file_open(url)
+            self.open_files(urls)
             # Resize the window
             if self.gridLayout.sizeHint().height()+25>self.size().height():
                 self.resize(self.gridLayout.sizeHint().width()+25, self.gridLayout.sizeHint().height()+25)
@@ -227,21 +227,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.message.information(None, 'Error', str(e))
             pass
 
-    def file_open(self, file):
-        try:
-            confile = ConFile(file)
-        except Exception as e:
-            logging.warning(str(e))
-            self.message.information(None, 'Error', str(e))
-        else:
-            self.files.append(confile)
-            self.add_to_table(confile)
+    def open_files(self, files):
+        if not isinstance(files, list) and isinstance(files, str):
+            files = [files]
+        for file in files:
+            try:
+                confile = ConFile(file)
+            except Exception as e:
+                logging.warning(str(e))
+                self.message.information(None, 'Error', str(e))
+            else:
+                self.files.append(confile)
+                self.add_to_table(confile)
 
     def open_file_dialog(self):
         try:
             file = self.dialog.getOpenFileName(self, 'Open File')
             if file[0].lower().endswith('.con'):
-                self.file_open(file[0])
+                self.open_files(file[0])
             else:
                 self.message.information(None, 'Error', 'Invalid File Format')
                 return
@@ -263,13 +266,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     file.set_station_range(new_min, new_max)
                 else:
                     file.set_station_range(file.start_stn, file.end_stn)
-
                 file.save_file()
-
             self.clear_files()
-
-            for filepath in temp_filepaths:
-                self.file_open(filepath)
+            self.open_files(temp_filepaths)
 
     def run_mkdxf(self):
         if len(self.files)>0:
@@ -362,7 +361,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 def main():
 
     app = QApplication(sys.argv)
-    mw = MainWindow()
+    mw = Conder()
+    mw.show()
     app.exec_()
 
     # file_names = [f for f in os.listdir(samples_path) if isfile(join(samples_path, f)) and f.lower().endswith('.con')]

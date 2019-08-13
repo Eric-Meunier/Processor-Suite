@@ -5,7 +5,7 @@ import datetime
 import codecs
 import statistics as stats
 import pyqtgraph as pg
-from time_axis import AxisTime
+from src.damp.time_axis import AxisTime
 import logging
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox)
 from PyQt5 import (QtCore, QtGui, uic)
@@ -25,21 +25,18 @@ else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
 # Load Qt ui file into a class
-MW_qtCreatorFile = os.path.join(application_path, "db_plot_window.ui")
-DP_qtCreatorFile = os.path.join(application_path, "db_plot_widget.ui")
-Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_qtCreatorFile)
-Ui_DampPlotWidget, QtBaseClass = uic.loadUiType(DP_qtCreatorFile)
+DB_Window_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_window.ui')
+DB_Widget_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_widget.ui')
+Ui_DB_Window, QtBaseClass = uic.loadUiType(DB_Window_qtCreatorFile)
+Ui_DB_Widget, QtBaseClass = uic.loadUiType(DB_Widget_qtCreatorFile)
 
 
-class MainWindow(QMainWindow, Ui_MainWindow):
+class DBPlot(QMainWindow, Ui_DB_Window):
     def __init__(self):
         super().__init__()
-        # QMainWindow.__init__(self)
-        # Ui_MainWindow.__init__(self)
-        self.setupUi(self)
         self.initUi()
+        self.initActions()
 
-        self.setAcceptDrops(True)
         self.filename = None
         self.show_coords = False
         self.show_grids = True
@@ -59,16 +56,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             centerPoint = QDesktopWidget().availableGeometry().center()
             qtRectangle.moveCenter(centerPoint)
             self.move(qtRectangle.topLeft())
-            self.show()
-
+            # self.show()
+        self.setupUi(self)
         self.dialog = QtGui.QFileDialog()
         self.statusBar().showMessage('Ready')
-        self.setWindowTitle("Damping Box Current Plot  v"+str(__version__))
+        self.setWindowTitle("DB Plot  v"+str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
-        # TODO Program where the window opens
         self.setGeometry(500, 300, 800, 600)
+        center_window(self)
 
+    def initActions(self):
+        self.setAcceptDrops(True)
         self.mainMenu = self.menuBar()
 
         self.openFile = QtGui.QAction("&Open File", self)
@@ -117,24 +116,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.viewMenu.addAction(self.resetRange)
         self.viewMenu.addAction(self.showSymbols)
 
-        center_window(self)
-
-    # def init_ui(self):
-    #     # self.ui =
-    #     logging.info("Setting up MainWindow ui")
-    #     centralwidget = QtWidgets.QWidget(self)
-    #     centralwidget.setObjectName("centralwidget")
-    #     self.setCentralWidget(centralwidget)
-    #
-    #     self.statusBar().showMessage('Ready')
-    #     self.setWindowTitle("Damping Box Current Plot")
-    #     self.setGeometry(-1000, 300, 800, 600)
-    #
-    #     layout = QtWidgets.QVBoxLayout()
-    #     self.setLayout(layout)
-    #
-    #     self.show()
-
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
 
@@ -154,8 +135,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def dropEvent(self, e):
         try:
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
-            for url in urls:
-                self.file_open(url)
+            self.open_files(urls)
             # Resize the window
             if self.gridLayout.sizeHint().height() > self.size().height() or self.gridLayout.sizeHint().width() > self.size().width():
                 self.resize(self.gridLayout.sizeHint().width(), self.gridLayout.sizeHint().height())
@@ -168,7 +148,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         try:
             file = QtGui.QFileDialog.getOpenFileName(self, 'Open File')
             if file[0].endswith('log') or file[0].endswith('txt') or file[0].endswith('rtf'):
-                self.file_open(file[0])
+                self.open_files(file[0])
             else:
                 self.message.information(None, 'Error', 'Invalid File Format')
                 return
@@ -177,7 +157,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.message.information(None, 'Error', str(e))
             return
 
-    def file_open(self, files):
+    def open_files(self, files):
         # Only work with lists (to accomodate files with multiple logs, so if input isn't a list, makes it one
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
@@ -396,12 +376,12 @@ class DampParser:
         return damp_data
 
 
-class DampPlot(QWidget, Ui_DampPlotWidget):
+class DampPlot(QWidget, Ui_DB_Widget):
 
     def __init__(self, file, show_coords=False, grid=True, show_symbols=True, parent=None):
         super(DampPlot, self).__init__(parent=parent)
         QWidget.__init__(self, parent=parent)
-        Ui_DampPlotWidget.__init__(self)
+        Ui_DB_Widget.__init__(self)
         self.setupUi(self)
 
         self.pw = None
@@ -520,7 +500,8 @@ class DampPlot(QWidget, Ui_DampPlotWidget):
 
 def main():
     app = QtGui.QApplication(sys.argv)
-    mw = MainWindow()
+    mw = DBPlot()
+    mw.show()
     app.exec_()
 
     # file = 'df.log'

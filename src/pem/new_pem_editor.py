@@ -27,17 +27,39 @@ Ui_PEMEditorWidget, QtBaseClass = uic.loadUiType(editorCreatorFile)
 # TODO Added filepath to pemparser, will need to go and fix broken code as a result
 
 
-class MainWindow(QMainWindow):
+class PEMEditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUi()
+        self.initApps()
+        self.initActions()
+
+    def initUi(self):
+        def center_window(self):
+            qtRectangle = self.frameGeometry()
+            centerPoint = QDesktopWidget().availableGeometry().center()
+            qtRectangle.moveCenter(centerPoint)
+            self.move(qtRectangle.topLeft())
+
         layout = QGridLayout(self)
         self.setLayout(layout)
-        self.editor = PEMEditor(self)
+        self.setAcceptDrops(True)
+        self.setWindowTitle("PEMEditor  v" + str(__version__))
+        self.setWindowIcon(
+            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\crone_logo.ico")))
+        self.setGeometry(500, 300, 1000, 800)
+        center_window(self)
+
+    def initApps(self):
         self.message = QMessageBox()
+        self.dialog = QFileDialog()
+
+        self.editor = PEMEditor(self)
         self.layout().addWidget(self.editor)
         self.setCentralWidget(self.editor)
 
+    def initActions(self):
+        self.statusBar().showMessage('Ready')
         self.mainMenu = self.menuBar()
 
         self.openFile = QAction("&Open File", self)
@@ -60,29 +82,12 @@ class MainWindow(QMainWindow):
         self.fileMenu.addAction(self.saveFiles)
         self.fileMenu.addAction(self.clearFiles)
 
-    def initUi(self):
-        def center_window(self):
-            qtRectangle = self.frameGeometry()
-            centerPoint = QDesktopWidget().availableGeometry().center()
-            qtRectangle.moveCenter(centerPoint)
-            self.move(qtRectangle.topLeft())
-            self.show()
-
-        self.setAcceptDrops(True)
-        self.dialog = QFileDialog()
-        self.statusBar().showMessage('Ready')
-        self.setWindowTitle("PEM Editor  v" + str(__version__))
-        self.setWindowIcon(
-            QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
-        # TODO Program where the window opens
-        self.setGeometry(500, 300, 800, 600)
-        center_window(self)
-
     def open_file_dialog(self):
         try:
             file = self.dialog.getOpenFileName(self, 'Open File')
             if file[0].lower().endswith('.pem'):
                 self.editor.open_files(file[0])
+                # self.setFixedSize(self.layout.sizeHint())
             else:
                 self.message.information(None, 'Error', 'Invalid File Format')
                 return
@@ -118,6 +123,132 @@ class MainWindow(QMainWindow):
             logging.warning(str(e))
             self.message.information(None, 'Error - Could not open selected PEM files', str(e))
             pass
+
+    def open_files(self, files):
+        if not isinstance(files, list) and isinstance(files, str):
+            files = [files]
+        for file in files:
+            try:
+                pem_file = self.parser.parse(file)
+                self.pem_files.append(pem_file)
+
+                if len(self.pem_files) == 1:  # The initial fill of the header and station info
+                    if self.client_edit.text() == '':
+                        self.client_edit.setText(self.pem_files[0].header['Client'])
+                    if self.grid_edit.text() == '':
+                        self.grid_edit.setText(self.pem_files[0].header['Grid'])
+                    if self.loop_edit.text() == '':
+                        self.loop_edit.setText(self.pem_files[0].header['Loop'])
+
+                    all_stations = [file.get_unique_stations() for file in self.pem_files]
+
+                    if self.min_range_edit.text() == '':
+                        min_range = str(min(chain.from_iterable(all_stations)))
+                        self.min_range_edit.setText(min_range)
+                    if self.max_range_edit.text() == '':
+                        max_range = str(max(chain.from_iterable(all_stations)))
+                        self.max_range_edit.setText(max_range)
+
+            except Exception as e:
+                logging.info(str(e))
+                self.message.information(None, 'Error', str(e))
+
+        if len(self.pem_files) > 0:
+            self.parent.statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
+            self.fill_share_range()
+        # self.update_table()
+
+# class MainWindow(QMainWindow):
+#     def __init__(self):
+#         super().__init__()
+#         self.initUi()
+#         layout = QGridLayout(self)
+#         self.setLayout(layout)
+#         self.editor = PEMEditor(self)
+#         self.message = QMessageBox()
+#         self.layout().addWidget(self.editor)
+#         self.setCentralWidget(self.editor)
+#
+#         self.mainMenu = self.menuBar()
+#
+#         self.openFile = QAction("&Open File", self)
+#         self.openFile.setShortcut("Ctrl+O")
+#         self.openFile.setStatusTip('Open file')
+#         self.openFile.triggered.connect(self.open_file_dialog)
+#
+#         self.saveFiles = QAction("&Save Files", self)
+#         self.saveFiles.setShortcut("Ctrl+S")
+#         self.saveFiles.setStatusTip("Save all files")
+#         self.saveFiles.triggered.connect(self.editor.save_all)
+#
+#         self.clearFiles = QAction("&Clear Files", self)
+#         self.clearFiles.setShortcut("Ctrl+Del")
+#         self.clearFiles.setStatusTip("Clear all files")
+#         self.clearFiles.triggered.connect(self.editor.clear_files)
+#
+#         self.fileMenu = self.mainMenu.addMenu('&File')
+#         self.fileMenu.addAction(self.openFile)
+#         self.fileMenu.addAction(self.saveFiles)
+#         self.fileMenu.addAction(self.clearFiles)
+#
+#     def initUi(self):
+#         def center_window(self):
+#             qtRectangle = self.frameGeometry()
+#             centerPoint = QDesktopWidget().availableGeometry().center()
+#             qtRectangle.moveCenter(centerPoint)
+#             self.move(qtRectangle.topLeft())
+#             # self.show()
+#
+#         self.setAcceptDrops(True)
+#         self.dialog = QFileDialog()
+#         self.statusBar().showMessage('Ready')
+#         self.setWindowTitle("PEM Editor  v" + str(__version__))
+#         self.setWindowIcon(
+#             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
+#         self.setGeometry(500, 300, 800, 600)
+#         center_window(self)
+#
+#     def open_file_dialog(self):
+#         try:
+#             file = self.dialog.getOpenFileName(self, 'Open File')
+#             if file[0].lower().endswith('.pem'):
+#                 self.editor.open_files(file[0])
+#                 # self.setFixedSize(self.layout.sizeHint())
+#             else:
+#                 self.message.information(None, 'Error', 'Invalid File Format')
+#                 return
+#         except Exception as e:
+#             logging.warning(str(e))
+#             self.message.information(None, 'Error', str(e))
+#             pass
+#
+#     def dragEnterEvent(self, e):
+#         urls = [url.toLocalFile() for url in e.mimeData().urls()]
+#
+#         def check_extension(urls):
+#             for url in urls:
+#                 if url.lower().endswith('pem'):
+#                     continue
+#                 else:
+#                     return False
+#             return True
+#
+#         if check_extension(urls):
+#             e.accept()
+#         else:
+#             e.ignore()
+#
+#     def dropEvent(self, e):
+#         try:
+#             urls = [url.toLocalFile() for url in e.mimeData().urls()]
+#             self.editor.open_files(urls)
+#             # #Resize the window
+#             # if self.gridLayout.sizeHint().height()+25>self.size().height():
+#             #     self.resize(self.gridLayout.sizeHint().width()+25, self.gridLayout.sizeHint().height()+25)
+#         except Exception as e:
+#             logging.warning(str(e))
+#             self.message.information(None, 'Error - Could not open selected PEM files', str(e))
+#             pass
 
 
 class PEMEditor(QWidget, Ui_PEMEditorWidget):
@@ -377,7 +508,8 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    mw = MainWindow()
+    mw = PEMEditorWindow()
+    mw.show()
     # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
     # file_names = [f for f in os.listdir(sample_files) if os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
     # file_paths = []
