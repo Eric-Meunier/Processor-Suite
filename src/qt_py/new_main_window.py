@@ -132,7 +132,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.mdiArea.addSubWindow(self.editor)
                 self.editor.show()
                 self.mdiArea.tileSubWindows()
-                self.editor.editor.open_files(pem_files)
+                self.editor.open_files(pem_files)
             except Exception as e:
                 logging.warning(str(e))
                 self.message.information(None, 'Error - Could not open selected PEM files', str(e))
@@ -153,7 +153,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             try:
                 self.mdiArea.addSubWindow(self.conder)
                 self.conder.show()
-                self.mdiArea.cascadeSubWindows()
+                self.mdiArea.tileSubWindows()
                 self.conder.open_files(con_files)
             except Exception as e:
                 logging.warning(str(e))

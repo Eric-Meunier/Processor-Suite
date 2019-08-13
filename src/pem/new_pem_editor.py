@@ -55,6 +55,8 @@ class PEMEditorWindow(QMainWindow):
         self.dialog = QFileDialog()
 
         self.editor = PEMEditor(self)
+        self.parser = PEMParser()
+        self.serializer = PEMSerializer()
         self.layout().addWidget(self.editor)
         self.setCentralWidget(self.editor)
 
@@ -70,12 +72,12 @@ class PEMEditorWindow(QMainWindow):
         self.saveFiles = QAction("&Save Files", self)
         self.saveFiles.setShortcut("Ctrl+S")
         self.saveFiles.setStatusTip("Save all files")
-        self.saveFiles.triggered.connect(self.editor.save_all)
+        self.saveFiles.triggered.connect(self.save_all)
 
         self.clearFiles = QAction("&Clear Files", self)
         self.clearFiles.setShortcut("Ctrl+Del")
         self.clearFiles.setStatusTip("Clear all files")
-        self.clearFiles.triggered.connect(self.editor.clear_files)
+        self.clearFiles.triggered.connect(self.clear_files)
 
         self.fileMenu = self.mainMenu.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
@@ -86,7 +88,7 @@ class PEMEditorWindow(QMainWindow):
         try:
             file = self.dialog.getOpenFileName(self, 'Open File')
             if file[0].lower().endswith('.pem'):
-                self.editor.open_files(file[0])
+                self.open_files(file[0])
                 # self.setFixedSize(self.layout.sizeHint())
             else:
                 self.message.information(None, 'Error', 'Invalid File Format')
@@ -115,7 +117,7 @@ class PEMEditorWindow(QMainWindow):
     def dropEvent(self, e):
         try:
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
-            self.editor.open_files(urls)
+            self.open_files(urls)
             # #Resize the window
             # if self.gridLayout.sizeHint().height()+25>self.size().height():
             #     self.resize(self.gridLayout.sizeHint().width()+25, self.gridLayout.sizeHint().height()+25)
@@ -130,33 +132,58 @@ class PEMEditorWindow(QMainWindow):
         for file in files:
             try:
                 pem_file = self.parser.parse(file)
-                self.pem_files.append(pem_file)
+                self.editor.pem_files.append(pem_file)
 
-                if len(self.pem_files) == 1:  # The initial fill of the header and station info
-                    if self.client_edit.text() == '':
-                        self.client_edit.setText(self.pem_files[0].header['Client'])
-                    if self.grid_edit.text() == '':
-                        self.grid_edit.setText(self.pem_files[0].header['Grid'])
-                    if self.loop_edit.text() == '':
-                        self.loop_edit.setText(self.pem_files[0].header['Loop'])
+                if len(self.editor.pem_files) == 1:  # The initial fill of the header and station info
+                    if self.editor.client_edit.text() == '':
+                        self.editor.client_edit.setText(self.editor.pem_files[0].header['Client'])
+                    if self.editor.grid_edit.text() == '':
+                        self.editor.grid_edit.setText(self.editor.pem_files[0].header['Grid'])
+                    if self.editor.loop_edit.text() == '':
+                        self.editor.loop_edit.setText(self.editor.pem_files[0].header['Loop'])
 
-                    all_stations = [file.get_unique_stations() for file in self.pem_files]
+                    all_stations = [file.get_unique_stations() for file in self.editor.pem_files]
 
-                    if self.min_range_edit.text() == '':
+                    if self.editor.min_range_edit.text() == '':
                         min_range = str(min(chain.from_iterable(all_stations)))
-                        self.min_range_edit.setText(min_range)
-                    if self.max_range_edit.text() == '':
+                        self.editor.min_range_edit.setText(min_range)
+                    if self.editor.max_range_edit.text() == '':
                         max_range = str(max(chain.from_iterable(all_stations)))
-                        self.max_range_edit.setText(max_range)
+                        self.editor.max_range_edit.setText(max_range)
 
             except Exception as e:
                 logging.info(str(e))
                 self.message.information(None, 'Error', str(e))
 
-        if len(self.pem_files) > 0:
-            self.parent.statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
-            self.fill_share_range()
+        if len(self.editor.pem_files) > 0:
+            self.statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
+            self.editor.fill_share_range()
         # self.update_table()
+
+    def clear_files(self):
+        while self.editor.table.rowCount() > 0:
+            self.editor.table.removeRow(0)
+        self.editor.pem_files.clear()
+        self.editor.min_range_edit.setText('')
+        self.editor.max_range_edit.setText('')
+        self.editor.client_edit.setText('')
+        self.editor.grid_edit.setText('')
+        self.editor.loop_edit.setText('')
+
+    def save_all(self):
+        if len(self.editor.pem_files) > 0:
+            for row in range(self.editor.table.rowCount()):
+                self.editor.pem_files[row].header['Client'] = self.editor.table.item(row, 1).text()
+                self.editor.pem_files[row].header['Grid'] = self.editor.table.item(row, 2).text()
+                self.editor.pem_files[row].header['LineHole'] = self.editor.table.item(row, 3).text()
+                self.editor.pem_files[row].header['Loop'] = self.editor.table.item(row, 4).text()
+            for pem_file in self.editor.pem_files:
+                save_file = self.serializer.serialize(pem_file)
+                print(save_file)
+                self.statusBar().showMessage('{0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
+                # save_name = os.path.splitext(pem_file.filepath)
+                # print(save_file, file=open(pem_file.filepath, 'w+'))
+            self.editor.update_table()
 
 # class MainWindow(QMainWindow):
 #     def __init__(self):
@@ -259,8 +286,8 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.parent = parent
         self.message = QMessageBox()
         self.pem_files = []
-        self.parser = PEMParser()
-        self.serializer = PEMSerializer()
+        # self.parser = PEMParser()
+        # self.serializer = PEMSerializer()
         self.create_table()
         self.table.viewport().installEventFilter(self)
         self.tabWidget.hide()
@@ -281,39 +308,39 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.min_range_edit.returnPressed.connect(self.update_table)
         self.max_range_edit.returnPressed.connect(self.update_table)
 
-    def open_files(self, files):
-        if not isinstance(files, list) and isinstance(files, str):
-            files = [files]
-        for file in files:
-            try:
-                pem_file = self.parser.parse(file)
-                self.pem_files.append(pem_file)
-
-                if len(self.pem_files) == 1:  # The initial fill of the header and station info
-                    if self.client_edit.text() == '':
-                        self.client_edit.setText(self.pem_files[0].header['Client'])
-                    if self.grid_edit.text() == '':
-                        self.grid_edit.setText(self.pem_files[0].header['Grid'])
-                    if self.loop_edit.text() == '':
-                        self.loop_edit.setText(self.pem_files[0].header['Loop'])
-
-                    all_stations = [file.get_unique_stations() for file in self.pem_files]
-
-                    if self.min_range_edit.text() == '':
-                        min_range = str(min(chain.from_iterable(all_stations)))
-                        self.min_range_edit.setText(min_range)
-                    if self.max_range_edit.text() == '':
-                        max_range = str(max(chain.from_iterable(all_stations)))
-                        self.max_range_edit.setText(max_range)
-
-            except Exception as e:
-                logging.info(str(e))
-                self.message.information(None, 'Error', str(e))
-
-        if len(self.pem_files) > 0:
-            self.parent.statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
-            self.fill_share_range()
-        # self.update_table()
+    # def open_files(self, files):
+    #     if not isinstance(files, list) and isinstance(files, str):
+    #         files = [files]
+    #     for file in files:
+    #         try:
+    #             pem_file = self.parser.parse(file)
+    #             self.pem_files.append(pem_file)
+    #
+    #             if len(self.pem_files) == 1:  # The initial fill of the header and station info
+    #                 if self.client_edit.text() == '':
+    #                     self.client_edit.setText(self.pem_files[0].header['Client'])
+    #                 if self.grid_edit.text() == '':
+    #                     self.grid_edit.setText(self.pem_files[0].header['Grid'])
+    #                 if self.loop_edit.text() == '':
+    #                     self.loop_edit.setText(self.pem_files[0].header['Loop'])
+    #
+    #                 all_stations = [file.get_unique_stations() for file in self.pem_files]
+    #
+    #                 if self.min_range_edit.text() == '':
+    #                     min_range = str(min(chain.from_iterable(all_stations)))
+    #                     self.min_range_edit.setText(min_range)
+    #                 if self.max_range_edit.text() == '':
+    #                     max_range = str(max(chain.from_iterable(all_stations)))
+    #                     self.max_range_edit.setText(max_range)
+    #
+    #         except Exception as e:
+    #             logging.info(str(e))
+    #             self.message.information(None, 'Error', str(e))
+    #
+    #     if len(self.pem_files) > 0:
+    #         self.parent.statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
+    #         self.fill_share_range()
+    #     # self.update_table()
 
     # Creates the right-click context menu on the table
     def contextMenuEvent(self, event):
@@ -457,30 +484,30 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             self.max_range_edit.setEnabled(False)
             self.update_table()
 
-    def clear_files(self):
-        while self.table.rowCount() > 0:
-            self.table.removeRow(0)
-        self.pem_files.clear()
-        self.min_range_edit.setText('')
-        self.max_range_edit.setText('')
-        self.client_edit.setText('')
-        self.grid_edit.setText('')
-        self.loop_edit.setText('')
-
-    def save_all(self):
-        if len(self.pem_files) > 0:
-            for row in range(self.table.rowCount()):
-                self.pem_files[row].header['Client'] = self.table.item(row, 1).text()
-                self.pem_files[row].header['Grid'] = self.table.item(row, 2).text()
-                self.pem_files[row].header['LineHole'] = self.table.item(row, 3).text()
-                self.pem_files[row].header['Loop'] = self.table.item(row, 4).text()
-            for pem_file in self.pem_files:
-                save_file = self.serializer.serialize(pem_file)
-                print(save_file)
-                self.parent.statusBar().showMessage('{0} PEM files saved'.format(len(self.pem_files)), 2000)
-                # save_name = os.path.splitext(pem_file.filepath)
-                # print(save_file, file=open(pem_file.filepath, 'w+'))
-            self.update_table()
+    # def clear_files(self):
+    #     while self.table.rowCount() > 0:
+    #         self.table.removeRow(0)
+    #     self.pem_files.clear()
+    #     self.min_range_edit.setText('')
+    #     self.max_range_edit.setText('')
+    #     self.client_edit.setText('')
+    #     self.grid_edit.setText('')
+    #     self.loop_edit.setText('')
+    #
+    # def save_all(self):
+    #     if len(self.pem_files) > 0:
+    #         for row in range(self.table.rowCount()):
+    #             self.pem_files[row].header['Client'] = self.table.item(row, 1).text()
+    #             self.pem_files[row].header['Grid'] = self.table.item(row, 2).text()
+    #             self.pem_files[row].header['LineHole'] = self.table.item(row, 3).text()
+    #             self.pem_files[row].header['Loop'] = self.table.item(row, 4).text()
+    #         for pem_file in self.pem_files:
+    #             save_file = self.serializer.serialize(pem_file)
+    #             print(save_file)
+    #             self.parent.statusBar().showMessage('{0} PEM files saved'.format(len(self.pem_files)), 2000)
+    #             # save_name = os.path.splitext(pem_file.filepath)
+    #             # print(save_file, file=open(pem_file.filepath, 'w+'))
+    #         self.update_table()
 
     # def save_pem(self, pem_file):
     #     try:
