@@ -10,7 +10,7 @@ from src.pem.pem_serializer import PEMSerializer
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_file import PEMFile
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox,
-                             QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction)
+                             QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu)
 from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -56,7 +56,7 @@ class MainWindow(QMainWindow):
         self.saveFiles.triggered.connect(self.editor.save_all)
 
         self.clearFiles = QAction("&Clear Files", self)
-        self.clearFiles.setShortcut("Del")
+        self.clearFiles.setShortcut("Ctrl+Del")
         self.clearFiles.setStatusTip("Clear all files")
         self.clearFiles.triggered.connect(self.editor.clear_files)
 
@@ -115,8 +115,6 @@ class MainWindow(QMainWindow):
     def dropEvent(self, e):
         try:
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
-            # for url in urls:
-            #     self.editor.open_files(url)
             self.editor.open_files(urls)
             # Resize the window
             # if self.gridLayout.sizeHint().height()+25>self.size().height():
@@ -138,6 +136,11 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.serializer = PEMSerializer()
         self.create_table()
         self.tabWidget.hide()
+
+        self.del_file = QAction("&Remove File", self)
+        self.del_file.setShortcut("Del")
+        self.del_file.triggered.connect(self.remove_file)
+        self.addAction(self.del_file)
 
         self.share_header_checkbox.stateChanged.connect(self.toggle_share_header)
         self.reset_header_btn.clicked.connect(self.fill_share_header)
@@ -182,6 +185,22 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         if len(self.pem_files) > 0:
             self.fill_share_range()
         # self.update_table()
+
+    def contextMenuEvent(self, event):
+        self.menu = QMenu(self.table)
+        self.remove_file_action = QAction("&Remove", self)
+        self.remove_file_action.triggered.connect(self.remove_file)
+        self.menu.addAction(self.remove_file_action)
+        self.menu.popup(QtGui.QCursor.pos())
+
+    def remove_file(self):
+        row = self.table.currentRow()
+        if row != -1:
+            self.table.removeRow(row)
+            del self.pem_files[row]
+            self.update_table()
+        else:
+            pass
 
     def create_table(self):
         self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'First Station', 'Last Station']
@@ -236,6 +255,10 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             self.grid_edit.setText(self.pem_files[0].header['Grid'])
             self.loop_edit.setText(self.pem_files[0].header['Loop'])
             self.update_table()
+        else:
+            self.client_edit.setText('')
+            self.grid_edit.setText('')
+            self.loop_edit.setText('')
 
     def fill_share_range(self):
         if len(self.pem_files) > 0:
@@ -245,6 +268,9 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             self.min_range_edit.setText(min_range)
             self.max_range_edit.setText(max_range)
             self.update_table()
+        else:
+            self.min_range_edit.setText('')
+            self.max_range_edit.setText('')
 
     def toggle_share_header(self):
         if self.share_header_checkbox.isChecked():
@@ -267,41 +293,6 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             self.min_range_edit.setEnabled(False)
             self.max_range_edit.setEnabled(False)
             self.update_table()
-
-    def update_header(self):
-        if self.share_header_checkbox.isChecked():
-            self.client_edit.setEnabled(True)
-            self.grid_edit.setEnabled(True)
-            self.loop_edit.setEnabled(True)
-
-            if len(self.pem_files) > 0:
-                if self.client_edit.text() == '':
-                    self.client_edit.setText(self.pem_files[0].header['Client'])
-                if self.grid_edit.text() == '':
-                    self.grid_edit.setText(self.pem_files[0].header['Grid'])
-                if self.loop_edit.text() == '':
-                    self.loop_edit.setText(self.pem_files[0].header['Loop'])
-            else:
-                pass
-        else:
-            self.client_edit.setEnabled(False)
-            self.grid_edit.setEnabled(False)
-            self.loop_edit.setEnabled(False)
-
-        if self.share_range_checkbox.isChecked():
-            self.min_range_edit.setEnabled(True)
-            self.max_range_edit.setEnabled(True)
-
-            if len(self.pem_files) > 0:
-                all_stations = [file.get_unique_stations() for file in self.pem_files]
-                min_range, max_range = str(min(chain.from_iterable(all_stations))), str(max(chain.from_iterable(all_stations)))
-                self.min_range_edit.setText(min_range)
-                self.max_range_edit.setText(max_range)
-            else:
-                pass
-        else:
-            self.min_range_edit.setEnabled(False)
-            self.max_range_edit.setEnabled(False)
 
     def clear_files(self):
         while self.table.rowCount() > 0:
