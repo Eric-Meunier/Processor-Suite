@@ -109,7 +109,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
 
         # TODO Make sure active editor field is valid
-        logger.info('Saving plots to PDFs in directory "{}"'.format(name))
+        logging.info('Saving plots to PDFs in directory "{}"'.format(name))
         self.file_browser.print_files(name)
 
     def on_file_open(self):

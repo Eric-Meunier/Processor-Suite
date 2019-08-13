@@ -56,7 +56,7 @@ class FileBrowser(QTabWidget):
         # tab_widget = self.widget(tab_index)
         self.setCurrentWidget(new_file_widget)
 
-        new_file_widget.open_file(file_name)
+        new_file_widget.open_files(file_name)
         self.active_editor = self.editor
 
     def open_files(self, file_names, redraw = False, **kwargs):
@@ -81,7 +81,7 @@ class FileBrowser(QTabWidget):
                 return 'Invalid File Name'
 
         def get_item_name(file_path):
-            self.editor.open_file(file_path)
+            self.editor.open_files(file_path)
             components = self.editor.active_file.get_components()
             header = self.editor.active_file.get_header()
             survey_type = self.editor.active_file.get_survey_type()
@@ -116,7 +116,7 @@ class FileBrowser(QTabWidget):
             # loop after the required widgets are generated
             self.num_plotted = int(file_names.index(file_name) + 1)
 
-            new_file_widget.open_file(file_name, **kwargs)
+            new_file_widget.open_files(file_name, **kwargs)
             # update = self.update_pbar()
             self.pbar.setValue(float((self.num_plotted / self.num_files) * 100))
 

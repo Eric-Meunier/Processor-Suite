@@ -2,6 +2,7 @@
 # from log import Logger
 # logger = Logger(__name__)
 import logging
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 
@@ -143,7 +144,7 @@ class PEMSerializer:
         :return: A string in PEM file format containing the data found inside of pem_file
         """
 
-        logging.info("Serializing file...")
+        # logging.info("Serializing file...")
 
         result = self.serialize_tags(pem_file.get_tags()) + \
                  self.serialize_loop_coords(pem_file.get_loop_coords()) + \
@@ -152,6 +153,6 @@ class PEMSerializer:
                  self.serialize_header(pem_file.get_header()) + \
                  self.serialize_data(pem_file.get_data())
 
-        logging.info("Finished serializing")
+        # logging.info("Finished serializing")
 
         return result

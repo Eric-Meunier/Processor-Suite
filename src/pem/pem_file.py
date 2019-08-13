@@ -45,7 +45,8 @@ class PEMFile:
     def get_unique_stations(self):
         unique_stations = {self.convert_station(n) for n in
                            [reading['Station'] for reading in self.data]}
-        return unique_stations
+        unique_stations_list = [station for station in unique_stations]
+        return unique_stations_list
 
     def convert_station(self, station):
         """
