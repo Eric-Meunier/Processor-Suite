@@ -135,6 +135,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.parser = PEMParser()
         self.serializer = PEMSerializer()
         self.create_table()
+        self.table.viewport().installEventFilter(self)
         self.tabWidget.hide()
 
         self.del_file = QAction("&Remove File", self)
@@ -187,11 +188,24 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         # self.update_table()
 
     def contextMenuEvent(self, event):
-        self.menu = QMenu(self.table)
-        self.remove_file_action = QAction("&Remove", self)
-        self.remove_file_action.triggered.connect(self.remove_file)
-        self.menu.addAction(self.remove_file_action)
-        self.menu.popup(QtGui.QCursor.pos())
+        if self.table.underMouse():
+            if self.table.selectionModel().selectedIndexes():
+                self.table.menu = QMenu(self.table)
+                self.table.remove_file_action = QAction("&Remove", self)
+                self.table.remove_file_action.triggered.connect(self.remove_file)
+                self.table.menu.addAction(self.table.remove_file_action)
+                self.table.menu.popup(QtGui.QCursor.pos())
+            else:
+                pass
+        else:
+            pass
+
+    def eventFilter(self, source, event):
+        if (event.type() == QtCore.QEvent.MouseButtonPress and
+            source is self.table.viewport() and
+            self.table.itemAt(event.pos()) is None):
+            self.table.clearSelection()
+        return super(QWidget, self).eventFilter(source, event)
 
     def remove_file(self):
         row = self.table.currentRow()
