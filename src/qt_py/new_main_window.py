@@ -55,14 +55,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusBar().showMessage('Ready')
 
         self.setCentralWidget(self.mdiArea)
-        # self.mdiArea.setViewMode(QtGui.QMdiArea.TabbedView)
         self.editor = None
         self.db_plot = None
         self.conder = None
 
     def initActions(self):
-        self.mainMenu = self.menuBar()
-
+        self.menubar.hide()
         self.openFile = QAction("&Open File", self)
         self.openFile.setShortcut("Ctrl+O")
         self.openFile.setStatusTip('Open file')
@@ -78,10 +76,89 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.clearFiles.setStatusTip("Clear all files")
         # self.clearFiles.triggered.connect(self.editor.clear_files)
 
-        self.fileMenu = self.mainMenu.addMenu('&File')
+        self.fileMenu = self.menubar.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.saveFiles)
         self.fileMenu.addAction(self.clearFiles)
+
+        self.toolbar = self.addToolBar('')
+
+        self.tile_view = QAction(
+            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\windows_stack.png")), '&Tile View',
+            self)
+        self.tile_view.setShortcut('Ctrl+I')
+        self.tile_view.triggered.connect(self.set_tile_view)
+
+        self.show_pem_editor = QAction(
+        QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\plots2.png")), '&PEM Editor', self)
+        self.show_pem_editor.triggered.connect(self.toggle_editor)
+
+        self.show_db_plot = QAction(
+        QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\db_plot.png")), '&DB Plot', self)
+        self.show_db_plot.triggered.connect(self.toggle_db_plot)
+
+        self.show_conder = QAction(
+        QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\conder.png")), '&Conder', self)
+        self.show_conder.triggered.connect(self.toggle_conder)
+
+        self.toolbar.addAction(self.tile_view)
+        self.toolbar.addAction(self.show_pem_editor)
+        self.toolbar.addAction(self.show_db_plot)
+        self.toolbar.addAction(self.show_conder)
+
+    def set_tile_view(self):
+        self.mdiArea.tileSubWindows()
+
+    def closeIt(self):
+        self.mdiArea.removeSubWindow(self.editor_subwindow)
+
+    def toggle_editor(self):
+        if self.editor is None:
+            self.editor = PEMEditorWindow()
+            self.editor_subwindow = self.mdiArea.addSubWindow(self.editor)
+            self.editor.show()
+            self.editor_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
+            self.mdiArea.tileSubWindows()
+        else:
+            if self.editor_subwindow.isHidden():
+                self.editor.show()
+                self.editor_subwindow.show()
+                self.mdiArea.tileSubWindows()
+            else:
+                self.editor_subwindow.hide()
+                self.mdiArea.tileSubWindows()
+
+    def toggle_db_plot(self):
+        if self.db_plot is None:
+            self.db_plot = DBPlot()
+            self.db_plot_subwindow = self.mdiArea.addSubWindow(self.db_plot)
+            self.db_plot_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
+            self.db_plot.show()
+            self.mdiArea.tileSubWindows()
+        else:
+            if self.db_plot_subwindow.isHidden():
+                self.db_plot.show()
+                self.db_plot_subwindow.show()
+                self.mdiArea.tileSubWindows()
+            else:
+                self.db_plot_subwindow.hide()
+                self.mdiArea.tileSubWindows()
+
+    def toggle_conder(self):
+        if self.conder is None:
+            self.conder = Conder()
+            self.conder_subwindow = self.mdiArea.addSubWindow(self.conder)
+            self.conder_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
+            self.conder.show()
+            self.mdiArea.tileSubWindows()
+        else:
+            if self.conder_subwindow.isHidden():
+                self.conder.show()
+                self.conder_subwindow.show()
+                self.mdiArea.tileSubWindows()
+            else:
+                self.conder_subwindow.hide()
+                self.mdiArea.tileSubWindows()
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile().lower() for url in e.mimeData().urls()]
@@ -131,7 +208,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if len(pem_files) > 0:
             if self.editor is None:
                 self.editor = PEMEditorWindow()
-                self.mdiArea.addSubWindow(self.editor)
+                self.editor_subwindow = self.mdiArea.addSubWindow(self.editor)
+                self.editor_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
                 self.editor.show()
                 self.mdiArea.tileSubWindows()
             try:
@@ -144,7 +222,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if len(damp_files) > 0:
             if self.db_plot is None:
                 self.db_plot = DBPlot()
-                self.mdiArea.addSubWindow(self.db_plot)
+                self.db_plot_subwindow = self.mdiArea.addSubWindow(self.db_plot)
+                self.db_plot_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
                 self.db_plot.show()
                 self.mdiArea.tileSubWindows()
             try:
@@ -157,7 +236,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if len(con_files) > 0:
             if self.conder is None:
                 self.conder = Conder()
-                self.mdiArea.addSubWindow(self.conder)
+                self.conder_subwindow = self.mdiArea.addSubWindow(self.conder)
+                self.conder_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
                 self.conder.show()
                 self.mdiArea.tileSubWindows()
             try:

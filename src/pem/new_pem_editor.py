@@ -57,6 +57,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.editor = PEMEditor(self)
         self.layout.addWidget(self.editor)
         self.setCentralWidget(self.editor)
+        self.dockWidget.hide()
         # self.dockWidget.setWidget(self.tabWidget)
         # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dockWidget)
 
@@ -100,6 +101,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             logging.warning(str(e))
             self.message.information(None, 'Error', str(e))
             pass
+
+    def closeEvent(self,e):
+        e.ignore
+        self.hide()
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
@@ -182,10 +187,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.editor.pem_files[row].header['Loop'] = self.editor.table.item(row, 4).text()
             for pem_file in self.editor.pem_files:
                 save_file = self.serializer.serialize(pem_file)
-                print(save_file)
+                # print(save_file)
                 self.statusBar().showMessage('{0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
                 # save_name = os.path.splitext(pem_file.filepath)
-                # print(save_file, file=open(pem_file.filepath, 'w+'))
+                print(save_file, file=open(pem_file.filepath, 'w+'))
             self.editor.update_table()
 
 # class MainWindow(QMainWindow):
@@ -380,8 +385,8 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'First Station', 'Last Station']
         self.table.setColumnCount(len(self.columns))
         self.table.setHorizontalHeaderLabels(self.columns)
-        # self.table.setSizeAdjustPolicy(
-        #     QAbstractScrollArea.AdjustToContents)
+        self.table.setSizeAdjustPolicy(
+            QAbstractScrollArea.AdjustToContents)
         # self.table.resizeColumnsToContents()
         # header = self.table.horizontalHeader()
         # header.setSectionResizeMode(0, QHeaderView.Stretch)
