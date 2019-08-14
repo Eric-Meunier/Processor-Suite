@@ -66,10 +66,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.openFile.setStatusTip('Open file')
         self.openFile.triggered.connect(self.open_file_dialog)
 
-        self.saveFiles = QAction("&Save Files", self)
-        self.saveFiles.setShortcut("Ctrl+S")
-        self.saveFiles.setStatusTip("Save all files")
-        # self.saveFiles.triggered.connect(self.editor.save_all)
+        self.closeAllWindows = QAction("&Close All", self)
+        self.closeAllWindows.setShortcut("Ctrl+Shift+Del")
+        self.closeAllWindows.setStatusTip("Close all windows")
+        self.closeAllWindows.triggered.connect(self.close_all_windows)
 
         self.clearFiles = QAction("&Clear All Files", self)
         self.clearFiles.setShortcut("Ctrl+Del")
@@ -78,7 +78,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.fileMenu = self.menubar.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
-        # self.fileMenu.addAction(self.saveFiles)
+        self.fileMenu.addAction(self.closeAllWindows)
         self.fileMenu.addAction(self.clearFiles)
 
         self.toolbar = self.addToolBar('')
@@ -111,10 +111,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def set_tile_view(self):
         self.mdiArea.tileSubWindows()
 
-    def clear_files(self):
-        if self.editor or self.db_plot or self.conder:
-            response = self.message.question(self, 'PEMPro', 'Are you sure you want to clear all files?',
+    def close_all_windows(self):
+        if self.mdiArea.subWindowList():
+
+            def subwindow_showing():
+                for subwindow in self.mdiArea.subWindowList():
+                    if subwindow.isHidden() == False:
+                        return True
+
+            if subwindow_showing():
+                response = self.message.question(self, 'PEMPro', 'Are you sure you want to close all windows?',
                                              self.message.Yes | self.message.No)
+                if response == self.message.Yes:
+                    for subwindow in self.mdiArea.subWindowList():
+                        subwindow.hide()
+                    self.clear_files(response=self.message.Yes)
+                else:
+                    pass
+            else:
+                pass
+        else:
+            pass
+
+    def clear_files(self, response=None):
+        if self.editor or self.db_plot or self.conder:
+            if response is None:
+                response = self.message.question(self, 'PEMPro', 'Are you sure you want to clear all files?',
+                                                 self.message.Yes | self.message.No)
 
             if response == self.message.Yes:
                 if self.editor:
@@ -123,6 +146,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.db_plot.clear_files()
                 if self.conder:
                     self.conder.clear_files()
+                self.statusbar.showMessage('All files removed', 2000)
             else:
                 pass
         else:
@@ -192,6 +216,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if check_extension(urls):
             e.accept()
         else:
+            self.statusbar.showMessage('Invalid file type', 1000)
             e.ignore()
 
     def dropEvent(self, e):
@@ -231,43 +256,48 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.editor = PEMEditorWindow()
                 self.editor_subwindow = self.mdiArea.addSubWindow(self.editor)
                 self.editor_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
-                self.editor.show()
-                self.mdiArea.tileSubWindows()
             try:
                 self.editor.open_files(pem_files)
             except Exception as e:
                 logging.warning(str(e))
                 self.message.information(None, 'Error - Could not open selected PEM files', str(e))
                 pass
+            else:
+                self.editor.show()
+                self.editor_subwindow.show()
+                self.mdiArea.tileSubWindows()
 
         if len(damp_files) > 0:
             if self.db_plot is None:
                 self.db_plot = DBPlot()
                 self.db_plot_subwindow = self.mdiArea.addSubWindow(self.db_plot)
                 self.db_plot_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
-                self.db_plot.show()
-                self.mdiArea.tileSubWindows()
             try:
                 self.db_plot.open_files(damp_files)
             except Exception as e:
                 logging.warning(str(e))
                 self.message.information(None, 'Error - Could not open selected damping box files', str(e))
                 pass
+            else:
+                self.db_plot.show()
+                self.db_plot_subwindow.show()
+                self.mdiArea.tileSubWindows()
 
         if len(con_files) > 0:
             if self.conder is None:
                 self.conder = Conder()
                 self.conder_subwindow = self.mdiArea.addSubWindow(self.conder)
                 self.conder_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
-                self.conder.show()
-                self.mdiArea.tileSubWindows()
             try:
                 self.conder.open_files(con_files)
             except Exception as e:
                 logging.warning(str(e))
                 self.message.information(None, 'Error - Could not open selected CON files', str(e))
                 pass
-
+            else:
+                self.conder.show()
+                self.conder_subwindow.show()
+                self.mdiArea.tileSubWindows()
 
 def main():
     # TODO Make dedicated Application class
