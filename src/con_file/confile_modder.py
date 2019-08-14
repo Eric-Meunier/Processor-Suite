@@ -242,12 +242,15 @@ class Conder(QMainWindow, Ui_Conder_Window):
 
     def open_file_dialog(self):
         try:
-            file = self.dialog.getOpenFileName(self, 'Open File')
-            if file[0].lower().endswith('.con'):
-                self.open_files(file[0])
+            files = self.dialog.getOpenFileNames(self, 'Open File', filter='Con files (*.con);; All files(*.*)')
+            if files[0]!='':
+                for file in files[0]:
+                    if file.lower().endswith('.con'):
+                        self.open_files(file)
+                    else:
+                        pass
             else:
-                self.message.information(None, 'Error', 'Invalid File Format')
-                return
+                pass
         except Exception as e:
             logging.warning(str(e))
             self.message.information(None, 'Error', str(e))

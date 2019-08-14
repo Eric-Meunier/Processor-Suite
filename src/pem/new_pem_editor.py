@@ -78,6 +78,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.saveFiles.setStatusTip("Save all files")
         self.saveFiles.triggered.connect(self.save_all)
 
+        self.saveFilesAs = QAction("&Save Files As...", self)
+        self.saveFilesAs.setShortcut("F12")
+        self.saveFilesAs.setStatusTip("Save all files as...")
+        self.saveFilesAs.triggered.connect(self.save_all_as)
+
         self.clearFiles = QAction("&Clear Files", self)
         self.clearFiles.setShortcut("Ctrl+Del")
         self.clearFiles.setStatusTip("Clear all files")
@@ -86,25 +91,24 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu = self.menubar.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.saveFiles)
+        self.fileMenu.addAction(self.saveFilesAs)
         self.fileMenu.addAction(self.clearFiles)
 
     def open_file_dialog(self):
         try:
-            file = self.dialog.getOpenFileName(self, 'Open File')
-            if file[0].lower().endswith('.pem'):
-                self.open_files(file[0])
-                # self.setFixedSize(self.layout.sizeHint())
+            files = self.dialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem);; All files(*.*)')
+            if files[0]!='':
+                for file in files[0]:
+                    if file.lower().endswith('.pem'):
+                        self.open_files(file)
+                    else:
+                        pass
             else:
-                self.message.information(None, 'Error', 'Invalid File Format')
-                return
+                pass
         except Exception as e:
             logging.warning(str(e))
             self.message.information(None, 'Error', str(e))
             pass
-
-    def closeEvent(self,e):
-        e.ignore
-        self.hide()
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
@@ -192,6 +196,35 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 # save_name = os.path.splitext(pem_file.filepath)
                 print(save_file, file=open(pem_file.filepath, 'w+'))
             self.editor.update_table()
+
+    def save_all_as(self):
+        if len(self.editor.pem_files) > 0:
+            for row in range(self.editor.table.rowCount()):
+                self.editor.pem_files[row].header['Client'] = self.editor.table.item(row, 1).text()
+                self.editor.pem_files[row].header['Grid'] = self.editor.table.item(row, 2).text()
+                self.editor.pem_files[row].header['LineHole'] = self.editor.table.item(row, 3).text()
+                self.editor.pem_files[row].header['Loop'] = self.editor.table.item(row, 4).text()
+
+            default_path = os.path.split(self.editor.pem_files[-1].filepath)[0]
+            # self.dialog.setFileMode(QFileDialog.Directory)
+            # self.dialog.setDirectory(default_path)
+            # file_dir = QFileDialog.getExistingDirectory(self, '', default_path)
+            suffix = 'Av'
+            file_dir = default_path
+            if file_dir:
+                for pem_file in self.editor.pem_files:
+                    save_file = self.serializer.serialize(pem_file)
+                    file_name = os.path.basename(pem_file.filepath)
+                    save_name = os.path.join(file_dir, file_name)
+                    print(save_name)
+                    # print(save_file, file=open(pem_file.filepath, 'w+'))
+                    self.statusBar().showMessage('{0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
+                self.editor.update_table()
+            else:
+                logging.info("No directory chosen, aborted save")
+                pass
+
+
 
 # class MainWindow(QMainWindow):
 #     def __init__(self):

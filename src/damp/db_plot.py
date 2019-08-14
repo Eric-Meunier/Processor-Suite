@@ -57,10 +57,11 @@ class DBPlot(QMainWindow, Ui_DB_Window):
             qtRectangle.moveCenter(centerPoint)
             self.move(qtRectangle.topLeft())
             # self.show()
+
         self.setupUi(self)
         self.dialog = QtGui.QFileDialog()
         self.statusBar().showMessage('Ready')
-        self.setWindowTitle("DB Plot  v"+str(__version__))
+        self.setWindowTitle("DB Plot  v" + str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
         # self.setGeometry(500, 300, 800, 600)
@@ -146,16 +147,20 @@ class DBPlot(QMainWindow, Ui_DB_Window):
 
     def open_file_dialog(self):
         try:
-            file = QtGui.QFileDialog.getOpenFileName(self, 'Open File')
-            if file[0].endswith('log') or file[0].endswith('txt') or file[0].endswith('rtf'):
-                self.open_files(file[0])
+            files = self.dialog.getOpenFileNames(self, 'Open Files',
+                                                     filter='Damp files (*.log *.txt *.rtf);; All files(*.*)')
+            if files[0]!='':
+                for file in files[0]:
+                    if file.lower().endswith('log') or file.lower().endswith('txt') or file.lower().endswith('rtf'):
+                        self.open_files(file)
+                    else:
+                        pass
             else:
-                self.message.information(None, 'Error', 'Invalid File Format')
-                return
+                pass
         except Exception as e:
             logging.warning(str(e))
             self.message.information(None, 'Error', str(e))
-            return
+            pass
 
     def open_files(self, files):
         # Only work with lists (to accomodate files with multiple logs, so if input isn't a list, makes it one
@@ -188,13 +193,13 @@ class DBPlot(QMainWindow, Ui_DB_Window):
             raise
 
     def reset_range(self):
-        if len(self.open_widgets)>0:
+        if len(self.open_widgets) > 0:
             try:
                 for widget in self.open_widgets:
                     widget.set_ranges()
 
             except Exception as e:
-                self.message.information(None, 'Error',str(e))
+                self.message.information(None, 'Error', str(e))
                 logging.info(str(e))
                 pass
 
@@ -452,7 +457,7 @@ class DampPlot(QWidget, Ui_DB_Widget):
                 # self.pw.plot(x=self.times, y=self.currents, pen=custom_pen)#, symbol='+', symbolSize=8, symbolPen='r')
                 curve = pg.PlotCurveItem(times, currents, pen=custom_pen)
                 symbols = pg.PlotDataItem(times, currents, symbol='d', symbolSize=8,
-                                               symbolPen=color, symbolBrush=color)
+                                          symbolPen=color, symbolBrush=color)
                 self.curves.append(curve)
                 self.symbols.append(symbols)
 
@@ -489,10 +494,12 @@ class DampPlot(QWidget, Ui_DB_Widget):
 
     def set_ranges(self):
 
-        offset = 0.5*(max([stats.median(currents) for currents in self.currents]) - min([stats.median(currents) for currents in self.currents]))
+        offset = 0.5 * (max([stats.median(currents) for currents in self.currents]) - min(
+            [stats.median(currents) for currents in self.currents]))
         median = stats.median([stats.median(currents) for currents in self.currents])
         min_y, max_y = median - max(offset, 1), median + max(offset, 1)
-        min_x, max_x = min([item for sublist in self.times for item in sublist]), max([item for sublist in self.times for item in sublist])
+        min_x, max_x = min([item for sublist in self.times for item in sublist]), max(
+            [item for sublist in self.times for item in sublist])
 
         self.pw.setYRange(min_y, max_y)
         self.pw.setXRange(min_x, max_x)

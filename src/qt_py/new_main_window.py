@@ -60,7 +60,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.conder = None
 
     def initActions(self):
-        self.menubar.hide()
+        # self.menubar.hide()
         self.openFile = QAction("&Open File", self)
         self.openFile.setShortcut("Ctrl+O")
         self.openFile.setStatusTip('Open file')
@@ -84,21 +84,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.toolbar = self.addToolBar('')
 
         self.tile_view = QAction(
-            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\windows_stack.png")), '&Tile View',
+            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\windows_stack.png")),
+            '&Tile View',
             self)
         self.tile_view.setShortcut('Ctrl+I')
         self.tile_view.triggered.connect(self.set_tile_view)
 
         self.show_pem_editor = QAction(
-        QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\plots2.png")), '&PEM Editor', self)
+            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\plots2.png")), '&PEM Editor',
+            self)
         self.show_pem_editor.triggered.connect(self.toggle_editor)
 
         self.show_db_plot = QAction(
-        QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\db_plot.png")), '&DB Plot', self)
+            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\db_plot.png")), '&DB Plot', self)
         self.show_db_plot.triggered.connect(self.toggle_db_plot)
 
         self.show_conder = QAction(
-        QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\conder.png")), '&Conder', self)
+            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\conder.png")), '&Conder', self)
         self.show_conder.triggered.connect(self.toggle_conder)
 
         self.toolbar.addAction(self.tile_view)
@@ -108,9 +110,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def set_tile_view(self):
         self.mdiArea.tileSubWindows()
-
-    def closeIt(self):
-        self.mdiArea.removeSubWindow(self.editor_subwindow)
 
     def toggle_editor(self):
         if self.editor is None:
@@ -185,12 +184,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def open_file_dialog(self):
         accepted_extensions = ['pem', 'con', 'txt', 'log', 'rtf']
         try:
-            file = self.dialog.getOpenFileName(self, 'Open File')
-            if file[0].split('.').lower() in accepted_extensions:
-                self.open_files(file)
+            files = self.dialog.getOpenFileNames(self, 'Open Files',
+                                                 filter='All Files (*.*);; PEM files (*.pem);; '
+                                                        'Damp files (*.txt *.log *.rtf);; CON files (*.con)')
+            if files[0] != '':
+                for file in files[0]:
+                    if file.split('.')[-1].lower() in accepted_extensions:
+                        self.open_files(file)
+                    else:
+                        pass
             else:
-                self.message.information(None, 'Error', 'Invalid File Format')
-                return
+                pass
         except Exception as e:
             logging.warning(str(e))
             self.message.information(None, 'Error', str(e))
