@@ -159,7 +159,7 @@ class Conder(QMainWindow, Ui_Conder_Window):
             # self.show()
 
         self.setupUi(self)
-        self.setGeometry(500, 300, 800, 600)
+        # self.setGeometry(500, 300, 800, 600)
         self.setWindowTitle('Conder  v'+__version__)
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))

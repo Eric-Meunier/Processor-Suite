@@ -4,8 +4,9 @@ import logging
 from itertools import chain
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.pem_parser import PEMParser
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox,
-                             QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu)
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
+                             QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
+                             QHeaderView)
 from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -23,11 +24,11 @@ else:
 # Load Qt ui file into a class
 editorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_widget.ui')
 Ui_PEMEditorWidget, QtBaseClass = uic.loadUiType(editorCreatorFile)
+editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
+Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
 
-# TODO Added filepath to pemparser, will need to go and fix broken code as a result
 
-
-class PEMEditorWindow(QMainWindow):
+class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def __init__(self):
         super().__init__()
         self.initUi()
@@ -41,13 +42,12 @@ class PEMEditorWindow(QMainWindow):
             qtRectangle.moveCenter(centerPoint)
             self.move(qtRectangle.topLeft())
 
-        layout = QGridLayout(self)
-        self.setLayout(layout)
-        self.setAcceptDrops(True)
+        self.setupUi(self)
+
         self.setWindowTitle("PEMEditor  v" + str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\crone_logo.ico")))
-        self.setGeometry(500, 300, 1000, 800)
+        # self.setGeometry(500, 300, 1000, 800)
         center_window(self)
 
     def initApps(self):
@@ -55,14 +55,17 @@ class PEMEditorWindow(QMainWindow):
         self.dialog = QFileDialog()
 
         self.editor = PEMEditor(self)
+        self.layout.addWidget(self.editor)
+        self.setCentralWidget(self.editor)
+        # self.dockWidget.setWidget(self.tabWidget)
+        # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dockWidget)
+
         self.parser = PEMParser()
         self.serializer = PEMSerializer()
-        self.layout().addWidget(self.editor)
-        self.setCentralWidget(self.editor)
 
     def initActions(self):
-        self.statusBar().showMessage('Ready')
-        self.mainMenu = self.menuBar()
+        self.setAcceptDrops(True)
+        self.statusbar.showMessage('Ready')
 
         self.openFile = QAction("&Open File", self)
         self.openFile.setShortcut("Ctrl+O")
@@ -79,7 +82,7 @@ class PEMEditorWindow(QMainWindow):
         self.clearFiles.setStatusTip("Clear all files")
         self.clearFiles.triggered.connect(self.clear_files)
 
-        self.fileMenu = self.mainMenu.addMenu('&File')
+        self.fileMenu = self.menubar.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.saveFiles)
         self.fileMenu.addAction(self.clearFiles)
@@ -286,11 +289,8 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.parent = parent
         self.message = QMessageBox()
         self.pem_files = []
-        # self.parser = PEMParser()
-        # self.serializer = PEMSerializer()
         self.create_table()
         self.table.viewport().installEventFilter(self)
-        self.tabWidget.hide()
 
         self.del_file = QAction("&Remove File", self)
         self.del_file.setShortcut("Del")
@@ -380,9 +380,14 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'First Station', 'Last Station']
         self.table.setColumnCount(len(self.columns))
         self.table.setHorizontalHeaderLabels(self.columns)
-        self.table.setSizeAdjustPolicy(
-            QAbstractScrollArea.AdjustToContents)
-        self.table.resizeColumnsToContents()
+        # self.table.setSizeAdjustPolicy(
+        #     QAbstractScrollArea.AdjustToContents)
+        # self.table.resizeColumnsToContents()
+        # header = self.table.horizontalHeader()
+        # header.setSectionResizeMode(0, QHeaderView.Stretch)
+        # header.setSectionResizeMode(1, QHeaderView.Stretch)
+        # header.setSectionResizeMode(2, QHeaderView.Stretch)
+        # header.setSectionResizeMode(3, QHeaderView.Stretch)
 
     def add_to_table(self, pem_file):
 
@@ -410,7 +415,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
 
         boldFont = QtGui.QFont()
         boldFont.setBold(True)
-        # Only used for table comparisons
+        # Only used for table comparisons. Makes bold entries that have changed
         pem_file_info_list = [
             file,
             header.get('Client'),

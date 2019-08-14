@@ -63,7 +63,7 @@ class DBPlot(QMainWindow, Ui_DB_Window):
         self.setWindowTitle("DB Plot  v"+str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
-        self.setGeometry(500, 300, 800, 600)
+        # self.setGeometry(500, 300, 800, 600)
         center_window(self)
 
     def initActions(self):

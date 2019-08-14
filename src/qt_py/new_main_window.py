@@ -46,7 +46,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\crone_logo.ico")))
-        self.setGeometry(500, 300, 1000, 800)
+        self.setGeometry(500, 300, 1400, 900)
         center_window(self)
 
     def initApps(self):
@@ -55,9 +55,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusBar().showMessage('Ready')
 
         self.setCentralWidget(self.mdiArea)
-        self.editor = PEMEditorWindow()
-        self.db_plot = DBPlot()
-        self.conder = Conder()
+        # self.mdiArea.setViewMode(QtGui.QMdiArea.TabbedView)
+        self.editor = None
+        self.db_plot = None
+        self.conder = None
 
     def initActions(self):
         self.mainMenu = self.menuBar()
@@ -128,10 +129,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                       or file.lower().endswith('rtf')]
 
         if len(pem_files) > 0:
-            try:
+            if self.editor is None:
+                self.editor = PEMEditorWindow()
                 self.mdiArea.addSubWindow(self.editor)
                 self.editor.show()
                 self.mdiArea.tileSubWindows()
+            try:
                 self.editor.open_files(pem_files)
             except Exception as e:
                 logging.warning(str(e))
@@ -139,25 +142,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 pass
 
         if len(damp_files) > 0:
-            try:
+            if self.db_plot is None:
+                self.db_plot = DBPlot()
                 self.mdiArea.addSubWindow(self.db_plot)
                 self.db_plot.show()
                 self.mdiArea.tileSubWindows()
+            try:
                 self.db_plot.open_files(damp_files)
             except Exception as e:
                 logging.warning(str(e))
-                self.message.information(None, 'Error - Could not open selected PEM files', str(e))
+                self.message.information(None, 'Error - Could not open selected damping box files', str(e))
                 pass
 
         if len(con_files) > 0:
-            try:
+            if self.conder is None:
+                self.conder = Conder()
                 self.mdiArea.addSubWindow(self.conder)
                 self.conder.show()
                 self.mdiArea.tileSubWindows()
+            try:
                 self.conder.open_files(con_files)
             except Exception as e:
                 logging.warning(str(e))
-                self.message.information(None, 'Error - Could not open selected PEM files', str(e))
+                self.message.information(None, 'Error - Could not open selected CON files', str(e))
                 pass
 
 
