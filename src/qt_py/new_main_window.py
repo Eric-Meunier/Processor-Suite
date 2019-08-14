@@ -62,7 +62,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def initActions(self):
         # self.menubar.hide()
         self.openFile = QAction("&Open File", self)
-        self.openFile.setShortcut("Ctrl+O")
+        self.openFile.setShortcut("F1")
         self.openFile.setStatusTip('Open file')
         self.openFile.triggered.connect(self.open_file_dialog)
 
@@ -71,14 +71,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.saveFiles.setStatusTip("Save all files")
         # self.saveFiles.triggered.connect(self.editor.save_all)
 
-        self.clearFiles = QAction("&Clear Files", self)
+        self.clearFiles = QAction("&Clear All Files", self)
         self.clearFiles.setShortcut("Ctrl+Del")
         self.clearFiles.setStatusTip("Clear all files")
-        # self.clearFiles.triggered.connect(self.editor.clear_files)
+        self.clearFiles.triggered.connect(self.clear_files)
 
         self.fileMenu = self.menubar.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
-        self.fileMenu.addAction(self.saveFiles)
+        # self.fileMenu.addAction(self.saveFiles)
         self.fileMenu.addAction(self.clearFiles)
 
         self.toolbar = self.addToolBar('')
@@ -110,6 +110,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def set_tile_view(self):
         self.mdiArea.tileSubWindows()
+
+    def clear_files(self):
+        if self.editor or self.db_plot or self.conder:
+            response = self.message.question(self, 'PEMPro', 'Are you sure you want to clear all files?',
+                                             self.message.Yes | self.message.No)
+
+            if response == self.message.Yes:
+                if self.editor:
+                    self.editor.clear_files()
+                if self.db_plot:
+                    self.db_plot.clear_files()
+                if self.conder:
+                    self.conder.clear_files()
+            else:
+                pass
+        else:
+            pass
 
     def toggle_editor(self):
         if self.editor is None:

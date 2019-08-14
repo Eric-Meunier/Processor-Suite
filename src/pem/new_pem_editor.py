@@ -130,9 +130,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         try:
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
             self.open_files(urls)
-            # #Resize the window
-            # if self.gridLayout.sizeHint().height()+25>self.size().height():
-            #     self.resize(self.gridLayout.sizeHint().width()+25, self.gridLayout.sizeHint().height()+25)
         except Exception as e:
             logging.warning(str(e))
             self.message.information(None, 'Error - Could not open selected PEM files', str(e))
