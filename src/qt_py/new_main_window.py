@@ -5,6 +5,7 @@ from src.damp.db_plot import DBPlot
 from src.con_file.confile_modder import Conder
 from src.pem.new_pem_editor import PEMEditorWindow
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QMdiArea,
+                             QTabWidget,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QToolBar)
 from PyQt5 import (QtCore, QtGui, uic)
 
@@ -56,10 +57,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def initApps(self):
         self.message = QMessageBox()
         self.dialog = QFileDialog()
-        self.statusBar().showMessage('Ready')
+        self.statusbar.showMessage('Ready', 2000)
 
         self.setCentralWidget(self.mdiArea)
         self.mdiArea.setViewMode(QMdiArea.TabbedView)
+        self.mdiArea.setTabPosition(QTabWidget.North)
+        self.mdiArea.setTabShape(QTabWidget.Rounded)
+        # self.mdiArea.setTabsClosable(True)
+        self.mdiArea.setTabsMovable(True)
+        self.mdiArea.showMaximized()
+
         self.editor = None
         self.db_plot = None
         self.conder = None
@@ -118,7 +125,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def close_all_windows(self):
         if self.mdiArea.subWindowList():
             response = self.message.question(self, 'PEMPro', 'Are you sure you want to close all windows?',
-                                         self.message.Yes | self.message.No)
+                                             self.message.Yes | self.message.No)
             if response == self.message.Yes:
                 self.mdiArea.closeAllSubWindows()
                 self.clear_files(response=self.message.Yes)
@@ -164,7 +171,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def toggle_db_plot(self):
         if self.db_plot is None:
-            self.db_plot = DBPlot()
+            self.db_plot = DBPlot(parent=self)
             self.db_plot_subwindow = self.mdiArea.addSubWindow(self.db_plot)
             self.db_plot_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
             self.db_plot.show()
@@ -247,7 +254,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if len(pem_files) > 0:
             if self.editor is None:
-                self.editor = PEMEditorWindow()
+                self.editor = PEMEditorWindow(parent=self)
                 self.editor_subwindow = self.mdiArea.addSubWindow(self.editor)
                 self.editor_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
             try:
@@ -263,7 +270,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if len(damp_files) > 0:
             if self.db_plot is None:
-                self.db_plot = DBPlot()
+                self.db_plot = DBPlot(parent=self)
                 self.db_plot_subwindow = self.mdiArea.addSubWindow(self.db_plot)
                 self.db_plot_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
             try:
@@ -279,7 +286,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if len(con_files) > 0:
             if self.conder is None:
-                self.conder = Conder()
+                self.conder = Conder(parent=self)
                 self.conder_subwindow = self.mdiArea.addSubWindow(self.conder)
                 self.conder_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
             try:
@@ -292,6 +299,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.conder.show()
                 self.conder_subwindow.show()
                 self.mdiArea.tileSubWindows()
+
 
 def main():
     # TODO Make dedicated Application class

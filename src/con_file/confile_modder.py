@@ -29,15 +29,16 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', date
 Ui_Conder_Window, QtBaseClass = uic.loadUiType(ConderWindow_qtCreatorFile)
 
 
-
 class Conder(QMainWindow, Ui_Conder_Window):
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
         self.initUI()
         self.initActions()
 
         self.dialog = QFileDialog()
-        # self.setLayout = None
+        self.message = QMessageBox()
+        self.setCentralWidget(self.centralWidget)
         self.files = []
 
     def initUI(self):
@@ -46,25 +47,19 @@ class Conder(QMainWindow, Ui_Conder_Window):
             centerPoint = QDesktopWidget().availableGeometry().center()
             qtRectangle.moveCenter(centerPoint)
             self.move(qtRectangle.topLeft())
-            # self.show()
 
         self.setupUi(self)
-        # self.setGeometry(500, 300, 800, 600)
-        self.setWindowTitle('Conder  v'+__version__)
+        self.setWindowTitle('Conder  v' + __version__)
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
         center_window(self)
 
     def initActions(self):
         self.setAcceptDrops(True)
-
-        self.setCentralWidget(self.centralWidget)
-
-        self.statusBar.showMessage('Ready')
-        self.message = QMessageBox()
+        self.mainMenu = self.menuBar()
 
         self.mkdxfButton.clicked.connect(self.run_mkdxf)
-        self.mkdxfButton.setShortcut("\r")
+        self.mkdxfButton.setShortcut("Ctrl+D")
 
         self.shareRangeCheckBox.stateChanged.connect(self.set_ranges)
 
@@ -92,6 +87,7 @@ class Conder(QMainWindow, Ui_Conder_Window):
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
+
         def check_extension(urls):
             for url in urls:
                 if url.lower().endswith('con'):
@@ -110,8 +106,8 @@ class Conder(QMainWindow, Ui_Conder_Window):
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
             self.open_files(urls)
             # Resize the window
-            if self.gridLayout.sizeHint().height()+25>self.size().height():
-                self.resize(self.gridLayout.sizeHint().width()+25, self.gridLayout.sizeHint().height()+25)
+            if self.gridLayout.sizeHint().height() + 25 > self.size().height():
+                self.resize(self.gridLayout.sizeHint().width() + 25, self.gridLayout.sizeHint().height() + 25)
         except Exception as e:
             logging.warning(str(e))
             self.message.information(None, 'Error', str(e))
@@ -133,7 +129,7 @@ class Conder(QMainWindow, Ui_Conder_Window):
     def open_file_dialog(self):
         try:
             files = self.dialog.getOpenFileNames(self, 'Open File', filter='Con files (*.con);; All files(*.*)')
-            if files[0]!='':
+            if files[0] != '':
                 for file in files[0]:
                     if file.lower().endswith('.con'):
                         self.open_files(file)
@@ -160,11 +156,15 @@ class Conder(QMainWindow, Ui_Conder_Window):
                 else:
                     file.set_station_range(file.start_stn, file.end_stn)
                 file.save_file()
+            if len(self.files) > 1:
+                self.parent.statusBar().showMessage('{} CON files saved'.format(str(len(self.files))), 2000)
+            else:
+                self.parent.statusBar().showMessage('1 CON file saved')
             self.clear_files()
             self.open_files(temp_filepaths)
 
     def run_mkdxf(self):
-        if len(self.files)>0:
+        if len(self.files) > 0:
             working_dir = os.path.split(self.files[0].filepath)[0]
             os.chdir(working_dir)
             os.system("start /wait cmd /c mkdxf")
@@ -183,7 +183,7 @@ class Conder(QMainWindow, Ui_Conder_Window):
         return min_stn, max_stn
 
     def set_ranges(self):
-        if len(self.files)>0:
+        if len(self.files) > 0:
             if self.shareRangeCheckBox.isChecked():
                 min_range, max_range = self.get_shared_range()
                 for file in self.files:
@@ -229,7 +229,7 @@ class Conder(QMainWindow, Ui_Conder_Window):
         self.tableWidget.setItem(row_pos, 0, QTableWidgetItem(name))
         self.tableWidget.setItem(row_pos, 1, QTableWidgetItem(current_name))
         self.tableWidget.setItem(row_pos, 2, QTableWidgetItem(new_line_name))
-        self.tableWidget.setItem(row_pos, 3, QTableWidgetItem(old_start_stn+' to '+old_end_stn))
+        self.tableWidget.setItem(row_pos, 3, QTableWidgetItem(old_start_stn + ' to ' + old_end_stn))
         self.tableWidget.setItem(row_pos, 4, QTableWidgetItem(str(new_start_stn) + ' to ' + str(new_end_stn)))
 
         self.tableWidget.resizeColumnsToContents()
@@ -238,11 +238,11 @@ class Conder(QMainWindow, Ui_Conder_Window):
         #     for column in range(self.tableWidget.columnCount()):
         #         self.tableWidget.item(row_pos, column).setForeground(QtGui.QColor('red'))
         if self.tableWidget.item(row_pos, 1).text() != self.tableWidget.item(row_pos, 2).text():
-            for column in range (1, 3):
+            for column in range(1, 3):
                 self.tableWidget.item(row_pos, column).setForeground(QtGui.QColor('red'))
 
         if self.tableWidget.item(row_pos, 3).text() != self.tableWidget.item(row_pos, 4).text():
-            for column in range (3, 5):
+            for column in range(3, 5):
                 self.tableWidget.item(row_pos, column).setForeground(QtGui.QColor('red'))
 
     def clear_files(self):
@@ -258,6 +258,7 @@ class ConFile:
     can also populate the client, grid, and loop names if they haven't been set by
     pembat, and it can change the station ranges.
     """
+
     def __init__(self, filepath):
         self.pem_file = None
 
@@ -282,7 +283,7 @@ class ConFile:
             self.file = in_file.read()
 
         self.original_name = self.re_line.search(self.file).group('Line')
-        self.name = re.split('[XYZ]\.CON',os.path.basename(self.filepath))[0]
+        self.name = re.split('[XYZ]\.CON', os.path.basename(self.filepath))[0]
         self.start_stn = int(self.re_start_stn.search(self.file).group('StartStn'))
         self.end_stn = int(self.re_end_stn.search(self.file).group('EndStn'))
 
@@ -293,6 +294,7 @@ class ConFile:
         """
         Checks if pembat.exe has been run. If not, it will fill in the header in its place.
         """
+
         def get_pem_file():
             pem_file_names = [f for f in os.listdir(self.file_dir) if
                               isfile(join(self.file_dir, f)) and f.lower().endswith('.pem')]
@@ -315,8 +317,8 @@ class ConFile:
             client = header['Client']
             grid = header['Grid']
 
-            new_client_str = client+'   '+grid
-            self.file = re.sub(self.re_client, r"\g<1>"+str(new_client_str)+"\g<3>", self.file)
+            new_client_str = client + '   ' + grid
+            self.file = re.sub(self.re_client, r"\g<1>" + str(new_client_str) + "\g<3>", self.file)
         else:
             pass
 
@@ -329,14 +331,14 @@ class ConFile:
             survey_type = self.pem_file.get_survey_type()
             line_type = 'Line' if 'surface' in survey_type.lower() else 'Hole'
             new_loop_str = "Loop {0}, {1} {2}".format(loop, line_type, self.name)
-            self.file = re.sub(self.re_holehole, r"\g<1>"+str(new_loop_str)+"\g<3>", self.file)
+            self.file = re.sub(self.re_holehole, r"\g<1>" + str(new_loop_str) + "\g<3>", self.file)
         else:
             pass
 
     def set_station_range(self, start_stn, end_stn):
-        self.file = re.sub(self.re_start_stn, r"\g<1>"+str(start_stn)+"\g<3>", self.file)
-        self.file = re.sub(self.re_end_stn, r"\g<1>"+str(end_stn)+"\g<3>", self.file)
-        self.file = re.sub(self.re_section, r"\g<1>"+str(1)+"\g<3>", self.file)
+        self.file = re.sub(self.re_start_stn, r"\g<1>" + str(start_stn) + "\g<3>", self.file)
+        self.file = re.sub(self.re_end_stn, r"\g<1>" + str(end_stn) + "\g<3>", self.file)
+        self.file = re.sub(self.re_section, r"\g<1>" + str(1) + "\g<3>", self.file)
 
     def set_win2(self):
         win2_max = self.re_win2_max.search(self.file).group('Max')
@@ -352,9 +354,9 @@ class ConFile:
                 new_win2_max = 10
                 new_win2_min = -15
 
-            self.file = re.sub(self.re_win2_max, r"\g<1>"+str(new_win2_max)+"\g<3>", self.file)
-            self.file = re.sub(self.re_win2_min, r"\g<1>"+str(new_win2_min)+"\g<3>", self.file)
-            self.file = re.sub(self.re_win2_step, r"\g<1>"+str(new_win2_step)+"\g<3>", self.file)
+            self.file = re.sub(self.re_win2_max, r"\g<1>" + str(new_win2_max) + "\g<3>", self.file)
+            self.file = re.sub(self.re_win2_min, r"\g<1>" + str(new_win2_min) + "\g<3>", self.file)
+            self.file = re.sub(self.re_win2_step, r"\g<1>" + str(new_win2_step) + "\g<3>", self.file)
 
         else:
             pass
@@ -367,7 +369,6 @@ class ConFile:
 
 
 def main():
-
     app = QApplication(sys.argv)
     mw = Conder()
     mw.show()

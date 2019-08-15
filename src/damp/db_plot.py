@@ -14,7 +14,7 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -38,8 +38,12 @@ Ui_DB_Widget, QtBaseClass = uic.loadUiType(DB_Widget_qtCreatorFile)
 
 
 class DBPlot(QMainWindow, Ui_DB_Window):
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        # QWidget.__init__(self, parent)
+        # Ui_DB_Window.__init__(self)
+        self.parent = parent
+
         self.initUi()
         self.initActions()
 
@@ -53,7 +57,7 @@ class DBPlot(QMainWindow, Ui_DB_Window):
 
         self.damp_parser = DampParser()
         self.message = QMessageBox()
-
+        self.dialog = QtGui.QFileDialog()
         self.open_widgets = []
 
     def initUi(self):
@@ -64,8 +68,6 @@ class DBPlot(QMainWindow, Ui_DB_Window):
             self.move(qtRectangle.topLeft())
 
         self.setupUi(self)
-        self.dialog = QtGui.QFileDialog()
-        self.statusBar().showMessage('Ready')
         self.setWindowTitle("DB Plot  v" + str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
@@ -158,8 +160,8 @@ class DBPlot(QMainWindow, Ui_DB_Window):
     def open_file_dialog(self):
         try:
             files = self.dialog.getOpenFileNames(self, 'Open Files',
-                                                     filter='Damp files (*.log *.txt *.rtf);; All files(*.*)')
-            if files[0]!='':
+                                                 filter='Damp files (*.log *.txt *.rtf);; All files(*.*)')
+            if files[0] != '':
                 for file in files[0]:
                     if file.lower().endswith('log') or file.lower().endswith('txt') or file.lower().endswith('rtf'):
                         self.open_files(file)
@@ -195,12 +197,13 @@ class DBPlot(QMainWindow, Ui_DB_Window):
                 self.gridLayout.removeWidget(widget)
                 widget.deleteLater()
             self.open_widgets.clear()
+            self.parent.statusBar().showMessage('All files removed', 2000)
             self.x = 0
             self.y = 0
         except Exception as e:
             logging.info(str(e))
             self.message.information(None, 'Error', str(e))
-            raise
+            pass
 
     def remove_file(self):
         if len(self.open_widgets) > 0:
@@ -209,6 +212,7 @@ class DBPlot(QMainWindow, Ui_DB_Window):
                     self.gridLayout.removeWidget(widget)
                     widget.deleteLater()
                     self.open_widgets.remove(widget)
+                    break
 
     def reset_range(self):
         if len(self.open_widgets) > 0:
@@ -239,7 +243,6 @@ class DBPlot(QMainWindow, Ui_DB_Window):
             file_name = '/Current Logs.png'
 
         self.mainMenu.hide()
-        self.statusBar().hide()
 
         self.dialog.setFileMode(QtGui.QFileDialog.Directory)
         self.dialog.setDirectory(default_path)
@@ -248,12 +251,12 @@ class DBPlot(QMainWindow, Ui_DB_Window):
 
         if file_dir:
             self.grab().save(file_dir + file_name)
+            self.parent.statusBar().showMessage('Imaged saved at {}'.format(str(file_dir)), 2000)
         else:
             logging.info("No directory chosen, aborted save")
             pass
 
         self.mainMenu.show()
-        self.statusBar().showMessage('Ready')
 
     def toggle_coords(self):
         # Toggle displaying the plot values at the location of the mouse
@@ -407,6 +410,7 @@ class DampPlot(QWidget, Ui_DB_Widget):
         Ui_DB_Widget.__init__(self)
         self.setupUi(self)
 
+        self.parent = parent
         self.pw = None
         self.__axisTime = AxisTime(orientation='bottom')
         self.file = file
