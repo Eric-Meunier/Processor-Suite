@@ -62,7 +62,6 @@ class DBPlot(QMainWindow, Ui_DB_Window):
             centerPoint = QDesktopWidget().availableGeometry().center()
             qtRectangle.moveCenter(centerPoint)
             self.move(qtRectangle.topLeft())
-            # self.show()
 
         self.setupUi(self)
         self.dialog = QtGui.QFileDialog()
@@ -70,7 +69,6 @@ class DBPlot(QMainWindow, Ui_DB_Window):
         self.setWindowTitle("DB Plot  v" + str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
-        # self.setGeometry(500, 300, 800, 600)
         center_window(self)
 
     def initActions(self):
@@ -83,9 +81,14 @@ class DBPlot(QMainWindow, Ui_DB_Window):
         self.openFile.triggered.connect(self.open_file_dialog)
 
         self.clearFiles = QtGui.QAction("&Clear Files", self)
-        self.clearFiles.setShortcut("Del")
+        self.clearFiles.setShortcut("Shift+Del")
         self.clearFiles.setStatusTip('Clear all open files')
         self.clearFiles.triggered.connect(self.clear_files)
+
+        self.removeFile = QtGui.QAction("&Remove File", self)
+        self.removeFile.setShortcut("Del")
+        self.removeFile.setStatusTip('Remove a single file')
+        self.removeFile.triggered.connect(self.remove_file)
 
         self.resetRange = QtGui.QAction("&Reset Ranges", self)
         self.resetRange.setShortcut(" ")
@@ -119,6 +122,7 @@ class DBPlot(QMainWindow, Ui_DB_Window):
         self.viewMenu = self.mainMenu.addMenu('&View')
         self.viewMenu.addAction(self.showCoords)
         self.viewMenu.addAction(self.showGrids)
+        self.viewMenu.addAction(self.removeFile)
         self.viewMenu.addAction(self.clearFiles)
         self.viewMenu.addAction(self.resetRange)
         self.viewMenu.addAction(self.showSymbols)
@@ -197,6 +201,14 @@ class DBPlot(QMainWindow, Ui_DB_Window):
             logging.info(str(e))
             self.message.information(None, 'Error', str(e))
             raise
+
+    def remove_file(self):
+        if len(self.open_widgets) > 0:
+            for widget in self.open_widgets:
+                if widget.underMouse():
+                    self.gridLayout.removeWidget(widget)
+                    widget.deleteLater()
+                    self.open_widgets.remove(widget)
 
     def reset_range(self):
         if len(self.open_widgets) > 0:

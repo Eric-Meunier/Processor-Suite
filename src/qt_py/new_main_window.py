@@ -4,13 +4,13 @@ import logging
 from src.damp.db_plot import DBPlot
 from src.con_file.confile_modder import Conder
 from src.pem.new_pem_editor import PEMEditorWindow
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox,
-                             QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu)
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QMdiArea,
+                             QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QToolBar)
 from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.0.0'
+__version__ = '0.0.2'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -59,6 +59,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusBar().showMessage('Ready')
 
         self.setCentralWidget(self.mdiArea)
+        self.mdiArea.setViewMode(QMdiArea.TabbedView)
         self.editor = None
         self.db_plot = None
         self.conder = None
@@ -75,28 +76,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.closeAllWindows.setStatusTip("Close all windows")
         self.closeAllWindows.triggered.connect(self.close_all_windows)
 
-        self.clearFiles = QAction("&Clear All Files", self)
-        self.clearFiles.setShortcut("Ctrl+Del")
-        self.clearFiles.setStatusTip("Clear all files")
-        self.clearFiles.triggered.connect(self.clear_files)
+        # self.clearFiles = QAction("&Clear All Files", self)
+        # self.clearFiles.setShortcut("Ctrl+Del")
+        # self.clearFiles.setStatusTip("Clear all files")
+        # self.clearFiles.triggered.connect(self.clear_files)
 
         self.fileMenu = self.menubar.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.closeAllWindows)
-        self.fileMenu.addAction(self.clearFiles)
+        # self.fileMenu.addAction(self.clearFiles)
 
-        self.toolbar = self.addToolBar('')
+        self.toolbar = QToolBar()
+        self.addToolBar(QtCore.Qt.LeftToolBarArea, self.toolbar)
 
         self.tile_view = QAction(
             QtGui.QIcon(os.path.join(icons_path, 'windows_stack.png')),
-            '&Tile View',
-            self)
+            '&Tile View', self)
         self.tile_view.setShortcut('Ctrl+I')
         self.tile_view.triggered.connect(self.set_tile_view)
 
         self.show_pem_editor = QAction(
-            QtGui.QIcon(os.path.join(icons_path, 'plots2.png')), '&PEM Editor',
-            self)
+            QtGui.QIcon(os.path.join(icons_path, 'plots2.png')), '&PEM Editor', self)
         self.show_pem_editor.triggered.connect(self.toggle_editor)
 
         self.show_db_plot = QAction(
@@ -117,21 +117,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def close_all_windows(self):
         if self.mdiArea.subWindowList():
-
-            def subwindow_showing():
-                for subwindow in self.mdiArea.subWindowList():
-                    if subwindow.isHidden() == False:
-                        return True
-
-            if subwindow_showing():
-                response = self.message.question(self, 'PEMPro', 'Are you sure you want to close all windows?',
-                                             self.message.Yes | self.message.No)
-                if response == self.message.Yes:
-                    for subwindow in self.mdiArea.subWindowList():
-                        subwindow.hide()
-                    self.clear_files(response=self.message.Yes)
-                else:
-                    pass
+            response = self.message.question(self, 'PEMPro', 'Are you sure you want to close all windows?',
+                                         self.message.Yes | self.message.No)
+            if response == self.message.Yes:
+                self.mdiArea.closeAllSubWindows()
+                self.clear_files(response=self.message.Yes)
             else:
                 pass
         else:

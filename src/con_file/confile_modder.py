@@ -29,120 +29,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', date
 Ui_Conder_Window, QtBaseClass = uic.loadUiType(ConderWindow_qtCreatorFile)
 
 
-class ConFile:
-    """
-    Con file object is based on the .CON text-based files. It reads the .CON file, and
-    renames the current line name in the .CON file to that of the .CON file's filename. It
-    can also populate the client, grid, and loop names if they haven't been set by
-    pembat, and it can change the station ranges.
-    """
-    def __init__(self, filepath):
-        self.pem_file = None
-
-        self.filepath = filepath
-        self.filename = os.path.basename(self.filepath)  # With extension
-        self.file_dir = os.path.dirname(self.filepath)
-
-        # Only used if pembat hasn't been run
-        self.re_client = re.compile(r'(RPLS .t1.,\s\")(?P<Client>.*)(\")')
-        self.re_holehole = re.compile(r'(RPLS .t2., \")(?P<Loop>.*\s?)(\s{4}[XYZ]\sComponent\")')
-
-        # Unused groups must be made for re.sub
-        self.re_line = re.compile(r'((?:Line|Hole)\s)(?P<Line>.*?)(\s+[ZXY]\s+Component)')
-        self.re_section = re.compile(r'(RPLS Section,\s+)(?P<Section>\d)(\s+.*)')
-        self.re_start_stn = re.compile(r'(RPLS StartStn,\s+)(?P<StartStn>[\W\d]+?)(\s+.*)')
-        self.re_end_stn = re.compile(r'(RPLS EndStn,\s+)(?P<EndStn>[\W\d]+?)(\s+.*)')
-        self.re_win2_max = re.compile(r'(RPLS MaxWin2,\s+)(?P<Max>[\W\d]+?)(\s+.*)')
-        self.re_win2_min = re.compile(r'(RPLS MinWin2,\s+)(?P<Min>[\W\d]+?)(\s+.*)')
-        self.re_win2_step = re.compile(r'(RPLS TickWin2,\s+)(?P<Step>\d+)(\s+.*)')
-
-        with open(self.filepath, 'rt') as in_file:
-            self.file = in_file.read()
-
-        self.original_name = self.re_line.search(self.file).group('Line')
-        self.name = re.split('[XYZ]\.CON',os.path.basename(self.filepath))[0]
-        self.start_stn = int(self.re_start_stn.search(self.file).group('StartStn'))
-        self.end_stn = int(self.re_end_stn.search(self.file).group('EndStn'))
-
-        self.check_header()
-        self.set_win2()
-
-    def check_header(self):
-        """
-        Checks if pembat.exe has been run. If not, it will fill in the header in its place.
-        """
-        def get_pem_file():
-            pem_file_names = [f for f in os.listdir(self.file_dir) if
-                              isfile(join(self.file_dir, f)) and f.lower().endswith('.pem')]
-            pem_file_paths = []
-
-            if len(pem_file_names) > 0:
-                for file in pem_file_names:
-                    pem_file_paths.append(join(self.file_dir, file))
-                pem_file = PEMParser().parse(pem_file_paths[0])
-
-                self.pem_file = pem_file
-            else:
-                pass
-
-        if self.re_client.search(self.file).group('Client').lower() == 'client':
-            if self.pem_file is None:
-                get_pem_file()
-
-            header = self.pem_file.get_header()
-            client = header['Client']
-            grid = header['Grid']
-
-            new_client_str = client+'   '+grid
-            self.file = re.sub(self.re_client, r"\g<1>"+str(new_client_str)+"\g<3>", self.file)
-        else:
-            pass
-
-        if self.re_holehole.search(self.file).group('Loop').lower() == 'hole hole ':
-            if self.pem_file is None:
-                get_pem_file()
-
-            header = self.pem_file.get_header()
-            loop = header['Loop']
-            survey_type = self.pem_file.get_survey_type()
-            line_type = 'Line' if 'surface' in survey_type.lower() else 'Hole'
-            new_loop_str = "Loop {0}, {1} {2}".format(loop, line_type, self.name)
-            self.file = re.sub(self.re_holehole, r"\g<1>"+str(new_loop_str)+"\g<3>", self.file)
-        else:
-            pass
-
-    def set_station_range(self, start_stn, end_stn):
-        self.file = re.sub(self.re_start_stn, r"\g<1>"+str(start_stn)+"\g<3>", self.file)
-        self.file = re.sub(self.re_end_stn, r"\g<1>"+str(end_stn)+"\g<3>", self.file)
-        self.file = re.sub(self.re_section, r"\g<1>"+str(1)+"\g<3>", self.file)
-
-    def set_win2(self):
-        win2_max = self.re_win2_max.search(self.file).group('Max')
-        win2_min = self.re_win2_min.search(self.file).group('Min')
-
-        if int(win2_max) - int(win2_min) < 25:
-            new_win2_step = 5
-
-            if abs(int(win2_max)) > abs(int(win2_min)):
-                new_win2_max = 15
-                new_win2_min = -10
-            else:
-                new_win2_max = 10
-                new_win2_min = -15
-
-            self.file = re.sub(self.re_win2_max, r"\g<1>"+str(new_win2_max)+"\g<3>", self.file)
-            self.file = re.sub(self.re_win2_min, r"\g<1>"+str(new_win2_min)+"\g<3>", self.file)
-            self.file = re.sub(self.re_win2_step, r"\g<1>"+str(new_win2_step)+"\g<3>", self.file)
-
-        else:
-            pass
-
-    def rename_line(self):
-        self.file = re.sub(self.re_line, r"\g<1>" + str(self.name) + "\g<3>", self.file)
-
-    def save_file(self):
-        print(self.file, file=open(self.filepath, 'w+'))
-
 
 class Conder(QMainWindow, Ui_Conder_Window):
     def __init__(self):
@@ -193,7 +79,7 @@ class Conder(QMainWindow, Ui_Conder_Window):
         self.saveFiles.triggered.connect(self.save_files)
 
         self.clearFiles = QAction("&Clear Files", self)
-        self.clearFiles.setShortcut("Del")
+        self.clearFiles.setShortcut("Shift+Del")
         self.clearFiles.setStatusTip("Clear all files")
         self.clearFiles.triggered.connect(self.clear_files)
 
@@ -363,6 +249,121 @@ class Conder(QMainWindow, Ui_Conder_Window):
         while self.tableWidget.rowCount() > 0:
             self.tableWidget.removeRow(0)
         self.files.clear()
+
+
+class ConFile:
+    """
+    Con file object is based on the .CON text-based files. It reads the .CON file, and
+    renames the current line name in the .CON file to that of the .CON file's filename. It
+    can also populate the client, grid, and loop names if they haven't been set by
+    pembat, and it can change the station ranges.
+    """
+    def __init__(self, filepath):
+        self.pem_file = None
+
+        self.filepath = filepath
+        self.filename = os.path.basename(self.filepath)  # With extension
+        self.file_dir = os.path.dirname(self.filepath)
+
+        # Only used if pembat hasn't been run
+        self.re_client = re.compile(r'(RPLS .t1.,\s\")(?P<Client>.*)(\")')
+        self.re_holehole = re.compile(r'(RPLS .t2., \")(?P<Loop>.*\s?)(\s{4}[XYZ]\sComponent\")')
+
+        # Unused groups must be made for re.sub
+        self.re_line = re.compile(r'((?:Line|Hole)\s)(?P<Line>.*?)(\s+[ZXY]\s+Component)')
+        self.re_section = re.compile(r'(RPLS Section,\s+)(?P<Section>\d)(\s+.*)')
+        self.re_start_stn = re.compile(r'(RPLS StartStn,\s+)(?P<StartStn>[\W\d]+?)(\s+.*)')
+        self.re_end_stn = re.compile(r'(RPLS EndStn,\s+)(?P<EndStn>[\W\d]+?)(\s+.*)')
+        self.re_win2_max = re.compile(r'(RPLS MaxWin2,\s+)(?P<Max>[\W\d]+?)(\s+.*)')
+        self.re_win2_min = re.compile(r'(RPLS MinWin2,\s+)(?P<Min>[\W\d]+?)(\s+.*)')
+        self.re_win2_step = re.compile(r'(RPLS TickWin2,\s+)(?P<Step>\d+)(\s+.*)')
+
+        with open(self.filepath, 'rt') as in_file:
+            self.file = in_file.read()
+
+        self.original_name = self.re_line.search(self.file).group('Line')
+        self.name = re.split('[XYZ]\.CON',os.path.basename(self.filepath))[0]
+        self.start_stn = int(self.re_start_stn.search(self.file).group('StartStn'))
+        self.end_stn = int(self.re_end_stn.search(self.file).group('EndStn'))
+
+        self.check_header()
+        self.set_win2()
+
+    def check_header(self):
+        """
+        Checks if pembat.exe has been run. If not, it will fill in the header in its place.
+        """
+        def get_pem_file():
+            pem_file_names = [f for f in os.listdir(self.file_dir) if
+                              isfile(join(self.file_dir, f)) and f.lower().endswith('.pem')]
+            pem_file_paths = []
+
+            if len(pem_file_names) > 0:
+                for file in pem_file_names:
+                    pem_file_paths.append(join(self.file_dir, file))
+                pem_file = PEMParser().parse(pem_file_paths[0])
+
+                self.pem_file = pem_file
+            else:
+                pass
+
+        if self.re_client.search(self.file).group('Client').lower() == 'client':
+            if self.pem_file is None:
+                get_pem_file()
+
+            header = self.pem_file.get_header()
+            client = header['Client']
+            grid = header['Grid']
+
+            new_client_str = client+'   '+grid
+            self.file = re.sub(self.re_client, r"\g<1>"+str(new_client_str)+"\g<3>", self.file)
+        else:
+            pass
+
+        if self.re_holehole.search(self.file).group('Loop').lower() == 'hole hole ':
+            if self.pem_file is None:
+                get_pem_file()
+
+            header = self.pem_file.get_header()
+            loop = header['Loop']
+            survey_type = self.pem_file.get_survey_type()
+            line_type = 'Line' if 'surface' in survey_type.lower() else 'Hole'
+            new_loop_str = "Loop {0}, {1} {2}".format(loop, line_type, self.name)
+            self.file = re.sub(self.re_holehole, r"\g<1>"+str(new_loop_str)+"\g<3>", self.file)
+        else:
+            pass
+
+    def set_station_range(self, start_stn, end_stn):
+        self.file = re.sub(self.re_start_stn, r"\g<1>"+str(start_stn)+"\g<3>", self.file)
+        self.file = re.sub(self.re_end_stn, r"\g<1>"+str(end_stn)+"\g<3>", self.file)
+        self.file = re.sub(self.re_section, r"\g<1>"+str(1)+"\g<3>", self.file)
+
+    def set_win2(self):
+        win2_max = self.re_win2_max.search(self.file).group('Max')
+        win2_min = self.re_win2_min.search(self.file).group('Min')
+
+        if int(win2_max) - int(win2_min) < 25:
+            new_win2_step = 5
+
+            if abs(int(win2_max)) > abs(int(win2_min)):
+                new_win2_max = 15
+                new_win2_min = -10
+            else:
+                new_win2_max = 10
+                new_win2_min = -15
+
+            self.file = re.sub(self.re_win2_max, r"\g<1>"+str(new_win2_max)+"\g<3>", self.file)
+            self.file = re.sub(self.re_win2_min, r"\g<1>"+str(new_win2_min)+"\g<3>", self.file)
+            self.file = re.sub(self.re_win2_step, r"\g<1>"+str(new_win2_step)+"\g<3>", self.file)
+
+        else:
+            pass
+
+    def rename_line(self):
+        self.file = re.sub(self.re_line, r"\g<1>" + str(self.name) + "\g<3>", self.file)
+
+    def save_file(self):
+        print(self.file, file=open(self.filepath, 'w+'))
 
 
 def main():

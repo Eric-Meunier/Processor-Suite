@@ -90,7 +90,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.saveFilesAs.triggered.connect(self.save_all_as)
 
         self.clearFiles = QAction("&Clear Files", self)
-        self.clearFiles.setShortcut("Ctrl+Del")
+        self.clearFiles.setShortcut("Shift+Del")
         self.clearFiles.setStatusTip("Clear all files")
         self.clearFiles.triggered.connect(self.clear_files)
 
