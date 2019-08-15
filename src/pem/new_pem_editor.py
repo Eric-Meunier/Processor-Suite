@@ -18,13 +18,19 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
+    editorCreatorFile = 'qt_ui\\pem_editor_widget.ui'
+    editorWindowCreatorFile = 'qt_ui\\pem_editor_window.ui'
+    icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
+    editorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_widget.ui')
+    editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
-editorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_widget.ui')
+# editorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_widget.ui')
+# editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
 Ui_PEMEditorWidget, QtBaseClass = uic.loadUiType(editorCreatorFile)
-editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
 Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
 
 
@@ -46,7 +52,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.setWindowTitle("PEMEditor  v" + str(__version__))
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\crone_logo.ico")))
+            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
         # self.setGeometry(500, 300, 1000, 800)
         center_window(self)
 

@@ -21,12 +21,18 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
+    DB_Window_qtCreatorFile = 'qt_ui\\db_plot_window.ui'
+    DB_Widget_qtCreatorFile = 'qt_ui\\db_plot_widget.ui'
+    icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
+    DB_Window_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_window.ui')
+    DB_Widget_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_widget.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
-DB_Window_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_window.ui')
-DB_Widget_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_widget.ui')
+# DB_Window_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_window.ui')
+# DB_Widget_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_widget.ui')
 Ui_DB_Window, QtBaseClass = uic.loadUiType(DB_Window_qtCreatorFile)
 Ui_DB_Widget, QtBaseClass = uic.loadUiType(DB_Widget_qtCreatorFile)
 
@@ -63,7 +69,7 @@ class DBPlot(QMainWindow, Ui_DB_Window):
         self.statusBar().showMessage('Ready')
         self.setWindowTitle("DB Plot  v" + str(__version__))
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
+            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
         # self.setGeometry(500, 300, 800, 600)
         center_window(self)
 

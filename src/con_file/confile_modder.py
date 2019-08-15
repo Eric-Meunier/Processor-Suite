@@ -15,13 +15,17 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
+    ConderWindow_qtCreatorFile = 'qt_ui\\con_file_window.ui'
+    icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
+    ConderWindow_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\con_file_window.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 samples_path = os.path.join(application_path, "sample_files")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-ConderWindow_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\con_file_window.ui')
+# ConderWindow_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\con_file_window.ui')
 Ui_Conder_Window, QtBaseClass = uic.loadUiType(ConderWindow_qtCreatorFile)
 
 
@@ -162,7 +166,7 @@ class Conder(QMainWindow, Ui_Conder_Window):
         # self.setGeometry(500, 300, 800, 600)
         self.setWindowTitle('Conder  v'+__version__)
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
+            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
         center_window(self)
 
     def initActions(self):

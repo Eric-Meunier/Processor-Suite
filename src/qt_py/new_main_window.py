@@ -1,8 +1,8 @@
 import os
 import sys
 import logging
-from src.con_file.confile_modder import Conder
 from src.damp.db_plot import DBPlot
+from src.con_file.confile_modder import Conder
 from src.pem.new_pem_editor import PEMEditorWindow
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu)
@@ -17,10 +17,14 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
+    MW_CreatorFile = 'qt_ui\\new_main_window.ui'
+    icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
+    MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\new_main_window.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
-MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\new_main_window.ui')
+# MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\new_main_window.ui')
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_CreatorFile)
 
 
@@ -45,7 +49,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\crone_logo.ico")))
+            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
         self.setGeometry(500, 300, 1400, 900)
         center_window(self)
 
@@ -84,23 +88,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.toolbar = self.addToolBar('')
 
         self.tile_view = QAction(
-            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\windows_stack.png")),
+            QtGui.QIcon(os.path.join(icons_path, 'windows_stack.png')),
             '&Tile View',
             self)
         self.tile_view.setShortcut('Ctrl+I')
         self.tile_view.triggered.connect(self.set_tile_view)
 
         self.show_pem_editor = QAction(
-            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\plots2.png")), '&PEM Editor',
+            QtGui.QIcon(os.path.join(icons_path, 'plots2.png')), '&PEM Editor',
             self)
         self.show_pem_editor.triggered.connect(self.toggle_editor)
 
         self.show_db_plot = QAction(
-            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\db_plot.png")), '&DB Plot', self)
+            QtGui.QIcon(os.path.join(icons_path, 'db_plot.png')), '&DB Plot', self)
         self.show_db_plot.triggered.connect(self.toggle_db_plot)
 
         self.show_conder = QAction(
-            QtGui.QIcon(os.path.join(os.path.dirname(application_path), "qt_ui\\icons\\conder.png")), '&Conder', self)
+            QtGui.QIcon(os.path.join(icons_path, 'conder.png')), '&Conder', self)
         self.show_conder.triggered.connect(self.toggle_conder)
 
         self.toolbar.addAction(self.tile_view)

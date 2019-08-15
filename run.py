@@ -1,14 +1,23 @@
 import os
 import sys
 
-src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
+if getattr(sys, 'frozen', False):
+    # If the application is run as a bundle, the pyInstaller bootloader
+    # extends the sys module by a flag frozen=True and sets the app
+    # path into variable _MEIPASS'.
+    application_path = sys._MEIPASS
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
+src_dir = os.path.join(application_path, "src")
+
 print('src directory: '+src_dir)
 
 # Needed to keep run.py outside of src directory
-os.chdir(src_dir)
-sys.path.append(src_dir)
+# os.chdir(src_dir)
+# sys.path.append(src_dir)
 
-from qt_py.main_window import MainWindow
+from src.qt_py.new_main_window import MainWindow
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtCore import QTimer
 
