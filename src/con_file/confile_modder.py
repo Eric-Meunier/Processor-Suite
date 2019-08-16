@@ -51,7 +51,7 @@ class Conder(QMainWindow, Ui_Conder_Window):
         self.setupUi(self)
         self.setWindowTitle('Conder  v' + __version__)
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
+            QtGui.QIcon(os.path.join(icons_path, 'conder 32.png')))
         center_window(self)
 
     def initActions(self):

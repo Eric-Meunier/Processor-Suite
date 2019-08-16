@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import copy
 from itertools import chain
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.pem_parser import PEMParser
@@ -191,28 +192,19 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def save_all(self):
         if len(self.editor.pem_files) > 0:
             for row in range(self.editor.table.rowCount()):
-                self.editor.pem_files[row].header['Client'] = self.editor.table.item(row, 1).text()
-                self.editor.pem_files[row].header['Grid'] = self.editor.table.item(row, 2).text()
-                self.editor.pem_files[row].header['LineHole'] = self.editor.table.item(row, 3).text()
-                self.editor.pem_files[row].header['Loop'] = self.editor.table.item(row, 4).text()
-            for pem_file in self.editor.pem_files:
-                save_file = self.serializer.serialize(pem_file)
-                # print(save_file)
+                file = copy.copy(self.editor.pem_files[row])
+                updated_file = self.editor.update_pem_file(self.editor.pem_files[row], row)
+                save_file = self.serializer.serialize(updated_file)
                 self.parent.statusBar().showMessage('Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
-                # save_name = os.path.splitext(pem_file.filepath)
-                print(save_file, file=open(pem_file.filepath, 'w+'))
+                print(save_file, file=open(updated_file.filepath, 'w+'))
+                if os.path.basename(file.filepath) != os.path.basename(updated_file.filepath):
+                    os.remove(file.filepath)
             self.editor.update_table()
         else:
             self.parent.statusBar().showMessage('No PEM files to save', 2000)
 
     def save_all_as(self):
         if len(self.editor.pem_files) > 0:
-            for row in range(self.editor.table.rowCount()):
-                self.editor.pem_files[row].header['Client'] = self.editor.table.item(row, 1).text()
-                self.editor.pem_files[row].header['Grid'] = self.editor.table.item(row, 2).text()
-                self.editor.pem_files[row].header['LineHole'] = self.editor.table.item(row, 3).text()
-                self.editor.pem_files[row].header['Loop'] = self.editor.table.item(row, 4).text()
-
             default_path = os.path.split(self.editor.pem_files[-1].filepath)[0]
             self.dialog.setFileMode(QFileDialog.Directory)
             self.dialog.setDirectory(default_path)
@@ -220,13 +212,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             file_dir = QFileDialog.getExistingDirectory(self, '', default_path)
             suffix = 'Av'
             if file_dir:
-                for pem_file in self.editor.pem_files:
-                    save_file = self.serializer.serialize(pem_file)
+                for row in range(self.editor.table.rowCount()):
+                    pem_file = self.editor.pem_files[row]
+                    updated_file = self.editor.update_pem_file(self.editor.pem_files[row], row)
                     file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
                     extension = os.path.splitext(pem_file.filepath)[-1]
-                    save_name = os.path.join(file_dir, file_name + suffix + extension)
-                    # print(save_name)
-                    print(save_file, file=open(save_name, 'w+'))
+                    updated_file.filepath = os.path.join(file_dir, file_name + suffix + extension)
+                    save_file = self.serializer.serialize(updated_file)
+
+                    print(save_file, file=open(updated_file.filepath, 'w+'))
                     self.parent.statusBar().showMessage('Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
                 self.editor.update_table()
             else:
@@ -300,29 +294,36 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         else:
             pass
 
+    def update_pem_file(self, pem_file, table_row):
+        updated_file = None
+        pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0], self.table.item(table_row, 0).text())
+        pem_file.header['Client'] = self.table.item(table_row, 1).text()
+        pem_file.header['Grid'] = self.table.item(table_row, 2).text()
+        pem_file.header['LineHole'] = self.table.item(table_row, 3).text()
+        pem_file.header['Loop'] = self.table.item(table_row, 4).text()
+        pem_file.tags['Current'] = self.table.item(table_row, 5).text()
+        return pem_file
+
     def save_file(self):
         row = self.table.currentRow()
 
         if row != -1 and len(self.pem_files) > 0:
-            file = self.pem_files[row]
-            file.header['Client'] = self.table.item(row, 1).text()
-            file.header['Grid'] = self.table.item(row, 2).text()
-            file.header['LineHole'] = self.table.item(row, 3).text()
-            file.header['Loop'] = self.table.item(row, 4).text()
-
-            save_file = self.parent.serializer.serialize(file)
-            # print(save_file)
+            file = copy.copy(self.pem_files[row])
+            updated_file = self.update_pem_file(self.pem_files[row], row)
+            save_file = self.parent.serializer.serialize(updated_file)
             self.parent.window().statusBar().showMessage(
-                'File {} saved.'.format(os.path.basename(file.filepath)), 2000)
-            # save_name = os.path.splitext(pem_file.filepath)
-            print(save_file, file=open(file.filepath, 'w+'))
+                'File {} saved.'.format(os.path.basename(updated_file.filepath)), 2000)
+            print(save_file, file=open(updated_file.filepath, 'w+'))
             self.update_table()
+
+            if os.path.basename(file.filepath) != os.path.basename(updated_file.filepath):
+                os.remove(file.filepath)
         else:
             pass
 
     # Creates the table when the editor is first opened
     def create_table(self):
-        self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'First Station', 'Last Station']
+        self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'First Station', 'Last Station']
         self.table.setColumnCount(len(self.columns))
         self.table.setHorizontalHeaderLabels(self.columns)
         self.table.setSizeAdjustPolicy(
@@ -337,10 +338,12 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
     def add_to_table(self, pem_file):
 
         header = pem_file.header
+        tags = pem_file.tags
         file = os.path.basename(pem_file.filepath)
         client = self.client_edit.text() if self.share_header_checkbox.isChecked() else header.get('Client')
         grid = self.grid_edit.text() if self.share_header_checkbox.isChecked() else header.get('Grid')
         loop = self.loop_edit.text() if self.share_header_checkbox.isChecked() else header.get('Loop')
+        current = tags.get('Current')
 
         line = header.get('LineHole')
         start_stn = self.min_range_edit.text() if self.share_range_checkbox.isChecked() else str(
@@ -348,7 +351,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         end_stn = self.max_range_edit.text() if self.share_range_checkbox.isChecked() else str(
             max(pem_file.get_unique_stations()))
 
-        new_row = [file, client, grid, line, loop, start_stn, end_stn]
+        new_row = [file, client, grid, line, loop, current, start_stn, end_stn]
 
         row_pos = self.table.rowCount()
         self.table.insertRow(row_pos)
@@ -367,6 +370,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             header.get('Grid'),
             header.get('LineHole'),
             header.get('Loop'),
+            tags.get('Current'),
             str(min(pem_file.get_unique_stations())),
             str(max(pem_file.get_unique_stations()))
         ]

@@ -2,16 +2,17 @@ import re
 import os
 import sys
 import datetime
+import time
 import codecs
 import statistics as stats
 import pyqtgraph as pg
-from src.damp.time_axis import AxisTime
 import logging
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox)
 from PyQt5 import (QtCore, QtGui, uic)
 
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
+pg.setConfigOption('crashWarning', True)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 __version__ = '0.0.3'
@@ -31,8 +32,6 @@ else:
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
-# DB_Window_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_window.ui')
-# DB_Widget_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_widget.ui')
 Ui_DB_Window, QtBaseClass = uic.loadUiType(DB_Window_qtCreatorFile)
 Ui_DB_Widget, QtBaseClass = uic.loadUiType(DB_Widget_qtCreatorFile)
 
@@ -40,8 +39,6 @@ Ui_DB_Widget, QtBaseClass = uic.loadUiType(DB_Widget_qtCreatorFile)
 class DBPlot(QMainWindow, Ui_DB_Window):
     def __init__(self, parent=None):
         super().__init__()
-        # QWidget.__init__(self, parent)
-        # Ui_DB_Window.__init__(self)
         self.parent = parent
 
         self.initUi()
@@ -406,8 +403,6 @@ class DampPlot(QWidget, Ui_DB_Widget):
 
     def __init__(self, file, show_coords=False, grid=True, show_symbols=True, parent=None):
         super(DampPlot, self).__init__(parent=parent)
-        QWidget.__init__(self, parent=parent)
-        Ui_DB_Widget.__init__(self)
         self.setupUi(self)
 
         self.parent = parent
@@ -525,6 +520,21 @@ class DampPlot(QWidget, Ui_DB_Widget):
 
         self.pw.setYRange(min_y, max_y)
         self.pw.setXRange(min_x, max_x)
+
+
+class AxisTime(pg.AxisItem):
+    ## Formats axis label to human readable time.
+    # @param[in] values List of \c time_t.
+    # @param[in] scale Not used.
+    # @param[in] spacing Not used.
+    def tickStrings(self, values, scale, spacing):
+        strns = []
+        for x in values:
+            try:
+                strns.append(time.strftime("%H:%M:%S", time.gmtime(x)))    # time_t --> time.struct_time
+            except ValueError:  # Windows can't handle dates before 1970
+                strns.append('')
+        return strns
 
 
 def main():

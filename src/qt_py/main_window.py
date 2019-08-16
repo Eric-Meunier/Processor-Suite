@@ -33,6 +33,13 @@ class CustomMdiArea(QMdiArea):
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
+        # self.mdiArea.setViewMode(QMdiArea.TabbedView)
+        # self.mdiArea.setTabPosition(QTabWidget.North)
+        # self.mdiArea.setTabShape(QTabWidget.Rounded)
+        # self.mdiArea.setTabsClosable(True)
+        # self.mdiArea.setTabsMovable(True)
+        # self.setStyleSheet('cde')  # Don't notice a difference
+        # self.setDocumentMode(True)  # Don't notice a difference
 
 
 class CustomMdiSubWindow(QMdiSubWindow):
@@ -43,7 +50,7 @@ class CustomMdiSubWindow(QMdiSubWindow):
 
     def closeEvent(self, e):
         self.parent.clear_files()
-        self.window().mdiArea.tileSubWindows()  # Doesn't work, don't know why
+        self.mdiArea().tileSubWindows()  # Doesn't work, don't know why
         e.accept()
 
 
@@ -67,8 +74,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.setLayout(layout)
         self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
-        self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
+        # self.setWindowIcon(
+        #     QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
         self.setGeometry(500, 300, 1400, 900)
         center_window(self)
 
@@ -78,13 +85,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusbar.showMessage('Ready', 2000)
         self.mdiArea = CustomMdiArea(parent=self)
         self.setCentralWidget(self.mdiArea)
-        self.mdiArea.setViewMode(QMdiArea.TabbedView)
-        self.mdiArea.setTabPosition(QTabWidget.North)
-        self.mdiArea.setTabShape(QTabWidget.Rounded)
-        # self.mdiArea.setTabsClosable(True)
-        self.mdiArea.setTabsMovable(True)
-        # self.mdiArea.setStyleSheet('cde')  # Don't notice a difference
-        # self.mdiArea.setDocumentMode(True)  # Don't notice a difference
 
         self.editor = None
         self.db_plot = None
@@ -118,7 +118,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QtGui.QIcon(os.path.join(icons_path, 'windows_stack.png')),
             '&Tile View', self)
         self.tile_view.setShortcut('Ctrl+ ')
-        self.tile_view.triggered.connect(self.set_tile_view)
+        self.tile_view.triggered.connect(self.set_view)
 
         self.show_pem_editor = QAction(
             QtGui.QIcon(os.path.join(icons_path, 'plots2.png')), '&PEM Editor', self)
@@ -129,7 +129,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.show_db_plot.triggered.connect(self.toggle_db_plot)
 
         self.show_conder = QAction(
-            QtGui.QIcon(os.path.join(icons_path, 'conder.png')), '&Conder', self)
+            QtGui.QIcon(os.path.join(icons_path, 'conder 32.png')), '&Conder', self)
         self.show_conder.triggered.connect(self.toggle_conder)
 
         self.toolbar.addAction(self.tile_view)
@@ -137,8 +137,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.toolbar.addAction(self.show_db_plot)
         self.toolbar.addAction(self.show_conder)
 
-    def set_tile_view(self):
-        self.mdiArea.tileSubWindows()
+    # def set_view(self):
+    #     if self.num_subwindows_visible() == 1:
+    #         self.editor_subwindow.showMaximized()
+    #     else:
+    #         self.mdiArea.tileSubWindows()
 
     def close_all_windows(self):
         if self.mdiArea.subWindowList():
@@ -171,71 +174,81 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             pass
 
+    def set_view(self):
+        visible_subwindows = []
+        if self.mdiArea.subWindowList():
+            for subwindow in self.mdiArea.subWindowList():
+                if subwindow.isHidden() == False:
+                    visible_subwindows.append(subwindow)
+
+            if len(visible_subwindows) == 1:
+                visible_subwindows[0].showMaximized()
+            else:
+                self.mdiArea.tileSubWindows()
+
     def open_editor(self):
         self.editor = PEMEditorWindow(parent=self)
         self.editor_subwindow = CustomMdiSubWindow(parent=self.editor)
         self.editor_subwindow.setWidget(self.editor)
         self.mdiArea.addSubWindow(self.editor_subwindow)
+        self.editor.show()
+        self.editor_subwindow.show()
+        self.set_view()
 
     def open_db_plot(self):
         self.db_plot = DBPlot(parent=self)
         self.db_plot_subwindow = CustomMdiSubWindow(parent=self.db_plot)
         self.db_plot_subwindow.setWidget(self.db_plot)
         self.mdiArea.addSubWindow(self.db_plot_subwindow)
+        self.db_plot.show()
+        self.db_plot_subwindow.show()
+        self.set_view()
 
     def open_conder(self):
         self.conder = Conder(parent=self)
         self.conder_subwindow = CustomMdiSubWindow(parent=self.conder)
         self.conder_subwindow.setWidget(self.conder)
         self.mdiArea.addSubWindow(self.conder_subwindow)
+        self.conder.show()
+        self.conder_subwindow.show()
+        self.set_view()
 
     def toggle_editor(self):
         if self.editor is None:
             self.open_editor()
-            if len(self.mdiArea.subWindowList()) == 1:
-                self.editor_subwindow.showMaximized()
-            else:
-                self.mdiArea.tileSubWindows()
         else:
             if self.editor_subwindow.isHidden():
                 self.editor.show()
                 self.editor_subwindow.show()
-                self.mdiArea.tileSubWindows()
+                self.set_view()
             else:
                 self.editor_subwindow.hide()
-                self.mdiArea.tileSubWindows()
+                self.set_view()
 
     def toggle_db_plot(self):
         if self.db_plot is None:
             self.open_db_plot()
-            if len(self.mdiArea.subWindowList()) == 1:
-                self.db_plot_subwindow.showMaximized()
-            else:
-                self.mdiArea.tileSubWindows()
+            self.set_view()
         else:
             if self.db_plot_subwindow.isHidden():
                 self.db_plot.show()
                 self.db_plot_subwindow.show()
-                self.mdiArea.tileSubWindows()
+                self.set_view()
             else:
                 self.db_plot_subwindow.hide()
-                self.mdiArea.tileSubWindows()
+                self.set_view()
 
     def toggle_conder(self):
         if self.conder is None:
             self.open_conder()
-            if len(self.mdiArea.subWindowList()) == 1:
-                self.conder_subwindow.showMaximized()
-            else:
-                self.mdiArea.tileSubWindows()
         else:
             if self.conder_subwindow.isHidden():
                 self.conder.show()
                 self.conder_subwindow.show()
-                self.mdiArea.tileSubWindows()
+                self.set_view()
             else:
                 self.conder_subwindow.hide()
-                self.mdiArea.tileSubWindows()
+                self.set_view()
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile().lower() for url in e.mimeData().urls()]
@@ -300,10 +313,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             else:
                 self.editor.show()
                 self.editor_subwindow.show()
-                if len(self.mdiArea.subWindowList()) == 1:
-                    self.editor_subwindow.showMaximized()
-                else:
-                    self.mdiArea.tileSubWindows()
+                # if len(self.mdiArea.subWindowList()) == 1:
+                #     self.editor_subwindow.showMaximized()
+                # else:
+                #     self.mdiArea.tileSubWindows()
 
         if len(damp_files) > 0:
             if self.db_plot is None:
