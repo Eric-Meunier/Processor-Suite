@@ -269,6 +269,11 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 self.table.menu = QMenu(self.table)
                 self.table.remove_file_action = QAction("&Remove", self)
                 self.table.remove_file_action.triggered.connect(self.remove_file)
+
+                self.table.save_file_file_action = QAction("&Save", self)
+                self.table.save_file_file_action.triggered.connect(self.save_file)
+
+                self.table.menu.addAction(self.table.save_file_file_action)
                 self.table.menu.addAction(self.table.remove_file_action)
                 self.table.menu.popup(QtGui.QCursor.pos())
             else:
@@ -291,6 +296,26 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             self.table.removeRow(row)
             self.parent.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
             del self.pem_files[row]
+            self.update_table()
+        else:
+            pass
+
+    def save_file(self):
+        row = self.table.currentRow()
+
+        if row != -1 and len(self.pem_files) > 0:
+            file = self.pem_files[row]
+            file.header['Client'] = self.table.item(row, 1).text()
+            file.header['Grid'] = self.table.item(row, 2).text()
+            file.header['LineHole'] = self.table.item(row, 3).text()
+            file.header['Loop'] = self.table.item(row, 4).text()
+
+            save_file = self.parent.serializer.serialize(file)
+            # print(save_file)
+            self.parent.window().statusBar().showMessage(
+                'File {} saved.'.format(os.path.basename(file.filepath)), 2000)
+            # save_name = os.path.splitext(pem_file.filepath)
+            print(save_file, file=open(file.filepath, 'w+'))
             self.update_table()
         else:
             pass

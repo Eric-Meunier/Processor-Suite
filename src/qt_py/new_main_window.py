@@ -66,6 +66,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.mdiArea.setTabsClosable(True)
         self.mdiArea.setTabsMovable(True)
         self.mdiArea.showMaximized()
+        # self.mdiArea.setDocumentMode(True)  # Don't notice a difference
+        self.mdiArea.showFullScreen()
+
+        # sdflsdfs
 
         self.editor = None
         self.db_plot = None
@@ -155,11 +159,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def toggle_editor(self):
         if self.editor is None:
-            self.editor = PEMEditorWindow()
+            self.editor = PEMEditorWindow(parent=self)
             self.editor_subwindow = self.mdiArea.addSubWindow(self.editor)
             self.editor.show()
             self.editor_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
-            self.mdiArea.tileSubWindows()
+            if len(self.mdiArea.subWindowList()) == 1:
+                self.editor_subwindow.showMaximized()
+            else:
+                self.mdiArea.tileSubWindows()
         else:
             if self.editor_subwindow.isHidden():
                 self.editor.show()
@@ -175,7 +182,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.db_plot_subwindow = self.mdiArea.addSubWindow(self.db_plot)
             self.db_plot_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
             self.db_plot.show()
-            self.mdiArea.tileSubWindows()
+            if len(self.mdiArea.subWindowList()) == 1:
+                self.db_plot_subwindow.showMaximized()
+            else:
+                self.mdiArea.tileSubWindows()
         else:
             if self.db_plot_subwindow.isHidden():
                 self.db_plot.show()
@@ -187,11 +197,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def toggle_conder(self):
         if self.conder is None:
-            self.conder = Conder()
+            self.conder = Conder(parent=self)
             self.conder_subwindow = self.mdiArea.addSubWindow(self.conder)
             self.conder_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
             self.conder.show()
-            self.mdiArea.tileSubWindows()
+            if len(self.mdiArea.subWindowList()) == 1:
+                self.conder_subwindow.showMaximized()
+            else:
+                self.mdiArea.tileSubWindows()
         else:
             if self.conder_subwindow.isHidden():
                 self.conder.show()
@@ -256,7 +269,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if self.editor is None:
                 self.editor = PEMEditorWindow(parent=self)
                 self.editor_subwindow = self.mdiArea.addSubWindow(self.editor)
-                self.editor_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
+                self.editor_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)  # So we can re-open subwindows
             try:
                 self.editor.open_files(pem_files)
             except Exception as e:
@@ -266,7 +279,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             else:
                 self.editor.show()
                 self.editor_subwindow.show()
-                self.mdiArea.tileSubWindows()
+                if len(self.mdiArea.subWindowList()) == 1:
+                    self.editor_subwindow.showMaximized()
+                else:
+                    self.mdiArea.tileSubWindows()
 
         if len(damp_files) > 0:
             if self.db_plot is None:
@@ -282,7 +298,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             else:
                 self.db_plot.show()
                 self.db_plot_subwindow.show()
-                self.mdiArea.tileSubWindows()
+                if len(self.mdiArea.subWindowList()) == 1:
+                    self.db_plot_subwindow.showMaximized()
+                else:
+                    self.mdiArea.tileSubWindows()
 
         if len(con_files) > 0:
             if self.conder is None:
@@ -298,7 +317,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             else:
                 self.conder.show()
                 self.conder_subwindow.show()
-                self.mdiArea.tileSubWindows()
+                if len(self.mdiArea.subWindowList()) == 1:
+                    self.conder_subwindow.showMaximized()
+                else:
+                    self.mdiArea.tileSubWindows()
 
 
 def main():
