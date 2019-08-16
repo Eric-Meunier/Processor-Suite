@@ -17,7 +17,7 @@ print('src directory: '+src_dir)
 # os.chdir(src_dir)
 # sys.path.append(src_dir)
 
-from src.qt_py.new_main_window import MainWindow
+from src.qt_py.main_window import MainWindow
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtCore import QTimer
 

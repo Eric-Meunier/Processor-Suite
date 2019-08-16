@@ -70,14 +70,14 @@ class DBPlot(QMainWindow, Ui_DB_Window):
         self.setupUi(self)
         self.setWindowTitle("DB Plot  v" + str(__version__))
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
+            QtGui.QIcon(os.path.join(icons_path, 'db_plot 24.png')))
         center_window(self)
 
     def initActions(self):
         self.setAcceptDrops(True)
         self.mainMenu = self.menuBar()
 
-        self.openFile = QtGui.QAction("&Open File", self)
+        self.openFile = QtGui.QAction("&Open...", self)
         self.openFile.setShortcut("Ctrl+O")
         self.openFile.setStatusTip('Open file')
         self.openFile.triggered.connect(self.open_file_dialog)

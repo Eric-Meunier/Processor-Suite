@@ -5,7 +5,7 @@ from src.damp.db_plot import DBPlot
 from src.con_file.confile_modder import Conder
 from src.pem.new_pem_editor import PEMEditorWindow
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QMdiArea,
-                             QTabWidget,
+                             QTabWidget, QMdiSubWindow,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QToolBar)
 from PyQt5 import (QtCore, QtGui, uic)
 
@@ -18,15 +18,33 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
-    MW_CreatorFile = 'qt_ui\\new_main_window.ui'
+    MW_CreatorFile = 'qt_ui\\main_window.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\new_main_window.ui')
+    MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\main_window.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
-# MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\new_main_window.ui')
+# MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\main_window.ui')
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_CreatorFile)
+
+
+class CustomMdiArea(QMdiArea):
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+
+
+class CustomMdiSubWindow(QMdiSubWindow):
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
+
+    def closeEvent(self, e):
+        self.parent.clear_files()
+        self.window().mdiArea.tileSubWindows()  # Doesn't work, don't know why
+        e.accept()
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -58,28 +76,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.message = QMessageBox()
         self.dialog = QFileDialog()
         self.statusbar.showMessage('Ready', 2000)
-
+        self.mdiArea = CustomMdiArea(parent=self)
         self.setCentralWidget(self.mdiArea)
         self.mdiArea.setViewMode(QMdiArea.TabbedView)
         self.mdiArea.setTabPosition(QTabWidget.North)
         self.mdiArea.setTabShape(QTabWidget.Rounded)
         # self.mdiArea.setTabsClosable(True)
         self.mdiArea.setTabsMovable(True)
-        self.mdiArea.showMaximized()
+        # self.mdiArea.setStyleSheet('cde')  # Don't notice a difference
         # self.mdiArea.setDocumentMode(True)  # Don't notice a difference
-        self.mdiArea.showFullScreen()
-
-        # sdflsdfs
 
         self.editor = None
         self.db_plot = None
         self.conder = None
 
     def initActions(self):
-        # self.menubar.hide()
-        self.openFile = QAction("&Open File", self)
+        self.openFile = QAction("&Open...", self)
         self.openFile.setShortcut("F1")
-        self.openFile.setStatusTip('Open file')
+        self.openFile.setStatusTip('Open file(s)')
         self.openFile.triggered.connect(self.open_file_dialog)
 
         self.closeAllWindows = QAction("&Close All", self)
@@ -103,7 +117,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tile_view = QAction(
             QtGui.QIcon(os.path.join(icons_path, 'windows_stack.png')),
             '&Tile View', self)
-        self.tile_view.setShortcut('Ctrl+I')
+        self.tile_view.setShortcut('Ctrl+ ')
         self.tile_view.triggered.connect(self.set_tile_view)
 
         self.show_pem_editor = QAction(
@@ -111,7 +125,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.show_pem_editor.triggered.connect(self.toggle_editor)
 
         self.show_db_plot = QAction(
-            QtGui.QIcon(os.path.join(icons_path, 'db_plot.png')), '&DB Plot', self)
+            QtGui.QIcon(os.path.join(icons_path, 'db_plot 32.png')), '&DB Plot', self)
         self.show_db_plot.triggered.connect(self.toggle_db_plot)
 
         self.show_conder = QAction(
@@ -157,12 +171,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             pass
 
+    def open_editor(self):
+        self.editor = PEMEditorWindow(parent=self)
+        self.editor_subwindow = CustomMdiSubWindow(parent=self.editor)
+        self.editor_subwindow.setWidget(self.editor)
+        self.mdiArea.addSubWindow(self.editor_subwindow)
+
+    def open_db_plot(self):
+        self.db_plot = DBPlot(parent=self)
+        self.db_plot_subwindow = CustomMdiSubWindow(parent=self.db_plot)
+        self.db_plot_subwindow.setWidget(self.db_plot)
+        self.mdiArea.addSubWindow(self.db_plot_subwindow)
+
+    def open_conder(self):
+        self.conder = Conder(parent=self)
+        self.conder_subwindow = CustomMdiSubWindow(parent=self.conder)
+        self.conder_subwindow.setWidget(self.conder)
+        self.mdiArea.addSubWindow(self.conder_subwindow)
+
     def toggle_editor(self):
         if self.editor is None:
-            self.editor = PEMEditorWindow(parent=self)
-            self.editor_subwindow = self.mdiArea.addSubWindow(self.editor)
-            self.editor.show()
-            self.editor_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
+            self.open_editor()
             if len(self.mdiArea.subWindowList()) == 1:
                 self.editor_subwindow.showMaximized()
             else:
@@ -178,10 +207,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def toggle_db_plot(self):
         if self.db_plot is None:
-            self.db_plot = DBPlot(parent=self)
-            self.db_plot_subwindow = self.mdiArea.addSubWindow(self.db_plot)
-            self.db_plot_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
-            self.db_plot.show()
+            self.open_db_plot()
             if len(self.mdiArea.subWindowList()) == 1:
                 self.db_plot_subwindow.showMaximized()
             else:
@@ -197,10 +223,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def toggle_conder(self):
         if self.conder is None:
-            self.conder = Conder(parent=self)
-            self.conder_subwindow = self.mdiArea.addSubWindow(self.conder)
-            self.conder_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
-            self.conder.show()
+            self.open_conder()
             if len(self.mdiArea.subWindowList()) == 1:
                 self.conder_subwindow.showMaximized()
             else:
@@ -267,9 +290,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if len(pem_files) > 0:
             if self.editor is None:
-                self.editor = PEMEditorWindow(parent=self)
-                self.editor_subwindow = self.mdiArea.addSubWindow(self.editor)
-                self.editor_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)  # So we can re-open subwindows
+                self.open_editor()
             try:
                 self.editor.open_files(pem_files)
             except Exception as e:
@@ -286,9 +307,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if len(damp_files) > 0:
             if self.db_plot is None:
-                self.db_plot = DBPlot(parent=self)
-                self.db_plot_subwindow = self.mdiArea.addSubWindow(self.db_plot)
-                self.db_plot_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
+                self.open_db_plot()
             try:
                 self.db_plot.open_files(damp_files)
             except Exception as e:
@@ -305,9 +324,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if len(con_files) > 0:
             if self.conder is None:
-                self.conder = Conder(parent=self)
-                self.conder_subwindow = self.mdiArea.addSubWindow(self.conder)
-                self.conder_subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
+                self.open_conder()
             try:
                 self.conder.open_files(con_files)
             except Exception as e:
@@ -322,6 +339,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 else:
                     self.mdiArea.tileSubWindows()
 
+
+# class
 
 def main():
     # TODO Make dedicated Application class

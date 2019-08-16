@@ -63,7 +63,7 @@ class Conder(QMainWindow, Ui_Conder_Window):
 
         self.shareRangeCheckBox.stateChanged.connect(self.set_ranges)
 
-        self.openFile = QAction("&Open File", self)
+        self.openFile = QAction("&Open...", self)
         self.openFile.setShortcut("Ctrl+O")
         self.openFile.setStatusTip('Open file')
         self.openFile.triggered.connect(self.open_file_dialog)
