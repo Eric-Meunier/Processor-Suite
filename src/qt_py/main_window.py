@@ -5,7 +5,7 @@ from src.damp.db_plot import DBPlot
 from src.con_file.confile_modder import Conder
 from src.pem.new_pem_editor import PEMEditorWindow
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QMdiArea,
-                             QTabWidget, QMdiSubWindow,
+                             QTabWidget, QMdiSubWindow, QToolButton,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QToolBar)
 from PyQt5 import (QtCore, QtGui, uic)
 
@@ -25,7 +25,6 @@ else:
     MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\main_window.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
-# MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\main_window.ui')
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_CreatorFile)
 
 
@@ -43,18 +42,26 @@ class CustomMdiArea(QMdiArea):
 
 
 class CustomMdiSubWindow(QMdiSubWindow):
+    closeWindow = QtCore.pyqtSignal()
+    # hideWindow = QtCore.pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
 
+    # def hideEvent(self, e):
+    #     self.hideWindow.emit()
+
     def closeEvent(self, e):
-        self.parent.clear_files()
-        self.mdiArea().tileSubWindows()  # Doesn't work, don't know why
-        e.accept()
+        e.ignore()
+        self.closeWindow.emit()
+        # self.parent.clear_files()
+        # self.mdiArea().tileSubWindows()  # Doesn't work, don't know why
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
+    windowChange = QtCore.pyqtSignal()
     def __init__(self):
         super().__init__()
         self.initUi()
@@ -70,8 +77,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.show()
 
         self.setupUi(self)  # Init for the .UI file
-        # layout = QGridLayout(self)
-        # self.setLayout(layout)
         self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
         # self.setWindowIcon(
@@ -82,7 +87,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def initApps(self):
         self.message = QMessageBox()
         self.dialog = QFileDialog()
-        self.statusbar.showMessage('Ready', 2000)
+        self.statusBar().showMessage('Ready', 2000)
         self.mdiArea = CustomMdiArea(parent=self)
         self.setCentralWidget(self.mdiArea)
 
@@ -101,15 +106,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.closeAllWindows.setStatusTip("Close all windows")
         self.closeAllWindows.triggered.connect(self.close_all_windows)
 
-        # self.clearFiles = QAction("&Clear All Files", self)
-        # self.clearFiles.setShortcut("Ctrl+Del")
-        # self.clearFiles.setStatusTip("Clear all files")
-        # self.clearFiles.triggered.connect(self.clear_files)
-
         self.fileMenu = self.menubar.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.closeAllWindows)
-        # self.fileMenu.addAction(self.clearFiles)
 
         self.toolbar = QToolBar()
         self.addToolBar(QtCore.Qt.LeftToolBarArea, self.toolbar)
@@ -120,28 +119,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tile_view.setShortcut('Ctrl+ ')
         self.tile_view.triggered.connect(self.set_view)
 
-        self.show_pem_editor = QAction(
-            QtGui.QIcon(os.path.join(icons_path, 'plots2.png')), '&PEM Editor', self)
-        self.show_pem_editor.triggered.connect(self.toggle_editor)
+        self.pem_editor_button = QToolButton(self)
+        self.pem_editor_button.setIcon(
+            QtGui.QIcon(os.path.join(icons_path, 'plots2.png')))
+        self.pem_editor_button.setCheckable(True)
+        self.pem_editor_button.setStatusTip('PEM Editor')
+        self.pem_editor_button.clicked.connect(self.toggle_editor)
 
-        self.show_db_plot = QAction(
-            QtGui.QIcon(os.path.join(icons_path, 'db_plot 32.png')), '&DB Plot', self)
-        self.show_db_plot.triggered.connect(self.toggle_db_plot)
+        self.db_plot_button = QToolButton(self)
+        self.db_plot_button.setIcon(
+            QtGui.QIcon(os.path.join(icons_path, 'db_plot 32.png')))
+        self.db_plot_button.setCheckable(True)
+        self.db_plot_button.setStatusTip('DB Plot')
+        self.db_plot_button.clicked.connect(self.toggle_db_plot)
 
-        self.show_conder = QAction(
-            QtGui.QIcon(os.path.join(icons_path, 'conder 32.png')), '&Conder', self)
-        self.show_conder.triggered.connect(self.toggle_conder)
+        self.conder_button = QToolButton(self)
+        self.conder_button.setIcon(
+            QtGui.QIcon(os.path.join(icons_path, 'conder 32.png')))
+        self.conder_button.setCheckable(True)
+        self.conder_button.setStatusTip('Conder')
+        self.conder_button.clicked.connect(self.toggle_conder)
 
         self.toolbar.addAction(self.tile_view)
-        self.toolbar.addAction(self.show_pem_editor)
-        self.toolbar.addAction(self.show_db_plot)
-        self.toolbar.addAction(self.show_conder)
-
-    # def set_view(self):
-    #     if self.num_subwindows_visible() == 1:
-    #         self.editor_subwindow.showMaximized()
-    #     else:
-    #         self.mdiArea.tileSubWindows()
+        self.toolbar.addWidget(self.pem_editor_button)
+        self.toolbar.addWidget(self.db_plot_button)
+        self.toolbar.addWidget(self.conder_button)
 
     def close_all_windows(self):
         if self.mdiArea.subWindowList():
@@ -168,13 +170,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.db_plot.clear_files()
                 if self.conder:
                     self.conder.clear_files()
-                self.statusbar.showMessage('All files removed', 2000)
+                self.statusBar().showMessage('All files removed', 2000)
             else:
                 pass
         else:
             pass
 
-    def set_view(self):
+    def set_view(self):  # Makes the subwindow fullscreen if it's the only one up
         visible_subwindows = []
         if self.mdiArea.subWindowList():
             for subwindow in self.mdiArea.subWindowList():
@@ -190,6 +192,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.editor = PEMEditorWindow(parent=self)
         self.editor_subwindow = CustomMdiSubWindow(parent=self.editor)
         self.editor_subwindow.setWidget(self.editor)
+        self.editor_subwindow.closeWindow.connect(self.editor.clear_files)
+        self.editor_subwindow.closeWindow.connect(self.toggle_editor)
         self.mdiArea.addSubWindow(self.editor_subwindow)
         self.editor.show()
         self.editor_subwindow.show()
@@ -199,18 +203,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db_plot = DBPlot(parent=self)
         self.db_plot_subwindow = CustomMdiSubWindow(parent=self.db_plot)
         self.db_plot_subwindow.setWidget(self.db_plot)
+        self.db_plot_subwindow.closeWindow.connect(self.db_plot.clear_files)
+        self.db_plot_subwindow.closeWindow.connect(self.toggle_db_plot)
         self.mdiArea.addSubWindow(self.db_plot_subwindow)
         self.db_plot.show()
         self.db_plot_subwindow.show()
+        self.db_plot_button.setDown(True)
         self.set_view()
 
     def open_conder(self):
         self.conder = Conder(parent=self)
         self.conder_subwindow = CustomMdiSubWindow(parent=self.conder)
         self.conder_subwindow.setWidget(self.conder)
+        self.conder_subwindow.closeWindow.connect(self.conder.clear_files)
+        self.conder_subwindow.closeWindow.connect(self.toggle_conder)
         self.mdiArea.addSubWindow(self.conder_subwindow)
         self.conder.show()
         self.conder_subwindow.show()
+        self.conder_button.setDown(True)
         self.set_view()
 
     def toggle_editor(self):
@@ -220,9 +230,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if self.editor_subwindow.isHidden():
                 self.editor.show()
                 self.editor_subwindow.show()
+                self.pem_editor_button.setChecked(True)
                 self.set_view()
             else:
                 self.editor_subwindow.hide()
+                self.pem_editor_button.setChecked(False)
                 self.set_view()
 
     def toggle_db_plot(self):
@@ -233,10 +245,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if self.db_plot_subwindow.isHidden():
                 self.db_plot.show()
                 self.db_plot_subwindow.show()
+                self.db_plot_button.setChecked(True)
                 self.set_view()
             else:
                 self.db_plot_subwindow.hide()
                 self.set_view()
+                self.db_plot_button.setChecked(False)
 
     def toggle_conder(self):
         if self.conder is None:
@@ -245,10 +259,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if self.conder_subwindow.isHidden():
                 self.conder.show()
                 self.conder_subwindow.show()
+                self.conder_button.setChecked(True)
                 self.set_view()
             else:
                 self.conder_subwindow.hide()
                 self.set_view()
+                self.conder_button.setChecked(False)
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile().lower() for url in e.mimeData().urls()]
@@ -266,7 +282,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if check_extension(urls):
             e.accept()
         else:
-            self.statusbar.showMessage('Invalid file type', 1000)
+            self.statusBar().showMessage('Invalid file type', 1000)
             e.ignore()
 
     def dropEvent(self, e):
@@ -356,6 +372,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 # class
 
 def main():
+    sys._excepthook = sys.excepthook
+
+    def exception_hook(exctype, value, traceback):
+        print(exctype, value, traceback)
+        sys._excepthook(exctype, value, traceback)
+        sys.exit(1)
+
+    sys.excepthook = exception_hook
+
     # TODO Make dedicated Application class
     app = QApplication(sys.argv)
     window = MainWindow()

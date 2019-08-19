@@ -157,9 +157,9 @@ class Conder(QMainWindow, Ui_Conder_Window):
                     file.set_station_range(file.start_stn, file.end_stn)
                 file.save_file()
             if len(self.files) > 1:
-                self.parent.statusBar().showMessage('{} CON files saved'.format(str(len(self.files))), 2000)
+                self.window().statusBar().showMessage('{} CON files saved'.format(str(len(self.files))), 2000)
             else:
-                self.parent.statusBar().showMessage('1 CON file saved')
+                self.window().statusBar().showMessage('1 CON file saved')
             self.clear_files()
             self.open_files(temp_filepaths)
 
@@ -269,9 +269,12 @@ class ConFile:
         # Only used if pembat hasn't been run
         self.re_client = re.compile(r'(RPLS .t1.,\s\")(?P<Client>.*)(\")')
         self.re_holehole = re.compile(r'(RPLS .t2., \")(?P<Loop>.*\s?)(\s{4}[XYZ]\sComponent\")')
+        self.re_bfield = re.compile('RPLS .t1.,.*B-Field Step')
 
         # Unused groups must be made for re.sub
         self.re_line = re.compile(r'((?:Line|Hole)\s)(?P<Line>.*?)(\s+[ZXY]\s+Component)')
+        self.re_hole = re.compile(r'((?:Hole)\s)(?P<Hole>.*?)(\s+[ZXY]\s+Component)')
+        self.re_bfield_line = re.compile(r'(RPLS .t2.*(Line|Hole):\s)(?P<Line>.*?)(\s+Comp:\s[XYZ]\")')
         self.re_section = re.compile(r'(RPLS Section,\s+)(?P<Section>\d)(\s+.*)')
         self.re_start_stn = re.compile(r'(RPLS StartStn,\s+)(?P<StartStn>[\W\d]+?)(\s+.*)')
         self.re_end_stn = re.compile(r'(RPLS EndStn,\s+)(?P<EndStn>[\W\d]+?)(\s+.*)')
@@ -282,12 +285,18 @@ class ConFile:
         with open(self.filepath, 'rt') as in_file:
             self.file = in_file.read()
 
-        self.original_name = self.re_line.search(self.file).group('Line')
-        self.name = re.split('[XYZ]\.CON', os.path.basename(self.filepath))[0]
+        if re.search(self.re_bfield, self.file):  # Check if the file is b-field
+            self.original_name = self.name = self.re_bfield_line.search(self.file).group('Line')
+        else:
+            self.original_name = self.re_line.search(self.file).group('Line')
+            self.check_header()  # If it's not B-field, check if pembat has been run
+
+            if re.search(self.re_hole, self.file):
+                self.name = re.search(self.re_hole, self.file).group('Hole')
+            else:
+                self.name = re.split('[XYZ]\.CON', os.path.basename(self.filepath))[0]
         self.start_stn = int(self.re_start_stn.search(self.file).group('StartStn'))
         self.end_stn = int(self.re_end_stn.search(self.file).group('EndStn'))
-
-        self.check_header()
         self.set_win2()
 
     def check_header(self):

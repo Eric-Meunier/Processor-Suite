@@ -74,7 +74,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def initActions(self):
         self.setAcceptDrops(True)
-        self.parent.statusBar().showMessage('Ready')
+        self.window().statusBar().showMessage('Ready')
 
         self.openFile = QAction("&Open...", self)
         self.openFile.setShortcut("Ctrl+O")
@@ -132,7 +132,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if check_extension(urls):
             e.accept()
         else:
-            self.parent.statusBar().showMessage('Invalid file type', 1000)
+            self.window().statusBar().showMessage('Invalid file type', 1000)
             e.ignore()
 
     def dropEvent(self, e):
@@ -174,7 +174,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.message.information(None, 'Error', str(e))
 
         if len(self.editor.pem_files) > 0:
-            # self.parent.statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
+            # self.window().statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
             self.editor.fill_share_range()
         # self.update_table()
 
@@ -187,7 +187,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.editor.client_edit.setText('')
         self.editor.grid_edit.setText('')
         self.editor.loop_edit.setText('')
-        self.parent.statusBar().showMessage('All files removed', 2000)
+        self.window().statusBar().showMessage('All files removed', 2000)
 
     def save_all(self):
         if len(self.editor.pem_files) > 0:
@@ -195,20 +195,20 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 file = copy.copy(self.editor.pem_files[row])
                 updated_file = self.editor.update_pem_file(self.editor.pem_files[row], row)
                 save_file = self.serializer.serialize(updated_file)
-                self.parent.statusBar().showMessage('Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
+                self.window().statusBar().showMessage('Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
                 print(save_file, file=open(updated_file.filepath, 'w+'))
                 if os.path.basename(file.filepath) != os.path.basename(updated_file.filepath):
                     os.remove(file.filepath)
             self.editor.update_table()
         else:
-            self.parent.statusBar().showMessage('No PEM files to save', 2000)
+            self.window().statusBar().showMessage('No PEM files to save', 2000)
 
     def save_all_as(self):
         if len(self.editor.pem_files) > 0:
             default_path = os.path.split(self.editor.pem_files[-1].filepath)[0]
             self.dialog.setFileMode(QFileDialog.Directory)
             self.dialog.setDirectory(default_path)
-            self.parent.statusBar().showMessage('Saving PEM files...')
+            self.window().statusBar().showMessage('Saving PEM files...')
             file_dir = QFileDialog.getExistingDirectory(self, '', default_path)
             suffix = 'Av'
             if file_dir:
@@ -221,10 +221,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     save_file = self.serializer.serialize(updated_file)
 
                     print(save_file, file=open(updated_file.filepath, 'w+'))
-                    self.parent.statusBar().showMessage('Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
+                    self.window().statusBar().showMessage('Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
                 self.editor.update_table()
             else:
-                self.parent.statusBar().showMessage('No directory chosen', 2000)
+                self.window().statusBar().showMessage('No directory chosen', 2000)
                 logging.info("No directory chosen, aborted save")
                 pass
 

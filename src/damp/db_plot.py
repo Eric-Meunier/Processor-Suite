@@ -194,7 +194,7 @@ class DBPlot(QMainWindow, Ui_DB_Window):
                 self.gridLayout.removeWidget(widget)
                 widget.deleteLater()
             self.open_widgets.clear()
-            self.parent.statusBar().showMessage('All files removed', 2000)
+            self.window().statusBar().showMessage('All files removed', 2000)
             self.x = 0
             self.y = 0
         except Exception as e:
@@ -248,7 +248,7 @@ class DBPlot(QMainWindow, Ui_DB_Window):
 
         if file_dir:
             self.grab().save(file_dir + file_name)
-            self.parent.statusBar().showMessage('Imaged saved at {}'.format(str(file_dir)), 2000)
+            self.window().statusBar().showMessage('Imaged saved at {}'.format(str(file_dir)), 2000)
         else:
             logging.info("No directory chosen, aborted save")
             pass
