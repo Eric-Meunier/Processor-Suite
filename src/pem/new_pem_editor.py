@@ -5,9 +5,10 @@ import copy
 from itertools import chain
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.pem_parser import PEMParser
+from src.gps.station_gps import StationGPSParser
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
-                             QHeaderView)
+                             QHeaderView, QListWidget, QTextBrowser)
 from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -33,6 +34,17 @@ else:
 # editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
 Ui_PEMEditorWidget, QtBaseClass = uic.loadUiType(editorCreatorFile)
 Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
+
+sys._excepthook = sys.excepthook
+
+
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
 
 
 class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
@@ -65,6 +77,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.editor = PEMEditor(self)
         self.layout.addWidget(self.editor)
         self.setCentralWidget(self.editor)
+
         self.dockWidget.hide()
         # self.dockWidget.setWidget(self.tabWidget)
         # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dockWidget)
@@ -105,7 +118,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def open_file_dialog(self):
         try:
             files = self.dialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem);; All files(*.*)')
-            if files[0]!='':
+            if files[0] != '':
                 for file in files[0]:
                     if file.lower().endswith('.pem'):
                         self.open_files(file)
@@ -119,20 +132,23 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pass
 
     def dragEnterEvent(self, e):
+        e.accept()
+
+    def dragMoveEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        pem_files = False
+        text_files = False
+        if all([url.lower().endswith('pem') for url in urls]):
+            pem_files = True
+        elif all([url.lower().endswith('txt') for url in urls]):
+            text_files = True
 
-        def check_extension(urls):
-            for url in urls:
-                if url.lower().endswith('pem'):
-                    continue
-                else:
-                    return False
-            return True
-
-        if check_extension(urls):
-            e.accept()
+        if e.answerRect().intersects(self.editor.table.geometry()) and pem_files is True:
+            e.acceptProposedAction()
+        elif e.answerRect().intersects(
+                self.editor.gpsTextBrowser.geometry()) and text_files is True:
+            e.acceptProposedAction()
         else:
-            self.window().statusBar().showMessage('Invalid file type', 1000)
             e.ignore()
 
     def dropEvent(self, e):
@@ -147,7 +163,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def open_files(self, files):
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
-        for file in files:
+        pem_files = [file for file in files if file.lower().endswith('pem')]
+        gps_files = [file for file in files if file.lower().endswith('txt') or file.lower().endswith('csv')]
+
+        for file in pem_files:
             try:
                 pem_file = self.parser.parse(file)
                 self.editor.pem_files.append(pem_file)
@@ -178,6 +197,16 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.editor.fill_share_range()
         # self.update_table()
 
+        for file in gps_files:
+            try:
+                gps_file = self.editor.gps_parser.parse(file)
+                self.editor.gps_files.append(gps_file)
+                self.editor.add_gps_file(gps_file)
+
+            except Exception as e:
+                logging.info(str(e))
+                self.message.information(None, 'Error', str(e))
+
     def clear_files(self):
         while self.editor.table.rowCount() > 0:
             self.editor.table.removeRow(0)
@@ -195,7 +224,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 file = copy.copy(self.editor.pem_files[row])
                 updated_file = self.editor.update_pem_file(self.editor.pem_files[row], row)
                 save_file = self.serializer.serialize(updated_file)
-                self.window().statusBar().showMessage('Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
+                self.window().statusBar().showMessage(
+                    'Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
                 print(save_file, file=open(updated_file.filepath, 'w+'))
                 if os.path.basename(file.filepath) != os.path.basename(updated_file.filepath):
                     os.remove(file.filepath)
@@ -221,7 +251,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     save_file = self.serializer.serialize(updated_file)
 
                     print(save_file, file=open(updated_file.filepath, 'w+'))
-                    self.window().statusBar().showMessage('Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
+                    self.window().statusBar().showMessage(
+                        'Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
                 self.editor.update_table()
             else:
                 self.window().statusBar().showMessage('No directory chosen', 2000)
@@ -234,11 +265,16 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         super(PEMEditor, self).__init__(parent)
         self.setupUi(self)
 
+        # self.setAcceptDrops(True)
         self.parent = parent
         self.message = QMessageBox()
         self.pem_files = []
+        self.gps_files = []
         self.create_table()
         self.table.viewport().installEventFilter(self)
+        # self.gps_list = GPSListWidget()
+        # self.gridLayout.addWidget(self.gps_list, 2, 3)
+        self.gps_parser = StationGPSParser()
 
         self.del_file = QAction("&Remove File", self)
         self.del_file.setShortcut("Del")
@@ -382,6 +418,10 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         #     for column in range (3, 5):
         #         self.table.item(row_pos, column).setForeground(QtGui.QColor('red'))
 
+    def add_gps_file(self, gps_file):
+        gps_data = gps_file.gps_data
+        self.gpsTextBrowser.setText(str('\n'.join(gps_data)))
+
     # Deletes and re-creates the table with the new information
     def update_table(self):
         # self.update_header()
@@ -437,6 +477,16 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             self.min_range_edit.setEnabled(False)
             self.max_range_edit.setEnabled(False)
             self.update_table()
+
+
+class PEMFileInfoWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.layout = QGridLayout()
+
+        self.tabs = QTabWidget()
+        self.station_gps_text = QTextBrowser()
 
 
 if __name__ == '__main__':

@@ -27,6 +27,16 @@ else:
 
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_CreatorFile)
 
+sys._excepthook = sys.excepthook
+
+
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
 
 class CustomMdiArea(QMdiArea):
     def __init__(self, parent=None):
@@ -195,6 +205,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.editor_subwindow.closeWindow.connect(self.editor.clear_files)
         self.editor_subwindow.closeWindow.connect(self.toggle_editor)
         self.mdiArea.addSubWindow(self.editor_subwindow)
+        self.pem_editor_button.setChecked(True)
         self.editor.show()
         self.editor_subwindow.show()
         self.set_view()
@@ -206,9 +217,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db_plot_subwindow.closeWindow.connect(self.db_plot.clear_files)
         self.db_plot_subwindow.closeWindow.connect(self.toggle_db_plot)
         self.mdiArea.addSubWindow(self.db_plot_subwindow)
+        self.db_plot_button.setChecked(True)
         self.db_plot.show()
         self.db_plot_subwindow.show()
-        self.db_plot_button.setDown(True)
         self.set_view()
 
     def open_conder(self):
@@ -218,9 +229,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.conder_subwindow.closeWindow.connect(self.conder.clear_files)
         self.conder_subwindow.closeWindow.connect(self.toggle_conder)
         self.mdiArea.addSubWindow(self.conder_subwindow)
+        self.conder_button.setChecked(True)
         self.conder.show()
         self.conder_subwindow.show()
-        self.conder_button.setDown(True)
         self.set_view()
 
     def toggle_editor(self):
@@ -372,15 +383,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 # class
 
 def main():
-    sys._excepthook = sys.excepthook
-
-    def exception_hook(exctype, value, traceback):
-        print(exctype, value, traceback)
-        sys._excepthook(exctype, value, traceback)
-        sys.exit(1)
-
-    sys.excepthook = exception_hook
-
     # TODO Make dedicated Application class
     app = QApplication(sys.argv)
     window = MainWindow()

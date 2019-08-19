@@ -141,6 +141,7 @@ class DBPlot(QMainWindow, Ui_DB_Window):
             e.accept()
         else:
             e.ignore()
+            self.window().statusBar().showMessage('Invalid file type', 1000)
 
     def dropEvent(self, e):
         try:

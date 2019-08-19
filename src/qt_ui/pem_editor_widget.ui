@@ -341,6 +341,53 @@
      </attribute>
     </widget>
    </item>
+   <item row="1" column="8">
+    <widget class="QStackedWidget" name="stackedWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="page">
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="0">
+        <widget class="QTabWidget" name="filesTab">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>400</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="currentIndex">
+          <number>1</number>
+         </property>
+         <widget class="QWidget" name="pemInfoTab">
+          <attribute name="title">
+           <string>PEM File Info</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_2"/>
+         </widget>
+         <widget class="QWidget" name="gpsTab">
+          <attribute name="title">
+           <string>GPS Files</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_3">
+           <item row="0" column="0">
+            <widget class="QTextBrowser" name="gpsTextBrowser"/>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="page_2"/>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>
