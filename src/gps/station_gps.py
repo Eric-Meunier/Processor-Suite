@@ -3,7 +3,6 @@ import os
 import sys
 from os.path import isfile, join
 import logging
-from src.pem.pem_parser import PEMParser
 
 __version__ = '0.0.0'
 

@@ -2,6 +2,7 @@ import re
 from decimal import Decimal
 from pprint import pprint
 from src.pem.pem_file import PEMFile
+from src.gps.station_gps import StationGPSParser
 
 
 class PEMParser:
@@ -31,10 +32,12 @@ class PEMParser:
         )
 
         #  Line/Hole coordinates section
-        self.re_line_coords = re.compile(  # Parsing the line/hole coordinates
-            r'^(?P<Tag><P\d*>)(?P<LineCoordinates>.*)[\r\n]',
-            re.MULTILINE
-        )
+        # self.re_line_coords = re.compile(  # Parsing the line/hole coordinates
+        #     r'^(?P<Tag><P\d*>)(?P<LineCoordinates>.*)[\r\n]',
+        #     re.MULTILINE
+        # )
+        self.re_line_coords = re.compile(
+            r'(?P<Tags><P\d*>)\s+(?P<Easting>\d{3,}\.?\d+)\s+(?P<Northing>\d{3,}\.\d+)\s+(?P<Elevation>\d{3,}\.\d+)\s+(?P<Units>0|1)\s+(?P<Station>\d+)')
 
         # Notes i.e. GEN and HE tags
         self.re_notes = re.compile(  # Parsing the notes i.e. GEN tags and HE tags
@@ -88,25 +91,32 @@ class PEMParser:
         return loop_coords
 
     def parse_line(self, file):
-        line_coords = []
-        for match in self.re_line_coords.finditer(file):
-            line_coords.append({'Tag': None,
-                                'LineCoordinates': None})
-
-            for group, index in self.re_line_coords.groupindex.items():
-                if group == 'Tag':
-                    line_coords[-1]['Tag'] = match.group(index)
-                elif group == 'LineCoordinates':
-                    line = match.group(index)
-                    line = line.partition('~')
-                    line_coords[-1]['LineCoordinates'] = line[0]
-        return line_coords
+        raw_gps = re.findall(self.re_line_coords, file)
+        line_gps = []
+        if raw_gps:
+            for row in raw_gps:
+                line_gps.append(' '.join(row))
+        else:
+            return None
+        # line_coords = []
+        # for match in self.re_line_coords.finditer(file):
+        #     line_coords.append({'Tag': None,
+        #                         'LineCoordinates': None})
+        #
+        #     for group, index in self.re_line_coords.groupindex.items():
+        #         if group == 'Tag':
+        #             line_coords[-1]['Tag'] = match.group(index)
+        #         elif group == 'LineCoordinates':
+        #             line = match.group(index)
+        #             line = line.partition('~')
+        #             line_coords[-1]['LineCoordinates'] = line[0]
+        return line_gps
 
     def parse_notes(self, file):
         notes = []
         for match in self.re_notes.finditer(file):
-                for group, index in self.re_notes.groupindex.items():
-                    notes.append(match.group(index))
+            for group, index in self.re_notes.groupindex.items():
+                notes.append(match.group(index))
 
         return notes
 
@@ -119,7 +129,7 @@ class PEMParser:
                 # pprint.pprint(group)
                 if group is not 'ChannelTimes':
                     header[group] = match.group(index)
-            header['ChannelTimes']=([Decimal(x) for x in match.group('ChannelTimes').split()])
+            header['ChannelTimes'] = ([Decimal(x) for x in match.group('ChannelTimes').split()])
 
         return header
 
