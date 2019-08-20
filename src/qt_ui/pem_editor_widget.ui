@@ -31,7 +31,7 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="7" colspan="2">
+   <item row="0" column="4">
     <widget class="QTableWidget" name="table">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
@@ -65,7 +65,26 @@
      </attribute>
     </widget>
    </item>
-   <item row="0" column="2">
+   <item row="1" column="4" colspan="4">
+    <widget class="QStackedWidget" name="stackedWidget">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>400</height>
+      </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
     <widget class="QFrame" name="main_frame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
@@ -342,25 +361,6 @@
        </widget>
       </item>
      </layout>
-    </widget>
-   </item>
-   <item row="1" column="7">
-    <widget class="QStackedWidget" name="stackedWidget">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>400</height>
-      </size>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
     </widget>
    </item>
   </layout>

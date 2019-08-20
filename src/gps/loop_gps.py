@@ -18,7 +18,7 @@ samples_path = os.path.join(application_path, "sample_files")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 
-class StationGPSFile:
+class LoopGPSFile:
     def __init__(self, filepath, gps_data):
         self.filepath = filepath
         self.filename = os.path.basename(self.filepath)  # With extension
@@ -26,14 +26,14 @@ class StationGPSFile:
 
         self.gps_data = gps_data
 
-    def sort_stations(self):
+    def sort_loop(self):
         pass
 
     def save_file(self):
         pass
 
 
-class StationGPSParser:
+class LoopGPSParser:
     """
     Class to parse station GPS text files.
     """
@@ -41,11 +41,9 @@ class StationGPSParser:
     def __init__(self):
         self.formatted_GPS = []
         self.filepath = None
-        self.gps_file = StationGPSFile
+        self.gps_file = LoopGPSFile
         self.re_gps = re.compile(
-            r'(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1)\W+(?P<Station>\d+)')
-
-        # self.parse()
+            r'(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1)\W+?')
 
     def parse(self, filepath):
         self.filepath = filepath
@@ -59,7 +57,7 @@ class StationGPSParser:
 
         if self.raw_gps:
             for row in self.raw_gps:
-                self.formatted_GPS.append("<P"+'{num:02d}'.format(num=count)+"> "+' '.join(row))
+                self.formatted_GPS.append("<L" + '{num:02d}'.format(num=count) + "> " + ' '.join(row))
                 count += 1
             return self.gps_file(filepath, self.formatted_GPS)
         else:
@@ -72,7 +70,8 @@ def main():
     # mw.show()
     # app.exec_()
 
-    file_names = [f for f in os.listdir(samples_path) if isfile(join(samples_path, f)) and f.lower().endswith('.txt') or f.lower().endswith('.csv')]
+    file_names = [f for f in os.listdir(samples_path) if
+                  isfile(join(samples_path, f)) and f.lower().endswith('.txt') or f.lower().endswith('.csv')]
     file_paths = []
 
     for file in file_names:

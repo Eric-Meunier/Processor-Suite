@@ -6,6 +6,7 @@ from itertools import chain
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.pem_parser import PEMParser
 from src.gps.station_gps import StationGPSParser
+from src.gps.loop_gps import LoopGPSParser
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
                              QHeaderView, QListWidget, QTextBrowser, QPlainTextEdit, QStackedWidget)
@@ -14,6 +15,9 @@ from PyQt5 import (QtCore, QtGui, uic)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 __version__ = '0.1.0'
+
+_station_gps_tab = 0
+_loop_gps_tab = 1
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -142,12 +146,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pem_files = True
         elif all([url.lower().endswith('txt') for url in urls]):
             text_files = True
-
-        if e.answerRect().intersects(self.editor.table.geometry()) and pem_files is True or e.answerRect().intersects(
-                self.editor.stackedWidget.geometry()) and text_files is True and len(urls) == 1:
-            e.acceptProposedAction()
+        if len(self.editor.pem_files) == 0:
+            if e.answerRect().intersects(self.editor.table.geometry()) and pem_files is True:
+                e.acceptProposedAction()
         else:
-            e.ignore()
+            eligible_tabs = [_station_gps_tab, _loop_gps_tab]
+            if e.answerRect().intersects(self.editor.table.geometry()) and pem_files is True \
+                    or e.answerRect().intersects(self.editor.stackedWidget.geometry()) and text_files is True and len(
+                urls) == 1 and self.editor.stackedWidget.currentWidget().tabs.currentIndex() in eligible_tabs:
+                e.acceptProposedAction()
+            else:
+                e.ignore()
 
     def dropEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
@@ -238,7 +247,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.parser = PEMParser()
         self.message = QMessageBox()
         self.pem_info_widget = PEMFileInfoWidget
-        self.gps_parser = StationGPSParser()
+        self.station_gps_parser = StationGPSParser()
 
         # self.stackedWidget.hide()
 
@@ -298,17 +307,24 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 self.fill_share_range()
 
     def open_gps_files(self, gps_files):
-        gps_parser = StationGPSParser()
+        station_gps_parser = StationGPSParser()
+        loop_gps_parser = LoopGPSParser()
+
         if len(gps_files) == 1:
             for file in gps_files:
                 try:
                     pem_info_widget = self.stackedWidget.currentWidget()
-                    gps_tab = pem_info_widget.tabs.findChild(QPlainTextEdit, 'Station GPS')
+                    station_gps_tab = pem_info_widget.tabs.findChild(QPlainTextEdit, 'Station GPS')
+                    loop_gps_tab = pem_info_widget.tabs.findChild(QPlainTextEdit, 'Loop GPS')
                     current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
-                    if gps_tab == current_tab:
-                        gps_file = gps_parser.parse(file)
+                    if station_gps_tab == current_tab:
+                        gps_file = station_gps_parser.parse(file)
                         gps_data = '\n'.join(gps_file.gps_data)
-                        gps_tab.setPlainText(gps_data)
+                        station_gps_tab.setPlainText(gps_data)
+                    elif loop_gps_tab == current_tab:
+                        gps_file = loop_gps_parser.parse(file)
+                        gps_data = '\n'.join(gps_file.gps_data)
+                        loop_gps_tab.setPlainText(gps_data)
                     else:
                         pass
 
@@ -343,7 +359,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 source is self.table.viewport() and
                 self.table.itemAt(event.pos()) is None):
             self.table.clearSelection()
-            self.stackedWidget.hide()
+            # self.stackedWidget.hide()
         return super(QWidget, self).eventFilter(source, event)
 
     # Remove a single file
@@ -351,6 +367,8 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         row = self.table.currentRow()
         if row != -1:
             self.table.removeRow(row)
+            self.stackedWidget.removeWidget(self.stackedWidget.widget(row))
+            # self.stackedWidget.widget(row).deleteLater()
             self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
             del self.pem_files[row]
             self.update_table()
@@ -358,18 +376,19 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             pass
 
     def display_pem_info_widget(self):
-        self.stackedWidget.show()
+        # self.stackedWidget.show()
         self.stackedWidget.setCurrentIndex(self.table.currentRow())
 
     # Saves the pem file in memory
     def update_pem_file(self, pem_file, table_row):
-        updated_file = None
         pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0], self.table.item(table_row, 0).text())
         pem_file.header['Client'] = self.table.item(table_row, 1).text()
         pem_file.header['Grid'] = self.table.item(table_row, 2).text()
         pem_file.header['LineHole'] = self.table.item(table_row, 3).text()
         pem_file.header['Loop'] = self.table.item(table_row, 4).text()
         pem_file.tags['Current'] = self.table.item(table_row, 5).text()
+        pem_file.loop_coords = self.stackedWidget.widget(table_row).tabs.widget(_loop_gps_tab).toPlainText()
+        pem_file.line_coords = self.stackedWidget.widget(table_row).tabs.widget(_station_gps_tab).toPlainText()
         return pem_file
 
     # Save the PEM file
@@ -384,6 +403,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 'File {} saved.'.format(os.path.basename(updated_file.filepath)), 2000)
             print(save_file, file=open(updated_file.filepath, 'w+'))
             self.update_table()
+            # TODO Make an update stackedWidget?
 
             if os.path.basename(file.filepath) != os.path.basename(updated_file.filepath):
                 os.remove(file.filepath)
@@ -451,10 +471,6 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         #     for column in range (3, 5):
         #         self.table.item(row_pos, column).setForeground(QtGui.QColor('red'))
 
-    def add_gps_file(self, gps_file):
-        gps_data = gps_file.gps_data
-        self.gpsTextBrowser.setText(str('\n'.join(gps_data)))
-
     # Deletes and re-creates the table with the new information
     def update_table(self):
         # self.update_header()
@@ -521,7 +537,9 @@ class PEMFileInfoWidget(QWidget):
         self.station_gps_text.setObjectName('Station GPS')
         self.station_gps_text.setAcceptDrops(False)
         self.loop_gps_text = QPlainTextEdit()
-        self.station_gps_text.setAcceptDrops(False)
+        self.loop_gps_text.setObjectName('Loop GPS')
+        self.loop_gps_text.setAcceptDrops(False)
+
         self.initUi()
         self.fill_info()
 
@@ -537,7 +555,9 @@ class PEMFileInfoWidget(QWidget):
     def fill_info(self):
         header = self.pem_file.header
         self.station_gps = self.pem_file.get_line_coords()
-        self.station_gps_text.insertPlainText('\n'.join(self.station_gps))
+        self.station_gps_text.setPlainText('\n'.join(self.station_gps))
+        self.loop_gps = self.pem_file.get_loop_coords()
+        self.loop_gps_text.setPlainText('\n'.join(self.loop_gps))
 
 
 if __name__ == '__main__':

@@ -37,22 +37,30 @@ class PEMSerializer:
 
     def serialize_loop_coords(self, coords):
         result = '~ Transmitter Loop Co-ordinates:\n'
-        cnt = 0
-        for loop_coord in coords:
-            # TODO Coordinates are a single line, should be separated
-            # result += loop_coord['Tag'] + ' ' + ' '.join(loop_coord['LoopCoordinates']) + '\n'
-            result += loop_coord['Tag'] + ' ' + loop_coord['LoopCoordinates'].strip() + '\n'
-            cnt += 1
+        for position in coords:
+            result += position
+        result += '\n'
         return result
+        # cnt = 0
+        # for loop_coord in coords:
+        #     # TODO Coordinates are a single line, should be separated
+        #     # result += loop_coord['Tag'] + ' ' + ' '.join(loop_coord['LoopCoordinates']) + '\n'
+        #     result += loop_coord['Tag'] + ' ' + loop_coord['LoopCoordinates'].strip() + '\n'
+        #     cnt += 1
+        # return result
 
     def serialize_line_coords(self, coords):
         result = '~ Hole/Profile Co-ordinates:\n'
-        cnt = 0
-        for hole_coord in coords:
-            # TODO Coordinates are a single line, should be separated
-            result += hole_coord['Tag'] + ' ' + hole_coord['LineCoordinates'].strip() + '\n'
-            cnt += 1
+        for position in coords:
+            result += position
+        result += '\n'
         return result
+        # cnt = 0
+        # for hole_coord in coords:
+        #     # TODO Coordinates are a single line, should be separated
+        #     result += hole_coord['Tag'] + ' ' + hole_coord['LineCoordinates'].strip() + '\n'
+        #     cnt += 1
+        # return result
 
     def serialize_notes(self, notes):
         if not notes:

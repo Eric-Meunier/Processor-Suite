@@ -25,11 +25,13 @@ class PEMParser:
             re.MULTILINE
         )
 
-        #  Tx loop coordinates section
-        self.re_loop_coords = re.compile(  # Parsing the loop coordinates
-            r'^(?P<Tag><L\d*>)(?P<LoopCoordinates>.*)[\r\n]',
-            re.MULTILINE
-        )
+        ## Tx loop coordinates section
+        # self.re_loop_coords = re.compile(  # Parsing the loop coordinates
+        #     r'^(?P<Tag><L\d*>)(?P<LoopCoordinates>.*)[\r\n]',
+        #     re.MULTILINE
+        # )
+        self.re_loop_coords = re.compile(
+            r'(?P<Tags><L\d*>)\W+(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1).*')
 
         #  Line/Hole coordinates section
         # self.re_line_coords = re.compile(  # Parsing the line/hole coordinates
@@ -37,7 +39,7 @@ class PEMParser:
         #     re.MULTILINE
         # )
         self.re_line_coords = re.compile(
-            r'(?P<Tags><P\d*>)\s+(?P<Easting>\d{3,}\.?\d+)\s+(?P<Northing>\d{3,}\.\d+)\s+(?P<Elevation>\d{3,}\.\d+)\s+(?P<Units>0|1)\s+(?P<Station>\d+)')
+            r'(?P<Tags><P\d*>)\W+(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1)\W+(?P<Station>\d+).*')
 
         # Notes i.e. GEN and HE tags
         self.re_notes = re.compile(  # Parsing the notes i.e. GEN tags and HE tags
@@ -75,20 +77,27 @@ class PEMParser:
         return tags
 
     def parse_loop(self, file):
-        loop_coords = []
-        for match in self.re_loop_coords.finditer(file):
-            loop_coords.append({'Tag': None,
-                                'LoopCoordinates': None})
+        raw_gps = re.findall(self.re_loop_coords, file)
+        loop_gps = []
+        if raw_gps:
+            for row in raw_gps:
+                loop_gps.append(' '.join(row))
+        else:
+            return None
+        # loop_coords = []
+        # for match in self.re_loop_coords.finditer(file):
+        #     loop_coords.append({'Tag': None,
+        #                         'LoopCoordinates': None})
+        #
+        #     for group, index in self.re_loop_coords.groupindex.items():
+        #         if group == 'Tag':
+        #             loop_coords[-1]['Tag'] = match.group(index)
+        #         elif group == 'LoopCoordinates':
+        #             line = match.group(index)
+        #             line = line.partition('~')
+        #             loop_coords[-1]['LoopCoordinates'] = line[0]
 
-            for group, index in self.re_loop_coords.groupindex.items():
-                if group == 'Tag':
-                    loop_coords[-1]['Tag'] = match.group(index)
-                elif group == 'LoopCoordinates':
-                    line = match.group(index)
-                    line = line.partition('~')
-                    loop_coords[-1]['LoopCoordinates'] = line[0]
-
-        return loop_coords
+        return loop_gps
 
     def parse_line(self, file):
         raw_gps = re.findall(self.re_line_coords, file)
