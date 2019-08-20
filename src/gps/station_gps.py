@@ -41,7 +41,7 @@ class StationGPSParser:
     def __init__(self):
         self.formatted_GPS = []
         self.filepath = None
-
+        self.gps_file = None
         self.re_gps = re.compile(
             r'(?P<Easting>\d{3,}\.?\d+)\s+(?P<Northing>\d{3,}\.\d+)\s+(?P<Elevation>\d{3,}\.\d+)\s+(?P<Units>0|1)\s+(?P<Station>\d+)')
 
@@ -58,11 +58,12 @@ class StationGPSParser:
         count = 0
 
         if self.raw_gps:
-            gps_file = GPSFile
+            if self.gps_file is None:
+                self.gps_file = GPSFile
             for row in self.raw_gps:
                 self.formatted_GPS.append("<P"+'{num:02d}'.format(num=count)+"> "+' '.join(row))
                 count += 1
-            return gps_file(filepath, self.formatted_GPS)
+            return self.gps_file(filepath, self.formatted_GPS)
         else:
             return None
 

@@ -134,31 +134,24 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def dragEnterEvent(self, e):
         e.accept()
 
-    # def dragMoveEvent(self, e):
-    #     urls = [url.toLocalFile() for url in e.mimeData().urls()]
-    #     pem_files = False
-    #     text_files = False
-    #     if all([url.lower().endswith('pem') for url in urls]):
-    #         pem_files = True
-    #     elif all([url.lower().endswith('txt') for url in urls]):
-    #         text_files = True
-    #
-    #     if e.answerRect().intersects(self.editor.table.geometry()) and pem_files is True:
-    #         e.acceptProposedAction()
-    #     elif e.answerRect().intersects(
-    #             self.editor.gpsTextBrowser.geometry()) and text_files is True:
-    #         e.acceptProposedAction()
-    #     else:
-    #         e.ignore()
+    def dragMoveEvent(self, e):
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        pem_files = False
+        text_files = False
+        if all([url.lower().endswith('pem') for url in urls]):
+            pem_files = True
+        elif all([url.lower().endswith('txt') for url in urls]):
+            text_files = True
+
+        if e.answerRect().intersects(self.editor.table.geometry()) and pem_files is True or e.answerRect().intersects(
+                self.editor.stackedWidget.geometry()) and text_files is True and len(urls) == 1:
+            e.acceptProposedAction()
+        else:
+            e.ignore()
 
     def dropEvent(self, e):
-        try:
-            urls = [url.toLocalFile() for url in e.mimeData().urls()]
-            self.open_files(urls)
-        except Exception as e:
-            logging.warning(str(e))
-            self.message.information(None, 'Error - Could not open selected PEM files', str(e))
-            pass
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        self.open_files(urls)
 
     def open_files(self, files):
 
@@ -172,55 +165,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if len(gps_files) > 0:
             self.editor.open_gps_files(gps_files)
-
-        # if not isinstance(files, list) and isinstance(files, str):
-        #     files = [files]
-        # pem_files = [file for file in files if file.lower().endswith('pem')]
-        # gps_files = [file for file in files if file.lower().endswith('txt') or file.lower().endswith('csv')]
-
-        # for file in pem_files:
-        #     try:
-        #         pem_file = self.parser.parse(file)
-        #         self.editor.pem_files.append(pem_file)
-        #
-        #         if len(self.editor.pem_files) == 1:  # The initial fill of the header and station info
-        #             if self.editor.client_edit.text() == '':
-        #                 self.editor.client_edit.setText(self.editor.pem_files[0].header['Client'])
-        #             if self.editor.grid_edit.text() == '':
-        #                 self.editor.grid_edit.setText(self.editor.pem_files[0].header['Grid'])
-        #             if self.editor.loop_edit.text() == '':
-        #                 self.editor.loop_edit.setText(self.editor.pem_files[0].header['Loop'])
-        #
-        #             all_stations = [file.get_unique_stations() for file in self.editor.pem_files]
-        #
-        #             if self.editor.min_range_edit.text() == '':
-        #                 min_range = str(min(chain.from_iterable(all_stations)))
-        #                 self.editor.min_range_edit.setText(min_range)
-        #             if self.editor.max_range_edit.text() == '':
-        #                 max_range = str(max(chain.from_iterable(all_stations)))
-        #                 self.editor.max_range_edit.setText(max_range)
-        #
-        #     except Exception as e:
-        #         logging.info(str(e))
-        #         self.message.information(None, 'Error', str(e))
-        #
-        # if len(self.editor.pem_files) > 0:
-        #     # self.window().statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
-        #     self.editor.fill_share_range()
-        # # self.update_table()
-        #
-        # for file in gps_files:
-        #     # self.pem_file_widget = PEMFileInfoWidget()
-        #     try:
-        #         self.editor.open_gps_file(file)
-        #         # gps_file = self.editor.gps_parser.parse(file)
-        #         # self.editor.gps_files.append(gps_file)
-        #         # self.editor.add_gps_file(gps_file)
-        #         # self.editor.stackedWidget.addWidget(self.pem_file_widget)
-        #
-        #     except Exception as e:
-        #         logging.info(str(e))
-        #         self.message.information(None, 'Error', str(e))
 
     def clear_files(self):
         while self.editor.table.rowCount() > 0:
@@ -296,6 +240,8 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         self.pem_info_widget = PEMFileInfoWidget
         self.gps_parser = StationGPSParser()
 
+        # self.stackedWidget.hide()
+
     def initActions(self):
         self.table.viewport().installEventFilter(self)
         self.table.itemSelectionChanged.connect(self.display_pem_info_widget)
@@ -352,20 +298,25 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 self.fill_share_range()
 
     def open_gps_files(self, gps_files):
-        for file in gps_files:
-            pass
-            # self.pem_file_widget = PEMFileInfoWidget()
-            try:
-                pass
-                # self.open_gps_file(file)
-                # gps_file = self.editor.gps_parser.parse(file)
-                # self.editor.gps_files.append(gps_file)
-                # self.editor.add_gps_file(gps_file)
-                # self.editor.stackedWidget.addWidget(self.pem_file_widget)
+        gps_parser = StationGPSParser()
+        if len(gps_files) == 1:
+            for file in gps_files:
+                try:
+                    pem_info_widget = self.stackedWidget.currentWidget()
+                    gps_tab = pem_info_widget.tabs.findChild(QPlainTextEdit, 'Station GPS')
+                    current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
+                    if gps_tab == current_tab:
+                        gps_file = gps_parser.parse(file)
+                        gps_data = '\n'.join(gps_file.gps_data)
+                        gps_tab.setPlainText(gps_data)
+                    else:
+                        pass
 
-            except Exception as e:
-                logging.info(str(e))
-                self.message.information(None, 'Error', str(e))
+                except Exception as e:
+                    logging.info(str(e))
+                    self.message.information(None, 'Error', str(e))
+        else:
+            self.message.information(None, 'Too many files', 'Only one GPS file can be opened at once')
 
     # Creates the right-click context menu on the table
     def contextMenuEvent(self, event):
@@ -392,6 +343,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 source is self.table.viewport() and
                 self.table.itemAt(event.pos()) is None):
             self.table.clearSelection()
+            self.stackedWidget.hide()
         return super(QWidget, self).eventFilter(source, event)
 
     # Remove a single file
@@ -406,10 +358,8 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             pass
 
     def display_pem_info_widget(self):
-        # if self.table.currentRow():
+        self.stackedWidget.show()
         self.stackedWidget.setCurrentIndex(self.table.currentRow())
-        # else:
-        #     pass
 
     # Saves the pem file in memory
     def update_pem_file(self, pem_file, table_row):
@@ -568,7 +518,10 @@ class PEMFileInfoWidget(QWidget):
         self.pem_file = pem_file
         self.tabs = QTabWidget()
         self.station_gps_text = QPlainTextEdit()
+        self.station_gps_text.setObjectName('Station GPS')
+        self.station_gps_text.setAcceptDrops(False)
         self.loop_gps_text = QPlainTextEdit()
+        self.station_gps_text.setAcceptDrops(False)
         self.initUi()
         self.fill_info()
 
@@ -585,6 +538,7 @@ class PEMFileInfoWidget(QWidget):
         header = self.pem_file.header
         self.station_gps = self.pem_file.get_line_coords()
         self.station_gps_text.insertPlainText('\n'.join(self.station_gps))
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
