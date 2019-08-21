@@ -1,6 +1,8 @@
 import re
 import os
 import sys
+import math
+from pprint import pprint
 from os.path import isfile, join
 import logging
 
@@ -34,10 +36,27 @@ class StationGPSFile:
         self.sorted_gps_data = self.sort_line()
 
     def sort_line(self):
-        return self.format_gps_data(self.gps_data)
 
-    def save_file(self):
-        pass
+        loop_coords_tuples = []  # Used to find the center point
+        loop_coords = []  # The actual full coordinates
+
+        # Splitting up the coordinates from a string to something usable
+        for coord in self.gps_data:
+            coord_tuple = (float(coord[0]), float(coord[1]))
+            coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), int(coord[3]), int(coord[4])]
+            loop_coords_tuples.append(coord_tuple)
+            loop_coords.append(coord_item)
+
+        # The function used in 'sorted' to figure out how to sort it
+        def lambda_func(coord_item):
+            coord = (coord_item[0], coord_item[1])
+            return coord
+
+        sorted_coords = sorted(loop_coords, key=lambda x: math.sqrt((x[0]**2)+(x[1]**2)), reverse=True)
+        pprint(sorted_coords)
+        formatted_gps = self.format_gps_data(sorted_coords)
+
+        return formatted_gps
 
     def format_gps_data(self, gps_data):
         count = 0
@@ -68,7 +87,7 @@ class StationGPSParser:
         self.filepath = None
         self.gps_file = StationGPSFile
         self.re_gps = re.compile(
-            r'(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1)\W+(?P<Station>\d+)')
+            r'\<P\d+\>\W+(?P<Easting>\d{4,}\.?\d*)\W+(?P<Northing>\d{4,}\.?\d*)\W+(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+(?P<Station>-?\d+)')
 
     def parse(self, filepath):
         self.filepath = filepath
@@ -107,8 +126,8 @@ def main():
 
     gps_file = StationGPSParser
 
-    for file in file_paths:
-        gps_file(file)
+    file = r'C:\Users\Eric\Desktop\7600N.PEM'
+    gps_file().parse(file)
 
 
 if __name__ == '__main__':

@@ -87,7 +87,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.show()
 
         self.setupUi(self)  # Init for the .UI file
-        self.setAcceptDrops(True)
+        # self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
         # self.setWindowIcon(
         #     QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
@@ -277,28 +277,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.set_view()
                 self.conder_button.setChecked(False)
 
-    def dragEnterEvent(self, e):
-        urls = [url.toLocalFile().lower() for url in e.mimeData().urls()]
-        accepted_extensions = ['pem', 'con', 'txt', 'log', 'rtf']
-
-        def check_extension(urls):
-            for url in urls:
-                url_ext = url.split('.')[-1].lower()
-                if url_ext in accepted_extensions:
-                    continue
-                else:
-                    return False
-            return True
-
-        if check_extension(urls):
-            e.accept()
-        else:
-            self.statusBar().showMessage('Invalid file type', 1000)
-            e.ignore()
-
-    def dropEvent(self, e):
-        urls = [url.toLocalFile() for url in e.mimeData().urls()]
-        self.open_files(urls)
+    # def dragEnterEvent(self, e):
+    #     urls = [url.toLocalFile().lower() for url in e.mimeData().urls()]
+    #     accepted_extensions = ['pem', 'con', 'txt', 'log', 'rtf']
+    #
+    #     def check_extension(urls):
+    #         for url in urls:
+    #             url_ext = url.split('.')[-1].lower()
+    #             if url_ext in accepted_extensions:
+    #                 continue
+    #             else:
+    #                 return False
+    #         return True
+    #
+    #     if check_extension(urls):
+    #         e.accept()
+    #     else:
+    #         self.statusBar().showMessage('Invalid file type', 1000)
+    #         e.ignore()
+    #
+    # def dropEvent(self, e):
+    #     urls = [url.toLocalFile() for url in e.mimeData().urls()]
+    #     self.open_files(urls)
 
     def open_file_dialog(self):
         accepted_extensions = ['pem', 'con', 'txt', 'log', 'rtf']

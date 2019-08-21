@@ -42,7 +42,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if parent.share_loop_gps_checkbox.isChecked():
             self.sort_loop_button.setEnabled(False)
         else:
-            self.sort_loop_button.setEnabled(False)
+            self.sort_loop_button.setEnabled(True)
 
     def initActions(self):
         self.sort_stations_button.toggled.connect(self.sort_station_gps)
@@ -64,10 +64,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 first_file_loop = self.parent.stackedWidget.widget(0).tabs.findChild(QTextEdit, 'loop_gps_text').toPlainText()
                 self.loop_gps_text.setPlainText(first_file_loop)
         else:
-            if self.sort_loop_button.isChecked():
+            if self.parent.sort_loop_button.isChecked():
                 self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_sorted_gps()))
             else:
-                self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_gps()))
+                if self.sort_loop_button.isChecked():
+                    self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_sorted_gps()))
+                else:
+                    self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_gps()))
 
     def sort_station_gps(self):
         if self.sort_stations_button.isChecked():

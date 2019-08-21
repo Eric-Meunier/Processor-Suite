@@ -44,7 +44,7 @@ class LoopGPSFile:
         # Splitting up the coordinates from a string to something usable
         for coord in self.gps_data:
             coord_tuple = (float(coord[0]), float(coord[1]))
-            coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), int(coord[3])]
+            coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), coord[3]]
             loop_coords_tuples.append(coord_tuple)
             loop_coords.append(coord_item)
 
@@ -61,9 +61,6 @@ class LoopGPSFile:
 
         return formatted_gps
 
-    def save_file(self):
-        pass
-
     def format_gps_data(self, gps_data):
         count = 0
         formatted_gps = []
@@ -71,6 +68,8 @@ class LoopGPSFile:
         if len(gps_data) > 0:
             for row in gps_data:
                 row_str = list(map(lambda x: str(x), row))  # Convert each item in the row into a string
+                if row[-1] == '':
+                    row_str[-1] = '0'
                 formatted_gps.append("<L" + '{num:02d}'.format(num=count) + "> " + ' '.join(row_str))
                 count += 1
 
@@ -93,7 +92,7 @@ class LoopGPSParser:
         self.filepath = None
         self.gps_file = LoopGPSFile
         self.re_gps = re.compile(
-            r'(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1)\W?')
+            r'(?P<Easting>\d{3,}\.?\d*)\W+(?P<Northing>\d{3,}\.?\d*)\W+(?P<Elevation>\d{1,4}\.?\d*)\W*(?P<Units>0|1)?\W?')
 
     def parse(self, filepath):
         self.filepath = filepath
@@ -134,7 +133,7 @@ def main():
     gps_file = LoopGPSParser
 
     # for file in file_paths:
-    file = r'C:\Users\Eric\Desktop\2400NAv.PEM'
+    file = r'C:\Users\Eric\Desktop\testing.txt'
     gps_file().parse(file)
 
 

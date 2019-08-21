@@ -120,6 +120,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu.addAction(self.saveFilesAs)
         self.fileMenu.addAction(self.clearFiles)
 
+        self.sortAllStationGps = QAction("&Sort All Station GPS", self)
+        self.sortAllStationGps.setStatusTip("Sort All Station GPS")
+        self.sortAllStationGps.triggered.connect(self.editor.sort_all_station_gps)
+
+        self.sortAllLoopGps = QAction("&Sort All Loop GPS", self)
+        self.sortAllLoopGps.setStatusTip("Sort All Loop GPS")
+        self.sortAllLoopGps.triggered.connect(self.editor.sort_all_loop_gps)
+
+        self.editMenu = self.menubar.addMenu('&Edit')
+        self.editMenu.addAction(self.sortAllStationGps)
+        self.editMenu.addAction(self.sortAllLoopGps)
+
     def open_file_dialog(self):
         try:
             files = self.dialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem);; All files(*.*)')
@@ -145,16 +157,35 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         text_files = False
         if all([url.lower().endswith('pem') for url in urls]):
             pem_files = True
-        elif all([url.lower().endswith('txt') for url in urls]):
+        elif all([url.lower().endswith('txt') or url.lower().endswith('csv') for url in urls]):
             text_files = True
+
+        pem_conditions = bool(all([
+            bool(e.answerRect().intersects(self.editor.table.geometry())),
+            pem_files,
+        ]))
+
         if len(self.editor.pem_files) == 0:
-            if e.answerRect().intersects(self.editor.table.geometry()) and pem_files is True:
+            if pem_conditions is True:
                 e.acceptProposedAction()
+            else:
+                e.ignore()
+
         else:
             eligible_tabs = [_station_gps_tab, _loop_gps_tab]
-            if e.answerRect().intersects(self.editor.table.geometry()) and pem_files is True \
-                    or e.answerRect().intersects(self.editor.stackedWidget.geometry()) and text_files is True and len(
-                urls) == 1 and self.editor.stackedWidget.currentWidget().tabs.currentIndex() in eligible_tabs:
+
+            gps_conditions = bool(all([
+                e.answerRect().intersects(self.editor.stackedWidget.geometry()),
+                text_files,
+                len(urls) == 1,
+                self.editor.stackedWidget.currentWidget().tabs.currentIndex() in eligible_tabs,
+                self.editor.share_loop_gps_checkbox.isChecked() is True and
+                self.editor.stackedWidget.currentWidget().tabs.currentIndex() is not _loop_gps_tab or
+                len(self.editor.pem_files) == 1,
+                len(self.editor.pem_files) > 0
+            ]))
+
+            if pem_conditions is True or gps_conditions is True:
                 e.acceptProposedAction()
             else:
                 e.ignore()
@@ -339,9 +370,10 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                         gps_file = loop_gps_parser.parse(file)
                         pem_info_widget.loop_gps = gps_file
 
-                        if self.share_loop_gps_button.isChecked():
-                            gps_data = self.stackedWidget.widget(0).tabs.widget(_loop_gps_tab).findChild\
-                                (QTextEdit,'loop_gps_text').toPlainText()
+                        # TODO fix bug here
+                        if self.share_loop_gps_checkbox.isChecked():
+                            gps_data = self.stackedWidget.widget(0).tabs.widget(_loop_gps_tab).findChild \
+                                (QTextEdit, 'loop_gps_text').toPlainText()
                             pem_info_widget.sort_loop_button.setEnabled(False)
                         else:
                             if loop_gps_tab.findChild(QToolButton, 'sort_loop_button').isChecked():
@@ -411,8 +443,8 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         pem_file.header['LineHole'] = self.table.item(table_row, 3).text()
         pem_file.header['Loop'] = self.table.item(table_row, 4).text()
         pem_file.tags['Current'] = self.table.item(table_row, 5).text()
-        pem_file.loop_coords = self.stackedWidget.widget(table_row).tabs.widget(_loop_gps_tab).toPlainText()
-        pem_file.line_coords = self.stackedWidget.widget(table_row).tabs.widget(_station_gps_tab).toPlainText()
+        pem_file.loop_coords = self.stackedWidget.widget(table_row).loop_gps.toPlainText()
+        pem_file.line_coords = self.stackedWidget.widget(table_row).station_gps.toPlainText()
         return pem_file
 
     # Save the PEM file
@@ -506,6 +538,28 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         else:
             pass
 
+    def sort_all_station_gps(self):
+        if len(self.pem_files) > 0:
+            for i in range(self.stackedWidget.count()):
+                widget = self.stackedWidget.widget(i)
+                widget.sort_stations_button.setChecked(True)
+                widget_station_text = widget.tabs.widget(_station_gps_tab).findChild(QTextEdit, 'station_gps_text')
+                widget_station_text.setPlainText('\n'.join(self.stackedWidget.widget(0).station_gps.get_sorted_gps()))
+            self.window().statusBar().showMessage('All stations have been sorted', 2000)
+
+    def sort_all_loop_gps(self):
+        if len(self.pem_files) > 0:
+            if self.share_loop_gps_checkbox.isChecked() is False:
+                self.toggle_sort_loops()
+            else:
+                for i in range(self.stackedWidget.count()):
+                    widget = self.stackedWidget.widget(i)
+                    widget.sort_loop_button.setChecked(True)
+                    widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
+                    widget_loop_text.setPlainText('\n'.join(self.stackedWidget.widget(0).loop_gps.get_sorted_gps()))
+                self.sort_loop_button.setChecked(True)
+            self.window().statusBar().showMessage('All loops have been sorted', 2000)
+
     def fill_share_header(self):
         if len(self.pem_files) > 0:
             self.client_edit.setText(self.pem_files[0].header['Client'])
@@ -577,15 +631,18 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                     else:
                         widget_loop_text.setPlainText('\n'.join(widget.loop_gps.get_gps()))
 
+    def toggle_sort_loop(self, widget):
+        widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
+        if self.sort_loop_button.isChecked():
+            widget_loop_text.setPlainText('\n'.join(self.stackedWidget.widget(0).loop_gps.get_sorted_gps()))
+        else:
+            widget_loop_text.setPlainText('\n'.join(self.stackedWidget.widget(0).loop_gps.get_gps()))
+
     def toggle_sort_loops(self):
         if len(self.pem_files) > 0:
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
-                widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
-                if self.sort_loop_button.isChecked():
-                    widget_loop_text.setPlainText('\n'.join(self.stackedWidget.widget(0).loop_gps.get_sorted_gps()))
-                else:
-                    widget_loop_text.setPlainText('\n'.join(self.stackedWidget.widget(0).loop_gps.get_gps()))
+                self.toggle_sort_loop(widget)
 
 
 if __name__ == '__main__':
