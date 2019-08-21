@@ -25,28 +25,19 @@ Ui_PEMInfoWidget, QtBaseClass = uic.loadUiType(pemInfoWidgetCreatorFile)
 
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
-    def __init__(self, pem_file):
+    def __init__(self, pem_file, parent=None):
         super().__init__()
+        self.parent = parent
         self.pem_file = pem_file
+        self.station_gps = None
+        self.loop_gps = None
         self.setupUi(self)
+        self.initActions()
         self.fill_info()
-        # self.tabs = QTabWidget()
-        # self.station_gps_text = QPlainTextEdit()
-        # self.station_gps_text.setObjectName('Station GPS')
-        # self.station_gps_text.setAcceptDrops(False)
-        # self.loop_gps_text = QPlainTextEdit()
-        # self.loop_gps_text.setObjectName('Loop GPS')
-        # self.loop_gps_text.setAcceptDrops(False)
-        # self.initUi()
 
-    # def initUi(self):
-    #     self.layout = QGridLayout()
-    #     self.setLayout(self.layout)
-    #     self.layout.addWidget(self.tabs)
-    #
-    #     # self.tabs.addTab('', 'PEM Info')
-    #     self.tabs.addTab(self.station_gps_text, 'Station GPS')
-    #     self.tabs.addTab(self.loop_gps_text, 'Loop GPS')
+    def initActions(self):
+        self.sort_stations_button.toggled.connect(self.sort_station_gps)
+        self.sort_loop_button.toggled.connect(self.sort_loop_gps)
 
     def fill_info(self):
         header = self.pem_file.header
@@ -54,4 +45,17 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.station_gps_text.setPlainText('\n'.join(self.station_gps))
         self.loop_gps = self.pem_file.get_loop_coords()
         self.loop_gps_text.setPlainText('\n'.join(self.loop_gps))
+
+    def sort_station_gps(self):
+        if self.sort_stations_button.isChecked():
+            self.station_gps_text.setPlainText('\n'.join(self.station_gps.get_sorted_gps()))
+        else:
+            self.station_gps_text.setPlainText('\n'.join(self.station_gps.get_gps()))
+
+    def sort_loop_gps(self):
+        if self.sort_loop_button.isChecked():
+            self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_sorted_gps()))
+        else:
+            self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_gps()))
+
 

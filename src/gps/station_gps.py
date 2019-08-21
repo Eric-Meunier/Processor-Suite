@@ -19,18 +19,43 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', date
 
 
 class StationGPSFile:
-    def __init__(self, filepath, gps_data):
+    """
+    Loop GPS Object.
+    :param gps_data: List of lists. Format of the items in the lists doesn't matter
+    :param filepath: Filepath of the original text file with the GPS data in it
+    """
+    def __init__(self, gps_data, filepath=None):
         self.filepath = filepath
-        self.filename = os.path.basename(self.filepath)  # With extension
-        self.file_dir = os.path.dirname(self.filepath)
+        if self.filepath:
+            self.filename = os.path.basename(self.filepath)  # With extension
+            self.file_dir = os.path.dirname(self.filepath)
 
         self.gps_data = gps_data
+        self.sorted_gps_data = self.sort_line()
 
-    def sort_stations(self):
-        pass
+    def sort_line(self):
+        return self.format_gps_data(self.gps_data)
 
     def save_file(self):
         pass
+
+    def format_gps_data(self, gps_data):
+        count = 0
+        formatted_gps = []
+
+        if len(gps_data) > 0:
+            for row in gps_data:
+                row_str = list(map(lambda x: str(x), row))  # Convert each item in the row into a string
+                formatted_gps.append("<P" + '{num:02d}'.format(num=count) + "> " + ' '.join(row_str))
+                count += 1
+
+        return formatted_gps
+
+    def get_sorted_gps(self):
+        return self.sorted_gps_data
+
+    def get_gps(self):
+        return self.format_gps_data(self.gps_data)
 
 
 class StationGPSParser:
@@ -54,16 +79,12 @@ class StationGPSParser:
             self.file = in_file.read()
 
         self.raw_gps = re.findall(self.re_gps, self.file)
-
-        count = 0
+        self.raw_gps = list(map(lambda x: list(x), self.raw_gps))
 
         if self.raw_gps:
-            for row in self.raw_gps:
-                self.formatted_GPS.append("<P"+'{num:02d}'.format(num=count)+"> "+' '.join(row))
-                count += 1
-            return self.gps_file(filepath, self.formatted_GPS)
+            return self.gps_file(self.raw_gps, filepath=self.filepath)
         else:
-            return None
+            return ''
 
 
 def main():

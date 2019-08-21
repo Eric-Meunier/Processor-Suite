@@ -10,7 +10,7 @@ from src.gps.loop_gps import LoopGPSParser
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
-                             QHeaderView, QListWidget, QTextBrowser, QTextEdit, QStackedWidget)
+                             QHeaderView, QListWidget, QTextBrowser, QTextEdit, QStackedWidget, QToolButton)
 from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -276,7 +276,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         for file in pem_files:
             try:
                 pem_file = self.parser.parse(file)
-                pem_info_widget = self.pem_info_widget(pem_file)
+                pem_info_widget = self.pem_info_widget(pem_file, parent=self)
                 self.pem_files.append(pem_file)
                 self.pem_info_widgets.append(pem_info_widget)
                 self.stackedWidget.addWidget(pem_info_widget)
@@ -320,11 +320,19 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                     current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
                     if station_gps_tab == current_tab:
                         gps_file = station_gps_parser.parse(file)
-                        gps_data = '\n'.join(gps_file.gps_data)
+                        pem_info_widget.station_gps = gps_file
+                        if station_gps_tab.findChild(QToolButton, 'sort_stations_button').isChecked():
+                            gps_data = '\n'.join(gps_file.get_sorted_gps())
+                        else:
+                            gps_data = '\n'.join(gps_file.get_gps())
                         station_gps_tab.findChild(QTextEdit, 'station_gps_text').setPlainText(gps_data)
                     elif loop_gps_tab == current_tab:
                         gps_file = loop_gps_parser.parse(file)
-                        gps_data = '\n'.join(gps_file.gps_data)
+                        pem_info_widget.loop_gps = gps_file
+                        if loop_gps_tab.findChild(QToolButton, 'sort_loop_button').isChecked():
+                            gps_data = '\n'.join(gps_file.get_sorted_gps())
+                        else:
+                            gps_data = '\n'.join(gps_file.get_gps())
                         loop_gps_tab.findChild(QTextEdit, 'loop_gps_text').setPlainText(gps_data)
                     else:
                         pass

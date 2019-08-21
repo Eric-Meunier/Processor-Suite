@@ -1,6 +1,9 @@
 import re
 import os
 import sys
+from functools import reduce
+import operator
+import math
 from os.path import isfile, join
 import logging
 
@@ -19,18 +22,65 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', date
 
 
 class LoopGPSFile:
-    def __init__(self, filepath, gps_data):
+    """
+    Loop GPS Object.
+    :param gps_data: List of lists. Format of the items in the lists doesn't matter
+    :param filepath: Filepath of the original text file with the GPS data in it
+    """
+    def __init__(self, gps_data, filepath=None):
         self.filepath = filepath
-        self.filename = os.path.basename(self.filepath)  # With extension
-        self.file_dir = os.path.dirname(self.filepath)
+        if self.filepath:
+            self.filename = os.path.basename(self.filepath)  # With extension
+            self.file_dir = os.path.dirname(self.filepath)
 
         self.gps_data = gps_data
+        self.sorted_gps_data = self.sort_loop()
 
     def sort_loop(self):
-        pass
+
+        loop_coords_tuples = []  # Used to find the center point
+        loop_coords = []  # The actual full coordinates
+
+        # Splitting up the coordinates from a string to something usable
+        for coord in self.gps_data:
+            coord_tuple = (float(coord[0]), float(coord[1]))
+            coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), int(coord[3])]
+            loop_coords_tuples.append(coord_tuple)
+            loop_coords.append(coord_item)
+
+        # Finds the center point using the tuples.
+        center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples), [len(loop_coords_tuples)] * 2))
+
+        # The function used in 'sorted' to figure out how to sort it
+        def lambda_func(coord_item):
+            coord = (coord_item[0], coord_item[1])
+            return (-135 - math.degrees(math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360
+
+        sorted_coords = sorted(loop_coords, key=lambda_func, reverse=True)
+        formatted_gps = self.format_gps_data(sorted_coords)
+
+        return formatted_gps
 
     def save_file(self):
         pass
+
+    def format_gps_data(self, gps_data):
+        count = 0
+        formatted_gps = []
+
+        if len(gps_data) > 0:
+            for row in gps_data:
+                row_str = list(map(lambda x: str(x), row))  # Convert each item in the row into a string
+                formatted_gps.append("<L" + '{num:02d}'.format(num=count) + "> " + ' '.join(row_str))
+                count += 1
+
+        return formatted_gps
+
+    def get_sorted_gps(self):
+        return self.sorted_gps_data
+
+    def get_gps(self):
+        return self.format_gps_data(self.gps_data)
 
 
 class LoopGPSParser:
@@ -52,16 +102,12 @@ class LoopGPSParser:
             self.file = in_file.read()
 
         self.raw_gps = re.findall(self.re_gps, self.file)
-
-        count = 0
+        self.raw_gps = list(map(lambda x: list(x), self.raw_gps))
 
         if self.raw_gps:
-            for row in self.raw_gps:
-                self.formatted_GPS.append("<L" + '{num:02d}'.format(num=count) + "> " + ' '.join(row))
-                count += 1
-            return self.gps_file(filepath, self.formatted_GPS)
+            return self.gps_file(self.raw_gps, filepath=self.filepath)
         else:
-            return None
+            return ''
 
 
 def main():
@@ -77,10 +123,11 @@ def main():
     for file in file_names:
         file_paths.append(join(samples_path, file))
 
-    gps_file = StationGPSParser
+    gps_file = LoopGPSParser
 
-    for file in file_paths:
-        gps_file(file)
+    # for file in file_paths:
+    file = r'C:\Users\Eric\Desktop\2400NAv.PEM'
+    gps_file().parse(file)
 
 
 if __name__ == '__main__':
