@@ -70,8 +70,6 @@ class StationGPSParser:
         self.re_gps = re.compile(
             r'(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1)\W+(?P<Station>\d+)')
 
-        # self.parse()
-
     def parse(self, filepath):
         self.filepath = filepath
 
@@ -85,6 +83,14 @@ class StationGPSParser:
             return self.gps_file(self.raw_gps, filepath=self.filepath)
         else:
             return ''
+
+    def parse_text(self, gps):
+        if isinstance(gps, list):
+            ' '.join(gps)
+        gps_str = '\n'.join(gps)
+        raw_gps = re.findall(self.re_gps, gps_str)
+        raw_gps = list(map(lambda x: list(x), raw_gps))
+        return self.gps_file(raw_gps)
 
 
 def main():
