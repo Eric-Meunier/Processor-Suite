@@ -7,17 +7,18 @@ from src.pem.pem_serializer import PEMSerializer
 from src.pem.pem_parser import PEMParser
 from src.gps.station_gps import StationGPSParser
 from src.gps.loop_gps import LoopGPSParser
+from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
-                             QHeaderView, QListWidget, QTextBrowser, QPlainTextEdit, QStackedWidget)
+                             QHeaderView, QListWidget, QTextBrowser, QTextEdit, QStackedWidget)
 from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 __version__ = '0.1.0'
 
-_station_gps_tab = 0
-_loop_gps_tab = 1
+_station_gps_tab = 1
+_loop_gps_tab = 2
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -314,17 +315,17 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             for file in gps_files:
                 try:
                     pem_info_widget = self.stackedWidget.currentWidget()
-                    station_gps_tab = pem_info_widget.tabs.findChild(QPlainTextEdit, 'Station GPS')
-                    loop_gps_tab = pem_info_widget.tabs.findChild(QPlainTextEdit, 'Loop GPS')
+                    station_gps_tab = pem_info_widget.tabs.widget(_station_gps_tab)
+                    loop_gps_tab = pem_info_widget.tabs.widget(_loop_gps_tab)
                     current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
                     if station_gps_tab == current_tab:
                         gps_file = station_gps_parser.parse(file)
                         gps_data = '\n'.join(gps_file.gps_data)
-                        station_gps_tab.setPlainText(gps_data)
+                        station_gps_tab.findChild(QTextEdit, 'station_gps_text').setPlainText(gps_data)
                     elif loop_gps_tab == current_tab:
                         gps_file = loop_gps_parser.parse(file)
                         gps_data = '\n'.join(gps_file.gps_data)
-                        loop_gps_tab.setPlainText(gps_data)
+                        loop_gps_tab.findChild(QTextEdit, 'loop_gps_text').setPlainText(gps_data)
                     else:
                         pass
 
@@ -526,38 +527,6 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             self.min_range_edit.setEnabled(False)
             self.max_range_edit.setEnabled(False)
             self.update_table()
-
-
-class PEMFileInfoWidget(QWidget):
-    def __init__(self, pem_file):
-        super().__init__()
-        self.pem_file = pem_file
-        self.tabs = QTabWidget()
-        self.station_gps_text = QPlainTextEdit()
-        self.station_gps_text.setObjectName('Station GPS')
-        self.station_gps_text.setAcceptDrops(False)
-        self.loop_gps_text = QPlainTextEdit()
-        self.loop_gps_text.setObjectName('Loop GPS')
-        self.loop_gps_text.setAcceptDrops(False)
-
-        self.initUi()
-        self.fill_info()
-
-    def initUi(self):
-        self.layout = QGridLayout()
-        self.setLayout(self.layout)
-        self.layout.addWidget(self.tabs)
-
-        # self.tabs.addTab('', 'PEM Info')
-        self.tabs.addTab(self.station_gps_text, 'Station GPS')
-        self.tabs.addTab(self.loop_gps_text, 'Loop GPS')
-
-    def fill_info(self):
-        header = self.pem_file.header
-        self.station_gps = self.pem_file.get_line_coords()
-        self.station_gps_text.setPlainText('\n'.join(self.station_gps))
-        self.loop_gps = self.pem_file.get_loop_coords()
-        self.loop_gps_text.setPlainText('\n'.join(self.loop_gps))
 
 
 if __name__ == '__main__':
