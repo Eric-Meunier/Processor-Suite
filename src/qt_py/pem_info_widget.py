@@ -53,6 +53,25 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def fill_info(self):
         header = self.pem_file.header
+        survey_type = self.pem_file.survey_type
+        if 'surface' in survey_type.lower():
+            linetype = 'Line'
+        else:
+            linetype = 'Hole'
+
+        # info = 'Date: {date}\n' \
+        #        '{linetype}: {line}'.format(linetype=linetype, line=header.get('LineHole'), date=header.get('Date'))
+        #
+        # self.info_text_edit.setPlainText(info)
+
+        for k, v in header.items():
+            unwanted_keys = ['Convension', 'IsNormalized', 'PrimeFieldValue','ChannelTimes']
+            if k not in unwanted_keys:
+                if k == 'LineHole':
+                    k = linetype
+                self.info_text_edit.append('<html><b>{k}</b</html>:\t{v}'.format(k=k, v=v))
+                # self.info_text_edit.append("<html><b>{k}</b</html>".format(k=k))
+                # self.info_text_edit.insertPlainText(' '+v)
 
         # Fill station GPS
         self.station_gps = self.station_gps_parser.parse_text(self.pem_file.get_line_coords())
@@ -94,7 +113,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if self.sort_stations_button.isChecked():
             self.tabs.findChild(QTextEdit, 'station_gps_text').setPlainText('\n'.join(self.station_gps.get_sorted_gps()))
         else:
-            self.tabs.findChild(QTextEdit, 'station_gps_text').setPlainText('\n'.join(self.station_gps.get_gps_data()))
+            self.tabs.findChild(QTextEdit, 'station_gps_text').setPlainText('\n'.join(self.station_gps.get_gps()))
 
     def format_loop_gps_text(self):
         current_text = self.tabs.findChild(QTextEdit, 'loop_gps_text').toPlainText()
@@ -103,5 +122,5 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if self.sort_loop_button.isChecked():
             self.tabs.findChild(QTextEdit, 'loop_gps_text').setPlainText('\n'.join(self.loop_gps.get_sorted_gps()))
         else:
-            self.tabs.findChild(QTextEdit, 'loop_gps_text').setPlainText('\n'.join(self.loop_gps.get_gps_data()))
+            self.tabs.findChild(QTextEdit, 'loop_gps_text').setPlainText('\n'.join(self.loop_gps.get_gps()))
 

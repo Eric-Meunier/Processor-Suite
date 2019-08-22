@@ -450,8 +450,8 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         pem_file.header['LineHole'] = self.table.item(table_row, 3).text()
         pem_file.header['Loop'] = self.table.item(table_row, 4).text()
         pem_file.tags['Current'] = self.table.item(table_row, 5).text()
-        pem_file.loop_coords = self.stackedWidget.widget(table_row).loop_gps.toPlainText()
-        pem_file.line_coords = self.stackedWidget.widget(table_row).station_gps.toPlainText()
+        pem_file.loop_coords = self.stackedWidget.widget(table_row).tabs.findChild(QTextEdit, 'loop_gps_text').toPlainText()
+        pem_file.line_coords = self.stackedWidget.widget(table_row).tabs.findChild(QTextEdit, 'station_gps_text').toPlainText()
         return pem_file
 
     # Save the PEM file
