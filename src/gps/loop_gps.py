@@ -107,7 +107,7 @@ class LoopGPSParser:
         self.filepath = None
         self.gps_file = LoopGPSFile
         self.re_gps = re.compile(
-            r'(?P<Easting>\d{3,}\.?\d*)\W+(?P<Northing>\d{3,}\.?\d*)\W+(?P<Elevation>\d{1,4}\.?\d*)\W*(?P<Units>0|1)?\W?')
+            r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W*(?P<Units>0|1)?\W?')
 
     def parse(self, filepath):
         self.filepath = filepath
@@ -126,6 +126,8 @@ class LoopGPSParser:
     def parse_text(self, gps):
         if isinstance(gps, list):
             gps_str = '\n'.join(gps)
+        elif gps is None:
+            return None
         else:
             gps_str = gps
         raw_gps = re.findall(self.re_gps, gps_str)

@@ -317,7 +317,6 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 self.pem_files.append(pem_file)
                 self.pem_info_widgets.append(pem_info_widget)
                 self.stackedWidget.addWidget(pem_info_widget)
-                # self.stackedWidget.setCurrentWidget(pem_info_widget)
 
                 if len(self.pem_files) == 1:  # The initial fill of the header and station info
                     if self.client_edit.text() == '':
