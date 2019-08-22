@@ -623,6 +623,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 for i in range(self.stackedWidget.count()):
                     widget = self.stackedWidget.widget(i)
                     widget.sort_loop_button.setEnabled(False)
+                    widget.format_loop_gps_button.setEnabled(False)
                     if i != 0:
                         widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
                         widget_loop_text.setPlainText(loop)
@@ -633,6 +634,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                     widget = self.stackedWidget.widget(i)
                     widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
                     widget.sort_loop_button.setEnabled(True)
+                    widget.format_loop_gps_button.setEnabled(True)
                     if widget.sort_loop_button.isChecked():
                         widget_loop_text.setPlainText('\n'.join(widget.loop_gps.get_sorted_gps()))
                     else:

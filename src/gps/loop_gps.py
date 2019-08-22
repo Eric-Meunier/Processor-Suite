@@ -59,11 +59,15 @@ class LoopGPSFile:
 
         sorted_coords = sorted(loop_coords, key=lambda_func, reverse=True)
         formatted_gps = self.format_gps_data(sorted_coords)
-        pprint(formatted_gps)
 
         return formatted_gps
 
     def format_gps_data(self, gps_data):
+        """
+        Adds the L tags and formats the numbers
+        :param gps_data: List without tags
+        :return: List of strings
+        """
 
         def format_row(row):
             for i, item in enumerate(row):
@@ -121,8 +125,9 @@ class LoopGPSParser:
 
     def parse_text(self, gps):
         if isinstance(gps, list):
-            ' '.join(gps)
-        gps_str = '\n'.join(gps)
+            gps_str = '\n'.join(gps)
+        else:
+            gps_str = gps
         raw_gps = re.findall(self.re_gps, gps_str)
         raw_gps = list(map(lambda x: list(x), raw_gps))
         return self.gps_file(raw_gps)

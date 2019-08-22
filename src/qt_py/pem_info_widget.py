@@ -48,6 +48,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.sort_stations_button.toggled.connect(self.sort_station_gps)
         self.sort_loop_button.toggled.connect(self.sort_loop_gps)
 
+        self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
+        self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
+
     def fill_info(self):
         header = self.pem_file.header
 
@@ -84,4 +87,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_gps()))
 
+    def format_station_gps_text(self):
+        current_text = self.tabs.findChild(QTextEdit, 'station_gps_text').toPlainText()
+        self.station_gps = self.station_gps_parser.parse_text(current_text)
+
+        if self.sort_stations_button.isChecked():
+            self.tabs.findChild(QTextEdit, 'station_gps_text').setPlainText('\n'.join(self.station_gps.get_sorted_gps()))
+        else:
+            self.tabs.findChild(QTextEdit, 'station_gps_text').setPlainText('\n'.join(self.station_gps.get_gps_data()))
+
+    def format_loop_gps_text(self):
+        current_text = self.tabs.findChild(QTextEdit, 'loop_gps_text').toPlainText()
+        self.loop_gps = self.loop_gps_parser.parse_text(current_text)
+
+        if self.sort_loop_button.isChecked():
+            self.tabs.findChild(QTextEdit, 'loop_gps_text').setPlainText('\n'.join(self.loop_gps.get_sorted_gps()))
+        else:
+            self.tabs.findChild(QTextEdit, 'loop_gps_text').setPlainText('\n'.join(self.loop_gps.get_gps_data()))
 

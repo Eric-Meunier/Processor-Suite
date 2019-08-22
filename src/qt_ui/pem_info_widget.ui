@@ -59,7 +59,7 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_3">
        <item row="0" column="1">
-        <widget class="QGroupBox" name="groupBox">
+        <widget class="QGroupBox" name="stationGPSGroupBox">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -67,10 +67,37 @@
           </sizepolicy>
          </property>
          <property name="title">
-          <string>Shift Stations</string>
+          <string>Station Editing</string>
          </property>
-         <layout class="QFormLayout" name="formLayout">
-          <item row="2" column="0">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="shiftStationLabel">
+            <property name="text">
+             <string>Shift Stations</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="shift_stations_spinbox">
+            <property name="minimum">
+             <number>-10000</number>
+            </property>
+            <property name="maximum">
+             <number>10000</number>
+            </property>
+            <property name="singleStep">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="format_station_gps_button">
+            <property name="text">
+             <string>Format Text</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="verticalSpacer">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -83,7 +110,7 @@
             </property>
            </spacer>
           </item>
-          <item row="3" column="0">
+          <item alignment="Qt::AlignHCenter">
            <widget class="QToolButton" name="sort_stations_button">
             <property name="text">
              <string>Auto-Sort</string>
@@ -91,18 +118,8 @@
             <property name="checkable">
              <bool>true</bool>
             </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QSpinBox" name="spinBox">
-            <property name="minimum">
-             <number>-10000</number>
-            </property>
-            <property name="maximum">
-             <number>10000</number>
-            </property>
-            <property name="singleStep">
-             <number>5</number>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -135,7 +152,7 @@
        <string>Loop GPS</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
-       <item row="0" column="0">
+       <item row="0" column="0" rowspan="2">
         <widget class="QTextEdit" name="loop_gps_text">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -148,14 +165,74 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QToolButton" name="sort_loop_button">
-         <property name="text">
-          <string>Auto-Sort</string>
+       <item row="0" column="1" rowspan="2">
+        <widget class="QGroupBox" name="loopGPSGroupBox">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="title">
+          <string>Loop Editing</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
          </property>
          <property name="checkable">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <widget class="QLabel" name="shiftElevationLabel">
+            <property name="text">
+             <string>Shift Elevation</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="shift_elevation_spinbox"/>
+          </item>
+          <item>
+           <widget class="QPushButton" name="format_loop_gps_button">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Format Text</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_4">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item alignment="Qt::AlignHCenter">
+           <widget class="QToolButton" name="sort_loop_button">
+            <property name="text">
+             <string>Auto-Sort</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
       </layout>
