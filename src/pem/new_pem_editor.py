@@ -177,7 +177,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             gps_conditions = bool(all([
                 e.answerRect().intersects(self.editor.stackedWidget.geometry()),
                 text_files,
-                len(urls) == 1,
+                # len(urls) == 1,
                 self.editor.stackedWidget.currentWidget().tabs.currentIndex() in eligible_tabs,
                 self.editor.share_loop_gps_checkbox.isChecked() is True and
                 self.editor.stackedWidget.currentWidget().tabs.currentIndex() is not _loop_gps_tab or
@@ -344,54 +344,68 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 self.fill_share_range()
 
     def open_gps_files(self, gps_files):
+
+        def read_gps_files(gps_files):  # Merges files together if there are multiple files
+            if len(gps_files) > 1:
+                merged_file = ''
+                for file in gps_files:
+                    with open(file, mode='rt') as in_file:
+                        contents = in_file.read()
+                        merged_file += contents
+                return merged_file
+            else:
+                with open(gps_files[0], mode='rt') as in_file:
+                    file = in_file.read()
+                return file
+
         station_gps_parser = StationGPSParser()
         loop_gps_parser = LoopGPSParser()
 
-        if len(gps_files) == 1:
-            for file in gps_files:
-                try:
-                    pem_info_widget = self.stackedWidget.currentWidget()
-                    station_gps_tab = pem_info_widget.tabs.widget(_station_gps_tab)
-                    loop_gps_tab = pem_info_widget.tabs.widget(_loop_gps_tab)
-                    current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
+        if len(gps_files) > 0:
+            file = read_gps_files(gps_files)
+            try:
+                pem_info_widget = self.stackedWidget.currentWidget()
+                station_gps_tab = pem_info_widget.tabs.widget(_station_gps_tab)
+                loop_gps_tab = pem_info_widget.tabs.widget(_loop_gps_tab)
+                current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
 
-                    if station_gps_tab == current_tab:
-                        gps_file = station_gps_parser.parse(file)
-                        pem_info_widget.station_gps = gps_file
+                if station_gps_tab == current_tab:
+                    gps_file = station_gps_parser.parse_text(file)
+                    pem_info_widget.station_gps = gps_file
 
-                        if station_gps_tab.findChild(QToolButton, 'sort_stations_button').isChecked():
-                            gps_data = '\n'.join(gps_file.get_sorted_gps())
-                        else:
-                            gps_data = '\n'.join(gps_file.get_gps())
-                        station_gps_tab.findChild(QTextEdit, 'station_gps_text').setPlainText(gps_data)
+                    if station_gps_tab.findChild(QToolButton, 'sort_stations_button').isChecked():
+                        gps_data = '\n'.join(gps_file.get_sorted_gps())
+                    else:
+                        gps_data = '\n'.join(gps_file.get_gps())
+                    station_gps_tab.findChild(QTextEdit, 'station_gps_text').setPlainText(gps_data)
 
-                    elif loop_gps_tab == current_tab:
-                        gps_file = loop_gps_parser.parse(file)
-                        pem_info_widget.loop_gps = gps_file
+                elif loop_gps_tab == current_tab:
+                    gps_file = loop_gps_parser.parse_text(file)
+                    pem_info_widget.loop_gps = gps_file
 
-                        if self.share_loop_gps_checkbox.isChecked():
-                            if len(self.pem_files) == 1:
-                                if self.sort_loop_button.isChecked():
-                                    gps_data = '\n'.join(gps_file.get_sorted_gps())
-                                else:
-                                    gps_data = '\n'.join(gps_file.get_gps())
-                            else:
-                                gps_data = self.stackedWidget.widget(0).tabs.widget(_loop_gps_tab).findChild \
-                                    (QTextEdit, 'loop_gps_text').toPlainText()
-                                pem_info_widget.sort_loop_button.setEnabled(False)
-                        else:
-                            if loop_gps_tab.findChild(QToolButton, 'sort_loop_button').isChecked():
+                    if self.share_loop_gps_checkbox.isChecked():
+                        if len(self.pem_files) == 1:
+                            if self.sort_loop_button.isChecked():
                                 gps_data = '\n'.join(gps_file.get_sorted_gps())
                             else:
                                 gps_data = '\n'.join(gps_file.get_gps())
-                        loop_gps_tab.findChild(QTextEdit, 'loop_gps_text').setPlainText(gps_data)
+                        else:
+                            gps_data = self.stackedWidget.widget(0).tabs.widget(_loop_gps_tab).findChild \
+                                (QTextEdit, 'loop_gps_text').toPlainText()
+                            pem_info_widget.sort_loop_button.setEnabled(False)
                     else:
-                        pass
-
-                except Exception as e:
-                    logging.info(str(e))
-                    self.message.information(None, 'Error', str(e))
+                        if loop_gps_tab.findChild(QToolButton, 'sort_loop_button').isChecked():
+                            gps_data = '\n'.join(gps_file.get_sorted_gps())
+                        else:
+                            gps_data = '\n'.join(gps_file.get_gps())
+                    loop_gps_tab.findChild(QTextEdit, 'loop_gps_text').setPlainText(gps_data)
+                else:
                     pass
+
+            except Exception as e:
+                logging.info(str(e))
+                self.message.information(None, 'Error', str(e))
+                pass
         else:
             self.message.information(None, 'Too many files', 'Only one GPS file can be opened at once')
             pass
