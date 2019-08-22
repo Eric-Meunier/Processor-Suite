@@ -1,9 +1,10 @@
 import re
 import os
 import sys
-from functools import reduce
 import operator
 import math
+from pprint import pprint
+from functools import reduce
 from os.path import isfile, join
 import logging
 
@@ -58,19 +59,29 @@ class LoopGPSFile:
 
         sorted_coords = sorted(loop_coords, key=lambda_func, reverse=True)
         formatted_gps = self.format_gps_data(sorted_coords)
+        pprint(formatted_gps)
 
         return formatted_gps
 
     def format_gps_data(self, gps_data):
+
+        def format_row(row):
+            for i, item in enumerate(row):
+                if i < 3:
+                    row[i] = '{:0.2f}'.format(float(item))
+                else:
+                    row[i] = str(item)
+            return row
+
         count = 0
         formatted_gps = []
 
         if len(gps_data) > 0:
             for row in gps_data:
-                row_str = list(map(lambda x: str(x), row))  # Convert each item in the row into a string
                 if row[-1] == '':
-                    row_str[-1] = '0'
-                formatted_gps.append("<L" + '{num:02d}'.format(num=count) + "> " + ' '.join(row_str))
+                    row[-1] = 0
+                formatted_row = format_row(row)
+                formatted_gps.append("<L" + '{num:02d}'.format(num=count) + "> " + ' '.join(formatted_row))
                 count += 1
 
         return formatted_gps

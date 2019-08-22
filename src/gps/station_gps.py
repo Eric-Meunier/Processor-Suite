@@ -43,15 +43,15 @@ class StationGPSFile:
 
         # Splitting up the coordinates from a string to something usable
         for coord in self.gps_data:
-            coord_tuple = (float(coord[0]), float(coord[1]))
+            coord_tuple = (float(coord[0]), float(coord[1]))  # Just used as a key for sorting later
             coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), int(coord[3]), int(coord[4])]
             loop_coords_tuples.append(coord_tuple)
             loop_coords.append(coord_item)
 
-        def point(x):
+        def coord_value(x):
             return sqrt((x[0]**2)+(x[1]**2))
 
-        values = list(map(point, loop_coords_tuples))
+        values = list(map(coord_value, loop_coords_tuples))
         min_value = min(values)
         end_point = tuple([loop_coords_tuples[i] for (i, v) in enumerate(values) if v == min_value][0])
 
@@ -61,20 +61,28 @@ class StationGPSFile:
             return hypot(p[0] - q[0], p[1] - q[1])
 
         sorted_coords = sorted(loop_coords, key=distance, reverse=True)
-        pprint('File: {}'.format(self.filepath))
-        pprint(sorted_coords)
         formatted_gps = self.format_gps_data(sorted_coords)
+        pprint(formatted_gps)
 
         return formatted_gps
 
     def format_gps_data(self, gps_data):
+
+        def format_row(row):
+            for i, item in enumerate(row):
+                if i < 3:
+                    row[i] = '{:0.2f}'.format(float(item))
+                else:
+                    row[i] = str(item)
+            return row
+
         count = 0
         formatted_gps = []
 
         if len(gps_data) > 0:
             for row in gps_data:
-                row_str = list(map(lambda x: str(x), row))  # Convert each item in the row into a string
-                formatted_gps.append("<P" + '{num:02d}'.format(num=count) + "> " + ' '.join(row_str))
+                formatted_row = format_row(row)
+                formatted_gps.append("<P" + '{num:02d}'.format(num=count) + "> " + ' '.join(formatted_row))
                 count += 1
 
         return formatted_gps
