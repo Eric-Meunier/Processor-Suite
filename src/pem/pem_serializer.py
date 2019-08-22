@@ -94,6 +94,7 @@ class PEMSerializer:
         cnt = 0
 
         channel_times = [str(time) for time in header['ChannelTimes']]
+        channel_times = list(map(lambda x: ' ' + x if not x.startswith('-') else x, channel_times))
 
         for i in range(0, len(channel_times), times_per_line):
             line_times = channel_times[i:i+times_per_line]
@@ -108,7 +109,6 @@ class PEMSerializer:
 
     def serialize_data(self, data):
         def serialize_reading(reading):
-            # r'^(?P<Station>^\d+[NSEW]?)\s(?P<Component>[XYZ])R(?P<ReadingIndex>\d+)\s(?P<Gain>\d)\s(?P<RxType>[AM\?])\s(?P<ZTS>\d+\.\d+)\s(?P<CoilDelay>\d+)\s(?P<NumStacks>\d+)\s(?P<ReadingsPerSet>\d)\s(?P<ReadingNumber>\
             result = ' '.join([reading['Station'],
                                reading['Component'] + 'R' + reading['ReadingIndex'],
                                reading['Gain'],
@@ -125,6 +125,7 @@ class PEMSerializer:
             cnt = 0
 
             channel_readings = [str(r) for r in reading['Data']]
+            channel_readings = list(map(lambda x: ' ' + x if not x.startswith('-') else x, channel_readings))
 
             for i in range(0, len(channel_readings), readings_per_line):
                 readings = channel_readings[i:i + readings_per_line]

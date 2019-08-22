@@ -65,17 +65,17 @@
      </attribute>
     </widget>
    </item>
-   <item row="1" column="4" colspan="4">
+   <item row="1" column="4" colspan="4" alignment="Qt::AlignLeft">
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
      <property name="minimumSize">
       <size>
-       <width>0</width>
+       <width>300</width>
        <height>300</height>
       </size>
      </property>

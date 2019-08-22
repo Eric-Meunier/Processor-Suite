@@ -430,9 +430,14 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         if row != -1:
             self.table.removeRow(row)
             self.stackedWidget.removeWidget(self.stackedWidget.widget(row))
-            # self.stackedWidget.widget(row).deleteLater()
             self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
             del self.pem_files[row]
+            if len(self.pem_files) == 0:
+                self.client_edit.setText('')
+                self.grid_edit.setText('')
+                self.loop_edit.setText('')
+                self.min_range_edit.setText('')
+                self.max_range_edit.setText('')
             self.update_table()
         else:
             pass
@@ -615,10 +620,14 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         if self.share_loop_gps_checkbox.isChecked():
             self.sort_loop_button.setEnabled(True)
             if len(self.pem_files) > 0:
-                if self.sort_loop_button.isChecked():
-                    loop = '\n'.join(self.stackedWidget.widget(0).loop_gps.get_sorted_gps())
+                first_widget = self.stackedWidget.widget(0)
+                if first_widget.loop_gps:
+                    if self.sort_loop_button.isChecked():
+                        loop = '\n'.join(first_widget.loop_gps.get_sorted_gps())
+                    else:
+                        loop = '\n'.join(first_widget.loop_gps.get_gps())
                 else:
-                    loop = '\n'.join(self.stackedWidget.widget(0).loop_gps.get_gps())
+                    loop = ''
                 for i in range(self.stackedWidget.count()):
                     widget = self.stackedWidget.widget(i)
                     widget.sort_loop_button.setEnabled(False)
@@ -634,10 +643,13 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                     widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
                     widget.sort_loop_button.setEnabled(True)
                     widget.format_loop_gps_button.setEnabled(True)
-                    if widget.sort_loop_button.isChecked():
-                        widget_loop_text.setPlainText('\n'.join(widget.loop_gps.get_sorted_gps()))
+                    if widget.loop_gps:
+                        if widget.sort_loop_button.isChecked():
+                            widget_loop_text.setPlainText('\n'.join(widget.loop_gps.get_sorted_gps()))
+                        else:
+                            widget_loop_text.setPlainText('\n'.join(widget.loop_gps.get_gps()))
                     else:
-                        widget_loop_text.setPlainText('\n'.join(widget.loop_gps.get_gps()))
+                        widget_loop_text.setPlainText('')
 
     def toggle_sort_loop(self, widget):
         widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
