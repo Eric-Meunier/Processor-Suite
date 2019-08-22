@@ -1,7 +1,7 @@
-# from pem.pem_file import PEMFile
 # from log import Logger
 # logger = Logger(__name__)
 import logging
+import re
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
@@ -37,30 +37,23 @@ class PEMSerializer:
 
     def serialize_loop_coords(self, coords):
         result = '~ Transmitter Loop Co-ordinates:\n'
-        for position in coords:
-            result += position
-        result += '\n'
+        if coords == '':
+            result += '<L00>\n''<L01>\n''<L02>\n''<L03>\n'
+        else:
+            for position in coords:
+                result += position
+            result += '\n'
         return result
-        # cnt = 0
-        # for loop_coord in coords:
-        #     # TODO Coordinates are a single line, should be separated
-        #     # result += loop_coord['Tag'] + ' ' + ' '.join(loop_coord['LoopCoordinates']) + '\n'
-        #     result += loop_coord['Tag'] + ' ' + loop_coord['LoopCoordinates'].strip() + '\n'
-        #     cnt += 1
-        # return result
 
     def serialize_line_coords(self, coords):
         result = '~ Hole/Profile Co-ordinates:\n'
-        for position in coords:
-            result += position
-        result += '\n'
+        if coords == '':
+            result += '<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
+        else:
+            for position in coords:
+                result += position
+            result += '\n'
         return result
-        # cnt = 0
-        # for hole_coord in coords:
-        #     # TODO Coordinates are a single line, should be separated
-        #     result += hole_coord['Tag'] + ' ' + hole_coord['LineCoordinates'].strip() + '\n'
-        #     cnt += 1
-        # return result
 
     def serialize_notes(self, notes):
         if not notes:
@@ -88,6 +81,9 @@ class PEMSerializer:
                                  header['PrimeFieldValue'],
                                  header['CoilArea']])]
 
+        if header['LoopPolarity'] is not None:
+            result_list[-1] += ' ' + header['LoopPolarity']
+
         result = '\n'.join(result_list) + '\n\n'
 
         times_per_line = 7
@@ -108,6 +104,19 @@ class PEMSerializer:
         return result
 
     def serialize_data(self, data):
+
+        def atoi(text):
+            return int(text) if text.isdigit() else text
+
+        def natural_keys(text):
+            '''
+            alist.sort(key=natural_keys) sorts in human order
+            http://nedbatchelder.com/blog/200712/human_sorting.html
+            '''
+            return [atoi(c) for c in re.split(r'(\d+)', text)]
+
+        sorted(data, key=lambda i: (i['Component'], natural_keys(i['Station']), i['ReadingIndex']))
+
         def serialize_reading(reading):
             result = ' '.join([reading['Station'],
                                reading['Component'] + 'R' + reading['ReadingIndex'],
@@ -129,18 +138,7 @@ class PEMSerializer:
 
             for i in range(0, len(channel_readings), readings_per_line):
                 readings = channel_readings[i:i + readings_per_line]
-
-                # TODO Add the space infront of non-negative numbers?
-            #     for i, reading in enumerate(readings):
-            #         if reading[0] == '-':
-            #             pass
-            #         else:
-            #             readings.pop(i)
-            #             reading = str(' '+reading)
-            #             readings.slice(i, reading)
-
                 result += ' '.join([str(r) + max(0, reading_spacing - len(r))*' ' for r in readings]) + '\n'
-
                 cnt += 1
 
             return result + '\n'
@@ -153,15 +151,11 @@ class PEMSerializer:
         :return: A string in PEM file format containing the data found inside of pem_file
         """
 
-        # logging.info("Serializing file...")
-
         result = self.serialize_tags(pem_file.get_tags()) + \
                  self.serialize_loop_coords(pem_file.get_loop_coords()) + \
                  self.serialize_line_coords(pem_file.get_line_coords()) + '~\n' + \
                  self.serialize_notes(pem_file.get_notes()) + \
                  self.serialize_header(pem_file.get_header()) + \
                  self.serialize_data(pem_file.get_data())
-
-        # logging.info("Finished serializing")
 
         return result

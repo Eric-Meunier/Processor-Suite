@@ -1,604 +1,756 @@
-from src.pem.pem_parser import PEMParser, PEMFile
-import matplotlib as mpl
-import matplotlib.style as mplstyle
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-from matplotlib import patches
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QVBoxLayout, QSizePolicy, QMessageBox, QWidget, QPushButton
-from matplotlib.dates import date2num, DateConverter, num2date
-from matplotlib.container import ErrorbarContainer
-from collections import OrderedDict
-import numpy as np
-import math
-import re
 import os
 import sys
-from scipy import interpolate
-from scipy import stats
 import logging
-import warnings
-import cProfile
-import time
-from datetime import datetime
-
-# plt.style.use('seaborn-white')
-# plt.style.use('bmh')
-# plt.style.use('ggplot')
-
-mpl.rcParams['path.simplify'] = True
-mpl.rcParams['path.simplify_threshold'] = 1.0
-mpl.rcParams['agg.path.chunksize'] = 10000
-mpl.rcParams["figure.autolayout"] = False
-mpl.rcParams['lines.linewidth'] = 0.5
-mpl.rcParams['lines.color'] = '#1B2631'
-mpl.rcParams['font.size'] = 9
-mpl.rcParams['font.sans-serif'] = 'Tahoma'
-# mplstyle.use(['seaborn-paper', 'fast'])  #Enabling this will override some of the above settings.
+import copy
+import numpy as np
+from decimal import Decimal, getcontext
+from pprint import pprint
+from itertools import chain
+from src.pem.pem_serializer import PEMSerializer
+from src.pem.pem_parser import PEMParser
+from src.gps.station_gps import StationGPSParser
+from src.gps.loop_gps import LoopGPSParser
+from src.qt_py.pem_info_widget import PEMFileInfoWidget
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
+                             QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
+                             QHeaderView, QListWidget, QTextBrowser, QTextEdit, QStackedWidget, QToolButton)
+from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
+__version__ = '0.1.0'
 
-class PEMFileEditor:
-    """
-    Class for making edits to PEM_Files
-    """
+_station_gps_tab = 1
+_loop_gps_tab = 2
+getcontext().prec = 6
 
-    def __init__(self):
-        self.active_file = None
-        self.parser = PEMParser()
+if getattr(sys, 'frozen', False):
+    # If the application is run as a bundle, the pyInstaller bootloader
+    # extends the sys module by a flag frozen=True and sets the app
+    # path into variable _MEIPASS'.
+    application_path = sys._MEIPASS
+    editorCreatorFile = 'qt_ui\\pem_editor_widget.ui'
+    editorWindowCreatorFile = 'qt_ui\\pem_editor_window.ui'
+    icons_path = 'icons'
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+    editorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_widget.ui')
+    editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
-    def open_file(self, file_path):
-        """
-        Sets the active file. All subsequent operations will be done on the file contained at file_path.
-        :param file_path: string containing path to a PEM file
-        """
-        self.active_file = self.parser.parse(file_path)
+# Load Qt ui file into a class
+# editorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_widget.ui')
+# editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
+Ui_PEMEditorWidget, QtBaseClass = uic.loadUiType(editorCreatorFile)
+Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
 
-    # File plotting functions
-    def generate_plots(self, **kwargs):
-        """
-        :return: A list of matplotlib.figure objects representing the data found inside of the active file
-        """
-        logging.info("Generating plots...")
-
-        lin_figs, log_figs = self.make_plots(**kwargs)
-        logging.info("Finished generating plots")
-        return lin_figs, log_figs
-
-    def get_stations(self):
-        """
-        Converts all the station names in the data into a number, negative if the stations was S or W
-        :param data: Dictionary of data from a PEM file
-        :return: Dictionary of data for a PEM file with the station numbers now integers
-        """
-        data = self.active_file.get_data()
-        stations = [d['Station'] for d in data]
-
-        return [self.convert_station(station) for station in stations]
-
-    def convert_station(self, station):
-        """
-        Converts a single station name into a number, negative if the stations was S or W
-        :return: Integer station number
-        """
-        if re.match(r"\d+(S|W)", station):
-            station = (-int(re.sub(r"\D", "", station)))
-
-        else:
-            station = (int(re.sub(r"\D", "", station)))
-
-        return station
-
-    def get_profile_data(self, component_data):
-        """
-        Transforms the data so it is ready to be plotted for LIN and LOG plots
-        :param component_data: Data (dict) for a single component (i.e. Z, X, or Y)
-        :return: Dictionary where each key is a channel, and the values of those keys are a list of
-        dictionaries which contain the stations and readings of all readings of that channel
-        """
-        profile_data = {}
-        num_channels = len(component_data[0]['Data'])
-
-        for channel in range(0, num_channels):
-            # profile_data[channel] = {}
-            channel_data = []
-
-            for i, station in enumerate(component_data):
-                reading = station['Data'][channel]
-                station_number = int(self.convert_station(station['Station']))
-                channel_data.append({'Station': station_number, 'Reading': reading})
-
-            profile_data[channel] = channel_data
-
-        return profile_data
-
-    def get_channel_data(self, channel, profile_data):
-        """
-        Get the profile-mode data for a given channel
-        :param channel: int, channel number
-        :param profile_data: dict, data in profile-mode
-        :return: data in list form and corresponding stations as a list
-        """
-        data = []
-        stations = []
-
-        for station in profile_data[channel]:
-            data.append(station['Reading'])
-            stations.append(station['Station'])
-
-        return data, stations
-
-    def calc_gaps(self, survey_type, stations, gap):
-        # survey_type = self.active_file.survey_type
-
-        if 'borehole' in survey_type.casefold():
-            min_gap = 50
-        elif 'surface' in survey_type.casefold():
-            min_gap = 200
-        station_gaps = np.diff(stations)
-
-        if gap is None:
-            gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
-
-        gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
-                         station_gaps[i] > gap]
-
-        return gap_intervals
-
-    def get_interp_data(self, survey_type, profile_data, stations, segments, hide_gaps, gap, interp_method='linear'):
-        """
-        Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
-        into 100 segments.
-        :param profile_data: The EM data in profile mode
-        :param stations: The stations of the EM data
-        :return: The interpolated data and stations
-        """
-        survey_type = survey_type
-        stations = np.array(stations, dtype='float64')
-        readings = np.array(profile_data, dtype='float64')
-        x_intervals = np.linspace(stations[0], stations[-1], segments)
-        f = interpolate.interp1d(stations, readings, kind='linear')
-
-        interpolated_y = f(x_intervals)
-
-        if hide_gaps:
-            gap_intervals = self.calc_gaps(survey_type, stations, gap)
-
-            # Masks the intervals that are between gap[0] and gap[1]
-            for gap in gap_intervals:
-                interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
-                                                    interpolated_y)
-
-        return interpolated_y, x_intervals
-
-    def make_LINLOG_plots(self, **kwargs):
-        def get_kwargs():
-            try:
-                kwargs['Client']
-            except KeyError:
-                kwargs['Client'] = header['Client']
-            else:
-                if kwargs['Client'] is None:
-                    kwargs['Client'] = header['Client']
-
-            try:
-                kwargs['Grid']
-            except KeyError:
-                kwargs['Grid'] = header['Grid']
-            else:
-                if kwargs['Grid'] is None:
-                    kwargs['Grid'] = header['Grid']
-
-            try:
-                kwargs['Loop']
-            except KeyError:
-                kwargs['Loop'] = header['Loop']
-            else:
-                if kwargs['Loop'] is None:
-                    kwargs['Loop'] = header['Loop']
-
-            try:
-                kwargs['lbound']
-            except KeyError:
-                kwargs['lbound'] = None
-
-            try:
-                kwargs['rbound']
-            except KeyError:
-                kwargs['rbound'] = None
-
-            try:
-                kwargs['HideGaps']
-            except KeyError:
-                kwargs['HideGaps'] = True
-
-            try:
-                kwargs['Gap']
-            except KeyError:
-                kwargs['Gap'] = None
-
-            try:
-                kwargs['Interp']
-            except KeyError:
-                kwargs['Interp'] = 'linear'
-
-        file = self.active_file
-        header = file.get_header()
-        tags = file.get_tags()
-        components = file.components
-
-        kwargs['Units'] = 'nT/s' if tags['Units'].casefold() == 'nanotesla/sec' else 'pT'
-        kwargs['SurveyType'] = file.survey_type
-        kwargs['Current'] = tags['Current']
-
-        get_kwargs()
-
-        lin_figs = []
-        log_figs = []
-
-        for component in components:
-            component_data = list(filter(lambda d: d['Component'] == component, self.active_file.get_data()))
-            lin_fig = CroneFigure(component_data, component, header, **kwargs).plot_lin()
-            log_fig = CroneFigure(component_data, component, header, **kwargs).plot_log()
-            lin_figs.append(lin_fig)
-            log_figs.append(log_fig)
-        return lin_figs, log_figs
+sys._excepthook = sys.excepthook
 
 
-class CroneFigure:
-    """
-    Class for creating Crone LIN and LOG figures.
-    Probably for STP figures in the future too.
-    """
-    def __init__(self, component_data, component, header, **kwargs):
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
+
+
+class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
+    def __init__(self, parent=None):
         super().__init__()
-        self.editor = PEMFileEditor()
-        self.kwargs = kwargs
-        self.data = component_data
-        self.profile_data = self.editor.get_profile_data(self.data)
-        self.header = header
-        self.component = component
-        self.stations = [self.editor.convert_station(station['Station']) for station in self.data]
-        self.x_limit = min(self.stations) if kwargs['lbound'] is None else kwargs['lbound'], max(self.stations) if \
-            kwargs['rbound'] is None else kwargs['rbound']
-        self.num_channels = int(self.header['NumChannels']) + 1
-        self.units = self.kwargs['Units']
-        self.line_colour = '#1B2631'
-        self.lin_fig = None
-        self.log_fig = None
+        self.parent = parent
+        self.initUi()
+        self.initApps()
+        self.initActions()
 
-    def format_figure(self, figure):
-        """
-        Formats a figure, mainly the spines, adjusting the padding, and adding the rectangle.
-        :param figure: LIN or LOG figure object
-        """
-        axes = figure.axes
+    def initUi(self):
+        def center_window(self):
+            qtRectangle = self.frameGeometry()
+            centerPoint = QDesktopWidget().availableGeometry().center()
+            qtRectangle.moveCenter(centerPoint)
+            self.move(qtRectangle.topLeft())
 
-        def format_spines(ax):
-            ax.spines['right'].set_visible(False)
-            ax.spines['top'].set_visible(False)
+        self.setupUi(self)
 
-            if ax != axes[-1]:
-                ax.spines['bottom'].set_position(('data', 0))
-                ax.tick_params(axis='x', which='major', direction='inout', length=4)
-                plt.setp(ax.get_xticklabels(), visible=False)
+        self.setWindowTitle("PEMEditor  v" + str(__version__))
+        self.setWindowIcon(
+            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
+        # self.setGeometry(500, 300, 1000, 800)
+        center_window(self)
+
+    def initApps(self):
+        self.message = QMessageBox()
+        self.dialog = QFileDialog()
+
+        self.editor = PEMEditor(self)
+        self.layout.addWidget(self.editor)
+        self.setCentralWidget(self.editor)
+
+        self.dockWidget.hide()
+        # self.dockWidget.setWidget(self.tabWidget)
+        # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dockWidget)
+
+        self.parser = PEMParser()
+        self.serializer = PEMSerializer()
+
+    def initActions(self):
+        self.setAcceptDrops(True)
+        self.window().statusBar().showMessage('Ready')
+
+        self.openFile = QAction("&Open...", self)
+        self.openFile.setShortcut("Ctrl+O")
+        self.openFile.setStatusTip('Open file')
+        self.openFile.triggered.connect(self.open_file_dialog)
+
+        self.saveFiles = QAction("&Save Files", self)
+        self.saveFiles.setShortcut("Ctrl+S")
+        self.saveFiles.setStatusTip("Save all files")
+        self.saveFiles.triggered.connect(self.save_all)
+
+        self.saveFilesAs = QAction("&Save Files As...", self)
+        self.saveFilesAs.setShortcut("F12")
+        self.saveFilesAs.setStatusTip("Save all files as...")
+        self.saveFilesAs.triggered.connect(self.save_all_as)
+
+        self.clearFiles = QAction("&Clear Files", self)
+        self.clearFiles.setShortcut("Shift+Del")
+        self.clearFiles.setStatusTip("Clear all files")
+        self.clearFiles.triggered.connect(self.clear_files)
+
+        self.fileMenu = self.menubar.addMenu('&File')
+        self.fileMenu.addAction(self.openFile)
+        self.fileMenu.addAction(self.saveFiles)
+        self.fileMenu.addAction(self.saveFilesAs)
+        self.fileMenu.addAction(self.clearFiles)
+
+        self.sortAllStationGps = QAction("&Sort All Station GPS", self)
+        self.sortAllStationGps.setStatusTip("Sort All Station GPS")
+        self.sortAllStationGps.triggered.connect(self.editor.sort_all_station_gps)
+
+        self.sortAllLoopGps = QAction("&Sort All Loop GPS", self)
+        self.sortAllLoopGps.setStatusTip("Sort All Loop GPS")
+        self.sortAllLoopGps.triggered.connect(self.editor.sort_all_loop_gps)
+
+        self.editMenu = self.menubar.addMenu('&Edit')
+        self.editMenu.addAction(self.sortAllStationGps)
+        self.editMenu.addAction(self.sortAllLoopGps)
+
+    def open_file_dialog(self):
+        try:
+            files = self.dialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem);; All files(*.*)')
+            if files[0] != '':
+                for file in files[0]:
+                    if file.lower().endswith('.pem'):
+                        self.open_files(file)
+                    else:
+                        pass
             else:
-                ax.spines['bottom'].set_visible(False)
-                ax.xaxis.set_ticks_position('bottom')
-                ax.tick_params(axis='x', which='major', direction='out', length=6)
-                plt.setp(ax.get_xticklabels(), visible=True, size=12)
+                pass
+        except Exception as e:
+            logging.warning(str(e))
+            self.message.information(None, 'Error', str(e))
+            pass
 
-        plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
-        self.add_rectangle()
+    def dragEnterEvent(self, e):
+        e.accept()
 
-        for ax in axes:
-            format_spines(ax)
+    def dragMoveEvent(self, e):
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        pem_files = False
+        text_files = False
+        if all([url.lower().endswith('pem') for url in urls]):
+            pem_files = True
+        elif all([url.lower().endswith('txt') or url.lower().endswith('csv') for url in urls]):
+            text_files = True
 
-    def format_xaxis(self, figure):
-        """
-        Formats the X axis of a figure
-        :param figure: LIN or LOG figure objects
-        """
-        x_label_locator = ticker.AutoLocator()
-        major_locator = ticker.FixedLocator(self.stations)
-        plt.xlim(self.x_limit)
-        figure.axes[0].xaxis.set_major_locator(major_locator) # for some reason this seems to apply to all axes
-        figure.axes[-1].xaxis.set_major_locator(x_label_locator)
+        pem_conditions = bool(all([
+            bool(e.answerRect().intersects(self.editor.table.geometry())),
+            pem_files,
+        ]))
 
-    def create_lin_figure(self):
-        """
-        Creates the blank LIN figure
-        """
-        lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
-        ax6 = ax5.twiny()
-        ax6.get_shared_x_axes().join(ax5, ax6)
+        if len(self.editor.pem_files) == 0:
+            if pem_conditions is True:
+                e.acceptProposedAction()
+            else:
+                e.ignore()
 
-        self.lin_fig = lin_fig
-        self.format_figure(self.lin_fig)
-
-    def plot_lin(self):
-        """
-        Plots the data into the LIN figure
-        """
-        def calc_channel_bounds():
-            # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
-            channel_bounds = [None] * 4
-            num_channels_per_plot = int((self.num_channels - 1) // 4)
-            remainder_channels = int((self.num_channels - 1) % 4)
-
-            for k in range(0, len(channel_bounds)):
-                channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
-
-            for i in range(0, remainder_channels):
-                channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
-                for k in range(i + 1, len(channel_bounds)):
-                    channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
-
-            channel_bounds.insert(0, (0, 0))
-            return channel_bounds
-
-        def add_ylabels():
-            for i in range(len(self.lin_fig.axes)-1):
-                ax = self.lin_fig.axes[i]
-                if i == 0:
-                    ax.set_ylabel('Primary Pulse' + "\n(" + self.units + ")")
-                else:
-                    ax.set_ylabel("Channel " + str(channel_bounds[i][0]) + " - " +
-                                   str(channel_bounds[i][1]) + "\n(" + self.units + ")")
-
-        if not self.lin_fig:
-            self.create_lin_figure()
-
-        channel_bounds = calc_channel_bounds()
-
-        for i, group in enumerate(channel_bounds):
-            ax = self.lin_fig.axes[i]
-            self.draw_lines(ax, group[0], group[1])
-
-        self.add_title()
-        add_ylabels()
-        self.format_yaxis(self.lin_fig)
-        self.format_xaxis(self.lin_fig)
-
-        return self.lin_fig
-
-    def create_log_figure(self):
-        """
-        Creates an empty but formatted LOG figure
-        """
-        log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
-        ax2 = ax.twiny()
-        ax2.get_shared_x_axes().join(ax, ax2)
-        plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
-
-        self.log_fig = log_fig
-        self.format_figure(self.log_fig)
-
-    def plot_log(self):
-        """
-        Plots the data into the LOG figure
-        :return:
-        """
-        def add_ylabel():
-            ax = self.log_fig.axes[0]
-            ax.set_ylabel('Primary Pulse to Channel ' + str(self.num_channels-1) + "\n(" + self.units + ")")
-
-        if not self.log_fig:
-            self.create_log_figure()
-
-        ax = self.log_fig.axes[0]
-
-        self.draw_lines(ax, 0, self.num_channels-1)
-        self.add_title()
-        add_ylabel()
-        self.format_yaxis(self.log_fig)
-        self.format_xaxis(self.log_fig)
-
-        return self.log_fig
-
-    def draw_lines(self, ax, channel_low, channel_high):
-        """
-        Plots the lines into an axes of a figure
-        :param ax: Axes of a figure, either LIN or LOG figure objects
-        :param channel_low: The first channel to be plotted
-        :param channel_high: The last channel to be plotted
-        """
-        segments = 1000  # The data will be broken in this number of segments
-        offset = segments * 0.1  # Used for spacing the annotations
-
-        for k in range(channel_low, (channel_high + 1)):
-            # Gets the profile data for a single channel, along with the stations
-            channel_data, stations = self.editor.get_channel_data(k, self.profile_data)
-
-            # Interpolates the channel data, also returns the corresponding x intervals
-            interp_data, x_intervals = self.editor.get_interp_data(self.kwargs['SurveyType'],channel_data, stations, segments,
-                                                            self.kwargs['HideGaps'], self.kwargs['Gap'],
-                                                            self.kwargs['Interp'])
-
-            ax.plot(x_intervals, interp_data, color=self.line_colour)
-
-            # Mask is used to hide data within gaps
-            mask = np.isclose(interp_data, interp_data.astype('float64'))
-            x_intervals = x_intervals[mask]
-            interp_data = interp_data[mask]
-
-            # Annotating the lines
-            for i, x_position in enumerate(x_intervals[int(offset)::int(len(x_intervals) * 0.4)]):
-                y = interp_data[list(x_intervals).index(x_position)]
-
-                if k == 0:
-                    ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7.5, color=self.line_colour,
-                                va='center_baseline', ha='center')
-
-                else:
-                    ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, color=self.line_colour,
-                                va='center_baseline', ha='center')
-
-            offset += len(x_intervals) * 0.15
-
-            if offset >= len(x_intervals) * 0.85:
-                offset = len(x_intervals) * 0.10
-
-    def format_yaxis(self, figure):
-        """
-        Formats the Y axis of a figure
-        :param figure: LIN or LOG figure object
-        """
-        axes = figure.axes
-
-        for ax in axes:
-            ax.get_yaxis().set_label_coords(-0.08, 0.5)
-
-            if ax.get_yscale() != 'symlog':
-                y_limits = ax.get_ylim()
-
-                if (y_limits[1] - y_limits[0]) < 3:
-                    new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                    new_low = new_high * -1
-                    ax.set_ylim(new_low, new_high)
-                    ax.set_yticks(ax.get_yticks())
-
-                elif ax != axes[-1]:
-                    new_high = math.ceil(max(y_limits[1], 0))
-                    new_low = math.floor(min(y_limits[0], 0))
-                    ax.set_ylim(new_low, new_high)
-                    ax.set_yticks(ax.get_yticks())
-
-            elif ax.get_yscale() == 'symlog':
-                y_limits = ax.get_ylim()
-                new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 11), 10))
-                new_low = -1 * 10.0 ** math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
-                ax.set_ylim(new_low, new_high)
-
-                ax.tick_params(axis='y', which='major', labelrotation=90)
-                plt.setp(ax.get_yticklabels(), va='center')
-
-            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
-
-    def add_title(self):
-        """
-        Adds the title header to a figure
-        """
-
-        timebase_freq = ((1 / (float(self.header['Timebase']) / 1000)) / 4)
-
-        if 'borehole' in self.kwargs['SurveyType'].casefold():
-            s_title = 'Hole'
         else:
-            s_title = 'Line'
+            eligible_tabs = [_station_gps_tab, _loop_gps_tab]
 
-        plt.figtext(0.550, 0.960, 'Crone Geophysics & Exploration Ltd.',
-                    fontname='Century Gothic', fontsize=11, ha='center')
+            gps_conditions = bool(all([
+                e.answerRect().intersects(self.editor.stackedWidget.geometry()),
+                text_files,
+                # len(urls) == 1,
+                self.editor.stackedWidget.currentWidget().tabs.currentIndex() in eligible_tabs,
+                self.editor.share_loop_gps_checkbox.isChecked() is True and
+                self.editor.stackedWidget.currentWidget().tabs.currentIndex() is not _loop_gps_tab or
+                len(self.editor.pem_files) == 1,
+                len(self.editor.pem_files) > 0
+            ]))
 
-        plt.figtext(0.550, 0.945, self.kwargs['SurveyType'] + ' Pulse EM Survey', family='cursive', style='italic',
-                    fontname='Century Gothic', fontsize=10, ha='center')
+            if pem_conditions is True or gps_conditions is True:
+                e.acceptProposedAction()
+            else:
+                e.ignore()
 
-        plt.figtext(0.145, 0.935, 'Timebase: ' + str(self.header['Timebase']) + ' ms\n' +
-                    'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
-                    'Current: ' + str(round(float(self.kwargs['Current']), 1)) + ' A',
-                    fontname='Century Gothic', fontsize=10, va='top')
+    def dropEvent(self, e):
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        self.open_files(urls)
 
-        plt.figtext(0.550, 0.935, s_title + ': ' + self.header['LineHole'] + '\n'
-                    + self.component + ' Component' + '\n'
-                    + 'Loop: ' + self.kwargs['Loop'],
-                    fontname='Century Gothic', fontsize=10, va='top', ha='center')
+    def open_files(self, files):
 
-        plt.figtext(0.955, 0.935,
-                    self.kwargs['Client'] + '\n' + self.kwargs['Grid'] + '\n' + self.header['Date'] + '\n',
-                    fontname='Century Gothic', fontsize=10, va='top', ha='right')
+        if not isinstance(files, list) and isinstance(files, str):
+            files = [files]
+        pem_files = [file for file in files if file.lower().endswith('pem')]
+        gps_files = [file for file in files if file.lower().endswith('txt') or file.lower().endswith('csv')]
 
-    def add_rectangle(self):
-        """
-        Draws a rectangle around a figure object
-        """
-        fig = plt.gcf()
-        rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
-                                 facecolor='none', transform=fig.transFigure)
-        fig.patches.append(rect)
+        if len(pem_files) > 0:
+            self.editor.open_pem_files(pem_files)
 
-    # def mk_qt_plot(self):
-    #     import pyqtgraph as pg
-    #     pg.setConfigOption('background', 'w')
+        if len(gps_files) > 0:
+            self.editor.open_gps_files(gps_files)
+
+    def clear_files(self):
+        while self.editor.table.rowCount() > 0:
+            self.editor.table.removeRow(0)
+        for i in reversed(range(self.editor.stackedWidget.count())):
+            widget = self.editor.stackedWidget.widget(i)
+            self.editor.stackedWidget.removeWidget(widget)
+        self.editor.pem_files.clear()
+        self.editor.min_range_edit.setText('')
+        self.editor.max_range_edit.setText('')
+        self.editor.client_edit.setText('')
+        self.editor.grid_edit.setText('')
+        self.editor.loop_edit.setText('')
+        self.window().statusBar().showMessage('All files removed', 2000)
+
+    def save_all(self):
+        if len(self.editor.pem_files) > 0:
+            for row in range(self.editor.table.rowCount()):
+                file = copy.copy(self.editor.pem_files[row])
+                updated_file = self.editor.update_pem_file_from_table(self.editor.pem_files[row], row)
+                save_file = self.serializer.serialize(updated_file)
+                self.window().statusBar().showMessage(
+                    'Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
+                print(save_file, file=open(updated_file.filepath, 'w+'))
+                if os.path.basename(file.filepath) != os.path.basename(updated_file.filepath):
+                    os.remove(file.filepath)
+            self.editor.update_table()
+        else:
+            self.window().statusBar().showMessage('No PEM files to save', 2000)
+
+    def save_all_as(self):
+        if len(self.editor.pem_files) > 0:
+            default_path = os.path.split(self.editor.pem_files[-1].filepath)[0]
+            self.dialog.setFileMode(QFileDialog.Directory)
+            self.dialog.setDirectory(default_path)
+            self.window().statusBar().showMessage('Saving PEM files...')
+            file_dir = QFileDialog.getExistingDirectory(self, '', default_path)
+            suffix = 'Av'
+            if file_dir:
+                for row in range(self.editor.table.rowCount()):
+                    pem_file = self.editor.pem_files[row]
+                    updated_file = self.editor.update_pem_file_from_table(self.editor.pem_files[row], row)
+                    file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
+                    extension = os.path.splitext(pem_file.filepath)[-1]
+                    updated_file.filepath = os.path.join(file_dir, file_name + suffix + extension)
+                    save_file = self.serializer.serialize(updated_file)
+
+                    print(save_file, file=open(updated_file.filepath, 'w+'))
+                    self.window().statusBar().showMessage(
+                        'Save complete. {0} PEM files saved'.format(len(self.editor.pem_files)), 2000)
+                self.editor.update_table()
+            else:
+                self.window().statusBar().showMessage('No directory chosen', 2000)
+                logging.info("No directory chosen, aborted save")
+                pass
+
+
+class PEMEditor(QWidget, Ui_PEMEditorWidget):
+    def __init__(self, parent):
+        super(PEMEditor, self).__init__(parent)
+        self.parent = parent
+
+        self.setupUi(self)
+        self.initActions()
+        self.initApps()
+
+        self.pem_files = []
+        self.gps_files = []
+        self.pem_info_widgets = []
+
+        self.create_table()
+
+    def initApps(self):
+        self.parser = PEMParser()
+        self.message = QMessageBox()
+        self.pem_info_widget = PEMFileInfoWidget
+        self.station_gps_parser = StationGPSParser()
+
+        self.stackedWidget.hide()
+
+    def initActions(self):
+        self.table.viewport().installEventFilter(self)
+        self.table.itemSelectionChanged.connect(self.display_pem_info_widget)
+
+        self.share_loop_gps_checkbox.toggled.connect(self.toggle_share_loop)
+        self.sort_loop_button.toggled.connect(self.toggle_sort_loops)
+
+        self.del_file = QAction("&Remove File", self)
+        self.del_file.setShortcut("Del")
+        self.del_file.triggered.connect(self.remove_file)
+        self.addAction(self.del_file)
+
+        self.share_header_checkbox.stateChanged.connect(self.toggle_share_header)
+        self.reset_header_btn.clicked.connect(self.fill_share_header)
+        self.client_edit.returnPressed.connect(self.update_table)
+        self.grid_edit.returnPressed.connect(self.update_table)
+        self.loop_edit.returnPressed.connect(self.update_table)
+
+        self.share_range_checkbox.stateChanged.connect(self.toggle_share_range)
+        self.reset_range_btn.clicked.connect(self.fill_share_range)
+        self.min_range_edit.returnPressed.connect(self.update_table)
+        self.max_range_edit.returnPressed.connect(self.update_table)
+
+    def open_pem_files(self, pem_files):
+        self.stackedWidget.show()
+        for file in pem_files:
+            try:
+                pem_file = self.parser.parse(file)
+                pem_info_widget = self.pem_info_widget(pem_file, parent=self)
+                self.pem_files.append(pem_file)
+                self.pem_info_widgets.append(pem_info_widget)
+                self.stackedWidget.addWidget(pem_info_widget)
+
+                if len(self.pem_files) == 1:  # The initial fill of the header and station info
+                    if self.client_edit.text() == '':
+                        self.client_edit.setText(self.pem_files[0].header['Client'])
+                    if self.grid_edit.text() == '':
+                        self.grid_edit.setText(self.pem_files[0].header['Grid'])
+                    if self.loop_edit.text() == '':
+                        self.loop_edit.setText(self.pem_files[0].header['Loop'])
+
+                    all_stations = [file.get_unique_stations() for file in self.pem_files]
+
+                    if self.min_range_edit.text() == '':
+                        min_range = str(min(chain.from_iterable(all_stations)))
+                        self.min_range_edit.setText(min_range)
+                    if self.max_range_edit.text() == '':
+                        max_range = str(max(chain.from_iterable(all_stations)))
+                        self.max_range_edit.setText(max_range)
+
+            except Exception as e:
+                logging.info(str(e))
+                self.message.information(None, 'Error', str(e))
+
+            if len(self.pem_files) > 0:
+                # self.window().statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
+                self.fill_share_range()
+
+    def open_gps_files(self, gps_files):
+
+        def read_gps_files(gps_files):  # Merges files together if there are multiple files
+            if len(gps_files) > 1:
+                merged_file = ''
+                for file in gps_files:
+                    with open(file, mode='rt') as in_file:
+                        contents = in_file.read()
+                        merged_file += contents
+                return merged_file
+            else:
+                with open(gps_files[0], mode='rt') as in_file:
+                    file = in_file.read()
+                return file
+
+        station_gps_parser = StationGPSParser()
+        loop_gps_parser = LoopGPSParser()
+
+        if len(gps_files) > 0:
+            file = read_gps_files(gps_files)
+            try:
+                pem_info_widget = self.stackedWidget.currentWidget()
+                station_gps_tab = pem_info_widget.tabs.widget(_station_gps_tab)
+                loop_gps_tab = pem_info_widget.tabs.widget(_loop_gps_tab)
+                current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
+
+                if station_gps_tab == current_tab:
+                    gps_file = station_gps_parser.parse_text(file)
+                    pem_info_widget.station_gps = gps_file
+
+                    if station_gps_tab.findChild(QToolButton, 'sort_stations_button').isChecked():
+                        gps_data = '\n'.join(gps_file.get_sorted_gps())
+                    else:
+                        gps_data = '\n'.join(gps_file.get_gps())
+                    station_gps_tab.findChild(QTextEdit, 'station_gps_text').setPlainText(gps_data)
+
+                elif loop_gps_tab == current_tab:
+                    gps_file = loop_gps_parser.parse_text(file)
+                    pem_info_widget.loop_gps = gps_file
+
+                    if self.share_loop_gps_checkbox.isChecked():
+                        if len(self.pem_files) == 1:
+                            if self.sort_loop_button.isChecked():
+                                gps_data = '\n'.join(gps_file.get_sorted_gps())
+                            else:
+                                gps_data = '\n'.join(gps_file.get_gps())
+                        else:
+                            gps_data = self.stackedWidget.widget(0).tabs.widget(_loop_gps_tab).findChild \
+                                (QTextEdit, 'loop_gps_text').toPlainText()
+                            pem_info_widget.sort_loop_button.setEnabled(False)
+                    else:
+                        if loop_gps_tab.findChild(QToolButton, 'sort_loop_button').isChecked():
+                            gps_data = '\n'.join(gps_file.get_sorted_gps())
+                        else:
+                            gps_data = '\n'.join(gps_file.get_gps())
+                    loop_gps_tab.findChild(QTextEdit, 'loop_gps_text').setPlainText(gps_data)
+                else:
+                    pass
+
+            except Exception as e:
+                logging.info(str(e))
+                self.message.information(None, 'Error', str(e))
+                pass
+        else:
+            self.message.information(None, 'Too many files', 'Only one GPS file can be opened at once')
+            pass
+
+    # Creates the right-click context menu on the table
+    def contextMenuEvent(self, event):
+        if self.table.underMouse():
+            if self.table.selectionModel().selectedIndexes():
+                self.table.menu = QMenu(self.table)
+                self.table.remove_file_action = QAction("&Remove", self)
+                self.table.remove_file_action.triggered.connect(self.remove_file)
+
+                self.table.save_file_file_action = QAction("&Save", self)
+                self.table.save_file_file_action.triggered.connect(self.save_file)
+
+                self.table.average_action = QAction("&Average", self)
+                self.table.average_action.triggered.connect(self.average_select_pem)
+
+                self.table.menu.addAction(self.table.save_file_file_action)
+                self.table.menu.addAction(self.table.remove_file_action)
+                self.table.menu.addAction(self.table.average_action)
+                self.table.menu.popup(QtGui.QCursor.pos())
+            else:
+                pass
+        else:
+            pass
+
+    # Un-selects items from the table when clicking away from the table
+    def eventFilter(self, source, event):
+        if (event.type() == QtCore.QEvent.MouseButtonPress and
+                source is self.table.viewport() and
+                self.table.itemAt(event.pos()) is None):
+            self.table.clearSelection()
+            # self.stackedWidget.hide()
+        return super(QWidget, self).eventFilter(source, event)
+
+    # Remove a single file
+    def remove_file(self):
+        row = self.table.currentRow()
+        if row != -1:
+            self.table.removeRow(row)
+            self.stackedWidget.removeWidget(self.stackedWidget.widget(row))
+            self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
+            del self.pem_files[row]
+            if len(self.pem_files) == 0:
+                self.stackedWidget.hide()
+                self.client_edit.setText('')
+                self.grid_edit.setText('')
+                self.loop_edit.setText('')
+                self.min_range_edit.setText('')
+                self.max_range_edit.setText('')
+            self.update_table()
+        else:
+            pass
+
+    def display_pem_info_widget(self):
+        # self.stackedWidget.show()
+        self.stackedWidget.setCurrentIndex(self.table.currentRow())
+
+    def average_pem_data(self, pem_file=None):
+        pem_file = self.pem_files[self.table.currentRow()]
+        if pem_file.is_averaged:
+            print('File is averaged')
+            pass
+        else:
+            new_data = []
+            unwanted_keys = ['Data', 'NumStacks']
+            print('File is not averaged')
+            num_channels = pem_file.header.get('NumChannels')
+            pem_data = pem_file.get_data()
+            unique_stations = pem_file.get_unique_stations()
+            components = pem_file.get_components()
+
+            for station in unique_stations:
+                station_data = list(filter(lambda x: x['Station'] == station, pem_data))
+
+                for component in components:
+                    component_data = list(filter(lambda x: x['Component'] == component, station_data))
+
+                    new_unique_station = {}
+                    unique_station_readings = []
+                    total_stacks = 0
+
+                    for reading in component_data:
+                        if station == '650S' and component == 'Z':
+                            print('hold up again')
+                        reading_data = reading['Data']
+                        total_stacks += int(reading['NumStacks'])
+                        unique_station_readings.append(reading_data)
+
+                    averaged_reading = np.mean(np.array(unique_station_readings), axis=0)
+
+                    for k, v in component_data[0].items():
+                        if k not in unwanted_keys:
+                            new_unique_station[k] = v
+
+                    new_unique_station['Data'] = [Decimal(x) for x in averaged_reading]
+                    new_unique_station['NumStacks'] = str(total_stacks)
+
+                    new_data.append(new_unique_station)
+
+            pem_file.header['NumReadings'] = str(len(new_data))
+            pem_file.data = new_data
+
+    def average_select_pem(self, pem_file=None):
+        if pem_file is None:
+            pem_file = self.pem_files[self.table.currentRow()]
+            self.average_pem_data(pem_file)
+        else:
+            self.average_pem_data(pem_file)
+
+    # Saves the pem file in memory using the information in the table
+    def update_pem_file_from_table(self, pem_file, table_row):
+        pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0], self.table.item(table_row, 0).text())
+        pem_file.header['Client'] = self.table.item(table_row, 1).text()
+        pem_file.header['Grid'] = self.table.item(table_row, 2).text()
+        pem_file.header['LineHole'] = self.table.item(table_row, 3).text()
+        pem_file.header['Loop'] = self.table.item(table_row, 4).text()
+        pem_file.tags['Current'] = self.table.item(table_row, 5).text()
+        pem_file.loop_coords = self.stackedWidget.widget(table_row).tabs.findChild(QTextEdit, 'loop_gps_text').toPlainText()
+        pem_file.line_coords = self.stackedWidget.widget(table_row).tabs.findChild(QTextEdit, 'station_gps_text').toPlainText()
+        return pem_file
+
+    # Save the PEM file
+    def save_file(self):
+        row = self.table.currentRow()
+
+        if row != -1 and len(self.pem_files) > 0:
+            file = copy.copy(self.pem_files[row])
+            updated_file = self.update_pem_file_from_table(self.pem_files[row], row)
+            save_file = self.parent.serializer.serialize(updated_file)
+            self.parent.window().statusBar().showMessage(
+                'File {} saved.'.format(os.path.basename(updated_file.filepath)), 2000)
+            print(save_file, file=open(updated_file.filepath, 'w+'))
+            self.update_table()
+            # TODO Make an update stackedWidget?
+
+            if os.path.basename(file.filepath) != os.path.basename(updated_file.filepath):
+                os.remove(file.filepath)
+        else:
+            pass
+
+    # Creates the table when the editor is first opened
+    def create_table(self):
+        self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'First Station', 'Last Station']
+        self.table.setColumnCount(len(self.columns))
+        self.table.setHorizontalHeaderLabels(self.columns)
+        self.table.setSizeAdjustPolicy(
+            QAbstractScrollArea.AdjustToContents)
+        # self.table.resizeColumnsToContents()
+        # header = self.table.horizontalHeader()
+        # header.setSectionResizeMode(0, QHeaderView.Stretch)
+        # header.setSectionResizeMode(1, QHeaderView.Stretch)
+        # header.setSectionResizeMode(2, QHeaderView.Stretch)
+        # header.setSectionResizeMode(3, QHeaderView.Stretch)
+
+    def add_to_table(self, pem_file):
+
+        header = pem_file.header
+        tags = pem_file.tags
+        file = os.path.basename(pem_file.filepath)
+        client = self.client_edit.text() if self.share_header_checkbox.isChecked() else header.get('Client')
+        grid = self.grid_edit.text() if self.share_header_checkbox.isChecked() else header.get('Grid')
+        loop = self.loop_edit.text() if self.share_header_checkbox.isChecked() else header.get('Loop')
+        current = tags.get('Current')
+
+        line = header.get('LineHole')
+        start_stn = self.min_range_edit.text() if self.share_range_checkbox.isChecked() else str(
+            min(pem_file.get_unique_stations()))
+        end_stn = self.max_range_edit.text() if self.share_range_checkbox.isChecked() else str(
+            max(pem_file.get_unique_stations()))
+
+        new_row = [file, client, grid, line, loop, current, start_stn, end_stn]
+
+        row_pos = self.table.rowCount()
+        self.table.insertRow(row_pos)
+
+        for i, column in enumerate(self.columns):
+            self.table.setItem(row_pos, i, QTableWidgetItem(new_row[i]))
+
+        self.table.resizeColumnsToContents()
+
+        boldFont = QtGui.QFont()
+        boldFont.setBold(True)
+        # Only used for table comparisons. Makes bold entries that have changed
+        pem_file_info_list = [
+            file,
+            header.get('Client'),
+            header.get('Grid'),
+            header.get('LineHole'),
+            header.get('Loop'),
+            tags.get('Current'),
+            str(min(pem_file.get_unique_stations())),
+            str(max(pem_file.get_unique_stations()))
+        ]
+        for column in range(self.table.columnCount()):
+            if self.table.item(row_pos, column).text() != pem_file_info_list[column]:
+                self.table.item(row_pos, column).setFont(boldFont)
+        #
+        # if self.table.item(row_pos, 3).text() != self.table.item(row_pos, 4).text():
+        #     for column in range (3, 5):
+        #         self.table.item(row_pos, column).setForeground(QtGui.QColor('red'))
+
+    # Deletes and re-creates the table with the new information
+    def update_table(self):
+        # self.update_header()
+        if len(self.pem_files) > 0:
+            while self.table.rowCount() > 0:
+                self.table.removeRow(0)
+            for pem_file in self.pem_files:
+                self.add_to_table(pem_file)
+        else:
+            pass
+
+    def sort_all_station_gps(self):
+        if len(self.pem_files) > 0:
+            for i in range(self.stackedWidget.count()):
+                widget = self.stackedWidget.widget(i)
+                widget.sort_stations_button.setChecked(True)
+                widget_station_text = widget.tabs.widget(_station_gps_tab).findChild(QTextEdit, 'station_gps_text')
+                widget_station_text.setPlainText('\n'.join(self.stackedWidget.widget(0).station_gps.get_sorted_gps()))
+            self.window().statusBar().showMessage('All stations have been sorted', 2000)
+
+    def sort_all_loop_gps(self):
+        if len(self.pem_files) > 0:
+            if self.share_loop_gps_checkbox.isChecked() is False:
+                self.toggle_sort_loops()
+            else:
+                for i in range(self.stackedWidget.count()):
+                    widget = self.stackedWidget.widget(i)
+                    widget.sort_loop_button.setChecked(True)
+                    widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
+                    widget_loop_text.setPlainText('\n'.join(self.stackedWidget.widget(0).loop_gps.get_sorted_gps()))
+                self.sort_loop_button.setChecked(True)
+            self.window().statusBar().showMessage('All loops have been sorted', 2000)
+
+    def fill_share_header(self):
+        if len(self.pem_files) > 0:
+            self.client_edit.setText(self.pem_files[0].header['Client'])
+            self.grid_edit.setText(self.pem_files[0].header['Grid'])
+            self.loop_edit.setText(self.pem_files[0].header['Loop'])
+            self.update_table()
+        else:
+            self.client_edit.setText('')
+            self.grid_edit.setText('')
+            self.loop_edit.setText('')
+
+    def fill_share_range(self):
+        if len(self.pem_files) > 0:
+            all_stations = [file.get_unique_stations() for file in self.pem_files]
+            min_range, max_range = str(min(chain.from_iterable(all_stations))), str(
+                max(chain.from_iterable(all_stations)))
+            self.min_range_edit.setText(min_range)
+            self.max_range_edit.setText(max_range)
+            self.update_table()
+        else:
+            self.min_range_edit.setText('')
+            self.max_range_edit.setText('')
+
+    def toggle_share_header(self):
+        if self.share_header_checkbox.isChecked():
+            self.client_edit.setEnabled(True)
+            self.grid_edit.setEnabled(True)
+            self.loop_edit.setEnabled(True)
+            self.update_table()
+        else:
+            self.client_edit.setEnabled(False)
+            self.grid_edit.setEnabled(False)
+            self.loop_edit.setEnabled(False)
+            self.update_table()
+
+    def toggle_share_range(self):
+        if self.share_range_checkbox.isChecked():
+            self.min_range_edit.setEnabled(True)
+            self.max_range_edit.setEnabled(True)
+            self.update_table()
+        else:
+            self.min_range_edit.setEnabled(False)
+            self.max_range_edit.setEnabled(False)
+            self.update_table()
+
+    def toggle_share_loop(self):
+        if self.share_loop_gps_checkbox.isChecked():
+            self.sort_loop_button.setEnabled(True)
+            if len(self.pem_files) > 0:
+                first_widget = self.stackedWidget.widget(0)
+                if first_widget.loop_gps:
+                    if self.sort_loop_button.isChecked():
+                        loop = '\n'.join(first_widget.loop_gps.get_sorted_gps())
+                    else:
+                        loop = '\n'.join(first_widget.loop_gps.get_gps())
+                else:
+                    loop = ''
+                for i in range(self.stackedWidget.count()):
+                    widget = self.stackedWidget.widget(i)
+                    widget.sort_loop_button.setEnabled(False)
+                    widget.format_loop_gps_button.setEnabled(False)
+                    if i != 0:
+                        widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
+                        widget_loop_text.setPlainText(loop)
+        else:
+            self.sort_loop_button.setEnabled(False)
+            if len(self.pem_files) > 0:
+                for i in range(self.stackedWidget.count()):
+                    widget = self.stackedWidget.widget(i)
+                    widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
+                    widget.sort_loop_button.setEnabled(True)
+                    widget.format_loop_gps_button.setEnabled(True)
+                    if widget.loop_gps:
+                        if widget.sort_loop_button.isChecked():
+                            widget_loop_text.setPlainText('\n'.join(widget.loop_gps.get_sorted_gps()))
+                        else:
+                            widget_loop_text.setPlainText('\n'.join(widget.loop_gps.get_gps()))
+                    else:
+                        widget_loop_text.setPlainText('')
+
+    def toggle_sort_loop(self, widget):
+        widget_loop_text = widget.tabs.widget(_loop_gps_tab).findChild(QTextEdit, 'loop_gps_text')
+        if self.sort_loop_button.isChecked():
+            widget_loop_text.setPlainText('\n'.join(self.stackedWidget.widget(0).loop_gps.get_sorted_gps()))
+        else:
+            widget_loop_text.setPlainText('\n'.join(self.stackedWidget.widget(0).loop_gps.get_gps()))
+
+    def toggle_sort_loops(self):
+        if len(self.pem_files) > 0:
+            for i in range(self.stackedWidget.count()):
+                widget = self.stackedWidget.widget(i)
+                self.toggle_sort_loop(widget)
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    mw = PEMEditorWindow()
+    mw.show()
+    # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
+    # file_names = [f for f in os.listdir(sample_files) if os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
+    # file_paths = []
     #
-    #     file = self.active_file
-    #     # Header info mostly just for the title of the plots
-    #     # TODO Negative coil area in PEM file breaks the parsing
-    #     header = file.get_header()
-    #     tags = file.get_tags()
-    #     client = header['Client']
-    #     loop = header['Loop']
-    #     linehole = header['LineHole']
-    #     date = header['Date']
-    #     grid = header['Grid']
-    #     current = float(tags['Current'])
-    #     timebase = float(header['Timebase'])
-    #     timebase_freq = ((1 / (timebase / 1000)) / 4)
-    #     survey_type = self.get_survey_type()
-    #     num_channels = int(header['NumChannels']) + 1  # +1 because the header channel number is only offtime
-    #     units = file.get_tags()['Units']
-    #
-    #     if 'borehole' in survey_type.casefold():
-    #         s_title = 'Hole'
-    #     else:
-    #         s_title = 'Line'
-    #
-    #     if units.casefold() == 'nanotesla/sec':
-    #         units = 'nT/s'
-    #     elif 'picotesla' in units.casefold():
-    #         units = 'pT'
-    #     else:
-    #         units = "UNDEF_UNIT"
-    #
-    #     data = sorted(self.convert_stations(file.get_data()), key=lambda k: k['Station'])
-    #     components = self.get_components(data)
-    #
-    #     for component in components:
-    #         component_data = list(filter(lambda d: d['Component'] == component, data))
-    #         profile_data = self.get_profile_data(component_data)
-    #         stations = [station['Station'] for station in component_data]
-    #         x_limit = min(stations), max(stations)
-
-    # Legacy function, leave as reference
-    # def generate_placeholder_plots(self):
-    #     """
-    #     :return: A list of matplotlib.figure objects representing the data found inside of the active file
-    #     """
-    #     # Temporary placeholder plots
-    #     # Use as guide for creating generate_plots
-    #     plots_dict = OrderedDict()
-    #
-    #     for reading in self.active_file.get_data():
-    #         station_number = reading['Station']
-    #
-    #         if station_number not in plots_dict:
-    #             fig = Figure()
-    #             ax = fig.add_subplot(111)
-    #             ax.set_title('Station ' + str(station_number))
-    #             ax.set_xlabel('Channel Number (By Index)')
-    #             ax.set_ylabel('Amplitude (' + self.active_file.get_tags()['Units'] + ')')
-    #             fig.subplots_adjust(bottom=0.15)
-    #
-    #             plots_dict[station_number] = {'fig': fig}
-    #             plots_dict[station_number]['ax'] = ax
-    #
-    #         ax = plots_dict[station_number]['ax']
-    #         y = reading['Data']
-    #         ax.plot(range(len(y)), y, '-', linewidth=0.8)
-    #
-    #     plots = [plot_data['fig'] for station_number, plot_data in plots_dict.items()]
-    #     return plots
-
-
-if __name__ == "__main__":
-    # Code to test PEMFileEditor
-    editor = PEMFileEditor()
-    testing_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../sample_files/9600NAv LP-100.PEM")
-    editor.open_file(testing_file)
-    # editor.make_plots()
-    # editor.generate_plots()
-    cProfile.run('editor.make_plots()', sort='cumtime')
-    # plt.show()
-
+    # for file in file_names:
+    #     # file_paths.append(os.path.join(sample_files, file))
+    #     mw.editor.open_file(os.path.join(sample_files, file))
+    # editor = PEMEditor()
+    app.exec_()

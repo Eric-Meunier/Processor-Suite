@@ -1,8 +1,5 @@
 import sys
-import copy
 import logging
-import PyQt5
-from PyQt5.QtWidgets import *
 from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtWidgets import QFileDialog, QMainWindow
 import os
@@ -10,8 +7,7 @@ import numpy as np
 import time
 from scipy import stats
 
-from src.pem.pem_editor import PEMFileEditor
-from qt_py.pem_file_widget import PEMFileWidget
+from src.pem.legacy.pem_editor import PEMFileEditor
 from qt_py.file_browser_widget import FileBrowser
 
 if getattr(sys, 'frozen', False):

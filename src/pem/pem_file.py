@@ -1,5 +1,6 @@
 from src.pem.pem_serializer import PEMSerializer
 import re
+import numpy as np
 
 class PEMFile:
     """
@@ -16,6 +17,18 @@ class PEMFile:
         self.components = components
         self.survey_type = survey_type
         self.filepath = filepath
+        self.is_averaged = self.is_averaged()
+
+    def is_averaged(self):
+        unique_identifiers = []
+
+        for reading in self.data:
+            identifier = ''.join([reading['Station'], reading['Component']])
+            if identifier in unique_identifiers:
+                return False
+            else:
+                unique_identifiers.append(identifier)
+        return True
 
     def get_tags(self):
         return self.tags
@@ -43,7 +56,7 @@ class PEMFile:
         return sorted_components
 
     def get_unique_stations(self):
-        unique_stations = {self.convert_station(n) for n in
+        unique_stations = {n for n in
                            [reading['Station'] for reading in self.data]}
         unique_stations_list = [station for station in unique_stations]
         return unique_stations_list

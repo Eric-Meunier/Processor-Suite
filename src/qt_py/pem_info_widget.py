@@ -89,7 +89,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         except ValueError:
             self.loop_gps = None
 
-
         if self.parent.share_loop_gps_checkbox.isChecked() and len(self.parent.pem_files) > 0:
                 first_file_loop = self.parent.stackedWidget.widget(0).tabs.findChild(QTextEdit, 'loop_gps_text').toPlainText()
                 self.loop_gps_text.setPlainText(first_file_loop)
