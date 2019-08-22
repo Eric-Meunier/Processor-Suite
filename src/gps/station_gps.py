@@ -1,7 +1,8 @@
 import re
 import os
 import sys
-import math
+from math import hypot, sqrt
+from functools import reduce
 from pprint import pprint
 from os.path import isfile, join
 import logging
@@ -47,12 +48,20 @@ class StationGPSFile:
             loop_coords_tuples.append(coord_tuple)
             loop_coords.append(coord_item)
 
-        # The function used in 'sorted' to figure out how to sort it
-        def lambda_func(coord_item):
-            coord = (coord_item[0], coord_item[1])
-            return coord
+        def point(x):
+            return sqrt((x[0]**2)+(x[1]**2))
 
-        sorted_coords = sorted(loop_coords, key=lambda x: math.sqrt((x[0]**2)+(x[1]**2)), reverse=True)
+        values = list(map(point, loop_coords_tuples))
+        min_value = min(values)
+        end_point = tuple([loop_coords_tuples[i] for (i, v) in enumerate(values) if v == min_value][0])
+
+        def distance(q):
+            # Return the Euclidean distance between points p and q.
+            p = end_point
+            return hypot(p[0] - q[0], p[1] - q[1])
+
+        sorted_coords = sorted(loop_coords, key=distance, reverse=True)
+        pprint('File: {}'.format(self.filepath))
         pprint(sorted_coords)
         formatted_gps = self.format_gps_data(sorted_coords)
 

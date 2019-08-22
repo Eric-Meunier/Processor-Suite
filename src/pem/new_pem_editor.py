@@ -370,11 +370,16 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                         gps_file = loop_gps_parser.parse(file)
                         pem_info_widget.loop_gps = gps_file
 
-                        # TODO fix bug here
                         if self.share_loop_gps_checkbox.isChecked():
-                            gps_data = self.stackedWidget.widget(0).tabs.widget(_loop_gps_tab).findChild \
-                                (QTextEdit, 'loop_gps_text').toPlainText()
-                            pem_info_widget.sort_loop_button.setEnabled(False)
+                            if len(self.pem_files) == 1:
+                                if self.sort_loop_button.isChecked():
+                                    gps_data = '\n'.join(gps_file.get_sorted_gps())
+                                else:
+                                    gps_data = '\n'.join(gps_file.get_gps())
+                            else:
+                                gps_data = self.stackedWidget.widget(0).tabs.widget(_loop_gps_tab).findChild \
+                                    (QTextEdit, 'loop_gps_text').toPlainText()
+                                pem_info_widget.sort_loop_button.setEnabled(False)
                         else:
                             if loop_gps_tab.findChild(QToolButton, 'sort_loop_button').isChecked():
                                 gps_data = '\n'.join(gps_file.get_sorted_gps())
@@ -387,8 +392,10 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
                 except Exception as e:
                     logging.info(str(e))
                     self.message.information(None, 'Error', str(e))
+                    pass
         else:
             self.message.information(None, 'Too many files', 'Only one GPS file can be opened at once')
+            pass
 
     # Creates the right-click context menu on the table
     def contextMenuEvent(self, event):
