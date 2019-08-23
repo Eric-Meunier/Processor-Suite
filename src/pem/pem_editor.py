@@ -124,6 +124,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu.addAction(self.saveFilesAs)
         self.fileMenu.addAction(self.clearFiles)
 
+        self.averageAllPems = QAction("&Average All PEM Files", self)
+        self.averageAllPems.setStatusTip("Average all PEM Files")
+        self.averageAllPems.triggered.connect(self.editor.average_all_pem_files)
+
         self.sortAllStationGps = QAction("&Sort All Station GPS", self)
         self.sortAllStationGps.setStatusTip("Sort All Station GPS")
         self.sortAllStationGps.triggered.connect(self.editor.sort_all_station_gps)
@@ -133,6 +137,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.sortAllLoopGps.triggered.connect(self.editor.sort_all_loop_gps)
 
         self.editMenu = self.menubar.addMenu('&Edit')
+        self.editMenu.addAction(self.averageAllPems)
         self.editMenu.addAction(self.sortAllStationGps)
         self.editMenu.addAction(self.sortAllLoopGps)
 
@@ -470,15 +475,13 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         # self.stackedWidget.show()
         self.stackedWidget.setCurrentIndex(self.table.currentRow())
 
-    def average_pem_data(self, pem_file=None):
-        pem_file = self.pem_files[self.table.currentRow()]
-        if pem_file.is_averaged:
+    def average_pem_data(self, pem_file):
+        if pem_file.is_averaged():
             print('File is averaged')
-            pass
+            return
         else:
             new_data = []
             unwanted_keys = ['Data', 'NumStacks']
-            print('File is not averaged')
             num_channels = pem_file.header.get('NumChannels')
             pem_data = pem_file.get_data()
             unique_stations = pem_file.get_unique_stations()
@@ -514,13 +517,24 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
 
             pem_file.header['NumReadings'] = str(len(new_data))
             pem_file.data = new_data
+            self.window().statusBar().showMessage('File averaged.', 2000)
 
     def average_select_pem(self, pem_file=None):
-        if pem_file is None:
+        if not pem_file:
             pem_file = self.pem_files[self.table.currentRow()]
             self.average_pem_data(pem_file)
         else:
             self.average_pem_data(pem_file)
+        self.update_table()
+
+    def average_all_pem_files(self):
+        if len(self.pem_files) > 0:
+            for pem_file in self.pem_files:
+                self.average_pem_data(pem_file)
+            self.update_table()
+            self.window().statusBar().showMessage('All files averaged.', 2000)
+        else:
+            pass
 
     # Saves the pem file in memory using the information in the table
     def update_pem_file_from_table(self, pem_file, table_row):
@@ -555,7 +569,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
 
     # Creates the table when the editor is first opened
     def create_table(self):
-        self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'First Station', 'Last Station']
+        self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'First Station', 'Last Station', 'Averaged?']
         self.table.setColumnCount(len(self.columns))
         self.table.setHorizontalHeaderLabels(self.columns)
         self.table.setSizeAdjustPolicy(
@@ -576,14 +590,14 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         grid = self.grid_edit.text() if self.share_header_checkbox.isChecked() else header.get('Grid')
         loop = self.loop_edit.text() if self.share_header_checkbox.isChecked() else header.get('Loop')
         current = tags.get('Current')
-
+        averaged = 'Yes' if pem_file.is_averaged() else 'No'
         line = header.get('LineHole')
         start_stn = self.min_range_edit.text() if self.share_range_checkbox.isChecked() else str(
             min(pem_file.get_unique_stations()))
         end_stn = self.max_range_edit.text() if self.share_range_checkbox.isChecked() else str(
             max(pem_file.get_unique_stations()))
 
-        new_row = [file, client, grid, line, loop, current, start_stn, end_stn]
+        new_row = [file, client, grid, line, loop, current, start_stn, end_stn, averaged]
 
         row_pos = self.table.rowCount()
         self.table.insertRow(row_pos)
@@ -604,7 +618,8 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             header.get('Loop'),
             tags.get('Current'),
             str(min(pem_file.get_unique_stations())),
-            str(max(pem_file.get_unique_stations()))
+            str(max(pem_file.get_unique_stations())),
+            str(averaged)
         ]
         for column in range(self.table.columnCount()):
             if self.table.item(row_pos, column).text() != pem_file_info_list[column]:

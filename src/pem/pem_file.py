@@ -17,11 +17,9 @@ class PEMFile:
         self.components = components
         self.survey_type = survey_type
         self.filepath = filepath
-        self.is_averaged = self.is_averaged()
 
     def is_averaged(self):
         unique_identifiers = []
-
         for reading in self.data:
             identifier = ''.join([reading['Station'], reading['Component']])
             if identifier in unique_identifiers:
