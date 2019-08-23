@@ -38,6 +38,7 @@ def exception_hook(exctype, value, traceback):
 
 sys.excepthook = exception_hook
 
+
 class CustomMdiArea(QMdiArea):
     def __init__(self, parent=None):
         super().__init__()

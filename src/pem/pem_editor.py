@@ -1,20 +1,21 @@
+import copy
+import logging
 import os
 import sys
-import logging
-import copy
-import numpy as np
 from decimal import Decimal, getcontext
-from pprint import pprint
 from itertools import chain
-from src.pem.pem_serializer import PEMSerializer
-from src.pem.pem_parser import PEMParser
-from src.gps.station_gps import StationGPSParser
-from src.gps.loop_gps import LoopGPSParser
-from src.qt_py.pem_info_widget import PEMFileInfoWidget
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
-                             QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
-                             QHeaderView, QListWidget, QTextBrowser, QTextEdit, QStackedWidget, QToolButton)
+
+import numpy as np
 from PyQt5 import (QtCore, QtGui, uic)
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
+                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QTextEdit, QToolButton)
+
+from src.gps.loop_gps import LoopGPSParser
+from src.gps.station_gps import StationGPSParser
+from src.pem.pem_parser import PEMParser
+from src.pem.pem_serializer import PEMSerializer
+from src.pem.pem_file_editor import PEMFileEditor
+from src.qt_py.pem_info_widget import PEMFileInfoWidget
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
@@ -76,14 +77,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.setWindowTitle("PEMEditor  v" + str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
-        # self.setGeometry(500, 300, 1000, 800)
+        self.setGeometry(500, 300, 1000, 800)
         center_window(self)
 
     def initApps(self):
         self.message = QMessageBox()
         self.dialog = QFileDialog()
 
-        self.editor = PEMEditor(self)
+        self.editor = PEMEditorWidget(self)
         self.layout.addWidget(self.editor)
         self.setCentralWidget(self.editor)
 
@@ -272,9 +273,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 pass
 
 
-class PEMEditor(QWidget, Ui_PEMEditorWidget):
+class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
     def __init__(self, parent):
-        super(PEMEditor, self).__init__(parent)
+        super(PEMEditorWidget, self).__init__(parent)
         self.parent = parent
 
         self.setupUi(self)
@@ -289,6 +290,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
 
     def initApps(self):
         self.parser = PEMParser()
+        self.file_editor = PEMFileEditor()
         self.message = QMessageBox()
         self.pem_info_widget = PEMFileInfoWidget
         self.station_gps_parser = StationGPSParser()
@@ -477,46 +479,10 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
 
     def average_pem_data(self, pem_file):
         if pem_file.is_averaged():
-            print('File is averaged')
+            self.window().statusBar().showMessage('File is already averaged.', 2000)
             return
         else:
-            new_data = []
-            unwanted_keys = ['Data', 'NumStacks']
-            num_channels = pem_file.header.get('NumChannels')
-            pem_data = pem_file.get_data()
-            unique_stations = pem_file.get_unique_stations()
-            components = pem_file.get_components()
-
-            for station in unique_stations:
-                station_data = list(filter(lambda x: x['Station'] == station, pem_data))
-
-                for component in components:
-                    component_data = list(filter(lambda x: x['Component'] == component, station_data))
-
-                    new_unique_station = {}
-                    unique_station_readings = []
-                    total_stacks = 0
-
-                    for reading in component_data:
-                        if station == '650S' and component == 'Z':
-                            print('hold up again')
-                        reading_data = reading['Data']
-                        total_stacks += int(reading['NumStacks'])
-                        unique_station_readings.append(reading_data)
-
-                    averaged_reading = np.mean(np.array(unique_station_readings), axis=0)
-
-                    for k, v in component_data[0].items():
-                        if k not in unwanted_keys:
-                            new_unique_station[k] = v
-
-                    new_unique_station['Data'] = [Decimal(x) for x in averaged_reading]
-                    new_unique_station['NumStacks'] = str(total_stacks)
-
-                    new_data.append(new_unique_station)
-
-            pem_file.header['NumReadings'] = str(len(new_data))
-            pem_file.data = new_data
+            pem_file = self.file_editor.average(pem_file)
             self.window().statusBar().showMessage('File averaged.', 2000)
 
     def average_select_pem(self, pem_file=None):
@@ -569,7 +535,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
 
     # Creates the table when the editor is first opened
     def create_table(self):
-        self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'First Station', 'Last Station', 'Averaged?']
+        self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'Coil Area', 'First Station', 'Last Station', 'Averaged?']
         self.table.setColumnCount(len(self.columns))
         self.table.setHorizontalHeaderLabels(self.columns)
         self.table.setSizeAdjustPolicy(
@@ -590,6 +556,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         grid = self.grid_edit.text() if self.share_header_checkbox.isChecked() else header.get('Grid')
         loop = self.loop_edit.text() if self.share_header_checkbox.isChecked() else header.get('Loop')
         current = tags.get('Current')
+        coil_area = pem_file.header.get('CoilArea')
         averaged = 'Yes' if pem_file.is_averaged() else 'No'
         line = header.get('LineHole')
         start_stn = self.min_range_edit.text() if self.share_range_checkbox.isChecked() else str(
@@ -597,7 +564,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
         end_stn = self.max_range_edit.text() if self.share_range_checkbox.isChecked() else str(
             max(pem_file.get_unique_stations()))
 
-        new_row = [file, client, grid, line, loop, current, start_stn, end_stn, averaged]
+        new_row = [file, client, grid, line, loop, current, coil_area, start_stn, end_stn, averaged]
 
         row_pos = self.table.rowCount()
         self.table.insertRow(row_pos)
@@ -617,6 +584,7 @@ class PEMEditor(QWidget, Ui_PEMEditorWidget):
             header.get('LineHole'),
             header.get('Loop'),
             tags.get('Current'),
+            header.get('CoilArea'),
             str(min(pem_file.get_unique_stations())),
             str(max(pem_file.get_unique_stations())),
             str(averaged)

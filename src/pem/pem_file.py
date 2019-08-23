@@ -1,6 +1,5 @@
 from src.pem.pem_serializer import PEMSerializer
 import re
-import numpy as np
 
 class PEMFile:
     """
@@ -27,6 +26,15 @@ class PEMFile:
             else:
                 unique_identifiers.append(identifier)
         return True
+
+    def is_split(self):
+        channel_times = self.header.get('ChannelTimes')
+        num_ontime_channels = len(list(filter(lambda x: x < 0, channel_times)))-1
+
+        if num_ontime_channels == 1:
+            return True
+        else:
+            return False
 
     def get_tags(self):
         return self.tags

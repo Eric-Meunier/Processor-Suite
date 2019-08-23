@@ -52,57 +52,70 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
 
     def fill_info(self):
-        header = self.pem_file.header
-        survey_type = self.pem_file.survey_type
-        if 'surface' in survey_type.lower():
-            linetype = 'Line'
-        else:
-            linetype = 'Hole'
 
-        # Fill the info tab
-        for k, v in header.items():
-            unwanted_keys = ['Convension', 'IsNormalized', 'PrimeFieldValue','ChannelTimes']
-            if k not in unwanted_keys:
-                if k == 'LineHole':
-                    k = linetype
-                self.info_text_edit.append('<html><b>{k}:</b</html>\t{v}'.format(k=k, v=v))
+        def fill_info_tab():
+            survey_type = self.pem_file.survey_type
+            operator = self.pem_file.tags.get('Operator')
+            loop_size = ' x '.join(self.pem_file.tags.get('LoopSize').split(' ')[0:2])
 
-        self.info_text_edit.append('<html><b>Notes: </b</html> {notes}'.format(notes='\n'.join(self.pem_file.notes)))
-
-        # Fill station GPS
-        try:
-            self.station_gps = self.station_gps_parser.parse_text(self.pem_file.get_line_coords())
-        except ValueError:
-            self.station_gps = None
-
-        if self.station_gps:
-            if self.sort_stations_button.isChecked():
-                self.station_gps_text.setPlainText('\n'.join(self.station_gps.get_sorted_gps()))
+            if 'surface' in survey_type.lower():
+                linetype = 'Line'
             else:
-                self.station_gps_text.setPlainText('\n'.join(self.station_gps.get_gps()))
-        else:
-            self.station_gps_text.setPlainText('')
+                linetype = 'Hole'
 
-        # Fill loop GPS
-        try:
-            self.loop_gps = self.loop_gps_parser.parse_text(self.pem_file.get_loop_coords())
-        except ValueError:
-            self.loop_gps = None
+            self.info_text_edit.append('<html><b>Operator: </b</html> {operator}'.format(operator=operator))
+            self.info_text_edit.append('<html><b>Loop Size: </b</html> {loop_size}'.format(loop_size=loop_size))
+            # Fill the info tab
+            for k, v in header.items():
+                unwanted_keys = ['Convension', 'IsNormalized', 'PrimeFieldValue','ChannelTimes']
+                if k not in unwanted_keys:
+                    if k == 'LineHole':
+                        k = linetype
+                    self.info_text_edit.append('<html><b>{k}:</b</html>\t{v}'.format(k=k, v=v))
 
-        if self.parent.share_loop_gps_checkbox.isChecked() and len(self.parent.pem_files) > 0:
-                first_file_loop = self.parent.stackedWidget.widget(0).tabs.findChild(QTextEdit, 'loop_gps_text').toPlainText()
-                self.loop_gps_text.setPlainText(first_file_loop)
-        else:
-            if self.loop_gps:
-                if self.parent.sort_loop_button.isChecked():
-                    self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_sorted_gps()))
+            self.info_text_edit.append('<html><b>Notes: </b</html> {notes}'.format(notes='\n'.join(self.pem_file.notes)))
+
+        def fill_station_text():
+            # Fill station GPS
+            try:
+                self.station_gps = self.station_gps_parser.parse_text(self.pem_file.get_line_coords())
+            except ValueError:
+                self.station_gps = None
+
+            if self.station_gps:
+                if self.sort_stations_button.isChecked():
+                    self.station_gps_text.setPlainText('\n'.join(self.station_gps.get_sorted_gps()))
                 else:
-                    if self.sort_loop_button.isChecked():
+                    self.station_gps_text.setPlainText('\n'.join(self.station_gps.get_gps()))
+            else:
+                self.station_gps_text.setPlainText('')
+
+        def fill_loop_text():
+            # Fill loop GPS
+            try:
+                self.loop_gps = self.loop_gps_parser.parse_text(self.pem_file.get_loop_coords())
+            except ValueError:
+                self.loop_gps = None
+
+            if self.parent.share_loop_gps_checkbox.isChecked() and len(self.parent.pem_files) > 0:
+                    first_file_loop = self.parent.stackedWidget.widget(0).tabs.findChild(QTextEdit, 'loop_gps_text').toPlainText()
+                    self.loop_gps_text.setPlainText(first_file_loop)
+            else:
+                if self.loop_gps:
+                    if self.parent.sort_loop_button.isChecked():
                         self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_sorted_gps()))
                     else:
-                        self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_gps()))
-            else:
-                self.loop_gps_text.setPlainText('')
+                        if self.sort_loop_button.isChecked():
+                            self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_sorted_gps()))
+                        else:
+                            self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_gps()))
+                else:
+                    self.loop_gps_text.setPlainText('')
+
+        header = self.pem_file.header
+        fill_info_tab()
+        fill_station_text()
+        fill_loop_text()
 
     def sort_station_gps(self):
         if self.station_gps:
