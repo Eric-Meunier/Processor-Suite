@@ -1,13 +1,13 @@
 import os
 import sys
 from copy import copy
-from decimal import Decimal
-from pprint import pprint
-from functools import reduce
-from src.pem.pem_parser import PEMParser
-from src.pem.pem_file import PEMFile
+from decimal import Decimal, getcontext
 
 import numpy as np
+
+from src.pem.pem_parser import PEMParser
+
+getcontext().prec = 6
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -50,14 +50,16 @@ class PEMFileEditor:
                     if component_data:
                         new_unique_station = {}
                         unique_station_readings = []
+                        stack_weights = []
                         total_stacks = 0
 
                         for reading in component_data:
-                            reading_data = reading['Data']
+                            stack_weights.append(int(reading['NumStacks']))
                             total_stacks += int(reading['NumStacks'])
-                            unique_station_readings.append(reading_data)
+                            unique_station_readings.append(reading['Data'])
 
-                        averaged_reading = np.mean(np.array(unique_station_readings), axis=0)
+                        stack_weights = np.array(stack_weights, dtype=float)/total_stacks
+                        averaged_reading = np.average(np.array(unique_station_readings, dtype=float), axis=0, weights=stack_weights)
 
                         for k, v in component_data[0].items():
                             if k not in unwanted_keys:
@@ -98,13 +100,13 @@ class PEMFileEditor:
             if 'induction' in survey_type.lower():
                 pp_times = (-0.0002, -0.0001)
                 for i, pair in enumerate(channel_pairs):
-                    if float(pair[0]) == pp_times[0]:
-                        return [(pp_times, i)]
+                    if float(pair[0]) == pp_times[0] and float(pair[1]) == pp_times[1]:
+                        return [(pp_times, i-1)]  # i offset by 1 because length difference with channel_times
             if 'fluxgate' or 'squid' in survey_type.lower():
                 return [(channel_pairs[0], 0)]
 
         if pem_file.is_split():
-            print('Stop, already split')
+            return
         else:
             pem_file.unsplit_data = copy(pem_file.data)
             channel_times = pem_file.header.get('ChannelTimes')
@@ -131,6 +133,19 @@ class PEMFileEditor:
 
             return pem_file
 
+    def scale_coil_area(self, pem_file, new_coil_area):
+        new_coil_area = int(new_coil_area)
+        old_coil_area = int(pem_file.header.get('CoilArea'))
+
+        scale_factor = Decimal(old_coil_area/new_coil_area)
+
+        for i, station in enumerate(pem_file.data):
+            for j, reading in enumerate(station['Data']):
+                pem_file.data[i]['Data'][j] = reading * scale_factor
+        pem_file.header['CoilArea'] = str(new_coil_area)
+        pem_file.notes.append('<HE3> Data scaled by coil area change from {0} to {1}'.format(str(old_coil_area), str(new_coil_area)))
+
+        return pem_file
 
 if __name__ == '__main__':
     editor = PEMFileEditor()
@@ -148,7 +163,7 @@ if __name__ == '__main__':
         print('File: ' + filepath)
 
         pem_file = parser.parse(filepath)
-        editor.split_channels(pem_file)
+        editor.scale_coil_area(pem_file, 5000)
     # file = r'C:\Users\Eric\Desktop\600N.PEM'
     # file = r'C:\Users\Eric\Desktop\CDR3 Surface Induction.PEM'
     # file = r'C:\Users\Eric\Desktop\2400NAv.PEM'

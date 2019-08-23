@@ -153,8 +153,8 @@ class PEMSerializer:
 
         result = self.serialize_tags(pem_file.get_tags()) + \
                  self.serialize_loop_coords(pem_file.get_loop_coords()) + \
-                 self.serialize_line_coords(pem_file.get_line_coords()) + '~\n' + \
-                 self.serialize_notes(pem_file.get_notes()) + \
+                 self.serialize_line_coords(pem_file.get_line_coords()) + \
+                 self.serialize_notes(pem_file.get_notes()) + '~\n' + \
                  self.serialize_header(pem_file.get_header()) + \
                  self.serialize_data(pem_file.get_data())
 

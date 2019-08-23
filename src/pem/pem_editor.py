@@ -2,19 +2,18 @@ import copy
 import logging
 import os
 import sys
-from decimal import Decimal, getcontext
+from decimal import getcontext
 from itertools import chain
 
-import numpy as np
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QTextEdit, QToolButton)
 
 from src.gps.loop_gps import LoopGPSParser
 from src.gps.station_gps import StationGPSParser
+from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_serializer import PEMSerializer
-from src.pem.pem_file_editor import PEMFileEditor
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -305,6 +304,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
     def initActions(self):
         self.table.viewport().installEventFilter(self)
         self.table.itemSelectionChanged.connect(self.display_pem_info_widget)
+        self.table.itemChanged.connect(self.scale_select_coil_area)
 
         self.share_loop_gps_checkbox.toggled.connect(self.toggle_share_loop)
         self.sort_loop_button.toggled.connect(self.toggle_sort_loops)
@@ -536,6 +536,20 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         else:
             pass
 
+    def scale_coil_area(self, pem_file, new_coil_area):
+        pem_file = self.file_editor.scale_coil_area(pem_file, new_coil_area)
+        self.update_table()
+
+    def scale_select_coil_area(self, e):
+        if e.column() == self.columns.index('Coil Area'):
+            pem_file = self.pem_files[e.row()]
+            old_value = int(pem_file.header.get('CoilArea'))
+            new_value = int(self.table.item(e.row(), e.column()).text())
+            if int(old_value) != int(new_value):
+                self.scale_coil_area(pem_file, int(new_value))
+                self.window().statusBar().showMessage(
+                    'Coil area changed from {0} to {1}'.format(str(old_value), str(new_value)), 2000)
+
     # Saves the pem file in memory using the information in the table
     def update_pem_file_from_table(self, pem_file, table_row):
         pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0], self.table.item(table_row, 0).text())
@@ -572,7 +586,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
     # Creates the table when the editor is first opened
     def create_table(self):
         self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'Coil Area', 'First Station',
-                        'Last Station', 'Averaged?']
+                        'Last Station', 'Averaged', 'Split']
         self.table.setColumnCount(len(self.columns))
         self.table.setHorizontalHeaderLabels(self.columns)
         self.table.setSizeAdjustPolicy(
@@ -595,13 +609,14 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         current = tags.get('Current')
         coil_area = pem_file.header.get('CoilArea')
         averaged = 'Yes' if pem_file.is_averaged() else 'No'
+        split = 'Yes' if pem_file.is_split() else 'No'
         line = header.get('LineHole')
         start_stn = self.min_range_edit.text() if self.share_range_checkbox.isChecked() else str(
             min(pem_file.get_unique_stations()))
         end_stn = self.max_range_edit.text() if self.share_range_checkbox.isChecked() else str(
             max(pem_file.get_unique_stations()))
 
-        new_row = [file, client, grid, line, loop, current, coil_area, start_stn, end_stn, averaged]
+        new_row = [file, client, grid, line, loop, current, coil_area, start_stn, end_stn, averaged, split]
 
         row_pos = self.table.rowCount()
         self.table.insertRow(row_pos)
@@ -624,7 +639,8 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
             header.get('CoilArea'),
             str(min(pem_file.get_unique_stations())),
             str(max(pem_file.get_unique_stations())),
-            str(averaged)
+            str(averaged),
+            str(split)
         ]
         for column in range(self.table.columnCount()):
             if self.table.item(row_pos, column).text() != pem_file_info_list[column]:
