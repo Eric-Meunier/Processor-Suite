@@ -129,6 +129,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.averageAllPems.setStatusTip("Average all PEM Files")
         self.averageAllPems.triggered.connect(self.editor.average_all_pem_files)
 
+        self.splitAllPems = QAction("&Split All PEM Files", self)
+        self.splitAllPems.setStatusTip("Split all PEM Files")
+        self.splitAllPems.triggered.connect(self.editor.split_all_pem_files)
+
         self.sortAllStationGps = QAction("&Sort All Station GPS", self)
         self.sortAllStationGps.setStatusTip("Sort All Station GPS")
         self.sortAllStationGps.triggered.connect(self.editor.sort_all_station_gps)
@@ -139,6 +143,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.editMenu = self.menubar.addMenu('&Edit')
         self.editMenu.addAction(self.averageAllPems)
+        self.editMenu.addAction(self.splitAllPems)
         self.editMenu.addAction(self.sortAllStationGps)
         self.editMenu.addAction(self.sortAllLoopGps)
 
@@ -436,9 +441,13 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                 self.table.average_action = QAction("&Average", self)
                 self.table.average_action.triggered.connect(self.average_select_pem)
 
+                self.table.split_action = QAction("&Split", self)
+                self.table.split_action.triggered.connect(self.split_select_pem)
+
                 self.table.menu.addAction(self.table.save_file_file_action)
                 self.table.menu.addAction(self.table.remove_file_action)
                 self.table.menu.addAction(self.table.average_action)
+                self.table.menu.addAction(self.table.split_action)
                 self.table.menu.popup(QtGui.QCursor.pos())
             else:
                 pass
@@ -502,6 +511,31 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         else:
             pass
 
+    def split_pem_data(self, pem_file):
+        if pem_file.is_split():
+            self.window().statusBar().showMessage('File is already split.', 2000)
+            return
+        else:
+            pem_file = self.file_editor.split_channels(pem_file)
+            self.window().statusBar().showMessage('File split.', 2000)
+
+    def split_select_pem(self, pem_file=None):
+        if not pem_file:
+            pem_file = self.pem_files[self.table.currentRow()]
+            self.split_pem_data(pem_file)
+        else:
+            self.split_pem_data(pem_file)
+        self.update_table()
+
+    def split_all_pem_files(self):
+        if len(self.pem_files) > 0:
+            for pem_file in self.pem_files:
+                self.split_pem_data(pem_file)
+            self.update_table()
+            self.window().statusBar().showMessage('All files split.', 2000)
+        else:
+            pass
+
     # Saves the pem file in memory using the information in the table
     def update_pem_file_from_table(self, pem_file, table_row):
         pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0], self.table.item(table_row, 0).text())
@@ -510,8 +544,10 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         pem_file.header['LineHole'] = self.table.item(table_row, 3).text()
         pem_file.header['Loop'] = self.table.item(table_row, 4).text()
         pem_file.tags['Current'] = self.table.item(table_row, 5).text()
-        pem_file.loop_coords = self.stackedWidget.widget(table_row).tabs.findChild(QTextEdit, 'loop_gps_text').toPlainText()
-        pem_file.line_coords = self.stackedWidget.widget(table_row).tabs.findChild(QTextEdit, 'station_gps_text').toPlainText()
+        pem_file.loop_coords = self.stackedWidget.widget(table_row).tabs.findChild(QTextEdit,
+                                                                                   'loop_gps_text').toPlainText()
+        pem_file.line_coords = self.stackedWidget.widget(table_row).tabs.findChild(QTextEdit,
+                                                                                   'station_gps_text').toPlainText()
         return pem_file
 
     # Save the PEM file
@@ -535,7 +571,8 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
 
     # Creates the table when the editor is first opened
     def create_table(self):
-        self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'Coil Area', 'First Station', 'Last Station', 'Averaged?']
+        self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'Coil Area', 'First Station',
+                        'Last Station', 'Averaged?']
         self.table.setColumnCount(len(self.columns))
         self.table.setHorizontalHeaderLabels(self.columns)
         self.table.setSizeAdjustPolicy(

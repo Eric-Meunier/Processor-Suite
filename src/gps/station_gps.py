@@ -107,7 +107,7 @@ class StationGPSParser:
         self.filepath = None
         self.gps_file = StationGPSFile
         self.re_gps = re.compile(
-            r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+(?P<Station>-?\d+)')
+            r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+)')
 
     def parse(self, filepath):
         self.filepath = filepath

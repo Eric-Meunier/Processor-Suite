@@ -37,7 +37,7 @@ class PEMParser:
         #     re.MULTILINE
         # )
         self.re_line_coords = re.compile(
-            r'(?P<Tags><P\d*>)\W+(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1)\W+(?P<Station>\d+).*')
+            r'(?P<Tags><P\d*>)\W+(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+).*')
 
         # Notes i.e. GEN and HE tags
         self.re_notes = re.compile(  # Parsing the notes i.e. GEN tags and HE tags

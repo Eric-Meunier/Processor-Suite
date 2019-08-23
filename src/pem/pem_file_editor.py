@@ -22,6 +22,7 @@ class PEMFileEditor:
     """
     Class to make edits to PEMFiles
     """
+
     def average(self, pem_file):
         """
         Average the EM data
@@ -76,33 +77,59 @@ class PEMFileEditor:
 
         def get_offtime_channels(channel_times):
             ontime_channels = list(filter(lambda x: x <= 0, channel_times))
-            num_ontime_channels = len(ontime_channels)
+            num_ontime_channels = len(ontime_channels)-1
 
             remaining_channels = list(filter(lambda x: x > 0, channel_times))
             paired_channel_times = list(map(lambda x, y: (x, y), remaining_channels[:-1], remaining_channels[1:]))
             differences = list(map(lambda x, y: y - x, remaining_channels[:-1], remaining_channels[1:]))
 
-            offtime_channels = [(paired_channel_times[0], num_ontime_channels+1)]
+            offtime_channels = [(paired_channel_times[0], num_ontime_channels)]
 
             for i, channel in enumerate(differences[1:]):
                 # Divided by 2 because there are small drops in CDDR3 borehole fluxgate times
-                if differences[i+1] >= (differences[i]/2):
-                    offtime_channels.append((paired_channel_times[i+1], i+2+num_ontime_channels))
+                if differences[i + 1] >= (differences[i] / 2):
+                    offtime_channels.append((paired_channel_times[i + 1], i + 1 + num_ontime_channels))
                 else:
                     break
-            pprint(offtime_channels)
             return offtime_channels
+
+        def get_pp_channel():
+            survey_type = pem_file.survey_type
+            if 'induction' in survey_type.lower():
+                pp_times = (-0.0002, -0.0001)
+                for i, pair in enumerate(channel_pairs):
+                    if float(pair[0]) == pp_times[0]:
+                        return [(pp_times, i)]
+            if 'fluxgate' or 'squid' in survey_type.lower():
+                return [(channel_pairs[0], 0)]
 
         if pem_file.is_split():
             print('Stop, already split')
         else:
+            pem_file.unsplit_data = copy(pem_file.data)
             channel_times = pem_file.header.get('ChannelTimes')
-            offtime_channels = get_offtime_channels(channel_times)
-            num_channels = pem_file.header.get('NumChannels')
-            survey_type = pem_file.survey_type
-            receiver_gen = pem_file.header.get('Receiver')[1]
+            channel_pairs = list(map(lambda x, y: (x, y), channel_times[:-1], channel_times[1:]))
 
-            # print('stop')
+            offtime_channels = get_offtime_channels(channel_times)
+            pp_channel = get_pp_channel()
+            kept_channels = pp_channel + offtime_channels
+            kept_channels_indeces = [item[1] for item in kept_channels]
+
+            # Modifying the EM data
+            for station in pem_file.get_data():
+                off_time_readings = []
+                for i, reading in enumerate(station['Data']):
+                    if i in kept_channels_indeces:
+                        off_time_readings.append(reading)
+                    else:
+                        pass
+                station['Data'] = off_time_readings
+
+            pem_file.header['NumChannels'] = str(len(kept_channels_indeces))
+            pem_file.header['ChannelTimes'] = [item[0] for item in kept_channels]
+            pem_file.header['ChannelTimes'] = list(dict.fromkeys(list(sum(pem_file.header['ChannelTimes'], ()))))
+
+            return pem_file
 
 
 if __name__ == '__main__':
@@ -111,12 +138,12 @@ if __name__ == '__main__':
 
     # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
     sample_files = r'C:\Users\Eric\Desktop\All survey types'
-    file_names = [f for f in os.listdir(sample_files) if os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
+    file_names = [f for f in os.listdir(sample_files) if
+                  os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
     file_paths = []
 
     # file = os.path.join(sample_files, file_names[0])
     for file in file_names:
-
         filepath = os.path.join(sample_files, file)
         print('File: ' + filepath)
 
@@ -129,6 +156,3 @@ if __name__ == '__main__':
     # print('File: '+file)
     # pem_file = parser.parse(file)
     # editor.split_channels(pem_file)
-
-
-
