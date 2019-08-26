@@ -7,7 +7,8 @@ from itertools import chain
 
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
-                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QTextEdit, QToolButton)
+                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QTextEdit, QToolButton,
+                             QInputDialog)
 
 from src.gps.loop_gps import LoopGPSParser
 from src.gps.station_gps import StationGPSParser
@@ -125,26 +126,33 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu.addAction(self.clearFiles)
 
         self.averageAllPems = QAction("&Average All PEM Files", self)
-        self.averageAllPems.setStatusTip("Average all PEM Files")
+        self.averageAllPems.setStatusTip("Average all PEM files")
         self.averageAllPems.triggered.connect(self.editor.average_all_pem_files)
 
         self.splitAllPems = QAction("&Split All PEM Files", self)
-        self.splitAllPems.setStatusTip("Split all PEM Files")
+        self.splitAllPems.setStatusTip("Split all PEM files")
         self.splitAllPems.triggered.connect(self.editor.split_all_pem_files)
 
+        self.coilAreaAllPems = QAction("&Change All Coil Areas", self)
+        self.coilAreaAllPems.setStatusTip("Change all coil areas to the same value")
+        self.coilAreaAllPems.triggered.connect(self.editor.scale_all_coil_area)
+
         self.sortAllStationGps = QAction("&Sort All Station GPS", self)
-        self.sortAllStationGps.setStatusTip("Sort All Station GPS")
+        self.sortAllStationGps.setStatusTip("Sort the station GPS for every file")
         self.sortAllStationGps.triggered.connect(self.editor.sort_all_station_gps)
 
         self.sortAllLoopGps = QAction("&Sort All Loop GPS", self)
-        self.sortAllLoopGps.setStatusTip("Sort All Loop GPS")
+        self.sortAllLoopGps.setStatusTip("Sort the loop GPS for every file")
         self.sortAllLoopGps.triggered.connect(self.editor.sort_all_loop_gps)
 
-        self.editMenu = self.menubar.addMenu('&Edit')
-        self.editMenu.addAction(self.averageAllPems)
-        self.editMenu.addAction(self.splitAllPems)
-        self.editMenu.addAction(self.sortAllStationGps)
-        self.editMenu.addAction(self.sortAllLoopGps)
+        self.PEMMenu = self.menubar.addMenu('&PEM')
+        self.PEMMenu.addAction(self.averageAllPems)
+        self.PEMMenu.addAction(self.splitAllPems)
+        self.PEMMenu.addAction(self.coilAreaAllPems)
+
+        self.GPSMenu = self.menubar.addMenu('&GPS')
+        self.GPSMenu.addAction(self.sortAllStationGps)
+        self.GPSMenu.addAction(self.sortAllLoopGps)
 
     def open_file_dialog(self):
         try:
@@ -550,6 +558,14 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                 self.window().statusBar().showMessage(
                     'Coil area changed from {0} to {1}'.format(str(old_value), str(new_value)), 2000)
 
+    def scale_all_coil_area(self):
+        if len(self.pem_files) > 0:
+            coil_area, okPressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:")
+            if okPressed:
+                for i, pem_file in enumerate(self.pem_files):
+                    coil_column = self.columns.index('Coil Area')
+                    self.table.item(i, coil_column).setText(str(coil_area))
+
     # Saves the pem file in memory using the information in the table
     def update_pem_file_from_table(self, pem_file, table_row):
         pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0], self.table.item(table_row, 0).text())
@@ -667,7 +683,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                 widget = self.stackedWidget.widget(i)
                 widget.sort_stations_button.setChecked(True)
                 widget_station_text = widget.tabs.widget(_station_gps_tab).findChild(QTextEdit, 'station_gps_text')
-                widget_station_text.setPlainText('\n'.join(self.stackedWidget.widget(0).station_gps.get_sorted_gps()))
+                widget_station_text.setPlainText('\n'.join(self.stackedWidget.widget(i).station_gps.get_sorted_gps()))
             self.window().statusBar().showMessage('All stations have been sorted', 2000)
 
     def sort_all_loop_gps(self):

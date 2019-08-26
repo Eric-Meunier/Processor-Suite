@@ -115,7 +115,7 @@ class PEMSerializer:
             '''
             return [atoi(c) for c in re.split(r'(\d+)', text)]
 
-        sorted(data, key=lambda i: (i['Component'], natural_keys(i['Station']), i['ReadingIndex']))
+        data.sort(key=lambda i: (i['Component'], natural_keys(i['Station']), i['ReadingNumber']))
 
         def serialize_reading(reading):
             result = ' '.join([reading['Station'],

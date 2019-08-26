@@ -57,8 +57,8 @@ class PEMFileEditor:
                             stack_weights.append(int(reading['NumStacks']))
                             total_stacks += int(reading['NumStacks'])
                             unique_station_readings.append(reading['Data'])
-
-                        stack_weights = np.array(stack_weights, dtype=float)/total_stacks
+                        # if station == '900S':
+                        stack_weights = np.array(stack_weights, dtype=object)/total_stacks
                         averaged_reading = np.average(np.array(unique_station_readings, dtype=float), axis=0, weights=stack_weights)
 
                         for k, v in component_data[0].items():

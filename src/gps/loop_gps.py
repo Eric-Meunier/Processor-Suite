@@ -55,9 +55,9 @@ class LoopGPSFile:
         # The function used in 'sorted' to figure out how to sort it
         def lambda_func(coord_item):
             coord = (coord_item[0], coord_item[1])
-            return (-135 - math.degrees(math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360
+            return (math.degrees(math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360
 
-        sorted_coords = sorted(loop_coords, key=lambda_func, reverse=True)
+        sorted_coords = sorted(loop_coords, key=lambda_func)
         formatted_gps = self.format_gps_data(sorted_coords)
 
         return formatted_gps
