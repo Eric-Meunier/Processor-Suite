@@ -312,7 +312,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
     def initActions(self):
         self.table.viewport().installEventFilter(self)
         self.table.itemSelectionChanged.connect(self.display_pem_info_widget)
-        self.table.itemChanged.connect(self.scale_select_coil_area)
+        self.table.itemChanged.connect(self.scale_coil_area_event)
 
         self.share_loop_gps_checkbox.toggled.connect(self.toggle_share_loop)
         self.sort_loop_button.toggled.connect(self.toggle_sort_loops)
@@ -452,10 +452,18 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                 self.table.split_action = QAction("&Split", self)
                 self.table.split_action.triggered.connect(self.split_select_pem)
 
+                self.table.scale_ca_action = QAction("&Coil Area", self)
+                self.table.scale_ca_action.triggered.connect(self.scale_coil_area_selection)
+
                 self.table.menu.addAction(self.table.save_file_file_action)
-                self.table.menu.addAction(self.table.remove_file_action)
+                self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.average_action)
                 self.table.menu.addAction(self.table.split_action)
+                self.table.menu.addAction(self.table.scale_ca_action)
+                self.table.menu.addSeparator()
+                self.table.menu.addAction(self.table.remove_file_action)
+
+
                 self.table.menu.popup(QtGui.QCursor.pos())
             else:
                 pass
@@ -471,25 +479,6 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
             # self.stackedWidget.hide()
         return super(QWidget, self).eventFilter(source, event)
 
-    # Remove a single file
-    def remove_file(self):
-        row = self.table.currentRow()
-        if row != -1:
-            self.table.removeRow(row)
-            self.stackedWidget.removeWidget(self.stackedWidget.widget(row))
-            self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
-            del self.pem_files[row]
-            if len(self.pem_files) == 0:
-                self.stackedWidget.hide()
-                self.client_edit.setText('')
-                self.grid_edit.setText('')
-                self.loop_edit.setText('')
-                self.min_range_edit.setText('')
-                self.max_range_edit.setText('')
-            self.update_table()
-        else:
-            pass
-
     def display_pem_info_widget(self):
         # self.stackedWidget.show()
         self.stackedWidget.setCurrentIndex(self.table.currentRow())
@@ -504,8 +493,14 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
 
     def average_select_pem(self, pem_file=None):
         if not pem_file:
-            pem_file = self.pem_files[self.table.currentRow()]
-            self.average_pem_data(pem_file)
+            rows = []
+            for i in self.table.selectedIndexes():
+                if i.row() not in rows:
+                    rows.append(i.row())
+
+            for row in rows:
+                pem_file = self.pem_files[row]
+                self.average_pem_data(pem_file)
         else:
             self.average_pem_data(pem_file)
         self.update_table()
@@ -529,8 +524,14 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
 
     def split_select_pem(self, pem_file=None):
         if not pem_file:
-            pem_file = self.pem_files[self.table.currentRow()]
-            self.split_pem_data(pem_file)
+            rows = []
+            for i in self.table.selectedIndexes():
+                if i.row() not in rows:
+                    rows.append(i.row())
+
+            for row in rows:
+                pem_file = self.pem_files[row]
+                self.split_pem_data(pem_file)
         else:
             self.split_pem_data(pem_file)
         self.update_table()
@@ -548,7 +549,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         pem_file = self.file_editor.scale_coil_area(pem_file, new_coil_area)
         self.update_table()
 
-    def scale_select_coil_area(self, e):
+    def scale_coil_area_event(self, e):
         if e.column() == self.columns.index('Coil Area'):
             pem_file = self.pem_files[e.row()]
             old_value = int(pem_file.header.get('CoilArea'))
@@ -557,6 +558,20 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                 self.scale_coil_area(pem_file, int(new_value))
                 self.window().statusBar().showMessage(
                     'Coil area changed from {0} to {1}'.format(str(old_value), str(new_value)), 2000)
+
+    def scale_coil_area_selection(self):
+        coil_area, okPressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:")
+        if okPressed:
+            rows = []
+            for i in self.table.selectedIndexes():
+                if i.row() not in rows:
+                    rows.append(i.row())
+
+            for row in rows:
+                coil_column = self.columns.index('Coil Area')
+                pem_file = self.pem_files[row]
+                self.scale_coil_area(pem_file, coil_area)
+                self.table.item(row, coil_column).setText(str(coil_area))
 
     def scale_all_coil_area(self):
         if len(self.pem_files) > 0:
@@ -580,11 +595,14 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                                                                                    'station_gps_text').toPlainText()
         return pem_file
 
-    # Save the PEM file
+    # Save selected PEM files
     def save_file(self):
-        row = self.table.currentRow()
+        rows = []
+        for i in self.table.selectedIndexes():
+            if i.row() not in rows:
+                rows.append(i.row())
 
-        if row != -1 and len(self.pem_files) > 0:
+        for row in rows:
             file = copy.copy(self.pem_files[row])
             updated_file = self.update_pem_file_from_table(self.pem_files[row], row)
             save_file = self.parent.serializer.serialize(updated_file)
@@ -592,12 +610,30 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                 'File {} saved.'.format(os.path.basename(updated_file.filepath)), 2000)
             print(save_file, file=open(updated_file.filepath, 'w+'))
             self.update_table()
-            # TODO Make an update stackedWidget?
 
             if os.path.basename(file.filepath) != os.path.basename(updated_file.filepath):
                 os.remove(file.filepath)
-        else:
-            pass
+
+    # Remove selected files
+    def remove_file(self):
+        rows = []
+        for i in reversed(self.table.selectedIndexes()):
+            if i.row() not in rows:
+                rows.append(i.row())
+
+        for row in rows:
+            self.table.removeRow(row)
+            self.stackedWidget.removeWidget(self.stackedWidget.widget(row))
+            self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
+            del self.pem_files[row]
+            if len(self.pem_files) == 0:
+                self.stackedWidget.hide()
+                self.client_edit.setText('')
+                self.grid_edit.setText('')
+                self.loop_edit.setText('')
+                self.min_range_edit.setText('')
+                self.max_range_edit.setText('')
+        self.update_table()
 
     # Creates the table when the editor is first opened
     def create_table(self):
@@ -661,6 +697,12 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         for column in range(self.table.columnCount()):
             if self.table.item(row_pos, column).text() != pem_file_info_list[column]:
                 self.table.item(row_pos, column).setFont(boldFont)
+
+        if self.table.item(row_pos, self.columns.index('Averaged')).text().lower() == 'no':
+            self.table.item(row_pos, self.columns.index('Averaged')).setForeground(QtGui.QColor('red'))
+
+        if self.table.item(row_pos, self.columns.index('Split')).text().lower() == 'no':
+            self.table.item(row_pos, self.columns.index('Split')).setForeground(QtGui.QColor('red'))
         #
         # if self.table.item(row_pos, 3).text() != self.table.item(row_pos, 4).text():
         #     for column in range (3, 5):

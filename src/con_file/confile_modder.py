@@ -289,12 +289,15 @@ class ConFile:
             self.original_name = self.name = self.re_bfield_line.search(self.file).group('Line')
         else:
             self.original_name = self.re_line.search(self.file).group('Line')
-            self.check_header()  # If it's not B-field, check if pembat has been run
 
-            if re.search(self.re_hole, self.file):
+            # If it is a borehole, use the group 'Hole' as the name (but make sure it doesn't say 'Hole Hole'
+            if re.search(self.re_hole, self.file) and not re.search('Hole Hole', self.file):
                 self.name = re.search(self.re_hole, self.file).group('Hole')
             else:
                 self.name = re.split('[XYZ]\.CON', os.path.basename(self.filepath))[0]
+
+            self.check_header()  # If it's not B-field, check if pembat has been run
+
         self.start_stn = int(self.re_start_stn.search(self.file).group('StartStn'))
         self.end_stn = int(self.re_end_stn.search(self.file).group('EndStn'))
         self.set_win2()
