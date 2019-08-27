@@ -20,7 +20,7 @@ from src.qt_py.pem_info_widget import PEMFileInfoWidget
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 _station_gps_tab = 1
 _loop_gps_tab = 2
@@ -143,15 +143,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.coilAreaAllPems.setStatusTip("Change all coil areas to the same value")
         self.coilAreaAllPems.triggered.connect(self.editor.scale_all_coil_area)
 
-        self.editLineNames = QAction("&Bulk Rename Lines/Holes", self)
+        self.editLineNames = QAction("&Rename All Lines/Holes", self)
         self.editLineNames.setStatusTip("Rename all line/hole names")
         self.editLineNames.setShortcut("F2")
-        self.editLineNames.triggered.connect(self.editor.edit_linenames)
+        self.editLineNames.triggered.connect(lambda: self.editor.batch_rename(type='Line'))
 
-        self.editFileNames = QAction("&Bulk Rename Files", self)
+        self.editFileNames = QAction("&Rename All Files", self)
         self.editFileNames.setStatusTip("Rename all file names")
         self.editFileNames.setShortcut("F3")
-        self.editFileNames.triggered.connect(self.editor.edit_filenames)
+        self.editFileNames.triggered.connect(lambda: self.editor.batch_rename(type='File'))
 
         self.sortAllStationGps = QAction("&Sort All Station GPS", self)
         self.sortAllStationGps.setStatusTip("Sort the station GPS for every file")
@@ -273,8 +273,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('No PEM files to save', 2000)
 
     def save_all_to(self):
-
-        # def find_suffix()
+        # Allows the user to select where to save all the files. Save As currently not needed
+        # since saving is done smartly
 
         if len(self.editor.pem_files) > 0:
             default_path = os.path.split(self.editor.pem_files[-1].filepath)[0]
@@ -290,9 +290,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 for row in range(self.editor.table.rowCount()):
                     pem_file = self.editor.pem_files[row]
                     updated_file = self.editor.update_pem_file_from_table(self.editor.pem_files[row], row)
-                    file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
-                    extension = os.path.splitext(pem_file.filepath)[-1]
-                    updated_file.filepath = os.path.join(file_dir, file_name + extension)
+                    # file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
+                    # extension = os.path.splitext(pem_file.filepath)[-1]
+                    # updated_file.filepath = os.path.join(file_dir, file_name + extension)
 
                     self.editor.save_pem_file(updated_file)
                     self.window().statusBar().showMessage(
@@ -344,14 +344,14 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
 
         self.share_header_checkbox.stateChanged.connect(self.toggle_share_header)
         self.reset_header_btn.clicked.connect(self.fill_share_header)
-        self.client_edit.returnPressed.connect(self.update_table)
-        self.grid_edit.returnPressed.connect(self.update_table)
-        self.loop_edit.returnPressed.connect(self.update_table)
+        self.client_edit.textChanged.connect(self.update_table)
+        self.grid_edit.textChanged.connect(self.update_table)
+        self.loop_edit.textChanged.connect(self.update_table)
 
         self.share_range_checkbox.stateChanged.connect(self.toggle_share_range)
         self.reset_range_btn.clicked.connect(self.fill_share_range)
-        self.min_range_edit.returnPressed.connect(self.update_table)
-        self.max_range_edit.returnPressed.connect(self.update_table)
+        self.min_range_edit.textChanged.connect(self.update_table)
+        self.max_range_edit.textChanged.connect(self.update_table)
 
     def open_pem_files(self, pem_files):
         self.stackedWidget.show()
@@ -475,11 +475,20 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                 self.table.scale_ca_action = QAction("&Coil Area", self)
                 self.table.scale_ca_action.triggered.connect(self.scale_coil_area_selection)
 
+                self.table.rename_lines_action = QAction("&Rename Lines/Holes", self)
+                self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line', selected=True))
+
+                self.table.rename_files_action = QAction("&Rename Files", self)
+                self.table.rename_files_action.triggered.connect(lambda: self.batch_rename(type='File', selected=True))
+
                 self.table.menu.addAction(self.table.save_file_file_action)
                 self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.average_action)
                 self.table.menu.addAction(self.table.split_action)
                 self.table.menu.addAction(self.table.scale_ca_action)
+                self.table.menu.addSeparator()
+                self.table.menu.addAction(self.table.rename_lines_action)
+                self.table.menu.addAction(self.table.rename_files_action)
                 self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.remove_file_action)
 
@@ -890,32 +899,35 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                 widget = self.stackedWidget.widget(i)
                 self.toggle_sort_loop(widget)
 
-    def edit_linenames(self):
-
+    def batch_rename(self, type, selected=False):
+    
         def rename_pem_files():
             if len(self.linename_editor.pem_files) > 0:
                 self.linename_editor.accept_changes()
-                for i, pem_file in enumerate(self.linename_editor.pem_files):
-                    self.pem_files[i].header['LineHole'] = pem_file
+                if selected is False:
+                    for i, pem_file in enumerate(self.linename_editor.pem_files):
+                        self.pem_files[i] = pem_file
+                else:
+                    for i, row in enumerate(rows):
+                        self.pem_files[row] = self.linename_editor.pem_files[i]
                 self.update_table()
 
-        self.linename_editor = LineNameEditor(self.pem_files, field='Line name')
+        if selected is False:
+            self.linename_editor = LineNameEditor(self.pem_files, type=type)
+        else:
+            rows = []
+            pem_files = []
+            for i in self.table.selectedIndexes():
+                if i.row() not in rows:
+                    rows.append(i.row())
+
+            for row in rows:
+                pem_file = self.pem_files[row]
+                pem_files.append(pem_file)
+
+            self.linename_editor = LineNameEditor(pem_files, type=type)
+
         self.linename_editor.buttonBox.accepted.connect(rename_pem_files)
-        self.linename_editor.acceptChangesSignal.connect(rename_pem_files)
-        self.linename_editor.buttonBox.rejected.connect(self.linename_editor.close)
-
-        self.linename_editor.show()
-
-    def edit_filenames(self):
-
-        def rename_pem_files():
-            if len(self.linename_editor.pem_files) > 0:
-                self.linename_editor.accept_changes()
-                for i, pem_file in enumerate(self.linename_editor.pem_files):
-                    self.pem_files[i] = pem_file
-                self.update_table()
-
-        self.linename_editor = LineNameEditor(self.pem_files, field='File name')
         self.linename_editor.acceptChangesSignal.connect(rename_pem_files)
         self.linename_editor.buttonBox.rejected.connect(self.linename_editor.close)
 
@@ -928,14 +940,14 @@ class LineNameEditor(QWidget, Ui_LineNameEditorWidget):
     """
     acceptChangesSignal = QtCore.pyqtSignal()
 
-    def __init__(self, pem_files, field=None, parent=None):
+    def __init__(self, pem_files, type=None, parent=None):
         super().__init__()
         self.parent = parent
         self.setupUi(self)
         self.pem_files = pem_files
-        self.field = field
+        self.type = type
 
-        if self.field == 'Line name':
+        if self.type == 'Line':
             self.setWindowTitle('Rename lines/holes names')
         else:
             self.setWindowTitle('Rename files names')
@@ -972,10 +984,10 @@ class LineNameEditor(QWidget, Ui_LineNameEditorWidget):
         row_pos = self.table.rowCount()
         self.table.insertRow(row_pos)
 
-        if self.field == 'Line name':
+        if self.type == 'Line':
             item = QTableWidgetItem(pem_file.header.get('LineHole'))
             item2 = QTableWidgetItem(pem_file.header.get('LineHole'))
-        elif self.field == 'File name':
+        elif self.type == 'File':
             item = QTableWidgetItem(os.path.basename(pem_file.filepath))
             item2 = QTableWidgetItem(os.path.basename(pem_file.filepath))
         else:
@@ -994,7 +1006,7 @@ class LineNameEditor(QWidget, Ui_LineNameEditorWidget):
         for row in range(self.table.rowCount()):
 
             # Split the text based on '[n]'. Anything before it becomes the prefix, and everything after is added as a suffix
-            if self.field == 'Line name':
+            if self.type == 'Line':
                 # Immediately replace what's in the removeEdit object with nothing
                 input = self.table.item(row, 0).text().replace(self.removeEdit.text(), '')
                 suffix = self.addEdit.text().rsplit('[n]')[-1]
@@ -1023,7 +1035,7 @@ class LineNameEditor(QWidget, Ui_LineNameEditorWidget):
         if len(self.pem_files) > 0:
             for i, pem_file in enumerate(self.pem_files):
                 new_name = self.table.item(i, 1).text()
-                if self.field == 'Line name':
+                if self.type == 'Line':
                     pem_file.header['LineHole'] = new_name
                 else:
                     old_path = copy.copy(pem_file.filepath)
