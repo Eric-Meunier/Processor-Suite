@@ -34,7 +34,7 @@ class PEMFileEditor:
             print('File is averaged')
             return
         else:
-            pem_file.raw_data = copy(pem_file.get_data())
+            pem_file.unaveraged_data = copy(pem_file.get_data())
             new_data = []
             unwanted_keys = ['Data', 'NumStacks']
             num_channels = pem_file.header.get('NumChannels')

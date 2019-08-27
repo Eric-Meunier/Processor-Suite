@@ -16,6 +16,9 @@ class PEMFile:
         self.components = components
         self.survey_type = survey_type
         self.filepath = filepath
+        self.unsplit_data = None
+        self.unaveraged_data = None
+        self.old_filepath = None
 
     def is_averaged(self):
         unique_identifiers = []
