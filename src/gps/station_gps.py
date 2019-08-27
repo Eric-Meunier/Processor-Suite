@@ -2,8 +2,6 @@ import re
 import os
 import sys
 from math import hypot, sqrt
-from functools import reduce
-from pprint import pprint
 from os.path import isfile, join
 import logging
 

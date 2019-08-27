@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import re
 import sys
 from decimal import getcontext
 from itertools import chain
@@ -8,7 +9,7 @@ from itertools import chain
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QTextEdit, QToolButton,
-                             QInputDialog)
+                             QInputDialog, QHeaderView)
 
 from src.gps.loop_gps import LoopGPSParser
 from src.gps.station_gps import StationGPSParser
@@ -32,11 +33,13 @@ if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
     editorCreatorFile = 'qt_ui\\pem_editor_widget.ui'
     editorWindowCreatorFile = 'qt_ui\\pem_editor_window.ui'
+    lineNameEditorCreatorFile = 'qt_ui\\line_name_editor.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     editorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_widget.ui')
     editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
+    lineNameEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\line_name_editor.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
@@ -44,6 +47,7 @@ else:
 # editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
 Ui_PEMEditorWidget, QtBaseClass = uic.loadUiType(editorCreatorFile)
 Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
+Ui_LineNameEditorWidget, QtBaseClass = uic.loadUiType(lineNameEditorCreatorFile)
 
 sys._excepthook = sys.excepthook
 
@@ -127,15 +131,27 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.averageAllPems = QAction("&Average All PEM Files", self)
         self.averageAllPems.setStatusTip("Average all PEM files")
+        self.averageAllPems.setShortcut("Ctrl + Shift + A")
         self.averageAllPems.triggered.connect(self.editor.average_all_pem_files)
 
         self.splitAllPems = QAction("&Split All PEM Files", self)
         self.splitAllPems.setStatusTip("Split all PEM files")
+        self.splitAllPems.setShortcut("Ctrl + Shift + S")
         self.splitAllPems.triggered.connect(self.editor.split_all_pem_files)
 
         self.coilAreaAllPems = QAction("&Change All Coil Areas", self)
         self.coilAreaAllPems.setStatusTip("Change all coil areas to the same value")
         self.coilAreaAllPems.triggered.connect(self.editor.scale_all_coil_area)
+
+        self.editLineNames = QAction("&Bulk Rename Lines/Holes", self)
+        self.editLineNames.setStatusTip("Rename all line/hole names")
+        self.editLineNames.setShortcut("F2")
+        self.editLineNames.triggered.connect(self.editor.edit_linenames)
+
+        self.editFileNames = QAction("&Bulk Rename Files", self)
+        self.editFileNames.setStatusTip("Rename all file names")
+        self.editFileNames.setShortcut("F3")
+        self.editFileNames.triggered.connect(self.editor.edit_filenames)
 
         self.sortAllStationGps = QAction("&Sort All Station GPS", self)
         self.sortAllStationGps.setStatusTip("Sort the station GPS for every file")
@@ -149,6 +165,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.PEMMenu.addAction(self.averageAllPems)
         self.PEMMenu.addAction(self.splitAllPems)
         self.PEMMenu.addAction(self.coilAreaAllPems)
+        self.PEMMenu.addAction(self.editLineNames)
+        self.PEMMenu.addAction(self.editFileNames)
 
         self.GPSMenu = self.menubar.addMenu('&GPS')
         self.GPSMenu.addAction(self.sortAllStationGps)
@@ -306,6 +324,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         self.message = QMessageBox()
         self.pem_info_widget = PEMFileInfoWidget
         self.station_gps_parser = StationGPSParser()
+        # self.linename_editor = LineNameEditor()
 
         self.stackedWidget.hide()
 
@@ -462,7 +481,6 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                 self.table.menu.addAction(self.table.scale_ca_action)
                 self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.remove_file_action)
-
 
                 self.table.menu.popup(QtGui.QCursor.pos())
             else:
@@ -674,7 +692,9 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         self.table.insertRow(row_pos)
 
         for i, column in enumerate(self.columns):
-            self.table.setItem(row_pos, i, QTableWidgetItem(new_row[i]))
+            item = QTableWidgetItem(new_row[i])
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.table.setItem(row_pos, i, item)
 
         self.table.resizeColumnsToContents()
 
@@ -833,6 +853,153 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
                 self.toggle_sort_loop(widget)
+
+    def edit_linenames(self):
+
+        def rename_pem_files():
+            if len(self.linename_editor.pem_files) > 0:
+                for i, pem_file in enumerate(self.linename_editor.pem_files):
+                    self.pem_files[i].header['LineHole'] = pem_file
+                self.linename_editor.accept_changes()
+                self.update_table()
+
+        self.linename_editor = LineNameEditor(self.pem_files, field='Line name')
+        self.linename_editor.buttonBox.accepted.connect(rename_pem_files)
+        self.linename_editor.acceptChangesSignal.connect(rename_pem_files)
+        self.linename_editor.buttonBox.rejected.connect(self.linename_editor.close)
+
+        self.linename_editor.show()
+
+    def edit_filenames(self):
+
+        def rename_pem_files():
+            if len(self.linename_editor.pem_files) > 0:
+                for i, pem_file in enumerate(self.linename_editor.pem_files):
+                    self.pem_files[i] = pem_file
+                self.linename_editor.accept_changes()
+                self.update_table()
+
+        self.linename_editor = LineNameEditor(self.pem_files, field='File name')
+        self.linename_editor.buttonBox.accepted.connect(rename_pem_files)
+        self.linename_editor.acceptChangesSignal.connect(rename_pem_files)
+        self.linename_editor.buttonBox.rejected.connect(self.linename_editor.close)
+
+        self.linename_editor.show()
+
+
+class LineNameEditor(QWidget, Ui_LineNameEditorWidget):
+    """
+    Class to bulk rename PEM File line/hole names or file names.
+    """
+    acceptChangesSignal = QtCore.pyqtSignal()
+
+    def __init__(self, pem_files, field=None, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.setupUi(self)
+        self.pem_files = pem_files
+        self.field = field
+
+        self.setWindowTitle('Rename')
+        self.columns = ['Old Name', 'New Name']
+        self.addEdit.setText('[n]')
+        self.addEdit.textEdited.connect(self.update_table)
+        self.removeEdit.textEdited.connect(self.update_table)
+        self.buttonBox.rejected.connect(self.close)
+        self.buttonBox.accepted.connect(self.accept_changes)
+        self.create_table()
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
+        elif e.key() == QtCore.Qt.Key_Return:
+            self.acceptChangesSignal.emit()
+
+    def create_table(self):
+        # Creates and populates the table
+        self.table.setColumnCount(len(self.columns))
+        self.table.setHorizontalHeaderLabels(self.columns)
+        self.table.setSizeAdjustPolicy(
+            QAbstractScrollArea.AdjustToContents)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+
+        for pem_file in self.pem_files:
+            self.add_to_table(pem_file)
+
+    def add_to_table(self, pem_file):
+
+        row_pos = self.table.rowCount()
+        self.table.insertRow(row_pos)
+
+        if self.field == 'Line name':
+            item = QTableWidgetItem(pem_file.header.get('LineHole'))
+            item2 = QTableWidgetItem(pem_file.header.get('LineHole'))
+        elif self.field == 'File name':
+            item = QTableWidgetItem(os.path.basename(pem_file.filepath))
+            item2 = QTableWidgetItem(os.path.basename(pem_file.filepath))
+        else:
+            raise ValueError
+
+        item.setTextAlignment(QtCore.Qt.AlignCenter)
+        item2.setTextAlignment(QtCore.Qt.AlignCenter)
+
+        self.table.setItem(row_pos, 0, item)
+        self.table.setItem(row_pos, 1, item2)
+
+        self.table.resizeColumnsToContents()
+
+    def update_table(self):
+        # Every time a change is made in the line edits, this function is called and updates the entries in the table
+        for row in range(self.table.rowCount()):
+
+            # Split the text based on '[n]'. Anything before it becomes the prefix, and everything after is added as a suffix
+            if self.field == 'Line name':
+                # Immediately replace what's in the removeEdit object with nothing
+                input = self.table.item(row, 0).text().replace(self.removeEdit.text(), '')
+                suffix = self.addEdit.text().rsplit('[n]')[-1]
+                prefix = self.addEdit.text().rsplit('[n]')[0]
+                output = prefix + input + suffix
+            else:
+                input = self.table.item(row, 0).text().split('.')[0].replace(self.removeEdit.text(), '')
+                ext = '.' + self.table.item(row, 0).text().split('.')[-1]
+                suffix = self.addEdit.text().rsplit('[n]')[-1]
+                prefix = self.addEdit.text().rsplit('[n]')[0]
+                output = prefix+input+suffix+ext
+
+            item = QTableWidgetItem(output)
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.table.setItem(row, 1, item)
+
+    def close(self):
+        while self.table.rowCount() > 0:
+            self.table.removeRow(0)
+        self.addEdit.setText('[n]')
+        self.removeEdit.setText('')
+        self.hide()
+
+    def accept_changes(self):
+        # Makes the proposed changes and updates the table
+        if len(self.pem_files) > 0:
+            for i, pem_file in enumerate(self.pem_files):
+                new_name = self.table.item(i, 1).text()
+                if self.field == 'Line name':
+                    pem_file.header['LineHole'] = new_name
+                else:
+                    old_path = pem_file.filepath
+                    new_path = '/'.join(old_path.split('/')[:-1])
+                    pem_file.filepath = new_path + '/' + new_name
+
+            while self.table.rowCount() > 0:
+                self.table.removeRow(0)
+            for pem_file in self.pem_files:
+                self.add_to_table(pem_file)
+            header = self.table.horizontalHeader()
+            header.setSectionResizeMode(0, QHeaderView.Stretch)
+            header.setSectionResizeMode(1, QHeaderView.Stretch)
+            self.addEdit.setText('[n]')
+            self.removeEdit.setText('')
 
 
 if __name__ == '__main__':

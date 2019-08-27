@@ -115,19 +115,19 @@ class PEMFileEditor:
             offtime_channels = get_offtime_channels(channel_times)
             pp_channel = get_pp_channel()
             kept_channels = pp_channel + offtime_channels
-            kept_channels_indeces = [item[1] for item in kept_channels]
+            kept_channels_indexes = [item[1] for item in kept_channels]
 
             # Modifying the EM data
             for station in pem_file.get_data():
                 off_time_readings = []
                 for i, reading in enumerate(station['Data']):
-                    if i in kept_channels_indeces:
+                    if i in kept_channels_indexes:
                         off_time_readings.append(reading)
                     else:
                         pass
                 station['Data'] = off_time_readings
 
-            pem_file.header['NumChannels'] = str(len(kept_channels_indeces))
+            pem_file.header['NumChannels'] = str(len(kept_channels_indexes)-1)
             pem_file.header['ChannelTimes'] = [item[0] for item in kept_channels]
             pem_file.header['ChannelTimes'] = list(dict.fromkeys(list(sum(pem_file.header['ChannelTimes'], ()))))
 
