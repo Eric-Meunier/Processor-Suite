@@ -121,12 +121,12 @@ class LoopGPSParser:
         if self.raw_gps:
             return self.gps_file(self.raw_gps, filepath=self.filepath)
         else:
-            return ''
+            return None
 
     def parse_text(self, gps):
         if isinstance(gps, list):
             gps_str = '\n'.join(gps)
-        elif gps is None:
+        elif gps is None or gps is '':
             return None
         else:
             gps_str = gps

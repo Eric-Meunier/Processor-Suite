@@ -25,6 +25,8 @@ else:
 # Load Qt ui file into a class
 Ui_PEMInfoWidget, QtBaseClass = uic.loadUiType(pemInfoWidgetCreatorFile)
 
+logging.info('PEMFileInfoWidget')
+
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def __init__(self, pem_file, parent=None):

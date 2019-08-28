@@ -4,7 +4,7 @@ import os
 import re
 import sys
 from decimal import getcontext
-from itertools import chain
+from itertools import chain, cycle
 
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
@@ -15,6 +15,7 @@ from src.gps.loop_gps import LoopGPSParser
 from src.gps.station_gps import StationGPSParser
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
+from src.pem.pem_file import PEMFile
 from src.pem.pem_serializer import PEMSerializer
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 
@@ -185,7 +186,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 pass
         except Exception as e:
             logging.warning(str(e))
-            self.message.information(None, 'Error', str(e))
+            self.message.information(None, 'PEMEditorWindow: open_file_dialog error', str(e))
             pass
 
     def dragEnterEvent(self, e):
@@ -305,6 +306,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
 
 class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
+    logging.info('PEMEditorWidget')
+
     def __init__(self, parent):
         super(PEMEditorWidget, self).__init__(parent)
         self.parent = parent
@@ -333,14 +336,14 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
     def initActions(self):
         self.table.viewport().installEventFilter(self)
         self.table.itemSelectionChanged.connect(self.display_pem_info_widget)
-        self.table.itemChanged.connect(self.table_value_changed)
+        self.table.cellChanged.connect(self.table_value_changed)
 
         self.share_loop_gps_checkbox.toggled.connect(self.toggle_share_loop)
         self.sort_loop_button.toggled.connect(self.toggle_sort_loops)
 
         self.del_file = QAction("&Remove File", self)
         self.del_file.setShortcut("Del")
-        self.del_file.triggered.connect(self.remove_file)
+        self.del_file.triggered.connect(self.remove_file_selection)
         self.addAction(self.del_file)
 
         self.share_header_checkbox.stateChanged.connect(self.toggle_share_header)
@@ -355,14 +358,21 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         self.max_range_edit.textChanged.connect(self.update_table)
 
     def open_pem_files(self, pem_files):
+        logging.info('open_pem_files')
+        if not isinstance(pem_files, list):
+            pem_files = [pem_files]
+
         self.stackedWidget.show()
-        for file in pem_files:
+
+        for pem_file in pem_files:
+            if not isinstance(pem_file, PEMFile):
+                pem_file = self.parser.parse(pem_file)
             try:
-                pem_file = self.parser.parse(file)
                 pem_info_widget = self.pem_info_widget(pem_file, parent=self)
                 self.pem_files.append(pem_file)
                 self.pem_info_widgets.append(pem_info_widget)
                 self.stackedWidget.addWidget(pem_info_widget)
+                self.add_to_table(pem_file)
 
                 if len(self.pem_files) == 1:  # The initial fill of the header and station info
                     if self.client_edit.text() == '':
@@ -372,7 +382,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                     if self.loop_edit.text() == '':
                         self.loop_edit.setText(self.pem_files[0].header['Loop'])
 
-                    all_stations = [file.get_unique_stations() for file in self.pem_files]
+                    all_stations = [file.get_converted_unique_stations() for file in self.pem_files]
 
                     if self.min_range_edit.text() == '':
                         min_range = str(min(chain.from_iterable(all_stations)))
@@ -383,7 +393,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
 
             except Exception as e:
                 logging.info(str(e))
-                self.message.information(None, 'Error', str(e))
+                self.message.information(None, 'PEMEditorWidget: open_pem_files error', str(e))
 
             if len(self.pem_files) > 0:
                 # self.window().statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
@@ -450,7 +460,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
 
             except Exception as e:
                 logging.info(str(e))
-                self.message.information(None, 'Error', str(e))
+                self.message.information(None, 'PEMEditorWidget: open_gps_files error', str(e))
                 pass
         else:
             self.message.information(None, 'Too many files', 'Only one GPS file can be opened at once')
@@ -462,7 +472,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
             if self.table.selectionModel().selectedIndexes():
                 self.table.menu = QMenu(self.table)
                 self.table.remove_file_action = QAction("&Remove", self)
-                self.table.remove_file_action.triggered.connect(self.remove_file)
+                self.table.remove_file_action.triggered.connect(self.remove_file_selection)
 
                 self.table.save_file_action = QAction("&Save", self)
                 self.table.save_file_action.triggered.connect(self.save_pem_file_selection)
@@ -471,7 +481,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                 self.table.save_file_as_action.triggered.connect(self.save_as_pem_file_selection)
 
                 self.table.merge_action = QAction("&Merge", self)
-                self.table.merge_action.triggered.connect(self.merge_pem_files)
+                self.table.merge_action.triggered.connect(self.merge_pem_files_selection)
 
                 self.table.average_action = QAction("&Average", self)
                 self.table.average_action.triggered.connect(self.average_select_pem)
@@ -614,59 +624,85 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
                     coil_column = self.columns.index('Coil Area')
                     self.table.item(i, coil_column).setText(str(coil_area))
 
-    def merge_pem_files(self):
-        pem_files = self.get_selected_pem_files()
-        rows = []
-        for i in self.table.selectedIndexes():
-            if i.row() not in rows:
-                rows.append(i.row())
+    def merge_pem_files(self, pem_files):
 
+        # Check that all selected files are the same in terms of being averaged and being split
         def pem_files_eligible(pem_files_list):
-            if all([pem_file.is_averaged() for pem_file in pem_files]) or all([not pem_file.is_averaged() for pem_file in pem_files]):
-                if all([pem_file.is_split() for pem_file in pem_files]) or all([not pem_file.is_split() for pem_file in pem_files]):
+            if all([pem_file.is_averaged() for pem_file in pem_files]) or all(
+                    [not pem_file.is_averaged() for pem_file in pem_files]):
+                if all([pem_file.is_split() for pem_file in pem_files]) or all(
+                        [not pem_file.is_split() for pem_file in pem_files]):
                     return True
             else:
                 return False
 
-        if len(pem_files) > 1:
+        if isinstance(pem_files, list) and len(pem_files) > 1:
+            # Data merging section
             if pem_files_eligible(pem_files):
-                print('All files the same')
-                merged_pem = pem_files[0]
-                num_readings = int(merged_pem.header['NumReadings'])
-                data = merged_pem.data
-                for i in range(1, len(pem_files)):
-                    num_readings += int(pem_files[i].header.get('NumReadings'))
-                    data.append(pem_files[i].data)
+                merged_pem = copy.copy(pem_files[0])
+                merged_pem.data = list(chain.from_iterable([pem_file.data for pem_file in pem_files]))
+                merged_pem.header['NumReadings'] = str(sum(
+                    list(chain([int(pem_file.header.get('NumReadings')) for pem_file in pem_files]))))
+                merged_pem.is_merged = True
+                # Add the '[M]'
+                merged_pem.filepath = os.path.splitext(merged_pem.filepath)[0] + '[M]' + \
+                                      os.path.splitext(merged_pem.filepath)[1]
 
-                # Remove the old files:
-                for row in rows:
-                    if not rows[0]:
-                        self.table.removeRow(row)
+                return merged_pem
+
             else:
-                print('Some files are different')
+                self.message.information(None, 'Error',
+                                         'Must select multiple PEM files')
+                return
+
+        else:
+            self.message.information(None, 'Error',
+                                     'All PEM files must be the same with regards to being averaged and channels being split')
+            return
+
+    def merge_pem_files_selection(self):
+        pem_files = self.get_selected_pem_files()
+        rows = []
+        # Find which rows are selected
+        for i in self.table.selectedIndexes():
+            if i.row() not in rows:
+                rows.append(i.row())
+
+        if len(pem_files) > 1:
+            # First update the PEM Files from the table
+            for pem_file, row in zip(pem_files, rows):
+                self.update_pem_file_from_table(pem_file, row)
+
+            merged_pem = self.merge_pem_files(pem_files)
+
+            if merged_pem:
+                # Remove the old files:
+                for row in reversed(rows):
+                    self.remove_file(row)
+                self.open_pem_files(merged_pem)
         else:
             self.message.information(None, 'Error', 'Must select multiple PEM Files')
 
-    def table_value_changed(self, e):
-        if e.column() == self.columns.index('Coil Area'):
-            pem_file = self.pem_files[e.row()]
+    def table_value_changed(self, row, col):
+        if col == self.columns.index('Coil Area'):
+            pem_file = self.pem_files[row]
             old_value = int(pem_file.header.get('CoilArea'))
-            new_value = int(self.table.item(e.row(), e.column()).text())
+            new_value = int(self.table.item(row, col).text())
             if int(old_value) != int(new_value):
                 self.scale_coil_area(pem_file, int(new_value))
                 self.window().statusBar().showMessage(
                     'Coil area changed from {0} to {1}'.format(str(old_value), str(new_value)), 2000)
 
-        if e.column() == self.columns.index('File'):
-            pem_file = self.pem_files[e.row()]
+        if col == self.columns.index('File'):
+            pem_file = self.pem_files[row]
             old_path = copy.copy(pem_file.filepath)
-            new_value = self.table.item(e.row(), e.column()).text()
+            new_value = self.table.item(row, col).text()
 
             if new_value != os.path.basename(pem_file.filepath):
                 if pem_file.old_filepath is None:
                     pem_file.old_filepath = old_path
 
-                new_name = self.table.item(e.row(), e.column()).text()
+                new_name = self.table.item(row, col).text()
                 new_path = '/'.join(old_path.split('/')[:-1]) + '/' + new_name
 
                 pem_file.filepath = new_path
@@ -695,17 +731,31 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
         extension = os.path.splitext(pem_file.filepath)[-1]
         overwrite = True
+        tags = []
 
         if pem_file.unaveraged_data:
             # Means the data has been averaged, therefore append '[A]'
             if '[A]' not in file_name:
-                file_name += '[A]'
+                tags.append('[A]')
                 overwrite = False
         if pem_file.unsplit_data:
             if '[S]' not in file_name:
-                file_name += '[S]'
+                tags.append('[S]')
+                overwrite = False
+        if pem_file.is_merged:
+            if '[M]' not in file_name:
+                tags.append('[M]')
                 overwrite = False
 
+        # Rearranging the tags
+        tags.sort()
+        if '[S]' in tags:
+            index = tags.index('[S]')
+            s = tags.pop(index)
+            pos = len(tags) - 1
+            tags.insert(pos, s)
+
+        file_name += ''.join(tags)
         pem_file.filepath = os.path.join(file_dir + '/' + file_name + extension)
         save_file = self.serializer.serialize(pem_file)
         print(save_file, file=open(pem_file.filepath, 'w+'))
@@ -750,25 +800,30 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         else:
             self.window().statusBar().showMessage('No folder selected')
 
+    def remove_file(self, table_row):
+        self.table.removeRow(table_row)
+        self.stackedWidget.removeWidget(self.stackedWidget.widget(table_row))
+        del self.pem_files[table_row]
+
+        if len(self.pem_files) == 0:
+            self.stackedWidget.hide()
+            self.client_edit.setText('')
+            self.grid_edit.setText('')
+            self.loop_edit.setText('')
+            self.min_range_edit.setText('')
+            self.max_range_edit.setText('')
+
     # Remove selected files
-    def remove_file(self):
+    def remove_file_selection(self):
         rows = []
         for i in reversed(self.table.selectedIndexes()):
             if i.row() not in rows:
                 rows.append(i.row())
 
         for row in rows:
-            self.table.removeRow(row)
-            self.stackedWidget.removeWidget(self.stackedWidget.widget(row))
             self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
-            del self.pem_files[row]
-            if len(self.pem_files) == 0:
-                self.stackedWidget.hide()
-                self.client_edit.setText('')
-                self.grid_edit.setText('')
-                self.loop_edit.setText('')
-                self.min_range_edit.setText('')
-                self.max_range_edit.setText('')
+            self.remove_file(row)
+
         self.update_table()
 
     # Creates the table when the editor is first opened
@@ -800,9 +855,9 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         split = 'Yes' if pem_file.is_split() else 'No'
         line = header.get('LineHole')
         start_stn = self.min_range_edit.text() if self.share_range_checkbox.isChecked() else str(
-            min(pem_file.get_unique_stations()))
+            min(pem_file.get_converted_unique_stations()))
         end_stn = self.max_range_edit.text() if self.share_range_checkbox.isChecked() else str(
-            max(pem_file.get_unique_stations()))
+            max(pem_file.get_converted_unique_stations()))
 
         new_row = [file, client, grid, line, loop, current, coil_area, start_stn, end_stn, averaged, split]
 
@@ -818,6 +873,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
 
         boldFont = QtGui.QFont()
         boldFont.setBold(True)
+
         # Only used for table comparisons. Makes bold entries that have changed
         pem_file_info_list = [
             file,
@@ -827,8 +883,8 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
             header.get('Loop'),
             tags.get('Current'),
             header.get('CoilArea'),
-            str(min(pem_file.get_unique_stations())),
-            str(max(pem_file.get_unique_stations())),
+            str(min(pem_file.get_converted_unique_stations())),
+            str(max(pem_file.get_converted_unique_stations())),
             str(averaged),
             str(split)
         ]
@@ -890,13 +946,15 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
             self.loop_edit.setText('')
 
     def fill_share_range(self):
+
         if len(self.pem_files) > 0:
-            all_stations = [file.get_unique_stations() for file in self.pem_files]
+            # all_stations = [file.get_unique_stations() for file in self.pem_files]
+            all_stations = [file.get_converted_unique_stations() for file in self.pem_files]
             min_range, max_range = str(min(chain.from_iterable(all_stations))), str(
                 max(chain.from_iterable(all_stations)))
             self.min_range_edit.setText(min_range)
             self.max_range_edit.setText(max_range)
-            self.update_table()
+            # self.update_table()
         else:
             self.min_range_edit.setText('')
             self.max_range_edit.setText('')

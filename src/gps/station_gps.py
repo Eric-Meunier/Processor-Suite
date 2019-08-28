@@ -125,7 +125,7 @@ class StationGPSParser:
         if isinstance(gps, list):
             ' '.join(gps)
             gps_str = '\n'.join(gps)
-        elif gps is None:
+        elif gps is None or gps is '':
             return None
             # return self.gps_file('')
         else:

@@ -1,5 +1,8 @@
 from src.pem.pem_serializer import PEMSerializer
 import re
+import logging
+
+logging.info('PEMFile')
 
 class PEMFile:
     """
@@ -19,6 +22,7 @@ class PEMFile:
         self.unsplit_data = None
         self.unaveraged_data = None
         self.old_filepath = None
+        self.is_merged = False
 
     def is_averaged(self):
         unique_identifiers = []
@@ -69,6 +73,9 @@ class PEMFile:
                            [reading['Station'] for reading in self.data]}
         unique_stations_list = [station for station in unique_stations]
         return unique_stations_list
+
+    def get_converted_unique_stations(self):
+        return [self.convert_station(station) for station in self.get_unique_stations()]
 
     def convert_station(self, station):
         """

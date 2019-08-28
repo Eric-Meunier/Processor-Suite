@@ -16,7 +16,7 @@ class PEMParser:
         self.re_tags = re.compile(  # Parsing the 'Tags' i.e. the information above the loop coordinates
             r'<FMT>\s(?P<Format>\d+)\s*~?.*[\r\n]'
             r'<UNI>\s(?P<Units>nanoTesla\/sec|picoTesla)\s*~?.*[\r\n]'
-            r'<OPR>\s(?P<Operator>\w+\s?\w+)\s*~?.*[\r\n]'
+            r'<OPR>\s(?P<Operator>.*)~?.*[\r\n]'
             r'<XYP>\s(?P<Probes>[\d\w\s-]*).*[\r\n]'
             r'<CUR>\s(?P<Current>\d+\.?\d?)\s*~?.*[\r\n]'
             r'<TXS>\s(?P<LoopSize>[\d\.\s]*).*[\r\n]',
