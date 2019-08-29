@@ -38,6 +38,7 @@ class LoopGPSFile:
         self.sorted_gps_data = self.sort_loop()
 
     def sort_loop(self):
+        logging.info('Sorting loop GPS')
 
         loop_coords_tuples = []  # Used to find the center point
         loop_coords = []  # The actual full coordinates

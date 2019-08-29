@@ -733,12 +733,12 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         overwrite = True
         tags = []
 
-        if pem_file.unaveraged_data:
+        if pem_file.is_averaged():
             # Means the data has been averaged, therefore append '[A]'
             if '[A]' not in file_name:
                 tags.append('[A]')
                 overwrite = False
-        if pem_file.unsplit_data:
+        if pem_file.is_split():
             if '[S]' not in file_name:
                 tags.append('[S]')
                 overwrite = False
@@ -750,10 +750,11 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         # Rearranging the tags
         tags.sort()
         if '[S]' in tags:
-            index = tags.index('[S]')
-            s = tags.pop(index)
-            pos = len(tags) - 1
-            tags.insert(pos, s)
+            if not tags[-1] == '[S]':
+                index = tags.index('[S]')
+                s = tags.pop(index)
+                pos = len(tags) - 1
+                tags.insert(pos, s)
 
         file_name += ''.join(tags)
         pem_file.filepath = os.path.join(file_dir + '/' + file_name + extension)

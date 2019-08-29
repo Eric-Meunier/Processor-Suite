@@ -1,6 +1,8 @@
 import re
 import os
 import sys
+import numpy as np
+from scipy import spatial
 from math import hypot, sqrt
 from os.path import isfile, join
 import logging
@@ -35,29 +37,27 @@ class StationGPSFile:
         self.sorted_gps_data = self.sort_line()
 
     def sort_line(self):
-        loop_coords_tuples = []  # Used to find the center point
-        loop_coords = []  # The actual full coordinates
+        logging.info('Sorting line GPS')
+        line_coords_tuples = []  # Used to find the center point
+        line_coords = []  # The actual full coordinates
 
         # Splitting up the coordinates from a string to something usable
         for coord in self.gps_data:
             coord_tuple = (float(coord[0]), float(coord[1]))  # Just used as a key for sorting later
             coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), int(coord[3]), int(coord[4])]
-            loop_coords_tuples.append(coord_tuple)
-            loop_coords.append(coord_item)
+            line_coords_tuples.append(coord_tuple)
+            line_coords.append(coord_item)
 
-        def coord_value(x):
-            return sqrt((x[0]**2)+(x[1]**2))
-
-        values = list(map(coord_value, loop_coords_tuples))
-        min_value = min(values)
-        end_point = tuple([loop_coords_tuples[i] for (i, v) in enumerate(values) if v == min_value][0])
+        distances = spatial.distance.cdist(line_coords_tuples, line_coords_tuples, 'euclidean')
+        index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
+        furthest_point = line_coords[index_of_max]
 
         def distance(q):
             # Return the Euclidean distance between points p and q.
-            p = end_point
+            p = furthest_point
             return hypot(p[0] - q[0], p[1] - q[1])
 
-        sorted_coords = sorted(loop_coords, key=distance, reverse=True)
+        sorted_coords = sorted(line_coords, key=distance, reverse=True)
         formatted_gps = self.format_gps_data(sorted_coords)
 
         return formatted_gps
