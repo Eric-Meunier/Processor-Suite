@@ -3,6 +3,7 @@ import os
 import sys
 import operator
 import math
+import numpy as np
 from pprint import pprint
 from functools import reduce
 from os.path import isfile, join
@@ -47,8 +48,10 @@ class LoopGPSFile:
         for coord in self.gps_data:
             coord_tuple = (float(coord[0]), float(coord[1]))
             coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), coord[3]]
-            loop_coords_tuples.append(coord_tuple)
-            loop_coords.append(coord_item)
+            if coord_tuple not in loop_coords_tuples:
+                loop_coords_tuples.append(coord_tuple)
+            if coord_item not in loop_coords:
+                loop_coords.append(coord_item)
 
         # Finds the center point using the tuples.
         center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples), [len(loop_coords_tuples)] * 2))
@@ -65,7 +68,7 @@ class LoopGPSFile:
 
     def format_gps_data(self, gps_data):
         """
-        Adds the L tags and formats the numbers
+        Adds the L tags and formats the numbers. Will also cull the loop if there are too many points
         :param gps_data: List without tags
         :return: List of strings
         """
@@ -82,6 +85,9 @@ class LoopGPSFile:
         formatted_gps = []
 
         if len(gps_data) > 0:
+            if len(gps_data) > 100:
+                gps_data = self.cull_loop(gps_data)
+
             for row in gps_data:
                 if row[-1] == '':
                     row[-1] = 0
@@ -90,6 +96,14 @@ class LoopGPSFile:
                 count += 1
 
         return formatted_gps
+
+    def cull_loop(self, loop_gps):
+        # Cutting down the loop size to being no more than 100 points
+        num_to_cull = len(loop_gps) - 100
+        factor = num_to_cull / len(loop_gps)
+        n = int(1/factor)
+        culled_loop = loop_gps[::n]
+        return culled_loop
 
     def get_sorted_gps(self):
         return self.sorted_gps_data

@@ -21,7 +21,7 @@ from src.qt_py.pem_info_widget import PEMFileInfoWidget
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.1.1'
+__version__ = '0.2.0'
 
 _station_gps_tab = 1
 _loop_gps_tab = 2
@@ -223,7 +223,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 pass
         else:
             pass
-        print('loop text changed')
 
     def open_file_dialog(self):
         try:
@@ -469,7 +468,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     # extension = os.path.splitext(pem_file.filepath)[-1]
                     # updated_file.filepath = os.path.join(file_dir, file_name + extension)
 
-                    self.save_pem_file(updated_file)
+                    self.save_pem_file(updated_file, dir=file_dir)
                     self.window().statusBar().showMessage(
                         'Save complete. {0} PEM files saved'.format(len(self.pem_files)), 2000)
                 self.update_table()
@@ -737,8 +736,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                                                                                    'station_gps_text').toPlainText()
         return pem_file
 
-    def save_pem_file(self, pem_file):
-        file_dir = os.path.split(pem_file.filepath)[0]
+    def save_pem_file(self, pem_file, dir=None):
+        if dir is None:
+            file_dir = os.path.split(pem_file.filepath)[0]
+        else:
+            file_dir = dir
         file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
         extension = os.path.splitext(pem_file.filepath)[-1]
         overwrite = True
@@ -754,18 +756,16 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 tags.append('[S]')
                 overwrite = False
         if pem_file.is_merged:
-            if '[M]' not in file_name:
+            if '[M]' in file_name:
                 tags.append('[M]')
                 overwrite = False
 
         # Rearranging the tags
         tags.sort()
-        if '[S]' in tags:
-            if not tags[-1] == '[S]':
-                index = tags.index('[S]')
-                s = tags.pop(index)
-                pos = len(tags) - 1
-                tags.insert(pos, s)
+        if '[M]' in tags:
+            index = tags.index('[M]')
+            m = tags.pop(index)
+            tags.append(m)
 
         file_name += ''.join(tags)
         pem_file.filepath = os.path.join(file_dir + '/' + file_name + extension)
