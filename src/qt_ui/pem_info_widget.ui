@@ -135,6 +135,20 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="flip_station_signs_button">
+            <property name="text">
+             <string>Station Polarity</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="flip_station_numbers_button">
+            <property name="text">
+             <string>Reverse Stations</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="verticalSpacer">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -147,8 +161,14 @@
             </property>
            </spacer>
           </item>
-          <item alignment="Qt::AlignHCenter">
-           <widget class="QToolButton" name="sort_stations_button">
+          <item>
+           <widget class="QToolButton" name="sort_station_gps_button">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
              <string>Auto-Sort</string>
             </property>
@@ -164,22 +184,19 @@
         </widget>
        </item>
        <item row="0" column="0">
-        <widget class="QTextEdit" name="station_gps_text">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+        <widget class="QTableWidget" name="stationGPSTable">
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
          </property>
-         <property name="font">
-          <font>
-           <family>Century Gothic</family>
-           <pointsize>9</pointsize>
-          </font>
-         </property>
-         <property name="acceptDrops">
+         <property name="showGrid">
           <bool>false</bool>
          </property>
+         <attribute name="horizontalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
         </widget>
        </item>
       </layout>
@@ -196,6 +213,11 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
          </property>
          <property name="acceptDrops">
           <bool>false</bool>
@@ -231,7 +253,14 @@
            </widget>
           </item>
           <item>
-           <widget class="QSpinBox" name="shift_elevation_spinbox"/>
+           <widget class="QSpinBox" name="shift_elevation_spinbox">
+            <property name="minimum">
+             <number>-100</number>
+            </property>
+            <property name="maximum">
+             <number>100</number>
+            </property>
+           </widget>
           </item>
           <item>
            <widget class="QPushButton" name="format_loop_gps_button">
@@ -258,6 +287,12 @@
           </item>
           <item alignment="Qt::AlignHCenter">
            <widget class="QToolButton" name="sort_loop_button">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
              <string>Auto-Sort</string>
             </property>

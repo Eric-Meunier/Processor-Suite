@@ -60,9 +60,24 @@ class StationGPSFile:
             return hypot(p[0] - q[0], p[1] - q[1])
 
         sorted_coords = sorted(line_coords, key=distance, reverse=True)
-        formatted_gps = self.format_gps_data(sorted_coords)
+        sorted_stations = self.sort_stations(sorted_coords)
+        formatted_gps = self.format_gps_data(sorted_stations)
 
         return formatted_gps
+
+    def sort_stations(self, gps):
+        stations = [int(point[-1]) for point in gps]
+        order = 'asc' if stations[-1] > stations[0] else 'desc'
+        if order is 'asc':
+            stations.sort()
+        else:
+            stations.sort(reverse=True)
+
+        sorted_stations_gps=[]
+        for i, number in enumerate(stations):
+            gps[i][:-1].append(str(number))
+            sorted_stations_gps.append(gps[i])
+        return sorted_stations_gps
 
     def format_gps_data(self, gps_data):
         """

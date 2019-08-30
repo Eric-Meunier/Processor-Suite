@@ -149,16 +149,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.averageAllPems = QAction("&Average All PEM Files", self)
         self.averageAllPems.setStatusTip("Average all PEM files")
-        self.averageAllPems.setShortcut("Ctrl + Shift + A")
+        self.averageAllPems.setShortcut("F5")
         self.averageAllPems.triggered.connect(self.average_all_pem_files)
 
         self.splitAllPems = QAction("&Split All PEM Files", self)
         self.splitAllPems.setStatusTip("Split all PEM files")
-        self.splitAllPems.setShortcut("Ctrl + Shift + S")
+        self.splitAllPems.setShortcut("F6")
         self.splitAllPems.triggered.connect(self.split_all_pem_files)
 
         self.coilAreaAllPems = QAction("&Change All Coil Areas", self)
         self.coilAreaAllPems.setStatusTip("Change all coil areas to the same value")
+        self.coilAreaAllPems.setShortcut("F7")
         self.coilAreaAllPems.triggered.connect(self.scale_all_coil_area)
 
         self.editLineNames = QAction("&Rename All Lines/Holes", self)
@@ -384,7 +385,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     gps_file = station_gps_parser.parse_text(file)
                     pem_info_widget.station_gps = gps_file
 
-                    if station_gps_tab.findChild(QToolButton, 'sort_stations_button').isChecked():
+                    if station_gps_tab.findChild(QToolButton, 'sort_station_gps_button').isChecked():
                         gps_data = '\n'.join(gps_file.get_sorted_gps())
                     else:
                         gps_data = '\n'.join(gps_file.get_gps())
@@ -932,7 +933,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if len(self.pem_files) > 0:
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
-                widget.sort_stations_button.setChecked(True)
+                widget.sort_station_gps_button.setChecked(True)
                 widget_station_text = widget.tabs.widget(_station_gps_tab).findChild(QTextEdit, 'station_gps_text')
                 widget_station_text.setPlainText('\n'.join(self.stackedWidget.widget(i).station_gps.get_sorted_gps()))
             self.window().statusBar().showMessage('All stations have been sorted', 2000)
@@ -1204,7 +1205,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
     #                 gps_file = station_gps_parser.parse_text(file)
     #                 pem_info_widget.station_gps = gps_file
     # 
-    #                 if station_gps_tab.findChild(QToolButton, 'sort_stations_button').isChecked():
+    #                 if station_gps_tab.findChild(QToolButton, 'sort_station_gps_button').isChecked():
     #                     gps_data = '\n'.join(gps_file.get_sorted_gps())
     #                 else:
     #                     gps_data = '\n'.join(gps_file.get_gps())
@@ -1693,7 +1694,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
         if len(self.pem_files) > 0:
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
-                widget.sort_stations_button.setChecked(True)
+                widget.sort_station_gps_button.setChecked(True)
                 widget_station_text = widget.tabs.widget(_station_gps_tab).findChild(QTextEdit, 'station_gps_text')
                 widget_station_text.setPlainText('\n'.join(self.stackedWidget.widget(i).station_gps.get_sorted_gps()))
             self.window().statusBar().showMessage('All stations have been sorted', 2000)
