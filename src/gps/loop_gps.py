@@ -75,25 +75,20 @@ class LoopGPSFile:
 
         def format_row(row):
             for i, item in enumerate(row):
-                if i < 3:
+                if i <= 2:
                     row[i] = '{:0.2f}'.format(float(item))
                 else:
                     row[i] = str(item)
             return row
 
-        count = 0
         formatted_gps = []
-
         if len(gps_data) > 0:
             if len(gps_data) > 100:
                 gps_data = self.cull_loop(gps_data)
-
             for row in gps_data:
                 if row[-1] == '':
                     row[-1] = 0
-                formatted_row = format_row(row)
-                formatted_gps.append("<L" + '{num:02d}'.format(num=count) + "> " + ' '.join(formatted_row))
-                count += 1
+                formatted_gps.append(format_row(row))
 
         return formatted_gps
 

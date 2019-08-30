@@ -88,20 +88,16 @@ class StationGPSFile:
 
         def format_row(row):
             for i, item in enumerate(row):
-                if i < 3:
+                if i <= 2:
                     row[i] = '{:0.2f}'.format(float(item))
                 else:
                     row[i] = str(item)
             return row
 
-        count = 0
         formatted_gps = []
-
         if len(gps_data) > 0:
             for row in gps_data:
-                formatted_row = format_row(row)
-                formatted_gps.append("<P" + '{num:02d}'.format(num=count) + "> " + ' '.join(formatted_row))
-                count += 1
+                formatted_gps.append(format_row(row))
 
         return formatted_gps
 
@@ -125,6 +121,7 @@ class StationGPSParser:
             r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+)')
 
     def parse(self, filepath):
+        # For .txt or .csv files with GPS in them
         self.filepath = filepath
 
         with open(self.filepath, 'rt') as in_file:
@@ -139,6 +136,7 @@ class StationGPSParser:
             return ''
 
     def parse_text(self, gps):
+        # For data coming in from PEMInfoWidget/PEMEditor
         if isinstance(gps, list):
             ' '.join(gps)
             gps_str = '\n'.join(gps)

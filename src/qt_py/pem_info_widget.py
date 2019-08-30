@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import logging
+import copy
 from itertools import chain
 from src.gps.station_gps import StationGPSParser
 from src.gps.loop_gps import LoopGPSParser
@@ -31,7 +32,7 @@ logging.info('PEMFileInfoWidget')
 
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
-    loop_text_signal = QtCore.pyqtSignal()
+    loop_change_signal = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -47,18 +48,19 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loop_gps_parser = LoopGPSParser()
         self.setupUi(self)
         self.initActions()
+        self.initTables()
 
     def initActions(self):
         self.sort_station_gps_button.toggled.connect(self.sort_station_gps)
         self.sort_loop_button.toggled.connect(self.sort_loop_gps)
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_numbers)
-        self.flip_station_signs_button.clicked.connect(self.flip_station_signs)
+        self.flip_station_signs_button.clicked.connect(self.flip_station_polarity)
         # self.station_gps_text.selectionChanged.connect(self.current_selection)
 
         self.shift_stations_spinbox.valueChanged.connect(self.shift_station_numbers)
         self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elev)
 
-        self.loop_gps_text.textChanged.connect(self.loop_text_signal.emit)
+        self.loopGPSTable.cellChanged.connect(self.loop_change_signal.emit)
 
         self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
         self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
@@ -76,20 +78,57 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         return self
 
-    def fill_station_table(self, gps):  # GPS in list form
-        columns = ['Tags', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
+    def initTables(self):
+        self.station_columns = ['Tags', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
+        self.stationGPSTable.setColumnCount(len(self.station_columns))
+        self.stationGPSTable.setHorizontalHeaderLabels(self.station_columns)
+        self.stationGPSTable.setSizeAdjustPolicy(
+            QAbstractScrollArea.AdjustToContents)
 
-        for row in gps:
+        self.loop_columns = ['Tags', 'Easting', 'Northing', 'Elevation', 'Units']
+        self.loopGPSTable.setColumnCount(len(self.loop_columns))
+        self.loopGPSTable.setHorizontalHeaderLabels(self.loop_columns)
+        self.loopGPSTable.setSizeAdjustPolicy(
+            QAbstractScrollArea.AdjustToContents)
+
+    def fill_station_table(self, gps, tags=False):  # GPS in list form
+        self.clear_table(self.stationGPSTable)
+        logging.info('Filling station table')
+        for i, row in enumerate(gps):
             row_pos = self.stationGPSTable.rowCount()
             self.stationGPSTable.insertRow(row_pos)
-            row_list = row.split(' ')
+            if re.match('\<P.*\>', row[0]):
+                row.pop(0)
+            tag_item = QTableWidgetItem("<P" + '{num:02d}'.format(num=i) + ">")
+            items = [QTableWidgetItem(row[j]) for j in range(len(row))]
+            items.insert(0, tag_item)
 
-            for j, column in enumerate(columns):
-                item = QTableWidgetItem(row_list[j])
+            for m, item in enumerate(items):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.stationGPSTable.setItem(row_pos, j, item)
+                self.stationGPSTable.setItem(row_pos, m, item)
 
         self.stationGPSTable.resizeColumnsToContents()
+
+    def fill_loop_table(self, gps):
+        self.clear_table(self.loopGPSTable)
+        for i, row in enumerate(gps):
+            row_pos = self.loopGPSTable.rowCount()
+            self.loopGPSTable.insertRow(row_pos)
+            if re.match('\<L.*\>', row[0]):
+                row.pop(0)
+            tag_item = QTableWidgetItem("<L" + '{num:02d}'.format(num=i) + ">")
+            items = [QTableWidgetItem(row[j]) for j in range(len(row))]
+            items.insert(0, tag_item)
+
+            for m, item in enumerate(items):
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.loopGPSTable.setItem(row_pos, m, item)
+
+        self.loopGPSTable.resizeColumnsToContents()
+
+    def clear_table(self, table):
+        while table.rowCount() > 0:
+            table.removeRow(0)
 
     def fill_info(self):
 
@@ -125,11 +164,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             if self.station_gps:
                 if self.sort_station_gps_button.isChecked():
                     self.fill_station_table(self.station_gps.get_sorted_gps())
-                    # self.station_gps_text.setPlainText('\n'.join(self.station_gps.get_sorted_gps()))
+                    # self.fill_loop_table(self.station_gps.get_sorted_gps()))
                 else:
-                    self.station_gps_text.setPlainText('\n'.join(self.station_gps.get_gps()))
+                    self.fill_station_table(self.station_gps.get_gps())
             else:
-                self.station_gps_text.setPlainText('')
+                # self.station_gps_text.setPlainText('')
+                pass
 
         def fill_loop_text():
             # Fill loop GPS
@@ -140,15 +180,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
             if self.parent.share_loop_gps_checkbox.isChecked() and len(self.parent.pem_files) > 0:
                 first_file_loop = self.parent.stackedWidget.widget(0).get_loop_gps_text()
-                self.loop_gps_text.setPlainText(first_file_loop)
+                self.fill_loop_table(first_file_loop)
             else:
                 if self.loop_gps:
                     if self.sort_loop_button.isChecked():
-                        self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_sorted_gps()))
+                        self.fill_loop_table(self.loop_gps.get_sorted_gps())
                     else:
-                        self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_gps()))
+                        self.fill_loop_table(self.loop_gps.get_gps())
                 else:
-                    self.loop_gps_text.setPlainText('')
+                    # self.loop_gps_text.setPlainText('')
+                    pass
 
         header = self.pem_file.header
         fill_info_tab()
@@ -158,28 +199,29 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def sort_station_gps(self):
         if self.station_gps:
             if self.sort_station_gps_button.isChecked():
-                self.station_gps_text.setPlainText('\n'.join(self.station_gps.get_sorted_gps()))
+                self.fill_station_table(self.station_gps.get_sorted_gps())
             else:
-                self.station_gps_text.setPlainText('\n'.join(self.station_gps.get_gps()))
+                self.fill_station_table(self.station_gps.get_gps())
         else:
             pass
 
     def sort_loop_gps(self):
         if self.loop_gps:
             if self.sort_loop_button.isChecked():
-                self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_sorted_gps()))
+                self.fill_loop_table(self.loop_gps.get_sorted_gps())
             else:
-                self.loop_gps_text.setPlainText('\n'.join(self.loop_gps.get_gps()))
+                self.fill_loop_table(self.loop_gps.get_gps())
 
     def shift_station_numbers(self):
 
         def apply_station_shift(row):
-            row_list = row.split(' ')
-            station = row_list.pop(-1)
+            # row_list = row.split(' ')
+            station = row.pop(-1)
             new_station = int(station) + (shift_amount - self.last_stn_shift_amt)
-            row_list.append(str(new_station))
-            return ' '.join(row_list)
+            row.append(str(new_station))
+            return row
 
+        # TODO Add shifting based on table selection, also deleting rows and such
         # selection = self.station_gps_text.textCursor().selectedText()
         cursor = self.station_gps_text.textCursor()
         start, end = cursor.selectionStart(), cursor.selectionEnd()
@@ -202,7 +244,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     cursor.setPosition(end, QtGui.QTextCursor.KeepAnchor)
                     self.station_gps_text.setTextCursor(cursor)
                 else:
-                    self.station_gps_text.setPlainText('\n'.join(shifted_gps))
+                    self.fill_loop_table(shifted_gps)
                 self.last_stn_shift_amt = shift_amount
         else:
             pass
@@ -210,50 +252,47 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def shift_loop_elev(self):
 
         def apply_elev_shift(row):
-            row_list = row.split(' ')
-            elev = row_list.pop(-2)
+            elev = row.pop(-2)
             new_elev = float(elev) + (shift_amount - self.last_loop_elev_shift_amt)
-            row_list.insert(3, str(new_elev))
-            return ' '.join(row_list)
+            row.insert(3, str(new_elev))
+            return row
 
-        gps = self.get_loop_gps_text().split('\n')
-        if gps[0] is not '':
+        gps = self.get_loop_gps_text()
+        if gps:
             shift_amount = self.shift_elevation_spinbox.value()
             shifted_gps = list(map(apply_elev_shift, gps))
-            self.loop_gps_text.setPlainText('\n'.join(shifted_gps))
+            self.fill_loop_table(shifted_gps)
             self.last_loop_elev_shift_amt = shift_amount
         else:
             pass
 
-    def flip_station_signs(self):
+    def flip_station_polarity(self):
         # Multiplies the station number by -1
 
         def flip_stn_num(row):
-            row_list = row.split(' ')
-            station = row_list.pop(-1)
+            station = row.pop(-1)
             new_station = int(station) * -1
-            row_list.append(str(new_station))
-            return ' '.join(row_list)
+            row.append(str(new_station))
+            return row
 
-        gps = self.get_station_gps_text().split('\n')
-        if gps[0] is not '':
-            flipped_gps = list(map(flip_stn_num, gps))
-            self.station_gps_text.setPlainText('\n'.join(flipped_gps))
+        gps = self.get_station_gps_text()
+        if gps:
+            flipped_gps = list(map(flip_stn_num, copy.copy(gps)))
+            self.fill_station_table(flipped_gps)
         else:
             pass
 
     def reverse_station_numbers(self):
         # Flips the station numbers head-over-heals
-        gps = self.get_station_gps_text().split('\n')
-        if gps[0] is not '':
-            gps_list = [row.split(' ') for row in gps]
-            reversed_stations = list(reversed(list(map(lambda x: int(x[-1]), gps_list))))
+        gps = self.get_station_gps_text()
+        if gps:
+            reversed_stations = list(reversed(list(map(lambda x: int(x[-1]), gps))))
             reversed_gps = []
             for i, station in enumerate(reversed_stations):
-                row = gps_list[i][:-1]
+                row = gps[i][:-1]
                 row.append(str(station))
-                reversed_gps.append(' '.join(row))
-            self.station_gps_text.setPlainText('\n'.join(reversed_gps))
+                reversed_gps.append(row)
+            self.fill_station_table(reversed_gps)
         else:
             pass
 
@@ -261,9 +300,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         current_gps = self.station_gps_parser.parse_text(self.get_station_gps_text())
         if current_gps:
             if self.sort_station_gps_button.isChecked():
-                self.tabs.findChild(QTextEdit, 'station_gps_text').setPlainText('\n'.join(current_gps.get_sorted_gps()))
+                self.fill_station_table(current_gps.get_sorted_gps())
             else:
-                self.tabs.findChild(QTextEdit, 'station_gps_text').setPlainText('\n'.join(current_gps.get_gps()))
+                self.fill_station_table(current_gps.get_gps())
         else:
             pass
 
@@ -271,20 +310,32 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         current_gps = self.loop_gps_parser.parse_text(self.get_loop_gps_text())
         if current_gps:
             if self.sort_station_gps_button.isChecked():
-                self.tabs.findChild(QTextEdit, 'loop_gps_text').setPlainText('\n'.join(current_gps.get_sorted_gps()))
+                self.fill_loop_table(current_gps.get_sorted_gps())
             else:
-                self.tabs.findChild(QTextEdit, 'loop_gps_text').setPlainText('\n'.join(current_gps.get_gps()))
+                self.fill_loop_table(current_gps.get_gps())
         else:
             pass
 
     def get_loop_gps_text(self):
-        return self.loop_gps_text.toPlainText()
+        table_gps = []
+        for row in range(self.loopGPSTable.rowCount()):
+            row_list = []
+            for i, column in enumerate(self.loop_columns):
+                row_list.append(self.loopGPSTable.item(row, i).text())
+            table_gps.append(row_list)
+        return table_gps
 
     def get_loop_gps_obj(self):
         return self.loop_gps
 
     def get_station_gps_text(self):
-        return self.station_gps_text.toPlainText()
+        table_gps = []
+        for row in range(self.stationGPSTable.rowCount()):
+            row_list = []
+            for i, column in enumerate(self.station_columns):
+                row_list.append(self.stationGPSTable.item(row, i).text())
+            table_gps.append(row_list)
+        return table_gps
 
     def get_station_gps_obj(self):
         return self.station_gps

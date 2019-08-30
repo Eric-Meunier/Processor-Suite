@@ -197,7 +197,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.table.itemSelectionChanged.connect(self.display_pem_info_widget)
         self.table.cellChanged.connect(self.table_value_changed)
 
-        # self.pem_info_widget.loop_text_signal.connect(self.update_loops)
+        # self.pem_info_widget.loop_change_signal.connect(self.update_loops)
 
         self.share_loop_gps_checkbox.toggled.connect(self.toggle_share_loop)
         self.sort_loop_button.toggled.connect(self.toggle_sort_loops)
@@ -219,7 +219,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 first_widget = self.pem_info_widgets[0]
                 first_widget_loop_text = first_widget.get_loop_gps_text()
                 for widget in self.pem_info_widgets[1:]:
-                    widget.loop_gps_text.setPlainText(first_widget_loop_text)
+                    widget.fill_loop_table(first_widget_loop_text)
             else:
                 pass
         else:
@@ -324,7 +324,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             try:
                 pem_widget = pemInfoWidget.open_file(pem_file, parent=self)
                 if len(self.pem_info_widgets) == 0:
-                    pem_widget.loop_text_signal.connect(self.update_loops)
+                    pem_widget.loop_change_signal.connect(self.update_loops)
                 self.pem_files.append(pem_file)
                 self.pem_info_widgets.append(pem_widget)
                 self.stackedWidget.addWidget(pem_widget)
@@ -386,31 +386,30 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     pem_info_widget.station_gps = gps_file
 
                     if station_gps_tab.findChild(QToolButton, 'sort_station_gps_button').isChecked():
-                        gps_data = '\n'.join(gps_file.get_sorted_gps())
+                        gps_data = gps_file.get_sorted_gps()
                     else:
-                        gps_data = '\n'.join(gps_file.get_gps())
-                    station_gps_tab.findChild(QTextEdit, 'station_gps_text').setPlainText(gps_data)
+                        gps_data = gps_file.get_gps()
+                    pem_info_widget.fill_station_table(gps_data)
 
                 elif loop_gps_tab == current_tab:
                     gps_file = loop_gps_parser.parse_text(file)
                     pem_info_widget.loop_gps = gps_file
 
                     if self.share_loop_gps_checkbox.isChecked():
-                        if len(self.pem_files) == 1 or self.table.currentRow()==0:
+                        if len(self.pem_files) == 1 or self.table.currentRow() == 0:
                             if self.sort_loop_button.isChecked():
-                                gps_data = '\n'.join(gps_file.get_sorted_gps())
+                                gps_data = gps_file.get_sorted_gps()
                             else:
-                                gps_data = '\n'.join(gps_file.get_gps())
+                                gps_data = gps_file.get_gps()
                         else:
-                            gps_data = self.stackedWidget.widget(0).tabs.widget(_loop_gps_tab).findChild \
-                                (QTextEdit, 'loop_gps_text').toPlainText()
+                            gps_data = self.stackedWidget.widget(0).get_loop_gps_text()
                             pem_info_widget.sort_loop_button.setEnabled(False)
                     else:
                         if loop_gps_tab.findChild(QToolButton, 'sort_loop_button').isChecked():
-                            gps_data = '\n'.join(gps_file.get_sorted_gps())
+                            gps_data = gps_file.get_sorted_gps()
                         else:
-                            gps_data = '\n'.join(gps_file.get_gps())
-                    loop_gps_tab.findChild(QTextEdit, 'loop_gps_text').setPlainText(gps_data)
+                            gps_data = gps_file.get_gps()
+                    pem_info_widget.fill_loop_table(gps_data)
                 else:
                     pass
 
@@ -418,9 +417,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 logging.info(str(e))
                 self.message.information(None, 'PEMEditorWidget: open_gps_files error', str(e))
                 pass
-        else:
-            self.message.information(None, 'Too many files', 'Only one GPS file can be opened at once')
-            pass
 
     def clear_files(self):
         while self.table.rowCount() > 0:
@@ -828,7 +824,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.min_range_edit.setText('')
             self.max_range_edit.setText('')
         else:
-            self.pem_info_widgets[0].loop_text_signal.connect(self.update_loops)
+            self.pem_info_widgets[0].loop_change_signal.connect(self.update_loops)
 
     # Remove selected files
     def remove_file_selection(self):
