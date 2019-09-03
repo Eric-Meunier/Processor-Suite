@@ -32,7 +32,7 @@ logging.info('PEMFileInfoWidget')
 
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
-    loop_change_signal = QtCore.pyqtSignal()
+    # loop_change_signal = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -42,8 +42,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loop_gps = None
         self.last_stn_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
-        # self.selection_row_start = None
-        # self.selection_row_end = None
         self.station_gps_parser = StationGPSParser()
         self.loop_gps_parser = LoopGPSParser()
         self.setupUi(self)
@@ -55,12 +53,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.sort_loop_button.toggled.connect(self.sort_loop_gps)
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_numbers)
         self.flip_station_signs_button.clicked.connect(self.flip_station_polarity)
-        # self.station_gps_text.selectionChanged.connect(self.current_selection)
 
         self.shift_stations_spinbox.valueChanged.connect(self.shift_station_numbers)
         self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elev)
 
-        self.loopGPSTable.cellChanged.connect(self.loop_change_signal.emit)
+        # self.loopGPSTable.cellChanged.connect(self.loop_change_signal.emit)
 
         self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
         self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
@@ -70,11 +67,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.parent = parent
 
         self.fill_info()
-
-        if parent.share_loop_gps_checkbox.isChecked():
-            self.sort_loop_button.setEnabled(False)
-        else:
-            self.sort_loop_button.setEnabled(True)
 
         return self
 
@@ -90,6 +82,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.setHorizontalHeaderLabels(self.loop_columns)
         self.loopGPSTable.setSizeAdjustPolicy(
             QAbstractScrollArea.AdjustToContents)
+
+        self.stationGPSTable.resizeColumnsToContents()
+        self.loopGPSTable.resizeColumnsToContents()
 
     def fill_station_table(self, gps, tags=False):  # GPS in list form
         self.clear_table(self.stationGPSTable)
@@ -164,11 +159,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             if self.station_gps:
                 if self.sort_station_gps_button.isChecked():
                     self.fill_station_table(self.station_gps.get_sorted_gps())
-                    # self.fill_loop_table(self.station_gps.get_sorted_gps()))
                 else:
                     self.fill_station_table(self.station_gps.get_gps())
             else:
-                # self.station_gps_text.setPlainText('')
                 pass
 
         def fill_loop_text():
@@ -178,18 +171,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             except ValueError:
                 self.loop_gps = None
 
-            if self.parent.share_loop_gps_checkbox.isChecked() and len(self.parent.pem_files) > 0:
-                first_file_loop = self.parent.stackedWidget.widget(0).get_loop_gps_text()
-                self.fill_loop_table(first_file_loop)
-            else:
-                if self.loop_gps:
-                    if self.sort_loop_button.isChecked():
-                        self.fill_loop_table(self.loop_gps.get_sorted_gps())
-                    else:
-                        self.fill_loop_table(self.loop_gps.get_gps())
+            if self.loop_gps:
+                if self.sort_loop_button.isChecked():
+                    self.fill_loop_table(self.loop_gps.get_sorted_gps())
                 else:
-                    # self.loop_gps_text.setPlainText('')
-                    pass
+                    self.fill_loop_table(self.loop_gps.get_gps())
+            else:
+                pass
 
         header = self.pem_file.header
         fill_info_tab()
@@ -320,9 +308,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         table_gps = []
         for row in range(self.loopGPSTable.rowCount()):
             row_list = []
-            for i, column in enumerate(self.loop_columns):
-                row_list.append(self.loopGPSTable.item(row, i).text())
-            table_gps.append(row_list)
+            if self.loopGPSTable.item(row, 1):  # Check if an item exists before trying to read it
+                for i, column in enumerate(self.loop_columns):
+                    row_list.append(self.loopGPSTable.item(row, i).text())
+                table_gps.append(row_list)
+            else:
+                return None
         return table_gps
 
     def get_loop_gps_obj(self):
@@ -332,9 +323,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         table_gps = []
         for row in range(self.stationGPSTable.rowCount()):
             row_list = []
-            for i, column in enumerate(self.station_columns):
-                row_list.append(self.stationGPSTable.item(row, i).text())
-            table_gps.append(row_list)
+            if self.stationGPSTable.item(row, 1):  # Check if an item exists before trying to read it
+                for i, column in enumerate(self.station_columns):
+                    row_list.append(self.stationGPSTable.item(row, i).text())
+                table_gps.append(row_list)
+            else:
+                return None
         return table_gps
 
     def get_station_gps_obj(self):
