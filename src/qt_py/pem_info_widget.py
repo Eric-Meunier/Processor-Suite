@@ -8,7 +8,7 @@ from src.gps.station_gps import StationGPSParser
 from src.gps.loop_gps import LoopGPSParser
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
-                             QHeaderView, QListWidget, QTextBrowser, QPlainTextEdit, QStackedWidget, QTextEdit)
+                             QHeaderView, QListWidget, QTextBrowser, QPlainTextEdit, QStackedWidget, QTextEdit, QShortcut)
 from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -49,6 +49,25 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.initTables()
 
     def initActions(self):
+        self.loopGPSTable.installEventFilter(self)
+        self.stationGPSTable.installEventFilter(self)
+        self.loopGPSTable.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.stationGPSTable.setFocusPolicy(QtCore.Qt.StrongFocus)
+
+        self.loopGPSTable.remove_row_action = QAction("&Remove", self)
+        self.addAction(self.loopGPSTable.remove_row_action)
+        self.loopGPSTable.remove_row_action.triggered.connect(
+            lambda: self.remove_table_row_selection(self.loopGPSTable))
+        self.loopGPSTable.remove_row_action.setShortcut('Del')
+        self.loopGPSTable.remove_row_action.setEnabled(False)
+
+        self.stationGPSTable.remove_row_action = QAction("&Remove", self)
+        self.addAction(self.stationGPSTable.remove_row_action)
+        self.stationGPSTable.remove_row_action.triggered.connect(
+            lambda: self.remove_table_row_selection(self.stationGPSTable))
+        self.stationGPSTable.remove_row_action.setShortcut('Del')
+        self.stationGPSTable.remove_row_action.setEnabled(False)
+
         self.sort_station_gps_button.toggled.connect(self.sort_station_gps)
         self.sort_loop_button.toggled.connect(self.sort_loop_gps)
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_numbers)
@@ -61,6 +80,37 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
         self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
+
+    def contextMenuEvent(self, event):
+        if self.stationGPSTable.underMouse():
+            if self.stationGPSTable.selectionModel().selectedIndexes():
+                self.stationGPSTable.menu = QMenu(self.stationGPSTable)
+                self.stationGPSTable.menu.addAction(self.stationGPSTable.remove_row_action)
+                self.stationGPSTable.menu.popup(QtGui.QCursor.pos())
+            else:
+                pass
+        elif self.loopGPSTable.underMouse():
+            if self.loopGPSTable.selectionModel().selectedIndexes():
+                self.loopGPSTable.menu = QMenu(self.loopGPSTable)
+                self.loopGPSTable.menu.addAction(self.loopGPSTable.remove_row_action)
+                self.loopGPSTable.menu.popup(QtGui.QCursor.pos())
+            else:
+                pass
+        else:
+            pass
+
+    def eventFilter(self, source, event):
+        if source is self.stationGPSTable:  # Makes the 'Del' shortcut work when the table is in focus
+            if event.type() == QtCore.QEvent.FocusIn:
+                self.stationGPSTable.remove_row_action.setEnabled(True)
+            elif event.type() == QtCore.QEvent.FocusOut:
+                self.stationGPSTable.remove_row_action.setEnabled(False)
+        elif source is self.loopGPSTable:   # Makes the 'Del' shortcut work when the table is in focus
+            if event.type() == QtCore.QEvent.FocusIn:
+                self.loopGPSTable.remove_row_action.setEnabled(True)
+            elif event.type() == QtCore.QEvent.FocusOut:
+                self.loopGPSTable.remove_row_action.setEnabled(False)
+        return super(QWidget, self).eventFilter(source, event)
 
     def open_file(self, pem_file, parent):
         self.pem_file = pem_file
@@ -125,6 +175,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         while table.rowCount() > 0:
             table.removeRow(0)
 
+    def remove_table_row_selection(self, table):
+        selected_rows = []
+        for i in table.selectedIndexes():
+            if i.row() not in selected_rows:
+                selected_rows.append(i.row())
+        for row in reversed(selected_rows):
+            table.removeRow(row)
+
     def fill_info(self):
 
         def fill_info_tab():
@@ -141,13 +199,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.info_text_edit.append('<html><b>Loop Size: </b</html> {loop_size}'.format(loop_size=loop_size))
             # Fill the info tab
             for k, v in header.items():
-                unwanted_keys = ['Convension', 'IsNormalized', 'PrimeFieldValue','ChannelTimes']
+                unwanted_keys = ['Convension', 'IsNormalized', 'PrimeFieldValue', 'ChannelTimes']
                 if k not in unwanted_keys:
                     if k == 'LineHole':
                         k = linetype
                     self.info_text_edit.append('<html><b>{k}:</b</html>\t{v}'.format(k=k, v=v))
 
-            self.info_text_edit.append('<html><b>Notes: </b</html> {notes}'.format(notes='\n'.join(self.pem_file.notes)))
+            self.info_text_edit.append(
+                '<html><b>Notes: </b</html> {notes}'.format(notes='\n'.join(self.pem_file.notes)))
 
         def fill_station_text():
             # Fill station GPS
@@ -206,7 +265,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         def apply_station_shift(row):
             station_column = 5
-            station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row, station_column) else None
+            station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
+                                                                                                              station_column) else None
             if station is not None or station == 0:
                 new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_shift_amt)))
                 new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
@@ -242,7 +302,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         def apply_elevation_shift(row):
             elevation_column = 3
-            elevation = float(self.loopGPSTable.item(row, elevation_column).text()) if self.loopGPSTable.item(row, elevation_column) else None
+            elevation = float(self.loopGPSTable.item(row, elevation_column).text()) if self.loopGPSTable.item(row,
+                                                                                                              elevation_column) else None
             if elevation is not None or elevation == 0:
                 new_elevation = elevation + (shift_amount - self.last_loop_elev_shift_amt)
                 new_elevation_item = QTableWidgetItem('{:.2f}'.format(new_elevation))
@@ -360,5 +421,3 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def get_station_gps_obj(self):
         return self.station_gps
-
-

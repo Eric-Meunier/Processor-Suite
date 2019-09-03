@@ -9,7 +9,7 @@ from itertools import chain
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QTextEdit, QToolButton,
-                             QInputDialog, QHeaderView)
+                             QInputDialog, QHeaderView, QShortcut)
 
 from src.gps.loop_gps import LoopGPSParser
 from src.gps.station_gps import StationGPSParser
@@ -23,8 +23,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', date
 
 __version__ = '0.2.0'
 
-_station_gps_tab = 1
-_loop_gps_tab = 2
+_station_gps_tab = 2
+_loop_gps_tab = 1
 getcontext().prec = 6
 
 if getattr(sys, 'frozen', False):
@@ -135,6 +135,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.del_file.setShortcut("Del")
         self.del_file.triggered.connect(self.remove_file_selection)
         self.addAction(self.del_file)
+        self.del_file.setEnabled(False)
 
         self.clearFiles = QAction("&Clear Files", self)
         self.clearFiles.setShortcut("Shift+Del")
@@ -194,6 +195,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def initSignals(self):
 
         self.table.viewport().installEventFilter(self)
+
+        self.table.installEventFilter(self)
+        self.table.setFocusPolicy(QtCore.Qt.StrongFocus)
+
         self.table.itemSelectionChanged.connect(self.display_pem_info_widget)
         self.table.cellChanged.connect(self.table_value_changed)
 
@@ -507,7 +512,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 source is self.table.viewport() and
                 self.table.itemAt(event.pos()) is None):
             self.table.clearSelection()
-            # self.stackedWidget.hide()
+        elif source == self.table and event.type() == QtCore.QEvent.FocusIn:
+            self.del_file.setEnabled(True)   # Makes the 'Del' shortcut work when the table is in focus
+        elif source == self.table and event.type() == QtCore.QEvent.FocusOut:
+            self.del_file.setEnabled(False)
         return super(QWidget, self).eventFilter(source, event)
 
     def get_selected_pem_files(self):

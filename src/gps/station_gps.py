@@ -41,29 +41,32 @@ class StationGPSFile:
         line_coords_tuples = []  # Used to find the center point
         line_coords = []  # The actual full coordinates
 
-        # Splitting up the coordinates from a string to something usable
-        for coord in self.gps_data:
-            coord_tuple = (float(coord[0]), float(coord[1]))  # Just used as a key for sorting later
-            coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), int(coord[3]), int(coord[4])]
-            if coord_tuple not in line_coords_tuples:
-                line_coords_tuples.append(coord_tuple)
-            if coord_item not in line_coords:
-                line_coords.append(coord_item)
+        if self.gps_data:
+            # Splitting up the coordinates from a string to something usable
+            for coord in self.gps_data:
+                coord_tuple = (float(coord[0]), float(coord[1]))  # Just used as a key for sorting later
+                coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), int(coord[3]), int(coord[4])]
+                if coord_tuple not in line_coords_tuples:
+                    line_coords_tuples.append(coord_tuple)
+                if coord_item not in line_coords:
+                    line_coords.append(coord_item)
 
-        distances = spatial.distance.cdist(line_coords_tuples, line_coords_tuples, 'euclidean')
-        index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
-        end_point = line_coords[index_of_max]
+            distances = spatial.distance.cdist(line_coords_tuples, line_coords_tuples, 'euclidean')
+            index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
+            end_point = line_coords[index_of_max]
 
-        def distance(q):
-            # Return the Euclidean distance between points p and q.
-            p = end_point
-            return hypot(p[0] - q[0], p[1] - q[1])
+            def distance(q):
+                # Return the Euclidean distance between points p and q.
+                p = end_point
+                return hypot(p[0] - q[0], p[1] - q[1])
 
-        sorted_coords = sorted(line_coords, key=distance, reverse=True)
-        sorted_stations = self.sort_stations(sorted_coords)
-        formatted_gps = self.format_gps_data(sorted_stations)
+            sorted_coords = sorted(line_coords, key=distance, reverse=True)
+            sorted_stations = self.sort_stations(sorted_coords)
+            formatted_gps = self.format_gps_data(sorted_stations)
 
-        return formatted_gps
+            return formatted_gps
+        else:
+            return ''
 
     def sort_stations(self, gps):
         stations = [int(point[-1]) for point in gps]

@@ -44,27 +44,31 @@ class LoopGPSFile:
         loop_coords_tuples = []  # Used to find the center point
         loop_coords = []  # The actual full coordinates
 
-        # Splitting up the coordinates from a string to something usable
-        for coord in self.gps_data:
-            coord_tuple = (float(coord[0]), float(coord[1]))
-            coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), coord[3]]
-            if coord_tuple not in loop_coords_tuples:
-                loop_coords_tuples.append(coord_tuple)
-            if coord_item not in loop_coords:
-                loop_coords.append(coord_item)
+        if self.gps_data:
+            # Splitting up the coordinates from a string to something usable
+            for coord in self.gps_data:
+                coord_tuple = (float(coord[0]), float(coord[1]))
+                coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), coord[3]]
+                if coord_tuple not in loop_coords_tuples:
+                    loop_coords_tuples.append(coord_tuple)
+                if coord_item not in loop_coords:
+                    loop_coords.append(coord_item)
 
-        # Finds the center point using the tuples.
-        center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples), [len(loop_coords_tuples)] * 2))
+            # Finds the center point using the tuples.
+            center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples), [len(loop_coords_tuples)] * 2))
 
-        # The function used in 'sorted' to figure out how to sort it
-        def lambda_func(coord_item):
-            coord = (coord_item[0], coord_item[1])
-            return (math.degrees(math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360
+            # The function used in 'sorted' to figure out how to sort it
+            def lambda_func(coord_item):
+                coord = (coord_item[0], coord_item[1])
+                return (math.degrees(math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360
 
-        sorted_coords = sorted(loop_coords, key=lambda_func)
-        formatted_gps = self.format_gps_data(sorted_coords)
+            sorted_coords = sorted(loop_coords, key=lambda_func)
+            formatted_gps = self.format_gps_data(sorted_coords)
 
-        return formatted_gps
+            return formatted_gps
+
+        else:
+            return ''
 
     def format_gps_data(self, gps_data):
         """
