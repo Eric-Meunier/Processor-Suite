@@ -208,20 +208,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.min_range_edit.textChanged.connect(self.update_table)
         self.max_range_edit.textChanged.connect(self.update_table)
 
-    def update_loops(self):
-        if len(self.pem_files) > 0:
-            if self.share_loop_gps_checkbox.isChecked():
-                first_widget = self.pem_info_widgets[0]
-                try:
-                    first_widget_loop_text = first_widget.get_loop_gps_text()
-                except:
-                    pass
-                for widget in self.pem_info_widgets[1:]:
-                    widget.fill_loop_table(first_widget_loop_text)
-            else:
-                pass
-        else:
-            pass
+    def share_loop(self):
+        selected_widget = self.pem_info_widgets[self.table.currentRow()]
+        try:
+            selected_widget_loop = selected_widget.get_loop_gps_text()
+        except:
+            return
+        for widget in self.pem_info_widgets:
+            widget.fill_loop_table(selected_widget_loop)
 
     def open_file_dialog(self):
         try:
@@ -270,17 +264,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.stackedWidget.currentWidget().tabs.currentIndex() in eligible_tabs,
                 len(self.pem_files) > 0
             ]))
-
-            # gps_conditions_dict = {
-            #     'Intersect PEM Info Dock Widget': e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
-            #     'All text files': text_files,
-            #     'Stacked Widget tab is either station or loop gps tab': self.stackedWidget.currentWidget().tabs.currentIndex() in eligible_tabs,
-            #     'Share loop gps checkbox checked and the loop gps tab is selected and pem file #1 is selected': share_loop_conditions,
-            #     'More than 0 PEM files open': bool(len(self.pem_files) > 0)
-            # }
-            # print('\n\n')
-            # for k, v in gps_conditions_dict.items():
-            #     print('{k}: {v}'.format(k=k, v=v))
 
             if pem_conditions is True or gps_conditions is True:
                 e.acceptProposedAction()
@@ -483,6 +466,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.scale_ca_action = QAction("&Coil Area", self)
                 self.table.scale_ca_action.triggered.connect(self.scale_coil_area_selection)
 
+                self.table.share_loop_action = QAction("&Share Loop", self)
+                self.table.share_loop_action.triggered.connect(self.share_loop)
+
                 self.table.rename_lines_action = QAction("&Rename Lines/Holes", self)
                 self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line', selected=True))
 
@@ -491,6 +477,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
                 self.table.menu.addAction(self.table.save_file_action)
                 if len(self.table.selectionModel().selectedIndexes()) == len(self.columns):
+                    # If only 1 row is selected...
                     self.table.menu.addAction(self.table.save_file_as_action)
                 self.table.menu.addSeparator()
                 if len(self.table.selectionModel().selectedIndexes()) > len(self.columns):
@@ -499,9 +486,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addAction(self.table.average_action)
                 self.table.menu.addAction(self.table.split_action)
                 self.table.menu.addAction(self.table.scale_ca_action)
-                self.table.menu.addSeparator()
-                self.table.menu.addAction(self.table.rename_lines_action)
-                self.table.menu.addAction(self.table.rename_files_action)
+                if len(self.table.selectionModel().selectedIndexes()) == len(self.columns):
+                    self.table.menu.addAction(self.table.share_loop_action)
+                if len(self.table.selectionModel().selectedIndexes()) > len(self.columns):
+                    self.table.menu.addSeparator()
+                    self.table.menu.addAction(self.table.rename_lines_action)
+                    self.table.menu.addAction(self.table.rename_files_action)
                 self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.remove_file_action)
 
@@ -911,7 +901,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
                 widget.sort_station_gps_button.setChecked(True)
-                widget.fill_station_table(widget.station_gps.get_sorted_gps())
+                try:
+                    widget.fill_station_table(widget.station_gps.get_sorted_gps())
+                except AttributeError:
+                    pass
             self.window().statusBar().showMessage('All stations have been sorted', 2000)
 
     def sort_all_loop_gps(self):
@@ -919,7 +912,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
                 widget.sort_loop_button.setChecked(True)
-                widget.fill_loop_table(widget.loop_gps.get_sorted_gps())
+                try:
+                    widget.fill_loop_table(widget.loop_gps.get_sorted_gps())
+                except AttributeError:
+                    pass
             self.window().statusBar().showMessage('All loops have been sorted', 2000)
 
     def fill_share_header(self):
@@ -1691,39 +1687,6 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
             self.min_range_edit.setEnabled(False)
             self.max_range_edit.setEnabled(False)
             self.update_table()
-
-    def toggle_share_loop(self):
-        if self.share_loop_gps_checkbox.isChecked():
-            self.sort_loop_button.setEnabled(True)
-            if len(self.pem_files) > 0:
-                first_widget = self.stackedWidget.widget(0)
-                if first_widget.loop_gps:
-                    if self.sort_loop_button.isChecked():
-                        loop = first_widget.loop_gps.get_sorted_gps()
-                    else:
-                        loop = first_widget.loop_gps.get_gps()
-                else:
-                    loop = None
-                for i in range(self.stackedWidget.count()):
-                    widget = self.stackedWidget.widget(i)
-                    widget.sort_loop_button.setEnabled(False)
-                    widget.format_loop_gps_button.setEnabled(False)
-                    if i != 0:
-                        widget.fill_loop_table(loop)
-        else:
-            self.sort_loop_button.setEnabled(False)
-            if len(self.pem_files) > 0:
-                for i in range(self.stackedWidget.count()):
-                    widget = self.stackedWidget.widget(i)
-                    widget.sort_loop_button.setEnabled(True)
-                    widget.format_loop_gps_button.setEnabled(True)
-                    if widget.loop_gps:
-                        if widget.sort_loop_button.isChecked():
-                            widget.fill_loop_table(widget.loop_gps.get_sorted_gps())
-                        else:
-                            widget.fill_loop_table(widget.loop_gps.get_gps())
-                    else:
-                        widget.clear_table(widget.loopGPSTable)
 
     def toggle_sort_loop(self, widget):
         if self.sort_loop_button.isChecked():

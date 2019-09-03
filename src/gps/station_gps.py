@@ -138,7 +138,12 @@ class StationGPSParser:
     def parse_text(self, gps):
         # For data coming in from PEMInfoWidget/PEMEditor
         if isinstance(gps, list):
-            ' '.join(gps)
+            for i, row in enumerate(gps):
+                if isinstance(row, list):
+                    row_str = ' '.join(row)
+                    gps[i] = row_str
+                else:
+                    pass
             gps_str = '\n'.join(gps)
         elif gps is None or gps is '':
             return None
