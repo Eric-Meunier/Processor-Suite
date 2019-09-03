@@ -365,27 +365,28 @@ class DampParser:
         filename = filepath.split('/')[-1].split('.')[0]
         folderpath = '/'.join(filepath.split('/')[0:-1])
 
-        raw = open(filepath, 'rb').read()  # Read the file as bytes first...
+        file = open(filepath, 'r').read()
 
-        # This try is only needed because some files are encoded in utf-16le (no bom) for some reason
-        # If a BOM is present, we know what to use to decode
-        if raw.startswith(codecs.BOM_UTF16_LE):
-            file = raw.decode('utf-16le')
-        elif raw.startswith(codecs.BOM_UTF16_BE):
-            file = raw.decode('utf-16be')
-        elif raw.startswith(codecs.BOM_UTF8):
-            file = raw.decode('utf-8')
-        else:
-            # If no BOM is present, becomes trial and error
-            try:
-                decoded = raw.decode('utf-16le').encode('ascii')
-                file = raw.decode('utf-16le')
-            except UnicodeEncodeError:
-                try:
-                    decoded = raw.decode('utf-16be').encode('ascii')
-                    file = raw.decode('utf-16be')
-                except UnicodeEncodeError:
-                    file = raw.decode('utf-8')
+        # # This try is only needed because some files are encoded in utf-16le (no bom) for some reason
+        # # If a BOM is present, we know what to use to decode
+        # raw = open(filepath, 'rb').read()  # Read the file as bytes first...
+        # if raw.startswith(codecs.BOM_UTF16_LE):
+        #     file = raw.decode('utf-16le')
+        # elif raw.startswith(codecs.BOM_UTF16_BE):
+        #     file = raw.decode('utf-16be')
+        # elif raw.startswith(codecs.BOM_UTF8):
+        #     file = raw.decode('utf-8')
+        # else:
+        #     # If no BOM is present, becomes trial and error
+        #     try:
+        #         decoded = raw.decode('utf-16le').encode('ascii')
+        #         file = raw.decode('utf-16le')
+        #     except UnicodeEncodeError:
+        #         try:
+        #             decoded = raw.decode('utf-16be').encode('ascii')
+        #             file = raw.decode('utf-16be')
+        #         except UnicodeEncodeError:
+        #             file = raw.decode('utf-8')
 
         file_no_ramp = re.split(self.re_split_ramp, file)[0]
         split_file = re.split(self.re_split_file, file_no_ramp)

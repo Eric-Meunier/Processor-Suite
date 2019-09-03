@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', date
 
 
 class StationGPSFile:
+    # TODO Add signal for duplicates message?
     """
     Loop GPS Object.
     :param gps_data: List of lists. Format of the items in the lists doesn't matter
@@ -40,7 +41,7 @@ class StationGPSFile:
         logging.info('Sorting line GPS')
         line_coords_tuples = []  # Used to find the center point
         line_coords = []  # The actual full coordinates
-
+        duplicates = []
         if self.gps_data:
             # Splitting up the coordinates from a string to something usable
             for coord in self.gps_data:
@@ -50,6 +51,11 @@ class StationGPSFile:
                     line_coords_tuples.append(coord_tuple)
                 if coord_item not in line_coords:
                     line_coords.append(coord_item)
+                else:
+                    duplicates.append(coord_item)
+
+            # if len(duplicates) > 0:
+            #     self.parent.window().message.information(None, 'Duplicate Notice', '{} duplicate(s) found'.format(str(len(duplicates))))
 
             distances = spatial.distance.cdist(line_coords_tuples, line_coords_tuples, 'euclidean')
             index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line

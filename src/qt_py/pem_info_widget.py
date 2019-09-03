@@ -86,6 +86,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             if self.stationGPSTable.selectionModel().selectedIndexes():
                 self.stationGPSTable.menu = QMenu(self.stationGPSTable)
                 self.stationGPSTable.menu.addAction(self.stationGPSTable.remove_row_action)
+                self.stationGPSTable.remove_row_action.setEnabled(True)
                 self.stationGPSTable.menu.popup(QtGui.QCursor.pos())
             else:
                 pass
@@ -93,6 +94,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             if self.loopGPSTable.selectionModel().selectedIndexes():
                 self.loopGPSTable.menu = QMenu(self.loopGPSTable)
                 self.loopGPSTable.menu.addAction(self.loopGPSTable.remove_row_action)
+                self.loopGPSTable.remove_row_action.setEnabled(True)
                 self.loopGPSTable.menu.popup(QtGui.QCursor.pos())
             else:
                 pass

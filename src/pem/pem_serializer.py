@@ -38,7 +38,7 @@ class PEMSerializer:
     def serialize_loop_coords(self, coords):
         # Coords are a list of lists
         result = '~ Transmitter Loop Co-ordinates:\n'
-        if coords == '':
+        if not coords:
             result += '<L00>\n''<L01>\n''<L02>\n''<L03>\n'
         else:
             for position in coords:
@@ -49,7 +49,7 @@ class PEMSerializer:
     def serialize_line_coords(self, coords):
         # Coords are a list of lists
         result = '~ Hole/Profile Co-ordinates:\n'
-        if coords == '':
+        if not coords:
             result += '<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
         else:
             for position in coords:

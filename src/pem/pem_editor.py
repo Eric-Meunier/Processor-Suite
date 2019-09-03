@@ -213,15 +213,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.min_range_edit.textChanged.connect(self.update_table)
         self.max_range_edit.textChanged.connect(self.update_table)
 
-    def share_loop(self):
-        selected_widget = self.pem_info_widgets[self.table.currentRow()]
-        try:
-            selected_widget_loop = selected_widget.get_loop_gps_text()
-        except:
-            return
-        for widget in self.pem_info_widgets:
-            widget.fill_loop_table(selected_widget_loop)
-
     def open_file_dialog(self):
         try:
             files = self.dialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem);; All files(*.*)')
@@ -673,6 +664,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.message.information(None, 'Error', 'Must select multiple PEM Files')
 
     def table_value_changed(self, row, col):
+        print('Table value changed')
         if col == self.columns.index('Coil Area'):
             pem_file = self.pem_files[row]
             old_value = int(pem_file.header.get('CoilArea'))
@@ -698,17 +690,50 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.window().statusBar().showMessage(
                     'File renamed to {}'.format(str(new_name)), 2000)
 
+        pem_file = self.pem_files[row]
+        self.check_for_table_changes(pem_file, row)
+
+    def check_for_table_changes(self, pem_file, row):
+        boldFont = QtGui.QFont()
+        boldFont.setBold(True)
+        normalFont = QtGui.QFont()
+        normalFont.setBold(False)
+
+        pem_file_info_list = [
+            os.path.basename(pem_file.filepath),
+            pem_file.header.get('Date'),
+            pem_file.header.get('Client'),
+            pem_file.header.get('Grid'),
+            pem_file.header.get('LineHole'),
+            pem_file.header.get('Loop'),
+            pem_file.tags.get('Current'),
+            pem_file.header.get('CoilArea'),
+            str(min(pem_file.get_converted_unique_stations())),
+            str(max(pem_file.get_converted_unique_stations())),
+            str('Yes' if pem_file.is_averaged() else 'No'),
+            str('Yes' if pem_file.is_split() else 'No')
+        ]
+        for column in range(self.table.columnCount()):
+            if self.table.item(row, column):
+                original_value = pem_file_info_list[column]
+                if self.table.item(row, column).text() != original_value:
+                    self.table.item(row, column).setFont(boldFont)
+                else:
+                    self.table.item(row, column).setFont(normalFont)
+        self.table.resizeColumnsToContents()
+
     # Saves the pem file in memory using the information in the table
     def update_pem_file_from_table(self, pem_file, table_row, filepath=None):
         if filepath is None:
             pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0], self.table.item(table_row, 0).text())
         else:
             pem_file.filepath = filepath
-        pem_file.header['Client'] = self.table.item(table_row, 1).text()
-        pem_file.header['Grid'] = self.table.item(table_row, 2).text()
-        pem_file.header['LineHole'] = self.table.item(table_row, 3).text()
-        pem_file.header['Loop'] = self.table.item(table_row, 4).text()
-        pem_file.tags['Current'] = self.table.item(table_row, 5).text()
+        pem_file.header['Date'] = self.table.item(table_row, self.columns.index('Date')).text()
+        pem_file.header['Client'] = self.table.item(table_row, self.columns.index('Client')).text()
+        pem_file.header['Grid'] = self.table.item(table_row, self.columns.index('Grid')).text()
+        pem_file.header['LineHole'] = self.table.item(table_row, self.columns.index('Line/Hole')).text()
+        pem_file.header['Loop'] = self.table.item(table_row, self.columns.index('Loop')).text()
+        pem_file.tags['Current'] = self.table.item(table_row, self.columns.index('Current')).text()
         pem_file.loop_coords = self.stackedWidget.widget(table_row).get_loop_gps_text()
         pem_file.line_coords = self.stackedWidget.widget(table_row).get_station_gps_text()
 
@@ -820,7 +845,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     # Creates the table when the editor is first opened
     def create_table(self):
-        self.columns = ['File', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'Coil Area', 'First Station',
+        self.columns = ['File', 'Date', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'Coil Area', 'First Station',
                         'Last Station', 'Averaged', 'Split']
         self.table.setColumnCount(len(self.columns))
         self.table.setHorizontalHeaderLabels(self.columns)
@@ -834,10 +859,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # header.setSectionResizeMode(3, QHeaderView.Stretch)
 
     def add_to_table(self, pem_file):
-
+        self.table.blockSignals(True)
         header = pem_file.header
         tags = pem_file.tags
         file = os.path.basename(pem_file.filepath)
+        date = header.get('Date')
         client = self.client_edit.text() if self.share_header_checkbox.isChecked() else header.get('Client')
         grid = self.grid_edit.text() if self.share_header_checkbox.isChecked() else header.get('Grid')
         loop = self.loop_edit.text() if self.share_header_checkbox.isChecked() else header.get('Loop')
@@ -851,7 +877,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         end_stn = self.max_range_edit.text() if self.share_range_checkbox.isChecked() else str(
             max(pem_file.get_converted_unique_stations()))
 
-        new_row = [file, client, grid, line, loop, current, coil_area, start_stn, end_stn, averaged, split]
+        new_row = [file, date, client, grid, line, loop, current, coil_area, start_stn, end_stn, averaged, split]
 
         row_pos = self.table.rowCount()
         self.table.insertRow(row_pos)
@@ -861,38 +887,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row_pos, i, item)
 
-        self.table.resizeColumnsToContents()
-
-        boldFont = QtGui.QFont()
-        boldFont.setBold(True)
-
-        # Only used for table comparisons. Makes bold entries that have changed
-        pem_file_info_list = [
-            file,
-            header.get('Client'),
-            header.get('Grid'),
-            header.get('LineHole'),
-            header.get('Loop'),
-            tags.get('Current'),
-            header.get('CoilArea'),
-            str(min(pem_file.get_converted_unique_stations())),
-            str(max(pem_file.get_converted_unique_stations())),
-            str(averaged),
-            str(split)
-        ]
-        for column in range(self.table.columnCount()):
-            if self.table.item(row_pos, column).text() != pem_file_info_list[column]:
-                self.table.item(row_pos, column).setFont(boldFont)
-
         if self.table.item(row_pos, self.columns.index('Averaged')).text().lower() == 'no':
             self.table.item(row_pos, self.columns.index('Averaged')).setForeground(QtGui.QColor('red'))
 
         if self.table.item(row_pos, self.columns.index('Split')).text().lower() == 'no':
             self.table.item(row_pos, self.columns.index('Split')).setForeground(QtGui.QColor('red'))
-        #
-        # if self.table.item(row_pos, 3).text() != self.table.item(row_pos, 4).text():
-        #     for column in range (3, 5):
-        #         self.table.item(row_pos, column).setForeground(QtGui.QColor('red'))
+
+        self.check_for_table_changes(pem_file, row_pos)
+        self.table.blockSignals(False)
 
     # Deletes and re-populates the table rows with the new information
     def update_table(self):
@@ -950,6 +952,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.min_range_edit.setText('')
             self.max_range_edit.setText('')
+
+    def share_loop(self):
+        selected_widget = self.pem_info_widgets[self.table.currentRow()]
+        try:
+            selected_widget_loop = selected_widget.get_loop_gps_text()
+        except:
+            return
+        for widget in self.pem_info_widgets:
+            widget.fill_loop_table(selected_widget_loop)
 
     def toggle_share_header(self):
         if self.share_header_checkbox.isChecked():
