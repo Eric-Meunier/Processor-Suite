@@ -8,7 +8,8 @@ from src.gps.station_gps import StationGPSParser
 from src.gps.loop_gps import LoopGPSParser
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
-                             QHeaderView, QListWidget, QTextBrowser, QPlainTextEdit, QStackedWidget, QTextEdit, QShortcut)
+                             QHeaderView, QListWidget, QTextBrowser, QPlainTextEdit, QStackedWidget, QTextEdit,
+                             QShortcut)
 from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -46,6 +47,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loop_gps_parser = LoopGPSParser()
         self.setupUi(self)
         self.initActions()
+        self.initSignals()
         self.initTables()
 
     def initActions(self):
@@ -68,6 +70,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.remove_row_action.setShortcut('Del')
         self.stationGPSTable.remove_row_action.setEnabled(False)
 
+    def initSignals(self):
         self.sort_station_gps_button.toggled.connect(self.sort_station_gps)
         self.sort_loop_button.toggled.connect(self.sort_loop_gps)
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_numbers)
@@ -76,7 +79,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.shift_stations_spinbox.valueChanged.connect(self.shift_station_numbers)
         self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elev)
 
-        # self.loopGPSTable.cellChanged.connect(self.loop_change_signal.emit)
+        self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
 
         self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
         self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
@@ -107,7 +110,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.stationGPSTable.remove_row_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
                 self.stationGPSTable.remove_row_action.setEnabled(False)
-        elif source is self.loopGPSTable:   # Makes the 'Del' shortcut work when the table is in focus
+        elif source is self.loopGPSTable:  # Makes the 'Del' shortcut work when the table is in focus
             if event.type() == QtCore.QEvent.FocusIn:
                 self.loopGPSTable.remove_row_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
@@ -140,7 +143,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def fill_station_table(self, gps, tags=False):  # GPS in list form
         self.clear_table(self.stationGPSTable)
+        self.stationGPSTable.blockSignals(True)
         logging.info('Filling station table')
+
         for i, row in enumerate(gps):
             row_pos = self.stationGPSTable.rowCount()
             self.stationGPSTable.insertRow(row_pos)
@@ -155,6 +160,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.stationGPSTable.setItem(row_pos, m, item)
 
         self.stationGPSTable.resizeColumnsToContents()
+        self.check_station_duplicates()
+        self.stationGPSTable.blockSignals(False)
 
     def fill_loop_table(self, gps):
         self.clear_table(self.loopGPSTable)
@@ -174,16 +181,36 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.resizeColumnsToContents()
 
     def clear_table(self, table):
+        table.blockSignals(True)
         while table.rowCount() > 0:
             table.removeRow(0)
+        table.blockSignals(False)
+
+    def check_station_duplicates(self):
+        self.stationGPSTable.blockSignals(True)
+        stations_column = 5
+        stations = []
+        for row in range(self.stationGPSTable.rowCount()):
+            if self.stationGPSTable.item(row, stations_column):
+                station = self.stationGPSTable.item(row, stations_column).text()
+                if station in stations:
+                    other_station_index = stations.index(station)
+                    self.stationGPSTable.item(row, stations_column).setForeground(QtGui.QColor('red'))
+                    self.stationGPSTable.item(other_station_index, stations_column).setForeground(QtGui.QColor('red'))
+                else:
+                    self.stationGPSTable.item(row, stations_column).setForeground(QtGui.QColor('black'))
+                stations.append(station)
+        self.stationGPSTable.blockSignals(False)
 
     def remove_table_row_selection(self, table):
+        # Table (QWidgetTable) is either the loop and station GPS tables
         selected_rows = []
         for i in table.selectedIndexes():
             if i.row() not in selected_rows:
                 selected_rows.append(i.row())
         for row in reversed(selected_rows):
             table.removeRow(row)
+        self.check_station_duplicates()
 
     def fill_info(self):
 
@@ -276,7 +303,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             else:
                 pass
 
-        # TODO Add shifting based on table selection, also deleting rows and such
         selected_rows = []
         for i in self.stationGPSTable.selectedIndexes():
             if i.row() not in selected_rows:
@@ -342,17 +368,31 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # Multiplies the station number by -1
 
         def flip_stn_num(row):
-            station = row.pop(-1)
-            new_station = int(station) * -1
-            row.append(str(new_station))
-            return row
+            station_column = 5
+            station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
+                                                                                                              station_column) else None
+            if station is not None or station == 0:
+                new_station_item = QTableWidgetItem(str(station * -1))
+                new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.stationGPSTable.setItem(row, station_column, new_station_item)
+            else:
+                pass
 
-        gps = self.get_station_gps_text()
-        if gps:
-            flipped_gps = list(map(flip_stn_num, gps))
-            self.fill_station_table(flipped_gps)
+        selected_rows = []
+        for i in self.stationGPSTable.selectedIndexes():
+            if i.row() not in selected_rows:
+                selected_rows.append(i.row())
+
+        if selected_rows:
+            for row in selected_rows:
+                flip_stn_num(row)
         else:
-            pass
+            for row in range(self.stationGPSTable.rowCount()):
+                try:
+                    flip_stn_num(row)
+                except Exception as e:
+                    print(str(e))
+                    pass
 
     def reverse_station_numbers(self):
         # Flips the station numbers head-over-heals
