@@ -1,12 +1,12 @@
-import re
+import logging
 import os
+import re
 import sys
+from math import hypot
+from os.path import isfile, join
+
 import numpy as np
 from scipy import spatial
-from math import hypot, sqrt
-from os.path import isfile, join
-import logging
-from PyQt5 import QtCore
 
 __version__ = '0.0.0'
 
@@ -125,7 +125,6 @@ class StationGPSParser:
             r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
 
     def open(self, filepath):
-        # For .txt or .csv files with GPS in them
         self.filepath = filepath
 
         with open(self.filepath, 'rt') as in_file:
@@ -134,7 +133,6 @@ class StationGPSParser:
         self.parse(self.file)
 
     def parse(self, gps):
-        # For data coming in from PEMInfoWidget/PEMEditor
         if isinstance(gps, list):
             for i, row in enumerate(gps):
                 if isinstance(row, list):
@@ -145,7 +143,6 @@ class StationGPSParser:
             gps_str = '\n'.join(gps)
         elif gps is None or gps is '':
             return None
-            # return self.gps_file('')
         else:
             gps_str = gps
         raw_gps = re.findall(self.re_gps, gps_str)

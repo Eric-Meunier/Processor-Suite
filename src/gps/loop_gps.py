@@ -1,13 +1,11 @@
-import re
-import os
-import sys
-import operator
+import logging
 import math
-import numpy as np
-from pprint import pprint
+import operator
+import os
+import re
+import sys
 from functools import reduce
 from os.path import isfile, join
-import logging
 
 __version__ = '0.0.0'
 

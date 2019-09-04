@@ -89,16 +89,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             if self.stationGPSTable.selectionModel().selectedIndexes():
                 self.stationGPSTable.menu = QMenu(self.stationGPSTable)
                 self.stationGPSTable.menu.addAction(self.stationGPSTable.remove_row_action)
-                self.stationGPSTable.remove_row_action.setEnabled(True)
                 self.stationGPSTable.menu.popup(QtGui.QCursor.pos())
+                self.stationGPSTable.remove_row_action.setEnabled(True)
             else:
                 pass
         elif self.loopGPSTable.underMouse():
             if self.loopGPSTable.selectionModel().selectedIndexes():
                 self.loopGPSTable.menu = QMenu(self.loopGPSTable)
                 self.loopGPSTable.menu.addAction(self.loopGPSTable.remove_row_action)
-                self.loopGPSTable.remove_row_action.setEnabled(True)
                 self.loopGPSTable.menu.popup(QtGui.QCursor.pos())
+                self.loopGPSTable.remove_row_action.setEnabled(True)
             else:
                 pass
         else:
@@ -291,6 +291,78 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def shift_station_numbers(self):
+
+        def apply_station_shift(row):
+            station_column = 5
+            station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
+                                                                                                              station_column) else None
+            if station is not None or station == 0:
+                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_shift_amt)))
+                new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.stationGPSTable.setItem(row, station_column, new_station_item)
+            else:
+                pass
+
+        selected_rows = []
+        for i in self.stationGPSTable.selectedIndexes():
+            if i.row() not in selected_rows:
+                selected_rows.append(i.row())
+
+        shift_amount = self.shift_stations_spinbox.value()
+
+        if selected_rows:
+            for row in selected_rows:
+                try:
+                    apply_station_shift(row)
+                except Exception as e:
+                    print(str(e))
+                    pass
+        else:
+            for row in range(self.stationGPSTable.rowCount()):
+                try:
+                    apply_station_shift(row)
+                except Exception as e:
+                    print(str(e))
+                    pass
+        self.last_stn_shift_amt = shift_amount
+
+    def shift_station_easting(self):
+
+        def apply_station_shift(row):
+            easting_column = 1
+            station = int(self.stationGPSTable.item(row, easting_column).text()) if self.stationGPSTable.item(row,
+                                                                                                              easting_column) else None
+            if station is not None or station == 0:
+                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_shift_amt)))
+                new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.stationGPSTable.setItem(row, easting_column, new_station_item)
+            else:
+                pass
+
+        selected_rows = []
+        for i in self.stationGPSTable.selectedIndexes():
+            if i.row() not in selected_rows:
+                selected_rows.append(i.row())
+
+        shift_amount = self.shift_stations_spinbox.value()
+
+        if selected_rows:
+            for row in selected_rows:
+                try:
+                    apply_station_shift(row)
+                except Exception as e:
+                    print(str(e))
+                    pass
+        else:
+            for row in range(self.stationGPSTable.rowCount()):
+                try:
+                    apply_station_shift(row)
+                except Exception as e:
+                    print(str(e))
+                    pass
+        self.last_stn_shift_amt = shift_amount
+
+    def shift_station_northing(self):
 
         def apply_station_shift(row):
             station_column = 5
