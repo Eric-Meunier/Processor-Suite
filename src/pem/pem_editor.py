@@ -354,7 +354,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
 
                 if station_gps_tab == current_tab:
-                    gps_file = station_gps_parser.parse_text(file)
+                    gps_file = station_gps_parser.parse(file)
                     pem_info_widget.station_gps = gps_file
 
                     if station_gps_tab.findChild(QToolButton, 'sort_station_gps_button').isChecked():
@@ -364,7 +364,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     pem_info_widget.fill_station_table(gps_data)
 
                 elif loop_gps_tab == current_tab:
-                    gps_file = loop_gps_parser.parse_text(file)
+                    gps_file = loop_gps_parser.parse(file)
                     pem_info_widget.loop_gps = gps_file
 
                     if loop_gps_tab.findChild(QToolButton, 'sort_loop_button').isChecked():
@@ -1152,7 +1152,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
     #             current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
     # 
     #             if station_gps_tab == current_tab:
-    #                 gps_file = station_gps_parser.parse_text(file)
+    #                 gps_file = station_gps_parser.parse(file)
     #                 pem_info_widget.station_gps = gps_file
     # 
     #                 if station_gps_tab.findChild(QToolButton, 'sort_station_gps_button').isChecked():
@@ -1162,7 +1162,7 @@ class PEMEditorWidget(QWidget, Ui_PEMEditorWidget):
     #                 station_gps_tab.findChild(QTextEdit, 'station_gps_text').setPlainText(gps_data)
     # 
     #             elif loop_gps_tab == current_tab:
-    #                 gps_file = loop_gps_parser.parse_text(file)
+    #                 gps_file = loop_gps_parser.parse(file)
     #                 pem_info_widget.loop_gps = gps_file
     # 
     #                 if self.share_loop_gps_checkbox.isChecked():

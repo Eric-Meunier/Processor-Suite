@@ -240,7 +240,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         def fill_station_text():
             # Fill station GPS
             try:
-                self.station_gps = self.station_gps_parser.parse_text(self.pem_file.get_line_coords())
+                self.station_gps = self.station_gps_parser.parse(self.pem_file.get_line_coords())
             except ValueError:
                 self.station_gps = None
 
@@ -255,7 +255,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         def fill_loop_text():
             # Fill loop GPS
             try:
-                self.loop_gps = self.loop_gps_parser.parse_text(self.pem_file.get_loop_coords())
+                self.loop_gps = self.loop_gps_parser.parse(self.pem_file.get_loop_coords())
             except ValueError:
                 self.loop_gps = None
 
@@ -410,7 +410,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def format_station_gps_text(self):
         try:
-            current_gps = self.station_gps_parser.parse_text(self.get_station_gps_text())
+            current_gps = self.station_gps_parser.parse(self.get_station_gps_text())
         except ValueError:
             current_gps = None
         if current_gps:
@@ -423,7 +423,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def format_loop_gps_text(self):
         try:
-            current_gps = self.loop_gps_parser.parse_text(self.get_loop_gps_text())
+            current_gps = self.loop_gps_parser.parse(self.get_loop_gps_text())
         except ValueError:
             current_gps = None
         if current_gps:

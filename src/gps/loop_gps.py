@@ -29,12 +29,7 @@ class LoopGPSFile:
     :param gps_data: List of lists. Format of the items in the lists doesn't matter
     :param filepath: Filepath of the original text file with the GPS data in it
     """
-    def __init__(self, gps_data, filepath=None):
-        self.filepath = filepath
-        if self.filepath:
-            self.filename = os.path.basename(self.filepath)  # With extension
-            self.file_dir = os.path.dirname(self.filepath)
-
+    def __init__(self, gps_data):
         self.gps_data = gps_data
         self.sorted_gps_data = self.sort_loop()
 
@@ -123,21 +118,15 @@ class LoopGPSParser:
         self.re_gps = re.compile(
             r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W*(?P<Units>0|1)?\W?')
 
-    def parse(self, filepath):
+    def open(self, filepath):
         self.filepath = filepath
 
         with open(self.filepath, 'rt') as in_file:
             self.file = in_file.read()
 
-        self.raw_gps = re.findall(self.re_gps, self.file)
-        self.raw_gps = list(map(lambda x: list(x), self.raw_gps))
+        self.parse(self.file)
 
-        if self.raw_gps:
-            return self.gps_file(self.raw_gps, filepath=self.filepath)
-        else:
-            return None
-
-    def parse_text(self, gps):
+    def parse(self, gps):
         if isinstance(gps, list):
             for i, row in enumerate(gps):
                 if isinstance(row, list):
@@ -172,7 +161,7 @@ def main():
 
     # for file in file_paths:
     file = r'C:\Users\Eric\Desktop\testing.txt'
-    gps_file().parse(file)
+    gps_file().open(file)
 
 
 if __name__ == '__main__':
