@@ -747,30 +747,30 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
         extension = os.path.splitext(pem_file.filepath)[-1]
         overwrite = True
-        tags = []
+        # tags = []
 
         if pem_file.is_averaged():
-            # Means the data has been averaged, therefore append '[A]'
             if '[A]' not in file_name:
-                tags.append('[A]')
+                file_name += '[A]'
                 overwrite = False
         if pem_file.is_split():
             if '[S]' not in file_name:
-                tags.append('[S]')
+                file_name += '[S]'
                 overwrite = False
         if pem_file.is_merged:
             if '[M]' in file_name:
-                tags.append('[M]')
+                file_name.replace('[M]','')
+                file_name += '[M]'
                 overwrite = False
 
-        # Rearranging the tags
-        tags.sort()
-        if '[M]' in tags:
-            index = tags.index('[M]')
-            m = tags.pop(index)
-            tags.append(m)
+        # # Rearranging the tags
+        # tags.sort()
+        # if '[M]' in tags:
+        #     index = tags.index('[M]')
+        #     m = tags.pop(index)
+        #     tags.append(m)
 
-        file_name += ''.join(tags)
+        # file_name += ''.join(tags)
         pem_file.filepath = os.path.join(file_dir + '/' + file_name + extension)
         save_file = self.serializer.serialize(pem_file)
         print(save_file, file=open(pem_file.filepath, 'w+'))

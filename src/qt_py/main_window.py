@@ -79,6 +79,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.initApps()
         self.initActions()
 
+        self.open_editor()
+
     def initUi(self):
         def center_window(self):
             qtRectangle = self.frameGeometry()
@@ -88,7 +90,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.show()
 
         self.setupUi(self)  # Init for the .UI file
-        # self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
         # self.setWindowIcon(
         #     QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))

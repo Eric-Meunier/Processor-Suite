@@ -6,6 +6,7 @@ from scipy import spatial
 from math import hypot, sqrt
 from os.path import isfile, join
 import logging
+from PyQt5 import QtCore
 
 __version__ = '0.0.0'
 
@@ -22,6 +23,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', date
 
 
 class StationGPSFile:
+    # duplicate_signal = QtCore.pyqtSignal(int)
     # TODO Add signal for duplicates message?
     """
     Loop GPS Object.
@@ -39,25 +41,22 @@ class StationGPSFile:
 
     def sort_line(self):
         logging.info('Sorting line GPS')
-        line_coords_tuples = []  # Used to find the center point
         line_coords = []  # The actual full coordinates
         duplicates = []
+
         if self.gps_data:
             # Splitting up the coordinates from a string to something usable
             for coord in self.gps_data:
-                coord_tuple = (float(coord[0]), float(coord[1]))  # Just used as a key for sorting later
                 coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), int(coord[3]), int(coord[4])]
-                if coord_tuple not in line_coords_tuples:
-                    line_coords_tuples.append(coord_tuple)
                 if coord_item not in line_coords:
                     line_coords.append(coord_item)
                 else:
                     duplicates.append(coord_item)
 
             # if len(duplicates) > 0:
-            #     self.parent.window().message.information(None, 'Duplicate Notice', '{} duplicate(s) found'.format(str(len(duplicates))))
+            #     self.duplicate_signal.emit(len(duplicates))
 
-            distances = spatial.distance.cdist(line_coords_tuples, line_coords_tuples, 'euclidean')
+            distances = spatial.distance.cdist(line_coords, line_coords, 'euclidean')
             index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
             end_point = line_coords[index_of_max]
 
