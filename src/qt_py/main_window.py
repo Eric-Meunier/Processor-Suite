@@ -93,8 +93,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle("PEMPro  v" + str(__version__))
         # self.setWindowIcon(
         #     QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
-        self.setGeometry(500, 300, 1400, 900)
-        center_window(self)
+        # self.setGeometry(500, 300, 1500, 900)
+
+        # center_window(self)
+        self.showMaximized()
 
     def initApps(self):
         self.message = QMessageBox()

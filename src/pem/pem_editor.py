@@ -2,6 +2,10 @@ import copy
 import logging
 import os
 import re
+import datetime
+import cProfile
+import pstats
+import time
 import sys
 from decimal import getcontext
 from itertools import chain
@@ -11,6 +15,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QTextEdit, QToolButton,
                              QInputDialog, QHeaderView, QShortcut)
 
+from src.pem.pem_plotter import PEMPlotter
 from src.gps.loop_gps import LoopGPSParser
 from src.gps.station_gps import StationGPSParser
 from src.pem.pem_file_editor import PEMFileEditor
@@ -277,11 +282,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         pem_files = [file for file in files if file.lower().endswith('pem')]
         gps_files = [file for file in files if file.lower().endswith('txt') or file.lower().endswith('csv')]
 
+        start_time = time.time()
         if len(pem_files) > 0:
             self.open_pem_files(pem_files)
+            print('open_pem_files time: {} seconds'.format(time.time()-start_time))
 
         if len(gps_files) > 0:
             self.open_gps_files(gps_files)
+            print('open_gps_files time: {} seconds'.format(time.time() - start_time))
 
     def open_pem_files(self, pem_files):
         logging.info('open_pem_files')
@@ -297,6 +305,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 pem_file = self.parser.parse(pem_file)
             try:
                 pem_widget = pemInfoWidget.open_file(pem_file, parent=self)
+                pem_widget.tabs.currentChanged.connect(self.change_pem_info_tab)
                 self.pem_files.append(pem_file)
                 self.pem_info_widgets.append(pem_widget)
                 self.stackedWidget.addWidget(pem_widget)
@@ -465,6 +474,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.share_loop_action = QAction("&Share Loop", self)
                 self.table.share_loop_action.triggered.connect(self.share_loop)
 
+                self.table.final_plots_action = QAction("&Make Final Plots", self)
+                self.table.final_plots_action.triggered.connect(self.save_final_plots_selection)
+
                 self.table.rename_lines_action = QAction("&Rename Lines/Holes", self)
                 self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line', selected=True))
 
@@ -472,19 +484,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.rename_files_action.triggered.connect(lambda: self.batch_rename(type='File', selected=True))
 
                 self.table.menu.addAction(self.table.save_file_action)
-                if len(self.table.selectionModel().selectedIndexes()) == len(self.columns):
-                    # If only 1 row is selected...
+                if len(self.table.selectionModel().selectedRows()) == 1:
                     self.table.menu.addAction(self.table.save_file_as_action)
+                self.table.menu.addAction(self.table.final_plots_action)
                 self.table.menu.addSeparator()
-                if len(self.table.selectionModel().selectedIndexes()) > len(self.columns):
-                    # If more than 2 rows are selected...
+                if len(self.table.selectionModel().selectedRows()) > 1:
                     self.table.menu.addAction(self.table.merge_action)
                 self.table.menu.addAction(self.table.average_action)
                 self.table.menu.addAction(self.table.split_action)
                 self.table.menu.addAction(self.table.scale_ca_action)
                 if len(self.pem_files) > 1:
                     self.table.menu.addAction(self.table.share_loop_action)
-                if len(self.table.selectionModel().selectedIndexes()) > len(self.columns):
+                if len(self.table.selectionModel().selectedRows()) > 1:
                     self.table.menu.addSeparator()
                     self.table.menu.addAction(self.table.rename_lines_action)
                     self.table.menu.addAction(self.table.rename_files_action)
@@ -525,6 +536,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def display_pem_info_widget(self):
         # self.stackedWidget.show()
         self.stackedWidget.setCurrentIndex(self.table.currentRow())
+
+    def change_pem_info_tab(self, tab_num):
+        if len(self.pem_info_widgets) > 0:
+            for widget in self.pem_info_widgets:
+                widget.tabs.setCurrentIndex(tab_num)
 
     def average_pem_data(self, pem_file):
         if pem_file.is_averaged():
@@ -664,7 +680,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.message.information(None, 'Error', 'Must select multiple PEM Files')
 
     def table_value_changed(self, row, col):
-        print('Table value changed')
         if col == self.columns.index('Coil Area'):
             pem_file = self.pem_files[row]
             old_value = int(pem_file.header.get('CoilArea'))
@@ -692,6 +707,22 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         pem_file = self.pem_files[row]
         self.check_for_table_changes(pem_file, row)
+        self.check_for_table_anomalies()
+
+    def check_for_table_anomalies(self):
+        self.table.blockSignals(True)
+        date_column = self.columns.index('Date')
+        current_year = str(datetime.datetime.now().year)
+
+        for row in range(self.table.rowCount()):
+            if self.table.item(row, date_column):
+                date = self.table.item(row, date_column).text()
+                year = str(date.split(' ')[-1])
+                if year != current_year:
+                    self.table.item(row, date_column).setForeground(QtGui.QColor('red'))
+                else:
+                    self.table.item(row, date_column).setForeground(QtGui.QColor('black'))
+        self.table.blockSignals(False)
 
     def check_for_table_changes(self, pem_file, row):
         boldFont = QtGui.QFont()
@@ -749,18 +780,21 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         overwrite = True
         # tags = []
 
-        if pem_file.is_averaged():
-            if '[A]' not in file_name:
-                file_name += '[A]'
-                overwrite = False
-        if pem_file.is_split():
-            if '[S]' not in file_name:
-                file_name += '[S]'
-                overwrite = False
         if pem_file.is_merged:
             if '[M]' in file_name:
                 file_name.replace('[M]','')
-                file_name += '[M]'
+                file_name = '[M]' + file_name
+                # file_name += '[M]'
+                overwrite = False
+        if pem_file.is_split():
+            if '[S]' not in file_name:
+                # file_name += '[S]'
+                file_name = '[S]' + file_name
+                overwrite = False
+        if pem_file.is_averaged():
+            if '[A]' not in file_name:
+                # file_name += '[A]'
+                file_name = '[A]'+file_name
                 overwrite = False
 
         # # Rearranging the tags
@@ -815,6 +849,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.window().statusBar().showMessage('No folder selected')
 
+    def save_final_plots(self, pem_file):
+        plotter = PEMPlotter(pem_file)
+        lin_plot = plotter.plot_lin_fig()
+
+    def save_final_plots_selection(self):
+        pem_files = self.get_selected_pem_files()
+        for pem_file in pem_files:
+            self.save_final_plots(pem_file)
+
     def remove_file(self, table_row):
         self.table.removeRow(table_row)
         self.stackedWidget.removeWidget(self.stackedWidget.widget(table_row))
@@ -841,7 +884,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
             self.remove_file(row)
 
-        self.update_table()
+        # TODO Should update table be here? Causes files to revert to their old saved state when another file is removed
+        # self.update_table()
 
     # Creates the table when the editor is first opened
     def create_table(self):
@@ -884,6 +928,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         for i, column in enumerate(self.columns):
             item = QTableWidgetItem(new_row[i])
+            if i == self.columns.index('Averaged') or i == self.columns.index('Split'):
+                item.setFlags(QtCore.Qt.ItemIsSelectable)
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row_pos, i, item)
 
@@ -894,15 +940,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.table.item(row_pos, self.columns.index('Split')).setForeground(QtGui.QColor('red'))
 
         self.check_for_table_changes(pem_file, row_pos)
+        self.check_for_table_anomalies()
         self.table.blockSignals(False)
 
     # Deletes and re-populates the table rows with the new information
     def update_table(self):
         if len(self.pem_files) > 0:
+            self.table.blockSignals(True)
             while self.table.rowCount() > 0:
                 self.table.removeRow(0)
             for pem_file in self.pem_files:
                 self.add_to_table(pem_file)
+            self.table.blockSignals(False)
         else:
             pass
 
@@ -997,7 +1046,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.toggle_sort_loop(widget)
 
     def batch_rename(self, type, selected=False):
-
+        # TODO Remove "selected", make it run on selected rows by default
         def rename_pem_files():
             if len(self.batch_name_editor.pem_files) > 0:
                 self.batch_name_editor.accept_changes()
@@ -1152,16 +1201,28 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
             self.removeEdit.setText('')
 
 
-if __name__ == '__main__':
+def main():
     app = QApplication(sys.argv)
     mw = PEMEditorWindow()
     mw.show()
-    # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-    # file_names = [f for f in os.listdir(sample_files) if os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
-    # file_paths = []
-    #
-    # for file in file_names:
-    #     # file_paths.append(os.path.join(sample_files, file))
-    #     mw.editor.open_file(os.path.join(sample_files, file))
-    # editor = PEMEditor()
+
+    sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
+    file_names = [f for f in os.listdir(sample_files) if os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
+    file_paths = []
+
+    for file in file_names:
+        file_paths.append(os.path.join(sample_files, file))
+    # (mw.open_files(file_paths))
+    mw.open_files(file_paths)
+
     app.exec_()
+
+
+if __name__ == '__main__':
+    cProfile.run('main()', 'restats')
+    p = pstats.Stats('restats')
+    p.strip_dirs().sort_stats(-1).print_stats()
+
+    p.sort_stats('cumulative').print_stats(.5)
+    # p.sort_stats('time', 'cumulative').print_stats()
+

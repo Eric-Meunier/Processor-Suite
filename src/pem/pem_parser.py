@@ -24,18 +24,10 @@ class PEMParser:
         )
 
         ## Tx loop coordinates section
-        # self.re_loop_coords = re.compile(  # Parsing the loop coordinates
-        #     r'^(?P<Tag><L\d*>)(?P<LoopCoordinates>.*)[\r\n]',
-        #     re.MULTILINE
-        # )
         self.re_loop_coords = re.compile(
             r'(?P<Tags><L\d*>)\W+(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1).*')
 
         #  Line/Hole coordinates section
-        # self.re_line_coords = re.compile(  # Parsing the line/hole coordinates
-        #     r'^(?P<Tag><P\d*>)(?P<LineCoordinates>.*)[\r\n]',
-        #     re.MULTILINE
-        # )
         self.re_line_coords = re.compile(
             r'(?P<Tags><P\d*>)\W+(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+).*')
 
@@ -82,19 +74,6 @@ class PEMParser:
                 loop_gps.append(' '.join(row))
         else:
             return None
-        # loop_coords = []
-        # for match in self.re_loop_coords.finditer(file):
-        #     loop_coords.append({'Tag': None,
-        #                         'LoopCoordinates': None})
-        #
-        #     for group, index in self.re_loop_coords.groupindex.items():
-        #         if group == 'Tag':
-        #             loop_coords[-1]['Tag'] = match.group(index)
-        #         elif group == 'LoopCoordinates':
-        #             line = match.group(index)
-        #             line = line.partition('~')
-        #             loop_coords[-1]['LoopCoordinates'] = line[0]
-
         return loop_gps
 
     def parse_line(self, file):
@@ -105,18 +84,6 @@ class PEMParser:
                 line_gps.append(' '.join(row))
         else:
             return None
-        # line_coords = []
-        # for match in self.re_line_coords.finditer(file):
-        #     line_coords.append({'Tag': None,
-        #                         'LineCoordinates': None})
-        #
-        #     for group, index in self.re_line_coords.groupindex.items():
-        #         if group == 'Tag':
-        #             line_coords[-1]['Tag'] = match.group(index)
-        #         elif group == 'LineCoordinates':
-        #             line = match.group(index)
-        #             line = line.partition('~')
-        #             line_coords[-1]['LineCoordinates'] = line[0]
         return line_gps
 
     def parse_notes(self, file):
@@ -157,8 +124,7 @@ class PEMParser:
 
         return survey_data
 
-    def components(self, file):
-        data = self.parse_data(file)
+    def get_components(self, data):
         unique_components = []
 
         for reading in data:
@@ -207,7 +173,7 @@ class PEMParser:
         notes = self.parse_notes(file)
         header = self.parse_header(file)
         data = self.parse_data(file)
-        components = self.components(file)
+        components = self.get_components(data)
         survey_type = self.survey_type(header)
         filepath = filename
 
