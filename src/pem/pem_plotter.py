@@ -3,6 +3,7 @@ import sys
 import logging
 import numpy as np
 import math
+import re
 import matplotlib as mpl
 from scipy import interpolate
 from scipy import stats
@@ -11,9 +12,6 @@ from matplotlib import patches
 from itertools import chain
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QMainWindow, QAction, QApplication, QGridLayout, QFileDialog, QDesktopWidget,
-                             QTableWidgetItem, QHeaderView, QAbstractScrollArea, QMessageBox)
 
 __version__ = '0.0.0'
 logging.info('PEMPlotter')
@@ -26,61 +24,58 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
-
 mpl.rcParams['path.simplify'] = True
 mpl.rcParams['path.simplify_threshold'] = 1.0
 mpl.rcParams['agg.path.chunksize'] = 10000
 mpl.rcParams["figure.autolayout"] = False
 mpl.rcParams['lines.linewidth'] = 0.5
-mpl.rcParams['lines.color'] = '#1B2631'
+# mpl.rcParams['lines.color'] = '#1B2631'
 mpl.rcParams['font.size'] = 9
 mpl.rcParams['font.sans-serif'] = 'Tahoma'
 
 
-# class MainWindow(QMainWindow):
-#     def __init__(self):
-#         super().__init__()
-#         self.initUi()
-#
-#     def initUi(self):
-#         def center_window(self):
-#             qtRectangle = self.frameGeometry()
-#             centerPoint = QDesktopWidget().availableGeometry().center()
-#             qtRectangle.moveCenter(centerPoint)
-#             self.move(qtRectangle.topLeft())
-#             self.show()
-#
-#         self.dialog = QtGui.QFileDialog()
-#         self.statusBar().showMessage('Ready')
-#         self.setWindowTitle("Damping Box Current Plot  v"+str(__version__))
-#         self.setWindowIcon(
-#             QtGui.QIcon(os.path.join(application_path, "crone_logo.ico")))
-#         # TODO Program where the window opens
-#         self.setGeometry(500, 300, 800, 600)
-#         self.center_window()
-
 class PEMPlotter:
     """
-    Class for creating Crone LIN figure
+    Class for creating Crone LIN and LOG figures.
+    PEMFile must be averaged and split.
     """
 
-    def __init__(self, pem_file, parent=None, x_limit = None):
+    def __init__(self, pem_file, hide_gaps=True, gap=None, parent=None, x_limit=None):
         super().__init__()
         self.parent = parent
         self.pem_file = pem_file
+        self.hide_gaps = hide_gaps
+        self.gap = gap
         self.data = self.pem_file.data
         self.header = self.pem_file.header
         self.stations = self.pem_file.get_converted_unique_stations()
         self.survey_type = self.pem_file.get_survey_type()
         if x_limit is None:
-            self.x_limit = (str(min(chain(self.stations))), str(max(chain(self.stations))))
+            self.x_limit = (int(min(chain(self.stations))), int(max(chain(self.stations))))
         else:
             self.x_limit = x_limit
         self.num_channels = int(self.header['NumChannels']) + 1
         self.units = 'nT/s' if self.pem_file.tags['Units'].casefold() == 'nanotesla/sec' else 'pT'
-        self.line_colour = '#1B2631'
-        self.lin_fig = None
-        self.log_fig = None
+        self.channel_bounds = self.calc_channel_bounds()
+        self.line_colour = 'k'
+        # self.line_colour = 'red'
+
+    def calc_channel_bounds(self):
+        # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
+        channel_bounds = [None] * 4
+        num_channels_per_plot = int((self.num_channels - 1) // 4)
+        remainder_channels = int((self.num_channels - 1) % 4)
+
+        for k in range(0, len(channel_bounds)):
+            channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
+
+        for i in range(0, remainder_channels):
+            channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
+            for k in range(i + 1, len(channel_bounds)):
+                channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+
+        channel_bounds.insert(0, (0, 0))
+        return channel_bounds
 
     def format_figure(self, figure):
         """
@@ -101,7 +96,7 @@ class PEMPlotter:
                 ax.spines['bottom'].set_visible(False)
                 ax.xaxis.set_ticks_position('bottom')
                 ax.tick_params(axis='x', which='major', direction='out', length=6)
-                plt.setp(ax.get_xticklabels(), visible=True, size=12)
+                plt.setp(ax.get_xticklabels(), visible=True, size=12,  fontname='Century Gothic')
 
         plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
         self.add_rectangle()
@@ -115,125 +110,203 @@ class PEMPlotter:
         :param figure: LIN or LOG figure objects
         """
         x_label_locator = ticker.AutoLocator()
-        major_locator = ticker.FixedLocator(self.stations)
+        major_locator = ticker.FixedLocator(sorted(self.stations))
         plt.xlim(self.x_limit)
         figure.axes[0].xaxis.set_major_locator(major_locator)  # for some reason this seems to apply to all axes
         figure.axes[-1].xaxis.set_major_locator(x_label_locator)
 
-    def create_lin_figure(self):
-        """
-        Creates the blank LIN figure
-        """
-        lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
-        ax6 = ax5.twiny()
-        ax6.get_shared_x_axes().join(ax5, ax6)
-
-        self.lin_fig = lin_fig
-        self.format_figure(self.lin_fig)
-
-    def plot_lin_fig(self):
+    def make_lin_fig(self, component):
         """
         Plots the data into the LIN figure
+        :return: Matplotlib Figure object
         """
 
-        def calc_channel_bounds():
-            # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
-            channel_bounds = [None] * 4
-            num_channels_per_plot = int((self.num_channels - 1) // 4)
-            remainder_channels = int((self.num_channels - 1) % 4)
+        def create_lin_figure():
+            """
+            Creates the blank LIN figure
+            """
+            lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
+            ax6 = ax5.twiny()
+            ax6.get_shared_x_axes().join(ax5, ax6)
 
-            for k in range(0, len(channel_bounds)):
-                channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
-
-            for i in range(0, remainder_channels):
-                channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
-                for k in range(i + 1, len(channel_bounds)):
-                    channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
-
-            channel_bounds.insert(0, (0, 0))
-            return channel_bounds
+            self.format_figure(lin_fig)
+            return lin_fig
 
         def add_ylabels():
-            for i in range(len(self.lin_fig.axes) - 1):
-                ax = self.lin_fig.axes[i]
+            for i in range(len(lin_fig.axes) - 1):
+                ax = lin_fig.axes[i]
                 if i == 0:
                     ax.set_ylabel('Primary Pulse' + "\n(" + self.units + ")")
                 else:
                     ax.set_ylabel("Channel " + str(channel_bounds[i][0]) + " - " +
                                   str(channel_bounds[i][1]) + "\n(" + self.units + ")")
 
-        if not self.lin_fig:
-            self.create_lin_figure()
+        lin_fig = create_lin_figure()
 
-        channel_bounds = calc_channel_bounds()
-
-        profile_data = self.pem_file.get_profile_data(self.data)
+        channel_bounds = self.channel_bounds
 
         for i, group in enumerate(channel_bounds):
-            ax = self.lin_fig.axes[i]
-            self.draw_lines(ax, group[0], group[1])
+            ax = lin_fig.axes[i]
+            self.draw_lines(ax, group[0], group[1], component)
 
-        self.add_title()
+        self.add_title(component)
         add_ylabels()
-        self.format_yaxis(self.lin_fig)
-        self.format_xaxis(self.lin_fig)
+        self.format_yaxis(lin_fig)
+        self.format_xaxis(lin_fig)
+        plt.show(lin_fig)
+        return lin_fig
 
-        return self.lin_fig
-
-    def create_log_figure(self):
-        """
-        Creates an empty but formatted LOG figure
-        """
-        log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
-        ax2 = ax.twiny()
-        ax2.get_shared_x_axes().join(ax, ax2)
-        plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
-
-        self.log_fig = log_fig
-        self.format_figure(self.log_fig)
-
-    def plot_log_fig(self):
+    def make_log_fig(self, component):
         """
         Plots the data into the LOG figure
-        :return:
+        :return: Matplotlib Figure object
         """
 
+        def create_log_figure():
+            """
+            Creates an empty but formatted LOG figure
+            """
+            log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
+            ax2 = ax.twiny()
+            ax2.get_shared_x_axes().join(ax, ax2)
+            plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
+
+            self.format_figure(log_fig)
+            return log_fig
+
         def add_ylabel():
-            ax = self.log_fig.axes[0]
+            ax = log_fig.axes[0]
             ax.set_ylabel('Primary Pulse to Channel ' + str(self.num_channels - 1) + "\n(" + self.units + ")")
 
-        if not self.log_fig:
-            self.create_log_figure()
+        log_fig = create_log_figure()
 
-        ax = self.log_fig.axes[0]
+        ax = log_fig.axes[0]
 
-        self.draw_lines(ax, 0, self.num_channels - 1)
-        self.add_title()
+        self.draw_lines(ax, 0, self.num_channels - 1, component)
+        self.add_title(component)
         add_ylabel()
-        self.format_yaxis(self.log_fig)
-        self.format_xaxis(self.log_fig)
+        self.format_yaxis(log_fig)
+        self.format_xaxis(log_fig)
 
-        return self.log_fig
+        plt.show(log_fig)
 
-    def draw_lines(self, ax, channel_low, channel_high):
+        return log_fig
+
+    def convert_station(self, station):
+        """
+        Converts a single station name into a number, negative if the stations was S or W
+        :return: Integer station number
+        """
+        if re.match(r"\d+(S|W)", station):
+            station = (-int(re.sub(r"\D", "", station)))
+
+        else:
+            station = (int(re.sub(r"\D", "", station)))
+
+        return station
+
+    def get_profile_data(self, component):
+        """
+        Transforms the data so it is ready to be plotted for LIN and LOG plots
+        :param component: A single component (i.e. Z, X, or Y)
+        :return: Dictionary where each key is a channel, and the values of those keys are a list of
+        dictionaries which contain the stations and readings of all readings of that channel
+        """
+        profile_data = {}
+        component_data = list(filter(lambda d: d['Component'] == component, self.data))
+        num_channels = len(component_data[0]['Data'])
+
+        for channel in range(0, num_channels):
+            channel_data = []
+
+            for i, station in enumerate(component_data):
+                reading = station['Data'][channel]
+                station_number = int(self.convert_station(station['Station']))
+                channel_data.append({'Station': station_number, 'Reading': reading})
+
+            profile_data[channel] = channel_data
+
+        return profile_data
+
+    def get_channel_data(self, channel, profile_data):
+        """
+        Get the profile-mode data for a given channel
+        :param channel: int, channel number
+        :param profile_data: dict, data in profile-mode
+        :return: data in list form and corresponding stations as a list
+        """
+        data = []
+        stations = []
+
+        for station in profile_data[channel]:
+            data.append(station['Reading'])
+            stations.append(station['Station'])
+
+        return data, stations
+
+    def draw_lines(self, ax, channel_low, channel_high, component):
         """
         Plots the lines into an axes of a figure
         :param ax: Axes of a figure, either LIN or LOG figure objects
         :param channel_low: The first channel to be plotted
         :param channel_high: The last channel to be plotted
+        :param component: String letter representing the component to plot (X, Y, or Z)
         """
+
+        def calc_gaps(stations):
+            survey_type = self.survey_type
+
+            if 'borehole' in survey_type.casefold():
+                min_gap = 50
+            elif 'surface' in survey_type.casefold():
+                min_gap = 200
+            station_gaps = np.diff(stations)
+
+            if self.gap is None:
+                self.gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
+
+            gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
+                             station_gaps[i] > self.gap]
+
+            return gap_intervals
+
+        def get_interp_data(profile_data, stations, interp_method='linear'):
+            """
+            Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
+            into 100 segments.
+            :param profile_data: The EM data in profile mode
+            :param segments: Number of segments to interpolate
+            :param hide_gaps: Bool: Whether or not to hide gaps
+            :param gap: The minimum length threshold above which is considered a gap
+            :return: The interpolated data and stations
+            """
+            stations = np.array(stations, dtype='float64')
+            readings = np.array(profile_data, dtype='float64')
+            x_intervals = np.linspace(stations[0], stations[-1], segments)
+            f = interpolate.interp1d(stations, readings, kind=interp_method)
+
+            interpolated_y = f(x_intervals)
+
+            if self.hide_gaps:
+                gap_intervals = calc_gaps(stations)
+
+                # Masks the intervals that are between gap[0] and gap[1]
+                for gap in gap_intervals:
+                    interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
+                                                        interpolated_y)
+
+            return interpolated_y, x_intervals
+
         segments = 1000  # The data will be broken in this number of segments
         offset = segments * 0.1  # Used for spacing the annotations
+        profile_channel_data = self.get_profile_data(component)
 
         for k in range(channel_low, (channel_high + 1)):
             # Gets the profile data for a single channel, along with the stations
-            channel_data, stations = self.editor.get_channel_data(k, self.profile_data)
+            channel_data, stations = self.get_channel_data(k, profile_channel_data)
 
             # Interpolates the channel data, also returns the corresponding x intervals
-            interp_data, x_intervals = self.editor.get_interp_data(self.kwargs['SurveyType'], channel_data, stations,
-                                                                   segments,
-                                                                   self.kwargs['HideGaps'], self.kwargs['Gap'],
-                                                                   self.kwargs['Interp'])
+            interp_data, x_intervals = get_interp_data(channel_data, stations)
 
             ax.plot(x_intervals, interp_data, color=self.line_colour)
 
@@ -247,12 +320,12 @@ class PEMPlotter:
                 y = interp_data[list(x_intervals).index(x_position)]
 
                 if k == 0:
-                    ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7.5, color=self.line_colour,
-                                va='center_baseline', ha='center')
+                    ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline', ha='center',
+                                color=self.line_colour)
 
                 else:
-                    ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, color=self.line_colour,
-                                va='center_baseline', ha='center')
+                    ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline', ha='center',
+                                color=self.line_colour)
 
             offset += len(x_intervals) * 0.15
 
@@ -295,7 +368,7 @@ class PEMPlotter:
 
             ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
 
-    def add_title(self):
+    def add_title(self, component):
         """
         Adds the title header to a figure
         """
@@ -315,16 +388,16 @@ class PEMPlotter:
 
         plt.figtext(0.145, 0.935, 'Timebase: ' + str(self.header['Timebase']) + ' ms\n' +
                     'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
-                    'Current: ' + str(round(float(self.kwargs['Current']), 1)) + ' A',
+                    'Current: ' + str(round(float(self.pem_file.tags.get('Current')), 1)) + ' A',
                     fontname='Century Gothic', fontsize=10, va='top')
 
-        plt.figtext(0.550, 0.935, s_title + ': ' + self.header['LineHole'] + '\n'
-                    + self.component + ' Component' + '\n'
-                    + 'Loop: ' + self.kwargs['Loop'],
+        plt.figtext(0.550, 0.935, s_title + ': ' + self.header.get('LineHole') + '\n' +
+                    'Loop: ' + self.header.get('Loop') + '\n' +
+                    component + ' Component',
                     fontname='Century Gothic', fontsize=10, va='top', ha='center')
 
         plt.figtext(0.955, 0.935,
-                    self.kwargs['Client'] + '\n' + self.kwargs['Grid'] + '\n' + self.header['Date'] + '\n',
+                    self.header.get('Client') + '\n' + self.header.get('Grid') + '\n' + self.header['Date'] + '\n',
                     fontname='Century Gothic', fontsize=10, va='top', ha='right')
 
     def add_rectangle(self):
@@ -336,6 +409,23 @@ class PEMPlotter:
                                  facecolor='none', transform=fig.transFigure)
         fig.patches.append(rect)
 
+    def get_lin_figs(self):
+        components = self.pem_file.get_components()
+        lin_figs = []
+
+        for component in components:
+            lin_figs.append(self.make_lin_fig(component))
+
+        return lin_figs
+
+    def get_log_figs(self):
+        components = self.pem_file.get_components()
+        log_figs = []
+
+        for component in components:
+            log_figs.append(self.make_log_fig(component))
+
+        return log_figs
 
 # class CronePYQTFigure:
 #     """
@@ -345,13 +435,13 @@ class PEMPlotter:
 #     """
 
 
-if __name__ == "__main__":
-    # app = QtGui.QApplication(sys.argv)
-    # mw = MainWindow()
-    # app.exec_()
-
-    # cProfile.run('editor.make_plots()', sort='cumtime')
-    testing_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../sample_files/9600NAv LP-100.PEM")
-    plots = CronePYQTFigure()
-    plots.plot(testing_file)
-    # plt.show()
+# if __name__ == "__main__":
+#     # app = QtGui.QApplication(sys.argv)
+#     # mw = MainWindow()
+#     # app.exec_()
+#
+#     # cProfile.run('editor.make_plots()', sort='cumtime')
+#     testing_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../sample_files/9600NAv LP-100.PEM")
+#     plots = CronePYQTFigure()
+#     plots.plot(testing_file)
+#     # plt.show()

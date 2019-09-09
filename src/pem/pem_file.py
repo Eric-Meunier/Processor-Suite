@@ -69,10 +69,12 @@ class PEMFile:
         return sorted_components
 
     def get_unique_stations(self):
-        unique_stations = {n for n in
-                           [reading['Station'] for reading in self.data]}
-        unique_stations_list = [station for station in unique_stations]
-        return unique_stations_list
+        unique_stations = []
+        for reading in self.data:
+            if reading['Station'] not in unique_stations:
+                unique_stations.append(reading['Station'])
+        # unique_stations_list = [station for station in unique_stations]
+        return unique_stations
 
     def get_converted_unique_stations(self):
         return [self.convert_station(station) for station in self.get_unique_stations()]

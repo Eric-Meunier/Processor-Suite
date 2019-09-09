@@ -100,7 +100,6 @@ class PEMParser:
         for match in self.re_header.finditer(file):
 
             for group, index in self.re_header.groupindex.items():
-                # pprint.pprint(group)
                 if group is not 'ChannelTimes':
                     header[group] = match.group(index)
             header['ChannelTimes'] = ([Decimal(x) for x in match.group('ChannelTimes').split()])

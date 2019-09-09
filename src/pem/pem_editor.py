@@ -49,7 +49,6 @@ else:
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
-Ui_PEMEditorWidget, QtBaseClass = uic.loadUiType(editorCreatorFile)
 Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
 Ui_LineNameEditorWidget, QtBaseClass = uic.loadUiType(lineNameEditorCreatorFile)
 
@@ -850,13 +849,21 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('No folder selected')
 
     def save_final_plots(self, pem_file):
-        plotter = PEMPlotter(pem_file)
-        lin_plot = plotter.plot_lin_fig()
+        if not pem_file.is_averaged():
+            pem_file = self.file_editor.average(copy.copy(pem_file))
+        if not pem_file.is_split():
+            pem_file = self.file_editor.split_channels(copy.copy(pem_file))
+        plotter = PEMPlotter(pem_file, hide_gaps=True)
+        lin_plots = plotter.get_lin_figs()
+        log_plots = plotter.get_log_figs()
 
     def save_final_plots_selection(self):
         pem_files = self.get_selected_pem_files()
         for pem_file in pem_files:
-            self.save_final_plots(pem_file)
+            table_row = pem_files.index(pem_file)
+            # Make a copy of the PEM file with updated table information first for plotting
+            plotting_pem_file = self.update_pem_file_from_table(copy.copy(pem_file), table_row)
+            self.save_final_plots(plotting_pem_file)
 
     def remove_file(self, table_row):
         self.table.removeRow(table_row)
