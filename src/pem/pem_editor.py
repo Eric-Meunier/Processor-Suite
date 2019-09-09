@@ -7,6 +7,8 @@ import cProfile
 import pstats
 import time
 import sys
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 from decimal import getcontext
 from itertools import chain
 
@@ -474,7 +476,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.share_loop_action.triggered.connect(self.share_loop)
 
                 self.table.final_plots_action = QAction("&Make Final Plots", self)
-                self.table.final_plots_action.triggered.connect(self.save_final_plots_selection)
+                self.table.final_plots_action.triggered.connect(self.print_final_plots_selection)
 
                 self.table.rename_lines_action = QAction("&Rename Lines/Holes", self)
                 self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line', selected=True))
@@ -848,22 +850,72 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.window().statusBar().showMessage('No folder selected')
 
-    def save_final_plots(self, pem_file):
+    def get_final_plots(self, pem_file):
         if not pem_file.is_averaged():
             pem_file = self.file_editor.average(copy.copy(pem_file))
         if not pem_file.is_split():
             pem_file = self.file_editor.split_channels(copy.copy(pem_file))
-        plotter = PEMPlotter(pem_file, hide_gaps=True)
+        if self.share_range_checkbox.isChecked():
+            try:
+                x_min = int(self.min_range_edit.text())
+            except ValueError:
+                x_min = None
+            try:
+                x_max = int(self.max_range_edit.text())
+            except ValueError:
+                x_max = None
+        else:
+            x_min = None
+            x_max = None
+
+        plotter = PEMPlotter(pem_file, x_min=x_min, x_max=x_max, hide_gaps=True)
         lin_plots = plotter.get_lin_figs()
         log_plots = plotter.get_log_figs()
+        return lin_plots, log_plots
 
-    def save_final_plots_selection(self):
+    def print_final_plots_selection(self):
         pem_files = self.get_selected_pem_files()
+        lin_plots = []
+        log_plots = []
         for pem_file in pem_files:
             table_row = pem_files.index(pem_file)
             # Make a copy of the PEM file with updated table information first for plotting
             plotting_pem_file = self.update_pem_file_from_table(copy.copy(pem_file), table_row)
-            self.save_final_plots(plotting_pem_file)
+            lins, logs = self.get_final_plots(plotting_pem_file)
+            lin_plots.append(lins)
+            log_plots.append(logs)
+
+        self.print_final_plots(lin_plots, log_plots)
+
+    def print_final_plots(self, lin_plots, log_plots):
+            self.window().statusBar().showMessage('Saving plots...')
+            default_path = os.path.split(self.pem_files[-1].filepath)[0]
+            self.dialog.setFileMode(QFileDialog.ExistingFiles)
+            self.dialog.setAcceptMode(QFileDialog.AcceptSave)
+            self.dialog.setDirectory(default_path)
+            self.window().statusBar().showMessage('Saving plots...')
+            file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
+
+            if file_dir:
+                with PdfPages(os.path.join(file_dir, "lin.pdf")) as pdf:
+                    for file in lin_plots:
+                        for fig in file:
+                            fig.set_size_inches(8.5, 11)
+                            pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
+                            plt.close(fig)
+
+                with PdfPages(os.path.join(file_dir, "log.pdf")) as pdf:
+                    for file in log_plots:
+                        for fig in file:
+                            fig.set_size_inches(8.5, 11)
+                            pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
+                            plt.close(fig)
+
+                lin_plots.clear()
+                log_plots.clear()
+                self.window().statusBar().showMessage('Plots Saved', 2000)
+            else:
+                pass
 
     def remove_file(self, table_row):
         self.table.removeRow(table_row)

@@ -10,6 +10,7 @@ from scipy import stats
 import matplotlib.ticker as ticker
 from matplotlib import patches
 from itertools import chain
+from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
@@ -31,7 +32,7 @@ mpl.rcParams["figure.autolayout"] = False
 mpl.rcParams['lines.linewidth'] = 0.5
 # mpl.rcParams['lines.color'] = '#1B2631'
 mpl.rcParams['font.size'] = 9
-mpl.rcParams['font.sans-serif'] = 'Tahoma'
+# mpl.rcParams['font.sans-serif'] = 'Tahoma'
 
 
 class PEMPlotter:
@@ -40,7 +41,7 @@ class PEMPlotter:
     PEMFile must be averaged and split.
     """
 
-    def __init__(self, pem_file, hide_gaps=True, gap=None, parent=None, x_limit=None):
+    def __init__(self, pem_file, hide_gaps=True, gap=None, parent=None, x_min=None, x_max=None):
         super().__init__()
         self.parent = parent
         self.pem_file = pem_file
@@ -50,10 +51,8 @@ class PEMPlotter:
         self.header = self.pem_file.header
         self.stations = self.pem_file.get_converted_unique_stations()
         self.survey_type = self.pem_file.get_survey_type()
-        if x_limit is None:
-            self.x_limit = (int(min(chain(self.stations))), int(max(chain(self.stations))))
-        else:
-            self.x_limit = x_limit
+        self.x_min = int(min(chain(self.stations))) if x_min is None else x_min
+        self.x_max = int(max(chain(self.stations))) if x_max is None else x_max
         self.num_channels = int(self.header['NumChannels']) + 1
         self.units = 'nT/s' if self.pem_file.tags['Units'].casefold() == 'nanotesla/sec' else 'pT'
         self.channel_bounds = self.calc_channel_bounds()
@@ -111,7 +110,7 @@ class PEMPlotter:
         """
         x_label_locator = ticker.AutoLocator()
         major_locator = ticker.FixedLocator(sorted(self.stations))
-        plt.xlim(self.x_limit)
+        plt.xlim(self.x_min, self.x_max)
         figure.axes[0].xaxis.set_major_locator(major_locator)  # for some reason this seems to apply to all axes
         figure.axes[-1].xaxis.set_major_locator(x_label_locator)
 
@@ -153,7 +152,6 @@ class PEMPlotter:
         add_ylabels()
         self.format_yaxis(lin_fig)
         self.format_xaxis(lin_fig)
-        plt.show(lin_fig)
         return lin_fig
 
     def make_log_fig(self, component):
@@ -187,9 +185,6 @@ class PEMPlotter:
         add_ylabel()
         self.format_yaxis(log_fig)
         self.format_xaxis(log_fig)
-
-        plt.show(log_fig)
-
         return log_fig
 
     def convert_station(self, station):
@@ -412,11 +407,17 @@ class PEMPlotter:
     def get_lin_figs(self):
         components = self.pem_file.get_components()
         lin_figs = []
-
         for component in components:
             lin_figs.append(self.make_lin_fig(component))
-
         return lin_figs
+
+    # def get_lin_figs(self):
+    #     components = self.pem_file.get_components()
+    #     file_dir = r'C:\_Data\2019\BMSC\Surface\MO-254'
+    #     with PdfPages(os.path.join(file_dir, "lin test.pdf")) as pdf:
+    #         for component in components:
+    #             pdf.savefig(self.make_lin_fig(component))
+    #             plt.clf()
 
     def get_log_figs(self):
         components = self.pem_file.get_components()
