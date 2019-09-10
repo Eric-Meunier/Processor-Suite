@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -251,6 +251,13 @@
            <widget class="QPushButton" name="flip_station_numbers_button">
             <property name="text">
              <string>Reverse Stations</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="cull_station_gps_button">
+            <property name="text">
+             <string>Cull GPS</string>
             </property>
            </widget>
           </item>

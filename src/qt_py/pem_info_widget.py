@@ -71,9 +71,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.remove_row_action.setShortcut('Del')
         self.stationGPSTable.remove_row_action.setEnabled(False)
 
+        # self.stationGPSTable.cull_gps_action = QAction("&Cull GPS", self)
+        # self.stationGPSTable.cull_gps_action.triggered.connect(self.cull_station_gps)
+
     def initSignals(self):
         self.sort_station_gps_button.toggled.connect(self.sort_station_gps)
         self.sort_loop_button.toggled.connect(self.sort_loop_gps)
+        self.cull_station_gps_button.clicked.connect(self.cull_station_gps)
+
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_numbers)
         self.flip_station_signs_button.clicked.connect(self.flip_station_polarity)
 
@@ -235,38 +240,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.loopGPSTable.resizeColumnsToContents()
 
-    def clear_table(self, table):
-        table.blockSignals(True)
-        while table.rowCount() > 0:
-            table.removeRow(0)
-        table.blockSignals(False)
-
-    def check_station_duplicates(self):
-        self.stationGPSTable.blockSignals(True)
-        stations_column = 5
-        stations = []
-        for row in range(self.stationGPSTable.rowCount()):
-            if self.stationGPSTable.item(row, stations_column):
-                station = self.stationGPSTable.item(row, stations_column).text()
-                if station in stations:
-                    other_station_index = stations.index(station)
-                    self.stationGPSTable.item(row, stations_column).setForeground(QtGui.QColor('red'))
-                    self.stationGPSTable.item(other_station_index, stations_column).setForeground(QtGui.QColor('red'))
-                else:
-                    self.stationGPSTable.item(row, stations_column).setForeground(QtGui.QColor('black'))
-                stations.append(station)
-        self.stationGPSTable.blockSignals(False)
-
-    def remove_table_row_selection(self, table):
-        # Table (QWidgetTable) is either the loop and station GPS tables
-        selected_rows = []
-        for i in table.selectedIndexes():
-            if i.row() not in selected_rows:
-                selected_rows.append(i.row())
-        for row in reversed(selected_rows):
-            table.removeRow(row)
-        self.check_station_duplicates()
-
     def fill_info(self):
 
         def fill_info_tab():
@@ -355,6 +328,51 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             fill_collar_gps_text()
             fill_geometry_text()
         fill_loop_text()
+
+    def clear_table(self, table):
+        table.blockSignals(True)
+        while table.rowCount() > 0:
+            table.removeRow(0)
+        table.blockSignals(False)
+
+    def check_station_duplicates(self):
+        self.stationGPSTable.blockSignals(True)
+        stations_column = 5
+        stations = []
+        for row in range(self.stationGPSTable.rowCount()):
+            if self.stationGPSTable.item(row, stations_column):
+                station = self.stationGPSTable.item(row, stations_column).text()
+                if station in stations:
+                    other_station_index = stations.index(station)
+                    self.stationGPSTable.item(row, stations_column).setForeground(QtGui.QColor('red'))
+                    self.stationGPSTable.item(other_station_index, stations_column).setForeground(QtGui.QColor('red'))
+                else:
+                    self.stationGPSTable.item(row, stations_column).setForeground(QtGui.QColor('black'))
+                stations.append(station)
+        self.stationGPSTable.blockSignals(False)
+
+    def remove_table_row_selection(self, table):
+        # Table (QWidgetTable) is either the loop and station GPS tables
+        selected_rows = []
+        for i in table.selectedIndexes():
+            if i.row() not in selected_rows:
+                selected_rows.append(i.row())
+        for row in reversed(selected_rows):
+            table.removeRow(row)
+        self.check_station_duplicates()
+
+    def cull_station_gps(self):
+        if self.station_gps:
+            culled_gps = []
+            gps = self.get_station_gps()
+            gps_stations = list(map(lambda x: x[-1], gps))
+            em_stations = list(map(lambda x: str(x), self.pem_file.get_converted_unique_stations()))
+            for i, station in enumerate(gps_stations):
+                if station in em_stations:
+                    culled_gps.append(gps[i])
+            self.fill_station_table(culled_gps)
+        else:
+            pass
 
     def sort_station_gps(self):
         if self.station_gps:
