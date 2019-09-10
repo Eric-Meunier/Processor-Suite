@@ -25,11 +25,11 @@ class PEMParser:
 
         ## Tx loop coordinates section
         self.re_loop_coords = re.compile(
-            r'(?P<Tags><L\d*>)\W+(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1).*')
+            r'(?P<LoopCoord><L.*>.*)')
 
         #  Line/Hole coordinates section
         self.re_line_coords = re.compile(
-            r'(?P<Tags><P\d*>)\W+(?P<Easting>\d{3,}\.?\d+)\W+(?P<Northing>\d{3,}\.\d+)\W+(?P<Elevation>\d{3,}\.\d+)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+).*')
+            r'(?P<LineCoord><P.*>.*)')
 
         # Notes i.e. GEN and HE tags
         self.re_notes = re.compile(  # Parsing the notes i.e. GEN tags and HE tags
@@ -67,23 +67,11 @@ class PEMParser:
         return tags
 
     def parse_loop(self, file):
-        raw_gps = re.findall(self.re_loop_coords, file)
-        loop_gps = []
-        if raw_gps:
-            for row in raw_gps:
-                loop_gps.append(' '.join(row))
-        else:
-            return None
+        loop_gps = re.findall(self.re_loop_coords, file)
         return loop_gps
 
     def parse_line(self, file):
-        raw_gps = re.findall(self.re_line_coords, file)
-        line_gps = []
-        if raw_gps:
-            for row in raw_gps:
-                line_gps.append(' '.join(row))
-        else:
-            return None
+        line_gps = re.findall(self.re_line_coords, file)
         return line_gps
 
     def parse_notes(self, file):

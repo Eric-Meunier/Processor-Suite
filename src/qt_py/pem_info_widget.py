@@ -6,6 +6,7 @@ import copy
 from itertools import chain
 from src.gps.station_gps import StationGPSParser
 from src.gps.loop_gps import LoopGPSParser
+from src.gps.hole_geometry import GeometryParser
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
                              QHeaderView, QListWidget, QTextBrowser, QPlainTextEdit, QStackedWidget, QTextEdit,
@@ -45,10 +46,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_loop_elev_shift_amt = 0
         self.station_gps_parser = StationGPSParser()
         self.loop_gps_parser = LoopGPSParser()
+        self.geometry_parser = GeometryParser()
         self.setupUi(self)
         self.initActions()
         self.initSignals()
-        self.initTables()
 
     def initActions(self):
         self.loopGPSTable.installEventFilter(self)
@@ -120,17 +121,36 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def open_file(self, pem_file, parent):
         self.pem_file = pem_file
         self.parent = parent
-
+        self.initTables()
         self.fill_info()
 
         return self
 
     def initTables(self):
-        self.station_columns = ['Tags', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
-        self.stationGPSTable.setColumnCount(len(self.station_columns))
-        self.stationGPSTable.setHorizontalHeaderLabels(self.station_columns)
-        self.stationGPSTable.setSizeAdjustPolicy(
-            QAbstractScrollArea.AdjustToContents)
+        if 'surface' in self.pem_file.survey_type.lower():
+            self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
+            self.station_columns = ['Tags', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
+            self.stationGPSTable.setColumnCount(len(self.station_columns))
+            self.stationGPSTable.setHorizontalHeaderLabels(self.station_columns)
+            self.stationGPSTable.setSizeAdjustPolicy(
+                QAbstractScrollArea.AdjustToContents)
+            self.stationGPSTable.resizeColumnsToContents()
+
+        elif 'borehole' in self.pem_file.survey_type.lower():
+            self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS))
+            self.geometry_columns = ['Tags', 'Azimuth', 'Dip', 'Seg. Length', 'Units', 'Depth']
+            self.geometryTable.setColumnCount(len(self.geometry_columns))
+            self.geometryTable.setHorizontalHeaderLabels(self.geometry_columns)
+            self.geometryTable.setSizeAdjustPolicy(
+                QAbstractScrollArea.AdjustToContents)
+            self.geometryTable.resizeColumnsToContents()
+
+            self.collar_columns = ['Tags', 'Easting', 'Northing', 'Elevation', 'Units']
+            self.collarGPSTable.setColumnCount(len(self.collar_columns))
+            self.collarGPSTable.setHorizontalHeaderLabels(self.collar_columns)
+            self.collarGPSTable.setSizeAdjustPolicy(
+                QAbstractScrollArea.AdjustToContents)
+            self.collarGPSTable.resizeColumnsToContents()
 
         self.loop_columns = ['Tags', 'Easting', 'Northing', 'Elevation', 'Units']
         self.loopGPSTable.setColumnCount(len(self.loop_columns))
@@ -138,10 +158,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.setSizeAdjustPolicy(
             QAbstractScrollArea.AdjustToContents)
 
-        self.stationGPSTable.resizeColumnsToContents()
         self.loopGPSTable.resizeColumnsToContents()
 
-    def fill_station_table(self, gps, tags=False):  # GPS in list form
+    def fill_station_table(self, gps):  # GPS in list form
         self.clear_table(self.stationGPSTable)
         self.stationGPSTable.blockSignals(True)
         logging.info('Filling station table')
@@ -162,6 +181,42 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.resizeColumnsToContents()
         self.check_station_duplicates()
         self.stationGPSTable.blockSignals(False)
+
+    def fill_collar_gps_table(self, gps):  # GPS in list form
+        self.clear_table(self.collarGPSTable)
+        logging.info('Filling collar GPS')
+
+        self.collarGPSTable.insertRow(0)
+        if re.match('<P.*>', gps[0]):
+            gps.pop(0)
+        tag_item = QTableWidgetItem("<P00>")
+        items = [QTableWidgetItem(gps[j]) for j in range(len(gps))]
+        items.insert(0, tag_item)
+
+        for m, item in enumerate(items):
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.collarGPSTable.setItem(0, m, item)
+
+        self.collarGPSTable.resizeColumnsToContents()
+
+    def fill_geometry_table(self, segments):  # GPS in list form
+        self.clear_table(self.geometryTable)
+        logging.info('Filling geometry table')
+
+        for i, row in enumerate(segments):
+            row_pos = self.geometryTable.rowCount()
+            self.geometryTable.insertRow(row_pos)
+            if re.match('<P.*>', row[0]):
+                row.pop(0)
+            tag_item = QTableWidgetItem("<P" + '{num:02d}'.format(num=i+1) + ">")
+            items = [QTableWidgetItem(row[j]) for j in range(len(row))]
+            items.insert(0, tag_item)
+
+            for m, item in enumerate(items):
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.geometryTable.setItem(row_pos, m, item)
+
+        self.geometryTable.resizeColumnsToContents()
 
     def fill_loop_table(self, gps):
         self.clear_table(self.loopGPSTable)
@@ -252,6 +307,30 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             else:
                 pass
 
+        def fill_collar_gps_text():
+            # Fill hole collar GPS
+            try:
+                self.collar_gps = self.geometry_parser.parse_collar_gps(self.pem_file.get_line_coords())
+            except ValueError:
+                self.collar_gps = None
+
+            if self.collar_gps:
+                self.fill_collar_gps_table(self.collar_gps)
+            else:
+                pass
+
+        def fill_geometry_text():
+            # Fill hole geometry segments
+            try:
+                self.geometry_text = self.geometry_parser.parse_segments(self.pem_file.get_line_coords())
+            except ValueError:
+                self.geometry_text = None
+
+            if self.geometry_text:
+                self.fill_geometry_table(self.geometry_text)
+            else:
+                pass
+
         def fill_loop_text():
             # Fill loop GPS
             try:
@@ -268,8 +347,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 pass
 
         header = self.pem_file.header
+
         fill_info_tab()
-        fill_station_text()
+        if 'surface' in self.pem_file.survey_type.lower():
+            fill_station_text()
+        else:
+            fill_collar_gps_text()
+            fill_geometry_text()
         fill_loop_text()
 
     def sort_station_gps(self):
@@ -468,7 +552,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def reverse_station_numbers(self):
         # Flips the station numbers head-over-heals
-        gps = self.get_station_gps_text()
+        gps = self.get_station_gps()
         if gps:
             reversed_stations = list(reversed(list(map(lambda x: int(x[-1]), gps))))
             reversed_gps = []
@@ -482,7 +566,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def format_station_gps_text(self):
         try:
-            current_gps = self.station_gps_parser.parse(self.get_station_gps_text())
+            current_gps = self.station_gps_parser.parse(self.get_station_gps())
         except ValueError:
             current_gps = None
         if current_gps:
@@ -495,7 +579,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def format_loop_gps_text(self):
         try:
-            current_gps = self.loop_gps_parser.parse(self.get_loop_gps_text())
+            current_gps = self.loop_gps_parser.parse(self.get_loop_gps())
         except ValueError:
             current_gps = None
         if current_gps:
@@ -506,7 +590,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
-    def get_loop_gps_text(self):
+    def get_loop_gps(self):
         table_gps = []
         for row in range(self.loopGPSTable.rowCount()):
             row_list = []
@@ -518,10 +602,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             table_gps.append(row_list)
         return table_gps
 
-    def get_loop_gps_obj(self):
-        return self.loop_gps
-
-    def get_station_gps_text(self):
+    def get_station_gps(self):
         table_gps = []
         for row in range(self.stationGPSTable.rowCount()):
             row_list = []
@@ -533,5 +614,23 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             table_gps.append(row_list)
         return table_gps
 
-    def get_station_gps_obj(self):
-        return self.station_gps
+    def get_collar_gps(self):
+        row_list = []
+        for i, column in enumerate(self.collar_columns):
+            if self.collarGPSTable.item(0, i):  # Check if an item exists before trying to read it
+                row_list.append(self.collarGPSTable.item(0, i).text())
+            else:
+                row_list.append('')
+        return row_list
+
+    def get_geometry_segments(self):
+        table_gps = []
+        for row in range(self.geometryTable.rowCount()):
+            row_list = []
+            for i, column in enumerate(self.geometry_columns):
+                if self.geometryTable.item(row, i):  # Check if an item exists before trying to read it
+                    row_list.append(self.geometryTable.item(row, i).text())
+                else:
+                    row_list.append('')
+            table_gps.append(row_list)
+        return table_gps

@@ -11,7 +11,7 @@ from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -91,9 +91,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.setupUi(self)  # Init for the .UI file
         self.setWindowTitle("PEMPro  v" + str(__version__))
-        # self.setWindowIcon(
-        #     QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
-        self.setGeometry(500, 300, 1500, 900)
+        self.setWindowIcon(
+            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
+        self.setGeometry(500, 300, 1600, 900)
 
         center_window(self)
         # self.showMaximized()

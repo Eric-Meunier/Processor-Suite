@@ -28,7 +28,7 @@ from src.qt_py.pem_info_widget import PEMFileInfoWidget
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 _station_gps_tab = 2
 _loop_gps_tab = 1
@@ -783,8 +783,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         pem_file.header['LineHole'] = self.table.item(table_row, self.columns.index('Line/Hole')).text()
         pem_file.header['Loop'] = self.table.item(table_row, self.columns.index('Loop')).text()
         pem_file.tags['Current'] = self.table.item(table_row, self.columns.index('Current')).text()
-        pem_file.loop_coords = self.stackedWidget.widget(table_row).get_loop_gps_text()
-        pem_file.line_coords = self.stackedWidget.widget(table_row).get_station_gps_text()
+        pem_file.loop_coords = self.stackedWidget.widget(table_row).get_loop_gps()
+
+        if 'surface' in pem_file.get_survey_type().lower():
+            pem_file.line_coords = self.stackedWidget.widget(table_row).get_station_gps()
+        elif 'borehole' in pem_file.get_survey_type().lower():
+            collar_gps = self.stackedWidget.widget(table_row).get_collar_gps()
+            segments = self.stackedWidget.widget(table_row).get_geometry_segments()
+            pem_file.line_coords = [collar_gps]+segments
 
         return pem_file
 
@@ -833,7 +839,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     # Save selected PEM files
     def save_pem_file_selection(self):
-
         rows = []
         for i in self.table.selectedIndexes():
             if i.row() not in rows:
@@ -846,9 +851,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 'File {} saved.'.format(os.path.basename(updated_file.filepath)), 2000)
             self.update_table()
 
-    def save_as_pem_file_selection(self):
+    def save_as_pem_file_selection(self):  # Only saves a single file
         row = self.table.currentRow()
-
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
         self.dialog.setFileMode(QFileDialog.ExistingFiles)
         self.dialog.setAcceptMode(QFileDialog.AcceptSave)
@@ -1059,7 +1063,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def share_loop(self):
         selected_widget = self.pem_info_widgets[self.table.currentRow()]
         try:
-            selected_widget_loop = selected_widget.get_loop_gps_text()
+            selected_widget_loop = selected_widget.get_loop_gps()
         except:
             return
         for widget in self.pem_info_widgets:

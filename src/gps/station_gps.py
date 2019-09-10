@@ -37,7 +37,7 @@ class StationGPSFile:
 
     def sort_line(self):
         logging.info('Sorting line GPS')
-        line_coords = []  # The actual full coordinates
+        line_coords = []
         duplicates = []
 
         if self.gps_data:
@@ -48,9 +48,6 @@ class StationGPSFile:
                     line_coords.append(coord_item)
                 else:
                     duplicates.append(coord_item)
-
-            # if len(duplicates) > 0:
-            #     self.duplicate_signal.emit(len(duplicates))
 
             distances = spatial.distance.cdist(line_coords, line_coords, 'euclidean')
             index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
