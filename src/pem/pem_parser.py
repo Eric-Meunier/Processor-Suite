@@ -54,7 +54,7 @@ class PEMParser:
         self.re_data = re.compile(  # Parsing the EM data information
             r'^(?P<Station>^\d+[NSEW]?)\s(?P<Component>[XYZ])R(?P<ReadingIndex>\d+)\s(?P<Gain>\d)\s(?P<RxType>[AM\?])\s(?P<ZTS>\d+\.\d+)\s(?P<CoilDelay>\d+)\s(?P<NumStacks>\d+)\s(?P<ReadingsPerSet>\d+)\s(?P<ReadingNumber>\d+).*[\r\n]'
             r'^(?P<RADTool>D\d.*)[\r\n]'
-            r'(?P<Data>[\W\de]+[\n\r])',
+            r'(?P<Data>[\W\deE]+[\n\r])',
             re.MULTILINE)
 
     def parse_tags(self, file):

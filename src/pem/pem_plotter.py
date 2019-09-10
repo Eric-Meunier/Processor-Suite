@@ -1,20 +1,19 @@
-import os
-import sys
 import logging
-import numpy as np
 import math
+import os
 import re
+import sys
+from itertools import chain
+import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import numpy as np
+from PyQt5.QtWidgets import (QProgressBar)
+from matplotlib import patches
+from matplotlib.backends.backend_pdf import PdfPages
 from scipy import interpolate
 from scipy import stats
-import matplotlib.ticker as ticker
-from matplotlib import patches
-from itertools import chain
-from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import (QApplication, QDialog,
-                             QProgressBar, QPushButton)
 
 __version__ = '0.0.0'
 logging.info('PEMPlotter')
@@ -52,8 +51,8 @@ class PEMPlotter:
         self.header = self.pem_file.header
         self.stations = self.pem_file.get_converted_unique_stations()
         self.survey_type = self.pem_file.get_survey_type()
-        self.x_min = int(min(chain(self.stations))) if kwargs.get('XMin') is None else  kwargs.get('XMin')
-        self.x_max = int(max(chain(self.stations))) if kwargs.get('XMax') is None else  kwargs.get('XMax')
+        self.x_min = int(min(chain(self.stations))) if kwargs.get('XMin') is None else kwargs.get('XMin')
+        self.x_max = int(max(chain(self.stations))) if kwargs.get('XMax') is None else kwargs.get('XMax')
         self.num_channels = int(self.header['NumChannels']) + 1
         self.units = 'nT/s' if self.pem_file.tags['Units'].casefold() == 'nanotesla/sec' else 'pT'
         self.channel_bounds = self.calc_channel_bounds()
@@ -185,7 +184,6 @@ class PEMPlotter:
         profile_data = {}
         component_data = list(filter(lambda d: d['Component'] == component, self.data))
         num_channels = len(component_data[0]['Data'])
-
         for channel in range(0, num_channels):
             channel_data = []
 

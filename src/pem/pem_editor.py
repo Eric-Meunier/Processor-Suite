@@ -1,28 +1,25 @@
+import cProfile
 import copy
+import datetime
 import logging
 import os
-import re
-import datetime
-import cProfile
 import pstats
-import time
 import sys
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
+import time
 from decimal import getcontext
 from itertools import chain
 
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
-                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QTextEdit, QToolButton,
-                             QInputDialog, QHeaderView, QShortcut)
+                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QToolButton,
+                             QInputDialog, QHeaderView)
 
-from src.pem.pem_plotter import PEMPrinter
 from src.gps.loop_gps import LoopGPSParser
 from src.gps.station_gps import StationGPSParser
+from src.pem.pem_file import PEMFile
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
-from src.pem.pem_file import PEMFile
+from src.pem.pem_plotter import PEMPrinter
 from src.pem.pem_serializer import PEMSerializer
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 
@@ -39,13 +36,11 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
-    editorCreatorFile = 'qt_ui\\pem_editor_widget.ui'
     editorWindowCreatorFile = 'qt_ui\\pem_editor_window.ui'
     lineNameEditorCreatorFile = 'qt_ui\\line_name_editor.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    editorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_widget.ui')
     editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
     lineNameEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\line_name_editor.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
@@ -303,8 +298,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         def is_opened(pem_file):
             if len(self.pem_files)>0:
-                existing_filepaths = [file.filepath for file in self.pem_files]
-                if pem_file in existing_filepaths:
+                existing_filepaths = [os.path.abspath(file.filepath) for file in self.pem_files]
+                if os.path.abspath(pem_file) in existing_filepaths:
                     self.window().statusBar().showMessage('{} is already opened'.format(pem_file), 2000)
                     return True
                 else:
