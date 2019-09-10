@@ -13,6 +13,8 @@ from itertools import chain
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+from PyQt5.QtWidgets import (QApplication, QDialog,
+                             QProgressBar, QPushButton)
 
 __version__ = '0.0.0'
 logging.info('PEMPlotter')
@@ -41,18 +43,17 @@ class PEMPlotter:
     PEMFile must be averaged and split.
     """
 
-    def __init__(self, pem_file, hide_gaps=True, gap=None, parent=None, x_min=None, x_max=None):
+    def __init__(self, pem_file, **kwargs):#hide_gaps=True, gap=None, x_min=None, x_max=None):
         super().__init__()
-        self.parent = parent
         self.pem_file = pem_file
-        self.hide_gaps = hide_gaps
-        self.gap = gap
+        self.hide_gaps = kwargs.get('HideGaps')
+        self.gap = kwargs.get('Gap')
         self.data = self.pem_file.data
         self.header = self.pem_file.header
         self.stations = self.pem_file.get_converted_unique_stations()
         self.survey_type = self.pem_file.get_survey_type()
-        self.x_min = int(min(chain(self.stations))) if x_min is None else x_min
-        self.x_max = int(max(chain(self.stations))) if x_max is None else x_max
+        self.x_min = int(min(chain(self.stations))) if kwargs.get('XMin') is None else  kwargs.get('XMin')
+        self.x_max = int(max(chain(self.stations))) if kwargs.get('XMax') is None else  kwargs.get('XMax')
         self.num_channels = int(self.header['NumChannels']) + 1
         self.units = 'nT/s' if self.pem_file.tags['Units'].casefold() == 'nanotesla/sec' else 'pT'
         self.channel_bounds = self.calc_channel_bounds()
@@ -98,7 +99,7 @@ class PEMPlotter:
                 plt.setp(ax.get_xticklabels(), visible=True, size=12,  fontname='Century Gothic')
 
         plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
-        self.add_rectangle()
+        self.add_rectangle(figure)
 
         for ax in axes:
             format_spines(ax)
@@ -114,23 +115,11 @@ class PEMPlotter:
         figure.axes[0].xaxis.set_major_locator(major_locator)  # for some reason this seems to apply to all axes
         figure.axes[-1].xaxis.set_major_locator(x_label_locator)
 
-    def make_lin_fig(self, component):
+    def make_lin_fig(self, component, lin_fig):
         """
         Plots the data into the LIN figure
         :return: Matplotlib Figure object
         """
-
-        def create_lin_figure():
-            """
-            Creates the blank LIN figure
-            """
-            lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
-            ax6 = ax5.twiny()
-            ax6.get_shared_x_axes().join(ax5, ax6)
-
-            self.format_figure(lin_fig)
-            return lin_fig
-
         def add_ylabels():
             for i in range(len(lin_fig.axes) - 1):
                 ax = lin_fig.axes[i]
@@ -140,8 +129,7 @@ class PEMPlotter:
                     ax.set_ylabel("Channel " + str(channel_bounds[i][0]) + " - " +
                                   str(channel_bounds[i][1]) + "\n(" + self.units + ")")
 
-        lin_fig = create_lin_figure()
-
+        self.format_figure(lin_fig)
         channel_bounds = self.channel_bounds
 
         for i, group in enumerate(channel_bounds):
@@ -154,30 +142,17 @@ class PEMPlotter:
         self.format_xaxis(lin_fig)
         return lin_fig
 
-    def make_log_fig(self, component):
+    def make_log_fig(self, component, log_fig):
         """
         Plots the data into the LOG figure
         :return: Matplotlib Figure object
         """
 
-        def create_log_figure():
-            """
-            Creates an empty but formatted LOG figure
-            """
-            log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
-            ax2 = ax.twiny()
-            ax2.get_shared_x_axes().join(ax, ax2)
-            plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
-
-            self.format_figure(log_fig)
-            return log_fig
-
         def add_ylabel():
             ax = log_fig.axes[0]
             ax.set_ylabel('Primary Pulse to Channel ' + str(self.num_channels - 1) + "\n(" + self.units + ")")
 
-        log_fig = create_log_figure()
-
+        self.format_figure(log_fig)
         ax = log_fig.axes[0]
 
         self.draw_lines(ax, 0, self.num_channels - 1, component)
@@ -395,21 +370,13 @@ class PEMPlotter:
                     self.header.get('Client') + '\n' + self.header.get('Grid') + '\n' + self.header['Date'] + '\n',
                     fontname='Century Gothic', fontsize=10, va='top', ha='right')
 
-    def add_rectangle(self):
+    def add_rectangle(self, figure):
         """
         Draws a rectangle around a figure object
         """
-        fig = plt.gcf()
         rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
-                                 facecolor='none', transform=fig.transFigure)
-        fig.patches.append(rect)
-
-    def get_lin_figs(self):
-        components = self.pem_file.get_components()
-        lin_figs = []
-        for component in components:
-            lin_figs.append(self.make_lin_fig(component))
-        return lin_figs
+                                 facecolor='none', transform=figure.transFigure)
+        figure.patches.append(rect)
 
     # def get_lin_figs(self):
     #     components = self.pem_file.get_components()
@@ -418,15 +385,84 @@ class PEMPlotter:
     #         for component in components:
     #             pdf.savefig(self.make_lin_fig(component))
     #             plt.clf()
+    #
+    # def get_log_figs(self):
+    #     components = self.pem_file.get_components()
+    #     log_figs = []
+    #
+    #     for component in components:
+    #         log_figs.append(self.make_log_fig(component))
+    #
+    #     return log_figs
 
-    def get_log_figs(self):
-        components = self.pem_file.get_components()
-        log_figs = []
 
-        for component in components:
-            log_figs.append(self.make_log_fig(component))
+class PEMPrinter:
+    """
+    Class for printing PEMPLotter plots to PDF.
+    Creates the figures for PEMPlotter so they may be closed after they are saved.
+    :param pem_files: List of PEMFile objects
+    :param save_dir: Desired save location for the PDFs
+    :param kwargs: Plotting kwargs such as hide_gaps, gaps, and x limits used in PEMPlotter.
+    """
 
-        return log_figs
+    def __init__(self, pem_files, save_dir, **kwargs):
+        self.pem_files = pem_files
+        self.plotter = PEMPlotter
+        self.save_dir = save_dir
+        self.kwargs = kwargs
+        self.pg = QProgressBar()
+        self.pg_count = 0
+        self.pg_end = sum([len(pem_file.get_components()) for pem_file in self.pem_files])
+        self.pg.setValue(0)
+
+    def create_lin_figure(self):
+        """
+        Creates the blank LIN figure
+        """
+        lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
+        ax6 = ax5.twiny()
+        ax6.get_shared_x_axes().join(ax5, ax6)
+
+        return lin_fig
+
+    def create_log_figure(self):
+        """
+        Creates an empty but formatted LOG figure
+        """
+        log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
+        ax2 = ax.twiny()
+        ax2.get_shared_x_axes().join(ax, ax2)
+        plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
+
+        return log_fig
+
+    def print_lin_figs(self):
+
+        with PdfPages(os.path.join(self.save_dir, "lin.pdf")) as pdf:
+
+            for pem_file in self.pem_files:
+                components = pem_file.get_components()
+                for component in components:
+                    lin_figure = self.create_lin_figure()
+                    lin_plot = self.plotter(pem_file, **self.kwargs).make_lin_fig(component, lin_figure)
+                    pdf.savefig(lin_plot)
+                    self.pg_count += 1
+                    self.pg.setValue((self.pg_count/self.pg_end) * 100)
+                    plt.close(lin_figure)
+
+    def print_log_figs(self):
+
+        with PdfPages(os.path.join(self.save_dir, "log.pdf")) as pdf:
+
+            for pem_file in self.pem_files:
+                components = pem_file.get_components()
+                for component in components:
+                    log_figure = self.create_log_figure()
+                    log_plot = self.plotter(pem_file, **self.kwargs).make_log_fig(component, log_figure)
+                    pdf.savefig(log_plot)
+                    self.pg_count += 1
+                    self.pg.setValue((self.pg_count / self.pg_end) * 100)
+                    plt.close(log_figure)
 
 # class CronePYQTFigure:
 #     """

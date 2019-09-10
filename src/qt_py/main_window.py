@@ -93,10 +93,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle("PEMPro  v" + str(__version__))
         # self.setWindowIcon(
         #     QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
-        # self.setGeometry(500, 300, 1500, 900)
+        self.setGeometry(500, 300, 1500, 900)
 
-        # center_window(self)
-        self.showMaximized()
+        center_window(self)
+        # self.showMaximized()
 
     def initApps(self):
         self.message = QMessageBox()
@@ -110,10 +110,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.conder = None
 
     def initActions(self):
-        self.openFile = QAction("&Open...", self)
-        self.openFile.setShortcut("F1")
-        self.openFile.setStatusTip('Open file(s)')
-        self.openFile.triggered.connect(self.open_file_dialog)
+        # self.openFile = QAction("&Open...", self)
+        # self.openFile.setShortcut("F1")
+        # self.openFile.setStatusTip('Open file(s)')
+        # self.openFile.triggered.connect(self.open_file_dialog)
+
+        self.openPEMEditor = QAction("&Open PEM Editor", self)
+        self.openPEMEditor.triggered.connect(self.open_editor)
+
+        self.openDBPlot = QAction("&Open DB Plot", self)
+        self.openDBPlot.triggered.connect(self.open_db_plot)
+
+        self.openConder = QAction("&Open Conder", self)
+        self.openConder.triggered.connect(self.open_conder)
 
         self.closeAllWindows = QAction("&Close All", self)
         self.closeAllWindows.setShortcut("Ctrl+Shift+Del")
@@ -121,7 +130,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.closeAllWindows.triggered.connect(self.close_all_windows)
 
         self.fileMenu = self.menubar.addMenu('&File')
-        self.fileMenu.addAction(self.openFile)
+        self.fileMenu.addAction(self.openPEMEditor)
+        self.fileMenu.addAction(self.openDBPlot)
+        self.fileMenu.addAction(self.openConder)
+        self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.closeAllWindows)
 
         self.toolbar = QToolBar()
@@ -203,36 +215,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.mdiArea.tileSubWindows()
 
     def open_editor(self):
-        self.editor = PEMEditorWindow(parent=self)
-        self.editor_subwindow = CustomMdiSubWindow(parent=self.editor)
-        self.editor_subwindow.setWidget(self.editor)
-        self.editor_subwindow.closeWindow.connect(self.editor.clear_files)
-        self.editor_subwindow.closeWindow.connect(self.toggle_editor)
-        self.mdiArea.addSubWindow(self.editor_subwindow)
+        if self.editor is None:
+            self.editor = PEMEditorWindow(parent=self)
+            self.editor_subwindow = CustomMdiSubWindow(parent=self.editor)
+            self.editor_subwindow.setWidget(self.editor)
+            self.editor_subwindow.closeWindow.connect(self.editor.clear_files)
+            self.editor_subwindow.closeWindow.connect(self.toggle_editor)
+            self.mdiArea.addSubWindow(self.editor_subwindow)
         self.pem_editor_button.setChecked(True)
         self.editor.show()
         self.editor_subwindow.show()
         self.set_view()
 
     def open_db_plot(self):
-        self.db_plot = DBPlot(parent=self)
-        self.db_plot_subwindow = CustomMdiSubWindow(parent=self.db_plot)
-        self.db_plot_subwindow.setWidget(self.db_plot)
-        self.db_plot_subwindow.closeWindow.connect(self.db_plot.clear_files)
-        self.db_plot_subwindow.closeWindow.connect(self.toggle_db_plot)
-        self.mdiArea.addSubWindow(self.db_plot_subwindow)
+        if self.db_plot is None:
+            self.db_plot = DBPlot(parent=self)
+            self.db_plot_subwindow = CustomMdiSubWindow(parent=self.db_plot)
+            self.db_plot_subwindow.setWidget(self.db_plot)
+            self.db_plot_subwindow.closeWindow.connect(self.db_plot.clear_files)
+            self.db_plot_subwindow.closeWindow.connect(self.toggle_db_plot)
+            self.mdiArea.addSubWindow(self.db_plot_subwindow)
         self.db_plot_button.setChecked(True)
         self.db_plot.show()
         self.db_plot_subwindow.show()
         self.set_view()
 
     def open_conder(self):
-        self.conder = Conder(parent=self)
-        self.conder_subwindow = CustomMdiSubWindow(parent=self.conder)
-        self.conder_subwindow.setWidget(self.conder)
-        self.conder_subwindow.closeWindow.connect(self.conder.clear_files)
-        self.conder_subwindow.closeWindow.connect(self.toggle_conder)
-        self.mdiArea.addSubWindow(self.conder_subwindow)
+        if self.conder is None:
+            self.conder = Conder(parent=self)
+            self.conder_subwindow = CustomMdiSubWindow(parent=self.conder)
+            self.conder_subwindow.setWidget(self.conder)
+            self.conder_subwindow.closeWindow.connect(self.conder.clear_files)
+            self.conder_subwindow.closeWindow.connect(self.toggle_conder)
+            self.mdiArea.addSubWindow(self.conder_subwindow)
         self.conder_button.setChecked(True)
         self.conder.show()
         self.conder_subwindow.show()

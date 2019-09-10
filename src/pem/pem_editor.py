@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QTextEdit, QToolButton,
                              QInputDialog, QHeaderView, QShortcut)
 
-from src.pem.pem_plotter import PEMPlotter
+from src.pem.pem_plotter import PEMPrinter
 from src.gps.loop_gps import LoopGPSParser
 from src.gps.station_gps import StationGPSParser
 from src.pem.pem_file_editor import PEMFileEditor
@@ -133,9 +133,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.saveFiles.triggered.connect(self.save_all)
 
         self.saveFilesTo = QAction("&Save Files To...", self)
-        self.saveFilesTo.setShortcut("F12")
+        self.saveFilesTo.setShortcut("F11")
         self.saveFilesTo.setStatusTip("Save all files at specified location.")
         self.saveFilesTo.triggered.connect(self.save_all_to)
+
+        self.print_final_plots_action = QAction("&Print Final Plots PDF", self)
+        self.print_final_plots_action.setShortcut("F12")
+        self.print_final_plots_action.setStatusTip("Print the final plots to PDF")
+        self.print_final_plots_action.triggered.connect(self.print_final_plots)
 
         self.del_file = QAction("&Remove File", self)
         self.del_file.setShortcut("Del")
@@ -153,6 +158,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu.addAction(self.saveFiles)
         self.fileMenu.addAction(self.saveFilesTo)
         self.fileMenu.addAction(self.clearFiles)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.print_final_plots_action)
 
         self.averageAllPems = QAction("&Average All PEM Files", self)
         self.averageAllPems.setStatusTip("Average all PEM files")
@@ -277,7 +284,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.open_files(urls)
 
     def open_files(self, files):
-
+        # TODO Check for existing files before bringing it in
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
         pem_files = [file for file in files if file.lower().endswith('pem')]
@@ -475,9 +482,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.share_loop_action = QAction("&Share Loop", self)
                 self.table.share_loop_action.triggered.connect(self.share_loop)
 
-                self.table.final_plots_action = QAction("&Make Final Plots", self)
-                self.table.final_plots_action.triggered.connect(self.print_final_plots_selection)
-
                 self.table.rename_lines_action = QAction("&Rename Lines/Holes", self)
                 self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line', selected=True))
 
@@ -487,7 +491,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addAction(self.table.save_file_action)
                 if len(self.table.selectionModel().selectedRows()) == 1:
                     self.table.menu.addAction(self.table.save_file_as_action)
-                self.table.menu.addAction(self.table.final_plots_action)
+                self.table.menu.addAction(self.print_final_plots_action)
                 self.table.menu.addSeparator()
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     self.table.menu.addAction(self.table.merge_action)
@@ -850,72 +854,52 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.window().statusBar().showMessage('No folder selected')
 
-    def get_final_plots(self, pem_file):
-        if not pem_file.is_averaged():
-            pem_file = self.file_editor.average(copy.copy(pem_file))
-        if not pem_file.is_split():
-            pem_file = self.file_editor.split_channels(copy.copy(pem_file))
-        if self.share_range_checkbox.isChecked():
-            try:
-                x_min = int(self.min_range_edit.text())
-            except ValueError:
-                x_min = None
-            try:
-                x_max = int(self.max_range_edit.text())
-            except ValueError:
-                x_max = None
-        else:
-            x_min = None
-            x_max = None
+    def print_final_plots(self):
+        self.window().statusBar().showMessage('Saving plots...')
+        default_path = os.path.split(self.pem_files[-1].filepath)[0]
+        # self.dialog.setFileMode(QFileDialog.ExistingFiles)
+        # self.dialog.setAcceptMode(QFileDialog.AcceptSave)
+        self.dialog.setDirectory(default_path)
+        self.window().statusBar().showMessage('Saving plots...')
+        file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
 
-        plotter = PEMPlotter(pem_file, x_min=x_min, x_max=x_max, hide_gaps=True)
-        lin_plots = plotter.get_lin_figs()
-        log_plots = plotter.get_log_figs()
-        return lin_plots, log_plots
+        plot_kwargs = {'HideGaps': True}
 
-    def print_final_plots_selection(self):
-        pem_files = self.get_selected_pem_files()
-        lin_plots = []
-        log_plots = []
-        for pem_file in pem_files:
-            table_row = pem_files.index(pem_file)
-            # Make a copy of the PEM file with updated table information first for plotting
-            plotting_pem_file = self.update_pem_file_from_table(copy.copy(pem_file), table_row)
-            lins, logs = self.get_final_plots(plotting_pem_file)
-            lin_plots.append(lins)
-            log_plots.append(logs)
-
-        self.print_final_plots(lin_plots, log_plots)
-
-    def print_final_plots(self, lin_plots, log_plots):
-            self.window().statusBar().showMessage('Saving plots...')
-            default_path = os.path.split(self.pem_files[-1].filepath)[0]
-            self.dialog.setFileMode(QFileDialog.ExistingFiles)
-            self.dialog.setAcceptMode(QFileDialog.AcceptSave)
-            self.dialog.setDirectory(default_path)
-            self.window().statusBar().showMessage('Saving plots...')
-            file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
-
-            if file_dir:
-                with PdfPages(os.path.join(file_dir, "lin.pdf")) as pdf:
-                    for file in lin_plots:
-                        for fig in file:
-                            fig.set_size_inches(8.5, 11)
-                            pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
-                            plt.close(fig)
-
-                with PdfPages(os.path.join(file_dir, "log.pdf")) as pdf:
-                    for file in log_plots:
-                        for fig in file:
-                            fig.set_size_inches(8.5, 11)
-                            pdf.savefig(fig, dpi=fig.dpi, papertype='letter')
-                            plt.close(fig)
-
-                lin_plots.clear()
-                log_plots.clear()
-                self.window().statusBar().showMessage('Plots Saved', 2000)
+        if file_dir:
+            pem_files_selection = self.get_selected_pem_files()
+            if pem_files_selection:
+                pem_files = copy.copy(pem_files_selection)
             else:
-                pass
+                pem_files = copy.copy(self.pem_files)
+
+            for i, pem_file in enumerate(pem_files):
+                self.update_pem_file_from_table(pem_file, i)
+                if not pem_file.is_averaged():
+                    self.file_editor.average(pem_file)
+                if not pem_file.is_split():
+                    self.file_editor.split_channels(pem_file)
+
+            if self.share_range_checkbox.isChecked():
+                try:
+                    plot_kwargs['XMin'] = int(self.min_range_edit.text())
+                except ValueError:
+                    plot_kwargs['XMin'] = None
+                try:
+                    plot_kwargs['XMax'] = int(self.max_range_edit.text())
+                except ValueError:
+                    plot_kwargs['XMax'] = None
+            else:
+                plot_kwargs['XMin'] = None
+                plot_kwargs['XMax'] = None
+
+            printer = PEMPrinter(pem_files, file_dir, **plot_kwargs)
+            self.window().statusBar().addPermanentWidget(printer.pg)
+            printer.print_lin_figs()
+            printer.print_log_figs()
+            printer.pg.hide()
+            self.window().statusBar().showMessage('Plots Saved', 2000)
+        else:
+            pass
 
     def remove_file(self, table_row):
         self.table.removeRow(table_row)
