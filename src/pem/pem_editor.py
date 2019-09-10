@@ -120,7 +120,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def initActions(self):
         self.setAcceptDrops(True)
-        self.window().statusBar().showMessage('Ready')
 
         self.openFile = QAction("&Open...", self)
         self.openFile.setShortcut("Ctrl+O")
@@ -301,6 +300,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def open_pem_files(self, pem_files):
         logging.info('open_pem_files')
+
+        def is_opened(pem_file):
+            if len(self.pem_files)>0:
+                existing_filepaths = [file.filepath for file in self.pem_files]
+                if pem_file in existing_filepaths:
+                    self.window().statusBar().showMessage('{} is already opened'.format(pem_file), 2000)
+                    return True
+                else:
+                    return False
+            else:
+                return False
+
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
@@ -308,37 +319,39 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.pemInfoDockWidget.show()
 
         for pem_file in pem_files:
-            pemInfoWidget = PEMFileInfoWidget()
-            if not isinstance(pem_file, PEMFile):
-                pem_file = self.parser.parse(pem_file)
-            try:
-                pem_widget = pemInfoWidget.open_file(pem_file, parent=self)
-                pem_widget.tabs.currentChanged.connect(self.change_pem_info_tab)
-                self.pem_files.append(pem_file)
-                self.pem_info_widgets.append(pem_widget)
-                self.stackedWidget.addWidget(pem_widget)
-                self.add_to_table(pem_file)
+            if not is_opened(pem_file):
+                pemInfoWidget = PEMFileInfoWidget()
 
-                if len(self.pem_files) == 1:  # The initial fill of the header and station info
-                    if self.client_edit.text() == '':
-                        self.client_edit.setText(self.pem_files[0].header['Client'])
-                    if self.grid_edit.text() == '':
-                        self.grid_edit.setText(self.pem_files[0].header['Grid'])
-                    if self.loop_edit.text() == '':
-                        self.loop_edit.setText(self.pem_files[0].header['Loop'])
+                if not isinstance(pem_file, PEMFile):
+                    pem_file = self.parser.parse(pem_file)
+                try:
+                    pem_widget = pemInfoWidget.open_file(pem_file, parent=self)
+                    pem_widget.tabs.currentChanged.connect(self.change_pem_info_tab)
+                    self.pem_files.append(pem_file)
+                    self.pem_info_widgets.append(pem_widget)
+                    self.stackedWidget.addWidget(pem_widget)
+                    self.add_to_table(pem_file)
 
-                    all_stations = [file.get_converted_unique_stations() for file in self.pem_files]
+                    if len(self.pem_files) == 1:  # The initial fill of the header and station info
+                        if self.client_edit.text() == '':
+                            self.client_edit.setText(self.pem_files[0].header['Client'])
+                        if self.grid_edit.text() == '':
+                            self.grid_edit.setText(self.pem_files[0].header['Grid'])
+                        if self.loop_edit.text() == '':
+                            self.loop_edit.setText(self.pem_files[0].header['Loop'])
 
-                    if self.min_range_edit.text() == '':
-                        min_range = str(min(chain.from_iterable(all_stations)))
-                        self.min_range_edit.setText(min_range)
-                    if self.max_range_edit.text() == '':
-                        max_range = str(max(chain.from_iterable(all_stations)))
-                        self.max_range_edit.setText(max_range)
+                        all_stations = [file.get_converted_unique_stations() for file in self.pem_files]
 
-            except Exception as e:
-                logging.info(str(e))
-                self.message.information(None, 'PEMEditor: open_pem_files error', str(e))
+                        if self.min_range_edit.text() == '':
+                            min_range = str(min(chain.from_iterable(all_stations)))
+                            self.min_range_edit.setText(min_range)
+                        if self.max_range_edit.text() == '':
+                            max_range = str(max(chain.from_iterable(all_stations)))
+                            self.max_range_edit.setText(max_range)
+
+                except Exception as e:
+                    logging.info(str(e))
+                    self.message.information(None, 'PEMEditor: open_pem_files error', str(e))
 
             if len(self.pem_files) > 0:
                 # self.window().statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
@@ -857,8 +870,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def print_final_plots(self):
         self.window().statusBar().showMessage('Saving plots...')
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
-        # self.dialog.setFileMode(QFileDialog.ExistingFiles)
-        # self.dialog.setAcceptMode(QFileDialog.AcceptSave)
         self.dialog.setDirectory(default_path)
         self.window().statusBar().showMessage('Saving plots...')
         file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
