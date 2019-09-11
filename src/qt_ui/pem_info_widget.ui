@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -90,7 +90,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="Loop_GPS">
+     <widget class="QWidget" name="Loop_GPS_Tab">
       <attribute name="title">
        <string>Loop GPS</string>
       </attribute>
@@ -196,7 +196,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="Station_GPS">
+     <widget class="QWidget" name="Station_GPS_Tab">
       <attribute name="title">
        <string>Station GPS</string>
       </attribute>

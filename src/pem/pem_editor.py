@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QToolButton,
                              QInputDialog, QHeaderView)
 
+from src.gps.hole_geometry import GeometryParser
 from src.gps.loop_gps import LoopGPSParser
 from src.gps.station_gps import StationGPSParser
 from src.pem.pem_file import PEMFile
@@ -27,8 +28,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', date
 
 __version__ = '0.2.1'
 
-_station_gps_tab = 2
-_loop_gps_tab = 1
+# _station_gps_tab = 2
+# _loop_gps_tab = 1
 getcontext().prec = 6
 
 if getattr(sys, 'frozen', False):
@@ -245,7 +246,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         text_files = False
         if all([url.lower().endswith('pem') for url in urls]):
             pem_files = True
-        elif all([url.lower().endswith('txt') or url.lower().endswith('csv') for url in urls]):
+        elif all([url.lower().endswith('txt') or url.lower().endswith('csv') or url.lower().endswith('seg') for url in urls]):
             text_files = True
 
         pem_conditions = bool(all([
@@ -260,11 +261,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 e.ignore()
 
         else:
-            eligible_tabs = [_station_gps_tab, _loop_gps_tab]
+            eligible_tabs = [self.stackedWidget.currentWidget().Station_GPS_Tab,
+                             self.stackedWidget.currentWidget().Loop_GPS_Tab,
+                             self.stackedWidget.currentWidget().Geometry_Tab]
             gps_conditions = bool(all([
                 e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
                 text_files is True,
-                self.stackedWidget.currentWidget().tabs.currentIndex() in eligible_tabs,
+                self.stackedWidget.currentWidget().tabs.currentWidget() in eligible_tabs,
                 len(self.pem_files) > 0
             ]))
 
@@ -278,11 +281,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.open_files(urls)
 
     def open_files(self, files):
-        # TODO Check for existing files before bringing it in
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
         pem_files = [file for file in files if file.lower().endswith('pem')]
-        gps_files = [file for file in files if file.lower().endswith('txt') or file.lower().endswith('csv')]
+        gps_files = [file for file in files if file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith('seg')]
 
         start_time = time.time()
         if len(pem_files) > 0:
@@ -369,13 +371,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         station_gps_parser = StationGPSParser()
         loop_gps_parser = LoopGPSParser()
+        geometry_parser = GeometryParser()
 
         if len(gps_files) > 0:
             file = read_gps_files(gps_files)
             try:
                 pem_info_widget = self.stackedWidget.currentWidget()
-                station_gps_tab = pem_info_widget.tabs.widget(_station_gps_tab)
-                loop_gps_tab = pem_info_widget.tabs.widget(_loop_gps_tab)
+                station_gps_tab = pem_info_widget.Station_GPS_Tab
+                geometry_tab = pem_info_widget.Geometry_Tab
+                loop_gps_tab = pem_info_widget.Loop_GPS_Tab
                 current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
 
                 if station_gps_tab == current_tab:
@@ -387,6 +391,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     else:
                         gps_data = gps_file.get_gps()
                     pem_info_widget.fill_station_table(gps_data)
+
+                elif geometry_tab == current_tab:
+                    collar_gps = geometry_parser.parse_collar_gps(file)
+                    segments = geometry_parser.parse_segments(file)
+                    if collar_gps:
+                        pem_info_widget.fill_collar_gps_table(collar_gps)
+                    if segments:
+                        pem_info_widget.fill_geometry_table(segments)
 
                 elif loop_gps_tab == current_tab:
                     gps_file = loop_gps_parser.parse(file)

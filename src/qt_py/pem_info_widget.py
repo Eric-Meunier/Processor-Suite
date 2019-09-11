@@ -142,7 +142,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.stationGPSTable.resizeColumnsToContents()
 
         elif 'borehole' in self.pem_file.survey_type.lower():
-            self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS))
+            self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
             self.geometry_columns = ['Tags', 'Azimuth', 'Dip', 'Seg. Length', 'Units', 'Depth']
             self.geometryTable.setColumnCount(len(self.geometry_columns))
             self.geometryTable.setHorizontalHeaderLabels(self.geometry_columns)
@@ -241,6 +241,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.resizeColumnsToContents()
 
     def fill_info(self):
+        logging.info('PEMInfoWidget: fill_info')
 
         def fill_info_tab():
             survey_type = self.pem_file.survey_type
@@ -267,57 +268,33 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         def fill_station_text():
             # Fill station GPS
-            try:
-                self.station_gps = self.station_gps_parser.parse(self.pem_file.get_line_coords())
-            except ValueError:
-                self.station_gps = None
-
+            self.station_gps = self.station_gps_parser.parse(self.pem_file.get_line_coords())
             if self.station_gps:
                 if self.sort_station_gps_button.isChecked():
                     self.fill_station_table(self.station_gps.get_sorted_gps())
                 else:
                     self.fill_station_table(self.station_gps.get_gps())
-            else:
-                pass
 
         def fill_collar_gps_text():
             # Fill hole collar GPS
-            try:
-                self.collar_gps = self.geometry_parser.parse_collar_gps(self.pem_file.get_line_coords())
-            except ValueError:
-                self.collar_gps = None
-
+            self.collar_gps = self.geometry_parser.parse_collar_gps(self.pem_file.get_line_coords())
             if self.collar_gps:
                 self.fill_collar_gps_table(self.collar_gps)
-            else:
-                pass
 
         def fill_geometry_text():
             # Fill hole geometry segments
-            try:
-                self.geometry_text = self.geometry_parser.parse_segments(self.pem_file.get_line_coords())
-            except ValueError:
-                self.geometry_text = None
-
+            self.geometry_text = self.geometry_parser.parse_segments(self.pem_file.get_line_coords())
             if self.geometry_text:
                 self.fill_geometry_table(self.geometry_text)
-            else:
-                pass
 
         def fill_loop_text():
             # Fill loop GPS
-            try:
-                self.loop_gps = self.loop_gps_parser.parse(self.pem_file.get_loop_coords())
-            except ValueError:
-                self.loop_gps = None
-
+            self.loop_gps = self.loop_gps_parser.parse(self.pem_file.get_loop_coords())
             if self.loop_gps:
                 if self.sort_loop_button.isChecked():
                     self.fill_loop_table(self.loop_gps.get_sorted_gps())
                 else:
                     self.fill_loop_table(self.loop_gps.get_gps())
-            else:
-                pass
 
         header = self.pem_file.header
 

@@ -139,7 +139,11 @@ class LoopGPSParser:
             gps_str = gps
         raw_gps = re.findall(self.re_gps, gps_str)
         raw_gps = list(map(lambda x: list(x), raw_gps))
-        return self.gps_file(raw_gps)
+
+        if raw_gps:
+            return self.gps_file(raw_gps)
+        else:
+            return None
 
 
 def main():

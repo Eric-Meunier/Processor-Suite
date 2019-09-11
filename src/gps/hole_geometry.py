@@ -116,11 +116,11 @@ class GeometryParser:
         self.formatted_file = []
         # self.geometry_file = GeometryFile
         self.re_collar_gps = re.compile(
-            r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?')
+            r'(?P<Easting>\d{4,}\.?\d*)[\s\t](?P<Northing>\d{4,}\.?\d*)[\s\t](?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?')
         self.re_segment = re.compile(
-            r'(?P<Azimuth>\d{1,3}\.?\d*)\W{1,3}(?P<Dip>\d{1,3}\.?\d*)\W{1,3}(?P<SegLength>\d{1,3}\.?\d*)\W{1,3}(?P<Units>0|1|2)\W{1,3}(?P<TotLength>\d{1,4}\.?\d*)')
+            r'(?P<Azimuth>\d{1,3}\.?\d*)[\s\t]{1,}(?P<Dip>\d{1,3}\.?\d*)[\s\t]{1,}(?P<SegLength>\d{1,3}\.?\d*)[\s\t]{1,}(?P<Units>0|1|2)[\s\t]{1,}(?P<Depth>\d{1,4}\.?\d*)')
 
-    def open(self, filepath):
+    def open(self, filepath):  # Not really needed as PEMEditor open_gps does this anyway
         with open(filepath, 'rt') as in_file:
             file = in_file.read()
         return file
@@ -140,7 +140,10 @@ class GeometryParser:
             seg_file_str = file
         raw_seg_file = re.findall(self.re_segment, seg_file_str)
         raw_seg_file = list(map(lambda x: list(x), raw_seg_file))
-        return raw_seg_file
+        if raw_seg_file:
+            return raw_seg_file
+        else:
+            return None
 
     def parse_collar_gps(self, file):
         if isinstance(file, list):
@@ -157,7 +160,10 @@ class GeometryParser:
             collar_str = file
         raw_collar_gps = re.findall(self.re_collar_gps, collar_str)
         raw_collar_gps = list(map(lambda x: list(x), raw_collar_gps))
-        return raw_collar_gps[0]  # Returns the first find
+        if raw_collar_gps:
+            return raw_collar_gps[0]  # Returns the first find
+        else:
+            return None
 
 
 def main():

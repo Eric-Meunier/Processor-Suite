@@ -145,15 +145,18 @@ class StationGPSParser:
         raw_gps = re.findall(self.re_gps, gps_str)
         raw_gps = list(map(lambda x: list(x), raw_gps))
 
-        for i, row in enumerate(raw_gps):
-            station = row.pop(-1)
-            if re.search('[swSW]', station):
-                raw_gps[i].append('-' + str(re.sub('[swSW]', '', station)))
-            elif re.search('[neNE]', station):
-                raw_gps[i].append(str(re.sub('[neNE]', '', station)))
-            else:
-                raw_gps[i].append(station)
-        return self.gps_file(raw_gps)
+        if raw_gps:
+            for i, row in enumerate(raw_gps):
+                station = row.pop(-1)
+                if re.search('[swSW]', station):
+                    raw_gps[i].append('-' + str(re.sub('[swSW]', '', station)))
+                elif re.search('[neNE]', station):
+                    raw_gps[i].append(str(re.sub('[neNE]', '', station)))
+                else:
+                    raw_gps[i].append(station)
+            return self.gps_file(raw_gps)
+        else:
+            return None
 
 
 def main():

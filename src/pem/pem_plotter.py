@@ -435,7 +435,7 @@ class PEMPrinter:
         return log_fig
 
     def print_lin_figs(self):
-
+    # TODO Sort pem file list first
         with PdfPages(os.path.join(self.save_dir, "lin.pdf")) as pdf:
 
             for pem_file in self.pem_files:
