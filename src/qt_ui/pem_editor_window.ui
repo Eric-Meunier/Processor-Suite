@@ -80,13 +80,13 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>180</width>
+           <width>200</width>
            <height>0</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>180</width>
+           <width>200</width>
            <height>16777215</height>
           </size>
          </property>
@@ -228,7 +228,7 @@
         </widget>
        </item>
        <item row="3" column="0">
-        <widget class="QGroupBox" name="range_groupBox">
+        <widget class="QGroupBox" name="plots_groupBox">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -237,7 +237,7 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>180</width>
+           <width>200</width>
            <height>0</height>
           </size>
          </property>
@@ -255,9 +255,16 @@
           </font>
          </property>
          <property name="title">
-          <string>Station Range</string>
+          <string>Plot Options</string>
          </property>
          <layout class="QGridLayout" name="share_range_layout">
+          <item row="4" column="0" colspan="2">
+           <widget class="Line" name="line">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="0">
            <widget class="QLabel" name="max_range_label">
             <property name="text">
@@ -282,25 +289,10 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1" alignment="Qt::AlignRight">
-           <widget class="QLineEdit" name="max_range_edit">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>125</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>125</width>
-              <height>16777215</height>
-             </size>
+          <item row="3" column="0" colspan="2">
+           <widget class="QPushButton" name="reset_range_btn">
+            <property name="text">
+             <string>Reset</string>
             </property>
            </widget>
           </item>
@@ -326,10 +318,35 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
-           <widget class="QPushButton" name="reset_range_btn">
+          <item row="2" column="1" alignment="Qt::AlignRight">
+           <widget class="QLineEdit" name="max_range_edit">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>125</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>125</width>
+              <height>16777215</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QCheckBox" name="hide_gaps_checkbox">
             <property name="text">
-             <string>Reset</string>
+             <string>Hide Data Gaps</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>

@@ -27,10 +27,8 @@ from src.qt_py.pem_info_widget import PEMFileInfoWidget
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
-# _station_gps_tab = 2
-# _loop_gps_tab = 1
 getcontext().prec = 6
 
 if getattr(sys, 'frozen', False):
@@ -225,6 +223,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.share_range_checkbox.stateChanged.connect(self.toggle_share_range)
         self.reset_range_btn.clicked.connect(self.fill_share_range)
+        self.hide_gaps_checkbox.stateChanged.connect(self.toggle_hide_gaps)
         self.min_range_edit.textChanged.connect(self.update_table)
         self.max_range_edit.textChanged.connect(self.update_table)
 
@@ -919,10 +918,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.window().statusBar().showMessage('Saving plots...')
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
         self.dialog.setDirectory(default_path)
-        self.window().statusBar().showMessage('Saving plots...')
         file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
 
-        plot_kwargs = {'HideGaps': True}
+        plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked()}
 
         if file_dir:
             pem_files_selection = self.get_selected_pem_files()
@@ -956,9 +954,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             printer.print_lin_figs()
             printer.print_log_figs()
             printer.pg.hide()
-            self.window().statusBar().showMessage('Plots Saved', 2000)
+            self.window().statusBar().showMessage('Plots saved', 2000)
         else:
-            pass
+            self.window().statusBar().showMessage('Cancelled', 2000)
 
     def remove_file(self, table_row):
         self.table.removeRow(table_row)
@@ -1146,6 +1144,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
                 self.toggle_sort_loop(widget)
+
+    def toggle_hide_gaps(self):
+        pass  # To be implemented when pyqtplots are in
 
     def batch_rename(self, type, selected=False):
         # TODO Remove "selected", make it run on selected rows by default
