@@ -3,9 +3,12 @@ import math
 import os
 import re
 import sys
+from pprint import pprint
 from itertools import chain
+from operator import itemgetter, attrgetter
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib as mpl
+from src.pem.pem_parser import PEMParser
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
@@ -405,6 +408,7 @@ class PEMPrinter:
 
     def __init__(self, pem_files, save_dir, **kwargs):
         self.pem_files = pem_files
+        self.sort_pem_files()
         self.plotter = PEMPlotter
         self.save_dir = save_dir
         self.kwargs = kwargs
@@ -412,6 +416,10 @@ class PEMPrinter:
         self.pg_count = 0
         self.pg_end = sum([len(pem_file.get_components()) for pem_file in self.pem_files])
         self.pg.setValue(0)
+
+    def sort_pem_files(self):
+        self.pem_files.sort(key=lambda x: x.get_components(), reverse=True)
+        self.pem_files.sort(key=lambda x: x.header['LineHole'])
 
     def create_lin_figure(self):
         """
@@ -469,14 +477,20 @@ class PEMPrinter:
 #     # TODO Only needs data, should the class do the rest of the work?
 #     """
 
+if __name__ == '__main__':
+    parser = PEMParser()
+    # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
+    sample_files = r'C:\_Data\2019\Minera Aguilar\Borehole'
+    file_names = [f for f in os.listdir(sample_files) if
+                  os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
+    pem_files = []
 
-# if __name__ == "__main__":
-#     # app = QtGui.QApplication(sys.argv)
-#     # mw = MainWindow()
-#     # app.exec_()
-#
-#     # cProfile.run('editor.make_plots()', sort='cumtime')
-#     testing_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../sample_files/9600NAv LP-100.PEM")
-#     plots = CronePYQTFigure()
-#     plots.plot(testing_file)
-#     # plt.show()
+    # file = os.path.join(sample_files, file_names[0])
+    for file in file_names:
+        filepath = os.path.join(sample_files, file)
+        pem_file = parser.parse(filepath)
+        print('File: ' + filepath)
+        pem_files.append(pem_file)
+
+    printer = PEMPrinter(pem_files, r'C:\_Data\2019\BMSC\Surface\MO-254')
+    printer.print_lin_figs()

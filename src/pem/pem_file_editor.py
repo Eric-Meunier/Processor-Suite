@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 from copy import copy
 from decimal import Decimal, getcontext
 
@@ -147,6 +148,16 @@ class PEMFileEditor:
 
         return pem_file
 
+    def shift_stations(self, pem_file, shift_amt):
+        data = pem_file.get_data()
+        for reading in data:
+            old_num = int(re.findall('\d+', reading['Station'])[0])
+            suffix = str(re.search('[NSEW]', reading['Station']))
+            new_num = str(old_num + shift_amt)
+            reading['Station'] = str(new_num+suffix)
+        return pem_file
+
+
 if __name__ == '__main__':
     editor = PEMFileEditor()
     parser = PEMParser()
@@ -157,17 +168,16 @@ if __name__ == '__main__':
                   os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
     file_paths = []
 
-    # file = os.path.join(sample_files, file_names[0])
+    file = os.path.join(sample_files, file_names[0])
     for file in file_names:
         filepath = os.path.join(sample_files, file)
         print('File: ' + filepath)
 
         pem_file = parser.parse(filepath)
-        editor.scale_coil_area(pem_file, 5000)
+        editor.shift_stations(pem_file, 1000)
     # file = r'C:\Users\Eric\Desktop\600N.PEM'
-    # file = r'C:\Users\Eric\Desktop\CDR3 Surface Induction.PEM'
+    # file = r'C:\Users\Eric\Desktop\All survey types\CDR2 SQUID.PEM'
     # file = r'C:\Users\Eric\Desktop\2400NAv.PEM'
     #
-    # print('File: '+file)
     # pem_file = parser.parse(file)
-    # editor.split_channels(pem_file)
+    # editor.shift_stations(pem_file, 1000)

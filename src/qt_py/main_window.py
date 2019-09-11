@@ -399,8 +399,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.mdiArea.tileSubWindows()
 
 
-# class
-
 def main():
     # TODO Make dedicated Application class
     app = QApplication(sys.argv)

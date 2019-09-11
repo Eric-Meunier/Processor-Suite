@@ -91,7 +91,7 @@ class PEMSerializer:
         times_per_line = 7
         cnt = 0
 
-        channel_times = [str(time) for time in header['ChannelTimes']]
+        channel_times = [f'{time:.6f}' for time in header['ChannelTimes']]
         channel_times = list(map(lambda x: ' ' + x if not x.startswith('-') else x, channel_times))
 
         for i in range(0, len(channel_times), times_per_line):
@@ -135,7 +135,7 @@ class PEMSerializer:
             reading_spacing = 15
             cnt = 0
 
-            channel_readings = [str(r) for r in reading['Data']]
+            channel_readings = [f'{r:0.6g}' for r in reading['Data']]
             channel_readings = list(map(lambda x: ' ' + x if not x.startswith('-') else x, channel_readings))
 
             for i in range(0, len(channel_readings), readings_per_line):

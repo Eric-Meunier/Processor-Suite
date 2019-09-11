@@ -62,8 +62,10 @@ class PEMParser:
         for match in self.re_tags.finditer(file):
             # Iterate through each group name such as 'Format' or 'Unit' in the regex
             for group, index in self.re_tags.groupindex.items():
-                tags[group] = match.group(index).strip()
-
+                if group == 'Operator':
+                    tags[group] = match.group(index).split('~')[0].split()[0]
+                else:
+                    tags[group] = match.group(index).strip()
         return tags
 
     def parse_loop(self, file):
