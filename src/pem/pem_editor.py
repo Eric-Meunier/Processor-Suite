@@ -3,6 +3,7 @@ import copy
 import datetime
 import logging
 import os
+import re
 import pstats
 import sys
 import time
@@ -132,6 +133,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.saveFilesTo.setStatusTip("Save all files at specified location.")
         self.saveFilesTo.triggered.connect(self.save_all_to)
 
+        self.export_final_pems_action = QAction("&Export Final PEM Files", self)
+        self.export_final_pems_action.setShortcut("F9")
+        self.export_final_pems_action.setStatusTip("Export the final PEM files")
+        self.export_final_pems_action.triggered.connect(self.export_final_pems)
+
         self.print_final_plots_action = QAction("&Print Final Plots PDF", self)
         self.print_final_plots_action.setShortcut("F12")
         self.print_final_plots_action.setStatusTip("Print the final plots to PDF")
@@ -154,6 +160,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu.addAction(self.saveFilesTo)
         self.fileMenu.addAction(self.clearFiles)
         self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.export_final_pems_action)
         self.fileMenu.addAction(self.print_final_plots_action)
 
         self.averageAllPems = QAction("&Average All PEM Files", self)
@@ -444,8 +451,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('No PEM files to save', 2000)
 
     def save_all_to(self):
-        # Allows the user to select where to save all the files. Save As currently not needed
-        # since saving is done smartly
+        # Allows the user to select where to save all the files.
 
         if len(self.pem_files) > 0:
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
@@ -473,6 +479,36 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.window().statusBar().showMessage('No directory chosen', 2000)
                 logging.info("No directory chosen, aborted save")
                 pass
+
+    def export_final_pems(self):
+        # Saves the files and removes any tags
+
+        pem_files_selection = self.get_selected_pem_files()
+        if pem_files_selection:
+            pem_files = copy.copy(pem_files_selection)
+        else:
+            pem_files = copy.copy(self.pem_files)
+
+        self.window().statusBar().showMessage('Saving PEM files...')
+        default_path = os.path.split(self.pem_files[-1].filepath)[0]
+        self.dialog.setDirectory(default_path)
+        file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
+
+        if file_dir:
+            for i, pem_file in enumerate(pem_files):
+                updated_file = self.update_pem_file_from_table(pem_file, i)
+                file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
+                extension = os.path.splitext(pem_file.filepath)[-1]
+                new_file_name = re.sub('\[\w\]','', file_name)
+                updated_file.filepath = os.path.join(file_dir, new_file_name + extension)
+                self.save_pem_file(updated_file, dir=file_dir, export=True)
+
+            self.window().statusBar().showMessage(
+                'Save complete. {0} PEM files exported'.format(len(pem_files)), 2000)
+            # self.update_table()
+        else:
+            self.window().statusBar().showMessage('No directory chosen', 2000)
+            pass
 
     def contextMenuEvent(self, event):
         if self.table.underMouse():
@@ -801,7 +837,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         return pem_file
 
-    def save_pem_file(self, pem_file, dir=None):
+    def save_pem_file(self, pem_file, dir=None, export=False):
         if dir is None:
             file_dir = os.path.split(pem_file.filepath)[0]
         else:
@@ -811,22 +847,23 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         overwrite = True
         # tags = []
 
-        if pem_file.is_merged:
-            if '[M]' in file_name:
-                file_name.replace('[M]','')
-                file_name = '[M]' + file_name
-                # file_name += '[M]'
-                overwrite = False
-        if pem_file.is_split():
-            if '[S]' not in file_name:
-                # file_name += '[S]'
-                file_name = '[S]' + file_name
-                overwrite = False
-        if pem_file.is_averaged():
-            if '[A]' not in file_name:
-                # file_name += '[A]'
-                file_name = '[A]'+file_name
-                overwrite = False
+        if not export:
+            if pem_file.is_merged:
+                if '[M]' in file_name:
+                    file_name = re.sub('\[M\]','', file_name)
+                    file_name = '[M]' + file_name
+                    # file_name += '[M]'
+                    overwrite = False
+            if pem_file.is_split():
+                if '[S]' not in file_name:
+                    # file_name += '[S]'
+                    file_name = '[S]' + file_name
+                    overwrite = False
+            if pem_file.is_averaged():
+                if '[A]' not in file_name:
+                    # file_name += '[A]'
+                    file_name = '[A]'+file_name
+                    overwrite = False
 
         # # Rearranging the tags
         # tags.sort()
