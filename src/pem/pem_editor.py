@@ -482,7 +482,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def export_final_pems(self):
         # Saves the files and removes any tags
 
-        pem_files_selection = self.get_selected_pem_files()
+        pem_files_selection, rows = self.get_selected_pem_files()
         if pem_files_selection:
             pem_files = copy.copy(pem_files_selection)
         else:
@@ -578,6 +578,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.del_file.setEnabled(True)   # Makes the 'Del' shortcut work when the table is in focus
         elif source == self.table and event.type() == QtCore.QEvent.FocusOut:
             self.del_file.setEnabled(False)
+        elif source == self.table and event.type() == QtCore.QEvent.KeyPress:
+            if len(self.pem_files) > 0:
+                if event.key() == QtCore.Qt.Key_Left:
+                    current_tab = self.pem_info_widgets[0].tabs.currentIndex()
+                    self.change_pem_info_tab(current_tab-1)
+                elif event.key() == QtCore.Qt.Key_Right:
+                    current_tab = self.pem_info_widgets[0].tabs.currentIndex()
+                    self.change_pem_info_tab(current_tab+1)
+
         return super(QWidget, self).eventFilter(source, event)
 
     def get_selected_pem_files(self):
@@ -1033,10 +1042,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if len(self.pem_files) > 0:
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
-                widget.sort_station_gps_button.setChecked(True)
-                try:
-                    widget.fill_station_table(widget.station_gps.get_sorted_gps())
-                except AttributeError:
+                if widget.station_gps:
+                    widget.fill_station_table(widget.station_gps.get_sorted_gps(widget.get_station_gps()))
+                else:
                     pass
             self.window().statusBar().showMessage('All stations have been sorted', 2000)
 
@@ -1044,10 +1052,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if len(self.pem_files) > 0:
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
-                widget.sort_loop_button.setChecked(True)
-                try:
-                    widget.fill_loop_table(widget.loop_gps.get_sorted_gps())
-                except AttributeError:
+                if widget.loop_gps:
+                    widget.fill_loop_table(widget.loop_gps.get_sorted_gps(widget.get_loop_gps()))
+                else:
                     pass
             self.window().statusBar().showMessage('All loops have been sorted', 2000)
 

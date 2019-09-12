@@ -94,9 +94,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # self.stationGPSTable.cull_gps_action.triggered.connect(self.cull_station_gps)
 
     def initSignals(self):
-        self.sort_station_gps_button.toggled.connect(self.sort_station_gps)
-        self.sort_loop_button.toggled.connect(self.sort_loop_gps)
-        self.cull_station_gps_button.clicked.connect(self.cull_station_gps)
+        self.sortStationsButton.toggled.connect(self.sort_station_gps)
+        self.sortLoopButton.toggled.connect(self.sort_loop_gps)
+        self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
 
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_numbers)
         self.flip_station_signs_button.clicked.connect(self.flip_station_polarity)
@@ -340,7 +340,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # Fill station GPS
             self.station_gps = self.station_gps_parser.parse(self.pem_file.get_line_coords())
             if self.station_gps:
-                if self.sort_station_gps_button.isChecked():
+                if self.parent.autoSortStationsCheckbox.isChecked():
                     self.fill_station_table(self.station_gps.get_sorted_gps())
                 else:
                     self.fill_station_table(self.station_gps.get_gps())
@@ -361,7 +361,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # Fill loop GPS
             self.loop_gps = self.loop_gps_parser.parse(self.pem_file.get_loop_coords())
             if self.loop_gps:
-                if self.sort_loop_button.isChecked():
+                if self.parent.autoSortLoopsCheckbox.isChecked():
                     self.fill_loop_table(self.loop_gps.get_sorted_gps())
                 else:
                     self.fill_loop_table(self.loop_gps.get_gps())
@@ -436,19 +436,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def sort_station_gps(self):
         if self.station_gps:
-            if self.sort_station_gps_button.isChecked():
-                self.fill_station_table(self.station_gps.get_sorted_gps())
-            else:
-                self.fill_station_table(self.station_gps.get_gps())
+            self.fill_station_table(self.station_gps.get_sorted_gps(self.get_station_gps()))
         else:
             pass
 
     def sort_loop_gps(self):
         if self.loop_gps:
-            if self.sort_loop_button.isChecked():
-                self.fill_loop_table(self.loop_gps.get_sorted_gps())
-            else:
-                self.fill_loop_table(self.loop_gps.get_gps())
+            self.fill_loop_table(self.loop_gps.get_sorted_gps(self.get_loop_gps()))
         else:
             pass
 
@@ -643,12 +637,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def format_station_gps_text(self):
-        try:
-            current_gps = self.station_gps_parser.parse(self.get_station_gps())
-        except ValueError:
-            current_gps = None
+        current_gps = self.station_gps_parser.parse(self.get_station_gps())
         if current_gps:
-            if self.sort_station_gps_button.isChecked():
+            if self.parent.autoSortStationsCheckbox.isChecked():
                 self.fill_station_table(current_gps.get_sorted_gps())
             else:
                 self.fill_station_table(current_gps.get_gps())
@@ -656,12 +647,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def format_loop_gps_text(self):
-        try:
-            current_gps = self.loop_gps_parser.parse(self.get_loop_gps())
-        except ValueError:
-            current_gps = None
+        current_gps = self.loop_gps_parser.parse(self.get_loop_gps())
         if current_gps:
-            if self.sort_station_gps_button.isChecked():
+            self.loop_gps = current_gps
+            if self.parent.autoSortLoopsCheckbox.isChecked():
                 self.fill_loop_table(current_gps.get_sorted_gps())
             else:
                 self.fill_loop_table(current_gps.get_gps())

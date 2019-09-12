@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -151,6 +151,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="sortLoopButton">
+            <property name="text">
+             <string>Sort Loop</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="verticalSpacer_4">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -162,25 +169,6 @@
              </size>
             </property>
            </spacer>
-          </item>
-          <item alignment="Qt::AlignHCenter">
-           <widget class="QToolButton" name="sort_loop_button">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Auto-Sort</string>
-            </property>
-            <property name="checkable">
-             <bool>true</bool>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
           </item>
          </layout>
         </widget>
@@ -248,6 +236,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="sortStationsButton">
+            <property name="text">
+             <string>Sort Stations</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="format_station_gps_button">
             <property name="text">
              <string>Format Text</string>
@@ -269,7 +264,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="cull_station_gps_button">
+           <widget class="QPushButton" name="cullStationGPSButton">
             <property name="text">
              <string>Cull GPS</string>
             </property>
@@ -302,38 +297,6 @@
             </property>
             <property name="segmentStyle">
              <enum>QLCDNumber::Flat</enum>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="verticalSpacer">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QToolButton" name="sort_station_gps_button">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Auto-Sort</string>
-            </property>
-            <property name="checkable">
-             <bool>true</bool>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
             </property>
            </widget>
           </item>
