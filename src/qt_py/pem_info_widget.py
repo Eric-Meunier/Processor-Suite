@@ -165,6 +165,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.loopGPSTable.resizeColumnsToContents()
 
+        self.data_columns = ['Station', 'Comp.', 'R. Index', 'Reading #', 'Stacks', 'ZTS']
+        self.dataTable.setColumnCount(len(self.data_columns))
+        self.dataTable.setHorizontalHeaderLabels(self.data_columns)
+        self.dataTable.setSizeAdjustPolicy(
+            QAbstractScrollArea.AdjustToContents)
+
+        self.dataTable.resizeColumnsToContents()
+
     def fill_station_table(self, gps):  # GPS in list form
         self.clear_table(self.stationGPSTable)
         self.stationGPSTable.blockSignals(True)
@@ -240,6 +248,22 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.loopGPSTable.resizeColumnsToContents()
 
+    def fill_data_table(self, data):
+        self.dataTable.blockSignals(True)
+        self.clear_table(self.dataTable)
+        column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
+        for i, station in enumerate(data):
+            row_pos = self.dataTable.rowCount()
+            self.dataTable.insertRow(row_pos)
+            items = [QTableWidgetItem(station[j]) for j in column_keys]
+
+            for m, item in enumerate(items):
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.dataTable.setItem(row_pos, m, item)
+
+        self.dataTable.resizeColumnsToContents()
+        self.dataTable.blockSignals(False)
+
     def fill_info(self):
         logging.info('PEMInfoWidget: fill_info')
 
@@ -305,6 +329,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             fill_collar_gps_text()
             fill_geometry_text()
         fill_loop_text()
+        self.fill_data_table(self.pem_file.data)
 
     def clear_table(self, table):
         table.blockSignals(True)

@@ -18,7 +18,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from scipy import interpolate
 from scipy import stats
 
-__version__ = '0.0.0'
+__version__ = '0.0.1'
 logging.info('PEMPlotter')
 
 if getattr(sys, 'frozen', False):
@@ -406,11 +406,11 @@ class PEMPrinter:
     :param kwargs: Plotting kwargs such as hide_gaps, gaps, and x limits used in PEMPlotter.
     """
 
-    def __init__(self, pem_files, save_dir, **kwargs):
+    def __init__(self, pem_files, save_path, **kwargs):
         self.pem_files = pem_files
         self.sort_pem_files()
         self.plotter = PEMPlotter
-        self.save_dir = save_dir
+        self.save_path = save_path
         self.kwargs = kwargs
         self.pg = QProgressBar()
         self.pg_count = 0
@@ -442,8 +442,35 @@ class PEMPrinter:
 
         return log_fig
 
-    def print_lin_figs(self):
-        with PdfPages(os.path.join(self.save_dir, "lin.pdf")) as pdf:
+    # To save LIN and LOG pdfs separately. Requires a save_dir instead of a save_path.
+    # def print_lin_figs(self):
+    #     with PdfPages(os.path.join(self.save_dir, "lin.pdf")) as pdf:
+    #         for pem_file in self.pem_files:
+    #             components = pem_file.get_components()
+    #             for component in components:
+    #                 lin_figure = self.create_lin_figure()
+    #                 lin_plot = self.plotter(pem_file, **self.kwargs).make_lin_fig(component, lin_figure)
+    #                 pdf.savefig(lin_plot)
+    #                 self.pg_count += 1
+    #                 self.pg.setValue((self.pg_count/self.pg_end) * 100)
+    #                 plt.close(lin_figure)
+    #
+    # def print_log_figs(self):
+    #     with PdfPages(os.path.join(self.save_dir, "log.pdf")) as pdf:
+    #         for pem_file in self.pem_files:
+    #             components = pem_file.get_components()
+    #             for component in components:
+    #                 log_figure = self.create_log_figure()
+    #                 log_plot = self.plotter(pem_file, **self.kwargs).make_log_fig(component, log_figure)
+    #                 pdf.savefig(log_plot)
+    #                 self.pg_count += 1
+    #                 self.pg.setValue((self.pg_count / self.pg_end) * 100)
+    #                 plt.close(log_figure)
+
+    def print_plots(self):
+        # file_name = self.pem_files[-1].header.get('LineHole')+'.PDF'
+        # path = os.path.join(self.save_dir, file_name)
+        with PdfPages(self.save_path+'.PDF') as pdf:
             for pem_file in self.pem_files:
                 components = pem_file.get_components()
                 for component in components:
@@ -453,9 +480,6 @@ class PEMPrinter:
                     self.pg_count += 1
                     self.pg.setValue((self.pg_count/self.pg_end) * 100)
                     plt.close(lin_figure)
-
-    def print_log_figs(self):
-        with PdfPages(os.path.join(self.save_dir, "log.pdf")) as pdf:
             for pem_file in self.pem_files:
                 components = pem_file.get_components()
                 for component in components:
@@ -465,6 +489,7 @@ class PEMPrinter:
                     self.pg_count += 1
                     self.pg.setValue((self.pg_count / self.pg_end) * 100)
                     plt.close(log_figure)
+        os.startfile(self.save_path + '.PDF')
 
 # class CronePYQTFigure:
 #     """

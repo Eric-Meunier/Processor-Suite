@@ -27,7 +27,7 @@ from src.qt_py.pem_info_widget import PEMFileInfoWidget
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 getcontext().prec = 6
 
@@ -853,12 +853,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     file_name = '[M]' + file_name
                     # file_name += '[M]'
                     overwrite = False
-            if pem_file.is_split():
+            if pem_file.unsplit_data:
                 if '[S]' not in file_name:
                     # file_name += '[S]'
                     file_name = '[S]' + file_name
                     overwrite = False
-            if pem_file.is_averaged():
+            if pem_file.unaveraged_data:
                 if '[A]' not in file_name:
                     # file_name += '[A]'
                     file_name = '[A]'+file_name
@@ -918,11 +918,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.window().statusBar().showMessage('Saving plots...')
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
         self.dialog.setDirectory(default_path)
-        file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
+        # file_dir = QFileDialog.getSaveDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)  # For separate LIN and LOG pdfs
+        file_path = QFileDialog.getSaveFileName(self, '', default_path)[0]  # Returns full filepath. For single PDF file
 
         plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked()}
 
-        if file_dir:
+        if file_path:
             pem_files_selection = self.get_selected_pem_files()
             if pem_files_selection:
                 pem_files = copy.copy(pem_files_selection)
@@ -949,10 +950,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 plot_kwargs['XMin'] = None
                 plot_kwargs['XMax'] = None
 
-            printer = PEMPrinter(pem_files, file_dir, **plot_kwargs)
+            printer = PEMPrinter(pem_files, file_path, **plot_kwargs)
             self.window().statusBar().addPermanentWidget(printer.pg)
-            printer.print_lin_figs()
-            printer.print_log_figs()
+            # printer.print_lin_figs()
+            # printer.print_log_figs()
+            printer.print_plots()
             printer.pg.hide()
             self.window().statusBar().showMessage('Plots saved', 2000)
         else:
