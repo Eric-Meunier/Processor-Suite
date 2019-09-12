@@ -641,7 +641,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 row_list.append(self.collarGPSTable.item(0, i).text())
             else:
                 row_list.append('')
-        return row_list
+        if any(row_list):
+            return row_list
+        else:
+            return None
 
     def get_geometry_segments(self):
         table_gps = []

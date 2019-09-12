@@ -91,11 +91,11 @@ class LoopGPSFile:
 
     def cull_loop(self, loop_gps):
         # Cutting down the loop size to being no more than 100 points
-        num_to_cull = len(loop_gps) - 100
+        num_to_cull = len(loop_gps) - 99
         factor = num_to_cull / len(loop_gps)
         n = int(1/factor)
-        culled_loop = loop_gps[::n]
-        return culled_loop
+        del loop_gps[n-1::n]
+        return loop_gps
 
     def get_sorted_gps(self):
         return self.sorted_gps_data

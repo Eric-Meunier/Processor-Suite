@@ -581,17 +581,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         return super(QWidget, self).eventFilter(source, event)
 
     def get_selected_pem_files(self):
-        rows = []
         selected_pem_files = []
-
-        for i in self.table.selectedIndexes():
-            if i.row() not in rows:
-                rows.append(i.row())
-
+        rows = [model.row() for model in self.table.selectionModel().selectedRows()]
         for row in rows:
             selected_pem_files.append(self.pem_files[row])
-
-        return selected_pem_files
+        return selected_pem_files, rows
 
     def display_pem_info_widget(self):
         # self.stackedWidget.show()
@@ -612,7 +606,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def average_select_pem(self, pem_file=None):
         if not pem_file:
-            pem_files = self.get_selected_pem_files()
+            pem_files, rows = self.get_selected_pem_files()
             for pem_file in pem_files:
                 self.average_pem_data(pem_file)
         else:
@@ -638,7 +632,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def split_select_pem(self, pem_file=None):
         if not pem_file:
-            pem_files = self.get_selected_pem_files()
+            pem_files, rows = self.get_selected_pem_files()
             for pem_file in pem_files:
                 self.split_pem_data(pem_file)
         else:
@@ -717,12 +711,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             return
 
     def merge_pem_files_selection(self):
-        pem_files = self.get_selected_pem_files()
-        rows = []
-        # Find which rows are selected
-        for i in self.table.selectedIndexes():
-            if i.row() not in rows:
-                rows.append(i.row())
+        pem_files, rows = self.get_selected_pem_files()
 
         if len(pem_files) > 1:
             # First update the PEM Files from the table
@@ -844,7 +833,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
         extension = os.path.splitext(pem_file.filepath)[-1]
         overwrite = True
-        # tags = []
 
         if not export:
             if pem_file.is_merged:
@@ -864,14 +852,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     file_name = '[A]'+file_name
                     overwrite = False
 
-        # # Rearranging the tags
-        # tags.sort()
-        # if '[M]' in tags:
-        #     index = tags.index('[M]')
-        #     m = tags.pop(index)
-        #     tags.append(m)
-
-        # file_name += ''.join(tags)
         pem_file.filepath = os.path.join(file_dir + '/' + file_name + extension)
         save_file = self.serializer.serialize(pem_file)
         print(save_file, file=open(pem_file.filepath, 'w+'))
@@ -882,14 +862,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     # Save selected PEM files
     def save_pem_file_selection(self):
-        rows = []
-        for i in self.table.selectedIndexes():
-            if i.row() not in rows:
-                rows.append(i.row())
+        pem_files, rows = self.get_selected_pem_files()
 
-        for row in rows:
-            updated_file = self.update_pem_file_from_table(self.pem_files[row], row)
+        for row, pem_file in zip(rows, pem_files):
+            updated_file = self.update_pem_file_from_table(pem_file, row)
             self.save_pem_file(updated_file)
+            self.pem_info_widgets[row].open_file(updated_file, parent=self)  # Updates the PEMInfoWidget tables
             self.parent.window().statusBar().showMessage(
                 'File {} saved.'.format(os.path.basename(updated_file.filepath)), 2000)
             self.update_table()
@@ -924,14 +902,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked()}
 
         if file_path:
-            pem_files_selection = self.get_selected_pem_files()
+            pem_files_selection, rows = self.get_selected_pem_files()
             if pem_files_selection:
                 pem_files = copy.copy(pem_files_selection)
             else:
                 pem_files = copy.copy(self.pem_files)
+                rows = range(self.table.rowCount())
 
-            for i, pem_file in enumerate(pem_files):
-                self.update_pem_file_from_table(pem_file, i)
+            for row, pem_file in zip(rows, pem_files):
+                self.update_pem_file_from_table(pem_file, row)
                 if not pem_file.is_averaged():
                     self.file_editor.average(pem_file)
                 if not pem_file.is_split():
@@ -977,17 +956,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     # Remove selected files
     def remove_file_selection(self):
-        rows = []
-        for i in reversed(self.table.selectedIndexes()):
-            if i.row() not in rows:
-                rows.append(i.row())
-
-        for row in rows:
+        pem_files, rows = self.get_selected_pem_files()
+        for row in reversed(rows):
             self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
             self.remove_file(row)
-
-        # TODO Should update table be here? Causes files to revert to their old saved state when another file is removed
-        # self.update_table()
 
     # Creates the table when the editor is first opened
     def create_table(self):
@@ -1091,9 +1063,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.loop_edit.setText('')
 
     def fill_share_range(self):
-
         if len(self.pem_files) > 0:
-            # all_stations = [file.get_unique_stations() for file in self.pem_files]
             all_stations = [file.get_converted_unique_stations() for file in self.pem_files]
             min_range, max_range = str(min(chain.from_iterable(all_stations))), str(
                 max(chain.from_iterable(all_stations)))
