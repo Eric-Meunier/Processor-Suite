@@ -116,9 +116,9 @@ class GeometryParser:
         self.formatted_file = []
         # self.geometry_file = GeometryFile
         self.re_collar_gps = re.compile(
-            r'(?P<Easting>\d{4,}\.?\d*)\s+(?P<Northing>\d{4,}\.?\d*)\s+(?P<Elevation>\d{1,4}\.?\d*)\s+(?P<Units>0|1)?\s*?')
+            r'(?P<Easting>\d{4,}\.?\d*)[\s\t,]+(?P<Northing>\d{4,}\.?\d*)[\s\t,]+(?P<Elevation>\d{1,4}\.?\d*)[\s\t,]+(?P<Units>0|1)?\s*?')
         self.re_segment = re.compile(
-            r'(?P<Azimuth>\d{1,3}\.?\d*)[\s\t]{1,}(?P<Dip>\d{1,3}\.?\d*)[\s\t]{1,}(?P<SegLength>\d{1,3}\.?\d*)[\s\t]{1,}(?P<Units>0|1|2)[\s\t]{1,}(?P<Depth>\d{1,4}\.?\d*)')
+            r'(?P<Azimuth>\d{1,3}\.?\d*)[\s\t,]+(?P<Dip>\d{1,3}\.?\d*)[\s\t,]+(?P<SegLength>\d{1,3}\.?\d*)[\s\t,]+(?P<Units>0|1|2)[\s\t,]+(?P<Depth>\d{1,4}\.?\d*)')
 
     def open(self, filepath):  # Not really needed as PEMEditor open_gps does this anyway
         with open(filepath, 'rt') as in_file:

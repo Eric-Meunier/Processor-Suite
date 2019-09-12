@@ -3,6 +3,9 @@ import re
 import sys
 import logging
 import copy
+import numpy as np
+import math
+from scipy import spatial
 from itertools import chain
 from src.gps.station_gps import StationGPSParser
 from src.gps.loop_gps import LoopGPSParser
@@ -54,6 +57,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def initActions(self):
         self.loopGPSTable.installEventFilter(self)
         self.stationGPSTable.installEventFilter(self)
+        self.collarGPSTable.installEventFilter(self)
+        self.geometryTable.installEventFilter(self)
         self.loopGPSTable.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.stationGPSTable.setFocusPolicy(QtCore.Qt.StrongFocus)
 
@@ -71,6 +76,20 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.remove_row_action.setShortcut('Del')
         self.stationGPSTable.remove_row_action.setEnabled(False)
 
+        self.collarGPSTable.remove_row_action = QAction("&Remove", self)
+        self.addAction(self.collarGPSTable.remove_row_action)
+        self.collarGPSTable.remove_row_action.triggered.connect(
+            lambda: self.remove_table_row_selection(self.collarGPSTable))
+        self.collarGPSTable.remove_row_action.setShortcut('Del')
+        self.collarGPSTable.remove_row_action.setEnabled(False)
+
+        self.geometryTable.remove_row_action = QAction("&Remove", self)
+        self.addAction(self.geometryTable.remove_row_action)
+        self.geometryTable.remove_row_action.triggered.connect(
+            lambda: self.remove_table_row_selection(self.geometryTable))
+        self.geometryTable.remove_row_action.setShortcut('Del')
+        self.geometryTable.remove_row_action.setEnabled(False)
+
         # self.stationGPSTable.cull_gps_action = QAction("&Cull GPS", self)
         # self.stationGPSTable.cull_gps_action.triggered.connect(self.cull_station_gps)
 
@@ -86,6 +105,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elev)
 
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
+        self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
 
         self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
         self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
@@ -107,6 +127,22 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.loopGPSTable.remove_row_action.setEnabled(True)
             else:
                 pass
+        elif self.collarGPSTable.underMouse():
+            if self.collarGPSTable.selectionModel().selectedIndexes():
+                self.collarGPSTable.menu = QMenu(self.collarGPSTable)
+                self.collarGPSTable.menu.addAction(self.collarGPSTable.remove_row_action)
+                self.collarGPSTable.menu.popup(QtGui.QCursor.pos())
+                self.collarGPSTable.remove_row_action.setEnabled(True)
+            else:
+                pass
+        elif self.geometryTable.underMouse():
+            if self.geometryTable.selectionModel().selectedIndexes():
+                self.geometryTable.menu = QMenu(self.geometryTable)
+                self.geometryTable.menu.addAction(self.geometryTable.remove_row_action)
+                self.geometryTable.menu.popup(QtGui.QCursor.pos())
+                self.geometryTable.remove_row_action.setEnabled(True)
+            else:
+                pass
         else:
             pass
 
@@ -116,11 +152,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.stationGPSTable.remove_row_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
                 self.stationGPSTable.remove_row_action.setEnabled(False)
-        elif source is self.loopGPSTable:  # Makes the 'Del' shortcut work when the table is in focus
+        elif source is self.loopGPSTable:
             if event.type() == QtCore.QEvent.FocusIn:
                 self.loopGPSTable.remove_row_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
                 self.loopGPSTable.remove_row_action.setEnabled(False)
+        elif source is self.collarGPSTable:
+            if event.type() == QtCore.QEvent.FocusIn:
+                self.collarGPSTable.remove_row_action.setEnabled(True)
+            elif event.type() == QtCore.QEvent.FocusOut:
+                self.collarGPSTable.remove_row_action.setEnabled(False)
+        elif source is self.geometryTable:
+            if event.type() == QtCore.QEvent.FocusIn:
+                self.geometryTable.remove_row_action.setEnabled(True)
+            elif event.type() == QtCore.QEvent.FocusOut:
+                self.geometryTable.remove_row_action.setEnabled(False)
         return super(QWidget, self).eventFilter(source, event)
 
     def open_file(self, pem_file, parent):
@@ -221,7 +267,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.geometryTable.insertRow(row_pos)
             if re.match('<P.*>', row[0]):
                 row.pop(0)
-            tag_item = QTableWidgetItem("<P" + '{num:02d}'.format(num=i+1) + ">")
+            tag_item = QTableWidgetItem("<P" + '{num:02d}'.format(num=i + 1) + ">")
             items = [QTableWidgetItem(row[j]) for j in range(len(row))]
             items.insert(0, tag_item)
 
@@ -354,14 +400,26 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.blockSignals(False)
 
     def remove_table_row_selection(self, table):
-        # Table (QWidgetTable) is either the loop and station GPS tables
-        selected_rows = []
-        for i in table.selectedIndexes():
-            if i.row() not in selected_rows:
-                selected_rows.append(i.row())
+        # Table (QWidgetTable) is either the loop, station, collar GPS, or geometry tables
+
+        def add_tags():  # tag is either 'P' or 'L'
+            if table == self.loopGPSTable:
+                tag = 'L'
+            else:
+                tag = 'P'
+            for row in range(table.rowCount()):
+                offset = 1 if table == self.geometryTable else 0
+                tag_item = QTableWidgetItem("<"+tag + '{num:02d}'.format(num=row+offset) + ">")
+                tag_item.setTextAlignment(QtCore.Qt.AlignCenter)
+                table.setItem(row, 0, tag_item)
+
+        selected_rows = [model.row() for model in table.selectionModel().selectedRows()]
         for row in reversed(selected_rows):
             table.removeRow(row)
-        self.check_station_duplicates()
+
+        if table == self.stationGPSTable:
+            self.check_station_duplicates()
+        add_tags()
 
     def cull_station_gps(self):
         if self.station_gps:
@@ -610,6 +668,37 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
+    def calc_distance(self):
+
+        def get_row_gps(row):
+            east_col = self.station_columns.index('Easting')
+            north_col = self.station_columns.index('Northing')
+            try:
+                easting = float(self.stationGPSTable.item(row, east_col).text())
+            except ValueError:
+                easting = None
+            try:
+                northing = float(self.stationGPSTable.item(row, north_col).text())
+            except ValueError:
+                northing = None
+            if easting and northing:
+                return float(easting), float(northing)
+            else:
+                return None
+
+        selected_rows = [model.row() for model in self.stationGPSTable.selectionModel().selectedRows()]
+        if len(selected_rows) > 1:
+            min_row, max_row = min(selected_rows), max(selected_rows)
+            first_point = get_row_gps(min_row)
+            second_point = get_row_gps(max_row)
+            if first_point and second_point:
+                distance = math.sqrt((first_point[0]-second_point[0])**2+(first_point[1]-second_point[1])**2)
+                self.lcdDistance.display(f'{distance:.1f}')
+            else:
+                self.lcdDistance.display(0)
+        else:
+            self.lcdDistance.display(0)
+
     def get_loop_gps(self):
         table_gps = []
         for row in range(self.loopGPSTable.rowCount()):
@@ -641,10 +730,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 row_list.append(self.collarGPSTable.item(0, i).text())
             else:
                 row_list.append('')
-        if any(row_list):
-            return row_list
-        else:
-            return None
+        return row_list
 
     def get_geometry_segments(self):
         table_gps = []

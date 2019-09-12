@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>4</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -276,6 +276,36 @@
            </widget>
           </item>
           <item>
+           <spacer name="verticalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Distance:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLCDNumber" name="lcdDistance">
+            <property name="digitCount">
+             <number>7</number>
+            </property>
+            <property name="segmentStyle">
+             <enum>QLCDNumber::Flat</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="verticalSpacer">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -371,6 +401,9 @@
          </property>
          <property name="showGrid">
           <bool>false</bool>
+         </property>
+         <property name="rowCount">
+          <number>0</number>
          </property>
          <attribute name="horizontalHeaderHighlightSections">
           <bool>false</bool>
