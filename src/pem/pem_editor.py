@@ -375,10 +375,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     file = in_file.read()
                 return file
 
-        # station_gps_parser = StationGPSParser()
-        # loop_gps_parser = LoopGPSParser()
-        # geometry_parser = GeometryParser()
-
         if len(gps_files) > 0:
             file = read_gps_files(gps_files)
             # try:
@@ -392,7 +388,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 pem_info_widget.add_station_gps(file)
 
             elif geometry_tab == current_tab:
-                pem_info_widget.add_collar_gps(file)
+                # pem_info_widget.add_collar_gps(file)
                 pem_info_widget.add_geometry(file)
 
             elif loop_gps_tab == current_tab:

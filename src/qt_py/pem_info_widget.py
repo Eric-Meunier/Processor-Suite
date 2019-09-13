@@ -1,21 +1,13 @@
+import logging
+import math
 import os
 import re
 import sys
-import logging
-import copy
-import numpy as np
-import math
-from scipy import spatial
-from itertools import chain
-# from src.gps.station_gps import StationGPSEditor
-# from src.gps.loop_gps import LoopGPSEditor
-# from src.gps.hole_geometry import GeometryEditor
-from src.gps.gps_editor import GPSParser, GPSEditor
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
-                             QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
-                             QHeaderView, QListWidget, QTextBrowser, QPlainTextEdit, QStackedWidget, QTextEdit,
-                             QShortcut, QTableWidget)
+
 from PyQt5 import (QtCore, QtGui, uic)
+from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QAction, QMenu)
+
+from src.gps.gps_editor import GPSParser, GPSEditor
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
@@ -44,7 +36,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         super().__init__()
         self.parent = None
         self.pem_file = None
-        self.station_gps = None
         self.gps_editor = GPSEditor()
         self.gps_parser = GPSParser()
         self.last_stn_shift_amt = 0
@@ -221,95 +212,110 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable.resizeColumnsToContents()
 
     def fill_station_table(self, gps):  # GPS in list form
-        self.clear_table(self.stationGPSTable)
-        self.stationGPSTable.blockSignals(True)
-        logging.info('Filling station table')
+        if gps:
+            self.clear_table(self.stationGPSTable)
+            self.stationGPSTable.blockSignals(True)
+            logging.info('Filling station table')
 
-        for i, row in enumerate(gps):
-            row_pos = self.stationGPSTable.rowCount()
-            self.stationGPSTable.insertRow(row_pos)
-            if re.match('<P.*>', row[0]):
-                row.pop(0)
-            tag_item = QTableWidgetItem("<P" + '{num:02d}'.format(num=i) + ">")
-            items = [QTableWidgetItem(row[j]) for j in range(len(row))]
-            items.insert(0, tag_item)
+            for i, row in enumerate(gps):
+                row_pos = self.stationGPSTable.rowCount()
+                self.stationGPSTable.insertRow(row_pos)
+                if re.match('<P.*>', row[0]):
+                    row.pop(0)
+                tag_item = QTableWidgetItem("<P" + '{num:02d}'.format(num=i) + ">")
+                items = [QTableWidgetItem(row[j]) for j in range(len(row))]
+                items.insert(0, tag_item)
 
-            for m, item in enumerate(items):
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.stationGPSTable.setItem(row_pos, m, item)
+                for m, item in enumerate(items):
+                    item.setTextAlignment(QtCore.Qt.AlignCenter)
+                    self.stationGPSTable.setItem(row_pos, m, item)
 
-        self.stationGPSTable.resizeColumnsToContents()
-        self.check_station_duplicates()
-        self.stationGPSTable.blockSignals(False)
+            self.stationGPSTable.resizeColumnsToContents()
+            self.check_station_duplicates()
+            self.stationGPSTable.blockSignals(False)
+        else:
+            pass
 
     def fill_collar_gps_table(self, gps):  # GPS in list form
-        self.clear_table(self.collarGPSTable)
-        logging.info('Filling collar GPS')
+        if gps:
+            self.clear_table(self.collarGPSTable)
+            logging.info('Filling collar GPS')
 
-        self.collarGPSTable.insertRow(0)
-        if re.match('<P.*>', gps[0]):
-            gps.pop(0)
-        tag_item = QTableWidgetItem("<P00>")
-        items = [QTableWidgetItem(gps[j]) for j in range(len(gps))]
-        items.insert(0, tag_item)
+            self.collarGPSTable.insertRow(0)
+            if re.match('<P.*>', gps[0]):
+                gps.pop(0)
+            tag_item = QTableWidgetItem("<P00>")
+            items = [QTableWidgetItem(gps[j]) for j in range(len(gps))]
+            items.insert(0, tag_item)
 
-        for m, item in enumerate(items):
-            item.setTextAlignment(QtCore.Qt.AlignCenter)
-            self.collarGPSTable.setItem(0, m, item)
+            for m, item in enumerate(items):
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.collarGPSTable.setItem(0, m, item)
 
-        self.collarGPSTable.resizeColumnsToContents()
+            self.collarGPSTable.resizeColumnsToContents()
+        else:
+            pass
 
     def fill_geometry_table(self, segments):  # GPS in list form
-        self.clear_table(self.geometryTable)
-        logging.info('Filling geometry table')
+        if segments:
+            self.clear_table(self.geometryTable)
+            logging.info('Filling geometry table')
 
-        for i, row in enumerate(segments):
-            row_pos = self.geometryTable.rowCount()
-            self.geometryTable.insertRow(row_pos)
-            if re.match('<P.*>', row[0]):
-                row.pop(0)
-            tag_item = QTableWidgetItem("<P" + '{num:02d}'.format(num=i + 1) + ">")
-            items = [QTableWidgetItem(row[j]) for j in range(len(row))]
-            items.insert(0, tag_item)
+            for i, row in enumerate(segments):
+                row_pos = self.geometryTable.rowCount()
+                self.geometryTable.insertRow(row_pos)
+                if re.match('<P.*>', row[0]):
+                    row.pop(0)
+                tag_item = QTableWidgetItem("<P" + '{num:02d}'.format(num=i + 1) + ">")
+                items = [QTableWidgetItem(row[j]) for j in range(len(row))]
+                items.insert(0, tag_item)
 
-            for m, item in enumerate(items):
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.geometryTable.setItem(row_pos, m, item)
+                for m, item in enumerate(items):
+                    item.setTextAlignment(QtCore.Qt.AlignCenter)
+                    self.geometryTable.setItem(row_pos, m, item)
 
-        self.geometryTable.resizeColumnsToContents()
+            self.geometryTable.resizeColumnsToContents()
+        else:
+            pass
 
     def fill_loop_table(self, gps):
-        self.clear_table(self.loopGPSTable)
-        for i, row in enumerate(gps):
-            row_pos = self.loopGPSTable.rowCount()
-            self.loopGPSTable.insertRow(row_pos)
-            if re.match('<L.*>', row[0]):
-                row.pop(0)
-            tag_item = QTableWidgetItem("<L" + '{num:02d}'.format(num=i) + ">")
-            items = [QTableWidgetItem(row[j]) for j in range(len(row))]
-            items.insert(0, tag_item)
+        if gps:
+            self.clear_table(self.loopGPSTable)
+            for i, row in enumerate(gps):
+                row_pos = self.loopGPSTable.rowCount()
+                self.loopGPSTable.insertRow(row_pos)
+                if re.match('<L.*>', row[0]):
+                    row.pop(0)
+                tag_item = QTableWidgetItem("<L" + '{num:02d}'.format(num=i) + ">")
+                items = [QTableWidgetItem(row[j]) for j in range(len(row))]
+                items.insert(0, tag_item)
 
-            for m, item in enumerate(items):
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.loopGPSTable.setItem(row_pos, m, item)
+                for m, item in enumerate(items):
+                    item.setTextAlignment(QtCore.Qt.AlignCenter)
+                    self.loopGPSTable.setItem(row_pos, m, item)
 
-        self.loopGPSTable.resizeColumnsToContents()
+            self.loopGPSTable.resizeColumnsToContents()
+        else:
+            pass
 
     def fill_data_table(self, data):
-        self.dataTable.blockSignals(True)
-        self.clear_table(self.dataTable)
-        column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
-        for i, station in enumerate(data):
-            row_pos = self.dataTable.rowCount()
-            self.dataTable.insertRow(row_pos)
-            items = [QTableWidgetItem(station[j]) for j in column_keys]
+        if data:
+            self.dataTable.blockSignals(True)
+            self.clear_table(self.dataTable)
+            column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
+            for i, station in enumerate(data):
+                row_pos = self.dataTable.rowCount()
+                self.dataTable.insertRow(row_pos)
+                items = [QTableWidgetItem(station[j]) for j in column_keys]
 
-            for m, item in enumerate(items):
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.dataTable.setItem(row_pos, m, item)
+                for m, item in enumerate(items):
+                    item.setTextAlignment(QtCore.Qt.AlignCenter)
+                    self.dataTable.setItem(row_pos, m, item)
 
-        self.dataTable.resizeColumnsToContents()
-        self.dataTable.blockSignals(False)
+            self.dataTable.resizeColumnsToContents()
+            self.dataTable.blockSignals(False)
+        else:
+            pass
 
     def fill_info(self):
         logging.info('PEMInfoWidget: fill_info')
@@ -342,13 +348,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pem_station_gps = self.pem_file.get_line_coords()
             self.add_station_gps(pem_station_gps)
 
-        def init_collar_gps_text():
-            # Fill hole collar GPS
-            pem_collar_gps = self.pem_file.get_line_coords()
-            self.add_collar_gps(pem_collar_gps)
+        # def init_collar_gps_text():
+        #     # Fill hole collar GPS
+        #     pem_collar_gps = self.pem_file.get_line_coords()
+        #     self.add_collar_gps(pem_collar_gps)
 
         def init_geometry_text():
-            # Fill hole geometry segments
+            # Fill hole geometry collar GPS segments
             pem_geometry_text = self.pem_file.get_line_coords()
             self.add_geometry(pem_geometry_text)
 
@@ -363,7 +369,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if 'surface' in self.pem_file.survey_type.lower():
             init_station_text()
         else:
-            init_collar_gps_text()
+            # init_collar_gps_text()
             init_geometry_text()
         init_loop_text()
         self.fill_data_table(self.pem_file.data)
@@ -384,15 +390,23 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             self.fill_station_table(self.gps_editor.get_station_gps(file))
 
-    def add_collar_gps(self, file):
-        # gps = self.gps_parser.parse_collar_gps(file)
-        # if gps:
-        self.fill_collar_gps_table(self.gps_editor.get_collar_gps(file))
-
     def add_geometry(self, file):
-        # segments = self.gps_parser.parse_segments(file)
-        # if segments:
-        self.fill_geometry_table(self.gps_editor.get_geometry(file))
+        gps = self.gps_parser.parse_collar_gps(file)
+        segments = self.gps_parser.parse_segments(file)
+        if gps:
+            self.fill_collar_gps_table(self.gps_editor.get_collar_gps(file))
+        if segments:
+            self.fill_geometry_table(self.gps_editor.get_geometry(file))
+
+    # def add_collar_gps(self, file):
+    #     # gps = self.gps_parser.parse_collar_gps(file)
+    #     # if gps:
+    #     self.fill_collar_gps_table(self.gps_editor.get_collar_gps(file))
+    #
+    # def add_geometry(self, file):
+    #     # segments = self.gps_parser.parse_segments(file)
+    #     # if segments:
+    #     self.fill_geometry_table(self.gps_editor.get_geometry(file))
 
     def clear_table(self, table):
         table.blockSignals(True)
@@ -426,7 +440,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 tag = 'P'
             for row in range(table.rowCount()):
                 offset = 1 if table == self.geometryTable else 0
-                tag_item = QTableWidgetItem("<"+tag + '{num:02d}'.format(num=row+offset) + ">")
+                tag_item = QTableWidgetItem("<" + tag + '{num:02d}'.format(num=row + offset) + ">")
                 tag_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 table.setItem(row, 0, tag_item)
 
@@ -699,7 +713,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             first_point = get_row_gps(min_row)
             second_point = get_row_gps(max_row)
             if first_point and second_point:
-                distance = math.sqrt((first_point[0]-second_point[0])**2+(first_point[1]-second_point[1])**2)
+                distance = math.sqrt((first_point[0] - second_point[0]) ** 2 + (first_point[1] - second_point[1]) ** 2)
                 self.lcdDistance.display(f'{distance:.1f}')
             else:
                 self.lcdDistance.display(0)

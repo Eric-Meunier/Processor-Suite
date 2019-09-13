@@ -1,17 +1,13 @@
 import logging
-import os
-import re
-import sys
-from math import hypot
-from os.path import isfile, join
-import logging
 import math
 import operator
 import os
 import re
 import sys
 from functools import reduce
+from math import hypot
 from os.path import isfile, join
+
 import numpy as np
 from scipy import spatial
 
@@ -75,17 +71,20 @@ class GPSEditor:
             return None
         logging.info('Sorting line GPS')
         line_coords = []
+        line_coords_tuples = []
         duplicates = []
 
         # Splitting up the coordinates from a string to something usable
         for coord in station_gps:
             coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), str(coord[3]), str(coord[4])]
+            coord_tuple = [float(coord[0]), float(coord[1])]
             if coord_item not in line_coords:
                 line_coords.append(coord_item)
+                line_coords_tuples.append(coord_tuple)
             else:
                 duplicates.append(coord_item)
 
-        distances = spatial.distance.cdist(line_coords, line_coords, 'euclidean')
+        distances = spatial.distance.cdist(line_coords_tuples, line_coords_tuples, 'euclidean')
         index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
         end_point = line_coords[index_of_max]
 
