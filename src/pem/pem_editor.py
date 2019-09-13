@@ -568,7 +568,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             pass
 
-    # Un-selects items from the table when clicking away from the table
     def eventFilter(self, source, event):
         if (event.type() == QtCore.QEvent.MouseButtonPress and
                 source is self.table.viewport() and
@@ -583,9 +582,21 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 if event.key() == QtCore.Qt.Key_Left:
                     current_tab = self.pem_info_widgets[0].tabs.currentIndex()
                     self.change_pem_info_tab(current_tab-1)
+                    return True
                 elif event.key() == QtCore.Qt.Key_Right:
                     current_tab = self.pem_info_widgets[0].tabs.currentIndex()
                     self.change_pem_info_tab(current_tab+1)
+                    return True
+                elif event.key() == QtCore.Qt.Key_Escape:
+                    self.table.clearSelection()
+                    return True
+        elif source == self.table and event.type() == QtCore.QEvent.Wheel and event.modifiers() == QtCore.Qt.ShiftModifier:
+            pos = self.table.horizontalScrollBar().value()
+            if event.angleDelta().y()<0:  # Wheel moved down so scroll to the right
+                self.table.horizontalScrollBar().setValue(pos + 20)
+            else:
+                self.table.horizontalScrollBar().setValue(pos - 20)
+            return True
 
         return super(QWidget, self).eventFilter(source, event)
 
