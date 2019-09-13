@@ -49,7 +49,7 @@ class PEMSerializer:
     def serialize_line_coords(self, coords):
         # Coords are a list of lists
         result = '~ Hole/Profile Co-ordinates:\n'
-        if not any(coords[0]):
+        if not coords:
             result += '<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
         else:
             for position in coords:

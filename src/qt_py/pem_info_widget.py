@@ -453,9 +453,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         add_tags()
 
     def cull_station_gps(self):
-        if self.station_gps:
+        gps = self.get_station_gps()
+        if gps:
             culled_gps = []
-            gps = self.get_station_gps()
             gps_stations = list(map(lambda x: x[-1], gps))
             em_stations = list(map(lambda x: str(x), self.pem_file.get_converted_unique_stations()))
             for i, station in enumerate(gps_stations):
@@ -750,7 +750,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             if self.collarGPSTable.item(0, i):  # Check if an item exists before trying to read it
                 row_list.append(self.collarGPSTable.item(0, i).text())
             else:
-                row_list.append('')
+                pass
         return row_list
 
     def get_geometry_segments(self):
