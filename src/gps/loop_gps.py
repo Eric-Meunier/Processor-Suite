@@ -21,47 +21,39 @@ samples_path = os.path.join(application_path, "sample_files")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 
-class LoopGPSFile:
+class LoopGPSEditor:
     """
-    Loop GPS Object.
+    Collection of functions for loop GPS
     :param gps_data: List of lists. Format of the items in the lists doesn't matter
-    :param filepath: Filepath of the original text file with the GPS data in it
     """
-    def __init__(self, gps_data):
-        self.gps_data = gps_data
-        self.sorted_gps_data = self.sort_loop()
+    def __init__(self):
+        self.parser = LoopGPSParser()
 
-    def sort_loop(self):
+    def sort_loop(self, gps_data):
         logging.info('Sorting loop GPS')
-
         loop_coords_tuples = []  # Used to find the center point
         loop_coords = []  # The actual full coordinates
 
-        if self.gps_data:
-            # Splitting up the coordinates from a string to something usable
-            for coord in self.gps_data:
-                coord_tuple = (float(coord[0]), float(coord[1]))
-                coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), coord[3]]
-                if coord_tuple not in loop_coords_tuples:
-                    loop_coords_tuples.append(coord_tuple)
-                if coord_item not in loop_coords:
-                    loop_coords.append(coord_item)
+        # Splitting up the coordinates from a string to something usable
+        for coord in gps_data:
+            coord_tuple = (float(coord[0]), float(coord[1]))
+            coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), coord[3]]
+            if coord_tuple not in loop_coords_tuples:
+                loop_coords_tuples.append(coord_tuple)
+            if coord_item not in loop_coords:
+                loop_coords.append(coord_item)
 
-            # Finds the center point using the tuples.
-            center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples), [len(loop_coords_tuples)] * 2))
+        # Finds the center point using the tuples.
+        center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples), [len(loop_coords_tuples)] * 2))
 
-            # The function used in 'sorted' to figure out how to sort it
-            def lambda_func(coord_item):
-                coord = (coord_item[0], coord_item[1])
-                return (math.degrees(math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360
+        # The function used in 'sorted' to figure out how to sort it
+        def lambda_func(coord_item):
+            coord = (coord_item[0], coord_item[1])
+            return (math.degrees(math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360
 
-            sorted_coords = sorted(loop_coords, key=lambda_func)
-            formatted_gps = self.format_gps_data(sorted_coords)
-
-            return formatted_gps
-
-        else:
-            return ''
+        sorted_coords = sorted(loop_coords, key=lambda_func)
+        formatted_gps = self.format_gps_data(sorted_coords)
+        return formatted_gps
 
     def format_gps_data(self, gps_data):
         """
@@ -97,11 +89,11 @@ class LoopGPSFile:
         del loop_gps[n-1::n]
         return loop_gps
 
-    def get_sorted_gps(self):
-        return self.sorted_gps_data
+    def get_sorted_gps(self, gps_data):
+        return self.format_gps_data(self.sort_loop(gps_data))
 
-    def get_gps(self):
-        return self.format_gps_data(self.gps_data)
+    def get_gps(self, gps_data):
+        return self.format_gps_data(gps_data)
 
 
 class LoopGPSParser:
@@ -112,7 +104,6 @@ class LoopGPSParser:
     def __init__(self):
         self.formatted_GPS = []
         self.filepath = None
-        self.gps_file = LoopGPSFile
         self.re_gps = re.compile(
             r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W*(?P<Units>0|1)?\W?')
 
@@ -141,7 +132,7 @@ class LoopGPSParser:
         raw_gps = list(map(lambda x: list(x), raw_gps))
 
         if raw_gps:
-            return self.gps_file(raw_gps)
+            return raw_gps
         else:
             return None
 

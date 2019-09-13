@@ -375,54 +375,36 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     file = in_file.read()
                 return file
 
-        station_gps_parser = StationGPSParser()
-        loop_gps_parser = LoopGPSParser()
-        geometry_parser = GeometryParser()
+        # station_gps_parser = StationGPSParser()
+        # loop_gps_parser = LoopGPSParser()
+        # geometry_parser = GeometryParser()
 
         if len(gps_files) > 0:
             file = read_gps_files(gps_files)
-            try:
-                pem_info_widget = self.stackedWidget.currentWidget()
-                station_gps_tab = pem_info_widget.Station_GPS_Tab
-                geometry_tab = pem_info_widget.Geometry_Tab
-                loop_gps_tab = pem_info_widget.Loop_GPS_Tab
-                current_tab = self.stackedWidget.currentWidget().tabs.currentWidget()
+            # try:
+            pem_info_widget = self.stackedWidget.currentWidget()
+            station_gps_tab = pem_info_widget.Station_GPS_Tab
+            geometry_tab = pem_info_widget.Geometry_Tab
+            loop_gps_tab = pem_info_widget.Loop_GPS_Tab
+            current_tab = pem_info_widget.tabs.currentWidget()
 
-                if station_gps_tab == current_tab:
-                    gps_file = station_gps_parser.parse(file)
-                    pem_info_widget.station_gps = gps_file
+            if station_gps_tab == current_tab:
+                pem_info_widget.add_station_gps(file)
 
-                    if station_gps_tab.findChild(QToolButton, 'sort_station_gps_button').isChecked():
-                        gps_data = gps_file.get_sorted_gps()
-                    else:
-                        gps_data = gps_file.get_gps()
-                    pem_info_widget.fill_station_table(gps_data)
+            elif geometry_tab == current_tab:
+                pem_info_widget.add_collar_gps(file)
+                pem_info_widget.add_geometry(file)
 
-                elif geometry_tab == current_tab:
-                    collar_gps = geometry_parser.parse_collar_gps(file)
-                    segments = geometry_parser.parse_segments(file)
-                    if collar_gps:
-                        pem_info_widget.fill_collar_gps_table(collar_gps)
-                    if segments:
-                        pem_info_widget.fill_geometry_table(segments)
+            elif loop_gps_tab == current_tab:
+                pem_info_widget.add_loop_gps(file)
 
-                elif loop_gps_tab == current_tab:
-                    gps_file = loop_gps_parser.parse(file)
-                    pem_info_widget.loop_gps = gps_file
-
-                    if loop_gps_tab.findChild(QToolButton, 'sort_loop_button').isChecked():
-                        gps_data = gps_file.get_sorted_gps()
-                    else:
-                        gps_data = gps_file.get_gps()
-                    pem_info_widget.fill_loop_table(gps_data)
-
-                else:
-                    pass
-
-            except Exception as e:
-                logging.info(str(e))
-                self.message.information(None, 'PEMEditorWidget: open_gps_files error', str(e))
+            else:
                 pass
+
+            # except Exception as e:
+            #     logging.info(str(e))
+            #     self.message.information(None, 'PEMEditorWidget: open_gps_files error', str(e))
+            #     pass
 
     def clear_files(self):
         while self.table.rowCount() > 0:
@@ -1124,16 +1106,16 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.update_table()
 
     def toggle_sort_loop(self, widget):
-        if self.sort_loop_button.isChecked():
+        if self.autoSortLoopsCheckbox.isChecked():
             widget.fill_loop_table(widget.loop_gps.get_sorted_gps())
         else:
             widget.fill_loop_table(widget.loop_gps.get_gps())
 
-    def toggle_sort_loops(self):
-        if len(self.pem_files) > 0:
-            for i in range(self.stackedWidget.count()):
-                widget = self.stackedWidget.widget(i)
-                self.toggle_sort_loop(widget)
+    # def toggle_sort_loops(self):
+    #     if len(self.pem_files) > 0:
+    #         for i in range(self.stackedWidget.count()):
+    #             widget = self.stackedWidget.widget(i)
+    #             self.toggle_sort_loop(widget)
 
     def toggle_hide_gaps(self):
         pass  # To be implemented when pyqtplots are in

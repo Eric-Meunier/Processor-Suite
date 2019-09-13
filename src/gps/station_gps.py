@@ -22,49 +22,43 @@ samples_path = os.path.join(application_path, "sample_files")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 
-class StationGPSFile:
+class StationGPSEditor:
     # duplicate_signal = QtCore.pyqtSignal(int)
     # TODO Add signal for duplicates message?
     """
-    Loop GPS Object.
     :param gps_data: List of lists. Format of the items in the lists doesn't matter
     :param filepath: Filepath of the original text file with the GPS data in it
     """
 
-    def __init__(self, gps_data):
-        self.gps_data = gps_data
-        self.sorted_gps_data = self.sort_line()
+    def __init__(self):
+        self.parser = StationGPSParser()
 
-    def sort_line(self):
+    def sort_line(self, gps):
         logging.info('Sorting line GPS')
         line_coords = []
         duplicates = []
 
-        if self.gps_data:
-            # Splitting up the coordinates from a string to something usable
-            for coord in self.gps_data:
-                coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), str(coord[3]), str(coord[4])]
-                if coord_item not in line_coords:
-                    line_coords.append(coord_item)
-                else:
-                    duplicates.append(coord_item)
+        # Splitting up the coordinates from a string to something usable
+        for coord in gps:
+            coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), str(coord[3]), str(coord[4])]
+            if coord_item not in line_coords:
+                line_coords.append(coord_item)
+            else:
+                duplicates.append(coord_item)
 
-            distances = spatial.distance.cdist(line_coords, line_coords, 'euclidean')
-            index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
-            end_point = line_coords[index_of_max]
+        distances = spatial.distance.cdist(line_coords, line_coords, 'euclidean')
+        index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
+        end_point = line_coords[index_of_max]
 
-            def distance(q):
-                # Return the Euclidean distance between points p and q.
-                p = end_point
-                return hypot(p[0] - q[0], p[1] - q[1])
+        def distance(q):
+            # Return the Euclidean distance between points p and q.
+            p = end_point
+            return hypot(p[0] - q[0], p[1] - q[1])
 
-            sorted_coords = sorted(line_coords, key=distance, reverse=True)
-            # sorted_stations = self.sort_stations(sorted_coords)
-            formatted_gps = self.format_gps_data(sorted_coords)
-
-            return formatted_gps
-        else:
-            return ''
+        sorted_coords = sorted(line_coords, key=distance, reverse=True)
+        # sorted_stations = self.sort_stations(sorted_coords)
+        formatted_gps = self.format_gps_data(sorted_coords)
+        return formatted_gps
 
     def sort_stations(self, gps):
         stations = [int(point[-1]) for point in gps]
@@ -80,7 +74,7 @@ class StationGPSFile:
             sorted_stations_gps.append(gps[i])
         return sorted_stations_gps
 
-    def format_gps_data(self, gps_data):
+    def format_gps_data(self, gps):
         """
         Adds the P tags and formats the numbers
         :param gps_data: List without tags
@@ -96,17 +90,17 @@ class StationGPSFile:
             return row
 
         formatted_gps = []
-        if len(gps_data) > 0:
-            for row in gps_data:
+        if len(gps) > 0:
+            for row in gps:
                 formatted_gps.append(format_row(row))
 
         return formatted_gps
 
-    def get_sorted_gps(self):
-        return self.sorted_gps_data
+    def get_sorted_gps(self, gps):
+        return self.sort_line(gps)
 
-    def get_gps(self):
-        return self.format_gps_data(self.gps_data)
+    def get_gps(self, gps):
+        return self.format_gps_data(gps)
 
 
 class StationGPSParser:
@@ -117,7 +111,6 @@ class StationGPSParser:
     def __init__(self):
         self.formatted_GPS = []
         self.filepath = None
-        self.gps_file = StationGPSFile
         self.re_gps = re.compile(
             r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
 
@@ -154,7 +147,7 @@ class StationGPSParser:
                     raw_gps[i].append(str(re.sub('[neNE]', '', station)))
                 else:
                     raw_gps[i].append(station)
-            return self.gps_file(raw_gps)
+            return raw_gps
         else:
             return None
 

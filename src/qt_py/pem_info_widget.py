@@ -7,13 +7,14 @@ import numpy as np
 import math
 from scipy import spatial
 from itertools import chain
-from src.gps.station_gps import StationGPSParser
-from src.gps.loop_gps import LoopGPSParser
-from src.gps.hole_geometry import GeometryParser
+# from src.gps.station_gps import StationGPSEditor
+# from src.gps.loop_gps import LoopGPSEditor
+# from src.gps.hole_geometry import GeometryEditor
+from src.gps.gps_editor import GPSParser, GPSEditor
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QTabWidget,
                              QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QDockWidget,
                              QHeaderView, QListWidget, QTextBrowser, QPlainTextEdit, QStackedWidget, QTextEdit,
-                             QShortcut)
+                             QShortcut, QTableWidget)
 from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -44,12 +45,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.parent = None
         self.pem_file = None
         self.station_gps = None
-        self.loop_gps = None
+        self.gps_editor = GPSEditor()
+        self.gps_parser = GPSParser()
         self.last_stn_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
-        self.station_gps_parser = StationGPSParser()
-        self.loop_gps_parser = LoopGPSParser()
-        self.geometry_parser = GeometryParser()
         self.setupUi(self)
         self.initActions()
         self.initSignals()
@@ -61,6 +60,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.geometryTable.installEventFilter(self)
         self.loopGPSTable.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.stationGPSTable.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.collarGPSTable.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.geometryTable.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         self.loopGPSTable.remove_row_action = QAction("&Remove", self)
         self.addAction(self.loopGPSTable.remove_row_action)
@@ -94,8 +95,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # self.stationGPSTable.cull_gps_action.triggered.connect(self.cull_station_gps)
 
     def initSignals(self):
-        self.sortStationsButton.toggled.connect(self.sort_station_gps)
-        self.sortLoopButton.toggled.connect(self.sort_loop_gps)
+        self.sortStationsButton.clicked.connect(self.sort_station_gps)
+        self.sortLoopButton.clicked.connect(self.sort_loop_gps)
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
 
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_numbers)
@@ -107,8 +108,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
 
-        self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
-        self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
+        # self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
+        # self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
 
     def contextMenuEvent(self, event):
         if self.stationGPSTable.underMouse():
@@ -313,7 +314,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def fill_info(self):
         logging.info('PEMInfoWidget: fill_info')
 
-        def fill_info_tab():
+        def init_info_tab():
             survey_type = self.pem_file.survey_type
             operator = self.pem_file.tags.get('Operator')
             loop_size = ' x '.join(self.pem_file.tags.get('LoopSize').split(' ')[0:2])
@@ -336,46 +337,62 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.info_text_edit.append(
                 '<html><b>Notes: </b</html> {notes}'.format(notes='\n'.join(self.pem_file.notes)))
 
-        def fill_station_text():
+        def init_station_text():
             # Fill station GPS
-            self.station_gps = self.station_gps_parser.parse(self.pem_file.get_line_coords())
-            if self.station_gps:
-                if self.parent.autoSortStationsCheckbox.isChecked():
-                    self.fill_station_table(self.station_gps.get_sorted_gps())
-                else:
-                    self.fill_station_table(self.station_gps.get_gps())
+            pem_station_gps = self.pem_file.get_line_coords()
+            self.add_station_gps(pem_station_gps)
 
-        def fill_collar_gps_text():
+        def init_collar_gps_text():
             # Fill hole collar GPS
-            self.collar_gps = self.geometry_parser.parse_collar_gps(self.pem_file.get_line_coords())
-            if self.collar_gps:
-                self.fill_collar_gps_table(self.collar_gps)
+            pem_collar_gps = self.pem_file.get_line_coords()
+            self.add_collar_gps(pem_collar_gps)
 
-        def fill_geometry_text():
+        def init_geometry_text():
             # Fill hole geometry segments
-            self.geometry_text = self.geometry_parser.parse_segments(self.pem_file.get_line_coords())
-            if self.geometry_text:
-                self.fill_geometry_table(self.geometry_text)
+            pem_geometry_text = self.pem_file.get_line_coords()
+            self.add_geometry(pem_geometry_text)
 
-        def fill_loop_text():
+        def init_loop_text():
             # Fill loop GPS
-            self.loop_gps = self.loop_gps_parser.parse(self.pem_file.get_loop_coords())
-            if self.loop_gps:
-                if self.parent.autoSortLoopsCheckbox.isChecked():
-                    self.fill_loop_table(self.loop_gps.get_sorted_gps())
-                else:
-                    self.fill_loop_table(self.loop_gps.get_gps())
+            pem_loop_gps = self.pem_file.get_loop_coords()
+            self.add_loop_gps(pem_loop_gps)
 
         header = self.pem_file.header
 
-        fill_info_tab()
+        init_info_tab()
         if 'surface' in self.pem_file.survey_type.lower():
-            fill_station_text()
+            init_station_text()
         else:
-            fill_collar_gps_text()
-            fill_geometry_text()
-        fill_loop_text()
+            init_collar_gps_text()
+            init_geometry_text()
+        init_loop_text()
         self.fill_data_table(self.pem_file.data)
+
+    def add_loop_gps(self, file):
+        # gps = self.gps_parser.parse_loop_gps(file)
+        # if gps:
+        if self.parent.autoSortLoopsCheckbox.isChecked():
+            self.fill_loop_table(self.gps_editor.get_sorted_loop_gps(file))
+        else:
+            self.fill_loop_table(self.gps_editor.get_loop_gps(file))
+
+    def add_station_gps(self, file):
+        # gps = self.gps_parser.parse_station_gps(file)
+        # if gps:
+        if self.parent.autoSortStationsCheckbox.isChecked():
+            self.fill_station_table(self.gps_editor.get_sorted_station_gps(file))
+        else:
+            self.fill_station_table(self.gps_editor.get_station_gps(file))
+
+    def add_collar_gps(self, file):
+        # gps = self.gps_parser.parse_collar_gps(file)
+        # if gps:
+        self.fill_collar_gps_table(self.gps_editor.get_collar_gps(file))
+
+    def add_geometry(self, file):
+        # segments = self.gps_parser.parse_segments(file)
+        # if segments:
+        self.fill_geometry_table(self.gps_editor.get_geometry(file))
 
     def clear_table(self, table):
         table.blockSignals(True)
@@ -435,14 +452,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def sort_station_gps(self):
-        if self.station_gps:
-            self.fill_station_table(self.station_gps.get_sorted_gps(self.get_station_gps()))
+        station_gps = self.get_station_gps()
+        if station_gps:
+            self.fill_station_table(self.gps_editor.get_sorted_station_gps(station_gps))
         else:
             pass
 
     def sort_loop_gps(self):
-        if self.loop_gps:
-            self.fill_loop_table(self.loop_gps.get_sorted_gps(self.get_loop_gps()))
+        loop = self.get_loop_gps()
+        if loop:
+            self.fill_loop_table(self.gps_editor.get_sorted_loop_gps(loop))
         else:
             pass
 
@@ -636,26 +655,25 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
-    def format_station_gps_text(self):
-        current_gps = self.station_gps_parser.parse(self.get_station_gps())
-        if current_gps:
-            if self.parent.autoSortStationsCheckbox.isChecked():
-                self.fill_station_table(current_gps.get_sorted_gps())
-            else:
-                self.fill_station_table(current_gps.get_gps())
-        else:
-            pass
+    # def format_station_gps_text(self):
+    #     current_gps = self.station_gps_parser.parse(self.get_station_gps())
+    #     if current_gps:
+    #         if self.parent.autoSortStationsCheckbox.isChecked():
+    #             self.fill_station_table(current_gps.get_sorted_gps())
+    #         else:
+    #             self.fill_station_table(current_gps.get_gps())
+    #     else:
+    #         pass
 
-    def format_loop_gps_text(self):
-        current_gps = self.loop_gps_parser.parse(self.get_loop_gps())
-        if current_gps:
-            self.loop_gps = current_gps
-            if self.parent.autoSortLoopsCheckbox.isChecked():
-                self.fill_loop_table(current_gps.get_sorted_gps())
-            else:
-                self.fill_loop_table(current_gps.get_gps())
-        else:
-            pass
+    # def format_loop_gps_text(self):
+    #     loop = self.get_loop_gps()
+    #     if loop:
+    #         if self.parent.autoSortLoopsCheckbox.isChecked():
+    #             self.fill_loop_table(self.gps_editor.get_sorted_gps(loop))
+    #         else:
+    #             self.fill_loop_table(self.gps_editor.get_gps(loop))
+    #     else:
+    #         pass
 
     def calc_distance(self):
 

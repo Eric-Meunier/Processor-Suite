@@ -141,16 +141,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="format_loop_gps_button">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string>Format Text</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QPushButton" name="sortLoopButton">
             <property name="text">
              <string>Sort Loop</string>
@@ -239,13 +229,6 @@
            <widget class="QPushButton" name="sortStationsButton">
             <property name="text">
              <string>Sort Stations</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="format_station_gps_button">
-            <property name="text">
-             <string>Format Text</string>
             </property>
            </widget>
           </item>
