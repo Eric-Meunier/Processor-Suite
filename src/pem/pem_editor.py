@@ -169,15 +169,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.splitAllPems.setShortcut("F6")
         self.splitAllPems.triggered.connect(self.split_all_pem_files)
 
-        self.currentAllPems = QAction("&Scale All Current", self)
-        self.currentAllPems.setStatusTip("Scale the current of all PEM Files to the same value")
-        self.currentAllPems.setShortcut("F7")
-        self.currentAllPems.triggered.connect(self.scale_all_current)
+        self.scaleAllCurrents = QAction("&Scale All Current", self)
+        self.scaleAllCurrents.setStatusTip("Scale the current of all PEM Files to the same value")
+        self.scaleAllCurrents.setShortcut("F7")
+        self.scaleAllCurrents.triggered.connect(self.scale_all_current)
 
-        self.coilAreaAllPems = QAction("&Change All Coil Areas", self)
-        self.coilAreaAllPems.setStatusTip("Scale all coil areas to the same value")
-        self.coilAreaAllPems.setShortcut("F8")
-        self.coilAreaAllPems.triggered.connect(self.scale_all_coil_area)
+        self.scaleAllCoilAreas = QAction("&Change All Coil Areas", self)
+        self.scaleAllCoilAreas.setStatusTip("Scale all coil areas to the same value")
+        self.scaleAllCoilAreas.setShortcut("F8")
+        self.scaleAllCoilAreas.triggered.connect(self.scale_all_coil_area)
 
         self.editLineNames = QAction("&Rename All Lines/Holes", self)
         self.editLineNames.setStatusTip("Rename all line/hole names")
@@ -204,8 +204,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.PEMMenu.addAction(self.averageAllPems)
         self.PEMMenu.addAction(self.splitAllPems)
         self.PEMMenu.addSeparator()
-        self.PEMMenu.addAction(self.currentAllPems)
-        self.PEMMenu.addAction(self.coilAreaAllPems)
+        self.PEMMenu.addAction(self.scaleAllCurrents)
+        self.PEMMenu.addAction(self.scaleAllCoilAreas)
 
         self.GPSMenu = self.menubar.addMenu('&GPS')
         self.GPSMenu.addAction(self.sortAllStationGps)
@@ -232,6 +232,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.hide_gaps_checkbox.stateChanged.connect(self.toggle_hide_gaps)
         self.min_range_edit.textChanged.connect(self.update_table)
         self.max_range_edit.textChanged.connect(self.update_table)
+
+        self.reverseAllZButton.clicked.connect(lambda: self.reverse_all_data(comp='Z'))
+        self.reverseAllXButton.clicked.connect(lambda: self.reverse_all_data(comp='X'))
+        self.reverseAllYButton.clicked.connect(lambda: self.reverse_all_data(comp='Y'))
 
     def contextMenuEvent(self, event):
         if self.table.underMouse():
@@ -646,6 +650,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     current_col = self.columns.index('Current')
                     self.scale_current(pem_file, current)
                     self.table.item(i, current_col).setText(str(current))
+
+    def reverse_all_data(self, comp):
+        if len(self.pem_files)>0:
+            for pem_file, pem_info_widget in zip(self.pem_files, self.pem_info_widgets):
+                pem_info_widget.reverse_polarity(component=comp)
+                pem_file = pem_info_widget.pem_file
 
     def merge_pem_files(self, pem_files):
 

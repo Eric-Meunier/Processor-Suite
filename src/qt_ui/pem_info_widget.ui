@@ -423,6 +423,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="reversePolarityButton">
+            <property name="text">
+             <string>Reverse Polarity</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="verticalSpacer_2">
             <property name="orientation">
              <enum>Qt::Vertical</enum>

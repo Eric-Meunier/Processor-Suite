@@ -405,6 +405,75 @@
          </layout>
         </widget>
        </item>
+       <item row="5" column="0">
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>200</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>Data Options</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QPushButton" name="reverseAllZButton">
+            <property name="minimumSize">
+             <size>
+              <width>180</width>
+              <height>23</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Reverse All Z Data</string>
+            </property>
+            <property name="checkable">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="reverseAllXButton">
+            <property name="minimumSize">
+             <size>
+              <width>180</width>
+              <height>23</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Reverse All X Data</string>
+            </property>
+            <property name="checkable">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="reverseAllYButton">
+            <property name="minimumSize">
+             <size>
+              <width>180</width>
+              <height>23</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Reverse All Y Data</string>
+            </property>
+            <property name="checkable">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>

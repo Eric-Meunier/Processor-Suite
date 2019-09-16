@@ -165,13 +165,39 @@ class PEMFileEditor:
 
         return pem_file
 
-    def shift_stations(self, pem_file, shift_amt):
-        data = pem_file.get_data()
+    def shift_stations(self, pem_file, shift_amt, rows=None):
+        """
+        Shift station number
+        :param pem_file: PEMFile object
+        :param shift_amt: Amount to shift the station number by
+        :param rows: Corresponding row (reading) of the PEMFile in the dataTable
+        :return: Updated PEMFile
+        """
+        if not rows:
+            data = pem_file.get_data()
+        else:
+            data = [pem_file.data[row] for row in rows]
         for reading in data:
-            old_num = int(re.findall('\d+', reading['Station'])[0])
-            suffix = str(re.search('[NSEW]', reading['Station']))
-            new_num = str(old_num + shift_amt)
-            reading['Station'] = str(new_num + suffix)
+            station_num = int(re.findall('\d+', reading['Station'])[0])
+            new_station_num = station_num + shift_amt
+            new_station = re.sub(str(station_num), str(new_station_num), reading['Station'])
+            reading['Station'] = new_station
+        return pem_file
+
+    def reverse_polarity(self, pem_file, rows=None, component=None):
+        """
+        Flip the data for given readings
+        :param pem_file: PEMFile object
+        :param rows: Corresponding row (reading) of the PEMFile in the dataTable
+        :return: Updated PEMFile
+        """
+        if component is None:
+            data = [pem_file.data[row] for row in rows]
+        else:
+            data = filter(lambda x: x['Component'] == component, pem_file.data)
+        for reading in data:
+            decay = np.array(reading['Data'])
+            reading['Data'] = decay * -1
         return pem_file
 
 

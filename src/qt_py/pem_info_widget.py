@@ -8,6 +8,7 @@ from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QAction, QMenu)
 
 from src.gps.gps_editor import GPSParser, GPSEditor
+from src.pem.pem_file_editor import PEMFileEditor
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
@@ -38,6 +39,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.pem_file = None
         self.gps_editor = GPSEditor()
         self.gps_parser = GPSParser()
+        self.file_editor = PEMFileEditor()
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
@@ -83,6 +85,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.geometryTable.remove_row_action.setShortcut('Del')
         self.geometryTable.remove_row_action.setEnabled(False)
 
+        self.dataTable.reverse_polarity_action = QAction("&Reverse Polarity", self)
+        self.dataTable.reverse_polarity_action.triggered.connect(self.reverse_polarity)
+        self.dataTable.reverse_polarity_action.setShortcut("F")
         # self.stationGPSTable.cull_gps_action = QAction("&Cull GPS", self)
         # self.stationGPSTable.cull_gps_action.triggered.connect(self.cull_station_gps)
 
@@ -102,6 +107,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.cellChanged.connect(self.check_station_order)
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
 
+        self.reversePolarityButton.clicked.connect(self.reverse_polarity)
         # self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
         # self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
 
@@ -136,6 +142,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.geometryTable.menu.addAction(self.geometryTable.remove_row_action)
                 self.geometryTable.menu.popup(QtGui.QCursor.pos())
                 self.geometryTable.remove_row_action.setEnabled(True)
+        elif self.dataTable.underMouse():
+            if self.dataTable.selectionModel().selectedIndexes():
+                self.dataTable.menu = QMenu(self.dataTable)
+                self.dataTable.menu.addAction(self.dataTable.reverse_polarity_action)
+                self.dataTable.menu.popup(QtGui.QCursor.pos())
+                # self.dataTable.remove_row_action.setEnabled(True)
             else:
                 pass
         else:
@@ -320,6 +332,18 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.dataTable.blockSignals(False)
         else:
             pass
+
+    def update_data_table(self):
+        self.dataTable.blockSignals(True)
+        column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
+        for station, row in zip(self.pem_file.data, range(self.dataTable.rowCount())):
+            items = [QTableWidgetItem(station[j]) for j in column_keys]
+
+            for m, item in enumerate(items):
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.dataTable.setItem(row, m, item)
+
+        self.dataTable.blockSignals(False)
 
     def fill_info(self):
         logging.info('PEMInfoWidget: fill_info')
@@ -708,37 +732,59 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             self.lcdDistance.display(0)
 
+    # def shift_station_numbers(self):
+    #     def apply_station_shift(row):
+    #         station_column = self.data_columns.index('Station')
+    #         if self.dataTable.item(row, station_column):
+    #             station = self.dataTable.item(row, station_column).text()
+    #         else:
+    #             station = None
+    #
+    #         if station is not None or station == 0:
+    #             station_num = int(re.findall('\d+', station)[0])
+    #             new_station_num = station_num + (shift_amount - self.last_stn_shift_amt)
+    #             new_station = re.sub(str(station_num), str(new_station_num), station)
+    #             new_station_item = QTableWidgetItem(str(new_station))
+    #             new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
+    #             self.pem_file.data[row]['Station'] = new_station
+    #             self.dataTable.setItem(row, station_column, new_station_item)
+    #         else:
+    #             pass
+    #
+    #     selected_rows = [model.row() for model in self.dataTable.selectionModel().selectedRows()]
+    #     shift_amount = self.shiftStationSpinbox.value()
+    #
+    #     if selected_rows:
+    #         for row in selected_rows:
+    #             apply_station_shift(row)
+    #
+    #     else:
+    #         if self.dataTable.rowCount() > 0:
+    #             for row in range(self.dataTable.rowCount()):
+    #                 apply_station_shift(row)
+    #     self.last_stn_shift_amt = shift_amount
+
     def shift_station_numbers(self):
-        def apply_station_shift(row):
-            station_column = self.data_columns.index('Station')
-            if self.dataTable.item(row, station_column):
-                station = self.dataTable.item(row, station_column).text()
-            else:
-                station = None
-
-            if station is not None or station == 0:
-                station_num = int(re.findall('\d+', station)[0])
-                new_station_num = station_num + (shift_amount - self.last_stn_shift_amt)
-                new_station = re.sub(str(station_num), str(new_station_num), station)
-                new_station_item = QTableWidgetItem(str(new_station))
-                new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.pem_file.data[row]['Station'] = new_station
-                self.dataTable.setItem(row, station_column, new_station_item)
-            else:
-                pass
-
+        # Shift the station number
         selected_rows = [model.row() for model in self.dataTable.selectionModel().selectedRows()]
-        shift_amount = self.shiftStationSpinbox.value()
-
-        if selected_rows:
-            for row in selected_rows:
-                apply_station_shift(row)
-
-        else:
-            if self.dataTable.rowCount() > 0:
-                for row in range(self.dataTable.rowCount()):
-                    apply_station_shift(row)
+        if not selected_rows:
+            selected_rows = range(self.dataTable.rowCount())
+        shift_amount = self.shiftStationSpinbox.value() - self.last_stn_shift_amt
+        self.pem_file = self.file_editor.shift_stations(self.pem_file, shift_amount, rows=selected_rows)
+        self.update_data_table()
+        self.dataTable.resizeColumnsToContents()
         self.last_stn_shift_amt = shift_amount
+
+    def reverse_polarity(self, selected_rows=None, component=None):
+        # Reverse the polarity of selected readings
+        if not component:
+            selected_rows = [model.row() for model in self.dataTable.selectionModel().selectedRows()]
+            if not selected_rows:
+                selected_rows = range(self.dataTable.rowCount())
+        self.pem_file = self.file_editor.reverse_polarity(self.pem_file, rows=selected_rows, component=component)
+        self.update_data_table()
+        self.dataTable.resizeColumnsToContents()
+        self.window().statusBar().showMessage('Polarity flipped.', 2000)
 
     def get_loop_gps(self):
         table_gps = []
