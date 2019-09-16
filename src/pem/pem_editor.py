@@ -122,12 +122,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.saveFiles = QAction("&Save Files", self)
         self.saveFiles.setShortcut("Ctrl+S")
         self.saveFiles.setStatusTip("Save all files")
-        self.saveFiles.triggered.connect(self.save_all)
+        self.saveFiles.triggered.connect(lambda: self.save_pem_file_selection(all=True))
 
         self.saveFilesTo = QAction("&Save Files To...", self)
         self.saveFilesTo.setShortcut("F11")
         self.saveFilesTo.setStatusTip("Save all files at specified location.")
-        self.saveFilesTo.triggered.connect(self.save_all_to)
+        self.saveFilesTo.triggered.connect(lambda: self.save_pem_file_to(all=True))
 
         self.export_final_pems_action = QAction("&Export Final PEM Files", self)
         self.export_final_pems_action.setShortcut("F9")
@@ -145,7 +145,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.addAction(self.del_file)
         self.del_file.setEnabled(False)
 
-        self.clearFiles = QAction("&Clear Files", self)
+        self.clearFiles = QAction("&Clear All Files", self)
         self.clearFiles.setShortcut("Shift+Del")
         self.clearFiles.setStatusTip("Clear all files")
         self.clearFiles.triggered.connect(self.clear_files)
@@ -169,9 +169,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.splitAllPems.setShortcut("F6")
         self.splitAllPems.triggered.connect(self.split_all_pem_files)
 
+        self.currentAllPems = QAction("&Scale All Current", self)
+        self.currentAllPems.setStatusTip("Scale the current of all PEM Files to the same value")
+        self.currentAllPems.setShortcut("F7")
+        self.currentAllPems.triggered.connect(self.scale_all_current)
+
         self.coilAreaAllPems = QAction("&Change All Coil Areas", self)
-        self.coilAreaAllPems.setStatusTip("Change all coil areas to the same value")
-        self.coilAreaAllPems.setShortcut("F7")
+        self.coilAreaAllPems.setStatusTip("Scale all coil areas to the same value")
+        self.coilAreaAllPems.setShortcut("F8")
         self.coilAreaAllPems.triggered.connect(self.scale_all_coil_area)
 
         self.editLineNames = QAction("&Rename All Lines/Holes", self)
@@ -193,11 +198,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.sortAllLoopGps.triggered.connect(self.sort_all_loop_gps)
 
         self.PEMMenu = self.menubar.addMenu('&PEM')
-        self.PEMMenu.addAction(self.averageAllPems)
-        self.PEMMenu.addAction(self.splitAllPems)
-        self.PEMMenu.addAction(self.coilAreaAllPems)
         self.PEMMenu.addAction(self.editLineNames)
         self.PEMMenu.addAction(self.editFileNames)
+        self.PEMMenu.addSeparator()
+        self.PEMMenu.addAction(self.averageAllPems)
+        self.PEMMenu.addAction(self.splitAllPems)
+        self.PEMMenu.addSeparator()
+        self.PEMMenu.addAction(self.currentAllPems)
+        self.PEMMenu.addAction(self.coilAreaAllPems)
 
         self.GPSMenu = self.menubar.addMenu('&GPS')
         self.GPSMenu.addAction(self.sortAllStationGps)
@@ -225,6 +233,83 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.min_range_edit.textChanged.connect(self.update_table)
         self.max_range_edit.textChanged.connect(self.update_table)
 
+    def contextMenuEvent(self, event):
+        if self.table.underMouse():
+            if self.table.selectionModel().selectedIndexes():
+                self.table.menu = QMenu(self.table)
+                self.table.remove_file_action = QAction("&Remove", self)
+                self.table.remove_file_action.triggered.connect(self.remove_file_selection)
+
+                self.table.open_file_action = QAction("&Open", self)
+                self.table.open_file_action.triggered.connect(self.open_in_text)
+
+                self.table.save_file_action = QAction("&Save", self)
+                self.table.save_file_action.triggered.connect(self.save_pem_file_selection)
+
+                self.table.save_file_to_action = QAction("&Save To...", self)
+                self.table.save_file_to_action.triggered.connect(self.save_pem_file_to)
+
+                self.table.save_file_as_action = QAction("&Save As...", self)
+                self.table.save_file_as_action.triggered.connect(self.save_pem_file_as)
+
+                self.table.merge_action = QAction("&Merge", self)
+                self.table.merge_action.triggered.connect(self.merge_pem_files_selection)
+
+                self.table.average_action = QAction("&Average", self)
+                self.table.average_action.triggered.connect(self.average_select_pem)
+
+                self.table.split_action = QAction("&Split", self)
+                self.table.split_action.triggered.connect(self.split_select_pem)
+
+                self.table.scale_current_action = QAction("&Scale Current", self)
+                self.table.scale_current_action.triggered.connect(self.scale_current_selection)
+
+                self.table.scale_ca_action = QAction("&Scale Coil Area", self)
+                self.table.scale_ca_action.triggered.connect(self.scale_coil_area_selection)
+
+                self.table.share_loop_action = QAction("&Share Loop", self)
+                self.table.share_loop_action.triggered.connect(self.share_loop)
+
+                self.table.rename_lines_action = QAction("&Rename Lines/Holes", self)
+                self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line', selected=True))
+
+                self.table.rename_files_action = QAction("&Rename Files", self)
+                self.table.rename_files_action.triggered.connect(lambda: self.batch_rename(type='File', selected=True))
+
+                self.table.menu.addAction(self.table.open_file_action)
+                self.table.menu.addAction(self.table.save_file_action)
+                if len(self.table.selectionModel().selectedRows()) == 1:
+                    self.table.menu.addAction(self.table.save_file_as_action)
+                else:
+                    self.table.menu.addAction(self.table.save_file_to_action)
+                self.table.menu.addAction(self.print_final_plots_action)
+                self.table.menu.addSeparator()
+                if len(self.table.selectionModel().selectedRows()) > 1:
+                    self.table.menu.addAction(self.table.merge_action)
+                self.table.menu.addAction(self.table.average_action)
+                self.table.menu.addAction(self.table.split_action)
+                self.table.menu.addAction(self.table.scale_current_action)
+                self.table.menu.addAction(self.table.scale_ca_action)
+                if len(self.pem_files) > 1:
+                    self.table.menu.addAction(self.table.share_loop_action)
+                if len(self.table.selectionModel().selectedRows()) > 1:
+                    self.table.menu.addSeparator()
+                    self.table.menu.addAction(self.table.rename_lines_action)
+                    self.table.menu.addAction(self.table.rename_files_action)
+                self.table.menu.addSeparator()
+                self.table.menu.addAction(self.table.remove_file_action)
+
+                self.table.menu.popup(QtGui.QCursor.pos())
+            else:
+                pass
+        else:
+            pass
+
+    def open_in_text(self):
+        pem_files, rows = self.get_selected_pem_files()
+        for pem_file in pem_files:
+            os.startfile(pem_file.filepath)
+
     def open_file_dialog(self):
         try:
             files = self.dialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem);; All files(*.*)')
@@ -250,7 +335,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         text_files = False
         if all([url.lower().endswith('pem') for url in urls]):
             pem_files = True
-        elif all([url.lower().endswith('txt') or url.lower().endswith('csv') or url.lower().endswith('seg') for url in urls]):
+        elif all([url.lower().endswith('txt') or url.lower().endswith('csv') or url.lower().endswith('seg') for url in
+                  urls]):
             text_files = True
 
         pem_conditions = bool(all([
@@ -288,12 +374,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
         pem_files = [file for file in files if file.lower().endswith('pem')]
-        gps_files = [file for file in files if file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith('seg')]
+        gps_files = [file for file in files if
+                     file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith('seg')]
 
         start_time = time.time()
         if len(pem_files) > 0:
             self.open_pem_files(pem_files)
-            print('open_pem_files time: {} seconds'.format(time.time()-start_time))
+            print('open_pem_files time: {} seconds'.format(time.time() - start_time))
 
         if len(gps_files) > 0:
             self.open_gps_files(gps_files)
@@ -303,7 +390,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         logging.info('open_pem_files')
 
         def is_opened(pem_file):
-            if len(self.pem_files)>0:
+            if len(self.pem_files) > 0:
                 existing_filepaths = [os.path.abspath(file.filepath) for file in self.pem_files]
                 if os.path.abspath(pem_file) in existing_filepaths:
                     self.window().statusBar().showMessage('{} is already opened'.format(pem_file), 2000)
@@ -414,161 +501,31 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.loop_edit.setText('')
         self.window().statusBar().showMessage('All files removed', 2000)
 
-    def save_all(self):
-        if len(self.pem_files) > 0:
-            for row in range(self.table.rowCount()):
-                updated_file = self.update_pem_file_from_table(self.pem_files[row], row)
-                self.save_pem_file(updated_file)
-                self.window().statusBar().showMessage(
-                    'Save complete. {0} PEM files saved'.format(len(self.pem_files)), 2000)
-            self.update_table()
-        else:
-            self.window().statusBar().showMessage('No PEM files to save', 2000)
-
-    def save_all_to(self):
-        # Allows the user to select where to save all the files.
-
-        if len(self.pem_files) > 0:
-            default_path = os.path.split(self.pem_files[-1].filepath)[0]
-            # self.dialog.setFileMode(QFileDialog.ExistingFiles)
-            # self.dialog.setOption(QFileDialog.ShowDirsOnly, on=False)
-            self.dialog.setNameFilter('PEM Files (*.PEM)')
-            self.dialog.setAcceptMode(QFileDialog.AcceptSave)
-            self.dialog.setDirectory(default_path)
-            self.window().statusBar().showMessage('Saving PEM files...')
-            file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
-
-            if file_dir:
-                for row in range(self.table.rowCount()):
-                    pem_file = self.pem_files[row]
-                    updated_file = self.update_pem_file_from_table(self.pem_files[row], row)
-                    # file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
-                    # extension = os.path.splitext(pem_file.filepath)[-1]
-                    # updated_file.filepath = os.path.join(file_dir, file_name + extension)
-
-                    self.save_pem_file(updated_file, dir=file_dir)
-                    self.window().statusBar().showMessage(
-                        'Save complete. {0} PEM files saved'.format(len(self.pem_files)), 2000)
-                self.update_table()
-            else:
-                self.window().statusBar().showMessage('No directory chosen', 2000)
-                logging.info("No directory chosen, aborted save")
-                pass
-
-    def export_final_pems(self):
-        # Saves the files and removes any tags
-
-        pem_files_selection, rows = self.get_selected_pem_files()
-        if pem_files_selection:
-            pem_files = copy.copy(pem_files_selection)
-        else:
-            pem_files = copy.copy(self.pem_files)
-
-        self.window().statusBar().showMessage('Saving PEM files...')
-        default_path = os.path.split(self.pem_files[-1].filepath)[0]
-        self.dialog.setDirectory(default_path)
-        file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
-
-        if file_dir:
-            for i, pem_file in enumerate(pem_files):
-                updated_file = self.update_pem_file_from_table(pem_file, i)
-                file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
-                extension = os.path.splitext(pem_file.filepath)[-1]
-                new_file_name = re.sub('\[\w\]','', file_name)
-                updated_file.filepath = os.path.join(file_dir, new_file_name + extension)
-                self.save_pem_file(updated_file, dir=file_dir, export=True)
-
-            self.window().statusBar().showMessage(
-                'Save complete. {0} PEM files exported'.format(len(pem_files)), 2000)
-            # self.update_table()
-        else:
-            self.window().statusBar().showMessage('No directory chosen', 2000)
-            pass
-
-    def contextMenuEvent(self, event):
-        if self.table.underMouse():
-            if self.table.selectionModel().selectedIndexes():
-                self.table.menu = QMenu(self.table)
-                self.table.remove_file_action = QAction("&Remove", self)
-                self.table.remove_file_action.triggered.connect(self.remove_file_selection)
-
-                self.table.save_file_action = QAction("&Save", self)
-                self.table.save_file_action.triggered.connect(self.save_pem_file_selection)
-
-                self.table.save_file_as_action = QAction("&Save As...", self)
-                self.table.save_file_as_action.triggered.connect(self.save_as_pem_file_selection)
-
-                self.table.merge_action = QAction("&Merge", self)
-                self.table.merge_action.triggered.connect(self.merge_pem_files_selection)
-
-                self.table.average_action = QAction("&Average", self)
-                self.table.average_action.triggered.connect(self.average_select_pem)
-
-                self.table.split_action = QAction("&Split", self)
-                self.table.split_action.triggered.connect(self.split_select_pem)
-
-                self.table.scale_ca_action = QAction("&Coil Area", self)
-                self.table.scale_ca_action.triggered.connect(self.scale_coil_area_selection)
-
-                self.table.share_loop_action = QAction("&Share Loop", self)
-                self.table.share_loop_action.triggered.connect(self.share_loop)
-
-                self.table.rename_lines_action = QAction("&Rename Lines/Holes", self)
-                self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line', selected=True))
-
-                self.table.rename_files_action = QAction("&Rename Files", self)
-                self.table.rename_files_action.triggered.connect(lambda: self.batch_rename(type='File', selected=True))
-
-                self.table.menu.addAction(self.table.save_file_action)
-                if len(self.table.selectionModel().selectedRows()) == 1:
-                    self.table.menu.addAction(self.table.save_file_as_action)
-                self.table.menu.addAction(self.print_final_plots_action)
-                self.table.menu.addSeparator()
-                if len(self.table.selectionModel().selectedRows()) > 1:
-                    self.table.menu.addAction(self.table.merge_action)
-                self.table.menu.addAction(self.table.average_action)
-                self.table.menu.addAction(self.table.split_action)
-                self.table.menu.addAction(self.table.scale_ca_action)
-                if len(self.pem_files) > 1:
-                    self.table.menu.addAction(self.table.share_loop_action)
-                if len(self.table.selectionModel().selectedRows()) > 1:
-                    self.table.menu.addSeparator()
-                    self.table.menu.addAction(self.table.rename_lines_action)
-                    self.table.menu.addAction(self.table.rename_files_action)
-                self.table.menu.addSeparator()
-                self.table.menu.addAction(self.table.remove_file_action)
-
-                self.table.menu.popup(QtGui.QCursor.pos())
-            else:
-                pass
-        else:
-            pass
-
     def eventFilter(self, source, event):
         if (event.type() == QtCore.QEvent.MouseButtonPress and
                 source is self.table.viewport() and
                 self.table.itemAt(event.pos()) is None):
             self.table.clearSelection()
         elif source == self.table and event.type() == QtCore.QEvent.FocusIn:
-            self.del_file.setEnabled(True)   # Makes the 'Del' shortcut work when the table is in focus
+            self.del_file.setEnabled(True)  # Makes the 'Del' shortcut work when the table is in focus
         elif source == self.table and event.type() == QtCore.QEvent.FocusOut:
             self.del_file.setEnabled(False)
         elif source == self.table and event.type() == QtCore.QEvent.KeyPress:
             if len(self.pem_files) > 0:
                 if event.key() == QtCore.Qt.Key_Left:
                     current_tab = self.pem_info_widgets[0].tabs.currentIndex()
-                    self.change_pem_info_tab(current_tab-1)
+                    self.change_pem_info_tab(current_tab - 1)
                     return True
                 elif event.key() == QtCore.Qt.Key_Right:
                     current_tab = self.pem_info_widgets[0].tabs.currentIndex()
-                    self.change_pem_info_tab(current_tab+1)
+                    self.change_pem_info_tab(current_tab + 1)
                     return True
                 elif event.key() == QtCore.Qt.Key_Escape:
                     self.table.clearSelection()
                     return True
         elif source == self.table and event.type() == QtCore.QEvent.Wheel and event.modifiers() == QtCore.Qt.ShiftModifier:
             pos = self.table.horizontalScrollBar().value()
-            if event.angleDelta().y()<0:  # Wheel moved down so scroll to the right
+            if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
                 self.table.horizontalScrollBar().setValue(pos + 20)
             else:
                 self.table.horizontalScrollBar().setValue(pos - 20)
@@ -651,14 +608,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def scale_coil_area_selection(self):
         coil_area, okPressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:")
         if okPressed:
-            rows = []
-            for i in self.table.selectedIndexes():
-                if i.row() not in rows:
-                    rows.append(i.row())
+            pem_files, rows = self.get_selected_pem_files()
 
-            for row in rows:
+            for pem_file, row in zip(pem_files, rows):
                 coil_column = self.columns.index('Coil Area')
-                pem_file = self.pem_files[row]
                 self.scale_coil_area(pem_file, coil_area)
                 self.table.item(row, coil_column).setText(str(coil_area))
 
@@ -668,12 +621,36 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if okPressed:
                 for i, pem_file in enumerate(self.pem_files):
                     coil_column = self.columns.index('Coil Area')
+                    self.scale_coil_area(pem_file, coil_area)
                     self.table.item(i, coil_column).setText(str(coil_area))
+
+    def scale_current(self, pem_file, new_current):
+        pem_file = self.file_editor.scale_current(pem_file, new_current)
+        self.update_table()
+
+    def scale_current_selection(self):
+        current, okPressed = QInputDialog.getInt(self, "Scale Current", "Current:")
+        if okPressed:
+            pem_files, rows = self.get_selected_pem_files()
+
+            for pem_file, row in zip(pem_files, rows):
+                coil_column = self.columns.index('Current')
+                self.scale_current(pem_file, current)
+                self.table.item(row, coil_column).setText(str(current))
+
+    def scale_all_current(self):
+        if len(self.pem_files) > 0:
+            current, okPressed = QInputDialog.getInt(self, "Scale Current", "Current:")
+            if okPressed:
+                for i, pem_file in enumerate(self.pem_files):
+                    current_col = self.columns.index('Current')
+                    self.scale_current(pem_file, current)
+                    self.table.item(i, current_col).setText(str(current))
 
     def merge_pem_files(self, pem_files):
 
         # Check that all selected files are the same in terms of being averaged and being split
-        def pem_files_eligible(pem_files_list):
+        def pem_files_eligible():
             if all([pem_file.is_averaged() for pem_file in pem_files]) or all(
                     [not pem_file.is_averaged() for pem_file in pem_files]):
                 if all([pem_file.is_split() for pem_file in pem_files]) or all(
@@ -684,7 +661,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if isinstance(pem_files, list) and len(pem_files) > 1:
             # Data merging section
-            if pem_files_eligible(pem_files):
+            if pem_files_eligible():
                 merged_pem = copy.copy(pem_files[0])
                 merged_pem.data = list(chain.from_iterable([pem_file.data for pem_file in pem_files]))
                 merged_pem.header['NumReadings'] = str(sum(
@@ -693,14 +670,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 # Add the '[M]'
                 merged_pem.filepath = os.path.splitext(merged_pem.filepath)[0] + '[M]' + \
                                       os.path.splitext(merged_pem.filepath)[1]
-
                 return merged_pem
-
             else:
                 self.message.information(None, 'Error',
                                          'Must select multiple PEM files')
                 return
-
         else:
             self.message.information(None, 'Error',
                                      'All PEM files must be the same with regards to being averaged and channels being split')
@@ -725,14 +699,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.message.information(None, 'Error', 'Must select multiple PEM Files')
 
     def table_value_changed(self, row, col):
-        if col == self.columns.index('Coil Area'):
-            pem_file = self.pem_files[row]
-            old_value = int(pem_file.header.get('CoilArea'))
-            new_value = int(self.table.item(row, col).text())
-            if int(old_value) != int(new_value):
-                self.scale_coil_area(pem_file, int(new_value))
-                self.window().statusBar().showMessage(
-                    'Coil area changed from {0} to {1}'.format(str(old_value), str(new_value)), 2000)
+        # if col == self.columns.index('Coil Area'):
+        #     pem_file = self.pem_files[row]
+        #     old_value = int(pem_file.header.get('CoilArea'))
+        #     new_value = int(self.table.item(row, col).text())
+        #     if int(old_value) != int(new_value):
+        #         self.scale_coil_area(pem_file, int(new_value))
+        #         self.window().statusBar().showMessage(
+        #             'Coil area changed from {0} to {1}'.format(str(old_value), str(new_value)), 2000)
 
         if col == self.columns.index('File'):
             pem_file = self.pem_files[row]
@@ -751,6 +725,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     'File renamed to {}'.format(str(new_name)), 2000)
 
         pem_file = self.pem_files[row]
+        # self.update_pem_file_from_table(pem_file, row)
         self.check_for_table_changes(pem_file, row)
         self.check_for_table_anomalies()
 
@@ -812,7 +787,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         pem_file.tags['Current'] = self.table.item(table_row, self.columns.index('Current')).text()
         pem_file.loop_coords = self.stackedWidget.widget(table_row).get_loop_gps()
 
-        if 'surface' in pem_file.get_survey_type().lower():
+        if 'surface' in pem_file.get_survey_type().lower() or 'squid' in pem_file.get_survey_type().lower():
             pem_file.line_coords = self.stackedWidget.widget(table_row).get_station_gps()
         elif 'borehole' in pem_file.get_survey_type().lower():
             collar_gps = self.stackedWidget.widget(table_row).get_collar_gps()
@@ -822,6 +797,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         return pem_file
 
     def save_pem_file(self, pem_file, dir=None, export=False):
+        # The action of saving a PEM file
         if dir is None:
             file_dir = os.path.split(pem_file.filepath)[0]
         else:
@@ -833,7 +809,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if not export:
             if pem_file.is_merged:
                 if '[M]' in file_name:
-                    file_name = re.sub('\[M\]','', file_name)
+                    file_name = re.sub('\[M\]', '', file_name)
                     file_name = '[M]' + file_name
                     # file_name += '[M]'
                     overwrite = False
@@ -845,7 +821,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if pem_file.unaveraged_data:
                 if '[A]' not in file_name:
                     # file_name += '[A]'
-                    file_name = '[A]'+file_name
+                    file_name = '[A]' + file_name
                     overwrite = False
 
         pem_file.filepath = os.path.join(file_dir + '/' + file_name + extension)
@@ -856,19 +832,51 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             os.remove(pem_file.old_filepath)
             pem_file.old_filepath = None
 
+    def save_pem_file_to(self, all=False):
+        # Saving PEM files to new directory
+        if all is False:
+            pem_files, rows = self.get_selected_pem_files()
+        else:
+            pem_files, rows = self.pem_files, range(self.table.rowCount())
+        default_path = os.path.split(self.pem_files[-1].filepath)[0]
+        self.dialog.setFileMode(QFileDialog.ExistingFiles)
+        self.dialog.setAcceptMode(QFileDialog.AcceptSave)
+        self.dialog.setDirectory(default_path)
+        self.window().statusBar().showMessage('Saving PEM files...')
+        file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
+
+        if file_dir:
+            for pem_file, row in zip(pem_files, rows):
+                pem_file = copy.copy(pem_file)
+                updated_file = self.update_pem_file_from_table(pem_file, row)
+
+                self.save_pem_file(updated_file, dir=file_dir)
+            self.window().statusBar().showMessage(
+                'Save Complete. PEM files saved to {}'.format(os.path.basename(file_dir)), 2000)
+        else:
+            self.window().statusBar().showMessage('No folder selected', 2000)
+
     # Save selected PEM files
-    def save_pem_file_selection(self):
-        pem_files, rows = self.get_selected_pem_files()
+    def save_pem_file_selection(self, all=False):
+        # Saving PEM files to same directory
+        if all is False:
+            pem_files, rows = self.get_selected_pem_files()
+        else:
+            pem_files, rows = self.pem_files, range(self.table.rowCount())
 
         for row, pem_file in zip(rows, pem_files):
             updated_file = self.update_pem_file_from_table(pem_file, row)
             self.save_pem_file(updated_file)
             self.pem_info_widgets[row].open_file(updated_file, parent=self)  # Updates the PEMInfoWidget tables
+        if len(pem_files) == 1:
             self.parent.window().statusBar().showMessage(
-                'File {} saved.'.format(os.path.basename(updated_file.filepath)), 2000)
-            self.update_table()
+                'Save Complete. PEM file {} saved.'.format(os.path.basename(pem_files[0].filepath)), 2000)
+        else:
+            self.parent.window().statusBar().showMessage(
+                'Save Complete. {} files saved.'.format(str(len(pem_files))), 2000)
+        self.update_table()
 
-    def save_as_pem_file_selection(self):  # Only saves a single file
+    def save_pem_file_as(self):  # Only saves a single file
         row = self.table.currentRow()
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
         self.dialog.setFileMode(QFileDialog.ExistingFiles)
@@ -884,9 +892,39 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             self.save_pem_file(updated_file)
             self.window().statusBar().showMessage(
-                'Save complete. PEM files saved as {}'.format(os.path.basename(file_path)), 2000)
+                'Save Complete. PEM file saved as {}'.format(os.path.basename(file_path)), 2000)
         else:
             self.window().statusBar().showMessage('No folder selected')
+
+    def export_final_pems(self):
+        # Saves the files and removes any tags
+
+        pem_files_selection, rows = self.get_selected_pem_files()
+        if pem_files_selection:
+            pem_files = copy.copy(pem_files_selection)
+        else:
+            pem_files = copy.copy(self.pem_files)
+
+        self.window().statusBar().showMessage('Saving PEM files...')
+        default_path = os.path.split(self.pem_files[-1].filepath)[0]
+        self.dialog.setDirectory(default_path)
+        file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
+
+        if file_dir:
+            for i, pem_file in enumerate(pem_files):
+                updated_file = self.update_pem_file_from_table(pem_file, i)
+                file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
+                extension = os.path.splitext(pem_file.filepath)[-1]
+                new_file_name = re.sub('\[\w\]', '', file_name)
+                updated_file.filepath = os.path.join(file_dir, new_file_name + extension)
+                self.save_pem_file(updated_file, dir=file_dir, export=True)
+
+            self.window().statusBar().showMessage(
+                'Save complete. {0} PEM files exported'.format(len(pem_files)), 2000)
+            # self.update_table()
+        else:
+            self.window().statusBar().showMessage('No directory chosen', 2000)
+            pass
 
     def print_final_plots(self):
         self.window().statusBar().showMessage('Saving plots...')
@@ -1276,7 +1314,8 @@ def main():
     mw.show()
 
     sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-    file_names = [f for f in os.listdir(sample_files) if os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
+    file_names = [f for f in os.listdir(sample_files) if
+                  os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
     file_paths = []
 
     for file in file_names:
@@ -1294,4 +1333,3 @@ if __name__ == '__main__':
 
     p.sort_stats('cumulative').print_stats(.5)
     # p.sort_stats('time', 'cumulative').print_stats()
-

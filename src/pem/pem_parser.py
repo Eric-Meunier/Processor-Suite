@@ -130,7 +130,7 @@ class PEMParser:
     def survey_type(self, header):
         survey_type = header['SurveyType']
 
-        if survey_type.casefold() == 's-coil':
+        if survey_type.casefold() == 's-coil' or survey_type.casefold() == 'surface':
             survey_type = 'Surface Induction'
         elif survey_type.casefold() == 'borehole':
             survey_type = 'Borehole Induction'

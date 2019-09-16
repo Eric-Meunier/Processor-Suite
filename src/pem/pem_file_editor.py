@@ -59,8 +59,9 @@ class PEMFileEditor:
                             total_stacks += int(reading['NumStacks'])
                             unique_station_readings.append(reading['Data'])
                         # if station == '900S':
-                        stack_weights = np.array(stack_weights, dtype=object)/total_stacks
-                        averaged_reading = np.average(np.array(unique_station_readings, dtype=float), axis=0, weights=stack_weights)
+                        stack_weights = np.array(stack_weights, dtype=object) / total_stacks
+                        averaged_reading = np.average(np.array(unique_station_readings, dtype=float), axis=0,
+                                                      weights=stack_weights)
 
                         for k, v in component_data[0].items():
                             if k not in unwanted_keys:
@@ -80,7 +81,7 @@ class PEMFileEditor:
 
         def get_offtime_channels(channel_times):
             ontime_channels = list(filter(lambda x: x <= 0, channel_times))
-            num_ontime_channels = len(ontime_channels)-1
+            num_ontime_channels = len(ontime_channels) - 1
 
             remaining_channels = list(filter(lambda x: x > 0, channel_times))
             paired_channel_times = list(map(lambda x, y: (x, y), remaining_channels[:-1], remaining_channels[1:]))
@@ -102,7 +103,7 @@ class PEMFileEditor:
                 pp_times = (-0.0002, -0.0001)
                 for i, pair in enumerate(channel_pairs):
                     if float(pair[0]) == pp_times[0] and float(pair[1]) == pp_times[1]:
-                        return [(pp_times, i-1)]  # i offset by 1 because length difference with channel_times
+                        return [(pp_times, i - 1)]  # i offset by 1 because length difference with channel_times
             if 'fluxgate' or 'squid' in survey_type.lower():
                 return [(channel_pairs[0], 0)]
 
@@ -128,7 +129,7 @@ class PEMFileEditor:
                         pass
                 station['Data'] = off_time_readings
 
-            pem_file.header['NumChannels'] = str(len(kept_channels_indexes)-1)
+            pem_file.header['NumChannels'] = str(len(kept_channels_indexes) - 1)
             pem_file.header['ChannelTimes'] = [item[0] for item in kept_channels]
             pem_file.header['ChannelTimes'] = list(dict.fromkeys(list(sum(pem_file.header['ChannelTimes'], ()))))
 
@@ -138,13 +139,29 @@ class PEMFileEditor:
         new_coil_area = int(new_coil_area)
         old_coil_area = int(pem_file.header.get('CoilArea'))
 
-        scale_factor = Decimal(old_coil_area/new_coil_area)
+        scale_factor = Decimal(old_coil_area / new_coil_area)
 
         for i, station in enumerate(pem_file.data):
             for j, reading in enumerate(station['Data']):
                 pem_file.data[i]['Data'][j] = reading * scale_factor
         pem_file.header['CoilArea'] = str(new_coil_area)
-        pem_file.notes.append('<HE3> Data scaled by coil area change from {0} to {1}'.format(str(old_coil_area), str(new_coil_area)))
+        pem_file.notes.append(
+            '<HE3> Data scaled by coil area change from {0} to {1}'.format(str(old_coil_area), str(new_coil_area)))
+
+        return pem_file
+
+    def scale_current(self, pem_file, new_current):
+        new_current = int(new_current)
+        old_current = int(pem_file.tags.get('Current'))
+
+        scale_factor = Decimal(new_current / old_current)
+
+        for i, station in enumerate(pem_file.data):
+            for j, reading in enumerate(station['Data']):
+                pem_file.data[i]['Data'][j] = reading * scale_factor
+        pem_file.tags['Current'] = str(new_current)
+        pem_file.notes.append(
+            '<HE3> Data scaled by current change from {0}A to {1}A'.format(str(old_current), str(new_current)))
 
         return pem_file
 
@@ -154,7 +171,7 @@ class PEMFileEditor:
             old_num = int(re.findall('\d+', reading['Station'])[0])
             suffix = str(re.search('[NSEW]', reading['Station']))
             new_num = str(old_num + shift_amt)
-            reading['Station'] = str(new_num+suffix)
+            reading['Station'] = str(new_num + suffix)
         return pem_file
 
 

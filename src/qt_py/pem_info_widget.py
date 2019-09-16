@@ -38,8 +38,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.pem_file = None
         self.gps_editor = GPSEditor()
         self.gps_parser = GPSParser()
-        self.last_stn_shift_amt = 0
+        self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
+        self.last_stn_shift_amt = 0
         self.setupUi(self)
         self.initActions()
         self.initSignals()
@@ -90,11 +91,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.sortLoopButton.clicked.connect(self.sort_loop_gps)
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
 
-        self.flip_station_numbers_button.clicked.connect(self.reverse_station_numbers)
-        self.flip_station_signs_button.clicked.connect(self.flip_station_polarity)
+        self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
+        self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
 
-        self.shift_stations_spinbox.valueChanged.connect(self.shift_station_numbers)
+        self.shiftStationGPSSpinbox.valueChanged.connect(self.shift_gps_station_numbers)
         self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elev)
+        self.shiftStationSpinbox.valueChanged.connect(self.shift_station_numbers)
 
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
         self.stationGPSTable.cellChanged.connect(self.check_station_order)
@@ -171,9 +173,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         return self
 
     def initTables(self):
-        if 'surface' in self.pem_file.survey_type.lower():
+        if 'surface' in self.pem_file.survey_type.lower() or 'squid' in self.pem_file.survey_type.lower():
             self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
-            self.station_columns = ['Tags', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
+            self.station_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
             self.stationGPSTable.setColumnCount(len(self.station_columns))
             self.stationGPSTable.setHorizontalHeaderLabels(self.station_columns)
             self.stationGPSTable.setSizeAdjustPolicy(
@@ -182,21 +184,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         elif 'borehole' in self.pem_file.survey_type.lower():
             self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
-            self.geometry_columns = ['Tags', 'Azimuth', 'Dip', 'Seg. Length', 'Units', 'Depth']
+            self.geometry_columns = ['Tag', 'Azimuth', 'Dip', 'Seg. Length', 'Units', 'Depth']
             self.geometryTable.setColumnCount(len(self.geometry_columns))
             self.geometryTable.setHorizontalHeaderLabels(self.geometry_columns)
             self.geometryTable.setSizeAdjustPolicy(
                 QAbstractScrollArea.AdjustToContents)
             self.geometryTable.resizeColumnsToContents()
 
-            self.collar_columns = ['Tags', 'Easting', 'Northing', 'Elevation', 'Units']
+            self.collar_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units']
             self.collarGPSTable.setColumnCount(len(self.collar_columns))
             self.collarGPSTable.setHorizontalHeaderLabels(self.collar_columns)
             self.collarGPSTable.setSizeAdjustPolicy(
                 QAbstractScrollArea.AdjustToContents)
             self.collarGPSTable.resizeColumnsToContents()
 
-        self.loop_columns = ['Tags', 'Easting', 'Northing', 'Elevation', 'Units']
+        self.loop_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units']
         self.loopGPSTable.setColumnCount(len(self.loop_columns))
         self.loopGPSTable.setHorizontalHeaderLabels(self.loop_columns)
         self.loopGPSTable.setSizeAdjustPolicy(
@@ -350,11 +352,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pem_station_gps = self.pem_file.get_line_coords()
             self.add_station_gps(pem_station_gps)
 
-        # def init_collar_gps_text():
-        #     # Fill hole collar GPS
-        #     pem_collar_gps = self.pem_file.get_line_coords()
-        #     self.add_collar_gps(pem_collar_gps)
-
         def init_geometry_text():
             # Fill hole geometry collar GPS segments
             pem_geometry_text = self.pem_file.get_line_coords()
@@ -399,16 +396,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_collar_gps_table(self.gps_editor.get_collar_gps(file))
         if segments:
             self.fill_geometry_table(self.gps_editor.get_geometry(file))
-
-    # def add_collar_gps(self, file):
-    #     # gps = self.gps_parser.parse_collar_gps(file)
-    #     # if gps:
-    #     self.fill_collar_gps_table(self.gps_editor.get_collar_gps(file))
-    #
-    # def add_geometry(self, file):
-    #     # segments = self.gps_parser.parse_segments(file)
-    #     # if segments:
-    #     self.fill_geometry_table(self.gps_editor.get_geometry(file))
 
     def clear_table(self, table):
         table.blockSignals(True)
@@ -500,24 +487,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
-    def shift_station_numbers(self):
+    def shift_gps_station_numbers(self):
         def apply_station_shift(row):
             station_column = 5
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
                                                                                                               station_column) else None
             if station is not None or station == 0:
-                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_shift_amt)))
+                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_gps_shift_amt)))
                 new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.stationGPSTable.setItem(row, station_column, new_station_item)
             else:
                 pass
 
-        selected_rows = []
-        for i in self.stationGPSTable.selectedIndexes():
-            if i.row() not in selected_rows:
-                selected_rows.append(i.row())
+        selected_rows = [model.row() for model in self.stationGPSTable.selectionModel().selectedRows()]
 
-        shift_amount = self.shift_stations_spinbox.value()
+        shift_amount = self.shiftStationGPSSpinbox.value()
 
         if selected_rows:
             for row in selected_rows:
@@ -533,7 +517,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 except Exception as e:
                     print(str(e))
                     pass
-        self.last_stn_shift_amt = shift_amount
+        self.last_stn_gps_shift_amt = shift_amount
 
     def shift_station_easting(self):
         def apply_station_shift(row):
@@ -541,18 +525,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             station = int(self.stationGPSTable.item(row, easting_column).text()) if self.stationGPSTable.item(row,
                                                                                                               easting_column) else None
             if station is not None or station == 0:
-                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_shift_amt)))
+                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_gps_shift_amt)))
                 new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.stationGPSTable.setItem(row, easting_column, new_station_item)
             else:
                 pass
 
-        selected_rows = []
-        for i in self.stationGPSTable.selectedIndexes():
-            if i.row() not in selected_rows:
-                selected_rows.append(i.row())
+        selected_rows = [model.row() for model in self.stationGPSTable.selectionModel().selectedRows()]
 
-        shift_amount = self.shift_stations_spinbox.value()
+        shift_amount = self.shiftStationGPSSpinbox.value()
 
         if selected_rows:
             for row in selected_rows:
@@ -568,7 +549,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 except Exception as e:
                     print(str(e))
                     pass
-        self.last_stn_shift_amt = shift_amount
+        self.last_stn_gps_shift_amt = shift_amount
 
     def shift_station_northing(self):
         def apply_station_shift(row):
@@ -576,18 +557,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
                                                                                                               station_column) else None
             if station is not None or station == 0:
-                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_shift_amt)))
+                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_gps_shift_amt)))
                 new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.stationGPSTable.setItem(row, station_column, new_station_item)
             else:
                 pass
 
-        selected_rows = []
-        for i in self.stationGPSTable.selectedIndexes():
-            if i.row() not in selected_rows:
-                selected_rows.append(i.row())
+        selected_rows = [model.row() for model in self.stationGPSTable.selectionModel().selectedRows()]
 
-        shift_amount = self.shift_stations_spinbox.value()
+        shift_amount = self.shiftStationGPSSpinbox.value()
 
         if selected_rows:
             for row in selected_rows:
@@ -603,7 +581,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 except Exception as e:
                     print(str(e))
                     pass
-        self.last_stn_shift_amt = shift_amount
+        self.last_stn_gps_shift_amt = shift_amount
 
     def shift_loop_elev(self):
         def apply_elevation_shift(row):
@@ -619,10 +597,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 pass
 
         # TODO Add shifting based on table selection, also deleting rows and such
-        selected_rows = []
-        for i in self.loopGPSTable.selectedIndexes():
-            if i.row() not in selected_rows:
-                selected_rows.append(i.row())
+        selected_rows = [model.row() for model in self.loopGPSTable.selectionModel().selectedRows()]
 
         shift_amount = self.shift_elevation_spinbox.value()
 
@@ -642,7 +617,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     pass
         self.last_loop_elev_shift_amt = shift_amount
 
-    def flip_station_polarity(self):
+    def flip_station_gps_polarity(self):
         # Multiplies the station number by -1
 
         def flip_stn_num(row):
@@ -656,10 +631,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             else:
                 pass
 
-        selected_rows = []
-        for i in self.stationGPSTable.selectedIndexes():
-            if i.row() not in selected_rows:
-                selected_rows.append(i.row())
+        selected_rows = [model.row() for model in self.stationGPSTable.selectionModel().selectedRows()]
 
         if selected_rows:
             for row in selected_rows:
@@ -672,7 +644,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     print(str(e))
                     pass
 
-    def reverse_station_numbers(self):
+    def reverse_station_gps_numbers(self):
         # Flips the station numbers head-over-heals
         gps = self.get_station_gps()
         if gps:
@@ -735,6 +707,38 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.lcdDistance.display(0)
         else:
             self.lcdDistance.display(0)
+
+    def shift_station_numbers(self):
+        def apply_station_shift(row):
+            station_column = self.data_columns.index('Station')
+            if self.dataTable.item(row, station_column):
+                station = self.dataTable.item(row, station_column).text()
+            else:
+                station = None
+
+            if station is not None or station == 0:
+                station_num = int(re.findall('\d+', station)[0])
+                new_station_num = station_num + (shift_amount - self.last_stn_shift_amt)
+                new_station = re.sub(str(station_num), str(new_station_num), station)
+                new_station_item = QTableWidgetItem(str(new_station))
+                new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.pem_file.data[row]['Station'] = new_station
+                self.dataTable.setItem(row, station_column, new_station_item)
+            else:
+                pass
+
+        selected_rows = [model.row() for model in self.dataTable.selectionModel().selectedRows()]
+        shift_amount = self.shiftStationSpinbox.value()
+
+        if selected_rows:
+            for row in selected_rows:
+                apply_station_shift(row)
+
+        else:
+            if self.dataTable.rowCount() > 0:
+                for row in range(self.dataTable.rowCount()):
+                    apply_station_shift(row)
+        self.last_stn_shift_amt = shift_amount
 
     def get_loop_gps(self):
         table_gps = []
