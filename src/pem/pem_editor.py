@@ -15,10 +15,8 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QToolButton,
                              QInputDialog, QHeaderView)
 
-from src.gps.hole_geometry import GeometryParser
-from src.gps.loop_gps import LoopGPSParser
-from src.gps.station_gps import StationGPSParser
 from src.pem.pem_file import PEMFile
+from src.gps.gps_editor import GPSEditor, GPSParser
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_plotter import PEMPrinter
@@ -101,7 +99,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.message = QMessageBox()
         self.dialog = QFileDialog()
         # self.pem_info_widget = PEMFileInfoWidget()
-        self.station_gps_parser = StationGPSParser()
+        self.gps_parser = GPSParser()
         self.serializer = PEMSerializer()
 
         # self.layout.addWidget(self)

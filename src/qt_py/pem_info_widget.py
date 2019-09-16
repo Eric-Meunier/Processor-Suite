@@ -3,7 +3,7 @@ import math
 import os
 import re
 import sys
-
+import numpy as np
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QAction, QMenu)
 
@@ -97,6 +97,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elev)
 
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
+        self.stationGPSTable.cellChanged.connect(self.check_station_order)
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
 
         # self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
@@ -232,6 +233,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
             self.stationGPSTable.resizeColumnsToContents()
             self.check_station_duplicates()
+            self.check_station_order()
             self.stationGPSTable.blockSignals(False)
         else:
             pass
@@ -430,6 +432,25 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 stations.append(station)
         self.stationGPSTable.blockSignals(False)
 
+    def check_station_order(self):
+        self.stationGPSTable.blockSignals(True)
+        stations = [int(row[-1]) for row in self.get_station_gps()]
+        order = 'asc' if stations[-1] > stations[0] else 'desc'
+        sorted_stations = sorted(stations) if order == 'asc' else sorted(stations, reverse=True)
+
+        blue_color = QtGui.QColor('blue')
+        blue_color.setAlpha(50)
+        red_color = QtGui.QColor('red')
+        red_color.setAlpha(50)
+        for row in range(self.stationGPSTable.rowCount()):
+            if self.stationGPSTable.item(row, self.station_columns.index('Station')) and stations[row] > sorted_stations[row]:
+                self.stationGPSTable.item(row, self.station_columns.index('Station')).setBackground(blue_color)
+            elif self.stationGPSTable.item(row, self.station_columns.index('Station')) and stations[row] < sorted_stations[row]:
+                self.stationGPSTable.item(row, self.station_columns.index('Station')).setBackground(red_color)
+            else:
+                self.stationGPSTable.item(row, self.station_columns.index('Station')).setBackground(QtGui.QColor('white'))
+        self.stationGPSTable.blockSignals(False)
+
     def remove_table_row_selection(self, table):
         # Table (QWidgetTable) is either the loop, station, collar GPS, or geometry tables
 
@@ -480,7 +501,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def shift_station_numbers(self):
-
         def apply_station_shift(row):
             station_column = 5
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
@@ -516,7 +536,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_shift_amt = shift_amount
 
     def shift_station_easting(self):
-
         def apply_station_shift(row):
             easting_column = 1
             station = int(self.stationGPSTable.item(row, easting_column).text()) if self.stationGPSTable.item(row,
@@ -552,7 +571,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_shift_amt = shift_amount
 
     def shift_station_northing(self):
-
         def apply_station_shift(row):
             station_column = 5
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
@@ -588,7 +606,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_shift_amt = shift_amount
 
     def shift_loop_elev(self):
-
         def apply_elevation_shift(row):
             elevation_column = 3
             elevation = float(self.loopGPSTable.item(row, elevation_column).text()) if self.loopGPSTable.item(row,
@@ -690,7 +707,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #         pass
 
     def calc_distance(self):
-
         def get_row_gps(row):
             east_col = self.station_columns.index('Easting')
             north_col = self.station_columns.index('Northing')
