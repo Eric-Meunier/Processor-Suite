@@ -178,7 +178,7 @@ class PEMFileEditor:
         else:
             data = [pem_file.data[row] for row in rows]
         for reading in data:
-            station_num = int(re.findall('\d+', reading['Station'])[0])
+            station_num = int(re.findall('-?\d+', reading['Station'])[0])
             new_station_num = station_num + shift_amt
             new_station = re.sub(str(station_num), str(new_station_num), reading['Station'])
             reading['Station'] = new_station

@@ -328,6 +328,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     item.setTextAlignment(QtCore.Qt.AlignCenter)
                     self.dataTable.setItem(row_pos, m, item)
 
+            self.color_rows_by_component()
             self.dataTable.resizeColumnsToContents()
             self.dataTable.blockSignals(False)
         else:
@@ -343,7 +344,34 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.dataTable.setItem(row, m, item)
 
+        self.color_rows_by_component()
         self.dataTable.blockSignals(False)
+
+    def color_rows_by_component(self):
+
+        def color_row(row, color):
+            for col in range(self.dataTable.columnCount()):
+                item = self.dataTable.item(row, col)
+                item.setBackground(color)
+
+        z_color = QtGui.QColor('cyan')
+        z_color.setAlpha(50)
+        x_color = QtGui.QColor('magenta')
+        x_color.setAlpha(50)
+        y_color = QtGui.QColor('yellow')
+        y_color.setAlpha(50)
+        for row in range(self.dataTable.rowCount()):
+            item = self.dataTable.item(row, self.data_columns.index('Comp.'))
+            if item:
+                component = item.text()
+                if component == 'Z':
+                    color_row(row, z_color)
+                elif component == 'X':
+                    color_row(row, x_color)
+                elif component == 'Y':
+                    color_row(row, y_color)
+                else:
+                    color_row(row, 'white')
 
     def fill_info(self):
         logging.info('PEMInfoWidget: fill_info')
@@ -513,7 +541,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def shift_gps_station_numbers(self):
         def apply_station_shift(row):
-            station_column = 5
+            station_column = self.station_columns.index('Station')
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
                                                                                                               station_column) else None
             if station is not None or station == 0:
@@ -769,8 +797,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         selected_rows = [model.row() for model in self.dataTable.selectionModel().selectedRows()]
         if not selected_rows:
             selected_rows = range(self.dataTable.rowCount())
-        shift_amount = self.shiftStationSpinbox.value() - self.last_stn_shift_amt
-        self.pem_file = self.file_editor.shift_stations(self.pem_file, shift_amount, rows=selected_rows)
+        shift_amount = self.shiftStationSpinbox.value()
+        self.pem_file = self.file_editor.shift_stations(self.pem_file, shift_amount - self.last_stn_shift_amt, rows=selected_rows)
         self.update_data_table()
         self.dataTable.resizeColumnsToContents()
         self.last_stn_shift_amt = shift_amount
@@ -785,6 +813,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.update_data_table()
         self.dataTable.resizeColumnsToContents()
         self.window().statusBar().showMessage('Polarity flipped.', 2000)
+
+    # def change_station_suffix(self):
 
     def get_loop_gps(self):
         table_gps = []

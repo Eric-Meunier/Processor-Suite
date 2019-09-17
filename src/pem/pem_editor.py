@@ -786,7 +786,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     # Saves the pem file in memory using the information in the table
     def update_pem_file_from_table(self, pem_file, table_row, filepath=None):
         if filepath is None:
-            pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0], self.table.item(table_row, 0).text())
+            pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0], self.table.item(table_row, self.columns.index('File')).text())
         else:
             pem_file.filepath = filepath
         pem_file.header['Date'] = self.table.item(table_row, self.columns.index('Date')).text()
@@ -802,7 +802,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         elif 'borehole' in pem_file.get_survey_type().lower():
             collar_gps = self.stackedWidget.widget(table_row).get_collar_gps()
             segments = self.stackedWidget.widget(table_row).get_geometry_segments()
-            pem_file.line_coords = collar_gps + segments
+            # line_coords = [item for sublist in segments for item in collar_gps]
+            pem_file.line_coords = [collar_gps]+segments
 
         return pem_file
 
