@@ -395,8 +395,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     item.setTextAlignment(QtCore.Qt.AlignCenter)
                     self.dataTable.setItem(row_pos, m, item)
 
-            self.color_rows_by_component()
-            self.color_wrong_suffix()
+            self.color_data_table()
             self.dataTable.resizeColumnsToContents()
             self.dataTable.blockSignals(False)
         else:
@@ -415,8 +414,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.dataTable.setItem(row, m, item)
 
-        self.color_rows_by_component()
-        self.color_wrong_suffix()
+        self.color_data_table()
         self.dataTable.blockSignals(False)
 
     def update_pem_from_table(self, table_row, table_col):
@@ -431,65 +429,87 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         table_value = self.dataTable.item(table_row, table_col).text()
         data[table_row][column_keys[table_col]] = table_value
 
-        self.color_rows_by_component()
-        self.color_wrong_suffix()
+        self.color_data_table()
         self.dataTable.blockSignals(False)
 
-    def color_rows_by_component(self):
-        """
-        Color the rows in dataTable by component
-        """
+    def color_data_table(self):
 
-        def color_row(row, color):
-            for col in range(self.dataTable.columnCount()):
-                item = self.dataTable.item(row, col)
-                item.setBackground(color)
+        def color_rows_by_component():
+            """
+            Color the rows in dataTable by component
+            """
 
-        z_color = QtGui.QColor('cyan')
-        z_color.setAlpha(50)
-        x_color = QtGui.QColor('magenta')
-        x_color.setAlpha(50)
-        y_color = QtGui.QColor('yellow')
-        y_color.setAlpha(50)
-        white_color = QtGui.QColor('white')
-        for row in range(self.dataTable.rowCount()):
-            item = self.dataTable.item(row, self.data_columns.index('Comp.'))
-            if item:
-                component = item.text()
-                if component == 'Z':
-                    color_row(row, z_color)
-                elif component == 'X':
-                    color_row(row, x_color)
-                elif component == 'Y':
-                    color_row(row, y_color)
-                else:
-                    color_row(row, white_color)
+            def color_row(row, color):
+                for col in range(self.dataTable.columnCount()):
+                    item = self.dataTable.item(row, col)
+                    item.setBackground(color)
 
-    def color_wrong_suffix(self):
-        """
-        Color the dataTable rows where the suffix is different from the mode
-        """
+            z_color = QtGui.QColor('cyan')
+            z_color.setAlpha(50)
+            x_color = QtGui.QColor('magenta')
+            x_color.setAlpha(50)
+            y_color = QtGui.QColor('yellow')
+            y_color.setAlpha(50)
+            white_color = QtGui.QColor('white')
+            for row in range(self.dataTable.rowCount()):
+                item = self.dataTable.item(row, self.data_columns.index('Comp.'))
+                if item:
+                    component = item.text()
+                    if component == 'Z':
+                        color_row(row, z_color)
+                    elif component == 'X':
+                        color_row(row, x_color)
+                    elif component == 'Y':
+                        color_row(row, y_color)
+                    else:
+                        color_row(row, white_color)
 
-        def most_common_suffix():
-            suffixes = []
-            for reading in self.pem_file.data:
-                station = reading['Station'].upper()
-                suffix = re.findall('[NSEW]', station)
-                if suffix:
-                    suffixes.append(suffix[0])
-            return statistics.mode(suffixes)
+        def color_wrong_suffix():
+            """
+            Color the dataTable rows where the suffix is different from the mode
+            """
 
-        if 'surface' in self.pem_file.survey_type.lower() or 'squid' in self.pem_file.survey_type.lower():
-            correct_suffix = most_common_suffix()
+            def most_common_suffix():
+                suffixes = []
+                for reading in self.pem_file.data:
+                    station = reading['Station'].upper()
+                    suffix = re.findall('[NSEW]', station)
+                    if suffix:
+                        suffixes.append(suffix[0])
+                return statistics.mode(suffixes)
 
+            if 'surface' in self.pem_file.survey_type.lower() or 'squid' in self.pem_file.survey_type.lower():
+                correct_suffix = most_common_suffix()
+
+                for row in range(self.dataTable.rowCount()):
+                    item = self.dataTable.item(row, self.data_columns.index('Station'))
+                    if item:
+                        station_suffix = re.findall('[NSEW]', item.text().upper())
+                        if not station_suffix or station_suffix[0] != correct_suffix:
+                            item.setForeground(QtGui.QColor('red'))
+                        else:
+                            item.setForeground(QtGui.QColor('black'))
+
+        def bolden_repeat_stations():
+            """
+            Makes the station number cell bold if it ends with '1'
+            """
+            boldFont = QtGui.QFont()
+            boldFont.setBold(True)
+            normalFont = QtGui.QFont()
+            normalFont.setBold(False)
             for row in range(self.dataTable.rowCount()):
                 item = self.dataTable.item(row, self.data_columns.index('Station'))
                 if item:
-                    station_suffix = re.findall('[NSEW]', item.text().upper())
-                    if not station_suffix or station_suffix[0] != correct_suffix:
-                        item.setForeground(QtGui.QColor('red'))
+                    station_num = re.findall('\d+', item.text())[0]
+                    if station_num[-1] == '1' or station_num[-1] == '6':
+                        item.setFont(boldFont)
                     else:
-                        item.setForeground(QtGui.QColor('black'))
+                        item.setFont(normalFont)
+
+        color_rows_by_component()
+        color_wrong_suffix()
+        bolden_repeat_stations()
 
     def fill_info(self):
         logging.info('PEMInfoWidget: fill_info')
@@ -504,7 +524,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             else:
                 linetype = 'Hole'
 
-            self.info_text_edit.append('<html><b>Operator: </b</html> {operator}'.format(operator=operator))
+            # Set text first to remove anything that was there bofore
+            self.info_text_edit.setText('<html><b>Operator: </b</html> {operator}'.format(operator=operator))
             self.info_text_edit.append('<html><b>Loop Size: </b</html> {loop_size}'.format(loop_size=loop_size))
             # Fill the info tab
             for k, v in header.items():

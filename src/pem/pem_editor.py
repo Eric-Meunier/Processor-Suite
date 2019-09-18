@@ -772,15 +772,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             new_value = self.table.item(row, col).text()
 
             if new_value != os.path.basename(pem_file.filepath):
-                if pem_file.old_filepath is None:
-                    pem_file.old_filepath = old_path
-
-                new_name = self.table.item(row, col).text()
-                new_path = '/'.join(old_path.split('/')[:-1]) + '/' + new_name
-
+                # if pem_file.old_filepath is None:
+                pem_file.old_filepath = old_path
+                new_path = '/'.join(old_path.split('/')[:-1]) + '/' + new_value
                 pem_file.filepath = new_path
                 self.window().statusBar().showMessage(
-                    'File renamed to {}'.format(str(new_name)), 2000)
+                    'File renamed to {}'.format(str(new_value)), 2000)
 
         pem_file = self.pem_files[row]
         # self.update_pem_file_from_table(pem_file, row)
@@ -958,11 +955,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def export_final_pems(self):
         # Saves the files and removes any tags
 
-        pem_files_selection, rows = self.get_selected_pem_files()
-        if pem_files_selection:
-            pem_files = copy.copy(pem_files_selection)
-        else:
-            pem_files = copy.copy(self.pem_files)
+        pem_files, rows = self.get_selected_pem_files()
+        if not pem_files:
+            pem_files, rows = copy.copy(self.pem_files), range(self.table.rowCount())
 
         self.window().statusBar().showMessage('Saving PEM files...')
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
@@ -970,11 +965,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
 
         if file_dir:
-            for i, pem_file in enumerate(pem_files):
-                updated_file = self.update_pem_file_from_table(pem_file, i)
+            for pem_file, row in zip(pem_files, rows):
+                updated_file = self.update_pem_file_from_table(pem_file, row)
                 file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
                 extension = os.path.splitext(pem_file.filepath)[-1]
-                new_file_name = re.sub('\[\w\]', '', file_name)
+                new_file_name = re.sub('_\d+', '', re.sub('\[\w\]', '', file_name))
                 updated_file.filepath = os.path.join(file_dir, new_file_name + extension)
                 self.save_pem_file(updated_file, dir=file_dir, export=True)
 
