@@ -11,7 +11,7 @@ from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.2.3'
+__version__ = '0.2.4'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -170,6 +170,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.toolbar.addWidget(self.pem_editor_button)
         self.toolbar.addWidget(self.db_plot_button)
         self.toolbar.addWidget(self.conder_button)
+
+    # def keyPressEvent(self, e):
+    #     if e.type() == QtCore.QEvent.KeyPress:
+    #         if e.modifiers() == QtCore.Qt.AltModifier:
+    #             e.ignore()
 
     def close_all_windows(self):
         if self.mdiArea.subWindowList():

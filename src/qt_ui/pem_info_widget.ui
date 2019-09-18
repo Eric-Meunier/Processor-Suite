@@ -433,14 +433,14 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton">
+           <widget class="QPushButton" name="changeStationSuffixButton">
             <property name="text">
              <string>Change Suffix</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_2">
+           <widget class="QPushButton" name="changeComponentButton">
             <property name="text">
              <string>Change Component</string>
             </property>

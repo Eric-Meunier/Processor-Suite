@@ -116,24 +116,7 @@ class PEMFile:
         return profile_data
 
     def get_survey_type(self):
-        survey_type = self.header['SurveyType']
-
-        if survey_type.casefold() == 's-coil':
-            survey_type = 'Surface Induction'
-        elif survey_type.casefold() == 'borehole':
-            survey_type = 'Borehole Induction'
-        elif survey_type.casefold() == 'b-rad':
-            survey_type = 'Borehole Induction'
-        elif survey_type.casefold() == 's-flux':
-            survey_type = 'Surface Fluxgate'
-        elif survey_type.casefold() == 'bh-flux':
-            survey_type = 'Borehole Fluxgate'
-        elif survey_type.casefold() == 's-squid':
-            survey_type = 'SQUID'
-        else:
-            survey_type = 'UNDEF_SURV'
-
-        return survey_type
+        return self.survey_type
 
     def save_file(self):
         ps = PEMSerializer()

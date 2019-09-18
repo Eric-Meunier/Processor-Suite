@@ -151,8 +151,8 @@ class PEMFileEditor:
         return pem_file
 
     def scale_current(self, pem_file, new_current):
-        new_current = int(new_current)
-        old_current = int(pem_file.tags.get('Current'))
+        new_current = float(new_current)
+        old_current = float(pem_file.tags.get('Current'))
 
         scale_factor = Decimal(new_current / old_current)
 
