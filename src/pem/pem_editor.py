@@ -246,7 +246,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.remove_file_action.triggered.connect(self.remove_file_selection)
 
                 self.table.open_file_action = QAction("&Open", self)
-                self.table.open_file_action.triggered.connect(self.open_in_text)
+                self.table.open_file_action.triggered.connect(self.open_in_text_editor)
 
                 self.table.save_file_action = QAction("&Save", self)
                 self.table.save_file_action.triggered.connect(self.save_pem_file_selection)
@@ -342,7 +342,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         return super(QWidget, self).eventFilter(source, event)
 
-    def open_in_text(self):
+    def open_in_text_editor(self):
         """
         Open the selected PEM File in a text editor
         """
@@ -531,14 +531,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             if station_gps_tab == current_tab:
                 pem_info_widget.add_station_gps(file)
-
             elif geometry_tab == current_tab:
                 # pem_info_widget.add_collar_gps(file)
                 pem_info_widget.add_geometry(file)
-
             elif loop_gps_tab == current_tab:
                 pem_info_widget.add_loop_gps(file)
-
             else:
                 pass
 

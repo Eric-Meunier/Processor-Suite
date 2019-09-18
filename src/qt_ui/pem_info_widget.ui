@@ -433,16 +433,16 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="changeStationSuffixButton">
+           <widget class="QPushButton" name="changeComponentButton">
             <property name="text">
-             <string>Change Suffix</string>
+             <string>Change Component</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="changeComponentButton">
+           <widget class="QPushButton" name="changeStationSuffixButton">
             <property name="text">
-             <string>Change Component</string>
+             <string>Change Suffix</string>
             </property>
            </widget>
           </item>
@@ -459,10 +459,25 @@
             </property>
            </spacer>
           </item>
+          <item>
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Duplicates Stations:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLCDNumber" name="lcdDuplicates"/>
+          </item>
          </layout>
         </widget>
        </item>
       </layout>
+     </widget>
+     <widget class="QWidget" name="RIFileTab">
+      <attribute name="title">
+       <string>RI File</string>
+      </attribute>
      </widget>
     </widget>
    </item>

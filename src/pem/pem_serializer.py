@@ -58,9 +58,14 @@ class PEMSerializer:
         return result
 
     def serialize_notes(self, notes):
+        results = []
         if not notes:
             return ''
-        return '\n'.join(notes) + '\n'
+        else:
+            for line in notes:
+                if line not in results:
+                    results.append(line)
+        return '\n'.join(results) + '\n'
 
     def serialize_header(self, header):
         result_list = [header['Client'],

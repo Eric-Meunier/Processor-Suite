@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QMainWindow, QAction, QApplication, QGridLayout, QF
                              QTableWidgetItem, QHeaderView, QAbstractScrollArea, QMessageBox)
 from src.pem.pem_parser import PEMParser
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader

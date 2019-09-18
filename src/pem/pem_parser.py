@@ -33,20 +33,20 @@ class PEMParser:
 
         # Notes i.e. GEN and HE tags
         self.re_notes = re.compile(  # Parsing the notes i.e. GEN tags and HE tags
-            r'(?P<Notes><GEN>.*|<HE\d>.*)',
+            r'^(?P<Notes><GEN>.*|<HE\d>.*)',
             re.MULTILINE
         )
 
         # Header starting from 'Client' to the channel start-end times
         self.re_header = re.compile(  # Parsing the header
-            r'(^(<|~).*[\r\n]+)'
+            r'^((<|~).*[\r\n]+)'
             r'(?P<Client>\w.*)[\r\n]'
             r'(?P<Grid>.*)[\r\n]'
             r'(?P<LineHole>.*)[\r\n]'
             r'(?P<Loop>.*)[\r\n]'
             r'(?P<Date>.*)[\r\n]'
-            r'^(?P<SurveyType>.*)\s(?P<Convension>Metric|Imperial)\s(?P<Sync>Crystal-Master|Crystal-Slave|Cable)\s(?P<Timebase>\d+\.?\d+)\s(?P<Ramp>\d+)\s(?P<NumChannels>\d+)\s(?P<NumReadings>\d+)[\r\n]'
-            r'^(?P<Receiver>#\d+)\s(?P<RxSoftwareVer>[\d.]+)\s(?P<RxSoftwareVerDate>[\w]+,[\w]+)\s(?P<RxFileName>[^\s]+)\s(?P<IsNormalized>[\w]+)\s(?P<PrimeFieldValue>\d+)\s(?P<CoilArea>-?\d+)\s(?P<LoopPolarity>-|\+)?[\n\r]+'
+            r'(?P<SurveyType>.*)\s(?P<Convension>Metric|Imperial)\s(?P<Sync>Crystal-Master|Crystal-Slave|Cable)\s(?P<Timebase>\d+\.?\d+)\s(?P<Ramp>\d+)\s(?P<NumChannels>\d+)\s(?P<NumReadings>\d+)[\r\n]'
+            r'(?P<Receiver>#\d+)\s(?P<RxSoftwareVer>[\d.]+)\s(?P<RxSoftwareVerDate>[\w]+,[\w]+)\s(?P<RxFileName>[^\s]+)\s(?P<IsNormalized>[\w]+)\s(?P<PrimeFieldValue>\d+)\s(?P<CoilArea>-?\d+)\s(?P<LoopPolarity>-|\+)?[\n\r]+'
             r'(?P<ChannelTimes>[\W\w]+)[\r\n]\$',
             re.MULTILINE)
 

@@ -195,6 +195,7 @@ class GPSParser:
         if isinstance(gps, list):
             for i, row in enumerate(gps):
                 if isinstance(row, list):
+                    row = list(map(lambda x: str(x), row))
                     row_str = ' '.join(row)
                     gps[i] = row_str
                 else:
@@ -224,6 +225,7 @@ class GPSParser:
         if isinstance(gps, list):
             for i, row in enumerate(gps):
                 if isinstance(row, list):
+                    row = list(map(lambda x: str(x), row))
                     row_str = ' '.join(row)
                     gps[i] = row_str
                 else:
@@ -245,6 +247,7 @@ class GPSParser:
         if isinstance(file, list):
             for i, row in enumerate(file):  # Convert to str for re purposes
                 if isinstance(row, list):
+                    row = list(map(lambda x: str(x), row))
                     row_str = ' '.join(row)
                     file[i] = row_str
                 else:
@@ -265,6 +268,7 @@ class GPSParser:
         if isinstance(file, list):
             for i, row in enumerate(file):  # Convert to str for re purposes
                 if isinstance(row, list):
+                    row = list(map(lambda x: str(x), row))
                     row_str = ' '.join(row)
                     file[i] = row_str
                 else:
@@ -295,10 +299,10 @@ def main():
     for file in file_names:
         file_paths.append(join(samples_path, file))
 
-    gps_file = StationGPSParser
+    gps_file = GPSParser()
 
     file = r'C:\Users\Eric\Desktop\7600N.PEM'
-    gps_file().open(file)
+    gps_file.open(file)
 
 
 if __name__ == '__main__':

@@ -179,21 +179,37 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.stationGPSTable.remove_row_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
                 self.stationGPSTable.remove_row_action.setEnabled(False)
+            elif event.type() == QtCore.QEvent.KeyPress:
+                if event.key() == QtCore.Qt.Key_Escape:
+                    self.stationGPSTable.clearSelection()
+                    return True
         elif source is self.loopGPSTable:
             if event.type() == QtCore.QEvent.FocusIn:
                 self.loopGPSTable.remove_row_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
                 self.loopGPSTable.remove_row_action.setEnabled(False)
+            elif event.type() == QtCore.QEvent.KeyPress:
+                if event.key() == QtCore.Qt.Key_Escape:
+                    self.loopGPSTable.clearSelection()
+                    return True
         elif source is self.collarGPSTable:
             if event.type() == QtCore.QEvent.FocusIn:
                 self.collarGPSTable.remove_row_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
                 self.collarGPSTable.remove_row_action.setEnabled(False)
+            elif event.type() == QtCore.QEvent.KeyPress:
+                if event.key() == QtCore.Qt.Key_Escape:
+                    self.collarGPSTable.clearSelection()
+                    return True
         elif source is self.geometryTable:
             if event.type() == QtCore.QEvent.FocusIn:
                 self.geometryTable.remove_row_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
                 self.geometryTable.remove_row_action.setEnabled(False)
+            elif event.type() == QtCore.QEvent.KeyPress:
+                if event.key() == QtCore.Qt.Key_Escape:
+                    self.geometryTable.clearSelection()
+                    return True
         elif source is self.dataTable:
             if event.type() == QtCore.QEvent.KeyPress:
                 if event.key() == QtCore.Qt.Key_F and event.modifiers() == QtCore.Qt.ShiftModifier:
@@ -201,6 +217,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     return True
                 elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ShiftModifier:
                     self.change_component()
+                    return True
+                elif event.key() == QtCore.Qt.Key_Escape:
+                    self.dataTable.clearSelection()
                     return True
             elif event.type() == QtCore.QEvent.FocusIn:
                 self.dataTable.remove_data_row_action.setEnabled(True)
@@ -419,10 +438,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def update_pem_from_table(self, table_row, table_col):
         """
-        Signal: Update the pem file using the values in the dataTable.
+        Signal slot: Update the pem file using the values in the dataTable.
         :param table_row: event row
         :param table_col: event column
         """
+        print('Update pem from table')
         self.dataTable.blockSignals(True)
         column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
         data = self.pem_file.data
@@ -433,6 +453,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable.blockSignals(False)
 
     def color_data_table(self):
+        print('Color data table')
 
         def color_rows_by_component():
             """
@@ -494,6 +515,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             """
             Makes the station number cell bold if it ends with '1'
             """
+            duplicates = 0
             boldFont = QtGui.QFont()
             boldFont.setBold(True)
             normalFont = QtGui.QFont()
@@ -503,13 +525,18 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 if item:
                     station_num = re.findall('\d+', item.text())[0]
                     if station_num[-1] == '1' or station_num[-1] == '6':
+                        duplicates += 1
                         item.setFont(boldFont)
+                        item.setForeground(QtGui.QColor('red'))
                     else:
                         item.setFont(normalFont)
+                        item.setForeground(QtGui.QColor('black'))
+            return duplicates
 
         color_rows_by_component()
         color_wrong_suffix()
-        bolden_repeat_stations()
+        duplicates_num = bolden_repeat_stations()
+        self.lcdDuplicates.display(duplicates_num)
 
     def fill_info(self):
         logging.info('PEMInfoWidget: fill_info')
@@ -661,9 +688,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             del self.pem_file.data[row]
             self.dataTable.removeRow(row)
 
-        # self.color_wrong_suffix()
-        # self.color_rows_by_component()
-
+        self.dataTable.blockSignals(True)
+        self.color_data_table()
+        self.dataTable.blockSignals(False)
 
     def cull_station_gps(self):
         gps = self.get_station_gps()
