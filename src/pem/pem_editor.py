@@ -760,11 +760,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if col == self.columns.index('Coil Area'):
             pem_file = self.pem_files[row]
             old_value = int(pem_file.header.get('CoilArea'))
-            new_value = int(self.table.item(row, col).text())
-            if int(old_value) != int(new_value):
-                self.scale_coil_area(pem_file, int(new_value))
-                self.window().statusBar().showMessage(
-                    f"Coil area changed from {str(old_value)} to {str(new_value)}", 2000)
+            try:
+                new_value = int(self.table.item(row, col).text())
+            except ValueError:
+                pass
+            else:
+                if int(old_value) != int(new_value):
+                    self.scale_coil_area(pem_file, int(new_value))
+                    self.window().statusBar().showMessage(
+                        f"Coil area changed from {str(old_value)} to {str(new_value)}", 2000)
 
         if col == self.columns.index('File'):
             pem_file = self.pem_files[row]

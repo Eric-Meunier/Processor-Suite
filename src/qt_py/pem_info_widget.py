@@ -67,6 +67,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.remove_row_action.setShortcut('Del')
         self.loopGPSTable.remove_row_action.setEnabled(False)
 
+        self.loopGPSTable.move_row_up_action = QAction("&Move Up", self)
+        self.addAction(self.loopGPSTable.move_row_up_action)
+        self.loopGPSTable.move_row_up_action.triggered.connect(lambda: self.move_table_row_up(self.loopGPSTable))
+
+        self.loopGPSTable.move_row_down_action = QAction("&Move Down", self)
+        self.addAction(self.loopGPSTable.move_row_down_action)
+        self.loopGPSTable.move_row_down_action.triggered.connect(lambda: self.move_table_row_down(self.loopGPSTable))
+
         self.stationGPSTable.remove_row_action = QAction("&Remove", self)
         self.addAction(self.stationGPSTable.remove_row_action)
         self.stationGPSTable.remove_row_action.triggered.connect(
@@ -107,6 +115,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
         self.changeStationSuffixButton.clicked.connect(self.change_station_suffix)
         self.changeComponentButton.clicked.connect(self.change_component)
+        self.moveUpButton.clicked.connect(self.move_table_row_up)
+        self.moveDownButton.clicked.connect(self.move_table_row_down)
 
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
         self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
@@ -141,6 +151,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             if self.loopGPSTable.selectionModel().selectedIndexes():
                 self.loopGPSTable.menu = QMenu(self.loopGPSTable)
                 self.loopGPSTable.menu.addAction(self.loopGPSTable.remove_row_action)
+                self.loopGPSTable.menu.addAction(self.loopGPSTable.move_row_up_action)
+                self.loopGPSTable.menu.addAction(self.loopGPSTable.move_row_down_action)
                 self.loopGPSTable.menu.popup(QtGui.QCursor.pos())
                 self.loopGPSTable.remove_row_action.setEnabled(True)
             else:
@@ -718,6 +730,32 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_loop_table(self.gps_editor.get_sorted_loop_gps(loop))
         else:
             pass
+
+    def move_table_row_up(self):
+        rows = self.get_selected_rows(self.loopGPSTable)
+        loop_gps = self.get_loop_gps()
+
+        for row in rows:
+            removed_row = loop_gps.pop(row)
+            loop_gps.insert(row-1, removed_row)
+
+        self.fill_loop_table(loop_gps)
+        self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
+        [self.loopGPSTable.selectRow(row-1) for row in rows]
+        self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+
+    def move_table_row_down(self):
+        rows = self.get_selected_rows(self.loopGPSTable)
+        loop_gps = self.get_loop_gps()
+
+        for row in rows:
+            removed_row = loop_gps.pop(row)
+            loop_gps.insert(row + 1, removed_row)
+
+        self.fill_loop_table(loop_gps)
+        self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
+        [self.loopGPSTable.selectRow(row + 1) for row in rows]
+        self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
     def shift_gps_station_numbers(self):
         def apply_station_shift(row):
