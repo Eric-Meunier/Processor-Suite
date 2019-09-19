@@ -446,7 +446,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if len(self.pem_files) > 0:
                 existing_filepaths = [os.path.abspath(file.filepath) for file in self.pem_files]
                 if os.path.abspath(pem_file) in existing_filepaths:
-                    self.window().statusBar().showMessage('{} is already opened'.format(pem_file), 2000)
+                    self.window().statusBar().showMessage(f"{pem_file} is already opened", 2000)
                     return True
                 else:
                     return False
@@ -747,9 +747,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             # First update the PEM Files from the table
             for pem_file, row in zip(pem_files, rows):
                 self.update_pem_file_from_table(pem_file, row)
-
             merged_pem = self.merge_pem_files(pem_files)
-
             if merged_pem:
                 # Remove the old files:
                 for row in reversed(rows):
@@ -766,7 +764,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if int(old_value) != int(new_value):
                 self.scale_coil_area(pem_file, int(new_value))
                 self.window().statusBar().showMessage(
-                    'Coil area changed from {0} to {1}'.format(str(old_value), str(new_value)), 2000)
+                    f"Coil area changed from {str(old_value)} to {str(new_value)}", 2000)
 
         if col == self.columns.index('File'):
             pem_file = self.pem_files[row]
@@ -779,7 +777,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 new_path = '/'.join(old_path.split('/')[:-1]) + '/' + new_value
                 pem_file.filepath = new_path
                 self.window().statusBar().showMessage(
-                    'File renamed to {}'.format(str(new_value)), 2000)
+                    f"File renamed to {str(new_value)}", 2000)
 
         pem_file = self.pem_files[row]
         # self.update_pem_file_from_table(pem_file, row)
@@ -890,7 +888,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.dialog.setFileMode(QFileDialog.ExistingFiles)
         self.dialog.setAcceptMode(QFileDialog.AcceptSave)
         self.dialog.setDirectory(default_path)
-        self.window().statusBar().showMessage('Saving PEM files...')
+        self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files)==1 else 'files'}...")
         file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
 
         if file_dir:
@@ -900,7 +898,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
                 self.save_pem_file(updated_file, dir=file_dir)
             self.window().statusBar().showMessage(
-                'Save Complete. PEM files saved to {}'.format(os.path.basename(file_dir)), 2000)
+                f"Save Complete. PEM {'file' if len(pem_files)==1 else 'files'} saved to {os.path.basename(file_dir)}", 2000)
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
@@ -951,7 +949,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if not pem_files:
             pem_files, rows = copy.copy(self.pem_files), range(self.table.rowCount())
 
-        self.window().statusBar().showMessage('Saving PEM files...')
+        self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files)==1 else 'files'}...")
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
         self.dialog.setDirectory(default_path)
         file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
@@ -966,7 +964,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.save_pem_file(updated_file, dir=file_dir, export=True)
 
             self.window().statusBar().showMessage(
-                'Save complete. {0} PEM files exported'.format(len(pem_files)), 2000)
+                'Save complete. {0} PEM {1} exported'.format(len(pem_files), 'file' if len(pem_files)==1 else 'files'), 2000)
             # self.update_table()
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
