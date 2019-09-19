@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QInputDialog, QHeaderView)
 
 from src.pem.pem_file import PEMFile
-from src.gps.gps_editor import GPSEditor, GPSParser
+from src.gps.gps_editor import GPSParser
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_plotter import PEMPrinter
@@ -979,11 +979,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
         self.dialog.setDirectory(default_path)
         # file_dir = QFileDialog.getSaveDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)  # For separate LIN and LOG pdfs
-        file_path = QFileDialog.getSaveFileName(self, '', default_path)[0]  # Returns full filepath. For single PDF file
+        save_dir = QFileDialog.getSaveFileName(self, '', default_path)[0]  # Returns full filepath. For single PDF file
 
         plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked()}
 
-        if file_path:
+        if save_dir:
             pem_files_selection, rows = self.get_selected_pem_files()
             if pem_files_selection:
                 pem_files = copy.copy(pem_files_selection)
@@ -1011,7 +1011,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 plot_kwargs['XMin'] = None
                 plot_kwargs['XMax'] = None
 
-            printer = PEMPrinter(pem_files, file_path, **plot_kwargs)
+            printer = PEMPrinter(pem_files, save_dir, **plot_kwargs)
             self.window().statusBar().addPermanentWidget(printer.pg)
             # printer.print_lin_figs()
             # printer.print_log_figs()

@@ -1,38 +1,29 @@
-import re
-import os
-import sys
-from os.path import isfile, join
 import logging
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QMainWindow, QAction, QApplication, QGridLayout, QFileDialog, QDesktopWidget,
-                             QTableWidgetItem, QHeaderView, QAbstractScrollArea, QMessageBox)
+import re
+import sys
+
+from PyQt5.QtWidgets import (QMainWindow, QApplication)
 
 __version__ = '0.0.0'
 
-if getattr(sys, 'frozen', False):
-    # If the application is run as a bundle, the pyInstaller bootloader
-    # extends the sys module by a flag frozen=True and sets the app
-    # path into variable _MEIPASS'.
-    application_path = sys._MEIPASS
-    ConderWindow_qtCreatorFile = 'qt_ui\\con_file_window.ui'
-    icons_path = 'icons'
-else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    ConderWindow_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\con_file_window.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
-
-samples_path = os.path.join(application_path, "sample_files")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-# ConderWindow_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\con_file_window.ui')
-Ui_Conder_Window, QtBaseClass = uic.loadUiType(ConderWindow_qtCreatorFile)
+sys._excepthook = sys.excepthook
+
+
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUi()
-        self.ri_parser = RIFileParser()
         self.ri_file = RIFile()
 
     def initUi(self):
@@ -58,48 +49,49 @@ class MainWindow(QMainWindow):
         try:
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
             self.open_files(urls)
-            # Resize the window
-            if self.gridLayout.sizeHint().height() + 25 > self.size().height():
-                self.resize(self.gridLayout.sizeHint().width() + 25, self.gridLayout.sizeHint().height() + 25)
         except Exception as e:
             logging.warning(str(e))
-            self.message.information(None, 'Error', str(e))
             pass
 
     def open_files(self, files):
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
         for file in files:
-            ri_file = self.ri_file(file)
-            self.files.append(ri_file)
-            self.add_to_table(ri_file)
-
-
-class RIFileParser:
-    def __init__(self):
-        self.re_ri = re.compile('')
+            ri_file = self.ri_file.open(file)
 
 
 class RIFile:
-    pass
+    def __init__(self):
+        self.file = []
+        self.columns = ['Station', 'Component', 'Gain', 'Theoretical PP', 'Measured PP', 'S1', 'Last Step',
+                       '(M-T)*100/Tot', '(S1-T)*100/Tot', '(LS-T)*100/Tot', '(S2-S1)*100/Tot', 'S3%', 'S4%',
+                       'S5%', 'S6%', 'S7%', 'S8%', 'S9%', 'S10%']
+
+    def open(self, filepath):
+
+        with open(filepath, 'rt') as in_file:
+            step_info = re.split('\$\$', in_file.read())[-1]
+            raw_file = step_info.splitlines()
+            raw_file = [line.split() for line in raw_file[1:]]  # Removing the header row
+            # Creating the remaining off-time channel columns for the header
+            [self.columns.append('Ch' + str(num + 11)) for num in range(len(raw_file[0]) - len(self.columns))]
+
+            for row in raw_file:
+                station = {}
+                for i, column in enumerate(self.columns):
+                    station[column] = row[i]
+                self.file.append(station)
+        return self.file
+
 
 def main():
     app = QApplication(sys.argv)
-
+    # file = r'C:\_Data\2019\BMSC\Surface\MO-254\STP\254-01N.RI2'
+    file = r'C:\_Data\2019\Nantou BF\Surface\Semtoun 100-114\STP\50N_100.RI3'
     mw = MainWindow()
+    # mw.ri_file.open(file)
     mw.show()
     app.exec_()
-
-    # file_names = [f for f in os.listdir(samples_path) if isfile(join(samples_path, f)) and f.lower().endswith('.con')]
-    # file_paths = []
-    #
-    # for file in file_names:
-    #     file_paths.append(join(samples_path, file))
-    #
-    # confile = ConFile
-    #
-    # for file in file_paths:
-    #     confile(file)
 
 
 if __name__ == '__main__':

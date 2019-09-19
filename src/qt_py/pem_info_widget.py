@@ -38,6 +38,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         super().__init__()
         self.parent = None
         self.pem_file = None
+        self.ri_file = None
         self.gps_editor = GPSEditor()
         self.gps_parser = GPSParser()
         self.file_editor = PEMFileEditor()
