@@ -25,7 +25,7 @@ from src.qt_py.pem_info_widget import PEMFileInfoWidget
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.2.3'
+__version__ = '0.2.6'
 
 getcontext().prec = 6
 
@@ -276,10 +276,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.share_loop_action.triggered.connect(self.share_loop)
 
                 self.table.rename_lines_action = QAction("&Rename Lines/Holes", self)
-                self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line', selected=True))
+                self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line'))
 
                 self.table.rename_files_action = QAction("&Rename Files", self)
-                self.table.rename_files_action.triggered.connect(lambda: self.batch_rename(type='File', selected=True))
+                self.table.rename_files_action.triggered.connect(lambda: self.batch_rename(type='File'))
 
                 self.table.menu.addAction(self.table.open_file_action)
                 self.table.menu.addAction(self.table.save_file_action)
@@ -703,37 +703,42 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         # Check that all selected files are the same in terms of being averaged and being split
         def pem_files_eligible():
-            if all([pem_file.is_averaged() for pem_file in pem_files]) or all(
-                    [not pem_file.is_averaged() for pem_file in pem_files]):
-                if all([pem_file.is_split() for pem_file in pem_files]) or all(
-                        [not pem_file.is_split() for pem_file in pem_files]):
-                    return True
+            # if all([pem_file.is_averaged() for pem_file in pem_files]) or all(
+            #         [not pem_file.is_averaged() for pem_file in pem_files]):
+            if all([pem_file.is_split() for pem_file in pem_files]) or all(
+                    [not pem_file.is_split() for pem_file in pem_files]):
+                return True
             else:
                 return False
 
         if isinstance(pem_files, list) and len(pem_files) > 1:
             # Data merging section
-            if pem_files_eligible():
-                merged_pem = copy.copy(pem_files[0])
-                merged_pem.data = list(chain.from_iterable([pem_file.data for pem_file in pem_files]))
-                merged_pem.header['NumReadings'] = str(sum(
-                    list(chain([int(pem_file.header.get('NumReadings')) for pem_file in pem_files]))))
-                merged_pem.is_merged = True
-                # Add the '[M]'
-                dir = os.path.split(merged_pem.filepath)[0]
-                file_name = '[M]' + os.path.split(merged_pem.filepath)[-1]
+            if not pem_files_eligible():
+                response = self.message.question(self, 'Merge PEM Files',
+                                                 'Both files have not been split. Would you like to split the unsplit file(s) and proceed with merging?',
+                                                 self.message.Yes | self.message.No)
+                if response == self.message.Yes:
+                    for pem_file in pem_files:
+                        self.split_pem_data(pem_file)
+                else:
+                    return
 
-                merged_pem.filepath = os.path.join(dir, file_name)
-                self.save_pem_file(merged_pem)
-                return merged_pem
-            else:
-                self.message.information(None, 'Error',
-                                         'Must select multiple PEM files')
-                return
-        else:
-            self.message.information(None, 'Error',
-                                     'All PEM files must be the same with regards to being averaged and channels being split')
-            return
+            merged_pem = copy.copy(pem_files[0])
+            merged_pem.data = list(chain.from_iterable([pem_file.data for pem_file in pem_files]))
+            merged_pem.header['NumReadings'] = str(sum(
+                list(chain([int(pem_file.header.get('NumReadings')) for pem_file in pem_files]))))
+            merged_pem.is_merged = True
+            # Add the '[M]'
+            dir = os.path.split(merged_pem.filepath)[0]
+            file_name = '[M]' + os.path.split(merged_pem.filepath)[-1]
+
+            merged_pem.filepath = os.path.join(dir, file_name)
+            self.save_pem_file(merged_pem)
+            return merged_pem
+            # else:
+            #     self.message.information(None, 'Error',
+            #                              'Selected PEM Files not eligible for merging.')
+            #     return
 
     def merge_pem_files_selection(self):
         pem_files, rows = self.get_selected_pem_files()
@@ -864,17 +869,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 if '[M]' in file_name:
                     file_name = re.sub('\[M\]', '', file_name)
                     file_name = '[M]' + file_name
-                    # file_name += '[M]'
-                    overwrite = False
-            if pem_file.unsplit_data:
-                if '[S]' not in file_name:
-                    # file_name += '[S]'
-                    file_name = '[S]' + file_name
-                    overwrite = False
-            if pem_file.unaveraged_data:
-                if '[A]' not in file_name:
-                    # file_name += '[A]'
-                    file_name = '[A]' + file_name
+                    # pem_file.is_merged = False
                     overwrite = False
 
         pem_file.filepath = os.path.join(file_dir + '/' + file_name + extension)
@@ -907,7 +902,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage(
                 'Save Complete. PEM files saved to {}'.format(os.path.basename(file_dir)), 2000)
         else:
-            self.window().statusBar().showMessage('No folder selected', 2000)
+            self.window().statusBar().showMessage('Cancelled.', 2000)
 
     # Save selected PEM files
     def save_pem_file_selection(self, all=False):
@@ -947,7 +942,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage(
                 'Save Complete. PEM file saved as {}'.format(os.path.basename(file_path)), 2000)
         else:
-            self.window().statusBar().showMessage('No folder selected')
+            self.window().statusBar().showMessage('Cancelled.', 2000)
 
     def export_final_pems(self):
         # Saves the files and removes any tags
@@ -974,7 +969,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 'Save complete. {0} PEM files exported'.format(len(pem_files)), 2000)
             # self.update_table()
         else:
-            self.window().statusBar().showMessage('No directory chosen', 2000)
+            self.window().statusBar().showMessage('Cancelled.', 2000)
             pass
 
     def print_final_plots(self):
@@ -1194,43 +1189,23 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             widget.fill_loop_table(widget.loop_gps.get_gps())
 
-    # def toggle_sort_loops(self):
-    #     if len(self.pem_files) > 0:
-    #         for i in range(self.stackedWidget.count()):
-    #             widget = self.stackedWidget.widget(i)
-    #             self.toggle_sort_loop(widget)
-
     def toggle_hide_gaps(self):
         pass  # To be implemented when pyqtplots are in
 
-    def batch_rename(self, type, selected=False):
-        # TODO Remove "selected", make it run on selected rows by default
+    def batch_rename(self, type):
+
         def rename_pem_files():
             if len(self.batch_name_editor.pem_files) > 0:
                 self.batch_name_editor.accept_changes()
-                if selected is False:
-                    for i, pem_file in enumerate(self.batch_name_editor.pem_files):
-                        self.pem_files[i] = pem_file
-                else:
-                    for i, row in enumerate(rows):
-                        self.pem_files[row] = self.batch_name_editor.pem_files[i]
+                for i, row in enumerate(rows):
+                    self.pem_files[row] = self.batch_name_editor.pem_files[i]
                 self.update_table()
 
-        if selected is False:
-            self.batch_name_editor = BatchNameEditor(self.pem_files, type=type)
-        else:
-            rows = []
-            pem_files = []
-            for i in self.table.selectedIndexes():
-                if i.row() not in rows:
-                    rows.append(i.row())
+        pem_files, rows = self.get_selected_pem_files()
+        if not pem_files:
+            pem_files, rows = self.pem_files, range(self.table.rowCount())
 
-            for row in rows:
-                pem_file = self.pem_files[row]
-                pem_files.append(pem_file)
-
-            self.batch_name_editor = BatchNameEditor(pem_files, type=type)
-
+        self.batch_name_editor = BatchNameEditor(pem_files, type=type)
         self.batch_name_editor.buttonBox.accepted.connect(rename_pem_files)
         self.batch_name_editor.acceptChangesSignal.connect(rename_pem_files)
         self.batch_name_editor.buttonBox.rejected.connect(self.batch_name_editor.close)

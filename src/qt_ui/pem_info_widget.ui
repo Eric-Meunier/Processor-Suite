@@ -467,7 +467,11 @@
            </widget>
           </item>
           <item>
-           <widget class="QLCDNumber" name="lcdDuplicates"/>
+           <widget class="QLCDNumber" name="lcdDuplicates">
+            <property name="segmentStyle">
+             <enum>QLCDNumber::Flat</enum>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

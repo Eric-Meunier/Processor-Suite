@@ -126,11 +126,12 @@ class GPSEditor:
                     row[i] = str(item)
             return row
 
-        formatted_gps = []
-        if len(gps) > 0:
-            for row in gps:
-                formatted_gps.append(format_row(row))
+        if not gps:
+            return None
 
+        formatted_gps = []
+        for row in gps:
+            formatted_gps.append(format_row(row))
         return formatted_gps
 
     def cull_loop(self, gps):
