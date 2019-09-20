@@ -36,6 +36,8 @@ mpl.rcParams["figure.autolayout"] = False
 mpl.rcParams['lines.linewidth'] = 0.5
 # mpl.rcParams['lines.color'] = '#1B2631'
 mpl.rcParams['font.size'] = 9
+
+
 # mpl.rcParams['font.sans-serif'] = 'Tahoma'
 
 
@@ -45,9 +47,10 @@ class PEMPlotter:
     PEMFile must be averaged and split.
     """
 
-    def __init__(self, pem_file, **kwargs):#hide_gaps=True, gap=None, x_min=None, x_max=None):
+    def __init__(self, pem_file=None, ri_file=None, **kwargs):  # hide_gaps=True, gap=None, x_min=None, x_max=None):
         super().__init__()
         self.pem_file = pem_file
+        self.ri_file = ri_file
         self.hide_gaps = kwargs.get('HideGaps')
         self.gap = kwargs.get('Gap')
         self.data = self.pem_file.data
@@ -58,28 +61,29 @@ class PEMPlotter:
         self.x_max = int(max(chain(self.stations))) if kwargs.get('XMax') is None else kwargs.get('XMax')
         self.num_channels = int(self.header['NumChannels']) + 1
         self.units = 'nT/s' if self.pem_file.tags['Units'].casefold() == 'nanotesla/sec' else 'pT'
-        self.channel_bounds = self.calc_channel_bounds()
+        # self.channel_bounds = self.calc_channel_bounds()
         self.line_colour = 'k'
         # self.line_colour = 'red'
 
-    def calc_channel_bounds(self):
-        # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
-        channel_bounds = [None] * 4
-        num_channels_per_plot = int((self.num_channels - 1) // 4)
-        remainder_channels = int((self.num_channels - 1) % 4)
+    #
+    # def calc_channel_bounds(self):
+    #     # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
+    #     channel_bounds = [None] * 4
+    #     num_channels_per_plot = int((self.num_channels - 1) // 4)
+    #     remainder_channels = int((self.num_channels - 1) % 4)
+    #
+    #     for k in range(0, len(channel_bounds)):
+    #         channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
+    #
+    #     for i in range(0, remainder_channels):
+    #         channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
+    #         for k in range(i + 1, len(channel_bounds)):
+    #             channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+    #
+    #     channel_bounds.insert(0, (0, 0))
+    #     return channel_bounds
 
-        for k in range(0, len(channel_bounds)):
-            channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
-
-        for i in range(0, remainder_channels):
-            channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
-            for k in range(i + 1, len(channel_bounds)):
-                channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
-
-        channel_bounds.insert(0, (0, 0))
-        return channel_bounds
-
-    def format_figure(self, figure):
+    def format_figure(self, figure, step=False):
         """
         Formats a figure, mainly the spines, adjusting the padding, and adding the rectangle.
         :param figure: LIN or LOG figure object
@@ -98,9 +102,9 @@ class PEMPlotter:
                 ax.spines['bottom'].set_visible(False)
                 ax.xaxis.set_ticks_position('bottom')
                 ax.tick_params(axis='x', which='major', direction='out', length=6)
-                plt.setp(ax.get_xticklabels(), visible=True, size=12,  fontname='Century Gothic')
+                plt.setp(ax.get_xticklabels(), visible=True, size=12, fontname='Century Gothic')
 
-        plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
+        plt.subplots_adjust(left=0.135 if step is False else 0.170, bottom=0.07, right=0.958, top=0.885)
         self.add_rectangle(figure)
 
         for ax in axes:
@@ -122,6 +126,7 @@ class PEMPlotter:
         Plots the data into the LIN figure
         :return: Matplotlib Figure object
         """
+
         def add_ylabels():
             for i in range(len(lin_fig.axes) - 1):
                 ax = lin_fig.axes[i]
@@ -131,8 +136,25 @@ class PEMPlotter:
                     ax.set_ylabel("Channel " + str(channel_bounds[i][0]) + " - " +
                                   str(channel_bounds[i][1]) + "\n(" + self.units + ")")
 
+        def calc_channel_bounds():
+            # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
+            channel_bounds = [None] * 4
+            num_channels_per_plot = int((self.num_channels - 1) // 4)
+            remainder_channels = int((self.num_channels - 1) % 4)
+
+            for k in range(0, len(channel_bounds)):
+                channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
+
+            for i in range(0, remainder_channels):
+                channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
+                for k in range(i + 1, len(channel_bounds)):
+                    channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+
+            channel_bounds.insert(0, (0, 0))
+            return channel_bounds
+
         self.format_figure(lin_fig)
-        channel_bounds = self.channel_bounds
+        channel_bounds = calc_channel_bounds()
 
         for i, group in enumerate(channel_bounds):
             ax = lin_fig.axes[i]
@@ -164,6 +186,95 @@ class PEMPlotter:
         self.format_xaxis(log_fig)
         return log_fig
 
+    def make_step_fig(self, component, step_fig):
+        """
+        Plots the step data (from ri_file) into the step_fig.
+        :param component: Component i.e. X, Y, or Z
+        :param step_fig: Figure object
+        :return: Figure object
+        """
+
+        def add_ylabel():
+            fluxgate =  True if 'fluxgate' in self.survey_type.lower() else False
+            units = 'pT' if fluxgate is True else 'nT/s'
+            step_fig.axes[0].set_ylabel("TP = Theoretical Primary\n"
+                                        f"{'PP = Calculated PP x Ramp' if fluxgate is True else 'PP = Last Ramp Channel'}\n"
+                                        f"S1 = Calculated Step Ch.1\n({units})")
+            step_fig.axes[1].set_ylabel("Deviation from TP.\n"
+                                        "(% Total Theoretical)")
+            step_fig.axes[2].set_ylabel("Step Channels 2-4\n"
+                                        "Deviation from S1\n"
+                                        "(% Total Theoretical")
+            step_fig.axes[3].set_ylabel("Pulse EM Off-time\n"
+                                        f"Channels {str(1)} - {str(2)}\n"
+                                        f"({units})")
+
+        def annotate_line(ax, annotation, interp_data, x_intervals, offset):
+
+            for i, x_position in enumerate(x_intervals[int(offset)::int(len(x_intervals) * 0.4)]):
+                y = interp_data[list(x_intervals).index(x_position)]
+
+                ax.annotate(str(annotation), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
+                            ha='center',
+                            color=self.line_colour)
+
+
+        def draw_step_lines(fig, profile_data):
+            segments = 1000  # The data will be broken in this number of segments
+            offset = segments * 0.1  # Used for spacing the annotations
+
+            keys = ['Theoretical PP', 'Measured PP', 'S1', '(M-T)*100/Tot', '(S1-T)*100/Tot', '(S2-S1)*100/Tot', 'S3%', 'S4%']
+            annotations = ['TP', 'PP', 'S1', 'PP', 'S1', 'S2', 'S3', 'S4']
+            stations = profile_data['Stations']
+            for i, key in enumerate(keys):
+                interp_data, x_intervals = self.get_interp_data(profile_data[key], stations)
+                mask = np.isclose(interp_data, interp_data.astype('float64'))
+                x_intervals = x_intervals[mask]
+                interp_data = interp_data[mask]
+
+                if i < 3:
+                    ax = fig.axes[0]
+                    ax.plot(x_intervals, interp_data, color=self.line_colour)
+                    annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
+                    offset += len(x_intervals) * 0.15
+                elif i < 5:
+                    ax = fig.axes[1]
+                    ax.plot(x_intervals, interp_data, color=self.line_colour)
+                    annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
+                    offset += len(x_intervals) * 0.15
+                else:
+                    ax = fig.axes[2]
+                    ax.plot(x_intervals, interp_data, color=self.line_colour)
+                    annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
+                    offset += len(x_intervals) * 0.15
+                # TODO why is s1 not annotating properly?
+                if offset >= len(x_intervals) * 0.85:
+                    offset = len(x_intervals) * 0.10
+
+            off_time_channels = [profile_data[key] for key in profile_data if re.match('Ch', key)]
+            num_channels = len(off_time_channels)+10
+            num_channels_to_plot = round(num_channels/4)
+
+            for i, channel in enumerate(off_time_channels[-num_channels_to_plot:]):
+                interp_data, x_intervals = self.get_interp_data(channel, stations)
+                mask = np.isclose(interp_data, interp_data.astype('float64'))
+                x_intervals = x_intervals[mask]
+                interp_data = interp_data[mask]
+                ax = fig.axes[3]
+                ax.plot(x_intervals, interp_data, color=self.line_colour)
+                annotate_line(ax, str(num_channels-i), interp_data, x_intervals, offset)
+                offset += len(x_intervals) * 0.15
+
+        self.format_figure(step_fig, step=True)
+        profile_data = self.get_profile_step_data(component)
+        draw_step_lines(step_fig, profile_data)
+
+        self.add_title(component)
+        add_ylabel()
+        self.format_yaxis(step_fig, step=True)
+        self.format_xaxis(step_fig)
+        return step_fig
+
     def convert_station(self, station):
         """
         Converts a single station name into a number, negative if the stations was S or W
@@ -179,7 +290,7 @@ class PEMPlotter:
 
     def get_profile_data(self, component):
         """
-        Transforms the data so it is ready to be plotted for LIN and LOG plots
+        Transforms the data so it is ready to be plotted for LIN and LOG plots. Only for PEM data.
         :param component: A single component (i.e. Z, X, or Y)
         :return: Dictionary where each key is a channel, and the values of those keys are a list of
         dictionaries which contain the stations and readings of all readings of that channel
@@ -199,9 +310,28 @@ class PEMPlotter:
 
         return profile_data
 
+    def get_profile_step_data(self, component):
+        """
+        Transforms the RI data as a profile to be plotted.
+        :param component: The component that is being plotted (i.e. X, Y, Z)
+        :return: The data in profile mode
+        """
+        profile_data = {}
+        keys = self.ri_file.columns
+        component_data = list(filter(lambda d: d['Component'] == component, self.ri_file.data))
+
+        for key in keys:
+            if key is not 'Gain' and key is not 'Component':
+                if key is 'Station':
+                    key = 'Stations'
+                    profile_data[key] = [self.convert_station(station['Station']) for station in component_data]
+                else:
+                    profile_data[key] = [float(station[key]) for station in component_data]
+        return profile_data
+
     def get_channel_data(self, channel, profile_data):
         """
-        Get the profile-mode data for a given channel
+        Get the profile-mode data for a given channel. Only for PEM data.
         :param channel: int, channel number
         :param profile_data: dict, data in profile-mode
         :return: data in list form and corresponding stations as a list
@@ -215,13 +345,16 @@ class PEMPlotter:
 
         return data, stations
 
-    def draw_lines(self, ax, channel_low, channel_high, component):
+
+    def get_interp_data(self, profile_data, stations, segments=1000, interp_method='linear'):
         """
-        Plots the lines into an axes of a figure
-        :param ax: Axes of a figure, either LIN or LOG figure objects
-        :param channel_low: The first channel to be plotted
-        :param channel_high: The last channel to be plotted
-        :param component: String letter representing the component to plot (X, Y, or Z)
+        Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
+        into 1000 segments.
+        :param profile_data: The EM data in profile mode
+        :param segments: Number of segments to interpolate
+        :param hide_gaps: Bool: Whether or not to hide gaps
+        :param gap: The minimum length threshold above which is considered a gap
+        :return: The interpolated data and stations
         """
 
         def calc_gaps(stations):
@@ -241,32 +374,31 @@ class PEMPlotter:
 
             return gap_intervals
 
-        def get_interp_data(profile_data, stations, interp_method='linear'):
-            """
-            Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
-            into 100 segments.
-            :param profile_data: The EM data in profile mode
-            :param segments: Number of segments to interpolate
-            :param hide_gaps: Bool: Whether or not to hide gaps
-            :param gap: The minimum length threshold above which is considered a gap
-            :return: The interpolated data and stations
-            """
-            stations = np.array(stations, dtype='float64')
-            readings = np.array(profile_data, dtype='float64')
-            x_intervals = np.linspace(stations[0], stations[-1], segments)
-            f = interpolate.interp1d(stations, readings, kind=interp_method)
+        stations = np.array(stations, dtype='float64')
+        readings = np.array(profile_data, dtype='float64')
+        x_intervals = np.linspace(stations[0], stations[-1], segments)
+        f = interpolate.interp1d(stations, readings, kind=interp_method)
 
-            interpolated_y = f(x_intervals)
+        interpolated_y = f(x_intervals)
 
-            if self.hide_gaps:
-                gap_intervals = calc_gaps(stations)
+        if self.hide_gaps:
+            gap_intervals = calc_gaps(stations)
 
-                # Masks the intervals that are between gap[0] and gap[1]
-                for gap in gap_intervals:
-                    interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
-                                                        interpolated_y)
+            # Masks the intervals that are between gap[0] and gap[1]
+            for gap in gap_intervals:
+                interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
+                                                    interpolated_y)
 
-            return interpolated_y, x_intervals
+        return interpolated_y, x_intervals
+
+    def draw_lines(self, ax, channel_low, channel_high, component):
+        """
+        Plots the lines into an axes of a figure
+        :param ax: Axes of a figure, either LIN or LOG figure objects
+        :param channel_low: The first channel to be plotted
+        :param channel_high: The last channel to be plotted
+        :param component: String letter representing the component to plot (X, Y, or Z)
+        """
 
         segments = 1000  # The data will be broken in this number of segments
         offset = segments * 0.1  # Used for spacing the annotations
@@ -277,7 +409,7 @@ class PEMPlotter:
             channel_data, stations = self.get_channel_data(k, profile_channel_data)
 
             # Interpolates the channel data, also returns the corresponding x intervals
-            interp_data, x_intervals = get_interp_data(channel_data, stations)
+            interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments)
 
             ax.plot(x_intervals, interp_data, color=self.line_colour)
 
@@ -295,7 +427,8 @@ class PEMPlotter:
                                 color=self.line_colour)
 
                 else:
-                    ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline', ha='center',
+                    ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
+                                ha='center',
                                 color=self.line_colour)
 
             offset += len(x_intervals) * 0.15
@@ -303,7 +436,7 @@ class PEMPlotter:
             if offset >= len(x_intervals) * 0.85:
                 offset = len(x_intervals) * 0.10
 
-    def format_yaxis(self, figure):
+    def format_yaxis(self, figure, step=False):
         """
         Formats the Y axis of a figure
         :param figure: LIN or LOG figure object
@@ -311,7 +444,7 @@ class PEMPlotter:
         axes = figure.axes
 
         for ax in axes:
-            ax.get_yaxis().set_label_coords(-0.08, 0.5)
+            ax.get_yaxis().set_label_coords(-0.08 if step is False else -0.10, 0.5)
 
             if ax.get_yscale() != 'symlog':
                 y_limits = ax.get_ylim()
@@ -338,6 +471,7 @@ class PEMPlotter:
                 plt.setp(ax.get_yticklabels(), va='center')
 
             ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
+            # figure.align_ylabels()
 
     def add_title(self, component):
         """
@@ -402,28 +536,34 @@ class PEMPrinter:
     Class for printing PEMPLotter plots to PDF.
     Creates the figures for PEMPlotter so they may be closed after they are saved.
     :param pem_files: List of PEMFile objects
-    :param save_dir: Desired save location for the PDFs
+    :param save_path: Desired save location for the PDFs
     :param kwargs: Plotting kwargs such as hide_gaps, gaps, and x limits used in PEMPlotter.
     """
 
-    def __init__(self, pem_files, save_path, **kwargs):
-        self.pem_files = pem_files
-        self.sort_pem_files()
+    def __init__(self, save_path, files, **kwargs):
+        self.files = files  # Zipped PEM and RI files
+        self.pem_files = []
+        self.ri_files = []
+        self.sort_files()
         self.plotter = PEMPlotter
         self.save_path = save_path
         self.kwargs = kwargs
-        self.pg = QProgressBar()
-        self.pg_count = 0
-        self.pg_end = sum([len(pem_file.get_components()) for pem_file in self.pem_files])
-        self.pg.setValue(0)
+        self.pb = QProgressBar()
+        self.pb_count = 0
+        self.pb_end = sum([len(pair[0].get_components()) for pair in self.files])
+        self.pb.setValue(0)
 
-    def sort_pem_files(self):
-        self.pem_files.sort(key=lambda x: x.get_components(), reverse=True)
-        self.pem_files.sort(key=lambda x: x.header['LineHole'])
+    def sort_files(self):
+        self.files.sort(key=lambda x: x[0].get_components(), reverse=True)
+        self.files.sort(key=lambda x: x[0].header['LineHole'])
+
+        self.pem_files = [pair[0] for pair in self.files]
+        self.ri_files = [pair[1] for pair in self.files]
 
     def create_lin_figure(self):
         """
         Creates the blank LIN figure
+        :return: Figure object
         """
         lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
         ax6 = ax5.twiny()
@@ -434,6 +574,7 @@ class PEMPrinter:
     def create_log_figure(self):
         """
         Creates an empty but formatted LOG figure
+        :return: Figure object
         """
         log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
         ax2 = ax.twiny()
@@ -441,6 +582,17 @@ class PEMPrinter:
         plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
 
         return log_fig
+
+    def create_step_figure(self):
+        """
+        Creates the blank Step figure
+        :return: Figure object
+        """
+        stp_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(8.5, 11), sharex=True)
+        ax5 = ax4.twiny()
+        ax5.get_shared_x_axes().join(ax4, ax5)
+
+        return stp_fig
 
     # To save LIN and LOG pdfs separately. Requires a save_dir instead of a save_path.
     # def print_lin_figs(self):
@@ -451,8 +603,8 @@ class PEMPrinter:
     #                 lin_figure = self.create_lin_figure()
     #                 lin_plot = self.plotter(pem_file, **self.kwargs).make_lin_fig(component, lin_figure)
     #                 pdf.savefig(lin_plot)
-    #                 self.pg_count += 1
-    #                 self.pg.setValue((self.pg_count/self.pg_end) * 100)
+    #                 self.pb_count += 1
+    #                 self.pb.setValue((self.pb_count/self.pb_end) * 100)
     #                 plt.close(lin_figure)
     #
     # def print_log_figs(self):
@@ -463,33 +615,62 @@ class PEMPrinter:
     #                 log_figure = self.create_log_figure()
     #                 log_plot = self.plotter(pem_file, **self.kwargs).make_log_fig(component, log_figure)
     #                 pdf.savefig(log_plot)
-    #                 self.pg_count += 1
-    #                 self.pg.setValue((self.pg_count / self.pg_end) * 100)
+    #                 self.pb_count += 1
+    #                 self.pb.setValue((self.pb_count / self.pb_end) * 100)
     #                 plt.close(log_figure)
 
-    def print_plots(self):
+    def print_step_plots(self):
+        with PdfPages(self.save_path + '.PDF') as pdf:
+            for file in self.files:
+                pem_file = file[0]
+                ri_file = file[1]
+                components = pem_file.get_components()
+                for component in components:
+                    step_figure = self.create_step_figure()
+                    step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(component,
+                                                                                                              step_figure)
+                    pdf.savefig(step_plot)
+                    self.pb_count += 1
+                    self.pb.setValue((self.pb_count / self.pb_end) * 100)
+                    plt.close(step_figure)
+        os.startfile(self.save_path + '.PDF')
+
+    def print_final_plots(self):
         # file_name = self.pem_files[-1].header.get('LineHole')+'.PDF'
         # path = os.path.join(self.save_dir, file_name)
-        with PdfPages(self.save_path+'.PDF') as pdf:
+        with PdfPages(self.save_path + '.PDF') as pdf:
             for pem_file in self.pem_files:
                 components = pem_file.get_components()
                 for component in components:
                     lin_figure = self.create_lin_figure()
-                    lin_plot = self.plotter(pem_file, **self.kwargs).make_lin_fig(component, lin_figure)
+                    lin_plot = self.plotter(pem_file=pem_file, **self.kwargs).make_lin_fig(component, lin_figure)
                     pdf.savefig(lin_plot)
-                    self.pg_count += 1
-                    self.pg.setValue((self.pg_count/self.pg_end) * 100)
+                    self.pb_count += 1
+                    self.pb.setValue((self.pb_count / self.pb_end) * 100)
                     plt.close(lin_figure)
             for pem_file in self.pem_files:
                 components = pem_file.get_components()
                 for component in components:
                     log_figure = self.create_log_figure()
-                    log_plot = self.plotter(pem_file, **self.kwargs).make_log_fig(component, log_figure)
+                    log_plot = self.plotter(pem_file=pem_file, **self.kwargs).make_log_fig(component, log_figure)
                     pdf.savefig(log_plot)
-                    self.pg_count += 1
-                    self.pg.setValue((self.pg_count / self.pg_end) * 100)
+                    self.pb_count += 1
+                    self.pb.setValue((self.pb_count / self.pb_end) * 100)
                     plt.close(log_figure)
+            for file in self.files:
+                pem_file = file[0]
+                ri_file = file[1]
+                components = pem_file.get_components()
+                for component in components:
+                    step_figure = self.create_step_figure()
+                    step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(component,
+                                                                                                              step_figure)
+                    pdf.savefig(step_plot)
+                    self.pb_count += 1
+                    self.pb.setValue((self.pb_count / self.pb_end) * 100)
+                    plt.close(step_figure)
         os.startfile(self.save_path + '.PDF')
+
 
 # class CronePYQTFigure:
 #     """

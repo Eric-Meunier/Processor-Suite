@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>5</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -505,10 +505,22 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="RIFileTab">
+     <widget class="QWidget" name="RI_Tab">
       <attribute name="title">
        <string>RI File</string>
       </attribute>
+      <layout class="QGridLayout" name="gridLayout_7">
+       <item row="0" column="0">
+        <widget class="QTableWidget" name="riTable">
+         <property name="autoScroll">
+          <bool>false</bool>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </widget>
    </item>

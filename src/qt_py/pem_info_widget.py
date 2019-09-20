@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QAc
 
 from src.gps.gps_editor import GPSParser, GPSEditor
 from src.pem.pem_file_editor import PEMFileEditor
+from src.ri.ri_file import RIFile
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
@@ -42,6 +43,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.gps_editor = GPSEditor()
         self.gps_parser = GPSParser()
         self.file_editor = PEMFileEditor()
+        self.ri_editor = RIFile()
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
@@ -55,11 +57,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.collarGPSTable.installEventFilter(self)
         self.geometryTable.installEventFilter(self)
         self.dataTable.installEventFilter(self)
+        self.riTable.installEventFilter(self)
         self.loopGPSTable.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.stationGPSTable.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.collarGPSTable.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.geometryTable.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.dataTable.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.riTable.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         self.loopGPSTable.remove_row_action = QAction("&Remove", self)
         self.addAction(self.loopGPSTable.remove_row_action)
@@ -239,15 +243,20 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             elif event.type() == QtCore.QEvent.FocusOut:
                 self.dataTable.remove_data_row_action.setEnabled(False)
 
-        # elif source is self.Data_Tab:
-        #     if event.type() == QtCore.QEvent.FocusOut:
-        #         self.dataTable.clearSelection()
-        #         return True
-        # elif (event.type() == QtCore.QEvent.MouseButtonPress and
-        #         source is self.dataTable.viewport() and
-        #         self.dataTable.itemAt(event.pos()) is None):
-        #     self.dataTable.clearSelection()
-        #     return True
+        elif source is self.riTable:
+            if event.type() == QtCore.QEvent.Wheel:
+                # TODO Make sideways scrolling work correctly. Won't scroll sideways without also going vertically
+                if event.modifiers() == QtCore.Qt.ShiftModifier:
+                    pos = self.riTable.horizontalScrollBar().value()
+                    if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
+                        self.riTable.horizontalScrollBar().setValue(pos + 2)
+                    else:
+                        self.riTable.horizontalScrollBar().setValue(pos - 2)
+                    return True
+            elif event.type() == QtCore.QEvent.KeyPress:
+                if event.key() == QtCore.Qt.Key_Escape:
+                    self.riTable.clearSelection()
+
         return super(QWidget, self).eventFilter(source, event)
 
     def open_file(self, pem_file, parent):
@@ -257,6 +266,39 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.fill_info()
 
         return self
+
+    def open_ri_file(self, filepath):
+
+        def make_ri_table():
+            columns = self.ri_file.columns
+            self.riTable.setColumnCount(len(columns))
+            self.riTable.setHorizontalHeaderLabels(columns)
+
+        def fill_ri_table():
+            self.clear_table(self.riTable)
+            logging.info('Filling RI table')
+
+            for i, row in enumerate(self.ri_file.data):
+                row_pos = self.riTable.rowCount()
+                self.riTable.insertRow(row_pos)
+                items = [QTableWidgetItem(row[key]) for key in self.ri_file.columns]
+
+                for m, item in enumerate(items):
+                    item.setTextAlignment(QtCore.Qt.AlignCenter)
+                    self.riTable.setItem(row_pos, m, item)
+
+        def add_header_from_pem():
+            header_keys = ['Client', 'Grid', 'Loop', 'Timebase', 'Date']
+            for key in header_keys:
+                self.ri_file.header[key] = self.pem_file.header[key]
+            self.ri_file.header['Current'] = self.pem_file.tags.get('Current')
+            self.ri_file.survey = self.pem_file.survey_type
+
+        self.ri_file = self.ri_editor.open(filepath)
+
+        make_ri_table()
+        fill_ri_table()
+        add_header_from_pem()
 
     def initTables(self):
         if 'surface' in self.pem_file.survey_type.lower() or 'squid' in self.pem_file.survey_type.lower():

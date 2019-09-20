@@ -129,12 +129,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.closeAllWindows.setStatusTip("Close all windows")
         self.closeAllWindows.triggered.connect(self.close_all_windows)
 
-        self.fileMenu = self.menubar.addMenu('&File')
-        self.fileMenu.addAction(self.openPEMEditor)
-        self.fileMenu.addAction(self.openDBPlot)
-        self.fileMenu.addAction(self.openConder)
-        self.fileMenu.addSeparator()
-        self.fileMenu.addAction(self.closeAllWindows)
+        # self.fileMenu = self.menubar.addMenu('&File')
+        # self.fileMenu.addAction(self.openPEMEditor)
+        # self.fileMenu.addAction(self.openDBPlot)
+        # self.fileMenu.addAction(self.openConder)
+        # self.fileMenu.addSeparator()
+        # self.fileMenu.addAction(self.closeAllWindows)
 
         self.toolbar = QToolBar()
         self.addToolBar(QtCore.Qt.LeftToolBarArea, self.toolbar)

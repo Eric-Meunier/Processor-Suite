@@ -135,10 +135,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.export_final_pems_action.setStatusTip("Export the final PEM files")
         self.export_final_pems_action.triggered.connect(self.export_final_pems)
 
+        self.print_step_plots_action = QAction("&Print Step Plots PDF", self)
+        self.print_step_plots_action.setShortcut("F11")
+        self.print_step_plots_action.setStatusTip("Print the step plots to PDF")
+        self.print_step_plots_action.triggered.connect(lambda: self.print_plots(step=True))
+
         self.print_final_plots_action = QAction("&Print Final Plots PDF", self)
         self.print_final_plots_action.setShortcut("F12")
         self.print_final_plots_action.setStatusTip("Print the final plots to PDF")
-        self.print_final_plots_action.triggered.connect(self.print_final_plots)
+        self.print_final_plots_action.triggered.connect(lambda: self.print_plots(final=True))
 
         self.del_file = QAction("&Remove File", self)
         self.del_file.setShortcut("Del")
@@ -158,6 +163,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu.addAction(self.clearFiles)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.export_final_pems_action)
+        self.fileMenu.addAction(self.print_step_plots_action)
         self.fileMenu.addAction(self.print_final_plots_action)
 
         self.averageAllPems = QAction("&Average All PEM Files", self)
@@ -287,6 +293,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.table.menu.addAction(self.table.save_file_as_action)
                 else:
                     self.table.menu.addAction(self.table.save_file_to_action)
+                self.table.menu.addAction(self.print_step_plots_action)
                 self.table.menu.addAction(self.print_final_plots_action)
                 self.table.menu.addSeparator()
                 if len(self.table.selectionModel().selectedRows()) > 1:
@@ -376,12 +383,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
         pem_files = False
         text_files = False
+        ri_files = False
+
         if all([url.lower().endswith('pem') for url in urls]):
             pem_files = True
         elif all([url.lower().endswith('txt') or url.lower().endswith('csv') or url.lower().endswith(
                 'seg') or url.lower().endswith('xyz') for url in
                   urls]):
             text_files = True
+        elif all([url.lower().endswith('ri1') or url.lower().endswith('ri2') or url.lower().endswith(
+                'ri3') for url in urls]):
+            ri_files = True
 
         pem_conditions = bool(all([
             bool(e.answerRect().intersects(self.table.geometry())),
@@ -397,7 +409,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             eligible_tabs = [self.stackedWidget.currentWidget().Station_GPS_Tab,
                              self.stackedWidget.currentWidget().Loop_GPS_Tab,
-                             self.stackedWidget.currentWidget().Geometry_Tab]
+                             self.stackedWidget.currentWidget().Geometry_Tab,
+                             self.stackedWidget.currentWidget().RI_Tab]
             gps_conditions = bool(all([
                 e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
                 text_files is True,
@@ -405,7 +418,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 len(self.pem_files) > 0
             ]))
 
-            if pem_conditions is True or gps_conditions is True:
+            ri_conditions = bool(all([
+                e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
+                ri_files is True,
+                self.stackedWidget.currentWidget().tabs.currentWidget() in eligible_tabs,
+                len(self.pem_files) > 0
+            ]))
+
+            if pem_conditions is True or gps_conditions is True or ri_conditions is True:
                 e.acceptProposedAction()
             else:
                 e.ignore()
@@ -423,7 +443,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             files = [files]
         pem_files = [file for file in files if file.lower().endswith('pem')]
         gps_files = [file for file in files if
-                     file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith('seg')]
+                     file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith('seg') or file.lower().endswith('xyz')]
+        ri_files = [file for file in files if file.lower().endswith('ri1') or file.lower().endswith('ri2') or file.lower().endswith('ri3')]
 
         start_time = time.time()
         if len(pem_files) > 0:
@@ -433,6 +454,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if len(gps_files) > 0:
             self.open_gps_files(gps_files)
             print('open_gps_files time: {} seconds'.format(time.time() - start_time))
+
+        if len(ri_files) > 0:
+            self.open_ri_file(ri_files)
 
     def open_pem_files(self, pem_files):
         """
@@ -543,6 +567,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             #     logging.info(str(e))
             #     self.message.information(None, 'PEMEditorWidget: open_gps_files error', str(e))
             #     pass
+
+    def open_ri_file(self, ri_files):
+        """
+        Adds RI file information to the associated PEMFile object. Only accepts 1 file.
+        :param ri_file: Text file with step plot information in them
+        """
+        ri_file = ri_files[0]  # Filepath
+        pem_info_widget = self.stackedWidget.currentWidget()
+        pem_info_widget.open_ri_file(ri_file)
 
     def clear_files(self):
         """
@@ -974,52 +1007,63 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('Cancelled.', 2000)
             pass
 
-    def print_final_plots(self):
-        self.window().statusBar().showMessage('Saving plots...')
-        default_path = os.path.split(self.pem_files[-1].filepath)[0]
-        self.dialog.setDirectory(default_path)
-        # file_dir = QFileDialog.getSaveDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)  # For separate LIN and LOG pdfs
-        save_dir = QFileDialog.getSaveFileName(self, '', default_path)[0]  # Returns full filepath. For single PDF file
+    def print_plots(self, final=False, step=False):
+        print('Saving plots')
+        if len(self.pem_files)>0:
+            self.window().statusBar().showMessage('Saving plots...')
+            default_path = os.path.split(self.pem_files[-1].filepath)[0]
+            self.dialog.setDirectory(default_path)
+            # file_dir = QFileDialog.getSaveDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)  # For separate LIN and LOG pdfs
+            save_dir = QFileDialog.getSaveFileName(self, '', default_path)[0]  # Returns full filepath. For single PDF file
 
-        plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked()}
+            plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked()}
 
-        if save_dir:
-            pem_files_selection, rows = self.get_selected_pem_files()
-            if pem_files_selection:
-                pem_files = copy.copy(pem_files_selection)
-            else:
-                pem_files = copy.copy(self.pem_files)
-                rows = range(self.table.rowCount())
+            if save_dir:
+                pem_files_selection, rows = self.get_selected_pem_files()
+                if pem_files_selection:
+                    pem_files = copy.copy(pem_files_selection)
+                else:
+                    pem_files = copy.copy(self.pem_files)
+                    rows = range(self.table.rowCount())
+                ri_files = []
+                for row, pem_file in zip(rows, pem_files):
+                    ri_files.append(self.pem_info_widgets[row].ri_file)
+                    self.update_pem_file_from_table(pem_file, row)
+                    if not pem_file.is_averaged():
+                        self.file_editor.average(pem_file)
+                    if not pem_file.is_split():
+                        self.file_editor.split_channels(pem_file)
 
-            for row, pem_file in zip(rows, pem_files):
-                self.update_pem_file_from_table(pem_file, row)
-                if not pem_file.is_averaged():
-                    self.file_editor.average(pem_file)
-                if not pem_file.is_split():
-                    self.file_editor.split_channels(pem_file)
-
-            if self.share_range_checkbox.isChecked():
-                try:
-                    plot_kwargs['XMin'] = int(self.min_range_edit.text())
-                except ValueError:
+                if self.share_range_checkbox.isChecked():
+                    try:
+                        plot_kwargs['XMin'] = int(self.min_range_edit.text())
+                    except ValueError:
+                        plot_kwargs['XMin'] = None
+                    try:
+                        plot_kwargs['XMax'] = int(self.max_range_edit.text())
+                    except ValueError:
+                        plot_kwargs['XMax'] = None
+                else:
                     plot_kwargs['XMin'] = None
-                try:
-                    plot_kwargs['XMax'] = int(self.max_range_edit.text())
-                except ValueError:
                     plot_kwargs['XMax'] = None
-            else:
-                plot_kwargs['XMin'] = None
-                plot_kwargs['XMax'] = None
 
-            printer = PEMPrinter(pem_files, save_dir, **plot_kwargs)
-            self.window().statusBar().addPermanentWidget(printer.pg)
-            # printer.print_lin_figs()
-            # printer.print_log_figs()
-            printer.print_plots()
-            printer.pg.hide()
-            self.window().statusBar().showMessage('Plots saved', 2000)
+                # PEM Files and RI files zipped together for when they get sorted
+                printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
+                self.window().statusBar().addPermanentWidget(printer.pb)
+                # printer.print_lin_figs()
+                # printer.print_log_figs()
+                if final is True:
+                    printer.print_final_plots()
+                elif step is True:
+                    printer.print_step_plots()
+                else:
+                    raise ValueError
+                printer.pb.hide()
+                self.window().statusBar().showMessage('Plots saved', 2000)
+            else:
+                self.window().statusBar().showMessage('Cancelled', 2000)
         else:
-            self.window().statusBar().showMessage('Cancelled', 2000)
+            pass
 
     def remove_file(self, table_row):
         self.table.removeRow(table_row)
@@ -1341,16 +1385,17 @@ def main():
     mw = PEMEditorWindow()
     mw.show()
 
-    sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-    file_names = [f for f in os.listdir(sample_files) if
-                  os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
-    file_paths = []
-
-    for file in file_names:
-        file_paths.append(os.path.join(sample_files, file))
-    # (mw.open_files(file_paths))
-    mw.open_files(file_paths)
-
+    # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
+    # file_names = [f for f in os.listdir(sample_files) if
+    #               os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
+    # file_paths = []
+    #
+    # for file in file_names:
+    #     file_paths.append(os.path.join(sample_files, file))
+    # # (mw.open_files(file_paths))
+    mw.open_pem_files(r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01NAv.PEM')
+    mw.open_ri_file([r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01N.RI2'])
+    mw.print_plots(step=True)
     app.exec_()
 
 

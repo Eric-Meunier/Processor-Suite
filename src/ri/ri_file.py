@@ -62,10 +62,13 @@ class MainWindow(QMainWindow):
 
 class RIFile:
     def __init__(self):
-        self.file = []
+        # self.file = {}
+        self.header = {}
+        self.data = []
         self.columns = ['Station', 'Component', 'Gain', 'Theoretical PP', 'Measured PP', 'S1', 'Last Step',
                        '(M-T)*100/Tot', '(S1-T)*100/Tot', '(LS-T)*100/Tot', '(S2-S1)*100/Tot', 'S3%', 'S4%',
                        'S5%', 'S6%', 'S7%', 'S8%', 'S9%', 'S10%']
+        self.survey_type = None
 
     def open(self, filepath):
 
@@ -80,8 +83,16 @@ class RIFile:
                 station = {}
                 for i, column in enumerate(self.columns):
                     station[column] = row[i]
-                self.file.append(station)
-        return self.file
+                self.data.append(station)
+        return self
+
+    def get_components(self):
+        components = []
+        for row in self.data:
+            component = row['Component']
+            if component not in components:
+                components.append(row['Component'])
+        return components
 
 
 def main():
