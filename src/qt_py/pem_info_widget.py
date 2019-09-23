@@ -295,7 +295,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.ri_file.survey = self.pem_file.survey_type
 
         self.ri_file = self.ri_editor.open(filepath)
-
         make_ri_table()
         fill_ri_table()
         add_header_from_pem()

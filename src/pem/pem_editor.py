@@ -176,6 +176,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.splitAllPems.setShortcut("F6")
         self.splitAllPems.triggered.connect(lambda: self.split_select_pem(all=True))
 
+        self.merge_action = QAction("&Merge", self)
+        self.merge_action.triggered.connect(self.merge_pem_files_selection)
+        self.merge_action.setShortcut("M")
+
         self.scaleAllCurrents = QAction("&Scale All Current", self)
         self.scaleAllCurrents.setStatusTip("Scale the current of all PEM Files to the same value")
         self.scaleAllCurrents.setShortcut("F7")
@@ -263,9 +267,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.save_file_as_action = QAction("&Save As...", self)
                 self.table.save_file_as_action.triggered.connect(self.save_pem_file_as)
 
-                self.table.merge_action = QAction("&Merge", self)
-                self.table.merge_action.triggered.connect(self.merge_pem_files_selection)
-
                 self.table.average_action = QAction("&Average", self)
                 self.table.average_action.triggered.connect(self.average_select_pem)
 
@@ -297,7 +298,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addAction(self.print_final_plots_action)
                 self.table.menu.addSeparator()
                 if len(self.table.selectionModel().selectedRows()) > 1:
-                    self.table.menu.addAction(self.table.merge_action)
+                    self.table.menu.addAction(self.merge_action)
                 self.table.menu.addAction(self.table.average_action)
                 self.table.menu.addAction(self.table.split_action)
                 self.table.menu.addAction(self.table.scale_current_action)
@@ -1393,8 +1394,8 @@ def main():
     # for file in file_names:
     #     file_paths.append(os.path.join(sample_files, file))
     # # (mw.open_files(file_paths))
-    mw.open_pem_files(r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01NAv.PEM')
-    mw.open_ri_file([r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01N.RI2'])
+    mw.open_pem_files(r'C:\_Data\2019\Nantou BF\Surface\NE2-2\PEM\1200SAv.PEM')
+    mw.open_ri_file([r'C:\_Data\2019\Nantou BF\Surface\NE2-2\PEM\1200S.RI3'])
     mw.print_plots(step=True)
     app.exec_()
 

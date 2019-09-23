@@ -194,19 +194,21 @@ class PEMPlotter:
         :return: Figure object
         """
 
-        def add_ylabel():
+        def add_ylabel(profile_data, num_channels_to_plot):
             fluxgate =  True if 'fluxgate' in self.survey_type.lower() else False
             units = 'pT' if fluxgate is True else 'nT/s'
+            channels = [re.findall('\d+', key)[0] for key in profile_data if re.match('Ch', key)]
+
             step_fig.axes[0].set_ylabel("TP = Theoretical Primary\n"
                                         f"{'PP = Calculated PP x Ramp' if fluxgate is True else 'PP = Last Ramp Channel'}\n"
                                         f"S1 = Calculated Step Ch.1\n({units})")
-            step_fig.axes[1].set_ylabel("Deviation from TP.\n"
+            step_fig.axes[1].set_ylabel("Deviation from TP\n"
                                         "(% Total Theoretical)")
-            step_fig.axes[2].set_ylabel("Step Channels 2-4\n"
+            step_fig.axes[2].set_ylabel("Step Channels 2 - 4\n"
                                         "Deviation from S1\n"
-                                        "(% Total Theoretical")
+                                        "(% Total Theoretical)")
             step_fig.axes[3].set_ylabel("Pulse EM Off-time\n"
-                                        f"Channels {str(1)} - {str(2)}\n"
+                                        f"Channels {str(min(channels[-num_channels_to_plot:]))} - {str(max(channels[-num_channels_to_plot:]))}\n"
                                         f"({units})")
 
         def annotate_line(ax, annotation, interp_data, x_intervals, offset):
@@ -218,8 +220,14 @@ class PEMPlotter:
                             ha='center',
                             color=self.line_colour)
 
-
         def draw_step_lines(fig, profile_data):
+            """
+            Plotting the lines for step plots made from RI files.
+            :param fig: step_fig Figure object
+            :param profile_data: RI file data tranposed to profile mode
+            :return: step_fig object with lines plotted
+            """
+
             segments = 1000  # The data will be broken in this number of segments
             offset = segments * 0.1  # Used for spacing the annotations
 
@@ -232,45 +240,50 @@ class PEMPlotter:
                 x_intervals = x_intervals[mask]
                 interp_data = interp_data[mask]
 
-                if i < 3:
+                if i < 3:  # Plotting TP, PP, and S1 to the first axes
                     ax = fig.axes[0]
                     ax.plot(x_intervals, interp_data, color=self.line_colour)
                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
                     offset += len(x_intervals) * 0.15
-                elif i < 5:
+                elif i < 5:  # Plotting the PP and S1% to the second axes
+                    if i == 3:  # Resetting the annotation positions
+                        offset = segments * 0.1
                     ax = fig.axes[1]
                     ax.plot(x_intervals, interp_data, color=self.line_colour)
                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
                     offset += len(x_intervals) * 0.15
-                else:
+                else:  # Plotting S2% to S4% to the third axes
+                    if i == 5:
+                        offset = segments * 0.1
                     ax = fig.axes[2]
                     ax.plot(x_intervals, interp_data, color=self.line_colour)
                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
                     offset += len(x_intervals) * 0.15
-                # TODO why is s1 not annotating properly?
                 if offset >= len(x_intervals) * 0.85:
                     offset = len(x_intervals) * 0.10
 
-            off_time_channels = [profile_data[key] for key in profile_data if re.match('Ch', key)]
-            num_channels = len(off_time_channels)+10
-            num_channels_to_plot = round(num_channels/4)
-
-            for i, channel in enumerate(off_time_channels[-num_channels_to_plot:]):
+            offset = segments * 0.1
+            # Plotting the off-time channels to the fourth axes
+            for i, channel in enumerate(off_time_channel_data[-num_channels_to_plot:]):
                 interp_data, x_intervals = self.get_interp_data(channel, stations)
                 mask = np.isclose(interp_data, interp_data.astype('float64'))
                 x_intervals = x_intervals[mask]
                 interp_data = interp_data[mask]
                 ax = fig.axes[3]
                 ax.plot(x_intervals, interp_data, color=self.line_colour)
-                annotate_line(ax, str(num_channels-i), interp_data, x_intervals, offset)
+                annotate_line(ax, str(num_off_time_channels-i), interp_data, x_intervals, offset)
                 offset += len(x_intervals) * 0.15
 
         self.format_figure(step_fig, step=True)
         profile_data = self.get_profile_step_data(component)
+        off_time_channel_data = [profile_data[key] for key in profile_data if re.match('Ch', key)]
+        num_off_time_channels = len(off_time_channel_data) + 10
+        num_channels_to_plot = round(num_off_time_channels / 4)
+
         draw_step_lines(step_fig, profile_data)
 
         self.add_title(component)
-        add_ylabel()
+        add_ylabel(profile_data, num_channels_to_plot)
         self.format_yaxis(step_fig, step=True)
         self.format_xaxis(step_fig)
         return step_fig
@@ -441,7 +454,7 @@ class PEMPlotter:
         Formats the Y axis of a figure
         :param figure: LIN or LOG figure object
         """
-        axes = figure.axes
+        axes = figure.axes[:-1]
 
         for ax in axes:
             ax.get_yaxis().set_label_coords(-0.08 if step is False else -0.10, 0.5)
@@ -449,17 +462,31 @@ class PEMPlotter:
             if ax.get_yscale() != 'symlog':
                 y_limits = ax.get_ylim()
 
-                if (y_limits[1] - y_limits[0]) < 3:
+                if step is True:
+                    if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 5)
+                        new_low = new_high * -1
+                    elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 30:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                        new_low = new_high * -1
+                    else:
+                        new_high = math.ceil(max(y_limits[1], 0))
+                        new_low = math.floor(min(y_limits[0], 0))
+
+                elif 'induction' in self.survey_type.lower() and (y_limits[1] - y_limits[0]) < 3:
                     new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
                     new_low = new_high * -1
-                    ax.set_ylim(new_low, new_high)
-                    ax.set_yticks(ax.get_yticks())
 
-                elif ax != axes[-1]:
+                elif 'fluxgate' in self.survey_type.lower() and (y_limits[1] - y_limits[0]) < 30:
+                    new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                    new_low = new_high * -1
+
+                else:
                     new_high = math.ceil(max(y_limits[1], 0))
                     new_low = math.floor(min(y_limits[0], 0))
-                    ax.set_ylim(new_low, new_high)
-                    ax.set_yticks(ax.get_yticks())
+
+                ax.set_ylim(new_low, new_high)
+                ax.set_yticks(ax.get_yticks())
 
             elif ax.get_yscale() == 'symlog':
                 y_limits = ax.get_ylim()
@@ -470,8 +497,7 @@ class PEMPlotter:
                 ax.tick_params(axis='y', which='major', labelrotation=90)
                 plt.setp(ax.get_yticklabels(), va='center')
 
-            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
-            # figure.align_ylabels()
+            # ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
 
     def add_title(self, component):
         """

@@ -72,6 +72,8 @@ class RIFile:
 
     def open(self, filepath):
 
+        self.data = []
+
         with open(filepath, 'rt') as in_file:
             step_info = re.split('\$\$', in_file.read())[-1]
             raw_file = step_info.splitlines()
