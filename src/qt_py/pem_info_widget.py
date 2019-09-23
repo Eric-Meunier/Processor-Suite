@@ -133,6 +133,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.cellChanged.connect(self.check_station_order)
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
 
+        self.loopGPSTable.itemSelectionChanged.connect(self.toggle_loop_move_buttons)
         self.dataTable.cellChanged.connect(self.update_pem_from_table)
 
         # Spinboxes
@@ -275,8 +276,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.riTable.setHorizontalHeaderLabels(columns)
 
         def fill_ri_table():
-            self.clear_table(self.riTable)
             logging.info('Filling RI table')
+            self.clear_table(self.riTable)
 
             for i, row in enumerate(self.ri_file.data):
                 row_pos = self.riTable.rowCount()
@@ -496,7 +497,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param table_row: event row
         :param table_col: event column
         """
-        print('Update pem from table')
         self.dataTable.blockSignals(True)
         column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
         data = self.pem_file.data
@@ -507,7 +507,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable.blockSignals(False)
 
     def color_data_table(self):
-        print('Color data table')
 
         def color_rows_by_component():
             """
@@ -798,6 +797,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
         [self.loopGPSTable.selectRow(row + 1) for row in rows]
         self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+
+    def toggle_loop_move_buttons(self):
+        if self.loopGPSTable.selectionModel().selectedRows():
+            self.moveUpButton.setEnabled(True)
+            self.moveDownButton.setEnabled(True)
+        else:
+            self.moveUpButton.setEnabled(False)
+            self.moveDownButton.setEnabled(False)
 
     def shift_gps_station_numbers(self):
         def apply_station_shift(row):

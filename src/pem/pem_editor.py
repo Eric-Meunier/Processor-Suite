@@ -13,7 +13,7 @@ from itertools import chain
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QToolButton,
-                             QInputDialog, QHeaderView)
+                             QInputDialog, QHeaderView, QGridLayout, QTableWidget, QDialogButtonBox, QVBoxLayout)
 
 from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser
@@ -22,10 +22,11 @@ from src.pem.pem_parser import PEMParser
 from src.pem.pem_plotter import PEMPrinter
 from src.pem.pem_serializer import PEMSerializer
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
+from src.ri.ri_file import RIFile
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.2.6'
+__version__ = '0.3.0'
 
 getcontext().prec = 6
 
@@ -102,6 +103,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # self.pem_info_widget = PEMFileInfoWidget()
         self.gps_parser = GPSParser()
         self.serializer = PEMSerializer()
+        self.ri_importer = BatchRIImporter(parent=self)
 
         # self.layout.addWidget(self)
         # self.setCentralWidget(self.table)
@@ -156,11 +158,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.clearFiles.setStatusTip("Clear all files")
         self.clearFiles.triggered.connect(self.clear_files)
 
+        self.import_ri_files_action = QAction("&Import RI Files", self)
+        self.import_ri_files_action.setShortcut("Ctrl+I")
+        self.import_ri_files_action.setStatusTip("Import multiple RI files")
+        self.import_ri_files_action.triggered.connect(self.import_ri_files)
+
         self.fileMenu = self.menubar.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.saveFiles)
         self.fileMenu.addAction(self.saveFilesTo)
         self.fileMenu.addAction(self.clearFiles)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.import_ri_files_action)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.export_final_pems_action)
         self.fileMenu.addAction(self.print_step_plots_action)
@@ -178,7 +187,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.merge_action = QAction("&Merge", self)
         self.merge_action.triggered.connect(self.merge_pem_files_selection)
-        self.merge_action.setShortcut("M")
+        self.merge_action.setShortcut("Shift+M")
 
         self.scaleAllCurrents = QAction("&Scale All Current", self)
         self.scaleAllCurrents.setStatusTip("Scale the current of all PEM Files to the same value")
@@ -1259,6 +1268,20 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.batch_name_editor.show()
 
+    def import_ri_files(self):
+
+        def open_ri_files():
+            ri_filepaths = self.ri_importer.ri_files
+            if len(ri_filepaths)>0:
+                for i, ri_filepath in enumerate(ri_filepaths):
+                    self.pem_info_widgets[i].open_ri_file(ri_filepath)
+                self.window().statusBar().showMessage(f"Imported {str(len(ri_filepaths))} RI files", 2000)
+            else:
+                pass
+        self.ri_importer.open_pem_files(self.pem_files)
+        self.ri_importer.show()
+        self.ri_importer.acceptImportSignal.connect(open_ri_files)
+
 
 class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
     """
@@ -1381,6 +1404,105 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
             self.removeEdit.setText('')
 
 
+class BatchRIImporter(QWidget):
+    acceptImportSignal = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.pem_files = []
+        self.ri_files = []
+        self.ri_parser = RIFile()
+        self.message = QMessageBox()
+        self.initUi()
+        self.initSignals()
+
+    def initUi(self):
+        self.setAcceptDrops(True)
+        self.setGeometry(500, 300, 400, 500)
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        self.setWindowTitle("RI File Import")
+
+        self.table = QTableWidget()
+        self.initTable()
+
+        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok |
+                                          QDialogButtonBox.Cancel)
+
+        self.layout().addWidget(self.table)
+        self.layout().addWidget(self.buttonBox)
+
+    def initSignals(self):
+        self.buttonBox.rejected.connect(self.close)
+        self.buttonBox.accepted.connect(self.acceptImportSignal.emit)
+        self.buttonBox.accepted.connect(self.close)
+
+    def initTable(self):
+        columns = ['PEM File', 'RI File']
+        self.table.setColumnCount(len(columns))
+        self.table.setHorizontalHeaderLabels(columns)
+        self.table.setSizeAdjustPolicy(
+            QAbstractScrollArea.AdjustIgnored)
+        self.table.setAlternatingRowColors(True)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+
+    def dragEnterEvent(self, e):
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+
+        if all([url.lower().endswith('ri1') or url.lower().endswith('ri2') or url.lower().endswith(
+                'ri3') for url in urls]):
+            e.accept()
+        else:
+            e.ignore()
+
+    def dropEvent(self, e):
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        self.open_ri_files(urls)
+
+    def closeEvent(self, e):
+        self.clear_table()
+        e.accept()
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
+        elif e.key() == QtCore.Qt.Key_Return:
+            self.acceptImportSignal.emit()
+            self.close()
+
+    def clear_table(self):
+        while self.table.rowCount()>0:
+            self.table.removeRow(0)
+
+    def open_pem_files(self, pem_files):
+        self.pem_files = pem_files
+
+        names = [os.path.basename(pem_file.filepath) for pem_file in self.pem_files]
+
+        for i, name in enumerate(names):
+            row_pos = self.table.rowCount()
+            self.table.insertRow(row_pos)
+            item = QTableWidgetItem(name)
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.table.setItem(row_pos, 0, item)
+
+    def open_ri_files(self, ri_filepaths):
+        if len(ri_filepaths) == len(self.pem_files):
+            for file in ri_filepaths:  # Add RI files to list of RI files
+                self.ri_files.append(file)
+
+            for i, filepath in enumerate(ri_filepaths):  # Add the RI file names to the table
+                name = os.path.basename(filepath)
+                item = QTableWidgetItem(name)
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.table.setItem(i, 1, item)
+        else:
+            self.message.information(None, "Error", "Length of RI Files must be equal to length of PEM Files")
+
+
 def main():
     app = QApplication(sys.argv)
     mw = PEMEditorWindow()
@@ -1394,8 +1516,8 @@ def main():
     # for file in file_names:
     #     file_paths.append(os.path.join(sample_files, file))
     # # (mw.open_files(file_paths))
-    mw.open_pem_files(r'C:\_Data\2019\Nantou BF\Surface\NE2-2\PEM\1200SAv.PEM')
-    mw.open_ri_file([r'C:\_Data\2019\Nantou BF\Surface\NE2-2\PEM\1200S.RI3'])
+    mw.open_pem_files(r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01NAv.PEM')
+    mw.open_ri_file([r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01N.RI2'])
     mw.print_plots(step=True)
     app.exec_()
 

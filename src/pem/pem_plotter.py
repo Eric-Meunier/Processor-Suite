@@ -457,33 +457,48 @@ class PEMPlotter:
         axes = figure.axes[:-1]
 
         for ax in axes:
-            ax.get_yaxis().set_label_coords(-0.08 if step is False else -0.10, 0.5)
+            ax.get_yaxis().set_label_coords(-0.08 if step is False else -0.095, 0.5)
 
             if ax.get_yscale() != 'symlog':
                 y_limits = ax.get_ylim()
 
-                if step is True:
-                    if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
-                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 5)
-                        new_low = new_high * -1
-                    elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 30:
-                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                        new_low = new_high * -1
+                if 'induction' in self.survey_type.lower():
+                    if step is True:
+                        if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
+                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 5)
+                            new_low = new_high * -1
+                        elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 3:
+                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+                            new_low = new_high * -1
+                        else:
+                            new_high = math.ceil(max(y_limits[1], 0))
+                            new_low = math.floor(min(y_limits[0], 0))
                     else:
-                        new_high = math.ceil(max(y_limits[1], 0))
-                        new_low = math.floor(min(y_limits[0], 0))
+                        if (y_limits[1] - y_limits[0]) < 3:
+                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+                            new_low = new_high * -1
+                        else:
+                            new_high = math.ceil(max(y_limits[1], 0))
+                            new_low = math.floor(min(y_limits[0], 0))
 
-                elif 'induction' in self.survey_type.lower() and (y_limits[1] - y_limits[0]) < 3:
-                    new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                    new_low = new_high * -1
-
-                elif 'fluxgate' in self.survey_type.lower() and (y_limits[1] - y_limits[0]) < 30:
-                    new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                    new_low = new_high * -1
-
-                else:
-                    new_high = math.ceil(max(y_limits[1], 0))
-                    new_low = math.floor(min(y_limits[0], 0))
+                elif 'fluxgate' in self.survey_type.lower():
+                    if step is True:
+                        if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
+                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 5)
+                            new_low = new_high * -1
+                        elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 30:
+                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                            new_low = new_high * -1
+                        else:
+                            new_high = math.ceil(max(y_limits[1], 0))
+                            new_low = math.floor(min(y_limits[0], 0))
+                    else:
+                        if (y_limits[1] - y_limits[0]) < 30:
+                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                            new_low = new_high * -1
+                        else:
+                            new_high = math.ceil(max(y_limits[1], 0))
+                            new_low = math.floor(min(y_limits[0], 0))
 
                 ax.set_ylim(new_low, new_high)
                 ax.set_yticks(ax.get_yticks())
