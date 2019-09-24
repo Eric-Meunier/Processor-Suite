@@ -273,6 +273,8 @@ class PEMPlotter:
                 ax.plot(x_intervals, interp_data, color=self.line_colour)
                 annotate_line(ax, str(num_off_time_channels-i), interp_data, x_intervals, offset)
                 offset += len(x_intervals) * 0.15
+                if offset >= len(x_intervals) * 0.85:
+                    offset = len(x_intervals) * 0.10
 
         self.format_figure(step_fig, step=True)
         profile_data = self.get_profile_step_data(component)
@@ -357,7 +359,6 @@ class PEMPlotter:
             stations.append(station['Station'])
 
         return data, stations
-
 
     def get_interp_data(self, profile_data, stations, segments=1000, interp_method='linear'):
         """
@@ -467,7 +468,7 @@ class PEMPlotter:
                         if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
                             new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 5)
                             new_low = new_high * -1
-                        elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 3:
+                        elif ax in axes[2:4] and (y_limits[1] - y_limits[0]) < 3:
                             new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
                             new_low = new_high * -1
                         else:
@@ -485,6 +486,9 @@ class PEMPlotter:
                     if step is True:
                         if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
                             new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 5)
+                            new_low = new_high * -1
+                        elif ax == axes[2] and (y_limits[1] - y_limits[0]) < 3:
+                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
                             new_low = new_high * -1
                         elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 30:
                             new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
@@ -665,15 +669,16 @@ class PEMPrinter:
             for file in self.files:
                 pem_file = file[0]
                 ri_file = file[1]
-                components = pem_file.get_components()
-                for component in components:
-                    step_figure = self.create_step_figure()
-                    step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(component,
-                                                                                                              step_figure)
-                    pdf.savefig(step_plot)
-                    self.pb_count += 1
-                    self.pb.setValue((self.pb_count / self.pb_end) * 100)
-                    plt.close(step_figure)
+                if ri_file:
+                    components = pem_file.get_components()
+                    for component in components:
+                        step_figure = self.create_step_figure()
+                        step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(component,
+                                                                                                                  step_figure)
+                        pdf.savefig(step_plot)
+                        self.pb_count += 1
+                        self.pb.setValue((self.pb_count / self.pb_end) * 100)
+                        plt.close(step_figure)
         os.startfile(self.save_path + '.PDF')
 
     def print_final_plots(self):
@@ -701,15 +706,16 @@ class PEMPrinter:
             for file in self.files:
                 pem_file = file[0]
                 ri_file = file[1]
-                components = pem_file.get_components()
-                for component in components:
-                    step_figure = self.create_step_figure()
-                    step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(component,
-                                                                                                              step_figure)
-                    pdf.savefig(step_plot)
-                    self.pb_count += 1
-                    self.pb.setValue((self.pb_count / self.pb_end) * 100)
-                    plt.close(step_figure)
+                if ri_file:
+                    components = pem_file.get_components()
+                    for component in components:
+                        step_figure = self.create_step_figure()
+                        step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(component,
+                                                                                                                  step_figure)
+                        pdf.savefig(step_plot)
+                        self.pb_count += 1
+                        self.pb.setValue((self.pb_count / self.pb_end) * 100)
+                        plt.close(step_figure)
         os.startfile(self.save_path + '.PDF')
 
 

@@ -110,6 +110,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable.reverse_polarity_action = QAction("&Reverse Polarity", self)
         self.dataTable.reverse_polarity_action.triggered.connect(self.reverse_polarity)
 
+        self.riTable.remove_ri_file_action = QAction("&Remove RI File", self)
+        self.addAction(self.riTable.remove_ri_file_action)
+        self.riTable.remove_ri_file_action.triggered.connect(self.remove_ri_file)
+        self.riTable.remove_ri_file_action.setStatusTip("Remove the RI file")
+        self.riTable.remove_ri_file_action.setShortcut('Shift+Del')
+        self.riTable.remove_ri_file_action.setEnabled(False)
+
         # self.stationGPSTable.cull_gps_action = QAction("&Cull GPS", self)
         # self.stationGPSTable.cull_gps_action.triggered.connect(self.cull_station_gps)
 
@@ -188,6 +195,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 # self.dataTable.remove_row_action.setEnabled(True)
             else:
                 pass
+        elif self.riTable.underMouse():
+            if self.riTable.selectionModel().selectedIndexes():
+                self.riTable.menu = QMenu(self.riTable)
+                self.riTable.menu.addAction(self.riTable.remove_ri_file_action)
+                self.riTable.menu.popup(QtGui.QCursor.pos())
+                self.riTable.remove_ri_file_action.setEnabled(True)
         else:
             pass
 
@@ -243,7 +256,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.dataTable.remove_data_row_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
                 self.dataTable.remove_data_row_action.setEnabled(False)
-
         elif source is self.riTable:
             if event.type() == QtCore.QEvent.Wheel:
                 # TODO Make sideways scrolling work correctly. Won't scroll sideways without also going vertically
@@ -254,9 +266,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     else:
                         self.riTable.horizontalScrollBar().setValue(pos - 2)
                     return True
+            elif event.type() == QtCore.QEvent.FocusIn:
+                self.riTable.remove_ri_file_action.setEnabled(True)
+            elif event.type() == QtCore.QEvent.FocusOut:
+                self.riTable.remove_ri_file_action.setEnabled(False)
             elif event.type() == QtCore.QEvent.KeyPress:
                 if event.key() == QtCore.Qt.Key_Escape:
                     self.riTable.clearSelection()
+                    return True
 
         return super(QWidget, self).eventFilter(source, event)
 
@@ -732,7 +749,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if table == self.stationGPSTable:
             self.check_station_duplicates()
-        add_tags()
+            add_tags()
+        elif table == self.loopGPSTable:
+            add_tags()
 
     def remove_data_row(self):
         selected_rows = self.get_selected_rows(self.dataTable)
@@ -744,6 +763,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable.blockSignals(True)
         self.color_data_table()
         self.dataTable.blockSignals(False)
+
+    def remove_ri_file(self):
+        while self.riTable.rowCount() > 0:
+            self.riTable.removeRow(0)
+        self.ri_file = None
 
     def cull_station_gps(self):
         gps = self.get_station_gps()

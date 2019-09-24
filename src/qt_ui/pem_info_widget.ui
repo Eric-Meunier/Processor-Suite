@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -268,14 +268,14 @@
           <item>
            <widget class="QPushButton" name="flip_station_signs_button">
             <property name="text">
-             <string>Station Polarity</string>
+             <string>+/- Stations</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QPushButton" name="flip_station_numbers_button">
             <property name="text">
-             <string>Reverse Stations</string>
+             <string>↑↓ Stations</string>
             </property>
            </widget>
           </item>

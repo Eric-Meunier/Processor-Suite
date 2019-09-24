@@ -1024,7 +1024,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
             self.dialog.setDirectory(default_path)
             # file_dir = QFileDialog.getSaveDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)  # For separate LIN and LOG pdfs
-            save_dir = QFileDialog.getSaveFileName(self, '', default_path)[0]  # Returns full filepath. For single PDF file
+            save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
 
             plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked()}
 
