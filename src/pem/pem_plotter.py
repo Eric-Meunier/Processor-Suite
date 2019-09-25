@@ -222,7 +222,8 @@ class PEMPlotter:
                                         "Deviation from S1\n"
                                         "(% Total Theoretical)")
             step_fig.axes[3].set_ylabel("Pulse EM Off-time\n"
-                                        f"Channels {str(min(channels[-num_channels_to_plot:]))} - {str(max(channels[-num_channels_to_plot:]))}\n"
+                                        f"Channels {str(min(channels[-num_channels_to_plot:]))} - "
+                                        f"{str(max(channels[-num_channels_to_plot:]))}\n"
                                         f"({units})")
 
         def annotate_line(ax, annotation, interp_data, x_intervals, offset):
@@ -425,7 +426,7 @@ class PEMPlotter:
 
     def draw_lines(self, ax, channel_low, channel_high, component):
         """
-        Plots the lines into an axes of a figure
+        Plots the lines into an axes of a figure. Not for step figures.
         :param ax: Axes of a figure, either LIN or LOG figure objects
         :param channel_low: The first channel to be plotted
         :param channel_high: The last channel to be plotted
@@ -470,8 +471,8 @@ class PEMPlotter:
 
     def format_yaxis(self, figure, step=False):
         """
-        Formats the Y axis of a figure
-        :param figure: LIN or LOG figure object
+        Formats the Y axis of a figure. Will increase the limits of the scale if depending on the limits of the data.
+        :param figure: LIN, LOG or Step figure objects
         """
         axes = figure.axes[:-1]
 
@@ -534,7 +535,7 @@ class PEMPlotter:
                 ax.tick_params(axis='y', which='major', labelrotation=90)
                 plt.setp(ax.get_yticklabels(), va='center')
 
-            # ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
+            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
 
     def add_title(self, component):
         """
@@ -567,6 +568,104 @@ class PEMPlotter:
         plt.figtext(0.955, 0.935,
                     self.header.get('Client') + '\n' + self.header.get('Grid') + '\n' + self.header['Date'] + '\n',
                     fontname='Century Gothic', fontsize=10, va='top', ha='right')
+
+
+# class PlanMap:
+#     def __init__(self):
+#         self.figure = None
+#         self.pem_files = None
+#         self.gps_editor = GPSEditor
+#
+#     def make_plan_map(self, pem_files, figure):
+#         self.figure = figure
+#         self.pem_files = pem_files
+#
+#         if all(['surface' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
+#             self.surface_plan()
+#         elif all(['borehole' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
+#             self.borehole_plan()
+#         else:
+#             return None
+#
+#     def plot_loops(self):
+#
+#         def draw_loop(pem_file):
+#             loop_coords = pem_file.loop_coords
+#             loop_center = self.gps_editor().get_loop_center(copy.copy(loop_coords))
+#             eastings, northings = [float(coord[1]) for coord in loop_coords], [float(coord[2]) for coord in loop_coords]
+#             eastings.insert(0, eastings[-1])  # To close up the loop
+#             northings.insert(0, northings[-1])
+#
+#             self.figure.axes[0].text(loop_center[0], loop_center[1], pem_file.header.get('Loop'),
+#                                      multialignment='center')
+#             self.figure.axes[0].plot(eastings, northings, color='b')
+#
+#         loops = []
+#         for pem_file in self.pem_files:
+#             if pem_file.loop_coords not in loops:  # plot the loop if the loop hasn't been plotted yet
+#                 draw_loop(pem_file)
+#
+#     def format_figure(self):
+#         ax = self.figure.axes[0]
+#         ax.set_aspect('equal', adjustable='box')
+#         [ax.spines[spine].set_color('none') for spine in ax.spines]
+#         ax.tick_params(axis='y', which='major', labelrotation=90)
+#         ax.tick_params(which='major', width=1.00, length=5, labelsize=10)
+#         ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%dN'))
+#         ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%dE'))
+#         ax.xaxis.set_ticks_position('top')
+#         plt.setp(ax.get_xticklabels(), fontname='Century Gothic')
+#         plt.setp(ax.get_yticklabels(), fontname='Century Gothic', va='center')
+#         plt.grid(linestyle='dotted')
+#         plt.subplots_adjust(left=0.092, bottom=0.07, right=0.908, top=0.685)
+#         add_rectangle(self.figure)
+#
+#         xmin, xmax = ax.get_xlim()
+#         ymin, ymax = ax.get_ylim()
+#         xwidth, ywidth = xmax - xmin, ymax - ymin
+#
+#         if xwidth < 1000:
+#             scalesize = 250
+#         elif xwidth < 2000:
+#             scalesize = 500
+#         elif xwidth < 3000:
+#             scalesize = 750
+#         elif xwidth < 4000:
+#             scalesize = 1000
+#
+#         # SCALE BAR
+#         scalebar = AnchoredHScaleBar(size=scalesize, label=str(scalesize) + 'm', loc=4, frameon=False,
+#                                      pad=0.3, sep=2, color="black", ax=ax)
+#         ax.add_artist(scalebar)
+#         # NORTH ARROW
+#         # ax.annotate('N', (1.01, 1), xytext=(1.01, 0.9), xycoords='axes fraction',
+#         #             ha='center', fontsize=12, fontweight='bold',
+#         #             arrowprops=dict(arrowstyle='->', color='k'), transform=ax.transAxes)
+#
+#         plt.arrow(0.5, 0.5, 0., 0.5, shape='right', width=0.007, color='gray', length_includes_head=True,
+#                   transform=self.figure.transFigure, zorder=10)
+#
+#     def surface_plan(self):
+#
+#         def plot_lines():
+#             pass
+#
+#         self.plot_loops()
+#         plot_lines()
+#         self.format_figure()
+#         return self.figure
+#
+#     def borehole_plan(self):
+#         borehole_names = []
+#         # TODO Can have same hole with two loops
+#         unique_boreholes = []
+#         for pem_file in self.pem_files:
+#             borehole_names.append(pem_file.header.get('LineHole'))
+#             if pem_file.header.get('LineHole') not in borehole_names:
+#                 unique_boreholes.append(pem_file)
+#         self.pem_files = unique_boreholes
+#
+#         return self.figure
 
 
 class PlanMap:
@@ -615,8 +714,8 @@ class PlanMap:
         ax.xaxis.set_ticks_position('top')
         plt.setp(ax.get_xticklabels(), fontname='Century Gothic')
         plt.setp(ax.get_yticklabels(), fontname='Century Gothic', va='center')
-
-        plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.785)
+        plt.grid(linestyle='dotted')
+        plt.subplots_adjust(left=0.092, bottom=0.07, right=0.908, top=0.685)
         add_rectangle(self.figure)
 
         xmin, xmax = ax.get_xlim()
@@ -633,14 +732,16 @@ class PlanMap:
             scalesize = 1000
 
         # SCALE BAR
-        scalebar = AnchoredScaleBar(ax.transData, sizey=0)#, sizex=scalesize, label=str(scalesize) + 'm', loc=8, frameon=False,
-        #                        pad=0.3, sep=2, color="black", ax=ax)
-        # ax.add_artist(scalebar)
-        add_scalebar(ax, matchy=False)
+        scalebar = AnchoredHScaleBar(size=scalesize, label=str(scalesize) + 'm', loc=4, frameon=False,
+                                     pad=0.3, sep=2, color="black", ax=ax)
+        ax.add_artist(scalebar)
         # NORTH ARROW
-        ax.annotate('N', (1, 0.1), xytext=(1,0.0), xycoords='axes fraction',
-                        ha='center', fontsize=12, fontweight='bold',
-                        arrowprops=dict(arrowstyle='fancy', color='k'), transform=ax.transAxes)
+        # ax.annotate('N', (1.01, 1), xytext=(1.01, 0.9), xycoords='axes fraction',
+        #             ha='center', fontsize=12, fontweight='bold',
+        #             arrowprops=dict(arrowstyle='->', color='k'), transform=ax.transAxes)
+
+        plt.arrow(0.5, 0.5, 0., 0.5, shape='right', width=0.007, color='gray', length_includes_head=True,
+                  transform=self.figure.transFigure, zorder=10)
 
     def surface_plan(self):
 
@@ -664,99 +765,31 @@ class PlanMap:
 
         return self.figure
 
-
-from matplotlib.offsetbox import AnchoredOffsetbox
-
-
-class AnchoredScaleBar(AnchoredOffsetbox):
-    def __init__(self, transform, sizex=0, sizey=0, labelx=None, labely=None, loc=4,
-                 pad=0.1, borderpad=0.1, sep=2, prop=None, barcolor="black", barwidth=None,
-                 **kwargs):
-        """
-        Draw a horizontal and/or vertical  bar with the size in data coordinate
-        of the give axes. A label will be drawn underneath (center-aligned).
-        - transform : the coordinate frame (typically axes.transData)
-        - sizex,sizey : width of x,y bar, in data units. 0 to omit
-        - labelx,labely : labels for x,y bars; None to omit
-        - loc : position in containing axes
-        - pad, borderpad : padding, in fraction of the legend font size (or prop)
-        - sep : separation between labels and bars in points.
-        - **kwargs : additional arguments passed to base class constructor
-        """
-        from matplotlib.patches import Rectangle
-        from matplotlib.offsetbox import AuxTransformBox, VPacker, HPacker, TextArea, DrawingArea
-        bars = AuxTransformBox(transform)
-        if sizex:
-            bars.add_artist(Rectangle((0, 0), sizex, 0, ec=barcolor, lw=barwidth, fc="none"))
-        if sizey:
-            bars.add_artist(Rectangle((0, 0), 0, sizey, ec=barcolor, lw=barwidth, fc="none"))
-
-        if sizex and labelx:
-            self.xlabel = TextArea(labelx, minimumdescent=False)
-            bars = VPacker(children=[bars, self.xlabel], align="center", pad=0, sep=sep)
-        if sizey and labely:
-            self.ylabel = TextArea(labely)
-            bars = HPacker(children=[self.ylabel, bars], align="center", pad=0, sep=sep)
-
-        AnchoredOffsetbox.__init__(self, loc, pad=pad, borderpad=borderpad,
-                                   child=bars, prop=prop, frameon=False, **kwargs)
-
-
-def add_scalebar(ax, matchx=True, matchy=True, hidex=True, hidey=True, **kwargs):
-    """ Add scalebars to axes
-    Adds a set of scale bars to *ax*, matching the size to the ticks of the plot
-    and optionally hiding the x and y axes
-    - ax : the axis to attach ticks to
-    - matchx,matchy : if True, set size of scale bars to spacing between ticks
-                    if False, size should be set using sizex and sizey params
-    - hidex,hidey : if True, hide x-axis and y-axis of parent
-    - **kwargs : additional arguments passed to AnchoredScaleBars
-    Returns created scalebar object
+# Draws a pretty scale bar
+class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
+    """ size: length of bar in data units
+        extent : height of bar ends in axes units
     """
 
-    def f(axis):
-        l = axis.get_majorticklocs()
-        return len(l) > 1 and (l[1] - l[0])
-
-    if matchx:
-        kwargs['sizex'] = f(ax.xaxis)
-        kwargs['labelx'] = str(kwargs['sizex'])
-    if matchy:
-        kwargs['sizey'] = f(ax.yaxis)
-        kwargs['labely'] = str(kwargs['sizey'])
-
-    sb = AnchoredScaleBar(ax.transData, **kwargs)
-    ax.add_artist(sb)
-
-    if hidex: ax.xaxis.set_visible(False)
-    if hidey: ax.yaxis.set_visible(False)
-    if hidex and hidey: ax.set_frame_on(False)
-
-    return sb
-
-# # Draws a pretty scale bar
-# class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
-#     """ size: length of bar in data units
-#         extent : height of bar ends in axes units
-#     """
-#     def __init__(self, size=1, extent = 0.03, label="", loc=1, ax=None,
-#                  pad=0.4, borderpad=0.5, ppad = -25, sep=2, prop=None,
-#                  frameon=True, **kwargs):
-#         if not ax:
-#             ax = plt.gca()
-#         trans = ax.get_xaxis_transform()
-#         size_bar = matplotlib.offsetbox.AuxTransformBox(trans)
-#         line = Line2D([0,size],[0,0], **kwargs)
-#         vline1 = Line2D([0,0],[-extent/2.,extent/2.], **kwargs)
-#         vline2 = Line2D([size,size],[-extent/2.,extent/2.], **kwargs)
-#         size_bar.add_artist(line)
-#         size_bar.add_artist(vline1)
-#         size_bar.add_artist(vline2)
-#         txt = matplotlib.offsetbox.TextArea(label, minimumdescent=False)
-#         self.vpac = matplotlib.offsetbox.VPacker(children=[size_bar,txt],
-#                                  align="center", pad=ppad, sep=sep)
-#         matplotlib.offsetbox.AnchoredOffsetbox.__init__(self, loc, pad=pad,
-#                  borderpad=borderpad, child=self.vpac, prop=prop, frameon=frameon)
+    def __init__(self, size=1, extent=0.03, label="", loc=1, ax=None,
+                 pad=0.4, borderpad=0.5, ppad=-25, sep=2, prop=None,
+                 frameon=True, **kwargs):
+        if not ax:
+            ax = plt.gca()
+        trans = ax.get_xaxis_transform()
+        size_bar = matplotlib.offsetbox.AuxTransformBox(trans)
+        line = Line2D([0, size], [0, 0], **kwargs)
+        vline1 = Line2D([0, 0], [-extent / 2., extent / 2.], **kwargs)
+        vline2 = Line2D([size, size], [-extent / 2., extent / 2.], **kwargs)
+        size_bar.add_artist(line)
+        size_bar.add_artist(vline1)
+        size_bar.add_artist(vline2)
+        txt = matplotlib.offsetbox.TextArea(label, minimumdescent=False)
+        self.vpac = matplotlib.offsetbox.VPacker(children=[size_bar, txt],
+                                                 align="center", pad=ppad, sep=sep)
+        matplotlib.offsetbox.AnchoredOffsetbox.__init__(self, loc, pad=pad,
+                                                        borderpad=borderpad, child=self.vpac, prop=prop,
+                                                        frameon=frameon)
 
 
 class PEMPrinter:
@@ -945,5 +978,7 @@ if __name__ == '__main__':
         print('File: ' + filepath)
         pem_files.append((pem_file, None))  # Empty second item for ri_files
 
-    printer = PEMPrinter(sample_files_dir, pem_files)
-    printer.print_final_plots()
+    pm = PlanMap
+    pm.make_plan_map(pem_files)
+    # printer = PEMPrinter(sample_files_dir, pem_files)
+    # printer.print_final_plots()

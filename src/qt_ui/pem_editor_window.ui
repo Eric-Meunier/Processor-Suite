@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1029</width>
-    <height>583</height>
+    <height>766</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -370,36 +370,150 @@
            <height>0</height>
           </size>
          </property>
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>16777215</height>
+          </size>
+         </property>
          <property name="title">
-          <string>GPS Import Options</string>
+          <string>GPS</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
-           <widget class="QCheckBox" name="autoSortLoopsCheckbox">
-            <property name="text">
-             <string>Auto-Sort Loops</string>
+           <widget class="QGroupBox" name="groupBox_4">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
             </property>
-            <property name="checked">
-             <bool>true</bool>
+            <property name="title">
+             <string>Coordinate System</string>
             </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_4">
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>Datum:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>Zone:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="comboBox">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="layoutDirection">
+                <enum>Qt::LeftToRight</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="comboBox_2">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="layoutDirection">
+                <enum>Qt::LeftToRight</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QComboBox" name="comboBox_3">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="layoutDirection">
+                <enum>Qt::LeftToRight</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label">
+               <property name="text">
+                <string>System:</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="autoSortStationsCheckbox">
-            <property name="font">
-             <font>
-              <family>MS Shell Dlg 2</family>
-             </font>
+           <widget class="QGroupBox" name="groupBox_3">
+            <property name="title">
+             <string> Import Options</string>
             </property>
-            <property name="text">
-             <string>Auto-Sort Station Positions</string>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
             </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-            <property name="tristate">
-             <bool>false</bool>
-            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_3">
+             <item>
+              <widget class="QCheckBox" name="autoSortLoopsCheckbox">
+               <property name="text">
+                <string>Auto-Sort Loops</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="autoSortStationsCheckbox">
+               <property name="font">
+                <font>
+                 <family>MS Shell Dlg 2</family>
+                </font>
+               </property>
+               <property name="text">
+                <string>Auto-Sort Station Positions</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+               <property name="tristate">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -432,7 +546,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Reverse All Z Data</string>
+             <string>+/- All Z Data</string>
             </property>
             <property name="checkable">
              <bool>false</bool>
@@ -448,7 +562,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Reverse All X Data</string>
+             <string>+/- All X Data</string>
             </property>
             <property name="checkable">
              <bool>false</bool>
@@ -464,7 +578,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Reverse All Y Data</string>
+             <string>+/- All Y Data</string>
             </property>
             <property name="checkable">
              <bool>false</bool>

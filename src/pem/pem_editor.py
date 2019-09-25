@@ -1065,8 +1065,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 if final is True:
                     printer.print_final_plots()
                 elif step is True:
-                    # printer.print_step_plots()
-                    printer.print_plan_map()
+                    printer.print_step_plots()
+                    # printer.print_plan_map()
                 else:
                     raise ValueError
                 printer.pb.hide()
