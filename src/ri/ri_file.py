@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
 
 class RIFile:
     def __init__(self):
-        # self.file = {}
+        self.filepath = None
         self.header = {}
         self.data = []
         self.columns = ['Station', 'Component', 'Gain', 'Theoretical PP', 'Measured PP', 'S1', 'Last Step',
@@ -71,7 +71,7 @@ class RIFile:
         self.survey_type = None
 
     def open(self, filepath):
-
+        self.filepath = filepath
         self.data = []
 
         with open(filepath, 'rt') as in_file:

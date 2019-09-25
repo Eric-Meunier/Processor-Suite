@@ -26,7 +26,7 @@ from src.ri.ri_file import RIFile
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 getcontext().prec = 6
 
@@ -1025,7 +1025,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.dialog.setDirectory(default_path)
             # file_dir = QFileDialog.getSaveDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)  # For separate LIN and LOG pdfs
             save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
-
+            # save_dir = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\Testing'
             plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked()}
 
             if save_dir:
@@ -1065,7 +1065,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 if final is True:
                     printer.print_final_plots()
                 elif step is True:
-                    printer.print_step_plots()
+                    # printer.print_step_plots()
+                    printer.print_plan_map()
                 else:
                     raise ValueError
                 printer.pb.hide()
@@ -1278,6 +1279,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.window().statusBar().showMessage(f"Imported {str(len(ri_filepaths))} RI files", 2000)
             else:
                 pass
+
         self.ri_importer.open_pem_files(self.pem_files)
         self.ri_importer.show()
         self.ri_importer.acceptImportSignal.connect(open_ri_files)
@@ -1412,7 +1414,7 @@ class BatchRIImporter(QWidget):
         self.parent = parent
         self.pem_files = []
         self.ri_files = []
-        self.ri_parser = RIFile()
+        self.ri_parser = RIFile
         self.message = QMessageBox()
         self.initUi()
         self.initSignals()
@@ -1490,17 +1492,39 @@ class BatchRIImporter(QWidget):
             self.table.setItem(row_pos, 0, item)
 
     def open_ri_files(self, ri_filepaths):
-        if len(ri_filepaths) == len(self.pem_files):
-            for file in ri_filepaths:  # Add RI files to list of RI files
-                self.ri_files.append(file)
+        self.ri_files = []
 
-            for i, filepath in enumerate(ri_filepaths):  # Add the RI file names to the table
+        if len(ri_filepaths) == len(self.pem_files):
+
+            if all(['borehole' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
+                ri_files = [self.ri_parser().open(filepath) for filepath in ri_filepaths]
+
+                for pem_file in self.pem_files:
+                    pem_components = pem_file.get_components()
+                    pem_name = re.sub('[^0-9]','', pem_file.header.get('LineHole'))[-4:]
+
+                    for ri_file in ri_files:
+                        ri_components = ri_file.get_components()
+                        ri_name = re.sub('[^0-9]','', os.path.splitext(os.path.basename(ri_file.filepath))[0])[-4:]
+
+                        if pem_components == ri_components and pem_name == ri_name:
+                            self.ri_files.append(ri_file.filepath)
+                            ri_files.pop(ri_files.index(ri_file))
+
+            elif not all(['surface' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
+                self.message.information(None, "Error", "PEM files must either be all borehole or all surface surveys")
+
+            else:
+                [self.ri_files.append(ri_filepath) for ri_filepath in ri_filepaths]
+
+            for i, filepath in enumerate(self.ri_files):  # Add the RI file names to the table
                 name = os.path.basename(filepath)
                 item = QTableWidgetItem(name)
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.table.setItem(i, 1, item)
+
         else:
-            self.message.information(None, "Error", "Length of RI Files must be equal to length of PEM Files")
+            self.message.information(None, "Error", "Length of RI files must be equal to length of PEM files")
 
 
 def main():
@@ -1518,6 +1542,7 @@ def main():
     # # (mw.open_files(file_paths))
     mw.open_pem_files(r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01NAv.PEM')
     mw.open_ri_file([r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01N.RI2'])
+    # mw.print_plots(step=True)
     mw.print_plots(step=True)
     app.exec_()
 

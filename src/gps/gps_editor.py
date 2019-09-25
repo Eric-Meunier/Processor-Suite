@@ -65,6 +65,24 @@ class GPSEditor:
         formatted_gps = self.format_gps(sorted_coords)
         return formatted_gps
 
+    def get_loop_center(self, gps):
+        loop_gps = self.parser.parse_loop_gps(gps)
+        if not loop_gps:
+            return None
+        logging.info('Calculating center of loop GPS')
+        loop_coords_tuples = []  # Easting and Northing
+
+        # Splitting up the coordinates from a string to something usable
+        for coord in loop_gps:
+            coord_tuple = (float(coord[0]), float(coord[1]))
+            if coord_tuple not in loop_coords_tuples:
+                loop_coords_tuples.append(coord_tuple)
+
+        # Finds the center point using the tuples.
+        center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples),
+                          [len(loop_coords_tuples)] * 2))
+        return center
+
     def sort_line(self, gps):
         station_gps = self.parser.parse_station_gps(gps)
         if not station_gps:
@@ -192,20 +210,37 @@ class GPSParser:
 
         return self.file
 
-    def parse_station_gps(self, gps):
-        if isinstance(gps, list):
-            for i, row in enumerate(gps):
+    def convert_to_str(self, file):
+        if isinstance(file, list):
+            for i, row in enumerate(file):
                 if isinstance(row, list):
                     row = list(map(lambda x: str(x), row))
                     row_str = ' '.join(row)
-                    gps[i] = row_str
+                    file[i] = row_str
                 else:
                     pass
-            gps_str = '\n'.join(gps)
-        elif gps is None or gps is '':
+            gps_str = '\n'.join(file)
+        elif file is None or file is '':
             return None
         else:
-            gps_str = gps
+            gps_str = file
+        return gps_str
+
+    def parse_station_gps(self, gps):
+        # if isinstance(gps, list):
+        #     for i, row in enumerate(gps):
+        #         if isinstance(row, list):
+        #             row = list(map(lambda x: str(x), row))
+        #             row_str = ' '.join(row)
+        #             gps[i] = row_str
+        #         else:
+        #             pass
+        #     gps_str = '\n'.join(gps)
+        # elif gps is None or gps is '':
+        #     return None
+        # else:
+        #     gps_str = gps
+        gps_str = self.convert_to_str(gps)
         raw_gps = re.findall(self.re_station_gps, gps_str)
         raw_gps = list(map(lambda x: list(x), raw_gps))
 
@@ -223,19 +258,20 @@ class GPSParser:
             return None
 
     def parse_loop_gps(self, gps):
-        if isinstance(gps, list):
-            for i, row in enumerate(gps):
-                if isinstance(row, list):
-                    row = list(map(lambda x: str(x), row))
-                    row_str = ' '.join(row)
-                    gps[i] = row_str
-                else:
-                    pass
-            gps_str = '\n'.join(gps)
-        elif gps is None or gps is '':
-            return None
-        else:
-            gps_str = gps
+        # if isinstance(gps, list):
+        #     for i, row in enumerate(gps):
+        #         if isinstance(row, list):
+        #             row = list(map(lambda x: str(x), row))
+        #             row_str = ' '.join(row)
+        #             gps[i] = row_str
+        #         else:
+        #             pass
+        #     gps_str = '\n'.join(gps)
+        # elif gps is None or gps is '':
+        #     return None
+        # else:
+        #     gps_str = gps
+        gps_str = self.convert_to_str(gps)
         raw_gps = re.findall(self.re_loop_gps, gps_str)
         raw_gps = list(map(lambda x: list(x), raw_gps))
 
@@ -245,19 +281,20 @@ class GPSParser:
             return None
 
     def parse_segments(self, file):
-        if isinstance(file, list):
-            for i, row in enumerate(file):  # Convert to str for re purposes
-                if isinstance(row, list):
-                    row = list(map(lambda x: str(x), row))
-                    row_str = ' '.join(row)
-                    file[i] = row_str
-                else:
-                    pass
-            seg_file_str = '\n'.join(file)
-        elif file is None or file is '':
-            return None
-        else:
-            seg_file_str = file
+        # if isinstance(file, list):
+        #     for i, row in enumerate(file):  # Convert to str for re purposes
+        #         if isinstance(row, list):
+        #             row = list(map(lambda x: str(x), row))
+        #             row_str = ' '.join(row)
+        #             file[i] = row_str
+        #         else:
+        #             pass
+        #     seg_file_str = '\n'.join(file)
+        # elif file is None or file is '':
+        #     return None
+        # else:
+        #     seg_file_str = file
+        seg_file_str = self.convert_to_str(file)
         raw_seg_file = re.findall(self.re_segment, seg_file_str)
         raw_seg_file = list(map(lambda x: list(x), raw_seg_file))
         if raw_seg_file:
@@ -266,19 +303,20 @@ class GPSParser:
             return None
 
     def parse_collar_gps(self, file):
-        if isinstance(file, list):
-            for i, row in enumerate(file):  # Convert to str for re purposes
-                if isinstance(row, list):
-                    row = list(map(lambda x: str(x), row))
-                    row_str = ' '.join(row)
-                    file[i] = row_str
-                else:
-                    pass
-            collar_str = '\n'.join(file)
-        elif file is None or file is '':
-            return None
-        else:
-            collar_str = file
+        # if isinstance(file, list):
+        #     for i, row in enumerate(file):  # Convert to str for re purposes
+        #         if isinstance(row, list):
+        #             row = list(map(lambda x: str(x), row))
+        #             row_str = ' '.join(row)
+        #             file[i] = row_str
+        #         else:
+        #             pass
+        #     collar_str = '\n'.join(file)
+        # elif file is None or file is '':
+        #     return None
+        # else:
+        #     collar_str = file
+        collar_str = self.convert_to_str(file)
         raw_collar_gps = re.findall(self.re_collar_gps, collar_str)
         raw_collar_gps = list(map(lambda x: list(x), raw_collar_gps))
         if raw_collar_gps:

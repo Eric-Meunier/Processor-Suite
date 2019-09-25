@@ -12,11 +12,16 @@ from src.pem.pem_parser import PEMParser
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
+from matplotlib.lines import Line2D
+import matplotlib.offsetbox
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 from PyQt5.QtWidgets import (QProgressBar)
 from matplotlib import patches
 from matplotlib.backends.backend_pdf import PdfPages
 from scipy import interpolate
 from scipy import stats
+import copy
+from src.gps.gps_editor import GPSEditor, GPSParser
 
 __version__ = '0.0.1'
 logging.info('PEMPlotter')
@@ -41,9 +46,18 @@ mpl.rcParams['font.size'] = 9
 # mpl.rcParams['font.sans-serif'] = 'Tahoma'
 
 
+def add_rectangle(figure):
+    """
+    Draws a rectangle around a figure object
+    """
+    rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
+                             facecolor='none', transform=figure.transFigure)
+    figure.patches.append(rect)
+
+
 class PEMPlotter:
     """
-    Class for creating Crone LIN and LOG figures.
+    Class for creating Crone LIN, LOG and STEP figures.
     PEMFile must be averaged and split.
     """
 
@@ -105,7 +119,7 @@ class PEMPlotter:
                 plt.setp(ax.get_xticklabels(), visible=True, size=12, fontname='Century Gothic')
 
         plt.subplots_adjust(left=0.135 if step is False else 0.170, bottom=0.07, right=0.958, top=0.885)
-        self.add_rectangle(figure)
+        add_rectangle(figure)
 
         for ax in axes:
             format_spines(ax)
@@ -195,7 +209,7 @@ class PEMPlotter:
         """
 
         def add_ylabel(profile_data, num_channels_to_plot):
-            fluxgate =  True if 'fluxgate' in self.survey_type.lower() else False
+            fluxgate = True if 'fluxgate' in self.survey_type.lower() else False
             units = 'pT' if fluxgate is True else 'nT/s'
             channels = [re.findall('\d+', key)[0] for key in profile_data if re.match('Ch', key)]
 
@@ -231,7 +245,8 @@ class PEMPlotter:
             segments = 1000  # The data will be broken in this number of segments
             offset = segments * 0.1  # Used for spacing the annotations
 
-            keys = ['Theoretical PP', 'Measured PP', 'S1', '(M-T)*100/Tot', '(S1-T)*100/Tot', '(S2-S1)*100/Tot', 'S3%', 'S4%']
+            keys = ['Theoretical PP', 'Measured PP', 'S1', '(M-T)*100/Tot', '(S1-T)*100/Tot', '(S2-S1)*100/Tot', 'S3%',
+                    'S4%']
             annotations = ['TP', 'PP', 'S1', 'PP', 'S1', 'S2', 'S3', 'S4']
             stations = profile_data['Stations']
             for i, key in enumerate(keys):
@@ -271,7 +286,7 @@ class PEMPlotter:
                 interp_data = interp_data[mask]
                 ax = fig.axes[3]
                 ax.plot(x_intervals, interp_data, color=self.line_colour)
-                annotate_line(ax, str(num_off_time_channels-i), interp_data, x_intervals, offset)
+                annotate_line(ax, str(num_off_time_channels - i), interp_data, x_intervals, offset)
                 offset += len(x_intervals) * 0.15
                 if offset >= len(x_intervals) * 0.85:
                     offset = len(x_intervals) * 0.10
@@ -289,6 +304,9 @@ class PEMPlotter:
         self.format_yaxis(step_fig, step=True)
         self.format_xaxis(step_fig)
         return step_fig
+
+    def make_plan_map(self, pem_files):
+        pass
 
     def convert_station(self, station):
         """
@@ -466,7 +484,7 @@ class PEMPlotter:
                 if 'induction' in self.survey_type.lower():
                     if step is True:
                         if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 5)
+                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
                             new_low = new_high * -1
                         elif ax in axes[2:4] and (y_limits[1] - y_limits[0]) < 3:
                             new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
@@ -485,7 +503,7 @@ class PEMPlotter:
                 elif 'fluxgate' in self.survey_type.lower():
                     if step is True:
                         if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 5)
+                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
                             new_low = new_high * -1
                         elif ax == axes[2] and (y_limits[1] - y_limits[0]) < 3:
                             new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
@@ -550,30 +568,195 @@ class PEMPlotter:
                     self.header.get('Client') + '\n' + self.header.get('Grid') + '\n' + self.header['Date'] + '\n',
                     fontname='Century Gothic', fontsize=10, va='top', ha='right')
 
-    def add_rectangle(self, figure):
-        """
-        Draws a rectangle around a figure object
-        """
-        rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
-                                 facecolor='none', transform=figure.transFigure)
-        figure.patches.append(rect)
 
-    # def get_lin_figs(self):
-    #     components = self.pem_file.get_components()
-    #     file_dir = r'C:\_Data\2019\BMSC\Surface\MO-254'
-    #     with PdfPages(os.path.join(file_dir, "lin test.pdf")) as pdf:
-    #         for component in components:
-    #             pdf.savefig(self.make_lin_fig(component))
-    #             plt.clf()
-    #
-    # def get_log_figs(self):
-    #     components = self.pem_file.get_components()
-    #     log_figs = []
-    #
-    #     for component in components:
-    #         log_figs.append(self.make_log_fig(component))
-    #
-    #     return log_figs
+class PlanMap:
+    def __init__(self):
+        self.figure = None
+        self.pem_files = None
+        self.gps_editor = GPSEditor
+
+    def make_plan_map(self, pem_files, figure):
+        self.figure = figure
+        self.pem_files = pem_files
+
+        if all(['surface' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
+            self.surface_plan()
+        elif all(['borehole' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
+            self.borehole_plan()
+        else:
+            return None
+
+    def plot_loops(self):
+
+        def draw_loop(pem_file):
+            loop_coords = pem_file.loop_coords
+            loop_center = self.gps_editor().get_loop_center(copy.copy(loop_coords))
+            eastings, northings = [float(coord[1]) for coord in loop_coords], [float(coord[2]) for coord in loop_coords]
+            eastings.insert(0, eastings[-1])  # To close up the loop
+            northings.insert(0, northings[-1])
+
+            self.figure.axes[0].text(loop_center[0], loop_center[1], pem_file.header.get('Loop'),
+                                     multialignment='center')
+            self.figure.axes[0].plot(eastings, northings, color='b')
+
+        loops = []
+        for pem_file in self.pem_files:
+            if pem_file.loop_coords not in loops:  # plot the loop if the loop hasn't been plotted yet
+                draw_loop(pem_file)
+
+    def format_figure(self):
+        ax = self.figure.axes[0]
+        ax.set_aspect('equal', adjustable='box')
+        [ax.spines[spine].set_color('none') for spine in ax.spines]
+        ax.tick_params(axis='y', which='major', labelrotation=90)
+        ax.tick_params(which='major', width=1.00, length=5, labelsize=10)
+        ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%dN'))
+        ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%dE'))
+        ax.xaxis.set_ticks_position('top')
+        plt.setp(ax.get_xticklabels(), fontname='Century Gothic')
+        plt.setp(ax.get_yticklabels(), fontname='Century Gothic', va='center')
+
+        plt.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.785)
+        add_rectangle(self.figure)
+
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        xwidth, ywidth = xmax - xmin, ymax - ymin
+
+        if xwidth < 1000:
+            scalesize = 250
+        elif xwidth < 2000:
+            scalesize = 500
+        elif xwidth < 3000:
+            scalesize = 750
+        elif xwidth < 4000:
+            scalesize = 1000
+
+        # SCALE BAR
+        scalebar = AnchoredScaleBar(ax.transData, sizey=0)#, sizex=scalesize, label=str(scalesize) + 'm', loc=8, frameon=False,
+        #                        pad=0.3, sep=2, color="black", ax=ax)
+        # ax.add_artist(scalebar)
+        add_scalebar(ax, matchy=False)
+        # NORTH ARROW
+        ax.annotate('N', (1, 0.1), xytext=(1,0.0), xycoords='axes fraction',
+                        ha='center', fontsize=12, fontweight='bold',
+                        arrowprops=dict(arrowstyle='fancy', color='k'), transform=ax.transAxes)
+
+    def surface_plan(self):
+
+        def plot_lines():
+            pass
+
+        self.plot_loops()
+        plot_lines()
+        self.format_figure()
+        return self.figure
+
+    def borehole_plan(self):
+        borehole_names = []
+        # TODO Can have same hole with two loops
+        unique_boreholes = []
+        for pem_file in self.pem_files:
+            borehole_names.append(pem_file.header.get('LineHole'))
+            if pem_file.header.get('LineHole') not in borehole_names:
+                unique_boreholes.append(pem_file)
+        self.pem_files = unique_boreholes
+
+        return self.figure
+
+
+from matplotlib.offsetbox import AnchoredOffsetbox
+
+
+class AnchoredScaleBar(AnchoredOffsetbox):
+    def __init__(self, transform, sizex=0, sizey=0, labelx=None, labely=None, loc=4,
+                 pad=0.1, borderpad=0.1, sep=2, prop=None, barcolor="black", barwidth=None,
+                 **kwargs):
+        """
+        Draw a horizontal and/or vertical  bar with the size in data coordinate
+        of the give axes. A label will be drawn underneath (center-aligned).
+        - transform : the coordinate frame (typically axes.transData)
+        - sizex,sizey : width of x,y bar, in data units. 0 to omit
+        - labelx,labely : labels for x,y bars; None to omit
+        - loc : position in containing axes
+        - pad, borderpad : padding, in fraction of the legend font size (or prop)
+        - sep : separation between labels and bars in points.
+        - **kwargs : additional arguments passed to base class constructor
+        """
+        from matplotlib.patches import Rectangle
+        from matplotlib.offsetbox import AuxTransformBox, VPacker, HPacker, TextArea, DrawingArea
+        bars = AuxTransformBox(transform)
+        if sizex:
+            bars.add_artist(Rectangle((0, 0), sizex, 0, ec=barcolor, lw=barwidth, fc="none"))
+        if sizey:
+            bars.add_artist(Rectangle((0, 0), 0, sizey, ec=barcolor, lw=barwidth, fc="none"))
+
+        if sizex and labelx:
+            self.xlabel = TextArea(labelx, minimumdescent=False)
+            bars = VPacker(children=[bars, self.xlabel], align="center", pad=0, sep=sep)
+        if sizey and labely:
+            self.ylabel = TextArea(labely)
+            bars = HPacker(children=[self.ylabel, bars], align="center", pad=0, sep=sep)
+
+        AnchoredOffsetbox.__init__(self, loc, pad=pad, borderpad=borderpad,
+                                   child=bars, prop=prop, frameon=False, **kwargs)
+
+
+def add_scalebar(ax, matchx=True, matchy=True, hidex=True, hidey=True, **kwargs):
+    """ Add scalebars to axes
+    Adds a set of scale bars to *ax*, matching the size to the ticks of the plot
+    and optionally hiding the x and y axes
+    - ax : the axis to attach ticks to
+    - matchx,matchy : if True, set size of scale bars to spacing between ticks
+                    if False, size should be set using sizex and sizey params
+    - hidex,hidey : if True, hide x-axis and y-axis of parent
+    - **kwargs : additional arguments passed to AnchoredScaleBars
+    Returns created scalebar object
+    """
+
+    def f(axis):
+        l = axis.get_majorticklocs()
+        return len(l) > 1 and (l[1] - l[0])
+
+    if matchx:
+        kwargs['sizex'] = f(ax.xaxis)
+        kwargs['labelx'] = str(kwargs['sizex'])
+    if matchy:
+        kwargs['sizey'] = f(ax.yaxis)
+        kwargs['labely'] = str(kwargs['sizey'])
+
+    sb = AnchoredScaleBar(ax.transData, **kwargs)
+    ax.add_artist(sb)
+
+    if hidex: ax.xaxis.set_visible(False)
+    if hidey: ax.yaxis.set_visible(False)
+    if hidex and hidey: ax.set_frame_on(False)
+
+    return sb
+
+# # Draws a pretty scale bar
+# class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
+#     """ size: length of bar in data units
+#         extent : height of bar ends in axes units
+#     """
+#     def __init__(self, size=1, extent = 0.03, label="", loc=1, ax=None,
+#                  pad=0.4, borderpad=0.5, ppad = -25, sep=2, prop=None,
+#                  frameon=True, **kwargs):
+#         if not ax:
+#             ax = plt.gca()
+#         trans = ax.get_xaxis_transform()
+#         size_bar = matplotlib.offsetbox.AuxTransformBox(trans)
+#         line = Line2D([0,size],[0,0], **kwargs)
+#         vline1 = Line2D([0,0],[-extent/2.,extent/2.], **kwargs)
+#         vline2 = Line2D([size,size],[-extent/2.,extent/2.], **kwargs)
+#         size_bar.add_artist(line)
+#         size_bar.add_artist(vline1)
+#         size_bar.add_artist(vline2)
+#         txt = matplotlib.offsetbox.TextArea(label, minimumdescent=False)
+#         self.vpac = matplotlib.offsetbox.VPacker(children=[size_bar,txt],
+#                                  align="center", pad=ppad, sep=sep)
+#         matplotlib.offsetbox.AnchoredOffsetbox.__init__(self, loc, pad=pad,
+#                  borderpad=borderpad, child=self.vpac, prop=prop, frameon=frameon)
 
 
 class PEMPrinter:
@@ -591,6 +774,7 @@ class PEMPrinter:
         self.ri_files = []
         self.sort_files()
         self.plotter = PEMPlotter
+        self.mapper = PlanMap
         self.save_path = save_path
         self.kwargs = kwargs
         self.pb = QProgressBar()
@@ -604,6 +788,14 @@ class PEMPrinter:
 
         self.pem_files = [pair[0] for pair in self.files]
         self.ri_files = [pair[1] for pair in self.files]
+
+    def create_plan_figure(self):
+        """
+        Creates an empty but formatted Plan figure
+        :return: Figure object
+        """
+        plan_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
+        return plan_fig
 
     def create_lin_figure(self):
         """
@@ -664,6 +856,16 @@ class PEMPrinter:
     #                 self.pb.setValue((self.pb_count / self.pb_end) * 100)
     #                 plt.close(log_figure)
 
+    def print_plan_map(self):
+        with PdfPages(self.save_path + '.PDF') as pdf:
+            plan_figure = self.create_plan_figure()
+            plan_map = self.mapper().make_plan_map(self.pem_files, plan_figure)
+            pdf.savefig(plan_map)
+            self.pb_count += 1
+            self.pb.setValue((self.pb_count / self.pb_end) * 100)
+            plt.close(plan_figure)
+        os.startfile(self.save_path + '.PDF')
+
     def print_step_plots(self):
         with PdfPages(self.save_path + '.PDF') as pdf:
             for file in self.files:
@@ -673,8 +875,9 @@ class PEMPrinter:
                     components = pem_file.get_components()
                     for component in components:
                         step_figure = self.create_step_figure()
-                        step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(component,
-                                                                                                                  step_figure)
+                        step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(
+                            component,
+                            step_figure)
                         pdf.savefig(step_plot)
                         self.pb_count += 1
                         self.pb.setValue((self.pb_count / self.pb_end) * 100)
@@ -710,8 +913,9 @@ class PEMPrinter:
                     components = pem_file.get_components()
                     for component in components:
                         step_figure = self.create_step_figure()
-                        step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(component,
-                                                                                                                  step_figure)
+                        step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(
+                            component,
+                            step_figure)
                         pdf.savefig(step_plot)
                         self.pb_count += 1
                         self.pb.setValue((self.pb_count / self.pb_end) * 100)
@@ -729,17 +933,17 @@ class PEMPrinter:
 if __name__ == '__main__':
     parser = PEMParser()
     # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-    sample_files = r'C:\_Data\2019\Minera Aguilar\Borehole'
-    file_names = [f for f in os.listdir(sample_files) if
-                  os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
+    sample_files_dir = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM'
+    file_names = [f for f in os.listdir(sample_files_dir) if
+                  os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
     pem_files = []
 
     # file = os.path.join(sample_files, file_names[0])
     for file in file_names:
-        filepath = os.path.join(sample_files, file)
+        filepath = os.path.join(sample_files_dir, file)
         pem_file = parser.parse(filepath)
         print('File: ' + filepath)
-        pem_files.append(pem_file)
+        pem_files.append((pem_file, None))  # Empty second item for ri_files
 
-    printer = PEMPrinter(pem_files, r'C:\_Data\2019\BMSC\Surface\MO-254')
-    printer.print_lin_figs()
+    printer = PEMPrinter(sample_files_dir, pem_files)
+    printer.print_final_plots()
