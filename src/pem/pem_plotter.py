@@ -5,6 +5,13 @@ import re
 import sys
 from pprint import pprint
 from itertools import chain
+import cartopy.crs as ccrs  # import projections
+import cartopy.feature as cf
+import cartopy.io.shapereader as shpreader
+from owslib.wmts import WebMapTileService
+from cartopy.io.img_tiles import OSM
+from matplotlib import patheffects
+import matplotlib
 from operator import itemgetter, attrgetter
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib as mpl
@@ -20,6 +27,7 @@ from matplotlib import patches
 from matplotlib.backends.backend_pdf import PdfPages
 from scipy import interpolate
 from scipy import stats
+from cartopy.io.img_tiles import Stamen
 import copy
 from src.gps.gps_editor import GPSEditor, GPSParser
 
@@ -669,57 +677,156 @@ class PEMPlotter:
 
 
 class PlanMap:
-    def __init__(self):
-        self.figure = None
-        self.pem_files = None
-        self.gps_editor = GPSEditor
-
-    def make_plan_map(self, pem_files, figure):
-        self.figure = figure
+    def __init__(self, pem_files, figure, projection, draw_loops=True, draw_lines=True, draw_hole_collar=True, draw_hole_trace=True):
+        self.fig = figure
+        if not isinstance(pem_files, list):
+            pem_files = [pem_files]
         self.pem_files = pem_files
+        self.loops = []
+        self.lines = []
+        self.holes = []
+        self.draw_loops = draw_loops
+        self.draw_lines = draw_lines
+        self.draw_hole_collar = draw_hole_collar
+        self.draw_hole_trace = draw_hole_trace
+        self.gps_editor = GPSEditor
+        self.crs = projection
+        self.ax = self.fig.add_subplot(projection=self.crs)
+        # self.inset_ax = self.fig.add_axes([0.1, 0.5, 0.5, 0.3], projection=self.crs)
 
-        if all(['surface' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
-            self.surface_plan()
-        elif all(['borehole' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
-            self.borehole_plan()
-        else:
-            return None
+        self.plot_pems()
+        self.format_figure()
 
-    def plot_loops(self):
+        plt.show()
 
-        def draw_loop(pem_file):
-            loop_coords = pem_file.loop_coords
-            loop_center = self.gps_editor().get_loop_center(copy.copy(loop_coords))
-            eastings, northings = [float(coord[1]) for coord in loop_coords], [float(coord[2]) for coord in loop_coords]
-            eastings.insert(0, eastings[-1])  # To close up the loop
-            northings.insert(0, northings[-1])
-
-            self.figure.axes[0].text(loop_center[0], loop_center[1], pem_file.header.get('Loop'),
-                                     multialignment='center')
-            self.figure.axes[0].plot(eastings, northings, color='b')
-
-        loops = []
+    def plot_pems(self):
         for pem_file in self.pem_files:
-            if pem_file.loop_coords not in loops:  # plot the loop if the loop hasn't been plotted yet
-                draw_loop(pem_file)
+            if self.draw_loops is True:
+                loop_gps = self.gps_editor().get_loop_gps(pem_file.loop_coords)
+                if loop_gps not in self.loops:
+                    self.loops.append(loop_gps)
+                    self.add_loop_to_map(loop_gps)
+
+            if 'surface' in pem_file.survey_type.lower() and self.draw_lines is True:
+                line_gps = self.gps_editor().get_station_gps(pem_file.line_coords)
+                if line_gps not in self.lines:
+                    self.lines.append(line_gps)
+                    self.add_line_to_map(line_gps)
+
+            if 'borehole' in pem_file.survey_type.lower():
+                if self.draw_hole_trace is True:
+                    pass
+                if self.draw_hole_collar is True:
+                    pass
+
+    def add_loop_to_map(self, loop_coords):
+        loop_center = self.gps_editor().get_loop_center(copy.copy(loop_coords))
+        eastings, northings = [float(coord[0]) for coord in loop_coords], [float(coord[1]) for coord in loop_coords]
+        eastings.insert(0, eastings[-1])  # To close up the loop
+        northings.insert(0, northings[-1])
+
+        self.ax.text(loop_center[0], loop_center[1], pem_file.header.get('Loop'),
+                     ha='center')
+        self.ax.plot(eastings, northings, color='b', transform=self.crs)
+
+    def add_line_to_map(self, line_coords):
+        eastings, northings = [float(coord[0]) for coord in line_coords], [float(coord[1]) for coord in line_coords]
+        #TODO Add rotation of text based on azimuth of line
+        self.ax.text(float(line_coords[0][0]), float(line_coords[0][1])+10, pem_file.header.get('LineHole'),
+                     ha='center')
+        self.ax.plot(eastings, northings, '-|', markersize=5, color='k', transform=self.crs)
 
     def format_figure(self):
-        ax = self.figure.axes[0]
-        ax.set_aspect('equal', adjustable='box')
-        [ax.spines[spine].set_color('none') for spine in ax.spines]
-        ax.tick_params(axis='y', which='major', labelrotation=90)
-        ax.tick_params(which='major', width=1.00, length=5, labelsize=10)
-        ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%dN'))
-        ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%dE'))
-        ax.xaxis.set_ticks_position('top')
-        plt.setp(ax.get_xticklabels(), fontname='Century Gothic')
-        plt.setp(ax.get_yticklabels(), fontname='Century Gothic', va='center')
-        plt.grid(linestyle='dotted')
-        plt.subplots_adjust(left=0.092, bottom=0.07, right=0.908, top=0.685)
-        add_rectangle(self.figure)
 
-        xmin, xmax = ax.get_xlim()
-        ymin, ymax = ax.get_ylim()
+        def scale_bar(ax, proj, length=None, location=(0.5, 0.05), linewidth=3,
+                      units='km', m_per_unit=1000):
+            """
+            http://stackoverflow.com/a/35705477/1072212
+            ax is the axes to draw the scalebar on.
+            proj is the projection the axes are in
+            location is center of the scalebar in axis coordinates ie. 0.5 is the middle of the plot
+            length is the length of the scalebar in km.
+            linewidth is the thickness of the scalebar.
+            units is the name of the unit
+            m_per_unit is the number of meters in a unit
+            """
+            # find lat/lon center to find best UTM zone
+            x0, x1, y0, y1 = ax.get_extent(proj.as_geodetic())
+            # Projection in metres
+            tm = ccrs.TransverseMercator((x0 + x1) / 2)
+            # Get the extent of the plotted area in coordinates in metres
+            x0, x1, y0, y1 = ax.get_extent(tm)
+            # Turn the specified scalebar location into coordinates in metres
+            sbcx, sbcy = x0 + (x1 - x0) * location[0], y0 + (y1 - y0) * location[1]
+
+            if not length:
+                length = (x1 - x0) / (m_per_unit / 2)
+                ndim = int(np.floor(np.log10(length)))  # number of digits in number
+                length = round(length, -ndim)  # round to 1sf
+
+                # Returns numbers starting with the list
+                def scale_number(x):
+                    if str(x)[0] in ['1', '2', '5']:
+                        return int(x)
+                    else:
+                        return scale_number(x - 10 ** ndim)
+
+                length = scale_number(length)
+
+            # Generate the x coordinate for the ends of the scalebar
+            bar_xs = [sbcx - length * m_per_unit / 2, sbcx + length * m_per_unit / 2]
+            # buffer for scalebar
+            buffer = [patheffects.withStroke(linewidth=5, foreground="w")]
+            # Plot the scalebar with buffer
+            ax.plot(bar_xs, [sbcy, sbcy], transform=tm, color='dimgray',
+                    linewidth=linewidth, path_effects=buffer)
+            # buffer for text
+            buffer = [patheffects.withStroke(linewidth=3, foreground="w")]
+            # Plot the scalebar label
+            t0 = ax.text(sbcx, sbcy, str(length) + ' ' + units, transform=tm,
+                         horizontalalignment='center', verticalalignment='bottom',
+                         path_effects=buffer, zorder=2, color='dimgray')
+            # Plot the scalebar without buffer, in case covered by text buffer
+            ax.plot(bar_xs, [sbcy, sbcy], transform=tm, color='dimgray',
+                    linewidth=linewidth, zorder=3)
+
+        def set_size(ax=None):
+            if not ax: ax = plt.gca()
+            xmin, xmax, ymin, ymax = ax.get_extent()
+            width, height = xmax-xmin, ymax-ymin
+            ratio = width/height
+            if ratio > (8.5/11):
+                new_width = width
+                new_height = new_width/(8.5/11)
+            else:
+                new_height = height
+                new_width = new_height/(8.5/11)
+            new_xmin = xmin-((new_width-width)/2)
+            new_xmax = xmax+((new_width-width)/2)
+            new_ymin = ymin-((new_height-height)/2)
+            new_ymax = ymax+((new_height-height)/2)
+            ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
+
+        set_size(self.ax)
+        plt.grid(linestyle='dotted')
+        self.ax.xaxis.set_visible(True)  # Required to actually get the labels to show in UTM
+        self.ax.yaxis.set_visible(True)
+        self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
+        self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
+        self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
+        self.ax.xaxis.set_ticks_position('top')
+        plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
+        plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
+
+        # self.ax.add_wms(wms='http://vmap0.tiles.osgeo.org/wms/vmap0',
+        #                 layers=['basic'])
+        plt.subplots_adjust(left=0.02, bottom=0.02, right=0.96, top=0.96)
+
+        offset=250
+        xmin, xmax = self.ax.get_xlim()
+        ymin, ymax = self.ax.get_ylim()
+        self.ax.set_extent((xmin-offset, xmax+offset, ymin-offset, ymax+offset), crs=self.crs)
+
         xwidth, ywidth = xmax - xmin, ymax - ymin
 
         if xwidth < 1000:
@@ -731,39 +838,10 @@ class PlanMap:
         elif xwidth < 4000:
             scalesize = 1000
 
-        # SCALE BAR
-        scalebar = AnchoredHScaleBar(size=scalesize, label=str(scalesize) + 'm', loc=4, frameon=False,
-                                     pad=0.3, sep=2, color="black", ax=ax)
-        ax.add_artist(scalebar)
-        # NORTH ARROW
-        # ax.annotate('N', (1.01, 1), xytext=(1.01, 0.9), xycoords='axes fraction',
-        #             ha='center', fontsize=12, fontweight='bold',
-        #             arrowprops=dict(arrowstyle='->', color='k'), transform=ax.transAxes)
+        scale_bar(self.ax, self.crs, length=scalesize, m_per_unit=1, units='m')
 
-        plt.arrow(0.5, 0.5, 0., 0.5, shape='right', width=0.007, color='gray', length_includes_head=True,
-                  transform=self.figure.transFigure, zorder=10)
-
-    def surface_plan(self):
-
-        def plot_lines():
-            pass
-
-        self.plot_loops()
-        plot_lines()
-        self.format_figure()
-        return self.figure
-
-    def borehole_plan(self):
-        borehole_names = []
-        # TODO Can have same hole with two loops
-        unique_boreholes = []
-        for pem_file in self.pem_files:
-            borehole_names.append(pem_file.header.get('LineHole'))
-            if pem_file.header.get('LineHole') not in borehole_names:
-                unique_boreholes.append(pem_file)
-        self.pem_files = unique_boreholes
-
-        return self.figure
+        plt.arrow(0.95, 0.85, 0., 0.1, shape='right', width=0.007, color='dimgray', length_includes_head=True,
+                  transform=self.ax.transAxes, zorder=10)
 
 # Draws a pretty scale bar
 class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
@@ -965,20 +1043,23 @@ class PEMPrinter:
 
 if __name__ == '__main__':
     parser = PEMParser()
-    # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-    sample_files_dir = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM'
-    file_names = [f for f in os.listdir(sample_files_dir) if
-                  os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
-    pem_files = []
-
-    # file = os.path.join(sample_files, file_names[0])
-    for file in file_names:
-        filepath = os.path.join(sample_files_dir, file)
-        pem_file = parser.parse(filepath)
-        print('File: ' + filepath)
-        pem_files.append((pem_file, None))  # Empty second item for ri_files
-
-    pm = PlanMap
-    pm.make_plan_map(pem_files)
+    # # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
+    # sample_files_dir = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM'
+    # file_names = [f for f in os.listdir(sample_files_dir) if
+    #               os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
+    # pem_files = []
+    #
+    # # file = os.path.join(sample_files, file_names[0])
+    # for file in file_names:
+    #     filepath = os.path.join(sample_files_dir, file)
+    #     pem_file = parser.parse(filepath)
+    #     print('File: ' + filepath)
+    #     pem_files.append((pem_file, None))  # Empty second item for ri_files
+    file = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01NAv.PEM'
+    # file = r'C:\_Data\2019\Eastern\Maritime Resources\WV-19-06\PEM\WV-19-06\WV-19-06 XYT.PEM'
+    pem_file = parser.parse(file)
+    fig = plt.figure(figsize=(8.5, 11))
+    pm = PlanMap(pem_file, fig, ccrs.UTM(21))
+    # pm.make_plan_map(pem_files)
     # printer = PEMPrinter(sample_files_dir, pem_files)
     # printer.print_final_plots()
