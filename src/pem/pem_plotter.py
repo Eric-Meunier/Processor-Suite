@@ -9,9 +9,12 @@ import cartopy.crs as ccrs  # import projections
 import cartopy.feature as cf
 import cartopy.io.shapereader as shpreader
 from owslib.wmts import WebMapTileService
+import matplotlib.transforms as mtransforms
 from cartopy.io.img_tiles import OSM
 from matplotlib import patheffects
+import matplotlib.lines as mlines
 import matplotlib
+from datetime import datetime
 from operator import itemgetter, attrgetter
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib as mpl
@@ -678,6 +681,7 @@ class PEMPlotter:
 
 class PlanMap:
     def __init__(self, pem_files, figure, projection, draw_loops=True, draw_lines=True, draw_hole_collar=True, draw_hole_trace=True):
+        self.color = 'dimgray'
         self.fig = figure
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
@@ -711,7 +715,7 @@ class PlanMap:
                 line_gps = self.gps_editor().get_station_gps(pem_file.line_coords)
                 if line_gps not in self.lines:
                     self.lines.append(line_gps)
-                    self.add_line_to_map(line_gps)
+                    self.add_line_to_map(line_gps, pem_file.header.get('LineHole'))
 
             if 'borehole' in pem_file.survey_type.lower():
                 if self.draw_hole_trace is True:
@@ -725,16 +729,14 @@ class PlanMap:
         eastings.insert(0, eastings[-1])  # To close up the loop
         northings.insert(0, northings[-1])
 
-        self.ax.text(loop_center[0], loop_center[1], pem_file.header.get('Loop'),
-                     ha='center')
-        self.ax.plot(eastings, northings, color='b', transform=self.crs)
+        self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}", ha='center', color=self.color)  # Add the loop name
+        self.loop_plt, = self.ax.plot(eastings, northings, color=self.color, label='Transmitter Loop', transform=self.crs)  # Plot the loop
 
-    def add_line_to_map(self, line_coords):
+    def add_line_to_map(self, line_coords, line_name):
         eastings, northings = [float(coord[0]) for coord in line_coords], [float(coord[1]) for coord in line_coords]
         #TODO Add rotation of text based on azimuth of line
-        self.ax.text(float(line_coords[0][0]), float(line_coords[0][1])+10, pem_file.header.get('LineHole'),
-                     ha='center')
-        self.ax.plot(eastings, northings, '-|', markersize=5, color='k', transform=self.crs)
+        self.ax.text(float(line_coords[0][0]), float(line_coords[0][1])+10, line_name, ha='center', color=self.color)  # Add the line name
+        self.station_plt, = self.ax.plot(eastings, northings, '-|', markersize=5, color=self.color, label='Surface Line', transform=self.crs)  # Plot the line
 
     def format_figure(self):
 
@@ -791,21 +793,103 @@ class PlanMap:
                     linewidth=linewidth, zorder=3)
 
         def set_size(ax=None):
+            """
+            Re-size the extents to make the axes 11" by 8.5"
+            :param ax: GeoAxes object
+            :return: None
+            """
             if not ax: ax = plt.gca()
             xmin, xmax, ymin, ymax = ax.get_extent()
             width, height = xmax-xmin, ymax-ymin
             ratio = width/height
-            if ratio > (8.5/11):
-                new_width = width
-                new_height = new_width/(8.5/11)
-            else:
+            if ratio < (11/8.5):
                 new_height = height
-                new_width = new_height/(8.5/11)
+                new_width = width*(11/8.5)
+            else:
+                new_width = width
+                new_height = height*(11/8.5)
             new_xmin = xmin-((new_width-width)/2)
             new_xmax = xmax+((new_width-width)/2)
             new_ymin = ymin-((new_height-height)/2)
             new_ymax = ymax+((new_height-height)/2)
             ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
+
+            # For portrait
+            # if not ax: ax = plt.gca()
+            # xmin, xmax, ymin, ymax = ax.get_extent()
+            # width, height = xmax-xmin, ymax-ymin
+            # ratio = width/height
+            # if ratio > (8.5/11):
+            #     new_width = width
+            #     new_height = new_width/(8.5/11)
+            # else:
+            #     new_height = height
+            #     new_width = new_height/(8.5/11)
+            # new_xmin = xmin-((new_width-width)/2)
+            # new_xmax = xmax+((new_width-width)/2)
+            # new_ymin = ymin-((new_height-height)/2)
+            # new_ymax = ymax+((new_height-height)/2)
+            # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
+
+        def add_title():
+            b_xmin = 0.02
+            b_width = 0.30
+            b_ymin = 0.82
+            b_height = 0.15
+            center_pos = ((b_xmin+b_width)/2)
+            right_pos = b_xmin+b_width-.02
+            left_pos = b_xmin+.02
+            top_pos = b_ymin+b_height-0.020
+
+            line_1 = mlines.Line2D([b_xmin,b_xmin+b_width], [top_pos-.030,top_pos-.030],
+                                   linewidth=1, color='gray', transform=self.ax.transAxes, zorder=4)
+
+            line_2 = mlines.Line2D([b_xmin,b_xmin+b_width], [top_pos-.105,top_pos-.105],
+                                   linewidth=.5, color='gray', transform=self.ax.transAxes, zorder=4)
+
+            client = self.pem_files[0].header.get("Client")
+            grid = self.pem_files[0].header.get("Grid")
+            survey_type = self.pem_files[0].get_survey_type()
+
+            survey_dates = [pem_file.header.get('Date') for pem_file in self.pem_files]
+            min_date = datetime.strftime(min([datetime.strptime(date, '%B %d, %Y') for date in survey_dates]),'%B %d')
+            max_date = datetime.strftime(max([datetime.strptime(date, '%B %d, %Y') for date in survey_dates]),'%B %d, %Y')
+
+            # timebases = []
+            # [timebases.append(timebase) for timebase in [pem_file.header.get('Timebase') for pem_file in self.pem_files] if timebase not in timebases]
+            # [str(timebase) for timebase in timebases]
+            #
+            # timebase_freqs = [str(round(((1 / (float(timebase) / 1000)) / 4),2)) for timebase in timebases]
+
+            coord_sys = "UTM Zone 31N, WGS 84"
+            scale = "1:2000"
+            # rect = patches.Rectangle(xy=(b_xmin, b_ymin), width=b_width, height=b_height, linewidth=0.7, edgecolor='black',
+            #                          facecolor='white', fill=True, alpha=1, zorder=4, transform=self.ax.transAxes)
+            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='gray',
+                                          boxstyle="round,pad=0.005", facecolor='white', zorder=4, transform=self.ax.transAxes)
+            self.ax.add_patch(rect)
+            shadow = patches.Shadow(rect, 0.002, -0.002)
+            self.ax.add_patch(shadow)
+            self.ax.add_line(line_1)
+            self.ax.add_line(line_2)
+
+            self.ax.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
+                        fontname='Century Gothic', fontsize=11, ha='center', zorder=5, transform=self.ax.transAxes)
+
+            self.ax.text(center_pos, top_pos-0.020, f"{survey_type} Pulse EM Survey", family='cursive', style='italic',
+                        fontname='Century Gothic', fontsize=10, ha='center', zorder=5, transform=self.ax.transAxes)
+
+            self.ax.text(center_pos, top_pos-0.040, f"{client}\n" + f"{grid}",
+                        fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=5, transform=self.ax.transAxes)
+
+            self.ax.text(center_pos,top_pos-0.085, f"Survey Date: {min_date} - {max_date}",
+                        fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=5, transform=self.ax.transAxes)
+
+            self.ax.text(left_pos, top_pos-0.113, f"{coord_sys}", family='cursive', style='italic', color='dimgray',
+                        fontname='Century Gothic', fontsize=9, va='top', ha='left', zorder=5, transform=self.ax.transAxes)
+
+            self.ax.text(right_pos, top_pos-0.113, f"Scale {scale}", family='cursive', style='italic', color='dimgray',
+                        fontname='Century Gothic', fontsize=9, va='top', ha='right', zorder=5, transform=self.ax.transAxes)
 
         set_size(self.ax)
         plt.grid(linestyle='dotted')
@@ -817,18 +901,17 @@ class PlanMap:
         self.ax.xaxis.set_ticks_position('top')
         plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
         plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
-
+        plt.subplots_adjust(left=0.02, bottom=0.02, right=0.96, top=0.96)
         # self.ax.add_wms(wms='http://vmap0.tiles.osgeo.org/wms/vmap0',
         #                 layers=['basic'])
-        plt.subplots_adjust(left=0.02, bottom=0.02, right=0.96, top=0.96)
 
-        offset=250
-        xmin, xmax = self.ax.get_xlim()
-        ymin, ymax = self.ax.get_ylim()
-        self.ax.set_extent((xmin-offset, xmax+offset, ymin-offset, ymax+offset), crs=self.crs)
+        offset = 250
+        xmin, xmax, ymin, ymax = self.ax.get_extent()
+        self.ax.set_extent((xmin-offset, xmax+offset, ymin-offset, ymax+offset*2), crs=self.crs)
 
         xwidth, ywidth = xmax - xmin, ymax - ymin
 
+        # TODO Make scale size automatic
         if xwidth < 1000:
             scalesize = 250
         elif xwidth < 2000:
@@ -840,8 +923,14 @@ class PlanMap:
 
         scale_bar(self.ax, self.crs, length=scalesize, m_per_unit=1, units='m')
 
-        plt.arrow(0.95, 0.85, 0., 0.1, shape='right', width=0.007, color='dimgray', length_includes_head=True,
+        arrow = plt.arrow(0.96, 0.86, 0., 0.1, shape='right', width=0.008, facecolor='white', edgecolor='dimgray', length_includes_head=True,
                   transform=self.ax.transAxes, zorder=10)
+        arrow_shadow = patches.Shadow(arrow, 0.002, -0.002)
+        self.ax.add_patch(arrow_shadow)
+
+        add_title()
+        self.ax.legend(handles=[self.station_plt, self.loop_plt], title='Legend', loc='lower left',
+                       framealpha=1, shadow=True)
 
 # Draws a pretty scale bar
 class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
@@ -905,7 +994,7 @@ class PEMPrinter:
         Creates an empty but formatted Plan figure
         :return: Figure object
         """
-        plan_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
+        plan_fig, ax = plt.subplots(1, 1, figsize=(11, 8.5))
         return plan_fig
 
     def create_lin_figure(self):
@@ -971,7 +1060,7 @@ class PEMPrinter:
         with PdfPages(self.save_path + '.PDF') as pdf:
             plan_figure = self.create_plan_figure()
             plan_map = self.mapper().make_plan_map(self.pem_files, plan_figure)
-            pdf.savefig(plan_map)
+            pdf.savefig(plan_map, orientation='landscape')
             self.pb_count += 1
             self.pb.setValue((self.pb_count / self.pb_end) * 100)
             plt.close(plan_figure)
@@ -1042,24 +1131,25 @@ class PEMPrinter:
 #     """
 
 if __name__ == '__main__':
-    parser = PEMParser()
+    parser = PEMParser
     # # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-    # sample_files_dir = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM'
-    # file_names = [f for f in os.listdir(sample_files_dir) if
-    #               os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
-    # pem_files = []
-    #
-    # # file = os.path.join(sample_files, file_names[0])
-    # for file in file_names:
-    #     filepath = os.path.join(sample_files_dir, file)
-    #     pem_file = parser.parse(filepath)
-    #     print('File: ' + filepath)
-    #     pem_files.append((pem_file, None))  # Empty second item for ri_files
-    file = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01NAv.PEM'
+    sample_files_dir = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM'
+    file_names = [f for f in os.listdir(sample_files_dir) if
+                  os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
+    pem_files = []
+
+    # file = os.path.join(sample_files, file_names[0])
+    for file in file_names:
+        filepath = os.path.join(sample_files_dir, file)
+        pem_file = parser().parse(filepath)
+        print('File: ' + filepath)
+        # pem_files.append((pem_file, None))  # Empty second item for ri_files
+        pem_files.append(pem_file)
+    # file = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01NAv.PEM'
     # file = r'C:\_Data\2019\Eastern\Maritime Resources\WV-19-06\PEM\WV-19-06\WV-19-06 XYT.PEM'
-    pem_file = parser.parse(file)
-    fig = plt.figure(figsize=(8.5, 11))
-    pm = PlanMap(pem_file, fig, ccrs.UTM(21))
+    # pem_file = parser.parse(file)
+    fig = plt.figure(figsize=(11, 8.5))
+    pm = PlanMap(pem_files, fig, ccrs.UTM(21))
     # pm.make_plan_map(pem_files)
     # printer = PEMPrinter(sample_files_dir, pem_files)
     # printer.print_final_plots()
