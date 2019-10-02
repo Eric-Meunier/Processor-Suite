@@ -318,7 +318,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         add_header_from_pem()
 
     def initTables(self):
-        if 'surface' in self.pem_file.survey_type.lower() or 'squid' in self.pem_file.survey_type.lower():
+        if self.pem_file.get_survey_type().lower() == 'surface':
             self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
             self.station_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
             self.stationGPSTable.setColumnCount(len(self.station_columns))
@@ -327,7 +327,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 QAbstractScrollArea.AdjustToContents)
             self.stationGPSTable.resizeColumnsToContents()
 
-        elif 'borehole' in self.pem_file.survey_type.lower():
+        elif self.pem_file.get_survey_type().lower() == 'borehole':
             self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
             self.geometry_columns = ['Tag', 'Azimuth', 'Dip', 'Seg. Length', 'Units', 'Depth']
             self.geometryTable.setColumnCount(len(self.geometry_columns))
@@ -569,7 +569,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                         suffixes.append(suffix[0])
                 return statistics.mode(suffixes)
 
-            if 'surface' in self.pem_file.survey_type.lower() or 'squid' in self.pem_file.survey_type.lower():
+            if self.pem_file.survey_type.lower() == 'surface':
                 correct_suffix = most_common_suffix()
 
                 for row in range(self.dataTable.rowCount()):
@@ -616,7 +616,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             operator = self.pem_file.tags.get('Operator')
             loop_size = ' x '.join(self.pem_file.tags.get('LoopSize').split(' ')[0:2])
 
-            if 'surface' in survey_type.lower():
+            if 'surface' in survey_type.lower() or 'squid' in survey_type.lower():
                 linetype = 'Line'
             else:
                 linetype = 'Hole'
@@ -637,17 +637,17 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         def init_station_text():
             # Fill station GPS
-            pem_station_gps = self.pem_file.get_line_coords()
+            pem_station_gps = self.pem_file.line_coords
             self.add_station_gps(pem_station_gps)
 
         def init_geometry_text():
             # Fill hole geometry collar GPS segments
-            pem_geometry_text = self.pem_file.get_line_coords()
+            pem_geometry_text = self.pem_file.line_coords
             self.add_geometry(pem_geometry_text)
 
         def init_loop_text():
             # Fill loop GPS
-            pem_loop_gps = self.pem_file.get_loop_coords()
+            pem_loop_gps = self.pem_file.loop_coords
             self.add_loop_gps(pem_loop_gps)
 
         header = self.pem_file.header

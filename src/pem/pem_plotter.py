@@ -53,8 +53,7 @@ mpl.rcParams['lines.linewidth'] = 0.5
 # mpl.rcParams['lines.color'] = '#1B2631'
 mpl.rcParams['font.size'] = 9
 
-
-# mpl.rcParams['font.sans-serif'] = 'Tahoma'
+line_colour = 'black'
 
 
 def add_rectangle(figure):
@@ -66,106 +65,329 @@ def add_rectangle(figure):
     figure.patches.append(rect)
 
 
-class PEMPlotter:
+def format_figure(figure, step=False):
     """
-    Class for creating Crone LIN, LOG and STEP figures.
-    PEMFile must be averaged and split.
+    Formats a figure, mainly the spines, adjusting the padding, and adding the rectangle.
+    :param figure: LIN or LOG figure object
+    """
+    axes = figure.axes
+
+    def format_spines(ax):
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        if ax != axes[-1]:
+            ax.spines['bottom'].set_position(('data', 0))
+            ax.tick_params(axis='x', which='major', direction='inout', length=4)
+            plt.setp(ax.get_xticklabels(), visible=False)
+        else:
+            ax.spines['bottom'].set_visible(False)
+            ax.xaxis.set_ticks_position('bottom')
+            ax.tick_params(axis='x', which='major', direction='out', length=6)
+            plt.setp(ax.get_xticklabels(), visible=True, size=12, fontname='Century Gothic')
+
+    plt.subplots_adjust(left=0.135 if step is False else 0.170, bottom=0.07, right=0.958, top=0.885)
+    add_rectangle(figure)
+
+    for ax in axes:
+        format_spines(ax)
+
+
+def format_xaxis(pem_file, figure, x_min, x_max):
+    """
+    Formats the X axis of a figure
+    :param figure: LIN or LOG figure objects
+    """
+    stations = [convert_station(station) for station in pem_file.get_unique_stations()]
+    if x_min is None:
+        x_min = min(stations)
+    if x_max is None:
+        x_max = max(stations)
+    x_label_locator = ticker.AutoLocator()
+    major_locator = ticker.FixedLocator(sorted(stations))
+    plt.xlim(x_min, x_max)
+    figure.axes[0].xaxis.set_major_locator(major_locator)  # for some reason this seems to apply to all axes
+    figure.axes[-1].xaxis.set_major_locator(x_label_locator)
+
+
+def convert_station(station):
+    """
+    Converts a single station name into a number, negative if the stations was S or W
+    :return: Integer station number
+    """
+    if re.match(r"\d+(S|W)", station):
+        station = (-int(re.sub(r"\D", "", station)))
+
+    else:
+        station = (int(re.sub(r"\D", "", station)))
+
+    return station
+
+
+def get_profile_data(pem_file, component):
+    """
+    Transforms the data of a single component so it is ready to be plotted for LIN and LOG plots. Only for PEM data.
+    :param component: A single component (i.e. Z, X, or Y)
+    :return: Dictionary where each key is a channel, and the values of those keys are a list of
+    dictionaries which contain the stations and readings of all readings of that channel
+    """
+    profile_data = {}
+    component_data = list(filter(lambda d: d['Component'] == component, pem_file.data))
+    num_channels = len(component_data[0]['Data'])
+
+    for channel in range(0, num_channels):
+        channel_data = []
+
+        for i, station in enumerate(component_data):
+            reading = station['Data'][channel]
+            station_number = int(convert_station(station['Station']))
+            channel_data.append({'Station': station_number, 'Reading': reading})
+
+        profile_data[channel] = channel_data
+
+    return profile_data
+
+
+def get_channel_data(channel, profile_data):
+    """
+    Get the profile-mode data for a given channel. Only for PEM data.
+    :param channel: int, channel number
+    :param profile_data: dict, data in profile-mode
+    :return: data in list form and corresponding stations as a list
+    """
+    data = []
+    stations = []
+
+    for station in profile_data[channel]:
+        data.append(station['Reading'])
+        stations.append(station['Station'])
+
+    return data, stations
+
+
+def get_interp_data(profile_data, stations, survey_type, hide_gaps=True, gap=None, segments=1000,
+                    interp_method='linear'):
+    """
+    Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
+    into 1000 segments.
+    :param profile_data: The EM data of a single channel in profile mode
+    :param segments: Number of segments to interpolate
+    :param hide_gaps: Bool: Whether or not to hide gaps
+    :param gap: The minimum length threshold above which is considered a gap
+    :return: The interpolated data and stations
     """
 
-    def __init__(self, pem_file=None, ri_file=None, **kwargs):  # hide_gaps=True, gap=None, x_min=None, x_max=None):
-        super().__init__()
-        self.pem_file = pem_file
-        self.ri_file = ri_file
-        self.hide_gaps = kwargs.get('HideGaps')
-        self.gap = kwargs.get('Gap')
-        self.data = self.pem_file.data
-        self.header = self.pem_file.header
-        self.stations = self.pem_file.get_converted_unique_stations()
-        self.survey_type = self.pem_file.get_survey_type()
-        self.x_min = int(min(chain(self.stations))) if kwargs.get('XMin') is None else kwargs.get('XMin')
-        self.x_max = int(max(chain(self.stations))) if kwargs.get('XMax') is None else kwargs.get('XMax')
-        self.num_channels = int(self.header['NumChannels']) + 1
-        self.units = 'nT/s' if self.pem_file.tags['Units'].casefold() == 'nanotesla/sec' else 'pT'
-        # self.channel_bounds = self.calc_channel_bounds()
-        self.line_colour = 'k'
-        # self.line_colour = 'red'
+    def calc_gaps(stations, gap):
 
-    #
-    # def calc_channel_bounds(self):
-    #     # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
-    #     channel_bounds = [None] * 4
-    #     num_channels_per_plot = int((self.num_channels - 1) // 4)
-    #     remainder_channels = int((self.num_channels - 1) % 4)
-    #
-    #     for k in range(0, len(channel_bounds)):
-    #         channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
-    #
-    #     for i in range(0, remainder_channels):
-    #         channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
-    #         for k in range(i + 1, len(channel_bounds)):
-    #             channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
-    #
-    #     channel_bounds.insert(0, (0, 0))
-    #     return channel_bounds
+        if 'borehole' in survey_type.casefold():
+            min_gap = 50
+        elif 'surface' in survey_type.casefold():
+            min_gap = 200
+        station_gaps = np.diff(stations)
 
-    def format_figure(self, figure, step=False):
-        """
-        Formats a figure, mainly the spines, adjusting the padding, and adding the rectangle.
-        :param figure: LIN or LOG figure object
-        """
-        axes = figure.axes
+        if gap is None:
+            gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
 
-        def format_spines(ax):
-            ax.spines['right'].set_visible(False)
-            ax.spines['top'].set_visible(False)
+        gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
+                         station_gaps[i] > gap]
 
-            if ax != axes[-1]:
-                ax.spines['bottom'].set_position(('data', 0))
-                ax.tick_params(axis='x', which='major', direction='inout', length=4)
-                plt.setp(ax.get_xticklabels(), visible=False)
+        return gap_intervals
+
+    stations = np.array(stations, dtype='float64')
+    readings = np.array(profile_data, dtype='float64')
+    x_intervals = np.linspace(stations[0], stations[-1], segments)
+    f = interpolate.interp1d(stations, readings, kind=interp_method)
+
+    interpolated_y = f(x_intervals)
+
+    if hide_gaps:
+        gap_intervals = calc_gaps(stations, gap)
+
+        # Masks the intervals that are between gap[0] and gap[1]
+        for gap in gap_intervals:
+            interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
+                                                interpolated_y)
+
+    return interpolated_y, x_intervals
+
+
+def draw_lines(pem_file, component, ax, channel_low, channel_high, hide_gaps=True):
+    """
+    Plots the lines into an axes of a figure. Not for step figures.
+    :param ax: Axes of a figure, either LIN or LOG figure objects
+    :param channel_low: The first channel to be plotted
+    :param channel_high: The last channel to be plotted
+    :param component: String letter representing the component to plot (X, Y, or Z)
+    """
+
+    line_colour = 'k'
+    segments = 1000  # The data will be broken in this number of segments
+    offset = segments * 0.1  # Used for spacing the annotations
+    profile_channel_data = get_profile_data(pem_file, component)
+
+    for k in range(channel_low, (channel_high + 1)):
+        # Gets the profile data for a single channel, along with the stations
+        channel_data, stations = get_channel_data(k, profile_channel_data)
+
+        # Interpolates the channel data, also returns the corresponding x intervals
+        interp_data, x_intervals = get_interp_data(channel_data, stations, pem_file.survey_type,
+                                                   segments=segments, hide_gaps=hide_gaps)
+
+        ax.plot(x_intervals, interp_data, color=line_colour)
+
+        # Mask is used to hide data within gaps
+        mask = np.isclose(interp_data, interp_data.astype('float64'))
+        x_intervals = x_intervals[mask]
+        interp_data = interp_data[mask]
+
+        # Annotating the lines
+        for i, x_position in enumerate(x_intervals[int(offset)::int(len(x_intervals) * 0.4)]):
+            y = interp_data[list(x_intervals).index(x_position)]
+
+            if k == 0:
+                ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline', ha='center',
+                            color=line_colour)
+
             else:
-                ax.spines['bottom'].set_visible(False)
-                ax.xaxis.set_ticks_position('bottom')
-                ax.tick_params(axis='x', which='major', direction='out', length=6)
-                plt.setp(ax.get_xticklabels(), visible=True, size=12, fontname='Century Gothic')
+                ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
+                            ha='center',
+                            color=line_colour)
 
-        plt.subplots_adjust(left=0.135 if step is False else 0.170, bottom=0.07, right=0.958, top=0.885)
-        add_rectangle(figure)
+        offset += len(x_intervals) * 0.15
 
-        for ax in axes:
-            format_spines(ax)
+        if offset >= len(x_intervals) * 0.85:
+            offset = len(x_intervals) * 0.10
 
-    def format_xaxis(self, figure):
-        """
-        Formats the X axis of a figure
-        :param figure: LIN or LOG figure objects
-        """
-        x_label_locator = ticker.AutoLocator()
-        major_locator = ticker.FixedLocator(sorted(self.stations))
-        plt.xlim(self.x_min, self.x_max)
-        figure.axes[0].xaxis.set_major_locator(major_locator)  # for some reason this seems to apply to all axes
-        figure.axes[-1].xaxis.set_major_locator(x_label_locator)
 
-    def make_lin_fig(self, component, lin_fig):
-        """
-        Plots the data into the LIN figure
-        :return: Matplotlib Figure object
-        """
+def format_yaxis(pem_file, figure, step=False):
+    """
+    Formats the Y axis of a figure. Will increase the limits of the scale if depending on the limits of the data.
+    :param figure: LIN, LOG or Step figure objects
+    """
+    axes = figure.axes[:-1]
+    survey_type = pem_file.survey_type
+
+    for ax in axes:
+        ax.get_yaxis().set_label_coords(-0.08 if step is False else -0.095, 0.5)
+
+        if ax.get_yscale() != 'symlog':
+            y_limits = ax.get_ylim()
+
+            if 'induction' in survey_type.lower():
+                if step is True:
+                    if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                        new_low = new_high * -1
+                    elif ax in axes[2:4] and (y_limits[1] - y_limits[0]) < 3:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+                        new_low = new_high * -1
+                    else:
+                        new_high = math.ceil(max(y_limits[1], 0))
+                        new_low = math.floor(min(y_limits[0], 0))
+                else:
+                    if (y_limits[1] - y_limits[0]) < 3:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+                        new_low = new_high * -1
+                    else:
+                        new_high = math.ceil(max(y_limits[1], 0))
+                        new_low = math.floor(min(y_limits[0], 0))
+
+            elif 'fluxgate' in survey_type.lower():
+                if step is True:
+                    if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                        new_low = new_high * -1
+                    elif ax == axes[2] and (y_limits[1] - y_limits[0]) < 3:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+                        new_low = new_high * -1
+                    elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 30:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                        new_low = new_high * -1
+                    else:
+                        new_high = math.ceil(max(y_limits[1], 0))
+                        new_low = math.floor(min(y_limits[0], 0))
+                else:
+                    if (y_limits[1] - y_limits[0]) < 30:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                        new_low = new_high * -1
+                    else:
+                        new_high = math.ceil(max(y_limits[1], 0))
+                        new_low = math.floor(min(y_limits[0], 0))
+
+            ax.set_ylim(new_low, new_high)
+            ax.set_yticks(ax.get_yticks())
+
+        elif ax.get_yscale() == 'symlog':
+            y_limits = ax.get_ylim()
+            new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 11), 10))
+            new_low = -1 * 10.0 ** math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
+            ax.set_ylim(new_low, new_high)
+
+            ax.tick_params(axis='y', which='major', labelrotation=90)
+            plt.setp(ax.get_yticklabels(), va='center')
+
+        ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
+
+
+def add_title(pem_file, component, step=False):
+    """
+    Adds the title header to a figure
+    """
+    header = pem_file.header
+    survey_type = pem_file.survey_type
+    timebase = float(header['Timebase'])
+    timebase_freq = ((1 / (timebase / 1000)) / 4)
+    step_flux_timebase = f"({timebase*2:.2f} ms Step)" if step is True and 'fluxgate' in survey_type.lower() else ''
+
+    if 'borehole' in survey_type.casefold():
+        s_title = 'Hole'
+    else:
+        s_title = 'Line'
+
+    plt.figtext(0.550, 0.960, 'Crone Geophysics & Exploration Ltd.',
+                fontname='Century Gothic', fontsize=11, ha='center')
+
+    plt.figtext(0.550, 0.945, f"{survey_type} Pulse EM Survey", family='cursive', style='italic',
+                fontname='Century Gothic', fontsize=10, ha='center')
+
+    plt.figtext(0.145, 0.935, f"Timebase: {timebase:.2f} ms {step_flux_timebase}\n" +
+                f"Base Frequency: {str(round(timebase_freq, 2))} Hz\n" +
+                f"Current: {float(pem_file.tags.get('Current')):.1f} A",
+                fontname='Century Gothic', fontsize=10, va='top')
+
+    plt.figtext(0.550, 0.935, f"{s_title} : {header.get('LineHole')}\n" +
+                f"Loop: {header.get('Loop')}\n" +
+                f"{component} Component",
+                fontname='Century Gothic', fontsize=10, va='top', ha='center')
+
+    plt.figtext(0.955, 0.935, f"{header.get('Client')}\n" +
+                f"{header.get('Grid')}\n" +
+                f"{header['Date']}\n",
+                fontname='Century Gothic', fontsize=10, va='top', ha='right')
+
+
+class LINPlotter:
+    """
+     Plots the data into the LIN figure
+     :return: Matplotlib Figure object
+     """
+
+    def plot(self, pem_file, component, figure, x_min=None, x_max=None, hide_gaps=True):
 
         def add_ylabels():
-            for i in range(len(lin_fig.axes) - 1):
-                ax = lin_fig.axes[i]
+            units = 'nT/s' if 'induction' in pem_file.survey_type.lower() else 'pT'
+            for i in range(len(figure.axes) - 1):
+                ax = figure.axes[i]
                 if i == 0:
-                    ax.set_ylabel('Primary Pulse' + "\n(" + self.units + ")")
+                    ax.set_ylabel(f"Primary Pulse\n({units}")
                 else:
-                    ax.set_ylabel("Channel " + str(channel_bounds[i][0]) + " - " +
-                                  str(channel_bounds[i][1]) + "\n(" + self.units + ")")
+                    ax.set_ylabel(f"Channel {str(channel_bounds[i][0])} - {str(channel_bounds[i][1])}\n({units})")
 
         def calc_channel_bounds():
             # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
             channel_bounds = [None] * 4
-            num_channels_per_plot = int((self.num_channels - 1) // 4)
-            remainder_channels = int((self.num_channels - 1) % 4)
+            num_channels_per_plot = int((num_channels - 1) // 4)
+            remainder_channels = int((num_channels - 1) % 4)
 
             for k in range(0, len(channel_bounds)):
                 channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
@@ -178,61 +400,70 @@ class PEMPlotter:
             channel_bounds.insert(0, (0, 0))
             return channel_bounds
 
-        self.format_figure(lin_fig)
+        num_channels = int(pem_file.header['NumChannels']) + 1
         channel_bounds = calc_channel_bounds()
 
+        # Plotting section
         for i, group in enumerate(channel_bounds):
-            ax = lin_fig.axes[i]
-            self.draw_lines(ax, group[0], group[1], component)
+            ax = figure.axes[i]
+            draw_lines(pem_file, component, ax, group[0], group[1], hide_gaps=hide_gaps)
 
-        self.add_title(component)
+        add_title(pem_file, component)
         add_ylabels()
-        self.format_yaxis(lin_fig)
-        self.format_xaxis(lin_fig)
-        return lin_fig
+        format_figure(figure)
+        format_yaxis(pem_file, figure, step=False)
+        format_xaxis(pem_file, figure, x_min, x_max)
+        return figure
 
-    def make_log_fig(self, component, log_fig):
-        """
-        Plots the data into the LOG figure
-        :return: Matplotlib Figure object
-        """
 
-        def add_ylabel():
-            ax = log_fig.axes[0]
-            ax.set_ylabel('Primary Pulse to Channel ' + str(self.num_channels - 1) + "\n(" + self.units + ")")
+class LOGPlotter:
+    """
+     Plots the data into the LOG figure
+     :return: Matplotlib Figure object
+     """
 
-        self.format_figure(log_fig)
-        ax = log_fig.axes[0]
+    def plot(self, pem_file, component, figure, x_min=None, x_max=None, hide_gaps=True):
 
-        self.draw_lines(ax, 0, self.num_channels - 1, component)
-        self.add_title(component)
-        add_ylabel()
-        self.format_yaxis(log_fig)
-        self.format_xaxis(log_fig)
-        return log_fig
+        def add_ylabels():
+            units = 'nT/s' if 'induction' in pem_file.survey_type.lower() else 'pT'
+            ax = figure.axes[0]
+            ax.set_ylabel(f"Primary Pulse to Channel {str(num_channels - 1)}\n({units})")
 
-    def make_step_fig(self, component, step_fig):
-        """
-        Plots the step data (from ri_file) into the step_fig.
-        :param component: Component i.e. X, Y, or Z
-        :param step_fig: Figure object
-        :return: Figure object
-        """
+        num_channels = int(pem_file.header['NumChannels']) + 1
+
+        # Plotting section
+        ax = figure.axes[0]
+        draw_lines(pem_file, component, ax, 0, num_channels-1, hide_gaps=hide_gaps)
+
+        add_title(pem_file, component)
+        add_ylabels()
+        format_figure(figure)
+        format_yaxis(pem_file, figure, step=False)
+        format_xaxis(pem_file, figure, x_min, x_max)
+        return figure
+
+
+class STEPPlotter:
+    """
+     Plots the data from an RI file into the STEP figure
+     :return: Matplotlib Figure object
+     """
+    def plot(self, pem_file, ri_file, component, figure, x_min=None, x_max=None, hide_gaps=True):
 
         def add_ylabel(profile_data, num_channels_to_plot):
-            fluxgate = True if 'fluxgate' in self.survey_type.lower() else False
+            fluxgate = True if 'fluxgate' in survey_type.lower() else False
             units = 'pT' if fluxgate is True else 'nT/s'
             channels = [re.findall('\d+', key)[0] for key in profile_data if re.match('Ch', key)]
 
-            step_fig.axes[0].set_ylabel("TP = Theoretical Primary\n"
+            figure.axes[0].set_ylabel("TP = Theoretical Primary\n"
                                         f"{'PP = Calculated PP x Ramp' if fluxgate is True else 'PP = Last Ramp Channel'}\n"
                                         f"S1 = Calculated Step Ch.1\n({units})")
-            step_fig.axes[1].set_ylabel("Deviation from TP\n"
+            figure.axes[1].set_ylabel("Deviation from TP\n"
                                         "(% Total Theoretical)")
-            step_fig.axes[2].set_ylabel("Step Channels 2 - 4\n"
+            figure.axes[2].set_ylabel("Step Channels 2 - 4\n"
                                         "Deviation from S1\n"
                                         "(% Total Theoretical)")
-            step_fig.axes[3].set_ylabel("Pulse EM Off-time\n"
+            figure.axes[3].set_ylabel("Pulse EM Off-time\n"
                                         f"Channels {str(min(channels[-num_channels_to_plot:]))} - "
                                         f"{str(max(channels[-num_channels_to_plot:]))}\n"
                                         f"({units})")
@@ -244,9 +475,9 @@ class PEMPlotter:
 
                 ax.annotate(str(annotation), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
                             ha='center',
-                            color=self.line_colour)
+                            color=line_colour)
 
-        def draw_step_lines(fig, profile_data):
+        def draw_step_lines(fig, profile_data, hide_gaps=True):
             """
             Plotting the lines for step plots made from RI files.
             :param fig: step_fig Figure object
@@ -261,29 +492,30 @@ class PEMPlotter:
                     'S4%']
             annotations = ['TP', 'PP', 'S1', 'PP', 'S1', 'S2', 'S3', 'S4']
             stations = profile_data['Stations']
+
             for i, key in enumerate(keys):
-                interp_data, x_intervals = self.get_interp_data(profile_data[key], stations)
+                interp_data, x_intervals = get_interp_data(profile_data[key], stations, survey_type, hide_gaps=hide_gaps)
                 mask = np.isclose(interp_data, interp_data.astype('float64'))
                 x_intervals = x_intervals[mask]
                 interp_data = interp_data[mask]
 
                 if i < 3:  # Plotting TP, PP, and S1 to the first axes
                     ax = fig.axes[0]
-                    ax.plot(x_intervals, interp_data, color=self.line_colour)
+                    ax.plot(x_intervals, interp_data, color=line_colour)
                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
                     offset += len(x_intervals) * 0.15
                 elif i < 5:  # Plotting the PP and S1% to the second axes
                     if i == 3:  # Resetting the annotation positions
                         offset = segments * 0.1
                     ax = fig.axes[1]
-                    ax.plot(x_intervals, interp_data, color=self.line_colour)
+                    ax.plot(x_intervals, interp_data, color=line_colour)
                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
                     offset += len(x_intervals) * 0.15
                 else:  # Plotting S2% to S4% to the third axes
                     if i == 5:
                         offset = segments * 0.1
                     ax = fig.axes[2]
-                    ax.plot(x_intervals, interp_data, color=self.line_colour)
+                    ax.plot(x_intervals, interp_data, color=line_colour)
                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
                     offset += len(x_intervals) * 0.15
                 if offset >= len(x_intervals) * 0.85:
@@ -292,391 +524,50 @@ class PEMPlotter:
             offset = segments * 0.1
             # Plotting the off-time channels to the fourth axes
             for i, channel in enumerate(off_time_channel_data[-num_channels_to_plot:]):
-                interp_data, x_intervals = self.get_interp_data(channel, stations)
+                interp_data, x_intervals = get_interp_data(channel, stations, survey_type, hide_gaps=hide_gaps)
                 mask = np.isclose(interp_data, interp_data.astype('float64'))
                 x_intervals = x_intervals[mask]
                 interp_data = interp_data[mask]
                 ax = fig.axes[3]
-                ax.plot(x_intervals, interp_data, color=self.line_colour)
+                ax.plot(x_intervals, interp_data, color=line_colour)
                 annotate_line(ax, str(num_off_time_channels - i), interp_data, x_intervals, offset)
                 offset += len(x_intervals) * 0.15
                 if offset >= len(x_intervals) * 0.85:
                     offset = len(x_intervals) * 0.10
 
-        self.format_figure(step_fig, step=True)
-        profile_data = self.get_profile_step_data(component)
+        def get_profile_step_data(component):
+            """
+            Transforms the RI data as a profile to be plotted.
+            :param component: The component that is being plotted (i.e. X, Y, Z)
+            :return: The data in profile mode
+            """
+            profile_data = {}
+            keys = ri_file.columns
+            component_data = list(filter(lambda d: d['Component'] == component, ri_file.data))
+
+            for key in keys:
+                if key is not 'Gain' and key is not 'Component':
+                    if key is 'Station':
+                        key = 'Stations'
+                        profile_data[key] = [convert_station(station['Station']) for station in component_data]
+                    else:
+                        profile_data[key] = [float(station[key]) for station in component_data]
+            return profile_data
+
+        survey_type = pem_file.survey_type
+        profile_data = get_profile_step_data(component)
         off_time_channel_data = [profile_data[key] for key in profile_data if re.match('Ch', key)]
         num_off_time_channels = len(off_time_channel_data) + 10
         num_channels_to_plot = round(num_off_time_channels / 4)
 
-        draw_step_lines(step_fig, profile_data)
+        draw_step_lines(figure, profile_data, hide_gaps=hide_gaps)
 
-        self.add_title(component)
+        add_title(pem_file, component, step=True)
         add_ylabel(profile_data, num_channels_to_plot)
-        self.format_yaxis(step_fig, step=True)
-        self.format_xaxis(step_fig)
-        return step_fig
-
-    def make_plan_map(self, pem_files):
-        pass
-
-    def convert_station(self, station):
-        """
-        Converts a single station name into a number, negative if the stations was S or W
-        :return: Integer station number
-        """
-        if re.match(r"\d+(S|W)", station):
-            station = (-int(re.sub(r"\D", "", station)))
-
-        else:
-            station = (int(re.sub(r"\D", "", station)))
-
-        return station
-
-    def get_profile_data(self, component):
-        """
-        Transforms the data so it is ready to be plotted for LIN and LOG plots. Only for PEM data.
-        :param component: A single component (i.e. Z, X, or Y)
-        :return: Dictionary where each key is a channel, and the values of those keys are a list of
-        dictionaries which contain the stations and readings of all readings of that channel
-        """
-        profile_data = {}
-        component_data = list(filter(lambda d: d['Component'] == component, self.data))
-        num_channels = len(component_data[0]['Data'])
-        for channel in range(0, num_channels):
-            channel_data = []
-
-            for i, station in enumerate(component_data):
-                reading = station['Data'][channel]
-                station_number = int(self.convert_station(station['Station']))
-                channel_data.append({'Station': station_number, 'Reading': reading})
-
-            profile_data[channel] = channel_data
-
-        return profile_data
-
-    def get_profile_step_data(self, component):
-        """
-        Transforms the RI data as a profile to be plotted.
-        :param component: The component that is being plotted (i.e. X, Y, Z)
-        :return: The data in profile mode
-        """
-        profile_data = {}
-        keys = self.ri_file.columns
-        component_data = list(filter(lambda d: d['Component'] == component, self.ri_file.data))
-
-        for key in keys:
-            if key is not 'Gain' and key is not 'Component':
-                if key is 'Station':
-                    key = 'Stations'
-                    profile_data[key] = [self.convert_station(station['Station']) for station in component_data]
-                else:
-                    profile_data[key] = [float(station[key]) for station in component_data]
-        return profile_data
-
-    def get_channel_data(self, channel, profile_data):
-        """
-        Get the profile-mode data for a given channel. Only for PEM data.
-        :param channel: int, channel number
-        :param profile_data: dict, data in profile-mode
-        :return: data in list form and corresponding stations as a list
-        """
-        data = []
-        stations = []
-
-        for station in profile_data[channel]:
-            data.append(station['Reading'])
-            stations.append(station['Station'])
-
-        return data, stations
-
-    def get_interp_data(self, profile_data, stations, segments=1000, interp_method='linear'):
-        """
-        Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
-        into 1000 segments.
-        :param profile_data: The EM data in profile mode
-        :param segments: Number of segments to interpolate
-        :param hide_gaps: Bool: Whether or not to hide gaps
-        :param gap: The minimum length threshold above which is considered a gap
-        :return: The interpolated data and stations
-        """
-
-        def calc_gaps(stations):
-            survey_type = self.survey_type
-
-            if 'borehole' in survey_type.casefold():
-                min_gap = 50
-            elif 'surface' in survey_type.casefold():
-                min_gap = 200
-            station_gaps = np.diff(stations)
-
-            if self.gap is None:
-                self.gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
-
-            gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
-                             station_gaps[i] > self.gap]
-
-            return gap_intervals
-
-        stations = np.array(stations, dtype='float64')
-        readings = np.array(profile_data, dtype='float64')
-        x_intervals = np.linspace(stations[0], stations[-1], segments)
-        f = interpolate.interp1d(stations, readings, kind=interp_method)
-
-        interpolated_y = f(x_intervals)
-
-        if self.hide_gaps:
-            gap_intervals = calc_gaps(stations)
-
-            # Masks the intervals that are between gap[0] and gap[1]
-            for gap in gap_intervals:
-                interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
-                                                    interpolated_y)
-
-        return interpolated_y, x_intervals
-
-    def draw_lines(self, ax, channel_low, channel_high, component):
-        """
-        Plots the lines into an axes of a figure. Not for step figures.
-        :param ax: Axes of a figure, either LIN or LOG figure objects
-        :param channel_low: The first channel to be plotted
-        :param channel_high: The last channel to be plotted
-        :param component: String letter representing the component to plot (X, Y, or Z)
-        """
-
-        segments = 1000  # The data will be broken in this number of segments
-        offset = segments * 0.1  # Used for spacing the annotations
-        profile_channel_data = self.get_profile_data(component)
-
-        for k in range(channel_low, (channel_high + 1)):
-            # Gets the profile data for a single channel, along with the stations
-            channel_data, stations = self.get_channel_data(k, profile_channel_data)
-
-            # Interpolates the channel data, also returns the corresponding x intervals
-            interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments)
-
-            ax.plot(x_intervals, interp_data, color=self.line_colour)
-
-            # Mask is used to hide data within gaps
-            mask = np.isclose(interp_data, interp_data.astype('float64'))
-            x_intervals = x_intervals[mask]
-            interp_data = interp_data[mask]
-
-            # Annotating the lines
-            for i, x_position in enumerate(x_intervals[int(offset)::int(len(x_intervals) * 0.4)]):
-                y = interp_data[list(x_intervals).index(x_position)]
-
-                if k == 0:
-                    ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline', ha='center',
-                                color=self.line_colour)
-
-                else:
-                    ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
-                                ha='center',
-                                color=self.line_colour)
-
-            offset += len(x_intervals) * 0.15
-
-            if offset >= len(x_intervals) * 0.85:
-                offset = len(x_intervals) * 0.10
-
-    def format_yaxis(self, figure, step=False):
-        """
-        Formats the Y axis of a figure. Will increase the limits of the scale if depending on the limits of the data.
-        :param figure: LIN, LOG or Step figure objects
-        """
-        axes = figure.axes[:-1]
-
-        for ax in axes:
-            ax.get_yaxis().set_label_coords(-0.08 if step is False else -0.095, 0.5)
-
-            if ax.get_yscale() != 'symlog':
-                y_limits = ax.get_ylim()
-
-                if 'induction' in self.survey_type.lower():
-                    if step is True:
-                        if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                            new_low = new_high * -1
-                        elif ax in axes[2:4] and (y_limits[1] - y_limits[0]) < 3:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                            new_low = new_high * -1
-                        else:
-                            new_high = math.ceil(max(y_limits[1], 0))
-                            new_low = math.floor(min(y_limits[0], 0))
-                    else:
-                        if (y_limits[1] - y_limits[0]) < 3:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                            new_low = new_high * -1
-                        else:
-                            new_high = math.ceil(max(y_limits[1], 0))
-                            new_low = math.floor(min(y_limits[0], 0))
-
-                elif 'fluxgate' in self.survey_type.lower():
-                    if step is True:
-                        if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                            new_low = new_high * -1
-                        elif ax == axes[2] and (y_limits[1] - y_limits[0]) < 3:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                            new_low = new_high * -1
-                        elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 30:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                            new_low = new_high * -1
-                        else:
-                            new_high = math.ceil(max(y_limits[1], 0))
-                            new_low = math.floor(min(y_limits[0], 0))
-                    else:
-                        if (y_limits[1] - y_limits[0]) < 30:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                            new_low = new_high * -1
-                        else:
-                            new_high = math.ceil(max(y_limits[1], 0))
-                            new_low = math.floor(min(y_limits[0], 0))
-
-                ax.set_ylim(new_low, new_high)
-                ax.set_yticks(ax.get_yticks())
-
-            elif ax.get_yscale() == 'symlog':
-                y_limits = ax.get_ylim()
-                new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 11), 10))
-                new_low = -1 * 10.0 ** math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
-                ax.set_ylim(new_low, new_high)
-
-                ax.tick_params(axis='y', which='major', labelrotation=90)
-                plt.setp(ax.get_yticklabels(), va='center')
-
-            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
-
-    def add_title(self, component):
-        """
-        Adds the title header to a figure
-        """
-
-        timebase_freq = ((1 / (float(self.header['Timebase']) / 1000)) / 4)
-
-        if 'borehole' in self.survey_type.casefold():
-            s_title = 'Hole'
-        else:
-            s_title = 'Line'
-
-        plt.figtext(0.550, 0.960, 'Crone Geophysics & Exploration Ltd.',
-                    fontname='Century Gothic', fontsize=11, ha='center')
-
-        plt.figtext(0.550, 0.945, self.survey_type + ' Pulse EM Survey', family='cursive', style='italic',
-                    fontname='Century Gothic', fontsize=10, ha='center')
-
-        plt.figtext(0.145, 0.935, 'Timebase: ' + str(self.header['Timebase']) + ' ms\n' +
-                    'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
-                    'Current: ' + str(round(float(self.pem_file.tags.get('Current')), 1)) + ' A',
-                    fontname='Century Gothic', fontsize=10, va='top')
-
-        plt.figtext(0.550, 0.935, s_title + ': ' + self.header.get('LineHole') + '\n' +
-                    'Loop: ' + self.header.get('Loop') + '\n' +
-                    component + ' Component',
-                    fontname='Century Gothic', fontsize=10, va='top', ha='center')
-
-        plt.figtext(0.955, 0.935,
-                    self.header.get('Client') + '\n' + self.header.get('Grid') + '\n' + self.header['Date'] + '\n',
-                    fontname='Century Gothic', fontsize=10, va='top', ha='right')
-
-
-# class PlanMap:
-#     def __init__(self):
-#         self.figure = None
-#         self.pem_files = None
-#         self.gps_editor = GPSEditor
-#
-#     def make_plan_map(self, pem_files, figure):
-#         self.figure = figure
-#         self.pem_files = pem_files
-#
-#         if all(['surface' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
-#             self.surface_plan()
-#         elif all(['borehole' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
-#             self.borehole_plan()
-#         else:
-#             return None
-#
-#     def plot_loops(self):
-#
-#         def draw_loop(pem_file):
-#             loop_coords = pem_file.loop_coords
-#             loop_center = self.gps_editor().get_loop_center(copy.copy(loop_coords))
-#             eastings, northings = [float(coord[1]) for coord in loop_coords], [float(coord[2]) for coord in loop_coords]
-#             eastings.insert(0, eastings[-1])  # To close up the loop
-#             northings.insert(0, northings[-1])
-#
-#             self.figure.axes[0].text(loop_center[0], loop_center[1], pem_file.header.get('Loop'),
-#                                      multialignment='center')
-#             self.figure.axes[0].plot(eastings, northings, color='b')
-#
-#         loops = []
-#         for pem_file in self.pem_files:
-#             if pem_file.loop_coords not in loops:  # plot the loop if the loop hasn't been plotted yet
-#                 draw_loop(pem_file)
-#
-#     def format_figure(self):
-#         ax = self.figure.axes[0]
-#         ax.set_aspect('equal', adjustable='box')
-#         [ax.spines[spine].set_color('none') for spine in ax.spines]
-#         ax.tick_params(axis='y', which='major', labelrotation=90)
-#         ax.tick_params(which='major', width=1.00, length=5, labelsize=10)
-#         ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%dN'))
-#         ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%dE'))
-#         ax.xaxis.set_ticks_position('top')
-#         plt.setp(ax.get_xticklabels(), fontname='Century Gothic')
-#         plt.setp(ax.get_yticklabels(), fontname='Century Gothic', va='center')
-#         plt.grid(linestyle='dotted')
-#         plt.subplots_adjust(left=0.092, bottom=0.07, right=0.908, top=0.685)
-#         add_rectangle(self.figure)
-#
-#         xmin, xmax = ax.get_xlim()
-#         ymin, ymax = ax.get_ylim()
-#         xwidth, ywidth = xmax - xmin, ymax - ymin
-#
-#         if xwidth < 1000:
-#             scalesize = 250
-#         elif xwidth < 2000:
-#             scalesize = 500
-#         elif xwidth < 3000:
-#             scalesize = 750
-#         elif xwidth < 4000:
-#             scalesize = 1000
-#
-#         # SCALE BAR
-#         scalebar = AnchoredHScaleBar(size=scalesize, label=str(scalesize) + 'm', loc=4, frameon=False,
-#                                      pad=0.3, sep=2, color="black", ax=ax)
-#         ax.add_artist(scalebar)
-#         # NORTH ARROW
-#         # ax.annotate('N', (1.01, 1), xytext=(1.01, 0.9), xycoords='axes fraction',
-#         #             ha='center', fontsize=12, fontweight='bold',
-#         #             arrowprops=dict(arrowstyle='->', color='k'), transform=ax.transAxes)
-#
-#         plt.arrow(0.5, 0.5, 0., 0.5, shape='right', width=0.007, color='gray', length_includes_head=True,
-#                   transform=self.figure.transFigure, zorder=10)
-#
-#     def surface_plan(self):
-#
-#         def plot_lines():
-#             pass
-#
-#         self.plot_loops()
-#         plot_lines()
-#         self.format_figure()
-#         return self.figure
-#
-#     def borehole_plan(self):
-#         borehole_names = []
-#         # TODO Can have same hole with two loops
-#         unique_boreholes = []
-#         for pem_file in self.pem_files:
-#             borehole_names.append(pem_file.header.get('LineHole'))
-#             if pem_file.header.get('LineHole') not in borehole_names:
-#                 unique_boreholes.append(pem_file)
-#         self.pem_files = unique_boreholes
-#
-#         return self.figure
+        format_figure(figure, step=True)
+        format_yaxis(pem_file, figure, step=True)
+        format_xaxis(pem_file, figure, x_min, x_max)
+        return figure
 
 
 class PlanMap:
@@ -705,65 +596,66 @@ class PlanMap:
         plt.show()
 
     def plot_pems(self):
+
+        def add_loop_to_map(pem_file):
+            loop_gps = self.gps_editor().get_loop_gps(pem_file.loop_coords)
+            if loop_gps and loop_gps not in self.loops:
+                self.loops.append(loop_gps)
+                loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
+                eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
+                eastings.insert(0, eastings[-1])  # To close up the loop
+                northings.insert(0, northings[-1])
+
+                self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}", ha='center',
+                             color=self.color)  # Add the loop name
+                self.loop_handle, = self.ax.plot(eastings, northings, color=self.color, label='Transmitter Loop',
+                                              transform=self.crs)  # Plot the loop
+
+        def add_line_to_map( pem_file):
+            line_gps = self.gps_editor().get_station_gps(pem_file.line_coords)
+            if line_gps and line_gps not in self.lines:
+                self.lines.append(line_gps)
+                eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
+                # TODO Add rotation of text based on azimuth of line
+                self.ax.text(float(line_gps[0][0]), float(line_gps[0][1]) + 10, f"{pem_file.header.get('LineHole')}",
+                             ha='center', color=self.color)  # Add the line name
+                self.station_handle, = self.ax.plot(eastings, northings, '-|', markersize=5, color=self.color,
+                                                 label='Surface Line', transform=self.crs)  # Plot the line
+
+        def add_hole_to_map(pem_file):
+
+            def get_borehole_projection():
+                collar = self.gps_editor().get_collar_gps(pem_file.line_coords)
+                segments = self.gps_editor().get_geometry(pem_file.line_coords)
+                trace = []
+
+                for segment in segments:
+                    azimuth = math.radians(float(segment[0]))
+                    dip = math.radians(float(segment[1]))
+                    seg_l = float(segment[2])
+                    delta_seg_l = seg_l * math.cos(dip)
+                    delta_elev = seg_l * math.sin(dip)
+
+                    dx = delta_seg_l * math.sin(azimuth)
+                    dy = delta_seg_l * math.cos(azimuth)
+
+                    trace.append([float(collar[0]) + dx, float(collar[1]) + dy])
+
+            if self.draw_hole_trace is True:
+                get_borehole_projection()
+            if self.draw_hole_collar is True:
+                pass
+
         for pem_file in self.pem_files:
             if self.draw_loops is True:
-                self.add_loop_to_map(pem_file)
+                add_loop_to_map(pem_file)
 
             if 'surface' in pem_file.survey_type.lower() and self.draw_lines is True:
-                self.add_line_to_map(pem_file)
+                add_line_to_map(pem_file)
 
             if 'borehole' in pem_file.survey_type.lower():
                 pass
-                self.add_hole_to_map(pem_file)
-
-    def add_loop_to_map(self, pem_file):
-        loop_gps = self.gps_editor().get_loop_gps(pem_file.loop_coords)
-        if loop_gps and loop_gps not in self.loops:
-            self.loops.append(loop_gps)
-            loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
-            eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
-            eastings.insert(0, eastings[-1])  # To close up the loop
-            northings.insert(0, northings[-1])
-
-            self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}", ha='center',
-                         color=self.color)  # Add the loop name
-            self.loop_plt, = self.ax.plot(eastings, northings, color=self.color, label='Transmitter Loop',
-                                          transform=self.crs)  # Plot the loop
-
-    def add_line_to_map(self, pem_file):
-        line_gps = self.gps_editor().get_station_gps(pem_file.line_coords)
-        if line_gps and line_gps not in self.lines:
-            self.lines.append(line_gps)
-            eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
-            # TODO Add rotation of text based on azimuth of line
-            self.ax.text(float(line_gps[0][0]), float(line_gps[0][1]) + 10, f"{pem_file.header.get('LineHole')}",
-                         ha='center', color=self.color)  # Add the line name
-            self.station_plt, = self.ax.plot(eastings, northings, '-|', markersize=5, color=self.color,
-                                             label='Surface Line', transform=self.crs)  # Plot the line
-
-    def add_hole_to_map(self, pem_file):
-
-        def get_borehole_projection():
-            collar = self.gps_editor().get_collar_gps(pem_file.line_coords)
-            segments = self.gps_editor().get_geometry(pem_file.line_coords)
-            trace = []
-
-            for segment in segments:
-                azimuth = math.radians(float(segment[0]))
-                dip = math.radians(float(segment[1]))
-                seg_l = float(segment[2])
-                delta_seg_l = seg_l * math.cos(dip)
-                delta_elev = seg_l * math.sin(dip)
-
-                dx = delta_seg_l * math.sin(azimuth)
-                dy = delta_seg_l * math.cos(azimuth)
-
-                trace.append([float(collar[0]) + dx, float(collar[1]) + dy])
-
-        if self.draw_hole_trace is True:
-            get_borehole_projection()
-        if self.draw_hole_collar is True:
-            pass
+                add_hole_to_map(pem_file)
 
     def format_figure(self):
 
@@ -789,14 +681,13 @@ class PlanMap:
             sbcx, sbcy = x0 + (x1 - x0) * location[0], y0 + (y1 - y0) * location[1]
 
             if not length:
-
                 def myround(x, base=5):
                     return base * round(x / base)
 
                 length = (ax.get_extent()[1] - ax.get_extent()[0])
                 num_digit = int(np.floor(np.log10(length)))  # number of digits in number
                 length = round(length, -num_digit)  # round to 1sf
-                length = myround(length/4, base=0.5*10**num_digit)  # Rounds to the nearest 1,2,5...
+                length = myround(length / 8, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
 
             # Generate the x coordinate for the ends of the scalebar
             bar_xs = [sbcx - length * m_per_unit / 2, sbcx + length * m_per_unit / 2]
@@ -827,7 +718,7 @@ class PlanMap:
             ratio = width / height
             if ratio < (11 / 8.5):
                 new_height = height
-                new_width = width * (11 / 8.5)
+                new_width = height * (11 / 8.5)
             else:
                 new_width = width
                 new_height = height * (11 / 8.5)
@@ -936,23 +827,9 @@ class PlanMap:
         # self.ax.add_wms(wms='http://vmap0.tiles.osgeo.org/wms/vmap0',
         #                 layers=['basic'])
 
-        offset = 250
         xmin, xmax, ymin, ymax = self.ax.get_extent()
+        offset = (ymax - ymin) * .1
         self.ax.set_extent((xmin - offset, xmax + offset, ymin - offset, ymax + offset * 2), crs=self.crs)
-
-        # xwidth, ywidth = xmax - xmin, ymax - ymin
-        #
-        # # TODO Make scale size automatic
-        # if xwidth < 1000:
-        #     scalesize = 250
-        # elif xwidth < 2000:
-        #     scalesize = 500
-        # elif xwidth < 3000:
-        #     scalesize = 750
-        # elif xwidth < 4000:
-        #     scalesize = 1000
-        # else:
-        #     scalesize = 5000
 
         scale_bar(self.ax, self.crs, m_per_unit=1, units='m')
 
@@ -963,8 +840,624 @@ class PlanMap:
         self.ax.add_patch(arrow_shadow)
 
         add_title()
-        self.ax.legend(handles=[self.station_plt, self.loop_plt], title='Legend', loc='lower left',
+        self.ax.legend(handles=[self.station_handle, self.loop_handle], title='Legend', loc='lower left',
                        framealpha=1, shadow=True)
+
+    def get_map(self):
+        return self.fig
+
+
+# class PEMPlotter:
+#     """
+#     Class for creating Crone LIN, LOG and STEP figures.
+#     PEMFile must be averaged and split.
+#     """
+#
+#     def __init__(self, pem_file=None, ri_file=None, **kwargs):  # hide_gaps=True, gap=None, x_min=None, x_max=None):
+#         super().__init__()
+#         self.pem_file = pem_file
+#         self.ri_file = ri_file
+#         self.hide_gaps = kwargs.get('HideGaps')
+#         self.gap = kwargs.get('Gap')
+#         self.data = self.pem_file.data
+#         self.header = self.pem_file.header
+#         self.stations = self.pem_file.get_converted_unique_stations()
+#         self.survey_type = self.pem_file.survey_type
+#         self.x_min = int(min(chain(self.stations))) if kwargs.get('XMin') is None else kwargs.get('XMin')
+#         self.x_max = int(max(chain(self.stations))) if kwargs.get('XMax') is None else kwargs.get('XMax')
+#         self.num_channels = int(self.header['NumChannels']) + 1
+#         self.units = 'nT/s' if self.pem_file.tags['Units'].casefold() == 'nanotesla/sec' else 'pT'
+#         # self.channel_bounds = self.calc_channel_bounds()
+#         self.line_colour = 'k'
+#
+#     #
+#     # def calc_channel_bounds(self):
+#     #     # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
+#     #     channel_bounds = [None] * 4
+#     #     num_channels_per_plot = int((self.num_channels - 1) // 4)
+#     #     remainder_channels = int((self.num_channels - 1) % 4)
+#     #
+#     #     for k in range(0, len(channel_bounds)):
+#     #         channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
+#     #
+#     #     for i in range(0, remainder_channels):
+#     #         channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
+#     #         for k in range(i + 1, len(channel_bounds)):
+#     #             channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+#     #
+#     #     channel_bounds.insert(0, (0, 0))
+#     #     return channel_bounds
+#
+#     # def format_figure(self, figure, step=False):
+#     #     """
+#     #     Formats a figure, mainly the spines, adjusting the padding, and adding the rectangle.
+#     #     :param figure: LIN or LOG figure object
+#     #     """
+#     #     axes = figure.axes
+#     #
+#     #     def format_spines(ax):
+#     #         ax.spines['right'].set_visible(False)
+#     #         ax.spines['top'].set_visible(False)
+#     #
+#     #         if ax != axes[-1]:
+#     #             ax.spines['bottom'].set_position(('data', 0))
+#     #             ax.tick_params(axis='x', which='major', direction='inout', length=4)
+#     #             plt.setp(ax.get_xticklabels(), visible=False)
+#     #         else:
+#     #             ax.spines['bottom'].set_visible(False)
+#     #             ax.xaxis.set_ticks_position('bottom')
+#     #             ax.tick_params(axis='x', which='major', direction='out', length=6)
+#     #             plt.setp(ax.get_xticklabels(), visible=True, size=12, fontname='Century Gothic')
+#     #
+#     #     plt.subplots_adjust(left=0.135 if step is False else 0.170, bottom=0.07, right=0.958, top=0.885)
+#     #     add_rectangle(figure)
+#     #
+#     #     for ax in axes:
+#     #         format_spines(ax)
+#     #
+#     # def format_xaxis(self, figure):
+#     #     """
+#     #     Formats the X axis of a figure
+#     #     :param figure: LIN or LOG figure objects
+#     #     """
+#     #     x_label_locator = ticker.AutoLocator()
+#     #     major_locator = ticker.FixedLocator(sorted(self.stations))
+#     #     plt.xlim(self.x_min, self.x_max)
+#     #     figure.axes[0].xaxis.set_major_locator(major_locator)  # for some reason this seems to apply to all axes
+#     #     figure.axes[-1].xaxis.set_major_locator(x_label_locator)
+#     #
+#     # def make_lin_fig(self, component, lin_fig):
+#     #     """
+#     #     Plots the data into the LIN figure
+#     #     :return: Matplotlib Figure object
+#     #     """
+#     #
+#     #     def add_ylabels():
+#     #         for i in range(len(lin_fig.axes) - 1):
+#     #             ax = lin_fig.axes[i]
+#     #             if i == 0:
+#     #                 ax.set_ylabel('Primary Pulse' + "\n(" + self.units + ")")
+#     #             else:
+#     #                 ax.set_ylabel("Channel " + str(channel_bounds[i][0]) + " - " +
+#     #                               str(channel_bounds[i][1]) + "\n(" + self.units + ")")
+#     #
+#     #     def calc_channel_bounds():
+#     #         # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
+#     #         channel_bounds = [None] * 4
+#     #         num_channels_per_plot = int((self.num_channels - 1) // 4)
+#     #         remainder_channels = int((self.num_channels - 1) % 4)
+#     #
+#     #         for k in range(0, len(channel_bounds)):
+#     #             channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
+#     #
+#     #         for i in range(0, remainder_channels):
+#     #             channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
+#     #             for k in range(i + 1, len(channel_bounds)):
+#     #                 channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+#     #
+#     #         channel_bounds.insert(0, (0, 0))
+#     #         return channel_bounds
+#     #
+#     #     self.format_figure(lin_fig)
+#     #     channel_bounds = calc_channel_bounds()
+#     #
+#     #     for i, group in enumerate(channel_bounds):
+#     #         ax = lin_fig.axes[i]
+#     #         self.draw_lines(ax, group[0], group[1], component)
+#     #
+#     #     self.add_title(component)
+#     #     add_ylabels()
+#     #     self.format_yaxis(lin_fig)
+#     #     self.format_xaxis(lin_fig)
+#     #     return lin_fig
+#
+#     def make_log_fig(self, component, log_fig):
+#         """
+#         Plots the data into the LOG figure
+#         :return: Matplotlib Figure object
+#         """
+#
+#         def add_ylabel():
+#             ax = log_fig.axes[0]
+#             ax.set_ylabel('Primary Pulse to Channel ' + str(self.num_channels - 1) + "\n(" + self.units + ")")
+#
+#         self.format_figure(log_fig)
+#         ax = log_fig.axes[0]
+#
+#         self.draw_lines(ax, 0, self.num_channels - 1, component)
+#         self.add_title(component)
+#         add_ylabel()
+#         self.format_yaxis(log_fig)
+#         self.format_xaxis(log_fig)
+#         return log_fig
+#
+#     def make_step_fig(self, component, step_fig):
+#         """
+#         Plots the step data (from ri_file) into the step_fig.
+#         :param component: Component i.e. X, Y, or Z
+#         :param step_fig: Figure object
+#         :return: Figure object
+#         """
+#
+#         def add_ylabel(profile_data, num_channels_to_plot):
+#             fluxgate = True if 'fluxgate' in self.survey_type.lower() else False
+#             units = 'pT' if fluxgate is True else 'nT/s'
+#             channels = [re.findall('\d+', key)[0] for key in profile_data if re.match('Ch', key)]
+#
+#             step_fig.axes[0].set_ylabel("TP = Theoretical Primary\n"
+#                                         f"{'PP = Calculated PP x Ramp' if fluxgate is True else 'PP = Last Ramp Channel'}\n"
+#                                         f"S1 = Calculated Step Ch.1\n({units})")
+#             step_fig.axes[1].set_ylabel("Deviation from TP\n"
+#                                         "(% Total Theoretical)")
+#             step_fig.axes[2].set_ylabel("Step Channels 2 - 4\n"
+#                                         "Deviation from S1\n"
+#                                         "(% Total Theoretical)")
+#             step_fig.axes[3].set_ylabel("Pulse EM Off-time\n"
+#                                         f"Channels {str(min(channels[-num_channels_to_plot:]))} - "
+#                                         f"{str(max(channels[-num_channels_to_plot:]))}\n"
+#                                         f"({units})")
+#
+#         def annotate_line(ax, annotation, interp_data, x_intervals, offset):
+#
+#             for i, x_position in enumerate(x_intervals[int(offset)::int(len(x_intervals) * 0.4)]):
+#                 y = interp_data[list(x_intervals).index(x_position)]
+#
+#                 ax.annotate(str(annotation), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
+#                             ha='center',
+#                             color=self.line_colour)
+#
+#         def draw_step_lines(fig, profile_data):
+#             """
+#             Plotting the lines for step plots made from RI files.
+#             :param fig: step_fig Figure object
+#             :param profile_data: RI file data tranposed to profile mode
+#             :return: step_fig object with lines plotted
+#             """
+#
+#             segments = 1000  # The data will be broken in this number of segments
+#             offset = segments * 0.1  # Used for spacing the annotations
+#
+#             keys = ['Theoretical PP', 'Measured PP', 'S1', '(M-T)*100/Tot', '(S1-T)*100/Tot', '(S2-S1)*100/Tot', 'S3%',
+#                     'S4%']
+#             annotations = ['TP', 'PP', 'S1', 'PP', 'S1', 'S2', 'S3', 'S4']
+#             stations = profile_data['Stations']
+#             for i, key in enumerate(keys):
+#                 interp_data, x_intervals = self.get_interp_data(profile_data[key], stations)
+#                 mask = np.isclose(interp_data, interp_data.astype('float64'))
+#                 x_intervals = x_intervals[mask]
+#                 interp_data = interp_data[mask]
+#
+#                 if i < 3:  # Plotting TP, PP, and S1 to the first axes
+#                     ax = fig.axes[0]
+#                     ax.plot(x_intervals, interp_data, color=self.line_colour)
+#                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
+#                     offset += len(x_intervals) * 0.15
+#                 elif i < 5:  # Plotting the PP and S1% to the second axes
+#                     if i == 3:  # Resetting the annotation positions
+#                         offset = segments * 0.1
+#                     ax = fig.axes[1]
+#                     ax.plot(x_intervals, interp_data, color=self.line_colour)
+#                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
+#                     offset += len(x_intervals) * 0.15
+#                 else:  # Plotting S2% to S4% to the third axes
+#                     if i == 5:
+#                         offset = segments * 0.1
+#                     ax = fig.axes[2]
+#                     ax.plot(x_intervals, interp_data, color=self.line_colour)
+#                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
+#                     offset += len(x_intervals) * 0.15
+#                 if offset >= len(x_intervals) * 0.85:
+#                     offset = len(x_intervals) * 0.10
+#
+#             offset = segments * 0.1
+#             # Plotting the off-time channels to the fourth axes
+#             for i, channel in enumerate(off_time_channel_data[-num_channels_to_plot:]):
+#                 interp_data, x_intervals = self.get_interp_data(channel, stations)
+#                 mask = np.isclose(interp_data, interp_data.astype('float64'))
+#                 x_intervals = x_intervals[mask]
+#                 interp_data = interp_data[mask]
+#                 ax = fig.axes[3]
+#                 ax.plot(x_intervals, interp_data, color=self.line_colour)
+#                 annotate_line(ax, str(num_off_time_channels - i), interp_data, x_intervals, offset)
+#                 offset += len(x_intervals) * 0.15
+#                 if offset >= len(x_intervals) * 0.85:
+#                     offset = len(x_intervals) * 0.10
+#
+#         self.format_figure(step_fig, step=True)
+#         profile_data = self.get_profile_step_data(component)
+#         off_time_channel_data = [profile_data[key] for key in profile_data if re.match('Ch', key)]
+#         num_off_time_channels = len(off_time_channel_data) + 10
+#         num_channels_to_plot = round(num_off_time_channels / 4)
+#
+#         draw_step_lines(step_fig, profile_data)
+#
+#         self.add_title(component)
+#         add_ylabel(profile_data, num_channels_to_plot)
+#         self.format_yaxis(step_fig, step=True)
+#         self.format_xaxis(step_fig)
+#         return step_fig
+#
+#     def make_plan_map(self, pem_files):
+#         pass
+#
+#     # def convert_station(self, station):
+#     #     """
+#     #     Converts a single station name into a number, negative if the stations was S or W
+#     #     :return: Integer station number
+#     #     """
+#     #     if re.match(r"\d+(S|W)", station):
+#     #         station = (-int(re.sub(r"\D", "", station)))
+#     #
+#     #     else:
+#     #         station = (int(re.sub(r"\D", "", station)))
+#     #
+#     #     return station
+#     #
+#     # def get_profile_data(self, component):
+#     #     """
+#     #     Transforms the data so it is ready to be plotted for LIN and LOG plots. Only for PEM data.
+#     #     :param component: A single component (i.e. Z, X, or Y)
+#     #     :return: Dictionary where each key is a channel, and the values of those keys are a list of
+#     #     dictionaries which contain the stations and readings of all readings of that channel
+#     #     """
+#     #     profile_data = {}
+#     #     component_data = list(filter(lambda d: d['Component'] == component, self.data))
+#     #     num_channels = len(component_data[0]['Data'])
+#     #     for channel in range(0, num_channels):
+#     #         channel_data = []
+#     #
+#     #         for i, station in enumerate(component_data):
+#     #             reading = station['Data'][channel]
+#     #             station_number = int(self.convert_station(station['Station']))
+#     #             channel_data.append({'Station': station_number, 'Reading': reading})
+#     #
+#     #         profile_data[channel] = channel_data
+#     #
+#     #     return profile_data
+#
+#     def get_profile_step_data(self, component):
+#         """
+#         Transforms the RI data as a profile to be plotted.
+#         :param component: The component that is being plotted (i.e. X, Y, Z)
+#         :return: The data in profile mode
+#         """
+#         profile_data = {}
+#         keys = self.ri_file.columns
+#         component_data = list(filter(lambda d: d['Component'] == component, self.ri_file.data))
+#
+#         for key in keys:
+#             if key is not 'Gain' and key is not 'Component':
+#                 if key is 'Station':
+#                     key = 'Stations'
+#                     profile_data[key] = [self.convert_station(station['Station']) for station in component_data]
+#                 else:
+#                     profile_data[key] = [float(station[key]) for station in component_data]
+#         return profile_data
+#
+#     #
+#     # def get_channel_data(self, channel, profile_data):
+#     #     """
+#     #     Get the profile-mode data for a given channel. Only for PEM data.
+#     #     :param channel: int, channel number
+#     #     :param profile_data: dict, data in profile-mode
+#     #     :return: data in list form and corresponding stations as a list
+#     #     """
+#     #     data = []
+#     #     stations = []
+#     #
+#     #     for station in profile_data[channel]:
+#     #         data.append(station['Reading'])
+#     #         stations.append(station['Station'])
+#     #
+#     #     return data, stations
+#
+#     # def get_interp_data(self, profile_data, stations, segments=1000, interp_method='linear'):
+#     #     """
+#     #     Interpolates the data using 1-D piecewise linear interpolation. The data is segmented
+#     #     into 1000 segments.
+#     #     :param profile_data: The EM data in profile mode
+#     #     :param segments: Number of segments to interpolate
+#     #     :param hide_gaps: Bool: Whether or not to hide gaps
+#     #     :param gap: The minimum length threshold above which is considered a gap
+#     #     :return: The interpolated data and stations
+#     #     """
+#     #
+#     #     def calc_gaps(stations):
+#     #         survey_type = self.survey_type
+#     #
+#     #         if 'borehole' in survey_type.casefold():
+#     #             min_gap = 50
+#     #         elif 'surface' in survey_type.casefold():
+#     #             min_gap = 200
+#     #         station_gaps = np.diff(stations)
+#     #
+#     #         if self.gap is None:
+#     #             self.gap = max(int(stats.mode(station_gaps)[0] * 2), min_gap)
+#     #
+#     #         gap_intervals = [(stations[i], stations[i + 1]) for i in range(len(stations) - 1) if
+#     #                          station_gaps[i] > self.gap]
+#     #
+#     #         return gap_intervals
+#     #
+#     #     stations = np.array(stations, dtype='float64')
+#     #     readings = np.array(profile_data, dtype='float64')
+#     #     x_intervals = np.linspace(stations[0], stations[-1], segments)
+#     #     f = interpolate.interp1d(stations, readings, kind=interp_method)
+#     #
+#     #     interpolated_y = f(x_intervals)
+#     #
+#     #     if self.hide_gaps:
+#     #         gap_intervals = calc_gaps(stations)
+#     #
+#     #         # Masks the intervals that are between gap[0] and gap[1]
+#     #         for gap in gap_intervals:
+#     #             interpolated_y = np.ma.masked_where((x_intervals > gap[0]) & (x_intervals < gap[1]),
+#     #                                                 interpolated_y)
+#     #
+#     #     return interpolated_y, x_intervals
+#     #
+#     # def draw_lines(self, ax, channel_low, channel_high, component):
+#     #     """
+#     #     Plots the lines into an axes of a figure. Not for step figures.
+#     #     :param ax: Axes of a figure, either LIN or LOG figure objects
+#     #     :param channel_low: The first channel to be plotted
+#     #     :param channel_high: The last channel to be plotted
+#     #     :param component: String letter representing the component to plot (X, Y, or Z)
+#     #     """
+#     #
+#     #     segments = 1000  # The data will be broken in this number of segments
+#     #     offset = segments * 0.1  # Used for spacing the annotations
+#     #     profile_channel_data = self.get_profile_data(component)
+#     #
+#     #     for k in range(channel_low, (channel_high + 1)):
+#     #         # Gets the profile data for a single channel, along with the stations
+#     #         channel_data, stations = self.get_channel_data(k, profile_channel_data)
+#     #
+#     #         # Interpolates the channel data, also returns the corresponding x intervals
+#     #         interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments)
+#     #
+#     #         ax.plot(x_intervals, interp_data, color=self.line_colour)
+#     #
+#     #         # Mask is used to hide data within gaps
+#     #         mask = np.isclose(interp_data, interp_data.astype('float64'))
+#     #         x_intervals = x_intervals[mask]
+#     #         interp_data = interp_data[mask]
+#     #
+#     #         # Annotating the lines
+#     #         for i, x_position in enumerate(x_intervals[int(offset)::int(len(x_intervals) * 0.4)]):
+#     #             y = interp_data[list(x_intervals).index(x_position)]
+#     #
+#     #             if k == 0:
+#     #                 ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline', ha='center',
+#     #                             color=self.line_colour)
+#     #
+#     #             else:
+#     #                 ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
+#     #                             ha='center',
+#     #                             color=self.line_colour)
+#     #
+#     #         offset += len(x_intervals) * 0.15
+#     #
+#     #         if offset >= len(x_intervals) * 0.85:
+#     #             offset = len(x_intervals) * 0.10
+#     #
+#     # def format_yaxis(self, figure, step=False):
+#     #     """
+#     #     Formats the Y axis of a figure. Will increase the limits of the scale if depending on the limits of the data.
+#     #     :param figure: LIN, LOG or Step figure objects
+#     #     """
+#     #     axes = figure.axes[:-1]
+#     #
+#     #     for ax in axes:
+#     #         ax.get_yaxis().set_label_coords(-0.08 if step is False else -0.095, 0.5)
+#     #
+#     #         if ax.get_yscale() != 'symlog':
+#     #             y_limits = ax.get_ylim()
+#     #
+#     #             if 'induction' in self.survey_type.lower():
+#     #                 if step is True:
+#     #                     if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
+#     #                         new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+#     #                         new_low = new_high * -1
+#     #                     elif ax in axes[2:4] and (y_limits[1] - y_limits[0]) < 3:
+#     #                         new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+#     #                         new_low = new_high * -1
+#     #                     else:
+#     #                         new_high = math.ceil(max(y_limits[1], 0))
+#     #                         new_low = math.floor(min(y_limits[0], 0))
+#     #                 else:
+#     #                     if (y_limits[1] - y_limits[0]) < 3:
+#     #                         new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+#     #                         new_low = new_high * -1
+#     #                     else:
+#     #                         new_high = math.ceil(max(y_limits[1], 0))
+#     #                         new_low = math.floor(min(y_limits[0], 0))
+#     #
+#     #             elif 'fluxgate' in self.survey_type.lower():
+#     #                 if step is True:
+#     #                     if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
+#     #                         new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+#     #                         new_low = new_high * -1
+#     #                     elif ax == axes[2] and (y_limits[1] - y_limits[0]) < 3:
+#     #                         new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+#     #                         new_low = new_high * -1
+#     #                     elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 30:
+#     #                         new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+#     #                         new_low = new_high * -1
+#     #                     else:
+#     #                         new_high = math.ceil(max(y_limits[1], 0))
+#     #                         new_low = math.floor(min(y_limits[0], 0))
+#     #                 else:
+#     #                     if (y_limits[1] - y_limits[0]) < 30:
+#     #                         new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+#     #                         new_low = new_high * -1
+#     #                     else:
+#     #                         new_high = math.ceil(max(y_limits[1], 0))
+#     #                         new_low = math.floor(min(y_limits[0], 0))
+#     #
+#     #             ax.set_ylim(new_low, new_high)
+#     #             ax.set_yticks(ax.get_yticks())
+#     #
+#     #         elif ax.get_yscale() == 'symlog':
+#     #             y_limits = ax.get_ylim()
+#     #             new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 11), 10))
+#     #             new_low = -1 * 10.0 ** math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
+#     #             ax.set_ylim(new_low, new_high)
+#     #
+#     #             ax.tick_params(axis='y', which='major', labelrotation=90)
+#     #             plt.setp(ax.get_yticklabels(), va='center')
+#     #
+#     #         ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
+#     #
+#     # def add_title(self, component):
+#     #     """
+#     #     Adds the title header to a figure
+#     #     """
+#     #
+#     #     timebase_freq = ((1 / (float(self.header['Timebase']) / 1000)) / 4)
+#     #
+#     #     if 'borehole' in self.survey_type.casefold():
+#     #         s_title = 'Hole'
+#     #     else:
+#     #         s_title = 'Line'
+#     #
+#     #     plt.figtext(0.550, 0.960, 'Crone Geophysics & Exploration Ltd.',
+#     #                 fontname='Century Gothic', fontsize=11, ha='center')
+#     #
+#     #     plt.figtext(0.550, 0.945, self.survey_type + ' Pulse EM Survey', family='cursive', style='italic',
+#     #                 fontname='Century Gothic', fontsize=10, ha='center')
+#     #
+#     #     plt.figtext(0.145, 0.935, 'Timebase: ' + str(self.header['Timebase']) + ' ms\n' +
+#     #                 'Base Frequency: ' + str(round(timebase_freq, 2)) + ' Hz\n' +
+#     #                 'Current: ' + str(round(float(self.pem_file.tags.get('Current')), 1)) + ' A',
+#     #                 fontname='Century Gothic', fontsize=10, va='top')
+#     #
+#     #     plt.figtext(0.550, 0.935, s_title + ': ' + self.header.get('LineHole') + '\n' +
+#     #                 'Loop: ' + self.header.get('Loop') + '\n' +
+#     #                 component + ' Component',
+#     #                 fontname='Century Gothic', fontsize=10, va='top', ha='center')
+#     #
+#     #     plt.figtext(0.955, 0.935,
+#     #                 self.header.get('Client') + '\n' + self.header.get('Grid') + '\n' + self.header['Date'] + '\n',
+#     #                 fontname='Century Gothic', fontsize=10, va='top', ha='right')
+
+
+# class PlanMap:
+#     def __init__(self):
+#         self.figure = None
+#         self.pem_files = None
+#         self.gps_editor = GPSEditor
+#
+#     def make_plan_map(self, pem_files, figure):
+#         self.figure = figure
+#         self.pem_files = pem_files
+#
+#         if all(['surface' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
+#             self.surface_plan()
+#         elif all(['borehole' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
+#             self.borehole_plan()
+#         else:
+#             return None
+#
+#     def plot_loops(self):
+#
+#         def draw_loop(pem_file):
+#             loop_coords = pem_file.loop_coords
+#             loop_center = self.gps_editor().get_loop_center(copy.copy(loop_coords))
+#             eastings, northings = [float(coord[1]) for coord in loop_coords], [float(coord[2]) for coord in loop_coords]
+#             eastings.insert(0, eastings[-1])  # To close up the loop
+#             northings.insert(0, northings[-1])
+#
+#             self.figure.axes[0].text(loop_center[0], loop_center[1], pem_file.header.get('Loop'),
+#                                      multialignment='center')
+#             self.figure.axes[0].plot(eastings, northings, color='b')
+#
+#         loops = []
+#         for pem_file in self.pem_files:
+#             if pem_file.loop_coords not in loops:  # plot the loop if the loop hasn't been plotted yet
+#                 draw_loop(pem_file)
+#
+#     def format_figure(self):
+#         ax = self.figure.axes[0]
+#         ax.set_aspect('equal', adjustable='box')
+#         [ax.spines[spine].set_color('none') for spine in ax.spines]
+#         ax.tick_params(axis='y', which='major', labelrotation=90)
+#         ax.tick_params(which='major', width=1.00, length=5, labelsize=10)
+#         ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%dN'))
+#         ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%dE'))
+#         ax.xaxis.set_ticks_position('top')
+#         plt.setp(ax.get_xticklabels(), fontname='Century Gothic')
+#         plt.setp(ax.get_yticklabels(), fontname='Century Gothic', va='center')
+#         plt.grid(linestyle='dotted')
+#         plt.subplots_adjust(left=0.092, bottom=0.07, right=0.908, top=0.685)
+#         add_rectangle(self.figure)
+#
+#         xmin, xmax = ax.get_xlim()
+#         ymin, ymax = ax.get_ylim()
+#         xwidth, ywidth = xmax - xmin, ymax - ymin
+#
+#         if xwidth < 1000:
+#             scalesize = 250
+#         elif xwidth < 2000:
+#             scalesize = 500
+#         elif xwidth < 3000:
+#             scalesize = 750
+#         elif xwidth < 4000:
+#             scalesize = 1000
+#
+#         # SCALE BAR
+#         scalebar = AnchoredHScaleBar(size=scalesize, label=str(scalesize) + 'm', loc=4, frameon=False,
+#                                      pad=0.3, sep=2, color="black", ax=ax)
+#         ax.add_artist(scalebar)
+#         # NORTH ARROW
+#         # ax.annotate('N', (1.01, 1), xytext=(1.01, 0.9), xycoords='axes fraction',
+#         #             ha='center', fontsize=12, fontweight='bold',
+#         #             arrowprops=dict(arrowstyle='->', color='k'), transform=ax.transAxes)
+#
+#         plt.arrow(0.5, 0.5, 0., 0.5, shape='right', width=0.007, color='gray', length_includes_head=True,
+#                   transform=self.figure.transFigure, zorder=10)
+#
+#     def surface_plan(self):
+#
+#         def plot_lines():
+#             pass
+#
+#         self.plot_loops()
+#         plot_lines()
+#         self.format_figure()
+#         return self.figure
+#
+#     def borehole_plan(self):
+#         borehole_names = []
+#         # TODO Can have same hole with two loops
+#         unique_boreholes = []
+#         for pem_file in self.pem_files:
+#             borehole_names.append(pem_file.header.get('LineHole'))
+#             if pem_file.header.get('LineHole') not in borehole_names:
+#                 unique_boreholes.append(pem_file)
+#         self.pem_files = unique_boreholes
+#
+#         return self.figure
 
 
 # Draws a pretty scale bar
@@ -1008,10 +1501,13 @@ class PEMPrinter:
         self.pem_files = []
         self.ri_files = []
         self.sort_files()
-        self.plotter = PEMPlotter
-        self.mapper = PlanMap
+
         self.save_path = save_path
-        self.kwargs = kwargs
+        self.x_min = kwargs.get('XMin')
+        self.x_max = kwargs.get('XMax')
+        self.hide_gaps = kwargs.get('HideGaps')
+        # self.projection = kwargs.get('Projection')
+        self.projection = ccrs.UTM(31)
         self.pb = QProgressBar()
         self.pb_count = 0
         self.pb_end = sum([len(pair[0].get_components()) for pair in self.files])
@@ -1063,7 +1559,6 @@ class PEMPrinter:
         stp_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(8.5, 11), sharex=True)
         ax5 = ax4.twiny()
         ax5.get_shared_x_axes().join(ax4, ax5)
-
         return stp_fig
 
     # To save LIN and LOG pdfs separately. Requires a save_dir instead of a save_path.
@@ -1094,10 +1589,10 @@ class PEMPrinter:
     def print_plan_map(self):
         with PdfPages(self.save_path + '.PDF') as pdf:
             plan_figure = self.create_plan_figure()
-            plan_map = self.mapper().make_plan_map(self.pem_files, plan_figure)
-            pdf.savefig(plan_map, orientation='landscape')
+            plan_map = PlanMap(self.pem_files, plan_figure, self.projection)
+            pdf.savefig(plan_map.get_map(), orientation='landscape')
             self.pb_count += 1
-            self.pb.setValue((self.pb_count / self.pb_end) * 100)
+            self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
             plt.close(plan_figure)
         os.startfile(self.save_path + '.PDF')
 
@@ -1110,12 +1605,12 @@ class PEMPrinter:
                     components = pem_file.get_components()
                     for component in components:
                         step_figure = self.create_step_figure()
-                        step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(
-                            component,
-                            step_figure)
-                        pdf.savefig(step_plot)
+                        step_plotter = STEPPlotter()
+                        plotted_fig = step_plotter.plot(pem_file, ri_file, component, step_figure, x_min=self.x_min, x_max=self.x_max,
+                                                hide_gaps=self.hide_gaps)
+                        pdf.savefig(plotted_fig)
                         self.pb_count += 1
-                        self.pb.setValue((self.pb_count / self.pb_end) * 100)
+                        self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
                         plt.close(step_figure)
         os.startfile(self.save_path + '.PDF')
 
@@ -1127,19 +1622,23 @@ class PEMPrinter:
                 components = pem_file.get_components()
                 for component in components:
                     lin_figure = self.create_lin_figure()
-                    lin_plot = self.plotter(pem_file=pem_file, **self.kwargs).make_lin_fig(component, lin_figure)
-                    pdf.savefig(lin_plot)
+                    lin_plotter = LINPlotter()
+                    plotted_fig = lin_plotter.plot(pem_file, component, lin_figure, x_min=self.x_min, x_max=self.x_max,
+                                                hide_gaps=self.hide_gaps)
+                    pdf.savefig(plotted_fig)
                     self.pb_count += 1
-                    self.pb.setValue((self.pb_count / self.pb_end) * 100)
+                    self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
                     plt.close(lin_figure)
             for pem_file in self.pem_files:
                 components = pem_file.get_components()
                 for component in components:
                     log_figure = self.create_log_figure()
-                    log_plot = self.plotter(pem_file=pem_file, **self.kwargs).make_log_fig(component, log_figure)
-                    pdf.savefig(log_plot)
+                    log_plotter = LOGPlotter()
+                    plotted_fig = log_plotter.plot(pem_file, component, log_figure, x_min=self.x_min, x_max=self.x_max,
+                                                hide_gaps=self.hide_gaps)
+                    pdf.savefig(plotted_fig)
                     self.pb_count += 1
-                    self.pb.setValue((self.pb_count / self.pb_end) * 100)
+                    self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
                     plt.close(log_figure)
             for file in self.files:
                 pem_file = file[0]
@@ -1148,12 +1647,12 @@ class PEMPrinter:
                     components = pem_file.get_components()
                     for component in components:
                         step_figure = self.create_step_figure()
-                        step_plot = self.plotter(pem_file=pem_file, ri_file=ri_file, **self.kwargs).make_step_fig(
-                            component,
-                            step_figure)
-                        pdf.savefig(step_plot)
+                        step_plotter = STEPPlotter()
+                        plotted_fig = step_plotter.plot(pem_file, ri_file, component, step_figure, x_min=self.x_min, x_max=self.x_max,
+                                                hide_gaps=self.hide_gaps)
+                        pdf.savefig(plotted_fig)
                         self.pb_count += 1
-                        self.pb.setValue((self.pb_count / self.pb_end) * 100)
+                        self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
                         plt.close(step_figure)
         os.startfile(self.save_path + '.PDF')
 

@@ -41,9 +41,10 @@ class PEMSerializer:
         if not coords:
             result += '<L00>\n''<L01>\n''<L02>\n''<L03>\n'
         else:
-            for position in coords:
+            for i, position in enumerate(coords):
+                tag = f"<L{i:02d}> "
                 row = ' '.join(position)
-                result += row + '\n'
+                result += tag + row + '\n'
         return result
 
     def serialize_line_coords(self, coords):
@@ -52,9 +53,10 @@ class PEMSerializer:
         if not coords or not any(coords):
             result += '<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
         else:
-            for position in coords:
+            for i, position in enumerate(coords):
+                tag = f"<P{i:02d}> "
                 row = ' '.join(position)
-                result += row + '\n'
+                result += tag + row + '\n'
         return result
 
     def serialize_notes(self, notes):

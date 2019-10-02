@@ -177,13 +177,13 @@ class GPSEditor:
     def get_geometry(self, file):
         segments = self.parser.parse_segments(file)
         if not segments:
-            return ''
+            return []
         return segments
 
     def get_collar_gps(self, file):
         gps = self.parser.parse_collar_gps(file)
         if not gps:
-            return ''
+            return []
         return gps
 
 
@@ -227,19 +227,6 @@ class GPSParser:
         return gps_str
 
     def parse_station_gps(self, gps):
-        # if isinstance(gps, list):
-        #     for i, row in enumerate(gps):
-        #         if isinstance(row, list):
-        #             row = list(map(lambda x: str(x), row))
-        #             row_str = ' '.join(row)
-        #             gps[i] = row_str
-        #         else:
-        #             pass
-        #     gps_str = '\n'.join(gps)
-        # elif gps is None or gps is '':
-        #     return None
-        # else:
-        #     gps_str = gps
         gps_str = self.convert_to_str(gps)
         raw_gps = re.findall(self.re_station_gps, gps_str)
         raw_gps = list(map(lambda x: list(x), raw_gps))
@@ -255,22 +242,9 @@ class GPSParser:
                     raw_gps[i].append(station)
             return raw_gps
         else:
-            return None
+            return []
 
     def parse_loop_gps(self, gps):
-        # if isinstance(gps, list):
-        #     for i, row in enumerate(gps):
-        #         if isinstance(row, list):
-        #             row = list(map(lambda x: str(x), row))
-        #             row_str = ' '.join(row)
-        #             gps[i] = row_str
-        #         else:
-        #             pass
-        #     gps_str = '\n'.join(gps)
-        # elif gps is None or gps is '':
-        #     return None
-        # else:
-        #     gps_str = gps
         gps_str = self.convert_to_str(gps)
         raw_gps = re.findall(self.re_loop_gps, gps_str)
         raw_gps = list(map(lambda x: list(x), raw_gps))
@@ -278,51 +252,25 @@ class GPSParser:
         if raw_gps:
             return raw_gps
         else:
-            return None
+            return []
 
     def parse_segments(self, file):
-        # if isinstance(file, list):
-        #     for i, row in enumerate(file):  # Convert to str for re purposes
-        #         if isinstance(row, list):
-        #             row = list(map(lambda x: str(x), row))
-        #             row_str = ' '.join(row)
-        #             file[i] = row_str
-        #         else:
-        #             pass
-        #     seg_file_str = '\n'.join(file)
-        # elif file is None or file is '':
-        #     return None
-        # else:
-        #     seg_file_str = file
         seg_file_str = self.convert_to_str(file)
         raw_seg_file = re.findall(self.re_segment, seg_file_str)
         raw_seg_file = list(map(lambda x: list(x), raw_seg_file))
         if raw_seg_file:
             return raw_seg_file
         else:
-            return None
+            return []
 
     def parse_collar_gps(self, file):
-        # if isinstance(file, list):
-        #     for i, row in enumerate(file):  # Convert to str for re purposes
-        #         if isinstance(row, list):
-        #             row = list(map(lambda x: str(x), row))
-        #             row_str = ' '.join(row)
-        #             file[i] = row_str
-        #         else:
-        #             pass
-        #     collar_str = '\n'.join(file)
-        # elif file is None or file is '':
-        #     return None
-        # else:
-        #     collar_str = file
         collar_str = self.convert_to_str(file)
         raw_collar_gps = re.findall(self.re_collar_gps, collar_str)
         raw_collar_gps = list(map(lambda x: list(x), raw_collar_gps))
         if raw_collar_gps:
-            return raw_collar_gps[0]  # Returns the first find
+            return [raw_collar_gps[0]]  # Returns the first find
         else:
-            return None
+            return []
 
 
 def main():

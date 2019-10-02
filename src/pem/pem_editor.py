@@ -1017,15 +1017,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('Cancelled.', 2000)
             pass
 
-    def print_plots(self, final=False, step=False):
+    def print_plots(self, final=False, step=False, plan=False):
         print('Saving plots')
         if len(self.pem_files)>0:
             self.window().statusBar().showMessage('Saving plots...')
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
             self.dialog.setDirectory(default_path)
             # file_dir = QFileDialog.getSaveDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)  # For separate LIN and LOG pdfs
-            save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
-            # save_dir = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\Testing'
+            # save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
+            save_dir = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\Testing'
             plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked()}
 
             if save_dir:
@@ -1060,13 +1060,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 # PEM Files and RI files zipped together for when they get sorted
                 printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
                 self.window().statusBar().addPermanentWidget(printer.pb)
-                # printer.print_lin_figs()
-                # printer.print_log_figs()
                 if final is True:
                     printer.print_final_plots()
                 elif step is True:
                     printer.print_step_plots()
-                    # printer.print_plan_map()
+                elif plan is True:
+                    printer.print_plan_map()
                 else:
                     raise ValueError
                 printer.pb.hide()
@@ -1540,10 +1539,10 @@ def main():
     # for file in file_names:
     #     file_paths.append(os.path.join(sample_files, file))
     # # (mw.open_files(file_paths))
-    mw.open_pem_files(r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01NAv.PEM')
-    mw.open_ri_file([r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01N.RI2'])
-    # mw.print_plots(step=True)
+    mw.open_pem_files(r'C:\_Data\2019\Nantou BF\Surface\__Semtoun 115-\PEM\5400N-LP115.PEM')
+    mw.open_ri_file([r'C:\_Data\2019\Nantou BF\Surface\__Semtoun 115-\PEM\1155400E.RI3'])
     mw.print_plots(step=True)
+    # mw.print_plots(step=False)
     app.exec_()
 
 

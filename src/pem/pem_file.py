@@ -1,6 +1,7 @@
 from src.pem.pem_serializer import PEMSerializer
 import re
 import logging
+from src.gps.gps_editor import GPSEditor
 
 logging.info('PEMFile')
 
@@ -47,10 +48,22 @@ class PEMFile:
         return self.tags
 
     def get_loop_coords(self):
-        return self.loop_coords
+        return GPSEditor().get_loop_gps(self.loop_coords)
 
-    def get_line_coords(self):
-        return self.line_coords
+    def get_station_coords(self):
+        return GPSEditor().get_station_gps(self.line_coords)
+
+    def get_collar_coords(self):
+        return GPSEditor().get_collar_gps(self.line_coords)
+
+    def get_hole_geometry(self):
+        return GPSEditor().get_geometry(self.line_coords)
+
+    def get_line_coords(self):  # All P tags
+        if self.get_survey_type() == 'borehole':
+            return self.get_collar_coords()+self.get_hole_geometry()
+        else:
+            return self.get_station_coords()
 
     def get_notes(self):
         return self.notes
@@ -116,7 +129,12 @@ class PEMFile:
         return profile_data
 
     def get_survey_type(self):
-        return self.survey_type
+        if 'surface' in self.survey_type.lower() or 'squid' in self.survey_type.lower():
+            return 'surface'
+        elif 'borehole' in self.survey_type.lower():
+            return 'borehole'
+        else:
+            return 'unknown'
 
     def save_file(self):
         ps = PEMSerializer()
