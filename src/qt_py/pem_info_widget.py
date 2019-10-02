@@ -318,7 +318,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         add_header_from_pem()
 
     def initTables(self):
-        if self.pem_file.get_survey_type().lower() == 'surface':
+        if 'surface' in self.pem_file.survey_type.lower() or 'squid' in self.pem_file.survey_type.lower():
             self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
             self.station_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
             self.stationGPSTable.setColumnCount(len(self.station_columns))
@@ -327,7 +327,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 QAbstractScrollArea.AdjustToContents)
             self.stationGPSTable.resizeColumnsToContents()
 
-        elif self.pem_file.get_survey_type().lower() == 'borehole':
+        elif 'borehole' in self.pem_file.survey_type.lower():
             self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
             self.geometry_columns = ['Tag', 'Azimuth', 'Dip', 'Seg. Length', 'Units', 'Depth']
             self.geometryTable.setColumnCount(len(self.geometry_columns))
@@ -569,7 +569,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                         suffixes.append(suffix[0])
                 return statistics.mode(suffixes)
 
-            if self.pem_file.survey_type.lower() == 'surface':
+            if 'surface' in self.pem_file.survey_type.lower():
                 correct_suffix = most_common_suffix()
 
                 for row in range(self.dataTable.rowCount()):

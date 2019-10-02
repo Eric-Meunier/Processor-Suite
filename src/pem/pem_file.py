@@ -129,12 +129,7 @@ class PEMFile:
         return profile_data
 
     def get_survey_type(self):
-        if 'surface' in self.survey_type.lower() or 'squid' in self.survey_type.lower():
-            return 'surface'
-        elif 'borehole' in self.survey_type.lower():
-            return 'borehole'
-        else:
-            return 'unknown'
+        return self.survey_type
 
     def save_file(self):
         ps = PEMSerializer()

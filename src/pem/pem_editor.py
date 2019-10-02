@@ -137,6 +137,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.export_final_pems_action.setStatusTip("Export the final PEM files")
         self.export_final_pems_action.triggered.connect(self.export_final_pems)
 
+        self.print_plan_map_action = QAction("&Print Plan Map PDF", self)
+        self.print_plan_map_action.setShortcut("F10")
+        self.print_plan_map_action.setStatusTip("Print a plan map to PDF")
+        self.print_plan_map_action.triggered.connect(lambda: self.print_plots(plan=True))
+
         self.print_step_plots_action = QAction("&Print Step Plots PDF", self)
         self.print_step_plots_action.setShortcut("F11")
         self.print_step_plots_action.setStatusTip("Print the step plots to PDF")
@@ -172,6 +177,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu.addAction(self.import_ri_files_action)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.export_final_pems_action)
+        self.fileMenu.addAction(self.print_plan_map_action)
         self.fileMenu.addAction(self.print_step_plots_action)
         self.fileMenu.addAction(self.print_final_plots_action)
 
@@ -303,6 +309,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.table.menu.addAction(self.table.save_file_as_action)
                 else:
                     self.table.menu.addAction(self.table.save_file_to_action)
+                self.table.menu.addAction(self.print_plan_map_action)
                 self.table.menu.addAction(self.print_step_plots_action)
                 self.table.menu.addAction(self.print_final_plots_action)
                 self.table.menu.addSeparator()

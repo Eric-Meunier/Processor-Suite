@@ -53,7 +53,7 @@ mpl.rcParams['lines.linewidth'] = 0.5
 # mpl.rcParams['lines.color'] = '#1B2631'
 mpl.rcParams['font.size'] = 9
 
-line_colour = 'black'
+line_color = 'black'
 
 
 def add_rectangle(figure):
@@ -220,7 +220,7 @@ def draw_lines(pem_file, component, ax, channel_low, channel_high, hide_gaps=Tru
     :param component: String letter representing the component to plot (X, Y, or Z)
     """
 
-    line_colour = 'k'
+    line_color = 'k'
     segments = 1000  # The data will be broken in this number of segments
     offset = segments * 0.1  # Used for spacing the annotations
     profile_channel_data = get_profile_data(pem_file, component)
@@ -233,7 +233,7 @@ def draw_lines(pem_file, component, ax, channel_low, channel_high, hide_gaps=Tru
         interp_data, x_intervals = get_interp_data(channel_data, stations, pem_file.survey_type,
                                                    segments=segments, hide_gaps=hide_gaps)
 
-        ax.plot(x_intervals, interp_data, color=line_colour)
+        ax.plot(x_intervals, interp_data, color=line_color)
 
         # Mask is used to hide data within gaps
         mask = np.isclose(interp_data, interp_data.astype('float64'))
@@ -246,12 +246,12 @@ def draw_lines(pem_file, component, ax, channel_low, channel_high, hide_gaps=Tru
 
             if k == 0:
                 ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline', ha='center',
-                            color=line_colour)
+                            color=line_color)
 
             else:
                 ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
                             ha='center',
-                            color=line_colour)
+                            color=line_color)
 
         offset += len(x_intervals) * 0.15
 
@@ -475,7 +475,7 @@ class STEPPlotter:
 
                 ax.annotate(str(annotation), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
                             ha='center',
-                            color=line_colour)
+                            color=line_color)
 
         def draw_step_lines(fig, profile_data, hide_gaps=True):
             """
@@ -501,21 +501,21 @@ class STEPPlotter:
 
                 if i < 3:  # Plotting TP, PP, and S1 to the first axes
                     ax = fig.axes[0]
-                    ax.plot(x_intervals, interp_data, color=line_colour)
+                    ax.plot(x_intervals, interp_data, color=line_color)
                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
                     offset += len(x_intervals) * 0.15
                 elif i < 5:  # Plotting the PP and S1% to the second axes
                     if i == 3:  # Resetting the annotation positions
                         offset = segments * 0.1
                     ax = fig.axes[1]
-                    ax.plot(x_intervals, interp_data, color=line_colour)
+                    ax.plot(x_intervals, interp_data, color=line_color)
                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
                     offset += len(x_intervals) * 0.15
                 else:  # Plotting S2% to S4% to the third axes
                     if i == 5:
                         offset = segments * 0.1
                     ax = fig.axes[2]
-                    ax.plot(x_intervals, interp_data, color=line_colour)
+                    ax.plot(x_intervals, interp_data, color=line_color)
                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
                     offset += len(x_intervals) * 0.15
                 if offset >= len(x_intervals) * 0.85:
@@ -529,7 +529,7 @@ class STEPPlotter:
                 x_intervals = x_intervals[mask]
                 interp_data = interp_data[mask]
                 ax = fig.axes[3]
-                ax.plot(x_intervals, interp_data, color=line_colour)
+                ax.plot(x_intervals, interp_data, color=line_color)
                 annotate_line(ax, str(num_off_time_channels - i), interp_data, x_intervals, offset)
                 offset += len(x_intervals) * 0.15
                 if offset >= len(x_intervals) * 0.85:
@@ -580,7 +580,12 @@ class PlanMap:
         self.pem_files = pem_files
         self.loops = []
         self.lines = []
+        self.collars = []
         self.holes = []
+        self.loop_handle = None
+        self.station_handle = None
+        self.collar_handle = None
+        self.trace_handle = None
         self.draw_loops = draw_loops
         self.draw_lines = draw_lines
         self.draw_hole_collar = draw_hole_collar
@@ -592,8 +597,17 @@ class PlanMap:
 
         self.plot_pems()
         self.format_figure()
-
         plt.show()
+
+    def label_location_helper(self, x, y, azimuth=0):
+        """
+        Finds an appropriate location for placing labels based on azimuth of the object
+        :param x: X coordinate of the item you wish to create a label for
+        :param y: Y coordinate
+        :param azimuth: Azimuth of the item
+        :return: X, Y, and Azimuth of the proposed label
+        """
+        pass
 
     def plot_pems(self):
 
@@ -624,27 +638,46 @@ class PlanMap:
 
         def add_hole_to_map(pem_file):
 
-            def get_borehole_projection():
-                collar = self.gps_editor().get_collar_gps(pem_file.line_coords)
-                segments = self.gps_editor().get_geometry(pem_file.line_coords)
-                trace = []
+            def get_borehole_projection(segments):
+                if not collar:
+                    return None
+                else:
+                    trace = [(float(collar[0]), float(collar[1]))]  # Easting and Northing tuples
+                    azimuth = None
+                    for segment in segments:
+                        azimuth = math.radians(float(segment[0]))
+                        dip = math.radians(float(segment[1]))
+                        seg_l = float(segment[2])
+                        delta_seg_l = seg_l * math.cos(dip)
+                        delta_elev = seg_l * math.sin(dip)
+                        dx = delta_seg_l * math.sin(azimuth)
+                        dy = delta_seg_l * math.cos(azimuth)
+                        trace.append((float(trace[-1][0]) + dx, float(trace[-1][1]) + dy))
+                    return [segment[0] for segment in trace], [segment[1] for segment in trace], float(segments[-1][0])
 
-                for segment in segments:
-                    azimuth = math.radians(float(segment[0]))
-                    dip = math.radians(float(segment[1]))
-                    seg_l = float(segment[2])
-                    delta_seg_l = seg_l * math.cos(dip)
-                    delta_elev = seg_l * math.sin(dip)
-
-                    dx = delta_seg_l * math.sin(azimuth)
-                    dy = delta_seg_l * math.cos(azimuth)
-
-                    trace.append([float(collar[0]) + dx, float(collar[1]) + dy])
-
-            if self.draw_hole_trace is True:
-                get_borehole_projection()
             if self.draw_hole_collar is True:
-                pass
+                collar = self.gps_editor().get_collar_gps(pem_file.line_coords)[0]
+                segments = self.gps_editor().get_geometry(pem_file.line_coords)
+                if collar and collar not in self.collars:
+                    self.collars.append(collar)
+                    self.collar_handle, = self.ax.plot(float(collar[0]), float(collar[1]), 'o', color=self.color, label='Borehole Collar')
+                    hole_az = float(segments[0][0])
+                    label_az = hole_az - 90 if hole_az > 90 or hole_az < 270 else hole_az + 90
+                    self.ax.text(float(collar[0]), float(collar[1]), f"{pem_file.header.get('LineHole')}\n",  # \n is to add space
+                                 rotation=label_az, rotation_mode='anchor', ha='center', va='baseline', color=self.color)  # Add the hole name
+
+                    if segments and self.draw_hole_trace is True:
+                        x, y, end_azimuth = get_borehole_projection(segments)
+                        depth = float(segments[-1][-1])
+                        depth_label_az = end_azimuth - 90 if end_azimuth > 90 or end_azimuth < 270 else end_azimuth + 90
+                        self.trace_handle, = self.ax.plot(x, y, '-.', color=self.color, label='Borehole Trace')
+                        self.ax.plot(x[-1], y[-1], marker=(2, 0, end_azimuth), color=self.color, markersize=15)
+                        self.ax.text(x[-1], y[-1], f" {depth:.0f} m",
+                                     rotation=depth_label_az, rotation_mode='anchor', ha='left', va='bottom',
+                                     color=self.color, fontsize=8)  # Add the hole name
+                        # TODO Add hole depth to end
+                else:
+                    pass
 
         for pem_file in self.pem_files:
             if self.draw_loops is True:
@@ -653,8 +686,7 @@ class PlanMap:
             if 'surface' in pem_file.survey_type.lower() and self.draw_lines is True:
                 add_line_to_map(pem_file)
 
-            if 'borehole' in pem_file.survey_type.lower():
-                pass
+            if 'borehole' in pem_file.survey_type.lower() and self.draw_hole_collar is True:
                 add_hole_to_map(pem_file)
 
     def format_figure(self):
@@ -715,18 +747,21 @@ class PlanMap:
             if not ax: ax = plt.gca()
             xmin, xmax, ymin, ymax = ax.get_extent()
             width, height = xmax - xmin, ymax - ymin
+            offset = (ymax - ymin) * .2
             ratio = width / height
             if ratio < (11 / 8.5):
                 new_height = height
-                new_width = height * (11 / 8.5)
+                new_width = new_height * (11 / 8.5)
             else:
                 new_width = width
-                new_height = height * (11 / 8.5)
+                new_height = new_width * (11 / 8.5)
             new_xmin = xmin - ((new_width - width) / 2)
             new_xmax = xmax + ((new_width - width) / 2)
             new_ymin = ymin - ((new_height - height) / 2)
             new_ymax = ymax + ((new_height - height) / 2)
-            ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
+
+            ax.set_extent((new_xmin - (offset*11/8.5), new_xmax + (offset*11/8.5), new_ymin - offset, new_ymax + offset), crs=self.crs)
+            # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
 
             # For portrait
             # if not ax: ax = plt.gca()
@@ -778,8 +813,6 @@ class PlanMap:
 
             coord_sys = "UTM Zone 31N, WGS 84"
             scale = "1:2000"
-            # rect = patches.Rectangle(xy=(b_xmin, b_ymin), width=b_width, height=b_height, linewidth=0.7, edgecolor='black',
-            #                          facecolor='white', fill=True, alpha=1, zorder=4, transform=self.ax.transAxes)
             rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='gray',
                                           boxstyle="round,pad=0.005", facecolor='white', zorder=4,
                                           transform=self.ax.transAxes)
@@ -823,13 +856,9 @@ class PlanMap:
         self.ax.xaxis.set_ticks_position('top')
         plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
         plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
-        plt.subplots_adjust(left=0.02, bottom=0.02, right=0.96, top=0.96)
+        plt.subplots_adjust(left=0.03, bottom=0.02, right=0.97, top=0.96)
         # self.ax.add_wms(wms='http://vmap0.tiles.osgeo.org/wms/vmap0',
         #                 layers=['basic'])
-
-        xmin, xmax, ymin, ymax = self.ax.get_extent()
-        offset = (ymax - ymin) * .1
-        self.ax.set_extent((xmin - offset, xmax + offset, ymin - offset, ymax + offset * 2), crs=self.crs)
 
         scale_bar(self.ax, self.crs, m_per_unit=1, units='m')
 
@@ -840,7 +869,8 @@ class PlanMap:
         self.ax.add_patch(arrow_shadow)
 
         add_title()
-        self.ax.legend(handles=[self.station_handle, self.loop_handle], title='Legend', loc='lower left',
+        legend_handles = [handle for handle in [self.loop_handle, self.station_handle, self.collar_handle, self.trace_handle] if handle is not None]
+        self.ax.legend(handles=legend_handles, title='Legend', loc='lower left',
                        framealpha=1, shadow=True)
 
     def get_map(self):
@@ -868,7 +898,7 @@ class PlanMap:
 #         self.num_channels = int(self.header['NumChannels']) + 1
 #         self.units = 'nT/s' if self.pem_file.tags['Units'].casefold() == 'nanotesla/sec' else 'pT'
 #         # self.channel_bounds = self.calc_channel_bounds()
-#         self.line_colour = 'k'
+#         self.line_color = 'k'
 #
 #     #
 #     # def calc_channel_bounds(self):
@@ -1024,7 +1054,7 @@ class PlanMap:
 #
 #                 ax.annotate(str(annotation), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
 #                             ha='center',
-#                             color=self.line_colour)
+#                             color=self.line_color)
 #
 #         def draw_step_lines(fig, profile_data):
 #             """
@@ -1049,21 +1079,21 @@ class PlanMap:
 #
 #                 if i < 3:  # Plotting TP, PP, and S1 to the first axes
 #                     ax = fig.axes[0]
-#                     ax.plot(x_intervals, interp_data, color=self.line_colour)
+#                     ax.plot(x_intervals, interp_data, color=self.line_color)
 #                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
 #                     offset += len(x_intervals) * 0.15
 #                 elif i < 5:  # Plotting the PP and S1% to the second axes
 #                     if i == 3:  # Resetting the annotation positions
 #                         offset = segments * 0.1
 #                     ax = fig.axes[1]
-#                     ax.plot(x_intervals, interp_data, color=self.line_colour)
+#                     ax.plot(x_intervals, interp_data, color=self.line_color)
 #                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
 #                     offset += len(x_intervals) * 0.15
 #                 else:  # Plotting S2% to S4% to the third axes
 #                     if i == 5:
 #                         offset = segments * 0.1
 #                     ax = fig.axes[2]
-#                     ax.plot(x_intervals, interp_data, color=self.line_colour)
+#                     ax.plot(x_intervals, interp_data, color=self.line_color)
 #                     annotate_line(ax, annotations[i], interp_data, x_intervals, offset)
 #                     offset += len(x_intervals) * 0.15
 #                 if offset >= len(x_intervals) * 0.85:
@@ -1077,7 +1107,7 @@ class PlanMap:
 #                 x_intervals = x_intervals[mask]
 #                 interp_data = interp_data[mask]
 #                 ax = fig.axes[3]
-#                 ax.plot(x_intervals, interp_data, color=self.line_colour)
+#                 ax.plot(x_intervals, interp_data, color=self.line_color)
 #                 annotate_line(ax, str(num_off_time_channels - i), interp_data, x_intervals, offset)
 #                 offset += len(x_intervals) * 0.15
 #                 if offset >= len(x_intervals) * 0.85:
@@ -1236,7 +1266,7 @@ class PlanMap:
 #     #         # Interpolates the channel data, also returns the corresponding x intervals
 #     #         interp_data, x_intervals = self.get_interp_data(channel_data, stations, segments)
 #     #
-#     #         ax.plot(x_intervals, interp_data, color=self.line_colour)
+#     #         ax.plot(x_intervals, interp_data, color=self.line_color)
 #     #
 #     #         # Mask is used to hide data within gaps
 #     #         mask = np.isclose(interp_data, interp_data.astype('float64'))
@@ -1249,12 +1279,12 @@ class PlanMap:
 #     #
 #     #             if k == 0:
 #     #                 ax.annotate('PP', xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline', ha='center',
-#     #                             color=self.line_colour)
+#     #                             color=self.line_color)
 #     #
 #     #             else:
 #     #                 ax.annotate(str(k), xy=(x_position, y), xycoords="data", size=7.5, va='center_baseline',
 #     #                             ha='center',
-#     #                             color=self.line_colour)
+#     #                             color=self.line_color)
 #     #
 #     #         offset += len(x_intervals) * 0.15
 #     #
