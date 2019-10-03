@@ -1,38 +1,32 @@
+import copy
 import logging
 import math
 import os
 import re
 import sys
-from pprint import pprint
-from itertools import chain
-import cartopy.crs as ccrs  # import projections
-import cartopy.feature as cf
-import cartopy.io.shapereader as shpreader
-from owslib.wmts import WebMapTileService
-import matplotlib.transforms as mtransforms
-from cartopy.io.img_tiles import OSM
-from matplotlib import patheffects
-import matplotlib.lines as mlines
-import matplotlib
 from datetime import datetime
-from operator import itemgetter, attrgetter
-import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
+
+import cartopy.crs as ccrs  # import projections
+import matplotlib
 import matplotlib as mpl
-from src.pem.pem_parser import PEMParser
+import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
+import matplotlib.lines as mlines
+import matplotlib.offsetbox
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import matplotlib.text as mtext
+import matplotlib.transforms as mtransforms
 import numpy as np
-from matplotlib.lines import Line2D
-import matplotlib.offsetbox
-from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 from PyQt5.QtWidgets import (QProgressBar)
 from matplotlib import patches
+from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.lines import Line2D
 from scipy import interpolate
 from scipy import stats
-from cartopy.io.img_tiles import Stamen
-import copy
-from src.gps.gps_editor import GPSEditor, GPSParser
+
+from src.gps.gps_editor import GPSEditor
+from src.pem.pem_parser import PEMParser
 
 __version__ = '0.0.1'
 logging.info('PEMPlotter')
@@ -337,7 +331,7 @@ def add_title(pem_file, component, step=False):
     survey_type = pem_file.survey_type
     timebase = float(header['Timebase'])
     timebase_freq = ((1 / (timebase / 1000)) / 4)
-    step_flux_timebase = f"({timebase*2:.2f} ms Step)" if step is True and 'fluxgate' in survey_type.lower() else ''
+    step_flux_timebase = f"({timebase * 2:.2f} ms Step)" if step is True and 'fluxgate' in survey_type.lower() else ''
 
     if 'borehole' in survey_type.casefold():
         s_title = 'Hole'
@@ -423,7 +417,6 @@ class LOGPlotter:
      """
 
     def plot(self, pem_file, component, figure, x_min=None, x_max=None, hide_gaps=True):
-
         def add_ylabels():
             units = 'nT/s' if 'induction' in pem_file.survey_type.lower() else 'pT'
             ax = figure.axes[0]
@@ -433,7 +426,7 @@ class LOGPlotter:
 
         # Plotting section
         ax = figure.axes[0]
-        draw_lines(pem_file, component, ax, 0, num_channels-1, hide_gaps=hide_gaps)
+        draw_lines(pem_file, component, ax, 0, num_channels - 1, hide_gaps=hide_gaps)
 
         add_title(pem_file, component)
         add_ylabels()
@@ -448,6 +441,7 @@ class STEPPlotter:
      Plots the data from an RI file into the STEP figure
      :return: Matplotlib Figure object
      """
+
     def plot(self, pem_file, ri_file, component, figure, x_min=None, x_max=None, hide_gaps=True):
 
         def add_ylabel(profile_data, num_channels_to_plot):
@@ -456,17 +450,17 @@ class STEPPlotter:
             channels = [re.findall('\d+', key)[0] for key in profile_data if re.match('Ch', key)]
 
             figure.axes[0].set_ylabel("TP = Theoretical Primary\n"
-                                        f"{'PP = Calculated PP x Ramp' if fluxgate is True else 'PP = Last Ramp Channel'}\n"
-                                        f"S1 = Calculated Step Ch.1\n({units})")
+                                      f"{'PP = Calculated PP x Ramp' if fluxgate is True else 'PP = Last Ramp Channel'}\n"
+                                      f"S1 = Calculated Step Ch.1\n({units})")
             figure.axes[1].set_ylabel("Deviation from TP\n"
-                                        "(% Total Theoretical)")
+                                      "(% Total Theoretical)")
             figure.axes[2].set_ylabel("Step Channels 2 - 4\n"
-                                        "Deviation from S1\n"
-                                        "(% Total Theoretical)")
+                                      "Deviation from S1\n"
+                                      "(% Total Theoretical)")
             figure.axes[3].set_ylabel("Pulse EM Off-time\n"
-                                        f"Channels {str(min(channels[-num_channels_to_plot:]))} - "
-                                        f"{str(max(channels[-num_channels_to_plot:]))}\n"
-                                        f"({units})")
+                                      f"Channels {str(min(channels[-num_channels_to_plot:]))} - "
+                                      f"{str(max(channels[-num_channels_to_plot:]))}\n"
+                                      f"({units})")
 
         def annotate_line(ax, annotation, interp_data, x_intervals, offset):
 
@@ -494,7 +488,8 @@ class STEPPlotter:
             stations = profile_data['Stations']
 
             for i, key in enumerate(keys):
-                interp_data, x_intervals = get_interp_data(profile_data[key], stations, survey_type, hide_gaps=hide_gaps)
+                interp_data, x_intervals = get_interp_data(profile_data[key], stations, survey_type,
+                                                           hide_gaps=hide_gaps)
                 mask = np.isclose(interp_data, interp_data.astype('float64'))
                 x_intervals = x_intervals[mask]
                 interp_data = interp_data[mask]
@@ -570,10 +565,56 @@ class STEPPlotter:
         return figure
 
 
+class RotnAnnotation(mtext.Annotation):
+    """
+    Text label object that rotates relative to the plot data based on the angle between the points given
+    :param label_str: label str
+    :param label_xy label position
+    :param p: Point 1
+    :param pa: Point 2
+    :param ax: Axes object
+    :param kwargs: text object kwargs
+    """
+
+    def __init__(self, label_str, label_xy, p, pa=None, ax=None, hole_collar=False, **kwargs):
+        self.ax = ax or plt.gca()
+        self.p = p
+        self.pa = pa
+        self.hole_collar = hole_collar
+        if not pa:
+            self.pa = label_xy
+        self.calc_angle_data()
+        kwargs.update(rotation_mode=kwargs.get("rotation_mode", "anchor"))
+        mtext.Annotation.__init__(self, label_str, label_xy, **kwargs)
+        self.set_transform(mtransforms.IdentityTransform())
+        if 'clip_on' in kwargs:
+            self.set_clip_path(self.ax.patch)
+        self.ax._add_text(self)
+
+    def calc_angle_data(self):
+        ang = np.arctan2(self.p[1] - self.pa[1], self.p[0] - self.pa[0])
+        deg = np.rad2deg(ang)
+        if self.hole_collar is True:
+            deg = deg - 90
+        else:
+            if deg > 90 or deg < -90:
+                deg = deg - 180
+        self.angle_data = deg
+
+    def _get_rotation(self):
+        return self.ax.transData.transform_angles(np.array((self.angle_data,)),
+                                                  np.array([self.pa[0], self.pa[1]]).reshape((1, 2)))[0]
+
+    def _set_rotation(self, rotation):
+        pass
+
+    _rotation = property(_get_rotation, _set_rotation)
+
+
 class PlanMap:
     def __init__(self, pem_files, figure, projection, draw_loops=True, draw_lines=True, draw_hole_collar=True,
                  draw_hole_trace=True):
-        self.color = 'dimgray'
+        self.color = 'black'
         self.fig = figure
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
@@ -611,9 +652,8 @@ class PlanMap:
         dy = (p2[1] - p1[1])
         dx = (p2[0] - p1[0])
         rotn = np.degrees(np.arctan2(dy, dx))
-
         if rotn > 90 or rotn < -90:
-            return -rotn
+            return rotn - 180
         else:
             return rotn
 
@@ -631,18 +671,19 @@ class PlanMap:
                 self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}", ha='center',
                              color=self.color)  # Add the loop name
                 self.loop_handle, = self.ax.plot(eastings, northings, color=self.color, label='Transmitter Loop',
-                                              transform=self.crs)  # Plot the loop
+                                                 transform=self.crs)  # Plot the loop
 
-        def add_line_to_map( pem_file):
+        def add_line_to_map(pem_file):
             line_gps = self.gps_editor().get_station_gps(pem_file.line_coords)
             if line_gps and line_gps not in self.lines:
                 self.lines.append(line_gps)
                 eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
-                # TODO Add rotation of text based on azimuth of line
-                self.ax.text(float(line_gps[0][0]), float(line_gps[0][1]) + 10, f"{pem_file.header.get('LineHole')}",
-                             ha='center', color=self.color)  # Add the line name
+                line_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}\n",
+                                            label_xy=(float(line_gps[0][0]), float(line_gps[0][1])),
+                                            p=(eastings[0], northings[0]), pa=(eastings[-1], northings[-1]),
+                                            va='center', ha='center', color=self.color)
                 self.station_handle, = self.ax.plot(eastings, northings, '-|', markersize=5, color=self.color,
-                                                 label='Surface Line', transform=self.crs)  # Plot the line
+                                                    label='Surface Line', transform=self.crs)  # Plot the line
 
         def add_hole_to_map(pem_file):
 
@@ -675,16 +716,27 @@ class PlanMap:
 
                 if collar and collar not in self.collars:
                     self.collars.append(collar)
-                    self.collar_handle, = self.ax.plot(float(collar[0]), float(collar[1]), 'o', color=self.color, label='Borehole Collar')
-                    self.ax.text(float(collar[0]), float(collar[1]), f"{pem_file.header.get('LineHole')}\n",  # \n is to add space
-                                 rotation=hole_rotn+90, rotation_mode='anchor', ha='center', va='baseline', color=self.color)  # Add the hole name
-
+                    self.collar_handle, = self.ax.plot(float(collar[0]), float(collar[1]), 'o', color=self.color,
+                                                       label='Borehole Collar')
+                    # Add the hole label at the collar
+                    collar_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}\n",
+                                                  label_xy=(float(collar[0]), float(collar[1])),
+                                                  p=(x[0], y[0]), pa=(x[-1], y[-1]), ax=self.ax, hole_collar=True,
+                                                  va='baseline',
+                                                  ha='center', color=self.color)
                     if x and y and self.draw_hole_trace is True:
                         self.trace_handle, = self.ax.plot(x, y, '-.', color=self.color, label='Borehole Trace')
-                        self.ax.plot(x[-1], y[-1], marker=(2, 0, hole_rotn), color=self.color, markersize=15)
-                        self.ax.text(x[-1], y[-1], f" {float(segments[-1][-1]):.0f} m",
-                                     rotation=hole_rotn+90, rotation_mode='anchor', ha='left', va='bottom',
-                                     color=self.color, fontsize=8)  # Add the hole name
+                        # Add the end tick for the borehole trace
+                        end_tick = RotnAnnotation("|",
+                                                  label_xy=(x[-1], y[-1]),
+                                                  p=(x[0], y[0]), pa=(x[-1], y[-1]), ax=self.ax, hole_collar=False,
+                                                  va='center', ha='left', rotation_mode='anchor', fontsize=15,
+                                                  color=self.color)
+                        # Label the depth of the hole
+                        bh_depth = RotnAnnotation(f" {float(segments[-1][-1]):.0f} m",
+                                                  label_xy=(x[-1], y[-1]),
+                                                  p=(x[0], y[0]), pa=(x[-1], y[-1]), ax=self.ax, hole_collar=True,
+                                                  va='bottom', ha='left', fontsize=8, color=self.color)
                 else:
                     pass
 
@@ -756,20 +808,22 @@ class PlanMap:
             if not ax: ax = plt.gca()
             xmin, xmax, ymin, ymax = ax.get_extent()
             width, height = xmax - xmin, ymax - ymin
-            offset = (ymax - ymin) * .2
+            offset = (ymax - ymin) * .3
             ratio = width / height
             if ratio < (11 / 8.5):
                 new_height = height
                 new_width = new_height * (11 / 8.5)
             else:
                 new_width = width
-                new_height = new_width * (11 / 8.5)
+                new_height = new_width * (8.5 / 11)
             new_xmin = xmin - ((new_width - width) / 2)
             new_xmax = xmax + ((new_width - width) / 2)
             new_ymin = ymin - ((new_height - height) / 2)
             new_ymax = ymax + ((new_height - height) / 2)
 
-            ax.set_extent((new_xmin - (offset*11/8.5), new_xmax + (offset*11/8.5), new_ymin - offset, new_ymax + offset), crs=self.crs)
+            ax.set_extent(
+                (new_xmin - (offset * 11 / 8.5), new_xmax + (offset * 11 / 8.5), new_ymin - offset, new_ymax + offset),
+                crs=self.crs)
             # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
 
             # For portrait
@@ -878,7 +932,9 @@ class PlanMap:
         self.ax.add_patch(arrow_shadow)
 
         add_title()
-        legend_handles = [handle for handle in [self.loop_handle, self.station_handle, self.collar_handle, self.trace_handle] if handle is not None]
+        legend_handles = [handle for handle in
+                          [self.loop_handle, self.station_handle, self.collar_handle, self.trace_handle] if
+                          handle is not None]
         self.ax.legend(handles=legend_handles, title='Legend', loc='lower left',
                        framealpha=1, shadow=True)
 
@@ -1645,8 +1701,9 @@ class PEMPrinter:
                     for component in components:
                         step_figure = self.create_step_figure()
                         step_plotter = STEPPlotter()
-                        plotted_fig = step_plotter.plot(pem_file, ri_file, component, step_figure, x_min=self.x_min, x_max=self.x_max,
-                                                hide_gaps=self.hide_gaps)
+                        plotted_fig = step_plotter.plot(pem_file, ri_file, component, step_figure, x_min=self.x_min,
+                                                        x_max=self.x_max,
+                                                        hide_gaps=self.hide_gaps)
                         pdf.savefig(plotted_fig)
                         self.pb_count += 1
                         self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
@@ -1663,7 +1720,7 @@ class PEMPrinter:
                     lin_figure = self.create_lin_figure()
                     lin_plotter = LINPlotter()
                     plotted_fig = lin_plotter.plot(pem_file, component, lin_figure, x_min=self.x_min, x_max=self.x_max,
-                                                hide_gaps=self.hide_gaps)
+                                                   hide_gaps=self.hide_gaps)
                     pdf.savefig(plotted_fig)
                     self.pb_count += 1
                     self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
@@ -1674,7 +1731,7 @@ class PEMPrinter:
                     log_figure = self.create_log_figure()
                     log_plotter = LOGPlotter()
                     plotted_fig = log_plotter.plot(pem_file, component, log_figure, x_min=self.x_min, x_max=self.x_max,
-                                                hide_gaps=self.hide_gaps)
+                                                   hide_gaps=self.hide_gaps)
                     pdf.savefig(plotted_fig)
                     self.pb_count += 1
                     self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
@@ -1687,8 +1744,9 @@ class PEMPrinter:
                     for component in components:
                         step_figure = self.create_step_figure()
                         step_plotter = STEPPlotter()
-                        plotted_fig = step_plotter.plot(pem_file, ri_file, component, step_figure, x_min=self.x_min, x_max=self.x_max,
-                                                hide_gaps=self.hide_gaps)
+                        plotted_fig = step_plotter.plot(pem_file, ri_file, component, step_figure, x_min=self.x_min,
+                                                        x_max=self.x_max,
+                                                        hide_gaps=self.hide_gaps)
                         pdf.savefig(plotted_fig)
                         self.pb_count += 1
                         self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
@@ -1706,7 +1764,7 @@ class PEMPrinter:
 if __name__ == '__main__':
     parser = PEMParser
     # # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-    sample_files_dir = r'C:\_Data\2019\BMSC\Surface\MO-254'
+    sample_files_dir = r'C:\_Data\2019\_Mowgli Testing'
     file_names = [f for f in os.listdir(sample_files_dir) if
                   os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
     pem_files = []

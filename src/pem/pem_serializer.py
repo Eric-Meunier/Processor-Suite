@@ -48,47 +48,48 @@ class PEMSerializer:
         return result
 
     def serialize_line_coords(self, pem_file):
+
+        def serialize_station_coords(coords):
+            # Coords are a list of lists
+            result = '~ Hole/Profile Co-ordinates:\n'
+            if not coords or not any(coords):
+                result += '<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
+            else:
+                for i, position in enumerate(coords):
+                    tag = f"<P{i:02d}> "
+                    row = ' '.join(position)
+                    result += tag + row + '\n'
+            return result
+
+        def serialize_collar_coords(coords):
+            # Coords are a list of lists
+            result = '~ Hole/Profile Co-ordinates:\n'
+            if not coords or not any(coords):
+                result += '<P00>\n'
+            else:
+                for i, position in enumerate(coords):
+                    tag = f"<P00> "
+                    row = ' '.join(position)
+                    result += tag + row + '\n'
+            return result
+
+        def serialize_segments(segments):
+            # segments are a list of lists
+            result = ''
+            if not segments or not any(segments):
+                result += '<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
+            else:
+                for i, position in enumerate(segments):
+                    tag = f"<P{i + 1:02d}> "
+                    row = ' '.join(position)
+                    result += tag + row + '\n'
+            return result
+
         if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower():
-            return self.serialize_station_coords(pem_file.get_line_coords())
+            return serialize_station_coords(pem_file.get_line_coords())
         else:
-            return self.serialize_collar_coords(pem_file.get_collar_coords()) + \
-                   self.serialize_segments(pem_file.get_hole_geometry())
-
-    def serialize_station_coords(self, coords):
-        # Coords are a list of lists
-        result = '~ Hole/Profile Co-ordinates:\n'
-        if not coords or not any(coords):
-            result += '<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
-        else:
-            for i, position in enumerate(coords):
-                tag = f"<P{i:02d}> "
-                row = ' '.join(position)
-                result += tag + row + '\n'
-        return result
-
-    def serialize_collar_coords(self, coords):
-        # Coords are a list of lists
-        result = '~ Hole/Profile Co-ordinates:\n'
-        if not coords or not any(coords):
-            result += '<P00>\n'
-        else:
-            for i, position in enumerate(coords):
-                tag = f"<P00> "
-                row = ' '.join(position)
-                result += tag + row + '\n'
-        return result
-
-    def serialize_segments(self, segments):
-        # segments are a list of lists
-        result = ''
-        if not segments or not any(segments):
-            result += '<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
-        else:
-            for i, position in enumerate(segments):
-                tag = f"<P{i+1:02d}> "
-                row = ' '.join(position)
-                result += tag + row + '\n'
-        return result
+            return serialize_collar_coords(pem_file.get_collar_coords()) + \
+                   serialize_segments(pem_file.get_hole_geometry())
 
     def serialize_notes(self, notes):
         results = []
