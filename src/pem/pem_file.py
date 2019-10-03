@@ -60,7 +60,7 @@ class PEMFile:
         return GPSEditor().get_geometry(self.line_coords)
 
     def get_line_coords(self):  # All P tags
-        if self.get_survey_type() == 'borehole':
+        if 'borehole' in self.get_survey_type().lower():
             return self.get_collar_coords()+self.get_hole_geometry()
         else:
             return self.get_station_coords()

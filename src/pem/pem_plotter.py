@@ -599,15 +599,23 @@ class PlanMap:
         self.format_figure()
         plt.show()
 
-    def label_location_helper(self, x, y, azimuth=0):
+    def get_rotation(self, xs, ys):
         """
-        Finds an appropriate location for placing labels based on azimuth of the object
-        :param x: X coordinate of the item you wish to create a label for
-        :param y: Y coordinate
-        :param azimuth: Azimuth of the item
-        :return: X, Y, and Azimuth of the proposed label
+        Get the real axes rotation value between two points
+        :param xs: list of X coordinates of the two points
+        :param ys: list of Y coordinates of the two points
+        :return: Rotation value that aligns properly between p1 and p2
         """
-        pass
+        p1 = self.ax.transData.transform_point((xs[0], ys[0]))
+        p2 = self.ax.transData.transform_point((xs[1], ys[1]))
+        dy = (p2[1] - p1[1])
+        dx = (p2[0] - p1[0])
+        rotn = np.degrees(np.arctan2(dy, dx))
+
+        if rotn > 90 or rotn < -90:
+            return -rotn
+        else:
+            return rotn
 
     def plot_pems(self):
 
@@ -653,29 +661,30 @@ class PlanMap:
                         dx = delta_seg_l * math.sin(azimuth)
                         dy = delta_seg_l * math.cos(azimuth)
                         trace.append((float(trace[-1][0]) + dx, float(trace[-1][1]) + dy))
-                    return [segment[0] for segment in trace], [segment[1] for segment in trace], float(segments[-1][0])
+                    return [segment[0] for segment in trace], [segment[1] for segment in trace]
 
             if self.draw_hole_collar is True:
                 collar = self.gps_editor().get_collar_gps(pem_file.line_coords)[0]
                 segments = self.gps_editor().get_geometry(pem_file.line_coords)
+                if segments:
+                    x, y = get_borehole_projection(segments)
+                    hole_rotn = self.get_rotation(x[-2:], y[-2:])
+                else:
+                    x, y = None, None
+                    hole_rotn = 0
+
                 if collar and collar not in self.collars:
                     self.collars.append(collar)
                     self.collar_handle, = self.ax.plot(float(collar[0]), float(collar[1]), 'o', color=self.color, label='Borehole Collar')
-                    hole_az = float(segments[0][0])
-                    label_az = hole_az - 90 if hole_az > 90 or hole_az < 270 else hole_az + 90
                     self.ax.text(float(collar[0]), float(collar[1]), f"{pem_file.header.get('LineHole')}\n",  # \n is to add space
-                                 rotation=label_az, rotation_mode='anchor', ha='center', va='baseline', color=self.color)  # Add the hole name
+                                 rotation=hole_rotn+90, rotation_mode='anchor', ha='center', va='baseline', color=self.color)  # Add the hole name
 
-                    if segments and self.draw_hole_trace is True:
-                        x, y, end_azimuth = get_borehole_projection(segments)
-                        depth = float(segments[-1][-1])
-                        depth_label_az = end_azimuth - 90 if end_azimuth > 90 or end_azimuth < 270 else end_azimuth + 90
+                    if x and y and self.draw_hole_trace is True:
                         self.trace_handle, = self.ax.plot(x, y, '-.', color=self.color, label='Borehole Trace')
-                        self.ax.plot(x[-1], y[-1], marker=(2, 0, end_azimuth), color=self.color, markersize=15)
-                        self.ax.text(x[-1], y[-1], f" {depth:.0f} m",
-                                     rotation=depth_label_az, rotation_mode='anchor', ha='left', va='bottom',
+                        self.ax.plot(x[-1], y[-1], marker=(2, 0, hole_rotn), color=self.color, markersize=15)
+                        self.ax.text(x[-1], y[-1], f" {float(segments[-1][-1]):.0f} m",
+                                     rotation=hole_rotn+90, rotation_mode='anchor', ha='left', va='bottom',
                                      color=self.color, fontsize=8)  # Add the hole name
-                        # TODO Add hole depth to end
                 else:
                     pass
 

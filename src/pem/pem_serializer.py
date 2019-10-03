@@ -47,7 +47,14 @@ class PEMSerializer:
                 result += tag + row + '\n'
         return result
 
-    def serialize_line_coords(self, coords):
+    def serialize_line_coords(self, pem_file):
+        if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower():
+            return self.serialize_station_coords(pem_file.get_line_coords())
+        else:
+            return self.serialize_collar_coords(pem_file.get_collar_coords()) + \
+                   self.serialize_segments(pem_file.get_hole_geometry())
+
+    def serialize_station_coords(self, coords):
         # Coords are a list of lists
         result = '~ Hole/Profile Co-ordinates:\n'
         if not coords or not any(coords):
@@ -55,6 +62,30 @@ class PEMSerializer:
         else:
             for i, position in enumerate(coords):
                 tag = f"<P{i:02d}> "
+                row = ' '.join(position)
+                result += tag + row + '\n'
+        return result
+
+    def serialize_collar_coords(self, coords):
+        # Coords are a list of lists
+        result = '~ Hole/Profile Co-ordinates:\n'
+        if not coords or not any(coords):
+            result += '<P00>\n'
+        else:
+            for i, position in enumerate(coords):
+                tag = f"<P00> "
+                row = ' '.join(position)
+                result += tag + row + '\n'
+        return result
+
+    def serialize_segments(self, segments):
+        # segments are a list of lists
+        result = ''
+        if not segments or not any(segments):
+            result += '<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
+        else:
+            for i, position in enumerate(segments):
+                tag = f"<P{i+1:02d}> "
                 row = ' '.join(position)
                 result += tag + row + '\n'
         return result
@@ -162,7 +193,7 @@ class PEMSerializer:
 
         result = self.serialize_tags(pem_file.get_tags()) + \
                  self.serialize_loop_coords(pem_file.get_loop_coords()) + \
-                 self.serialize_line_coords(pem_file.get_line_coords()) + \
+                 self.serialize_line_coords(pem_file) + \
                  self.serialize_notes(pem_file.get_notes()) + '~\n' + \
                  self.serialize_header(pem_file.get_header()) + \
                  self.serialize_data(pem_file.get_data())

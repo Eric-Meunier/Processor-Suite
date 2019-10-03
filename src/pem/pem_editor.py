@@ -901,6 +901,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pem_file.line_coords = self.stackedWidget.widget(table_row).get_station_gps()
         elif 'borehole' in pem_file.survey_type.lower():
             collar_gps = self.stackedWidget.widget(table_row).get_collar_gps()
+            if not collar_gps:
+                collar_gps = ['<P00>']
             segments = self.stackedWidget.widget(table_row).get_geometry_segments()
             pem_file.line_coords = [collar_gps] + segments
 
