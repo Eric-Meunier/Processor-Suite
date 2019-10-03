@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import matplotlib.text as mtext
 import matplotlib.transforms as mtransforms
+from matplotlib.text import OffsetFrom
 import numpy as np
 from PyQt5.QtWidgets import (QProgressBar)
 from matplotlib import patches
@@ -584,7 +585,7 @@ class RotnAnnotation(mtext.Annotation):
         if not pa:
             self.pa = label_xy
         self.calc_angle_data()
-        kwargs.update(rotation_mode=kwargs.get("rotation_mode", "anchor"))
+        kwargs.update(rotation_mode=kwargs.get("rotation_mode", "anchor"), xytext=(0, 0), textcoords='offset points')
         mtext.Annotation.__init__(self, label_str, label_xy, **kwargs)
         self.set_transform(mtransforms.IdentityTransform())
         if 'clip_on' in kwargs:
@@ -600,6 +601,10 @@ class RotnAnnotation(mtext.Annotation):
             if deg > 90 or deg < -90:
                 deg = deg - 180
         self.angle_data = deg
+
+    def calc_xy_offset(self):
+
+        pass
 
     def _get_rotation(self):
         return self.ax.transData.transform_angles(np.array((self.angle_data,)),
@@ -627,6 +632,7 @@ class PlanMap:
         self.station_handle = None
         self.collar_handle = None
         self.trace_handle = None
+        self.map_scale = None
         self.draw_loops = draw_loops
         self.draw_lines = draw_lines
         self.draw_hole_collar = draw_hole_collar
@@ -640,27 +646,27 @@ class PlanMap:
         self.format_figure()
         plt.show()
 
-    def get_rotation(self, xs, ys):
-        """
-        Get the real axes rotation value between two points
-        :param xs: list of X coordinates of the two points
-        :param ys: list of Y coordinates of the two points
-        :return: Rotation value that aligns properly between p1 and p2
-        """
-        p1 = self.ax.transData.transform_point((xs[0], ys[0]))
-        p2 = self.ax.transData.transform_point((xs[1], ys[1]))
-        dy = (p2[1] - p1[1])
-        dx = (p2[0] - p1[0])
-        rotn = np.degrees(np.arctan2(dy, dx))
-        if rotn > 90 or rotn < -90:
-            return rotn - 180
-        else:
-            return rotn
+    # def get_rotation(self, xs, ys):
+    #     """
+    #     Get the real axes rotation value between two points
+    #     :param xs: list of X coordinates of the two points
+    #     :param ys: list of Y coordinates of the two points
+    #     :return: Rotation value that aligns properly between p1 and p2
+    #     """
+    #     p1 = self.ax.transData.transform_point((xs[0], ys[0]))
+    #     p2 = self.ax.transData.transform_point((xs[1], ys[1]))
+    #     dy = (p2[1] - p1[1])
+    #     dx = (p2[0] - p1[0])
+    #     rotn = np.degrees(np.arctan2(dy, dx))
+    #     if rotn > 90 or rotn < -90:
+    #         return rotn - 180
+    #     else:
+    #         return rotn
 
     def plot_pems(self):
 
         def add_loop_to_map(pem_file):
-            loop_gps = self.gps_editor().get_loop_gps(pem_file.loop_coords)
+            loop_gps = pem_file.get_loop_coords()
             if loop_gps and loop_gps not in self.loops:
                 self.loops.append(loop_gps)
                 loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
@@ -669,21 +675,22 @@ class PlanMap:
                 northings.insert(0, northings[-1])
 
                 self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}", ha='center',
-                             color=self.color)  # Add the loop name
+                             color=self.color, zorder=3)  # Add the loop name
                 self.loop_handle, = self.ax.plot(eastings, northings, color=self.color, label='Transmitter Loop',
-                                                 transform=self.crs)  # Plot the loop
+                                                 transform=self.crs, zorder=2)  # Plot the loop
 
         def add_line_to_map(pem_file):
-            line_gps = self.gps_editor().get_station_gps(pem_file.line_coords)
+            line_gps = pem_file.get_station_coords()
             if line_gps and line_gps not in self.lines:
                 self.lines.append(line_gps)
                 eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
-                line_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}\n",
+                line_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
                                             label_xy=(float(line_gps[0][0]), float(line_gps[0][1])),
                                             p=(eastings[0], northings[0]), pa=(eastings[-1], northings[-1]),
-                                            va='center', ha='center', color=self.color)
+                                            va='bottom', ha='center', color=self.color, zorder=4,
+                                            path_effects=label_buffer)
                 self.station_handle, = self.ax.plot(eastings, northings, '-|', markersize=5, color=self.color,
-                                                    label='Surface Line', transform=self.crs)  # Plot the line
+                                                    label='Surface Line', transform=self.crs, zorder=2)  # Plot the line
 
         def add_hole_to_map(pem_file):
 
@@ -691,7 +698,7 @@ class PlanMap:
                 if not collar:
                     return None
                 else:
-                    trace = [(float(collar[0]), float(collar[1]))]  # Easting and Northing tuples
+                    trace = [(col_x, col_y)]  # Easting and Northing tuples
                     azimuth = None
                     for segment in segments:
                         azimuth = math.radians(float(segment[0]))
@@ -705,42 +712,48 @@ class PlanMap:
                     return [segment[0] for segment in trace], [segment[1] for segment in trace]
 
             if self.draw_hole_collar is True:
-                collar = self.gps_editor().get_collar_gps(pem_file.line_coords)[0]
-                segments = self.gps_editor().get_geometry(pem_file.line_coords)
+                collar = pem_file.get_collar_coords()
+                col_x, col_y = float(collar[0][0]), float(collar[0][1])
+                segments = pem_file.get_hole_geometry()
                 if segments:
-                    x, y = get_borehole_projection(segments)
-                    hole_rotn = self.get_rotation(x[-2:], y[-2:])
+                    seg_x, seg_y = get_borehole_projection(segments)
                 else:
-                    x, y = None, None
-                    hole_rotn = 0
+                    seg_x, seg_y = None, None
 
                 if collar and collar not in self.collars:
                     self.collars.append(collar)
-                    self.collar_handle, = self.ax.plot(float(collar[0]), float(collar[1]), 'o', color=self.color,
-                                                       label='Borehole Collar')
+                    self.collar_handle, = self.ax.plot(col_x, col_y, 'o', color=self.color,
+                                                       fillstyle='none', label='Borehole Collar', zorder=2)
                     # Add the hole label at the collar
-                    collar_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}\n",
-                                                  label_xy=(float(collar[0]), float(collar[1])),
-                                                  p=(x[0], y[0]), pa=(x[-1], y[-1]), ax=self.ax, hole_collar=True,
-                                                  va='baseline',
-                                                  ha='center', color=self.color)
-                    if x and y and self.draw_hole_trace is True:
-                        self.trace_handle, = self.ax.plot(x, y, '-.', color=self.color, label='Borehole Trace')
+                    collar_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
+                                                  label_xy=(col_x, col_y),
+                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax, hole_collar=True,
+                                                  va='bottom', ha='center', color=self.color, zorder=4,
+                                                  path_effects=label_buffer)
+
+                    # Add buffer around the label for readability
+                    # collar_label.set_path_effects([patheffects.Stroke(linewidth=3, foreground='white'),
+                    #                               patheffects.Normal()])
+                    if seg_x and seg_y and self.draw_hole_trace is True:
+                        self.trace_handle, = self.ax.plot(seg_x, seg_y, '-.', color=self.color, label='Borehole Trace', zorder=2)
                         # Add the end tick for the borehole trace
                         end_tick = RotnAnnotation("|",
-                                                  label_xy=(x[-1], y[-1]),
-                                                  p=(x[0], y[0]), pa=(x[-1], y[-1]), ax=self.ax, hole_collar=False,
-                                                  va='center', ha='left', rotation_mode='anchor', fontsize=15,
+                                                  label_xy=(seg_x[-1], seg_y[-1]),
+                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax, hole_collar=False,
+                                                  va='center', ha='center', rotation_mode='anchor', fontsize=14,
                                                   color=self.color)
                         # Label the depth of the hole
                         bh_depth = RotnAnnotation(f" {float(segments[-1][-1]):.0f} m",
-                                                  label_xy=(x[-1], y[-1]),
-                                                  p=(x[0], y[0]), pa=(x[-1], y[-1]), ax=self.ax, hole_collar=True,
-                                                  va='bottom', ha='left', fontsize=8, color=self.color)
+                                                  label_xy=(seg_x[-1], seg_y[-1]),
+                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax, hole_collar=True,
+                                                  va='bottom', ha='left', fontsize=8, color=self.color,
+                                                  path_effects=label_buffer, zorder=3)
                 else:
                     pass
 
         for pem_file in self.pem_files:
+            label_buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
+
             if self.draw_loops is True:
                 add_loop_to_map(pem_file)
 
@@ -753,7 +766,7 @@ class PlanMap:
     def format_figure(self):
 
         def scale_bar(ax, proj, length=None, location=(0.5, 0.05), linewidth=3,
-                      units='km', m_per_unit=1000):
+                      units='m', m_per_unit=1000):
             """
             http://stackoverflow.com/a/35705477/1072212
             ax is the axes to draw the scalebar on.
@@ -775,7 +788,7 @@ class PlanMap:
 
             if not length:
                 def myround(x, base=5):
-                    return base * round(x / base)
+                    return base * math.ceil(x / base)
 
                 length = (ax.get_extent()[1] - ax.get_extent()[0])
                 num_digit = int(np.floor(np.log10(length)))  # number of digits in number
@@ -792,7 +805,7 @@ class PlanMap:
             # buffer for text
             buffer = [patheffects.withStroke(linewidth=3, foreground="w")]
             # Plot the scalebar label
-            t0 = ax.text(sbcx, sbcy, str(length) + ' ' + units, transform=tm,
+            t0 = ax.text(sbcx, sbcy, f"{length:.0f} {units}", transform=tm,
                          horizontalalignment='center', verticalalignment='bottom',
                          path_effects=buffer, zorder=2, color='dimgray')
             # Plot the scalebar without buffer, in case covered by text buffer
@@ -805,17 +818,38 @@ class PlanMap:
             :param ax: GeoAxes object
             :return: None
             """
+
+            def myround(x, base=5):
+                return base * math.ceil(x / base)
+
+            def get_scale_factor():
+                # num_digit = len(str(int(current_scale)))  # number of digits in number
+                num_digit = int(np.floor(np.log10(current_scale)))   # number of digits in number
+                new_scale = round(current_scale, -num_digit)  # round to 1sf
+                new_scale = myround(new_scale, base=5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
+                self.map_scale = new_scale
+                scale_factor = new_scale / current_scale
+                return scale_factor
+
             if not ax: ax = plt.gca()
+
             xmin, xmax, ymin, ymax = ax.get_extent()
             width, height = xmax - xmin, ymax - ymin
-            offset = (ymax - ymin) * .3
+            current_scale = width / 0.2794  # 11 inches in meters
+            scale_factor = get_scale_factor()
+            offset = (ymax - ymin) * .25
+
             ratio = width / height
             if ratio < (11 / 8.5):
-                new_height = height
-                new_width = new_height * (11 / 8.5)
+                new_height = height*1.2  # Add padding
+                new_height = new_height * scale_factor  # Increase the height based on the increase in scale
+                new_width = new_height * (11 / 8.5)  # Set the new width to be the correct ratio larger than height
+
             else:
-                new_width = width
+                new_width = width*1.2
+                new_width = new_width * scale_factor
                 new_height = new_width * (8.5 / 11)
+
             new_xmin = xmin - ((new_width - width) / 2)
             new_xmax = xmax + ((new_width - width) / 2)
             new_ymin = ymin - ((new_height - height) / 2)
@@ -824,31 +858,13 @@ class PlanMap:
             ax.set_extent(
                 (new_xmin - (offset * 11 / 8.5), new_xmax + (offset * 11 / 8.5), new_ymin - offset, new_ymax + offset),
                 crs=self.crs)
-            # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
-
-            # For portrait
-            # if not ax: ax = plt.gca()
-            # xmin, xmax, ymin, ymax = ax.get_extent()
-            # width, height = xmax-xmin, ymax-ymin
-            # ratio = width/height
-            # if ratio > (8.5/11):
-            #     new_width = width
-            #     new_height = new_width/(8.5/11)
-            # else:
-            #     new_height = height
-            #     new_width = new_height/(8.5/11)
-            # new_xmin = xmin-((new_width-width)/2)
-            # new_xmax = xmax+((new_width-width)/2)
-            # new_ymin = ymin-((new_height-height)/2)
-            # new_ymax = ymax+((new_height-height)/2)
-            # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
 
         def add_title():
             b_xmin = 0.02
             b_width = 0.30
             b_ymin = 0.82
             b_height = 0.15
-            center_pos = ((b_xmin + b_width) / 2)
+            center_pos = b_xmin + (b_width / 2)
             right_pos = b_xmin + b_width - .02
             left_pos = b_xmin + .02
             top_pos = b_ymin + b_height - 0.020
@@ -875,7 +891,8 @@ class PlanMap:
             # timebase_freqs = [str(round(((1 / (float(timebase) / 1000)) / 4),2)) for timebase in timebases]
 
             coord_sys = "UTM Zone 31N, WGS 84"
-            scale = "1:2000"
+            scale = f"1:{self.map_scale:,.0f}"
+
             rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='gray',
                                           boxstyle="round,pad=0.005", facecolor='white', zorder=4,
                                           transform=self.ax.transAxes)
