@@ -727,25 +727,26 @@ class PlanMap:
                     # Add the hole label at the collar
                     collar_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
                                                   label_xy=(col_x, col_y),
-                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax, hole_collar=True,
+                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
+                                                  hole_collar=True,
                                                   va='bottom', ha='center', color=self.color, zorder=4,
                                                   path_effects=label_buffer)
 
-                    # Add buffer around the label for readability
-                    # collar_label.set_path_effects([patheffects.Stroke(linewidth=3, foreground='white'),
-                    #                               patheffects.Normal()])
                     if seg_x and seg_y and self.draw_hole_trace is True:
-                        self.trace_handle, = self.ax.plot(seg_x, seg_y, '-.', color=self.color, label='Borehole Trace', zorder=2)
+                        self.trace_handle, = self.ax.plot(seg_x, seg_y, '-.', color=self.color, label='Borehole Trace',
+                                                          zorder=2)
                         # Add the end tick for the borehole trace
                         end_tick = RotnAnnotation("|",
                                                   label_xy=(seg_x[-1], seg_y[-1]),
-                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax, hole_collar=False,
+                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
+                                                  hole_collar=False,
                                                   va='center', ha='center', rotation_mode='anchor', fontsize=14,
                                                   color=self.color)
                         # Label the depth of the hole
                         bh_depth = RotnAnnotation(f" {float(segments[-1][-1]):.0f} m",
                                                   label_xy=(seg_x[-1], seg_y[-1]),
-                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax, hole_collar=True,
+                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
+                                                  hole_collar=True,
                                                   va='bottom', ha='left', fontsize=8, color=self.color,
                                                   path_effects=label_buffer, zorder=3)
                 else:
@@ -763,54 +764,145 @@ class PlanMap:
             if 'borehole' in pem_file.survey_type.lower() and self.draw_hole_collar is True:
                 add_hole_to_map(pem_file)
 
+    def get_ax_width_m(self):
+        bbox = self.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        width = bbox.width
+        width_meters = width * 0.0254
+        width_meters = width_meters / 1.06  # Removing 6% due to subplot adjustment
+        return width_meters
+
+    def get_map_width_m(self):
+        # find lat/lon center to find best UTM zone
+        x0, x1, y0, y1 = self.ax.get_extent(self.crs.as_geodetic())
+        # Projection in metres
+        tm = ccrs.TransverseMercator((x0 + x1) / 2)
+        # Get the extent of the plotted area in coordinates in metres
+        x0, x1, y0, y1 = self.ax.get_extent(tm)
+        return x1-x0
+
     def format_figure(self):
 
-        def scale_bar(ax, proj, length=None, location=(0.5, 0.05), linewidth=3,
-                      units='m', m_per_unit=1000):
+        def scale_bar():
             """
-            http://stackoverflow.com/a/35705477/1072212
-            ax is the axes to draw the scalebar on.
-            proj is the projection the axes are in
-            location is center of the scalebar in axis coordinates ie. 0.5 is the middle of the plot
-            length is the length of the scalebar in km.
-            linewidth is the thickness of the scalebar.
-            units is the name of the unit
-            m_per_unit is the number of meters in a unit
+            Adds scale bar to the axes.
+            Gets the width of the map in meters, find the best bar length number, and converts the bar length to
+            equivalent axes percentage, then plots using axes transform so it is static on the axes.
+            :return: None
             """
-            # find lat/lon center to find best UTM zone
-            x0, x1, y0, y1 = ax.get_extent(proj.as_geodetic())
-            # Projection in metres
-            tm = ccrs.TransverseMercator((x0 + x1) / 2)
-            # Get the extent of the plotted area in coordinates in metres
-            x0, x1, y0, y1 = ax.get_extent(tm)
-            # Turn the specified scalebar location into coordinates in metres
-            sbcx, sbcy = x0 + (x1 - x0) * location[0], y0 + (y1 - y0) * location[1]
+            def myround(x, base=5):
+                return base * math.ceil(x / base)
 
-            if not length:
-                def myround(x, base=5):
-                    return base * math.ceil(x / base)
+            def add_rectangles(left_bar_pos, bar_center, right_bar_pos, y):
+                rect_height = 0.005
+                line_width = 0.4
+                sm_rect_width = (bar_center-left_bar_pos)/5
+                sm_rect_xs = np.arange(left_bar_pos, bar_center, sm_rect_width)
+                big_rect_x = bar_center
+                big_rect_width = right_bar_pos - bar_center
 
-                length = (ax.get_extent()[1] - ax.get_extent()[0])
-                num_digit = int(np.floor(np.log10(length)))  # number of digits in number
-                length = round(length, -num_digit)  # round to 1sf
-                length = myround(length / 8, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
+                # Adding the small rectangles
+                for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
+                    fill = 'w' if i % 2 == 0 else 'k'
+                    patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height, ec='k', linewidth=line_width,
+                                              facecolor=fill, transform=self.ax.transAxes)
+                    self.ax.add_patch(patch)
+                for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
+                    fill = 'k' if i % 2 == 0 else 'w'
+                    patch = patches.Rectangle((rect_x, y-rect_height), sm_rect_width, rect_height, ec='k',
+                                              linewidth=line_width, facecolor=fill, transform=self.ax.transAxes)
+                    self.ax.add_patch(patch)
 
-            # Generate the x coordinate for the ends of the scalebar
-            bar_xs = [sbcx - length * m_per_unit / 2, sbcx + length * m_per_unit / 2]
-            # buffer for scalebar
-            buffer = [patheffects.withStroke(linewidth=5, foreground="w")]
-            # Plot the scalebar with buffer
-            ax.plot(bar_xs, [sbcy, sbcy], transform=tm, color='dimgray',
-                    linewidth=linewidth, path_effects=buffer)
-            # buffer for text
-            buffer = [patheffects.withStroke(linewidth=3, foreground="w")]
-            # Plot the scalebar label
-            t0 = ax.text(sbcx, sbcy, f"{length:.0f} {units}", transform=tm,
-                         horizontalalignment='center', verticalalignment='bottom',
-                         path_effects=buffer, zorder=2, color='dimgray')
-            # Plot the scalebar without buffer, in case covered by text buffer
-            ax.plot(bar_xs, [sbcy, sbcy], transform=tm, color='dimgray',
-                    linewidth=linewidth, zorder=3)
+                # Adding the big rectangles
+                patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height, ec='k', facecolor='k',
+                                          linewidth=line_width, transform=self.ax.transAxes)
+                patch2 = patches.Rectangle((big_rect_x, y-rect_height), big_rect_width, rect_height, ec='k',
+                                           facecolor='w', linewidth=line_width, transform=self.ax.transAxes)
+                self.ax.add_patch(patch1)
+                self.ax.add_patch(patch2)
+
+            bar_center = 0.5  # Half way across the axes
+            bar_height_pos = 0.05
+            map_width = self.get_map_width_m()
+
+            num_digit = int(np.floor(np.log10(map_width)))  # number of digits in number
+            bar_map_length = round(map_width, -num_digit)  # round to 1sf
+            bar_map_length = myround(bar_map_length / 8, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
+            if bar_map_length > 10000:
+                units = 'kilometers'
+                bar_map_length = bar_map_length / 1000
+            else:
+                units = 'meters'
+            buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
+            bar_ax_length = bar_map_length / map_width
+            left_bar_pos = bar_center - (bar_ax_length/2)
+            right_bar_pos = bar_center + (bar_ax_length/2)
+
+            # Simple tick scale
+            # self.ax.plot([left_bar_pos, bar_center, right_bar_pos], [bar_height_pos]*3, color='k',
+            #              linewidth=1, transform=self.ax.transAxes, path_effects=buffer)
+            # self.ax.plot([left_bar_pos], [bar_height_pos], marker=3, color='k', lw=5,transform=self.ax.transAxes,
+            #              path_effects=buffer)
+            # self.ax.plot([right_bar_pos], [bar_height_pos], marker=3, color='k', transform=self.ax.transAxes,
+            #              path_effects=buffer)
+            # self.ax.text(bar_center, bar_height_pos+.005, f"{bar_map_length:.0f} {units}", ha='center',
+            #              transform=self.ax.transAxes, path_effects=buffer)
+
+            add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
+            self.ax.text(left_bar_pos, bar_height_pos+.009, f"{bar_map_length/2:.0f}", ha='center',
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7)
+            self.ax.text(bar_center, bar_height_pos+.009, f"0", ha='center',
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7)
+            self.ax.text(right_bar_pos, bar_height_pos+.009, f"{bar_map_length/2:.0f}", ha='center',
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7)
+            self.ax.text(bar_center, bar_height_pos-.018, f"({units})", ha='center',
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7)
+
+        # def scale_bar(ax, proj, length=None, location=(0.5, 0.05), linewidth=3,
+        #               units='m', m_per_unit=1000):
+        #     """
+        #     http://stackoverflow.com/a/35705477/1072212
+        #     ax is the axes to draw the scalebar on.
+        #     proj is the projection the axes are in
+        #     location is center of the scalebar in axis coordinates ie. 0.5 is the middle of the plot
+        #     length is the length of the scalebar in km.
+        #     linewidth is the thickness of the scalebar.
+        #     units is the name of the unit
+        #     m_per_unit is the number of meters in a unit
+        #     """
+        #     # find lat/lon center to find best UTM zone
+        #     x0, x1, y0, y1 = ax.get_extent(proj.as_geodetic())
+        #     # Projection in metres
+        #     tm = ccrs.TransverseMercator((x0 + x1) / 2)
+        #     # Get the extent of the plotted area in coordinates in metres
+        #     x0, x1, y0, y1 = ax.get_extent(tm)
+        #     # Turn the specified scalebar location into coordinates in metres
+        #     sbcx, sbcy = x0 + (x1 - x0) * location[0], y0 + (y1 - y0) * location[1]
+        #
+        #     if not length:
+        #         def myround(x, base=5):
+        #             return base * math.ceil(x / base)
+        #
+        #         length = (ax.get_extent()[1] - ax.get_extent()[0])
+        #         num_digit = int(np.floor(np.log10(length)))  # number of digits in number
+        #         length = round(length, -num_digit)  # round to 1sf
+        #         length = myround(length / 8, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
+        #
+        #     # Generate the x coordinate for the ends of the scalebar
+        #     bar_xs = [sbcx - length * m_per_unit / 2, sbcx + length * m_per_unit / 2]
+        #     # buffer for scalebar
+        #     buffer = [patheffects.withStroke(linewidth=5, foreground="w")]
+        #     # Plot the scalebar with buffer
+        #     ax.plot(bar_xs, [sbcy, sbcy], transform=tm, color='dimgray',
+        #             linewidth=linewidth, path_effects=buffer)
+        #     # buffer for text
+        #     buffer = [patheffects.withStroke(linewidth=3, foreground="w")]
+        #     # Plot the scalebar label
+        #     t0 = ax.text(sbcx, sbcy, f"{length:.0f} {units}", transform=tm,
+        #                  horizontalalignment='center', verticalalignment='bottom',
+        #                  path_effects=buffer, zorder=2, color='dimgray')
+        #     # Plot the scalebar without buffer, in case covered by text buffer
+        #     ax.plot(bar_xs, [sbcy, sbcy], transform=tm, color='dimgray',
+        #             linewidth=linewidth, zorder=3)
 
         def set_size(ax=None):
             """
@@ -824,7 +916,7 @@ class PlanMap:
 
             def get_scale_factor():
                 # num_digit = len(str(int(current_scale)))  # number of digits in number
-                num_digit = int(np.floor(np.log10(current_scale)))   # number of digits in number
+                num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
                 new_scale = round(current_scale, -num_digit)  # round to 1sf
                 new_scale = myround(new_scale, base=5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
                 self.map_scale = new_scale
@@ -835,18 +927,18 @@ class PlanMap:
 
             xmin, xmax, ymin, ymax = ax.get_extent()
             width, height = xmax - xmin, ymax - ymin
-            current_scale = width / 0.2794  # 11 inches in meters
+            current_scale = width / self.get_ax_width_m()
             scale_factor = get_scale_factor()
             offset = (ymax - ymin) * .25
 
             ratio = width / height
             if ratio < (11 / 8.5):
-                new_height = height*1.2  # Add padding
+                new_height = height * 1.2  # Add padding
                 new_height = new_height * scale_factor  # Increase the height based on the increase in scale
                 new_width = new_height * (11 / 8.5)  # Set the new width to be the correct ratio larger than height
 
             else:
-                new_width = width*1.2
+                new_width = width * 1.2
                 new_width = new_width * scale_factor
                 new_height = new_width * (8.5 / 11)
 
@@ -880,10 +972,11 @@ class PlanMap:
             survey_type = self.pem_files[0].get_survey_type()
 
             survey_dates = [pem_file.header.get('Date') for pem_file in self.pem_files]
-            min_date = datetime.strftime(min([datetime.strptime(date, '%B %d, %Y') for date in survey_dates]), '%B %d')
-            max_date = datetime.strftime(max([datetime.strptime(date, '%B %d, %Y') for date in survey_dates]),
-                                         '%B %d, %Y')
-
+            min_date = min([datetime.strptime(date, '%B %d, %Y') for date in survey_dates])
+            max_date = max([datetime.strptime(date, '%B %d, %Y') for date in survey_dates])
+            min_date_text = datetime.strftime(min_date, '%B %d')
+            max_date_text = datetime.strftime(max_date, '%B %d, %Y')
+            survey_date_text = f"Survey Date: {min_date_text} - {max_date_text}" if min_date != max_date else f"Survey Date: {max_date_text}"
             # timebases = []
             # [timebases.append(timebase) for timebase in [pem_file.header.get('Timebase') for pem_file in self.pem_files] if timebase not in timebases]
             # [str(timebase) for timebase in timebases]
@@ -913,7 +1006,7 @@ class PlanMap:
                          fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=5,
                          transform=self.ax.transAxes)
 
-            self.ax.text(center_pos, top_pos - 0.085, f"Survey Date: {min_date} - {max_date}",
+            self.ax.text(center_pos, top_pos - 0.085, survey_date_text,
                          fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=5,
                          transform=self.ax.transAxes)
 
@@ -940,7 +1033,8 @@ class PlanMap:
         # self.ax.add_wms(wms='http://vmap0.tiles.osgeo.org/wms/vmap0',
         #                 layers=['basic'])
 
-        scale_bar(self.ax, self.crs, m_per_unit=1, units='m')
+        # scale_bar(self.ax, self.crs, m_per_unit=1, units='m')
+        scale_bar()
 
         arrow = plt.arrow(0.96, 0.86, 0., 0.1, shape='right', width=0.008, facecolor='white', edgecolor='dimgray',
                           length_includes_head=True,
