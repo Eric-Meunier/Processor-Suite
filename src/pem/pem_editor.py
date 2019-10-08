@@ -1032,9 +1032,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('Saving plots...')
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
             self.dialog.setDirectory(default_path)
-            # file_dir = QFileDialog.getSaveDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)  # For separate LIN and LOG pdfs
             # save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
-            save_dir = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\Testing'
+            save_dir = r'C:\_Data\2019\_Mowgli Testing'
             plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked()}
 
             if save_dir:
