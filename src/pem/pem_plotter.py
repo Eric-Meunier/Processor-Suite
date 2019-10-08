@@ -5,7 +5,7 @@ import os
 import re
 import sys
 from datetime import datetime
-
+from adjustText import adjust_text
 import cartopy.crs as ccrs  # import projections
 import matplotlib
 import matplotlib as mpl
@@ -17,6 +17,7 @@ import matplotlib.ticker as ticker
 import matplotlib.text as mtext
 import matplotlib.transforms as mtransforms
 from matplotlib.font_manager import FontProperties
+from scipy.interpolate import interp1d
 import numpy as np
 from PyQt5.QtWidgets import (QProgressBar)
 from matplotlib import patches
@@ -617,7 +618,7 @@ class RotnAnnotation(mtext.Annotation):
 
 
 class PlanMap:
-    def __init__(self, pem_files, figure, projection, draw_loops=True, draw_lines=True, draw_hole_collar=True,
+    def __init__(self, pem_files, figure, projection, draw_loops=True, draw_loop_anno=False, draw_lines=True, draw_hole_collar=True,
                  draw_hole_trace=True):
         self.color = 'black'
         self.fig = figure
@@ -639,12 +640,14 @@ class PlanMap:
         self.lines = []
         self.collars = []
         self.holes = []
+        self.labels = []
         self.loop_handle = None
         self.station_handle = None
         self.collar_handle = None
         self.trace_handle = None
         self.map_scale = None
         self.draw_loops = draw_loops
+        self.draw_loop_annotations = draw_loop_anno
         self.draw_lines = draw_lines
         self.draw_hole_collar = draw_hole_collar
         self.draw_hole_trace = draw_hole_trace
@@ -654,8 +657,7 @@ class PlanMap:
         # self.inset_ax = self.fig.add_axes([0.1, 0.5, 0.5, 0.3], projection=self.crs)
 
         self.plot_pems()
-        self.format_figure()
-        plt.show()
+        self.get_map()
 
     # def get_rotation(self, xs, ys):
     #     """
@@ -685,10 +687,19 @@ class PlanMap:
                 eastings.insert(0, eastings[-1])  # To close up the loop
                 northings.insert(0, northings[-1])
 
-                self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}", ha='center',
+                loop_label = self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}", ha='center',
                              color=self.color, zorder=4, path_effects=label_buffer)  # Add the loop name
+
                 self.loop_handle, = self.ax.plot(eastings, northings, color=self.color, label='Transmitter Loop',
                                                  transform=self.crs, zorder=2)  # Plot the loop
+
+                # Moves the loop label away from other labels
+                adjust_text([loop_label], add_objects=self.labels, ax=self.ax, avoid_text=True)
+
+                if self.draw_loop_annotations:
+                    for i, (x, y) in enumerate(list(zip(eastings, northings))):
+                        plt.annotate(i, xy=(x, y), va='center', ha='center', fontsize=7, path_effects=label_buffer,
+                                     zorder=3, color=self.color, transform=self.ax.transData)
 
         def add_line_to_map(pem_file):
 
@@ -706,6 +717,7 @@ class PlanMap:
                                             p=(eastings[0], northings[0]), pa=(eastings[-1], northings[-1]),
                                             va='bottom', ha='center', color=self.color, zorder=4,
                                             path_effects=label_buffer)
+                self.labels.append(line_label)
                 # marker_rotation = get_rotation(eastings, northings)
                 self.station_handle, = self.ax.plot(eastings, northings, '-o', markersize=3, color=self.color,
                                                     markerfacecolor='w', markeredgewidth=0.3,
@@ -717,7 +729,7 @@ class PlanMap:
                 if not collar:
                     return None
                 else:
-                    trace = [(col_x, col_y)]  # Easting and Northing tuples
+                    trace = [(collar_x, collar_y)]  # Easting and Northing tuples
                     azimuth = None
                     for segment in segments:
                         azimuth = math.radians(float(segment[0]))
@@ -731,8 +743,8 @@ class PlanMap:
                     return [segment[0] for segment in trace], [segment[1] for segment in trace]
 
             if self.draw_hole_collar is True:
-                collar = pem_file.get_collar_coords()
-                col_x, col_y = float(collar[0][0]), float(collar[0][1])
+                collar = pem_file.get_collar_coords()[0]
+                collar_x, collar_y = float(collar[0]), float(collar[1])
                 segments = pem_file.get_hole_geometry()
                 if segments:
                     seg_x, seg_y = get_borehole_projection(segments)
@@ -741,30 +753,43 @@ class PlanMap:
 
                 if collar and collar not in self.collars:
                     self.collars.append(collar)
-                    self.collar_handle, = self.ax.plot(col_x, col_y, 'o', color=self.color,
+                    self.collar_handle, = self.ax.plot(collar_x, collar_y, 'o', color=self.color,
                                                        fillstyle='none', label='Borehole Collar', zorder=2)
                     # Add the hole label at the collar
                     collar_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
-                                                  label_xy=(col_x, col_y),
-                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
+                                                  label_xy=(collar_x, collar_y),
+                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[1], seg_y[1]), ax=self.ax,
                                                   hole_collar=True,
                                                   va='bottom', ha='center', color=self.color, zorder=4,
                                                   path_effects=label_buffer)
+                    self.labels.append(collar_label)
 
                     if seg_x and seg_y and self.draw_hole_trace is True:
-                        self.trace_handle, = self.ax.plot(seg_x, seg_y, '-.', color=self.color, label='Borehole Trace',
+                        self.trace_handle, = self.ax.plot(seg_x, seg_y, '--', color=self.color, label='Borehole Trace',
                                                           zorder=2)
+
+                        # Adding the ticks on the hole trace
+                        f_interp_seg = interp1d(seg_x, seg_y, kind='linear')
+                        new_seg_x = np.arange(seg_x[0], seg_x[-1], (seg_x[-1]-seg_x[0])/12)
+                        interp_seg_y = f_interp_seg(new_seg_x)
+                        for i, (x_seg, y_seg) in enumerate(list(zip(new_seg_x, interp_seg_y))[:-1]):
+                            pa = (x_seg, y_seg)
+                            p = (new_seg_x[i+1], interp_seg_y[i+1])
+                            tick = RotnAnnotation("|", label_xy=p, p=p, pa=pa, ax=self.ax,
+                                                  hole_collar=False, va='center', ha='center', rotation_mode='anchor',
+                                                  fontsize=6, color=self.color)
+
                         # Add the end tick for the borehole trace
                         end_tick = RotnAnnotation("|",
                                                   label_xy=(seg_x[-1], seg_y[-1]),
-                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
+                                                  p=(seg_x[-2], seg_y[-2]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
                                                   hole_collar=False,
                                                   va='center', ha='center', rotation_mode='anchor', fontsize=14,
                                                   color=self.color)
                         # Label the depth of the hole
                         bh_depth = RotnAnnotation(f" {float(segments[-1][-1]):.0f} m",
                                                   label_xy=(seg_x[-1], seg_y[-1]),
-                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
+                                                  p=(seg_x[-2], seg_y[-2]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
                                                   hole_collar=True,
                                                   va='bottom', ha='left', fontsize=8, color=self.color,
                                                   path_effects=label_buffer, zorder=4)
@@ -774,14 +799,14 @@ class PlanMap:
         for pem_file in self.pem_files:
             label_buffer = [patheffects.Stroke(linewidth=1, foreground='white'), patheffects.Normal()]
 
-            if self.draw_loops is True:
-                add_loop_to_map(pem_file)
-
             if 'surface' in pem_file.survey_type.lower() and self.draw_lines is True:
                 add_line_to_map(pem_file)
 
             if 'borehole' in pem_file.survey_type.lower() and self.draw_hole_collar is True:
                 add_hole_to_map(pem_file)
+
+            if self.draw_loops is True:
+                add_loop_to_map(pem_file)
 
     def get_ax_width_m(self):
         bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
@@ -825,19 +850,19 @@ class PlanMap:
                 for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
                     fill = 'w' if i % 2 == 0 else 'k'
                     patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height, ec='k', linewidth=line_width,
-                                              facecolor=fill, transform=self.ax.transAxes)
+                                              facecolor=fill, transform=self.ax.transAxes, zorder=9)
                     self.ax.add_patch(patch)
                 for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
                     fill = 'k' if i % 2 == 0 else 'w'
-                    patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height, ec='k',
+                    patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height, ec='k', zorder=9,
                                               linewidth=line_width, facecolor=fill, transform=self.ax.transAxes)
                     self.ax.add_patch(patch)
 
                 # Adding the big rectangles
                 patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height, ec='k', facecolor='k',
-                                           linewidth=line_width, transform=self.ax.transAxes)
+                                           linewidth=line_width, transform=self.ax.transAxes, zorder=9)
                 patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height, ec='k',
-                                           facecolor='w', linewidth=line_width, transform=self.ax.transAxes)
+                                           facecolor='w', linewidth=line_width, transform=self.ax.transAxes, zorder=9)
                 self.ax.add_patch(patch1)
                 self.ax.add_patch(patch2)
 
@@ -869,13 +894,13 @@ class PlanMap:
 
             add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
             self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7)
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
             self.ax.text(bar_center, bar_height_pos + .009, f"0", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7)
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
             self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7)
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
             self.ax.text(bar_center, bar_height_pos - .018, f"({units})", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7)
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
 
         # def scale_bar(ax, proj, length=None, location=(0.5, 0.05), linewidth=3,
         #               units='m', m_per_unit=1000):
@@ -955,11 +980,11 @@ class PlanMap:
         def set_scale():
 
             def get_scale_factor():
-                num_digit = len(str(int(current_scale)))  # number of digits in number
-                # num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
-                possible_scales = [num * 10 ** num_digit for num in [1, 2, 5, 10]]
-                new_scale = min(filter(lambda x: x > current_scale * 1.2, possible_scales),
-                                key=lambda x: x - current_scale * 1.2)
+                # num_digit = len(str(int(current_scale)))  # number of digits in number
+                num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
+                possible_scales = [num * 10 ** num_digit for num in [1, 2, 5, 10, 20]]
+                new_scale = min(filter(lambda x: x > current_scale * 1.1, possible_scales),
+                                key=lambda x: x - current_scale * 1.1)
                 # new_scale = round(current_scale, -num_digit)  # round to 1sf
                 # if str(new_scale)[0] not in ['1', '2', '5'] or current_scale > new_scale:
                 #     new_scale = myround(new_scale, base=5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
@@ -1006,10 +1031,10 @@ class PlanMap:
             line_1 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
                                    linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
 
-            line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .117, top_pos - .117],
+            line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
                                    linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
 
-            line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .162, top_pos - .162],
+            line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
                                    linewidth=.5, color='gray', transform=self.ax.transAxes, zorder=10)
 
             # Title box rectangle
@@ -1034,22 +1059,22 @@ class PlanMap:
 
             self.ax.text(center_pos, top_pos - 0.040, f"{self.survey_type.title()} Pulse EM Survey", family='cursive',
                          style='italic',
-                         fontname='Century Gothic', fontsize=10, ha='center', zorder=10, transform=self.ax.transAxes)
+                         fontname='Century Gothic', fontsize=9, ha='center', zorder=10, transform=self.ax.transAxes)
 
-            self.ax.text(center_pos, top_pos - 0.055, f"{client}\n" + f"{grid}\n"
+            self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
                          f"{loop if 'surface' in self.survey_type else hole}",
                          fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(center_pos, top_pos - 0.126, f"Timebase: {', '.join(self.timebase)} ms\n{get_survey_dates()}",
+            self.ax.text(center_pos, top_pos - 0.124, f"Timebase: {', '.join(self.timebase)} ms\n{get_survey_dates()}",
                          fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(left_pos, top_pos - 0.168, f"{coord_sys}", family='cursive', style='italic', color='dimgray',
+            self.ax.text(left_pos, top_pos - 0.167, f"{coord_sys}", family='cursive', style='italic', color='dimgray',
                          fontname='Century Gothic', fontsize=9, va='top', ha='left', zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(right_pos, top_pos - 0.168, f"Scale {scale}", family='cursive', style='italic',
+            self.ax.text(right_pos, top_pos - 0.167, f"Scale {scale}", family='cursive', style='italic',
                          color='dimgray',
                          fontname='Century Gothic', fontsize=9, va='top', ha='right', zorder=10,
                          transform=self.ax.transAxes)
@@ -1102,7 +1127,7 @@ class PlanMap:
         set_size()
         set_scale()
 
-        plt.grid(linestyle='dotted')
+        plt.grid(linestyle='dotted', zorder=0)
         self.ax.xaxis.set_visible(True)  # Required to actually get the labels to show in UTM
         self.ax.yaxis.set_visible(True)
         self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
@@ -1120,13 +1145,21 @@ class PlanMap:
         add_title()
 
         legend_handles = [handle for handle in
-                          [self.loop_handle, self.station_handle, self.collar_handle, self.trace_handle] if
+                          [self.loop_handle, self.station_handle, self.collar_handle] if
                           handle is not None]
-        self.ax.legend(handles=legend_handles, title='Legend', loc='lower left',
+        # Manually add the hole trace legend handle
+        if self.draw_hole_trace and 'borehole' in self.survey_type:
+            legend_handles.append(mlines.Line2D([], [], linestyle='--', color=self.color, marker='|', label='Borehole Trace'))
+        self.ax.legend(handles=legend_handles, title='Legend', loc='lower right',
                        framealpha=1, shadow=True)
 
     def get_map(self):
-        return self.fig
+        if any([self.loops, self.lines, self.collars, self.holes]):
+            self.format_figure()
+            plt.show()
+            return self.fig
+        else:
+            return None
 
 
 # class PEMPlotter:
@@ -1743,30 +1776,30 @@ class PlanMap:
 
 
 # Draws a pretty scale bar
-class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
-    """ size: length of bar in data units
-        extent : height of bar ends in axes units
-    """
-
-    def __init__(self, size=1, extent=0.03, label="", loc=1, ax=None,
-                 pad=0.4, borderpad=0.5, ppad=-25, sep=2, prop=None,
-                 frameon=True, **kwargs):
-        if not ax:
-            ax = plt.gca()
-        trans = ax.get_xaxis_transform()
-        size_bar = matplotlib.offsetbox.AuxTransformBox(trans)
-        line = Line2D([0, size], [0, 0], **kwargs)
-        vline1 = Line2D([0, 0], [-extent / 2., extent / 2.], **kwargs)
-        vline2 = Line2D([size, size], [-extent / 2., extent / 2.], **kwargs)
-        size_bar.add_artist(line)
-        size_bar.add_artist(vline1)
-        size_bar.add_artist(vline2)
-        txt = matplotlib.offsetbox.TextArea(label, minimumdescent=False)
-        self.vpac = matplotlib.offsetbox.VPacker(children=[size_bar, txt],
-                                                 align="center", pad=ppad, sep=sep)
-        matplotlib.offsetbox.AnchoredOffsetbox.__init__(self, loc, pad=pad,
-                                                        borderpad=borderpad, child=self.vpac, prop=prop,
-                                                        frameon=frameon)
+# class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
+#     """ size: length of bar in data units
+#         extent : height of bar ends in axes units
+#     """
+#
+#     def __init__(self, size=1, extent=0.03, label="", loc=1, ax=None,
+#                  pad=0.4, borderpad=0.5, ppad=-25, sep=2, prop=None,
+#                  frameon=True, **kwargs):
+#         if not ax:
+#             ax = plt.gca()
+#         trans = ax.get_xaxis_transform()
+#         size_bar = matplotlib.offsetbox.AuxTransformBox(trans)
+#         line = Line2D([0, size], [0, 0], **kwargs)
+#         vline1 = Line2D([0, 0], [-extent / 2., extent / 2.], **kwargs)
+#         vline2 = Line2D([size, size], [-extent / 2., extent / 2.], **kwargs)
+#         size_bar.add_artist(line)
+#         size_bar.add_artist(vline1)
+#         size_bar.add_artist(vline2)
+#         txt = matplotlib.offsetbox.TextArea(label, minimumdescent=False)
+#         self.vpac = matplotlib.offsetbox.VPacker(children=[size_bar, txt],
+#                                                  align="center", pad=ppad, sep=sep)
+#         matplotlib.offsetbox.AnchoredOffsetbox.__init__(self, loc, pad=pad,
+#                                                         borderpad=borderpad, child=self.vpac, prop=prop,
+#                                                         frameon=frameon)
 
 
 class PEMPrinter:
@@ -1788,6 +1821,7 @@ class PEMPrinter:
         self.x_min = kwargs.get('XMin')
         self.x_max = kwargs.get('XMax')
         self.hide_gaps = kwargs.get('HideGaps')
+        self.loop_annotations = kwargs.get('LoopAnnotations')
         # self.projection = kwargs.get('Projection')
         self.projection = ccrs.UTM(31)
         self.pb = QProgressBar()
@@ -1882,7 +1916,7 @@ class PEMPrinter:
     def print_plan_map(self):
         with PdfPages(self.save_path + '.PDF') as pdf:
             plan_figure = self.create_plan_figure()
-            plan_map = PlanMap(self.pem_files, plan_figure, self.projection)
+            plan_map = PlanMap(self.pem_files, plan_figure, self.projection, draw_loop_anno=self.loop_annotations)
             pdf.savefig(plan_map.get_map(), orientation='landscape')
             self.pb_count += 1
             self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
