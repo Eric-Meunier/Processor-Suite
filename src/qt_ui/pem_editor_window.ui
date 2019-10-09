@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1029</width>
-    <height>766</height>
+    <height>907</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -258,113 +258,144 @@
           </font>
          </property>
          <property name="title">
-          <string>Plot Options</string>
+          <string>Plots</string>
          </property>
          <layout class="QGridLayout" name="share_range_layout">
-          <item row="3" column="0" colspan="2">
-           <widget class="QPushButton" name="reset_range_btn">
-            <property name="text">
-             <string>Reset</string>
+          <item row="7" column="0" colspan="2">
+           <widget class="QGroupBox" name="groupBox">
+            <property name="title">
+             <string>Plan Map</string>
             </property>
-           </widget>
-          </item>
-          <item row="1" column="1" alignment="Qt::AlignRight|Qt::AlignVCenter">
-           <widget class="QLineEdit" name="min_range_edit">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
             </property>
-            <property name="minimumSize">
-             <size>
-              <width>125</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>125</width>
-              <height>16777215</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1" alignment="Qt::AlignRight">
-           <widget class="QLineEdit" name="max_range_edit">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>125</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>125</width>
-              <height>16777215</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="min_range_label">
-            <property name="text">
-             <string>Min</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="max_range_label">
-            <property name="text">
-             <string>Max</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0" colspan="2">
-           <widget class="Line" name="line">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0" colspan="2">
-           <widget class="QCheckBox" name="show_loop_anno_checkbox">
-            <property name="text">
-             <string>Show Loop Annotations</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0" colspan="2">
-           <widget class="QCheckBox" name="hide_gaps_checkbox">
-            <property name="text">
-             <string>Hide Data Gaps</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_4">
+             <item>
+              <widget class="QCheckBox" name="show_loop_anno_checkbox">
+               <property name="text">
+                <string>Show Loop Annotations</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="movingLoopCBox">
+               <property name="text">
+                <string>Moving Loop</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
           <item row="0" column="0" colspan="2">
-           <widget class="QCheckBox" name="share_range_checkbox">
-            <property name="text">
-             <string>Share Range</string>
+           <widget class="QGroupBox" name="groupBox_4">
+            <property name="title">
+             <string>Profile Plots</string>
             </property>
-            <property name="checked">
-             <bool>true</bool>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
             </property>
+            <layout class="QGridLayout" name="gridLayout_5">
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="max_range_edit">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>125</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>125</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0" colspan="2">
+              <widget class="QCheckBox" name="share_range_checkbox">
+               <property name="text">
+                <string>Share Range</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="min_range_label">
+               <property name="text">
+                <string>Min</string>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="0" colspan="2">
+              <widget class="QCheckBox" name="hide_gaps_checkbox">
+               <property name="text">
+                <string>Hide Data Gaps</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="max_range_label">
+               <property name="text">
+                <string>Max</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLineEdit" name="min_range_edit">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>125</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>125</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0" colspan="2">
+              <widget class="QPushButton" name="reset_range_btn">
+               <property name="text">
+                <string>Reset</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0" colspan="2">
+              <widget class="Line" name="line">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
         </widget>
        </item>
        <item row="4" column="0">
-        <widget class="QGroupBox" name="groupBox">
+        <widget class="QGroupBox" name="gps_box">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -388,7 +419,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
-           <widget class="QGroupBox" name="groupBox_4">
+           <widget class="QGroupBox" name="coord_system_box">
             <property name="layoutDirection">
              <enum>Qt::LeftToRight</enum>
             </property>
@@ -414,7 +445,7 @@
               </widget>
              </item>
              <item row="0" column="1">
-              <widget class="QComboBox" name="comboBox">
+              <widget class="QComboBox" name="systemCBox">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -433,7 +464,7 @@
               </widget>
              </item>
              <item row="1" column="1">
-              <widget class="QComboBox" name="comboBox_2">
+              <widget class="QComboBox" name="zoneCBox">
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -455,7 +486,7 @@
               </widget>
              </item>
              <item row="2" column="1">
-              <widget class="QComboBox" name="comboBox_3">
+              <widget class="QComboBox" name="datumCBox">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -541,7 +572,7 @@
           </size>
          </property>
          <property name="title">
-          <string>Data Options</string>
+          <string>Data</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>

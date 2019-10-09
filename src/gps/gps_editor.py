@@ -273,23 +273,37 @@ class GPSParser:
             return []
 
 
+class INFParser:
+
+    def get_crs(self, filepath):
+        crs = {}
+        with open(filepath, 'r') as in_file:
+            file = in_file.read()
+
+        crs['Coordinate System'] = re.findall('Coordinate System:\W+(?P<System>.*)', file)[0]
+        crs['Coordinate Zone'] = re.findall('Coordinate Zone:\W+(?P<Zone>.*)', file)[0]
+        crs['Datum'] = re.findall('Datum:\W+(?P<Datum>.*)', file)[0]
+
+        return crs
+
+
 def main():
-    # app = QApplication(sys.argv)
-    # mw = Conder()
-    # mw.show()
-    # app.exec_()
-
+    samples_path = r'C:\_Data\2019\_Mowgli Testing'
     file_names = [f for f in os.listdir(samples_path) if
-                  isfile(join(samples_path, f)) and f.lower().endswith('.txt') or f.lower().endswith('.csv')]
+                  isfile(join(samples_path, f)) and f.lower().endswith('.inf')]
     file_paths = []
-
+    inf_parser = INFParser()
     for file in file_names:
         file_paths.append(join(samples_path, file))
 
-    gps_file = GPSParser()
+    for filepath in file_paths:
+        crs = inf_parser.get_crs(filepath)
 
-    file = r'C:\Users\Eric\Desktop\7600N.PEM'
-    gps_file.open(file)
+
+    # gps_file = GPSParser()
+
+    # file = r'C:\Users\Eric\Desktop\7600N.PEM'
+    # gps_file.open(file)
 
 
 if __name__ == '__main__':

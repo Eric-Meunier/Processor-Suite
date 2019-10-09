@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QInputDialog, QHeaderView, QGridLayout, QTableWidget, QDialogButtonBox, QVBoxLayout)
 
 from src.pem.pem_file import PEMFile
-from src.gps.gps_editor import GPSParser
+from src.gps.gps_editor import GPSParser, INFParser
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_plotter import PEMPrinter
@@ -76,7 +76,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.pem_info_widgets = []
         self.tab_num = 2
 
+        self.gps_systems = ['', 'UTM', 'Latitude/Longitude']
+        self.gps_zones = [''] + [f"{num} North" for num in range(1, 31)] + [f"{num} South" for num in range(1, 61)]
+        self.gps_datums = ['', 'NAD 1927', 'NAD 1983', 'WGS 1984']
+
         self.create_table()
+        self.populate_gps_boxes()
 
     def initUi(self):
         def center_window(self):
@@ -263,6 +268,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.reverseAllXButton.clicked.connect(lambda: self.reverse_all_data(comp='X'))
         self.reverseAllYButton.clicked.connect(lambda: self.reverse_all_data(comp='Y'))
 
+        self.systemCBox.currentIndexChanged.connect(self.toggle_zone_box)
+
     def contextMenuEvent(self, event):
         if self.table.underMouse():
             if self.table.selectionModel().selectedIndexes():
@@ -401,6 +408,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         pem_files = False
         text_files = False
         ri_files = False
+        inf_files = False
 
         if all([url.lower().endswith('pem') for url in urls]):
             pem_files = True
@@ -411,6 +419,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         elif all([url.lower().endswith('ri1') or url.lower().endswith('ri2') or url.lower().endswith(
                 'ri3') for url in urls]):
             ri_files = True
+        elif all([url.lower().endswith('inf') for url in urls]):
+            inf_files = True
 
         pem_conditions = bool(all([
             bool(e.answerRect().intersects(self.table.geometry())),
@@ -442,7 +452,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 len(self.pem_files) > 0
             ]))
 
-            if pem_conditions is True or gps_conditions is True or ri_conditions is True:
+            inf_conditions = bool(all([
+                e.answerRect().intersects(self.gps_box.geometry()),
+                inf_files is True,
+            ]))
+
+            if pem_conditions is True or gps_conditions is True or ri_conditions is True or inf_conditions is True:
                 e.acceptProposedAction()
             else:
                 e.ignore()
@@ -462,6 +477,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         gps_files = [file for file in files if
                      file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith('seg') or file.lower().endswith('xyz')]
         ri_files = [file for file in files if file.lower().endswith('ri1') or file.lower().endswith('ri2') or file.lower().endswith('ri3')]
+        inf_files = [file for file in files if file.lower().endswith('inf')]
 
         start_time = time.time()
         if len(pem_files) > 0:
@@ -474,6 +490,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if len(ri_files) > 0:
             self.open_ri_file(ri_files)
+
+        if len(inf_files) > 0:
+            self.open_inf_file(inf_files)
 
     def open_pem_files(self, pem_files):
         """
@@ -593,6 +612,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         ri_file = ri_files[0]  # Filepath
         pem_info_widget = self.stackedWidget.currentWidget()
         pem_info_widget.open_ri_file(ri_file)
+
+    def open_inf_file(self, inf_files):
+        inf_file = inf_files[0]  # Filepath, only accept the first one
+        inf_parser = INFParser()
+        crs = inf_parser.get_crs(inf_file)
+        coord_sys = crs.get('Coordinate System')
+        coord_zone = crs.get('Coordinate Zone')
+        datum = crs.get('Datum')
+
+        self.systemCBox.setCurrentIndex(self.gps_systems.index(coord_sys))
+        self.zoneCBox.setCurrentIndex(self.gps_zones.index(coord_zone))
+        self.datumCBox.setCurrentIndex(self.gps_datums.index(datum))
 
     def clear_files(self):
         """
@@ -1034,7 +1065,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.dialog.setDirectory(default_path)
             # save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
             save_dir = r'C:\_Data\2019\_Mowgli Testing'
-            plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked(), 'LoopAnnotations': self.show_loop_anno_checkbox.isChecked()}
+            plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked(),
+                           'LoopAnnotations': self.show_loop_anno_checkbox.isChecked(),
+                           'MovingLoop': self.movingLoopCBox.isChecked()}
 
             if save_dir:
                 pem_files_selection, rows = self.get_selected_pem_files()
@@ -1104,6 +1137,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         for row in reversed(rows):
             self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
             self.remove_file(row)
+
+    def populate_gps_boxes(self):
+        for system in self.gps_systems:
+            self.systemCBox.addItem(system)
+        for zone in self.gps_zones:
+            self.zoneCBox.addItem(zone)
+        for datum in self.gps_datums:
+            self.datumCBox.addItem(datum)
 
     # Creates the table when the editor is first opened
     def create_table(self):
@@ -1255,6 +1296,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def toggle_hide_gaps(self):
         pass  # To be implemented when pyqtplots are in
+
+    def toggle_zone_box(self):
+        if self.systemCBox.currentText() == 'UTM':
+            self.zoneCBox.setEnabled(True)
+        else:
+            self.zoneCBox.setEnabled(False)
+            # self.zoneCBox.setCurrentIndex(self.gps_zones.index(''))
 
     def batch_rename(self, type):
 
@@ -1547,8 +1595,8 @@ def main():
     # for file in file_names:
     #     file_paths.append(os.path.join(sample_files, file))
     # # (mw.open_files(file_paths))
-    mw.open_pem_files(r'C:\_Data\2019\Nantou BF\Surface\__Semtoun 115-\PEM\5400N-LP115.PEM')
-    mw.open_ri_file([r'C:\_Data\2019\Nantou BF\Surface\__Semtoun 115-\PEM\1155400E.RI3'])
+    mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\1200NAv.PEM')
+    mw.open_ri_file([r'C:\_Data\2019\_Mowgli Testing\1200N.RI3'])
     mw.print_plots(step=True)
     # mw.print_plots(step=False)
     app.exec_()

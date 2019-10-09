@@ -52,6 +52,12 @@ mpl.rcParams['font.size'] = 9
 line_color = 'black'
 
 
+def natural_sort(list):
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ]
+    return sorted(list, key=alphanum_key)
+
+
 def add_rectangle(figure):
     """
     Draws a rectangle around a figure object
@@ -312,6 +318,8 @@ def format_yaxis(pem_file, figure, step=False):
 
             ax.set_ylim(new_low, new_high)
             ax.set_yticks(ax.get_yticks())
+            ax.yaxis.set_major_locator(ticker.AutoLocator())
+            ax.set_yticks(ax.get_yticks())  # This is used twice to avoid half-integer tick values
 
         elif ax.get_yscale() == 'symlog':
             y_limits = ax.get_ylim()
@@ -322,7 +330,7 @@ def format_yaxis(pem_file, figure, step=False):
             ax.tick_params(axis='y', which='major', labelrotation=90)
             plt.setp(ax.get_yticklabels(), va='center')
 
-            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
+        ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
 
 
 def add_title(pem_file, component, step=False):
@@ -586,7 +594,7 @@ class RotnAnnotation(mtext.Annotation):
         if not pa:
             self.pa = label_xy
         self.calc_angle_data()
-        kwargs.update(rotation_mode=kwargs.get("rotation_mode", "anchor"), xytext=(0, 0), textcoords='offset points')
+        # kwargs.update(rotation_mode=kwargs.get("rotation_mode", "anchor"), xycoords='axes faction', xytext=(0.01, 0.01), textcoords='offset points')
         mtext.Annotation.__init__(self, label_str, label_xy, **kwargs)
         self.set_transform(mtransforms.IdentityTransform())
         if 'clip_on' in kwargs:
@@ -619,7 +627,7 @@ class RotnAnnotation(mtext.Annotation):
 
 class PlanMap:
     def __init__(self, pem_files, figure, projection, draw_loops=True, draw_loop_anno=False, draw_lines=True, draw_hole_collar=True,
-                 draw_hole_trace=True):
+                 draw_hole_trace=True, moving_loop=False):
         self.color = 'black'
         self.fig = figure
         self.pem_files = []
@@ -651,6 +659,7 @@ class PlanMap:
         self.draw_lines = draw_lines
         self.draw_hole_collar = draw_hole_collar
         self.draw_hole_trace = draw_hole_trace
+        self.moving_loop = moving_loop
         self.gps_editor = GPSEditor
         self.crs = projection
         self.ax = self.fig.add_subplot(projection=self.crs)
@@ -686,15 +695,16 @@ class PlanMap:
                 eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
                 eastings.insert(0, eastings[-1])  # To close up the loop
                 northings.insert(0, northings[-1])
-
+                zorder = 4 if not self.moving_loop else 5
                 loop_label = self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}", ha='center',
-                             color=self.color, zorder=4, path_effects=label_buffer)  # Add the loop name
+                             color=self.color, zorder=zorder, path_effects=label_buffer)  # Add the loop name
 
                 self.loop_handle, = self.ax.plot(eastings, northings, color=self.color, label='Transmitter Loop',
                                                  transform=self.crs, zorder=2)  # Plot the loop
 
                 # Moves the loop label away from other labels
-                adjust_text([loop_label], add_objects=self.labels, ax=self.ax, avoid_text=True)
+                # adjust_text([loop_label], add_objects=self.labels, ax=self.ax, avoid_text=True, avoid_points=False,
+                #             autoalign=True)
 
                 if self.draw_loop_annotations:
                     for i, (x, y) in enumerate(list(zip(eastings, northings))):
@@ -715,7 +725,7 @@ class PlanMap:
                 line_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
                                             label_xy=(float(line_gps[0][0]), float(line_gps[0][1])),
                                             p=(eastings[0], northings[0]), pa=(eastings[-1], northings[-1]),
-                                            va='bottom', ha='center', color=self.color, zorder=4,
+                                            va='bottom', ha='center', color=self.color, zorder=5,
                                             path_effects=label_buffer)
                 self.labels.append(line_label)
                 # marker_rotation = get_rotation(eastings, northings)
@@ -785,7 +795,7 @@ class PlanMap:
                                                   p=(seg_x[-2], seg_y[-2]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
                                                   hole_collar=False,
                                                   va='center', ha='center', rotation_mode='anchor', fontsize=14,
-                                                  color=self.color)
+                                                  color=self.color, zorder=3)
                         # Label the depth of the hole
                         bh_depth = RotnAnnotation(f" {float(segments[-1][-1]):.0f} m",
                                                   label_xy=(seg_x[-1], seg_y[-1]),
@@ -797,7 +807,7 @@ class PlanMap:
                     pass
 
         for pem_file in self.pem_files:
-            label_buffer = [patheffects.Stroke(linewidth=1, foreground='white'), patheffects.Normal()]
+            label_buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
 
             if 'surface' in pem_file.survey_type.lower() and self.draw_lines is True:
                 add_line_to_map(pem_file)
@@ -807,23 +817,6 @@ class PlanMap:
 
             if self.draw_loops is True:
                 add_loop_to_map(pem_file)
-
-    def get_ax_width_m(self):
-        bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
-        width = bbox.width
-        width_meters = width * 0.0254
-        # width_meters = width_meters / 1.06  # Removing 6% due to subplot adjustment
-        width_meters = width_meters
-        return width_meters
-
-    def get_map_width_m(self):
-        # find lat/lon center to find best UTM zone
-        x0, x1, y0, y1 = self.ax.get_extent(self.crs.as_geodetic())
-        # Projection in metres
-        tm = ccrs.TransverseMercator((x0 + x1) / 2)
-        # Get the extent of the plotted area in coordinates in metres
-        x0, x1, y0, y1 = self.ax.get_extent(tm)
-        return x1 - x0
 
     def format_figure(self):
 
@@ -1038,16 +1031,22 @@ class PlanMap:
                                    linewidth=.5, color='gray', transform=self.ax.transAxes, zorder=10)
 
             # Title box rectangle
-            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='gray',
+            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='k',
                                           boxstyle="round,pad=0.005", facecolor='white', zorder=9,
                                           transform=self.ax.transAxes)
 
             client = self.pem_files[0].header.get("Client")
             grid = self.pem_files[0].header.get("Grid")
-            loop = f"Loop: {self.pem_files[0].header.get('Loop')}"
+            loops = [pem_file.header.get('Loop') for pem_file in self.pem_files]
+            loops = natural_sort(loops)
+            if self.moving_loop and len(loops) > 1:
+                loop_text = f"Loop: {loops[0]} to {loops[-1]}"
+            else:
+                loop_text = f"Loop: {', '.join(loops)}"
+
             hole = f"Hole: {self.pem_files[0].header.get('LineHole')}"
 
-            coord_sys = "UTM Zone 31N, WGS 84"
+            coord_sys = "UTM Zone 18S, WGS 84"
             scale = f"1:{self.map_scale:,.0f}"
 
             self.ax.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
@@ -1062,7 +1061,7 @@ class PlanMap:
                          fontname='Century Gothic', fontsize=9, ha='center', zorder=10, transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
-                         f"{loop if 'surface' in self.survey_type else hole}",
+                         f"{loop_text if 'surface' in self.survey_type else hole}",
                          fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
                          transform=self.ax.transAxes)
 
@@ -1150,8 +1149,8 @@ class PlanMap:
         # Manually add the hole trace legend handle
         if self.draw_hole_trace and 'borehole' in self.survey_type:
             legend_handles.append(mlines.Line2D([], [], linestyle='--', color=self.color, marker='|', label='Borehole Trace'))
-        self.ax.legend(handles=legend_handles, title='Legend', loc='lower right',
-                       framealpha=1, shadow=True)
+        self.ax.legend(handles=legend_handles, title='Legend', loc='lower right', framealpha=1, shadow=True,
+                       edgecolor='k')
 
     def get_map(self):
         if any([self.loops, self.lines, self.collars, self.holes]):
@@ -1822,6 +1821,7 @@ class PEMPrinter:
         self.x_max = kwargs.get('XMax')
         self.hide_gaps = kwargs.get('HideGaps')
         self.loop_annotations = kwargs.get('LoopAnnotations')
+        self.moving_loop = kwargs.get('MovingLoop')
         # self.projection = kwargs.get('Projection')
         self.projection = ccrs.UTM(31)
         self.pb = QProgressBar()
@@ -1916,7 +1916,8 @@ class PEMPrinter:
     def print_plan_map(self):
         with PdfPages(self.save_path + '.PDF') as pdf:
             plan_figure = self.create_plan_figure()
-            plan_map = PlanMap(self.pem_files, plan_figure, self.projection, draw_loop_anno=self.loop_annotations)
+            plan_map = PlanMap(self.pem_files, plan_figure, self.projection, draw_loop_anno=self.loop_annotations,
+                               moving_loop=self.moving_loop)
             pdf.savefig(plan_map.get_map(), orientation='landscape')
             self.pb_count += 1
             self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
@@ -2012,7 +2013,7 @@ if __name__ == '__main__':
     # file = r'C:\_Data\2019\Eastern\Maritime Resources\WV-19-06\PEM\WV-19-06\WV-19-06 XYT.PEM'
     # pem_file = parser.parse(file)
     fig = plt.figure(figsize=(11, 8.5))
-    pm = PlanMap(pem_files, fig, ccrs.UTM(21))
+    pm = PlanMap(pem_files, fig, ccrs.UTM(30, southern_hemisphere=False), moving_loop=True)
     # pm.make_plan_map(pem_files)
     # printer = PEMPrinter(sample_files_dir, pem_files)
     # printer.print_final_plots()
