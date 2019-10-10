@@ -74,7 +74,7 @@
       </property>
       <layout class="QFormLayout" name="formLayout_2">
        <item row="0" column="0">
-        <widget class="QGroupBox" name="header_groupBox">
+        <widget class="QGroupBox" name="share_header_gbox">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -99,30 +99,16 @@
           </font>
          </property>
          <property name="title">
-          <string>Header Information</string>
+          <string>Share Header Information</string>
          </property>
          <property name="flat">
           <bool>false</bool>
          </property>
          <property name="checkable">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <layout class="QGridLayout" name="share_header_layout">
-          <item row="1" column="0">
-           <widget class="QLabel" name="client_label">
-            <property name="font">
-             <font>
-              <family>MS Shell Dlg 2</family>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Client</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
+          <item row="2" column="1">
            <widget class="QLineEdit" name="loop_edit">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -144,7 +130,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1" alignment="Qt::AlignRight">
+          <item row="1" column="1" alignment="Qt::AlignRight">
            <widget class="QLineEdit" name="grid_edit">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -169,14 +155,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="loop_label">
-            <property name="text">
-             <string>Loop</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1" alignment="Qt::AlignRight">
+          <item row="0" column="1" alignment="Qt::AlignRight">
            <widget class="QLineEdit" name="client_edit">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -201,32 +180,40 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="grid_label">
-            <property name="text">
-             <string>Grid</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0" colspan="2">
+          <item row="3" column="0" colspan="2">
            <widget class="QPushButton" name="reset_header_btn">
             <property name="text">
              <string>Reset</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="0" colspan="2">
-           <widget class="QCheckBox" name="share_header_checkbox">
-            <property name="font">
-             <font>
-              <family>MS Shell Dlg 2</family>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="share_client_cbox">
             <property name="text">
-             <string>Share Header</string>
+             <string>Client</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="share_grid_cbox">
+            <property name="text">
+             <string>Grid</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="share_loop_cbox">
+            <property name="text">
+             <string>Loop</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -469,8 +456,14 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>110</width>
+                 <width>120</width>
                  <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
                 </size>
                </property>
                <property name="layoutDirection">
@@ -491,8 +484,14 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>110</width>
+                 <width>120</width>
                  <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
                 </size>
                </property>
                <property name="layoutDirection">
@@ -510,8 +509,14 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>110</width>
+                 <width>120</width>
                  <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
                 </size>
                </property>
                <property name="layoutDirection">

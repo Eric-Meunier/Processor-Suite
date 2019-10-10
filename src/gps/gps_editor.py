@@ -8,6 +8,7 @@ from functools import reduce
 from math import hypot
 from os.path import isfile, join
 from src.gps.gpx import gpxpy
+from pyproj import Proj
 
 import numpy as np
 from scipy import spatial
@@ -185,7 +186,7 @@ class GPSEditor:
         gps = self.parser.parse_collar_gps(file)
         if not gps:
             return []
-        return gps
+        return self.format_gps(gps)
 
 
 class GPSParser:
@@ -197,7 +198,7 @@ class GPSParser:
         self.re_station_gps = re.compile(
             r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
         self.re_loop_gps = re.compile(
-            r'(?P<Easting>\d{4,}\.?\d*)\W+(?P<Northing>\d{4,}\.?\d*)\W+(?P<Elevation>\d{1,4}\.?\d*)\W*(?P<Units>0|1)?\W?')
+            r'(?P<Easting>\d{4,}\.?\d*)\W+(?P<Northing>\d{4,}\.?\d*)\W+(?P<Elevation>\d{1,4}\.?\d*)\W*(?P<Units>0|1)?.*')
         self.re_collar_gps = re.compile(
             r'(?P<Easting>\d{4,}\.?\d*)[\s\t,]+(?P<Northing>\d{4,}\.?\d*)[\s\t,]+(?P<Elevation>\d{1,4}\.?\d*)[\s\t,]+(?P<Units>0|1)?\s*?')
         self.re_segment = re.compile(
@@ -295,17 +296,39 @@ class GPXEditor:
         gpx = gpxpy.parse(gpx_file)
         gps = []
         for waypoint in gpx.waypoints:
-            gps.append([waypoint.latitude, waypoint.longitude, waypoint.name])
-
+            gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', waypoint.name])
         return gps
 
-    def get_utm(self, filepath):
-        gps = self.parse_gpx(filepath)
+    def get_utm(self, gpx_filepath):
+        """
+        Retrieve the GPS from the GPS file in UTM coordinates
+        :param gpx_filepath: filepath of a GPX file
+        :return: List of rows of UTM gps with elevation, units (0 or 1) and comment/name from the GPX waypoint
+        """
+        gps = self.parse_gpx(gpx_filepath)
+        zone = None
+        hemisphere = None
+        utm_gps = []
+        for row in gps:
+            lat = row[0]
+            lon = row[1]
+            elevation = row[2]
+            units = row[3]
+            name = row[4]
+            stn = re.findall('\d+', re.split('-', name)[-1])
+            hemisphere = 'north' if lat >= 0 else 'south'
+            zone = math.floor((lon+180)/6) + 1  # Calculate the zone number
+            myProj = Proj(f"+proj=utm +zone={zone},\+{hemisphere} +ellps=WGS84 +datum=WGS84 +units=m +no_defs")  # north for north hemisphere
+            UTMx, UTMy = myProj(lon, lat)
+            utm_gps.append([UTMx, UTMy, elevation, units, stn])
+        return utm_gps, zone, hemisphere
 
+    def get_lat_long(self, gpx_filepath):
+        gps = self.parse_gpx(gpx_filepath)
+        return gps
 
     def save_gpx(self, coordinates):
         pass
-
 
 
 def main():
@@ -318,7 +341,7 @@ def main():
         file_paths.append(join(samples_path, file))
 
     for filepath in file_paths:
-        gpx_editor().parse_gpx(filepath)
+        gpx_editor().get_utm(filepath)
 
 
 if __name__ == '__main__':

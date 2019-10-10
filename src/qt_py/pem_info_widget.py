@@ -400,11 +400,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
 
         if gps:
+            gps = gps[0]
             self.clear_table(self.collarGPSTable)
             logging.info('Filling collar GPS')
 
             self.collarGPSTable.insertRow(0)
-            if re.match('<P.*>', gps[0]):
+            if '<P' in gps:
                 gps.pop(0)
             tag_item = QTableWidgetItem("<P00>")
             items = [QTableWidgetItem(gps[j]) for j in range(len(gps))]

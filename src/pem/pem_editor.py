@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QInputDialog, QHeaderView, QGridLayout, QTableWidget, QDialogButtonBox, QVBoxLayout)
 
 from src.pem.pem_file import PEMFile
-from src.gps.gps_editor import GPSParser, INFParser
+from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_plotter import PEMPrinter
@@ -77,7 +77,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.tab_num = 2
 
         self.gps_systems = ['', 'UTM', 'Latitude/Longitude']
-        self.gps_zones = [''] + [f"{num} North" for num in range(1, 31)] + [f"{num} South" for num in range(1, 61)]
+        self.gps_zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
         self.gps_datums = ['', 'NAD 1927', 'NAD 1983', 'WGS 1984']
 
         self.create_table()
@@ -107,6 +107,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.dialog = QFileDialog()
         # self.pem_info_widget = PEMFileInfoWidget()
         self.gps_parser = GPSParser()
+        self.gpx_editor = GPXEditor()
         self.serializer = PEMSerializer()
         self.ri_importer = BatchRIImporter(parent=self)
 
@@ -252,7 +253,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.table.itemSelectionChanged.connect(self.display_pem_info_widget)
         self.table.cellChanged.connect(self.table_value_changed)
 
-        self.share_header_checkbox.stateChanged.connect(self.toggle_share_header)
+        self.share_header_gbox.toggled.connect(self.toggle_share_header)
+        self.share_client_cbox.stateChanged.connect(self.toggle_share_client)
+        self.share_grid_cbox.stateChanged.connect(self.toggle_share_grid)
+        self.share_loop_cbox.stateChanged.connect(self.toggle_share_loop)
         self.reset_header_btn.clicked.connect(self.fill_share_header)
         self.client_edit.textChanged.connect(self.update_table)
         self.grid_edit.textChanged.connect(self.update_table)
@@ -409,6 +413,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         text_files = False
         ri_files = False
         inf_files = False
+        gpx_files = False
 
         if all([url.lower().endswith('pem') for url in urls]):
             pem_files = True
@@ -421,6 +426,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             ri_files = True
         elif all([url.lower().endswith('inf') for url in urls]):
             inf_files = True
+        elif all([url.lower().endswith('gpx') for url in urls]):
+            gpx_files = True
 
         pem_conditions = bool(all([
             bool(e.answerRect().intersects(self.table.geometry())),
@@ -437,10 +444,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             eligible_tabs = [self.stackedWidget.currentWidget().Station_GPS_Tab,
                              self.stackedWidget.currentWidget().Loop_GPS_Tab,
                              self.stackedWidget.currentWidget().Geometry_Tab,
-                             self.stackedWidget.currentWidget().RI_Tab]
+                             ]
             gps_conditions = bool(all([
                 e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
-                text_files is True,
+                text_files is True or gpx_files is True,
                 self.stackedWidget.currentWidget().tabs.currentWidget() in eligible_tabs,
                 len(self.pem_files) > 0
             ]))
@@ -448,7 +455,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             ri_conditions = bool(all([
                 e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
                 ri_files is True,
-                self.stackedWidget.currentWidget().tabs.currentWidget() in eligible_tabs,
+                self.stackedWidget.currentWidget().tabs.currentWidget() == self.stackedWidget.currentWidget().RI_Tab,
                 len(self.pem_files) > 0
             ]))
 
@@ -478,6 +485,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                      file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith('seg') or file.lower().endswith('xyz')]
         ri_files = [file for file in files if file.lower().endswith('ri1') or file.lower().endswith('ri2') or file.lower().endswith('ri3')]
         inf_files = [file for file in files if file.lower().endswith('inf')]
+        gpx_files = [file for file in files if file.lower().endswith('gpx')]
 
         start_time = time.time()
         if len(pem_files) > 0:
@@ -493,6 +501,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if len(inf_files) > 0:
             self.open_inf_file(inf_files)
+
+        if len(gpx_files) > 0:
+            self.open_gpx_files(gpx_files)
 
     def open_pem_files(self, pem_files):
         """
@@ -522,6 +533,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         for pem_file in pem_files:
             if isinstance(pem_file, PEMFile):
                 pem_file = pem_file.filepath
+            # Check that the PEM File isn't already opened
             if not is_opened(pem_file):
                 pemInfoWidget = PEMFileInfoWidget()
 
@@ -535,8 +547,26 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.pem_info_widgets.append(pem_widget)
                     self.stackedWidget.addWidget(pem_widget)
                     self.add_to_table(pem_file)
+                    # Fill in the GPS System information based on the existing GEN tag if it's not yet filled.
+                    for note in pem_file.notes:
+                        if '<GEN> CRS:' in note:
+                            if self.systemCBox.currentText() == '' and self.datumCBox.currentText() == '':
+                                info = re.split(': ',note)[-1]
+                                matches = re.search(r'(?P<System>UTM|Latitude/Longitude)(?P<Zone>\sZone \d+)?\s?'
+                                                    r'(?P<Hemisphere>North|South)?\,\s(?P<Datum>.*)', info)
+                                system = matches.group('System')
+                                zone = matches.group('Zone')
+                                hemis = matches.group('Hemisphere')
+                                datum = matches.group('Datum')
 
-                    if len(self.pem_files) == 1:  # The initial fill of the header and station info
+                                self.systemCBox.setCurrentIndex(self.gps_systems.index(system))
+                                if zone:
+                                    zone = zone.split('Zone ')[-1]
+                                    self.zoneCBox.setCurrentIndex(self.gps_zones.index(f"{zone} {hemis.title()}"))
+                                self.datumCBox.setCurrentIndex(self.gps_datums.index(datum))
+
+                    # Fill the shared header and station info if it's the first PEM File opened
+                    if len(self.pem_files) == 1:
                         if self.client_edit.text() == '':
                             self.client_edit.setText(self.pem_files[0].header['Client'])
                         if self.grid_edit.text() == '':
@@ -564,7 +594,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def open_gps_files(self, gps_files):
         """
         Adds GPS information from the gps_files to the PEMFile object
-        :param gps_files: Text file(s) with GPS information in them
+        :param gps_files: Text or gpx file(s) with GPS information in them
         """
 
         def read_gps_files(gps_files):  # Merges files together if there are multiple files
@@ -582,7 +612,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if len(gps_files) > 0:
             file = read_gps_files(gps_files)
-            # try:
             pem_info_widget = self.stackedWidget.currentWidget()
             station_gps_tab = pem_info_widget.Station_GPS_Tab
             geometry_tab = pem_info_widget.Geometry_Tab
@@ -598,11 +627,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 pem_info_widget.add_loop_gps(file)
             else:
                 pass
-
-            # except Exception as e:
-            #     logging.info(str(e))
-            #     self.message.information(None, 'PEMEditorWidget: open_gps_files error', str(e))
-            #     pass
 
     def open_ri_file(self, ri_files):
         """
@@ -624,6 +648,35 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.systemCBox.setCurrentIndex(self.gps_systems.index(coord_sys))
         self.zoneCBox.setCurrentIndex(self.gps_zones.index(coord_zone))
         self.datumCBox.setCurrentIndex(self.gps_datums.index(datum))
+
+    def open_gpx_files(self, gpx_files):
+        if len(gpx_files) > 0:
+            file = []
+            zone, hemisphere = None, None
+            for gpx_file in gpx_files:
+                gps, zone, hemisphere = self.gpx_editor.get_utm(gpx_file)
+                file += gps
+
+            if zone and hemisphere:
+                self.systemCBox.setCurrentIndex(self.gps_systems.index('UTM'))
+                self.zoneCBox.setCurrentIndex(self.gps_zones.index(f"{zone} {hemisphere.title()}"))
+                self.datumCBox.setCurrentIndex(self.gps_datums.index('WGS 1984'))
+
+            pem_info_widget = self.stackedWidget.currentWidget()
+            station_gps_tab = pem_info_widget.Station_GPS_Tab
+            geometry_tab = pem_info_widget.Geometry_Tab
+            loop_gps_tab = pem_info_widget.Loop_GPS_Tab
+            current_tab = pem_info_widget.tabs.currentWidget()
+
+            if station_gps_tab == current_tab:
+                pem_info_widget.add_station_gps(file)
+            elif geometry_tab == current_tab:
+                # pem_info_widget.add_collar_gps(file)
+                pem_info_widget.add_geometry(file)
+            elif loop_gps_tab == current_tab:
+                pem_info_widget.add_loop_gps(file)
+            else:
+                pass
 
     def clear_files(self):
         """
@@ -1182,9 +1235,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         tags = pem_file.tags
         file = os.path.basename(pem_file.filepath)
         date = header.get('Date')
-        client = self.client_edit.text() if self.share_header_checkbox.isChecked() else header.get('Client')
-        grid = self.grid_edit.text() if self.share_header_checkbox.isChecked() else header.get('Grid')
-        loop = self.loop_edit.text() if self.share_header_checkbox.isChecked() else header.get('Loop')
+        client = self.client_edit.text() if self.share_client_cbox.isChecked() and self.share_header_gbox.isChecked() else header.get('Client')
+        grid = self.grid_edit.text() if self.share_grid_cbox.isChecked() and self.share_header_gbox.isChecked() else header.get('Grid')
+        loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() and self.share_header_gbox.isChecked() else header.get('Loop')
         current = tags.get('Current')
         coil_area = pem_file.header.get('CoilArea')
         averaged = 'Yes' if pem_file.is_averaged() else 'No'
@@ -1282,14 +1335,29 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             widget.fill_loop_table(selected_widget_loop)
 
     def toggle_share_header(self):
-        if self.share_header_checkbox.isChecked():
+        self.update_table()
+
+    def toggle_share_client(self):
+        if self.share_client_cbox.isChecked():
             self.client_edit.setEnabled(True)
-            self.grid_edit.setEnabled(True)
-            self.loop_edit.setEnabled(True)
             self.update_table()
         else:
             self.client_edit.setEnabled(False)
+            self.update_table()
+
+    def toggle_share_grid(self):
+        if self.share_grid_cbox.isChecked():
+            self.grid_edit.setEnabled(True)
+            self.update_table()
+        else:
             self.grid_edit.setEnabled(False)
+            self.update_table()
+
+    def toggle_share_loop(self):
+        if self.share_loop_cbox.isChecked():
+            self.loop_edit.setEnabled(True)
+            self.update_table()
+        else:
             self.loop_edit.setEnabled(False)
             self.update_table()
 
@@ -1609,10 +1677,15 @@ def main():
     # for file in file_names:
     #     file_paths.append(os.path.join(sample_files, file))
     # # (mw.open_files(file_paths))
-    mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\1200NAv.PEM')
-    mw.open_ri_file([r'C:\_Data\2019\_Mowgli Testing\1200N.RI3'])
-    mw.print_plots(step=True)
+
+    mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6000E-LP116.PEM')
+    # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')
+
+    # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\1200NAv.PEM')
+    # mw.open_ri_file([r'C:\_Data\2019\_Mowgli Testing\1200N.RI3'])
+    # mw.print_plots(step=True)
     # mw.print_plots(step=False)
+
     app.exec_()
 
 
