@@ -101,6 +101,12 @@
          <property name="title">
           <string>Header Information</string>
          </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
          <layout class="QGridLayout" name="share_header_layout">
           <item row="1" column="0">
            <widget class="QLabel" name="client_label">
@@ -294,6 +300,15 @@
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
+            </property>
+            <property name="flat">
+             <bool>false</bool>
+            </property>
+            <property name="checkable">
+             <bool>false</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
             </property>
             <layout class="QGridLayout" name="gridLayout_5">
              <item row="1" column="1">

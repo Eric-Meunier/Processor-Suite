@@ -915,11 +915,26 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     # Saves the pem file in memory using the information in the table
     def update_pem_file_from_table(self, pem_file, table_row, filepath=None):
+
+        def add_crs_tag():
+            system = self.systemCBox.currentText()
+            zone = ' Zone ' + self.zoneCBox.currentText() if self.zoneCBox.isEnabled() else ''
+            datum = self.datumCBox.currentText()
+
+            if any([system, zone, datum]):
+                for i, note in enumerate(reversed(pem_file.notes)):
+                    if '<GEN> CRS' in note:
+                        del pem_file.notes[i]
+
+                pem_file.notes.append(f"<GEN> CRS: {system}{zone}, {datum}")
+
         if filepath is None:
             pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0],
                                              self.table.item(table_row, self.columns.index('File')).text())
         else:
             pem_file.filepath = filepath
+
+        add_crs_tag()
         pem_file.header['Date'] = self.table.item(table_row, self.columns.index('Date')).text()
         pem_file.header['Client'] = self.table.item(table_row, self.columns.index('Client')).text()
         pem_file.header['Grid'] = self.table.item(table_row, self.columns.index('Grid')).text()
@@ -1302,7 +1317,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.zoneCBox.setEnabled(True)
         else:
             self.zoneCBox.setEnabled(False)
-            # self.zoneCBox.setCurrentIndex(self.gps_zones.index(''))
 
     def batch_rename(self, type):
 

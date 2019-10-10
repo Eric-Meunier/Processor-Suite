@@ -7,6 +7,7 @@ import sys
 from functools import reduce
 from math import hypot
 from os.path import isfile, join
+from src.gps.gpx import gpxpy
 
 import numpy as np
 from scipy import spatial
@@ -287,23 +288,37 @@ class INFParser:
         return crs
 
 
+class GPXEditor:
+
+    def parse_gpx(self, filepath):
+        gpx_file = open(filepath, 'r')
+        gpx = gpxpy.parse(gpx_file)
+        gps = []
+        for waypoint in gpx.waypoints:
+            gps.append([waypoint.latitude, waypoint.longitude, waypoint.name])
+
+        return gps
+
+    def get_utm(self, filepath):
+        gps = self.parse_gpx(filepath)
+
+
+    def save_gpx(self, coordinates):
+        pass
+
+
+
 def main():
     samples_path = r'C:\_Data\2019\_Mowgli Testing'
     file_names = [f for f in os.listdir(samples_path) if
-                  isfile(join(samples_path, f)) and f.lower().endswith('.inf')]
+                  isfile(join(samples_path, f)) and f.lower().endswith('.gpx')]
     file_paths = []
-    inf_parser = INFParser()
+    gpx_editor = GPXEditor
     for file in file_names:
         file_paths.append(join(samples_path, file))
 
     for filepath in file_paths:
-        crs = inf_parser.get_crs(filepath)
-
-
-    # gps_file = GPSParser()
-
-    # file = r'C:\Users\Eric\Desktop\7600N.PEM'
-    # gps_file.open(file)
+        gpx_editor().parse_gpx(filepath)
 
 
 if __name__ == '__main__':
