@@ -95,21 +95,94 @@ def format_figure(figure, step=False):
         format_spines(ax)
 
 
-def format_xaxis(pem_file, figure, x_min, x_max):
+def format_xaxis(pem_file, component, figure, x_min, x_max):
     """
     Formats the X axis of a figure
     :param figure: LIN or LOG figure objects
     """
-    stations = [convert_station(station) for station in pem_file.get_unique_stations()]
+    component_data = list(filter(lambda d: d['Component'] == component, pem_file.data))
+    component_stations = [convert_station(station['Station']) for station in component_data]
     if x_min is None:
-        x_min = min(stations)
+        x_min = min(component_stations)
     if x_max is None:
-        x_max = max(stations)
+        x_max = max(component_stations)
     x_label_locator = ticker.AutoLocator()
-    major_locator = ticker.FixedLocator(sorted(stations))
+    major_locator = ticker.FixedLocator(sorted(component_stations))
     plt.xlim(x_min, x_max)
     figure.axes[0].xaxis.set_major_locator(major_locator)  # for some reason this seems to apply to all axes
     figure.axes[-1].xaxis.set_major_locator(x_label_locator)
+
+
+def format_yaxis(pem_file, figure, step=False):
+    """
+    Formats the Y axis of a figure. Will increase the limits of the scale if depending on the limits of the data.
+    :param figure: LIN, LOG or Step figure objects
+    """
+    axes = figure.axes[:-1]
+    survey_type = pem_file.survey_type
+
+    for ax in axes:
+        ax.get_yaxis().set_label_coords(-0.08 if step is False else -0.095, 0.5)
+
+        if ax.get_yscale() != 'symlog':
+            y_limits = ax.get_ylim()
+
+            if 'induction' in survey_type.lower():
+                if step is True:
+                    if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                        new_low = new_high * -1
+                    elif ax in axes[2:4] and (y_limits[1] - y_limits[0]) < 3:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+                        new_low = new_high * -1
+                    else:
+                        new_high = math.ceil(max(y_limits[1], 0))
+                        new_low = math.floor(min(y_limits[0], 0))
+                else:
+                    if (y_limits[1] - y_limits[0]) < 3:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+                        new_low = new_high * -1
+                    else:
+                        new_high = math.ceil(max(y_limits[1], 0))
+                        new_low = math.floor(min(y_limits[0], 0))
+
+            elif 'fluxgate' in survey_type.lower():
+                if step is True:
+                    if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                        new_low = new_high * -1
+                    elif ax == axes[2] and (y_limits[1] - y_limits[0]) < 3:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
+                        new_low = new_high * -1
+                    elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 30:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                        new_low = new_high * -1
+                    else:
+                        new_high = math.ceil(max(y_limits[1], 0))
+                        new_low = math.floor(min(y_limits[0], 0))
+                else:
+                    if (y_limits[1] - y_limits[0]) < 30:
+                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
+                        new_low = new_high * -1
+                    else:
+                        new_high = math.ceil(max(y_limits[1], 0))
+                        new_low = math.floor(min(y_limits[0], 0))
+
+            ax.set_ylim(new_low, new_high)
+            ax.set_yticks(ax.get_yticks())
+            ax.yaxis.set_major_locator(ticker.AutoLocator())
+            ax.set_yticks(ax.get_yticks())  # This is used twice to avoid half-integer tick values
+
+        elif ax.get_yscale() == 'symlog':
+            y_limits = ax.get_ylim()
+            new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 11), 10))
+            new_low = -1 * 10.0 ** math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
+            ax.set_ylim(new_low, new_high)
+
+            ax.tick_params(axis='y', which='major', labelrotation=90)
+            plt.setp(ax.get_yticklabels(), va='center')
+
+        ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
 
 
 def convert_station(station):
@@ -260,79 +333,6 @@ def draw_lines(pem_file, component, ax, channel_low, channel_high, hide_gaps=Tru
         if offset >= len(x_intervals) * 0.85:
             offset = len(x_intervals) * 0.10
 
-
-def format_yaxis(pem_file, figure, step=False):
-    """
-    Formats the Y axis of a figure. Will increase the limits of the scale if depending on the limits of the data.
-    :param figure: LIN, LOG or Step figure objects
-    """
-    axes = figure.axes[:-1]
-    survey_type = pem_file.survey_type
-
-    for ax in axes:
-        ax.get_yaxis().set_label_coords(-0.08 if step is False else -0.095, 0.5)
-
-        if ax.get_yscale() != 'symlog':
-            y_limits = ax.get_ylim()
-
-            if 'induction' in survey_type.lower():
-                if step is True:
-                    if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
-                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                        new_low = new_high * -1
-                    elif ax in axes[2:4] and (y_limits[1] - y_limits[0]) < 3:
-                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                        new_low = new_high * -1
-                    else:
-                        new_high = math.ceil(max(y_limits[1], 0))
-                        new_low = math.floor(min(y_limits[0], 0))
-                else:
-                    if (y_limits[1] - y_limits[0]) < 3:
-                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                        new_low = new_high * -1
-                    else:
-                        new_high = math.ceil(max(y_limits[1], 0))
-                        new_low = math.floor(min(y_limits[0], 0))
-
-            elif 'fluxgate' in survey_type.lower():
-                if step is True:
-                    if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
-                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                        new_low = new_high * -1
-                    elif ax == axes[2] and (y_limits[1] - y_limits[0]) < 3:
-                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                        new_low = new_high * -1
-                    elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 30:
-                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                        new_low = new_high * -1
-                    else:
-                        new_high = math.ceil(max(y_limits[1], 0))
-                        new_low = math.floor(min(y_limits[0], 0))
-                else:
-                    if (y_limits[1] - y_limits[0]) < 30:
-                        new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                        new_low = new_high * -1
-                    else:
-                        new_high = math.ceil(max(y_limits[1], 0))
-                        new_low = math.floor(min(y_limits[0], 0))
-
-            ax.set_ylim(new_low, new_high)
-            ax.set_yticks(ax.get_yticks())
-            ax.yaxis.set_major_locator(ticker.AutoLocator())
-            ax.set_yticks(ax.get_yticks())  # This is used twice to avoid half-integer tick values
-
-        elif ax.get_yscale() == 'symlog':
-            y_limits = ax.get_ylim()
-            new_high = 10.0 ** math.ceil(math.log(max(y_limits[1], 11), 10))
-            new_low = -1 * 10.0 ** math.ceil(math.log(max(abs(y_limits[0]), 11), 10))
-            ax.set_ylim(new_low, new_high)
-
-            ax.tick_params(axis='y', which='major', labelrotation=90)
-            plt.setp(ax.get_yticklabels(), va='center')
-
-        ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
-
-
 def add_title(pem_file, component, step=False):
     """
     Adds the title header to a figure
@@ -416,7 +416,7 @@ class LINPlotter:
         add_ylabels()
         format_figure(figure)
         format_yaxis(pem_file, figure, step=False)
-        format_xaxis(pem_file, figure, x_min, x_max)
+        format_xaxis(pem_file, component, figure, x_min, x_max)
         return figure
 
 
@@ -442,7 +442,7 @@ class LOGPlotter:
         add_ylabels()
         format_figure(figure)
         format_yaxis(pem_file, figure, step=False)
-        format_xaxis(pem_file, figure, x_min, x_max)
+        format_xaxis(pem_file, component, figure, x_min, x_max)
         return figure
 
 
@@ -1389,16 +1389,15 @@ if __name__ == '__main__':
         filepath = os.path.join(sample_files_dir, file)
         pem_file = parser().parse(filepath)
         print('File: ' + filepath)
-        # pem_files.append((pem_file, None))  # Empty second item for ri_files
-        pem_files.append(pem_file)
+        pem_files.append((pem_file, None))  # Empty second item for ri_files
+        # pem_files.append(pem_file)
     # file = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01NAv.PEM'
     # file = r'C:\_Data\2019\Eastern\Maritime Resources\WV-19-06\PEM\WV-19-06\WV-19-06 XYT.PEM'
     # pem_file = parser.parse(file)
-    crs = {'Coordinate System': 'UTM', 'Zone': '30 North', 'Datum': 'NAD 1983'}
-    fig = plt.figure(figsize=(11, 8.5))
-    pm = PlanMap(pem_files, fig, crs=crs, moving_loop=False)
-    map = pm.get_map()
-    plt.show()
-    # pm.make_plan_map(pem_files)
-    # printer = PEMPrinter(sample_files_dir, pem_files)
-    # printer.print_final_plots()
+    # crs = {'Coordinate System': 'UTM', 'Zone': '30 North', 'Datum': 'NAD 1983'}
+    # fig = plt.figure(figsize=(11, 8.5))
+    # pm = PlanMap(pem_files, fig, crs=crs, moving_loop=False)
+    # map = pm.get_map()
+    # plt.show()
+    printer = PEMPrinter(sample_files_dir, pem_files)
+    printer.print_final_plots()
