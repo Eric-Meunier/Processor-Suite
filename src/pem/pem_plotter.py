@@ -218,7 +218,7 @@ def get_profile_data(pem_file, component):
             station_number = int(convert_station(station['Station']))
             channel_data.append({'Station': station_number, 'Reading': reading})
 
-        profile_data[channel] = channel_data
+        profile_data[channel] = sorted(channel_data, key=lambda x: x['Station'])
 
     return profile_data
 

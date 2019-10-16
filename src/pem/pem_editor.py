@@ -1145,7 +1145,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
             self.dialog.setDirectory(default_path)
             # save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
-            save_dir = r'C:\_Data\2019\_Mowgli Testing'  # For testing purposes
+            save_dir = r'C:\_Data\2019\_Mowgli Testing\test'  # For testing purposes
             plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked(),
                            'LoopAnnotations': self.show_loop_anno_checkbox.isChecked(),
                            'MovingLoop': self.movingLoopCBox.isChecked(),
