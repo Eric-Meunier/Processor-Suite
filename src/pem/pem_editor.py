@@ -12,7 +12,7 @@ from itertools import chain
 
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
-                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QToolButton,
+                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QToolButton, QCheckBox,
                              QInputDialog, QHeaderView, QGridLayout, QTableWidget, QDialogButtonBox, QVBoxLayout)
 
 from src.pem.pem_file import PEMFile
@@ -37,16 +37,19 @@ if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
     editorWindowCreatorFile = 'qt_ui\\pem_editor_window.ui'
     lineNameEditorCreatorFile = 'qt_ui\\line_name_editor.ui'
+    planMapOptionsCreatorFile = 'qt_ui\\plan_map_options.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
     lineNameEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\line_name_editor.ui')
+    planMapOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\plan_map_options.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
 Ui_LineNameEditorWidget, QtBaseClass = uic.loadUiType(lineNameEditorCreatorFile)
+Ui_PlanMapOptionsWidget, QtBaseClass = uic.loadUiType(planMapOptionsCreatorFile)
 
 sys._excepthook = sys.excepthook
 
@@ -110,7 +113,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.gpx_editor = GPXEditor()
         self.serializer = PEMSerializer()
         self.ri_importer = BatchRIImporter(parent=self)
-
+        self.plan_map_options = PlanMapOptions(parent=self)
         # self.layout.addWidget(self)
         # self.setCentralWidget(self.table)
 
@@ -252,6 +255,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.table.itemSelectionChanged.connect(self.display_pem_info_widget)
         self.table.cellChanged.connect(self.table_value_changed)
+
+        self.plan_map_options_btn.clicked.connect(self.plan_map_options.show)
 
         self.share_header_gbox.toggled.connect(self.toggle_share_header)
         self.share_client_cbox.stateChanged.connect(self.toggle_share_client)
@@ -1126,16 +1131,37 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pass
 
     def print_plots(self, final=False, step=False, plan=False):
+
+        def get_crs():
+            crs = {}
+            crs['Coordinate System'] = self.systemCBox.currentText()
+            crs['Zone'] = self.zoneCBox.currentText()
+            crs['Datum'] = self.datumCBox.currentText()
+            return crs
+
         print('Saving plots')
-        if len(self.pem_files)>0:
+        if len(self.pem_files) > 0:
             self.window().statusBar().showMessage('Saving plots...')
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
             self.dialog.setDirectory(default_path)
             # save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
-            save_dir = r'C:\_Data\2019\_Mowgli Testing'
+            save_dir = r'C:\_Data\2019\_Mowgli Testing'  # For testing purposes
             plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked(),
                            'LoopAnnotations': self.show_loop_anno_checkbox.isChecked(),
-                           'MovingLoop': self.movingLoopCBox.isChecked()}
+                           'MovingLoop': self.movingLoopCBox.isChecked(),
+                           'TitleBox': self.plan_map_options.title_box_cbox.isChecked(),
+                           'Grid': self.plan_map_options.grid_cbox.isChecked(),
+                           'ScaleBar': self.plan_map_options.scale_bar_cbox.isChecked(),
+                           'NorthArrow': self.plan_map_options.north_arrow_cbox.isChecked(),
+                           'DrawLoops': self.plan_map_options.draw_loops_cbox.isChecked(),
+                           'DrawLines': self.plan_map_options.draw_lines_cbox.isChecked(),
+                           'DrawHoleCollars': self.plan_map_options.draw_hole_collars_cbox.isChecked(),
+                           'DrawHoleTraces': self.plan_map_options.draw_hole_traces_cbox.isChecked(),
+                           'LoopLabels': self.plan_map_options.loop_labels_cbox.isChecked(),
+                           'LineLabels': self.plan_map_options.line_labels_cbox.isChecked(),
+                           'HoleCollarLabels': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
+                           'HoleDepthLabel': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
+                           'CRS': get_crs()}
 
             if save_dir:
                 pem_files_selection, rows = self.get_selected_pem_files()
@@ -1664,6 +1690,59 @@ class BatchRIImporter(QWidget):
             self.message.information(None, "Error", "Length of RI files must be equal to length of PEM files")
 
 
+class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
+    # acceptImportSignal = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.setupUi(self)
+        self.setWindowTitle("Plan Map Options")
+        self.initSignals()
+
+    def initSignals(self):
+        self.all_btn.clicked.connect(self.toggle_all)
+        self.none_btn.clicked.connect(self.toggle_none)
+        self.buttonBox.rejected.connect(self.close)
+        self.buttonBox.accepted.connect(self.close)
+
+    def toggle_all(self):
+        self.title_box_cbox.setChecked(True)
+        self.grid_cbox.setChecked(True)
+        self.north_arrow_cbox.setChecked(True)
+        self.scale_bar_cbox.setChecked(True)
+        self.draw_loops_cbox.setChecked(True)
+        self.draw_lines_cbox.setChecked(True)
+        self.draw_hole_collars_cbox.setChecked(True)
+        self.draw_hole_traces_cbox.setChecked(True)
+        self.loop_labels_cbox.setChecked(True)
+        self.line_labels_cbox.setChecked(True)
+        self.hole_collar_labels_cbox.setChecked(True)
+        self.hole_depth_labels_cbox.setChecked(True)
+
+    def toggle_none(self):
+        self.title_box_cbox.setChecked(False)
+        self.grid_cbox.setChecked(False)
+        self.north_arrow_cbox.setChecked(False)
+        self.scale_bar_cbox.setChecked(False)
+        self.draw_loops_cbox.setChecked(False)
+        self.draw_lines_cbox.setChecked(False)
+        self.draw_hole_collars_cbox.setChecked(False)
+        self.draw_hole_traces_cbox.setChecked(False)
+        self.loop_labels_cbox.setChecked(False)
+        self.line_labels_cbox.setChecked(False)
+        self.hole_collar_labels_cbox.setChecked(False)
+        self.hole_depth_labels_cbox.setChecked(False)
+
+    def closeEvent(self, e):
+        e.accept()
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
+        elif e.key() == QtCore.Qt.Key_Return:
+            self.close()
+
 def main():
     app = QApplication(sys.argv)
     mw = PEMEditorWindow()
@@ -1678,7 +1757,7 @@ def main():
     #     file_paths.append(os.path.join(sample_files, file))
     # # (mw.open_files(file_paths))
 
-    mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6000E-LP116.PEM')
+    mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
     # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\1200NAv.PEM')

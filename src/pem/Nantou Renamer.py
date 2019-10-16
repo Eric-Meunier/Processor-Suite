@@ -19,8 +19,8 @@ if __name__ == '__main__':
 
         loop = pem_file.header.get('Loop')
         line = pem_file.header.get('LineHole')
-        # new_name = f"{line.split('0')[0]}EL{loop.split('-')[-1]}"
-        new_name = f"{line.split('E')[0]}00E"
+        new_name = f"{line.split('0')[0]}EL{loop.split('-')[-1]}"
+        # new_name = f"{line.split('E')[0]}00E"
         print(f"Loop: {loop}\nLine: {line}\nNew Name: {new_name}\n\n")
         pem_file.header['LineHole'] = new_name
 

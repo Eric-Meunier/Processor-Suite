@@ -9,6 +9,7 @@ from math import hypot
 from os.path import isfile, join
 from src.gps.gpx import gpxpy
 from pyproj import Proj
+import utm
 
 import numpy as np
 from scipy import spatial
@@ -316,11 +317,12 @@ class GPXEditor:
             units = row[3]
             name = row[4]
             stn = re.findall('\d+', re.split('-', name)[-1])
-            hemisphere = 'north' if lat >= 0 else 'south'
-            zone = math.floor((lon+180)/6) + 1  # Calculate the zone number
-            myProj = Proj(f"+proj=utm +zone={zone},\+{hemisphere} +ellps=WGS84 +datum=WGS84 +units=m +no_defs")  # north for north hemisphere
-            UTMx, UTMy = myProj(lon, lat)
-            utm_gps.append([UTMx, UTMy, elevation, units, stn])
+            u = utm.from_latlon(lat, lon)
+            # hemisphere = 'north' if lat >= 0 else 'south'
+            # zone = math.floor((lon+180)/6) + 1  # Calculate the zone number
+            # myProj = Proj(f"+proj=utm +zone={zone},\+{hemisphere} +ellps=WGS84 +datum=WGS84 +units=m +no_defs")  # north for north hemisphere
+            # UTMx, UTMy = myProj(lon, lat)
+            utm_gps.append([u[0], u[1], elevation, units, stn])
         return utm_gps, zone, hemisphere
 
     def get_lat_long(self, gpx_filepath):

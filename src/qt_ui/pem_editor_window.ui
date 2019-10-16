@@ -264,16 +264,23 @@
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_4">
              <item>
-              <widget class="QCheckBox" name="show_loop_anno_checkbox">
+              <widget class="QCheckBox" name="movingLoopCBox">
                <property name="text">
-                <string>Show Loop Annotations</string>
+                <string>Moving Loop</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="movingLoopCBox">
+              <widget class="QCheckBox" name="show_loop_anno_checkbox">
                <property name="text">
-                <string>Moving Loop</string>
+                <string>Loop Annotations</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="plan_map_options_btn">
+               <property name="text">
+                <string>Options</string>
                </property>
               </widget>
              </item>
