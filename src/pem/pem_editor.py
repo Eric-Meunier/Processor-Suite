@@ -1153,6 +1153,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                            'Grid': self.plan_map_options.grid_cbox.isChecked(),
                            'ScaleBar': self.plan_map_options.scale_bar_cbox.isChecked(),
                            'NorthArrow': self.plan_map_options.north_arrow_cbox.isChecked(),
+                           'Legend': self.plan_map_options.legend_cbox.isChecked(),
                            'DrawLoops': self.plan_map_options.draw_loops_cbox.isChecked(),
                            'DrawLines': self.plan_map_options.draw_lines_cbox.isChecked(),
                            'DrawHoleCollars': self.plan_map_options.draw_hole_collars_cbox.isChecked(),
@@ -1711,6 +1712,7 @@ class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
         self.grid_cbox.setChecked(True)
         self.north_arrow_cbox.setChecked(True)
         self.scale_bar_cbox.setChecked(True)
+        self.legend_cbox.setChecked(True)
         self.draw_loops_cbox.setChecked(True)
         self.draw_lines_cbox.setChecked(True)
         self.draw_hole_collars_cbox.setChecked(True)
@@ -1725,6 +1727,7 @@ class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
         self.grid_cbox.setChecked(False)
         self.north_arrow_cbox.setChecked(False)
         self.scale_bar_cbox.setChecked(False)
+        self.legend_cbox.setChecked(False)
         self.draw_loops_cbox.setChecked(False)
         self.draw_lines_cbox.setChecked(False)
         self.draw_hole_collars_cbox.setChecked(False)

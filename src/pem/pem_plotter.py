@@ -54,7 +54,7 @@ line_color = 'black'
 
 def natural_sort(list):
     convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ]
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
     return sorted(list, key=alphanum_key)
 
 
@@ -665,6 +665,7 @@ class PlanMap:
         self.map_grid = kwargs.get('Grid')
         self.scale_bar = kwargs.get('ScaleBar')
         self.north_arrow = kwargs.get('NorthArrow')
+        self.show_legend = kwargs.get('Legend')
         self.draw_loops = kwargs.get('DrawLoops')
         self.draw_lines = kwargs.get('DrawLines')
         self.draw_hole_collars = kwargs.get('DrawHoleCollars')
@@ -673,7 +674,7 @@ class PlanMap:
         self.line_labels = kwargs.get('LineLabels')
         self.hole_collar_labels = kwargs.get('HoleCollarLabels')
         self.hole_depth_labels = kwargs.get('HoleDepthLabels')
-        self.crs = kwargs.get('CRS')
+        self.crs = self.get_crs(kwargs.get('CRS'))
 
         self.gps_editor = GPSEditor
         self.ax = self.fig.add_subplot(projection=self.crs)
@@ -728,8 +729,10 @@ class PlanMap:
                 northings.insert(0, northings[-1])
                 zorder = 4 if not self.moving_loop else 5
                 if self.loop_labels:
-                    loop_label = self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}", ha='center',
-                             color=self.color, zorder=zorder, path_effects=label_buffer)  # Add the loop name
+                    loop_label = self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}",
+                                              ha='center',
+                                              color=self.color, zorder=zorder,
+                                              path_effects=label_buffer)  # Add the loop name
 
                 self.loop_handle, = self.ax.plot(eastings, northings, color=self.color, label='Transmitter Loop',
                                                  transform=self.crs, zorder=2)  # Plot the loop
@@ -756,10 +759,10 @@ class PlanMap:
                 eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
                 if self.line_labels:
                     line_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
-                                            label_xy=(float(line_gps[0][0]), float(line_gps[0][1])),
-                                            p=(eastings[0], northings[0]), pa=(eastings[-1], northings[-1]),
-                                            va='bottom', ha='center', color=self.color, zorder=5,
-                                            path_effects=label_buffer)
+                                                label_xy=(float(line_gps[0][0]), float(line_gps[0][1])),
+                                                p=(eastings[0], northings[0]), pa=(eastings[-1], northings[-1]),
+                                                va='bottom', ha='center', color=self.color, zorder=5,
+                                                path_effects=label_buffer)
                     self.labels.append(line_label)
                 # marker_rotation = get_rotation(eastings, northings)
                 self.station_handle, = self.ax.plot(eastings, northings, '-o', markersize=3, color=self.color,
@@ -801,11 +804,11 @@ class PlanMap:
                     # Add the hole label at the collar
                     if self.hole_collar_labels:
                         collar_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
-                                                  label_xy=(collar_x, collar_y),
-                                                  p=(seg_x[0], seg_y[0]), pa=(seg_x[1], seg_y[1]), ax=self.ax,
-                                                  hole_collar=True,
-                                                  va='bottom', ha='center', color=self.color, zorder=4,
-                                                  path_effects=label_buffer)
+                                                      label_xy=(collar_x, collar_y),
+                                                      p=(seg_x[0], seg_y[0]), pa=(seg_x[1], seg_y[1]), ax=self.ax,
+                                                      hole_collar=True,
+                                                      va='bottom', ha='center', color=self.color, zorder=4,
+                                                      path_effects=label_buffer)
                         self.labels.append(collar_label)
 
                     if seg_x and seg_y and self.draw_hole_traces is True:
@@ -814,11 +817,11 @@ class PlanMap:
 
                         # Adding the ticks on the hole trace
                         f_interp_seg = interp1d(seg_x, seg_y, kind='linear')
-                        new_seg_x = np.arange(seg_x[0], seg_x[-1], (seg_x[-1]-seg_x[0])/12)
+                        new_seg_x = np.arange(seg_x[0], seg_x[-1], (seg_x[-1] - seg_x[0]) / 12)
                         interp_seg_y = f_interp_seg(new_seg_x)
                         for i, (x_seg, y_seg) in enumerate(list(zip(new_seg_x, interp_seg_y))[:-1]):
                             pa = (x_seg, y_seg)
-                            p = (new_seg_x[i+1], interp_seg_y[i+1])
+                            p = (new_seg_x[i + 1], interp_seg_y[i + 1])
                             tick = RotnAnnotation("|", label_xy=p, p=p, pa=pa, ax=self.ax,
                                                   hole_collar=False, va='center', ha='center', rotation_mode='anchor',
                                                   fontsize=6, color=self.color)
@@ -833,11 +836,11 @@ class PlanMap:
                         # Label the depth of the hole
                         if self.hole_depth_labels:
                             bh_depth = RotnAnnotation(f" {float(segments[-1][-1]):.0f} m",
-                                                  label_xy=(seg_x[-1], seg_y[-1]),
-                                                  p=(seg_x[-2], seg_y[-2]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
-                                                  hole_collar=True,
-                                                  va='bottom', ha='left', fontsize=8, color=self.color,
-                                                  path_effects=label_buffer, zorder=4)
+                                                      label_xy=(seg_x[-1], seg_y[-1]),
+                                                      p=(seg_x[-2], seg_y[-2]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
+                                                      hole_collar=True,
+                                                      va='bottom', ha='left', fontsize=8, color=self.color,
+                                                      path_effects=label_buffer, zorder=4)
                 else:
                     pass
 
@@ -945,17 +948,17 @@ class PlanMap:
             if current_ratio < (bbox.width / bbox.height):
                 new_height = map_height
                 new_width = new_height * (
-                            bbox.width / bbox.height)  # Set the new width to be the correct ratio larger than height
+                        bbox.width / bbox.height)  # Set the new width to be the correct ratio larger than height
 
             else:
                 new_width = map_width
                 new_height = new_width * (bbox.height / bbox.width)
-            x_offset = 0.1 * (new_width)
-            y_offset = 0.1 * (new_height)
-            new_xmin = (xmin-x_offset) - ((new_width - map_width) / 2)
-            new_xmax = (xmax-x_offset) + ((new_width - map_width) / 2)
-            new_ymin = (ymin+y_offset) - ((new_height - map_height) / 2)
-            new_ymax = (ymax+y_offset) + ((new_height - map_height) / 2)
+            x_offset = 0.075 * (new_width)
+            y_offset = 0.075 * (new_height)
+            new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
+            new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
+            new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
+            new_ymax = (ymax + y_offset) + ((new_height - map_height) / 2)
 
             self.ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
 
@@ -1041,7 +1044,7 @@ class PlanMap:
                          fontname='Century Gothic', fontsize=11, ha='center', zorder=10, transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.020, f"{'Line' if 'surface' in self.survey_type else 'Hole'}"
-                         f" and Loop Location Map", family='cursive',
+            f" and Loop Location Map", family='cursive',
                          fontname='Century Gothic', fontsize=10, ha='center', zorder=10, transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.040, f"{self.survey_type.title()} Pulse EM Survey", family='cursive',
@@ -1049,7 +1052,7 @@ class PlanMap:
                          fontname='Century Gothic', fontsize=9, ha='center', zorder=10, transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
-                         f"{loop_text if 'surface' in self.survey_type else hole}",
+            f"{loop_text if 'surface' in self.survey_type else hole}",
                          fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
                          transform=self.ax.transAxes)
 
@@ -1116,8 +1119,8 @@ class PlanMap:
 
         if self.map_grid:
             plt.grid(linestyle='dotted', zorder=0)
-            self.ax.xaxis.set_visible(True)  # Required to actually get the labels to show in UTM
-            self.ax.yaxis.set_visible(True)
+        self.ax.xaxis.set_visible(True)  # Required to actually get the labels to show in UTM
+        self.ax.yaxis.set_visible(True)
         self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
         self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
         self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
@@ -1135,14 +1138,17 @@ class PlanMap:
         if self.title_box:
             add_title()
 
-        legend_handles = [handle for handle in
-                          [self.loop_handle, self.station_handle, self.collar_handle] if
-                          handle is not None]
-        # Manually add the hole trace legend handle
-        if self.draw_hole_traces and 'borehole' in self.survey_type:
-            legend_handles.append(mlines.Line2D([], [], linestyle='--', color=self.color, marker='|', label='Borehole Trace'))
-        self.ax.legend(handles=legend_handles, title='Legend', loc='lower right', framealpha=1, shadow=True,
-                       edgecolor='k')
+        if self.show_legend:
+            legend_handles = [handle for handle in
+                              [self.loop_handle, self.station_handle, self.collar_handle] if
+                              handle is not None]
+            # Manually add the hole trace legend handle
+            if self.draw_hole_traces and 'borehole' in self.survey_type:
+                legend_handles.append(
+                    mlines.Line2D([], [], linestyle='--', color=self.color, marker='|', label='Borehole Trace'))
+
+            self.ax.legend(handles=legend_handles, title='Legend', loc='lower right', framealpha=1, shadow=True,
+                           edgecolor='k')
 
     def get_map(self):
         if any([self.loops, self.lines, self.collars, self.holes]):
