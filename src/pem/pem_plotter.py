@@ -28,6 +28,7 @@ from scipy import interpolate
 from scipy import stats
 
 from src.gps.gps_editor import GPSEditor
+from src.pem.pem_getter import PEMGetter
 from src.pem.pem_parser import PEMParser
 
 __version__ = '0.0.1'
@@ -359,7 +360,7 @@ def add_title(pem_file, component, step=False):
                 f"Current: {float(pem_file.tags.get('Current')):.1f} A",
                 fontname='Century Gothic', fontsize=10, va='top')
 
-    plt.figtext(0.550, 0.935, f"{s_title} : {header.get('LineHole')}\n" +
+    plt.figtext(0.550, 0.935, f"{s_title}: {header.get('LineHole')}\n" +
                 f"Loop: {header.get('Loop')}\n" +
                 f"{component} Component",
                 fontname='Century Gothic', fontsize=10, va='top', ha='center')
@@ -571,7 +572,7 @@ class STEPPlotter:
         add_ylabel(profile_data, num_channels_to_plot)
         format_figure(figure, step=True)
         format_yaxis(pem_file, figure, step=True)
-        format_xaxis(pem_file, figure, x_min, x_max)
+        format_xaxis(pem_file, component, figure, x_min, x_max)
         return figure
 
 
@@ -594,7 +595,9 @@ class RotnAnnotation(mtext.Annotation):
         if not pa:
             self.pa = label_xy
         self.calc_angle_data()
-        # kwargs.update(rotation_mode=kwargs.get("rotation_mode", "anchor"), xycoords='axes faction', xytext=(0.01, 0.01), textcoords='offset points')
+        kwargs.update(rotation_mode=kwargs.get("rotation_mode", "anchor"))
+        # if self.hole_collar:
+        #     kwargs.update(xytext=(2, 2), textcoords='offset points')
         mtext.Annotation.__init__(self, label_str, label_xy, **kwargs)
         self.set_transform(mtransforms.IdentityTransform())
         if 'clip_on' in kwargs:
@@ -612,7 +615,6 @@ class RotnAnnotation(mtext.Annotation):
         self.angle_data = deg
 
     def calc_xy_offset(self):
-
         pass
 
     def _get_rotation(self):
@@ -659,46 +661,27 @@ class PlanMap:
         self.zone = None
         self.datum = None
 
-        self.draw_loop_annotations = kwargs.get('LoopAnnotations')
-        self.moving_loop = kwargs.get('MovingLoop')
-        self.title_box = kwargs.get('TitleBox')
-        self.map_grid = kwargs.get('Grid')
-        self.scale_bar = kwargs.get('ScaleBar')
-        self.north_arrow = kwargs.get('NorthArrow')
-        self.show_legend = kwargs.get('Legend')
-        self.draw_loops = kwargs.get('DrawLoops')
-        self.draw_lines = kwargs.get('DrawLines')
-        self.draw_hole_collars = kwargs.get('DrawHoleCollars')
-        self.draw_hole_traces = kwargs.get('DrawHoleTraces')
-        self.loop_labels = kwargs.get('LoopLabels')
-        self.line_labels = kwargs.get('LineLabels')
-        self.hole_collar_labels = kwargs.get('HoleCollarLabels')
-        self.hole_depth_labels = kwargs.get('HoleDepthLabels')
-        self.crs = self.get_crs(kwargs.get('CRS'))
+        self.draw_loop_annotations = kwargs.get('LoopAnnotations') or False
+        self.moving_loop = kwargs.get('MovingLoop') or True
+        self.title_box = kwargs.get('TitleBox') or True
+        self.map_grid = kwargs.get('Grid') or True
+        self.scale_bar = kwargs.get('ScaleBar') or True
+        self.north_arrow = kwargs.get('NorthArrow') or True
+        self.show_legend = kwargs.get('Legend') or True
+        self.draw_loops = kwargs.get('DrawLoops') or True
+        self.draw_lines = kwargs.get('DrawLines') or True
+        self.draw_hole_collars = kwargs.get('DrawHoleCollars') or True
+        self.draw_hole_traces = kwargs.get('DrawHoleTraces') or True
+        self.loop_labels = kwargs.get('LoopLabels') or True
+        self.line_labels = kwargs.get('LineLabels') or True
+        self.hole_collar_labels = kwargs.get('HoleCollarLabels') or True
+        self.hole_depth_labels = kwargs.get('HoleDepthLabels') or True
+        self.crs = self.get_crs(kwargs.get('CRS')) or self.get_crs({'Coordinate System': 'UTM', 'Zone': '10 North', 'Datum': 'WGS 1984'})
 
         self.gps_editor = GPSEditor
         self.ax = self.fig.add_subplot(projection=self.crs)
         # self.inset_ax = self.fig.add_axes([0.1, 0.5, 0.5, 0.3], projection=self.crs)
-
         self.plot_pems()
-        # self.get_map()
-
-    # def get_rotation(self, xs, ys):
-    #     """
-    #     Get the real axes rotation value between two points
-    #     :param xs: list of X coordinates of the two points
-    #     :param ys: list of Y coordinates of the two points
-    #     :return: Rotation value that aligns properly between p1 and p2
-    #     """
-    #     p1 = self.ax.transData.transform_point((xs[0], ys[0]))
-    #     p2 = self.ax.transData.transform_point((xs[1], ys[1]))
-    #     dy = (p2[1] - p1[1])
-    #     dx = (p2[0] - p1[0])
-    #     rotn = np.degrees(np.arctan2(dy, dx))
-    #     if rotn > 90 or rotn < -90:
-    #         return rotn - 180
-    #     else:
-    #         return rotn
 
     def get_crs(self, crs):
         if crs is None:
@@ -727,7 +710,7 @@ class PlanMap:
                 eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
                 eastings.insert(0, eastings[-1])  # To close up the loop
                 northings.insert(0, northings[-1])
-                zorder = 4 if not self.moving_loop else 5
+                zorder = 4 if not self.moving_loop else 6
                 if self.loop_labels:
                     loop_label = self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}",
                                               ha='center',
@@ -813,15 +796,21 @@ class PlanMap:
 
                     if seg_x and seg_y and self.draw_hole_traces is True:
                         self.trace_handle, = self.ax.plot(seg_x, seg_y, '--', color=self.color, label='Borehole Trace',
-                                                          zorder=2)
+                                                          zorder=2, markersize=16)
+
+                        # for i, (x, y) in enumerate(zip(seg_x[:-1], seg_y[:-1])):
+                        #     self.ax.annotate('', xy=(x, y), xycoords='data', xytext=(seg_x[i+1], seg_y[i+1]),
+                        #                      arrowprops=dict(arrowstyle='|-|', connectionstyle='arc3'))
 
                         # Adding the ticks on the hole trace
                         f_interp_seg = interp1d(seg_x, seg_y, kind='linear')
-                        new_seg_x = np.arange(seg_x[0], seg_x[-1], (seg_x[-1] - seg_x[0]) / 12)
+                        new_seg_x = np.linspace(seg_x[0], seg_x[-1], num=100)
                         interp_seg_y = f_interp_seg(new_seg_x)
-                        for i, (x_seg, y_seg) in enumerate(list(zip(new_seg_x, interp_seg_y))[:-1]):
-                            pa = (x_seg, y_seg)
-                            p = (new_seg_x[i + 1], interp_seg_y[i + 1])
+                        for i, (x, y) in enumerate(zip(new_seg_x[:-1:int(len(new_seg_x/12))], interp_seg_y[:-1:int(len(new_seg_x/12))])):
+                            pa = (x, y)
+                            p = (new_seg_x[i + 10], interp_seg_y[i + 10])
+                            # self.ax.annotate('', xy=pa, xycoords='data', xytext=p,
+                            #              arrowprops=dict(arrowstyle='|-|', connectionstyle='arc3'))
                             tick = RotnAnnotation("|", label_xy=p, p=p, pa=pa, ax=self.ax,
                                                   hole_collar=False, va='center', ha='center', rotation_mode='anchor',
                                                   fontsize=6, color=self.color)
@@ -953,8 +942,8 @@ class PlanMap:
             else:
                 new_width = map_width
                 new_height = new_width * (bbox.height / bbox.width)
-            x_offset = 0.075 * (new_width)
-            y_offset = 0.075 * (new_height)
+            x_offset = 0.06 * (new_width)
+            y_offset = 0.06 * (new_height)
             new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
             new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
             new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
@@ -1377,27 +1366,11 @@ class PEMPrinter:
 #     """
 
 if __name__ == '__main__':
-    parser = PEMParser
-    # # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-    sample_files_dir = r'C:\_Data\2019\_Mowgli Testing'
-    file_names = [f for f in os.listdir(sample_files_dir) if
-                  os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
-    pem_files = []
-
-    # file = os.path.join(sample_files, file_names[0])
-    for file in file_names:
-        filepath = os.path.join(sample_files_dir, file)
-        pem_file = parser().parse(filepath)
-        print('File: ' + filepath)
-        pem_files.append((pem_file, None))  # Empty second item for ri_files
-        # pem_files.append(pem_file)
-    # file = r'C:\_Data\2019\BMSC\Surface\MO-254\PEM\254-01NAv.PEM'
-    # file = r'C:\_Data\2019\Eastern\Maritime Resources\WV-19-06\PEM\WV-19-06\WV-19-06 XYT.PEM'
-    # pem_file = parser.parse(file)
-    # crs = {'Coordinate System': 'UTM', 'Zone': '30 North', 'Datum': 'NAD 1983'}
-    # fig = plt.figure(figsize=(11, 8.5))
-    # pm = PlanMap(pem_files, fig, crs=crs, moving_loop=False)
-    # map = pm.get_map()
-    # plt.show()
-    printer = PEMPrinter(sample_files_dir, pem_files)
-    printer.print_final_plots()
+    pem_getter = PEMGetter()
+    pem_files = pem_getter.get_pems()
+    fig = plt.figure(figsize=(11, 8.5))
+    pm = PlanMap(pem_files, fig)
+    map = pm.get_map()
+    plt.show()
+    # printer = PEMPrinter(sample_files_dir, pem_files)
+    # printer.print_final_plots()

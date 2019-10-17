@@ -21,6 +21,7 @@ from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_plotter import PEMPrinter
 from src.pem.pem_serializer import PEMSerializer
+from src.pem.pem_getter import PEMGetter
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.ri.ri_file import RIFile
 
@@ -1144,8 +1145,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('Saving plots...')
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
             self.dialog.setDirectory(default_path)
-            # save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
-            save_dir = r'C:\_Data\2019\_Mowgli Testing\test'  # For testing purposes
+            if __name__ == '__main__':
+                save_dir = r'C:\_Data\2019\_Mowgli Testing\test'  # For testing purposes
+            else:
+                save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
+
             plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked(),
                            'LoopAnnotations': self.show_loop_anno_checkbox.isChecked(),
                            'MovingLoop': self.movingLoopCBox.isChecked(),
@@ -1750,17 +1754,10 @@ def main():
     app = QApplication(sys.argv)
     mw = PEMEditorWindow()
     mw.show()
-
-    # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-    # file_names = [f for f in os.listdir(sample_files) if
-    #               os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
-    # file_paths = []
-    #
-    # for file in file_names:
-    #     file_paths.append(os.path.join(sample_files, file))
-    # # (mw.open_files(file_paths))
-
-    mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
+    pg = PEMGetter()
+    pem_files = pg.get_pems()
+    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
     # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\1200NAv.PEM')

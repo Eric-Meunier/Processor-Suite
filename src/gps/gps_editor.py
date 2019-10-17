@@ -196,14 +196,16 @@ class GPSParser:
     """
 
     def __init__(self):
+        # self.re_station_gps = re.compile(
+        #     r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
         self.re_station_gps = re.compile(
-            r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
+            r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\w+)?')
         self.re_loop_gps = re.compile(
             r'(?P<Easting>\d{4,}\.?\d*)\W+(?P<Northing>\d{4,}\.?\d*)\W+(?P<Elevation>\d{1,4}\.?\d*)\W*(?P<Units>0|1)?.*')
         self.re_collar_gps = re.compile(
             r'(?P<Easting>\d{4,}\.?\d*)[\s\t,]+(?P<Northing>\d{4,}\.?\d*)[\s\t,]+(?P<Elevation>\d{1,4}\.?\d*)[\s\t,]+(?P<Units>0|1)?\s*?')
         self.re_segment = re.compile(
-            r'(?P<Azimuth>\d{1,3}\.?\d*)[\s\t,]+(?P<Dip>\d{1,3}\.?\d*)[\s\t,]+(?P<SegLength>\d{1,3}\.?\d*)[\s\t,]+(?P<Units>0|1|2)[\s\t,]+(?P<Depth>\d{1,4}\.?\d*)')
+            r'(?P<Azimuth>-?\d{0,3}\.?\d*)[\s\t,]+(?P<Dip>-?\d{1,3}\.?\d*)[\s\t,]+(?P<SegLength>\d{1,3}\.?\d*)[\s\t,]+(?P<Units>0|1|2)[\s\t,]+(?P<Depth>\d{1,4}\.?\d*)')
 
     def open(self, filepath):  # Not needed, done in PEMEditor.
         self.filepath = filepath
@@ -236,13 +238,17 @@ class GPSParser:
 
         if raw_gps:
             for i, row in enumerate(raw_gps):
-                station = row.pop(-1)
-                if re.search('[swSW]', station):
-                    raw_gps[i].append('-' + str(re.sub('[swSW]', '', station)))
-                elif re.search('[neNE]', station):
-                    raw_gps[i].append(str(re.sub('[neNE]', '', station)))
+                station = row.pop(4)
+                if station:
+                    station = re.findall('-?\d+[NSEWnsew]?', station)[0]
+                    if re.search('[swSW]', station):
+                        raw_gps[i].append('-' + str(re.sub('[swSW]', '', station)))
+                    elif re.search('[neNE]', station):
+                        raw_gps[i].append(str(re.sub('[neNE]', '', station)))
+                    else:
+                        raw_gps[i].append(station)
                 else:
-                    raw_gps[i].append(station)
+                    raw_gps[i].append(9999)
             return raw_gps
         else:
             return []
@@ -336,14 +342,16 @@ class GPXEditor:
 def main():
     samples_path = r'C:\_Data\2019\_Mowgli Testing'
     file_names = [f for f in os.listdir(samples_path) if
-                  isfile(join(samples_path, f)) and f.lower().endswith('.gpx')]
+                  isfile(join(samples_path, f)) and f.lower().endswith('.txt')]
     file_paths = []
-    gpx_editor = GPXEditor
+    gps_editor = GPSEditor()
+    gps_parser = GPSParser()
     for file in file_names:
         file_paths.append(join(samples_path, file))
 
     for filepath in file_paths:
-        gpx_editor().get_utm(filepath)
+        file = gps_parser.open(filepath)
+        gps_editor.get_station_gps(file)
 
 
 if __name__ == '__main__':
