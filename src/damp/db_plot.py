@@ -43,7 +43,7 @@ Ui_DB_Window, QtBaseClass = uic.loadUiType(DB_Window_qtCreatorFile)
 Ui_DB_Widget, QtBaseClass = uic.loadUiType(DB_Widget_qtCreatorFile)
 
 
-class DBPlot(QMainWindow, Ui_DB_Window):
+class DBPlot(QMainWindow): #, Ui_DB_Window):
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
@@ -71,7 +71,11 @@ class DBPlot(QMainWindow, Ui_DB_Window):
             qtRectangle.moveCenter(centerPoint)
             self.move(qtRectangle.topLeft())
 
-        self.setupUi(self)
+        # self.setupUi(self)
+        grid_layout = QGridLayout()
+        self.setLayout(grid_layout)
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
         self.setWindowTitle("DB Plot  v" + str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'db_plot 24.png')))
@@ -408,12 +412,13 @@ class DampParser:
         return damp_data
 
 
-class DampPlot(QWidget, Ui_DB_Widget):
+class DampPlot(QWidget):#, Ui_DB_Widget):
 
     def __init__(self, file, show_coords=False, grid=True, show_symbols=True, parent=None):
         super(DampPlot, self).__init__(parent=parent)
-        self.setupUi(self)
-
+        # self.setupUi(self)
+        grid_layout = QGridLayout()
+        self.setLayout(grid_layout)
         self.parent = parent
         self.pw = None
         self.__axisTime = AxisTime(orientation='bottom')

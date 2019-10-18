@@ -122,7 +122,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.pemInfoDockWidget.hide()
         self.plotsDockWidget.hide()
         # self.plotsDockWidget.setWidget(self.tabWidget)
-        # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dockWidget)
+        # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.stackedWidget)
 
     def initActions(self):
         self.setAcceptDrops(True)
@@ -259,7 +259,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.plan_map_options_btn.clicked.connect(self.plan_map_options.show)
 
-        self.share_header_gbox.toggled.connect(self.toggle_share_header)
         self.share_client_cbox.stateChanged.connect(self.toggle_share_client)
         self.share_grid_cbox.stateChanged.connect(self.toggle_share_grid)
         self.share_loop_cbox.stateChanged.connect(self.toggle_share_loop)
@@ -981,9 +980,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             datum = self.datumCBox.currentText()
 
             if any([system, zone, datum]):
-                for i, note in enumerate(reversed(pem_file.notes)):
+                for note in reversed(pem_file.notes):
                     if '<GEN> CRS' in note:
-                        del pem_file.notes[i]
+                        del pem_file.notes[pem_file.notes.index(note)]
 
                 pem_file.notes.append(f"<GEN> CRS: {system}{zone}, {datum}")
 
@@ -1134,21 +1133,23 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def print_plots(self, final=False, step=False, plan=False):
 
         def get_crs():
-            crs = {}
-            crs['Coordinate System'] = self.systemCBox.currentText()
-            crs['Zone'] = self.zoneCBox.currentText()
-            crs['Datum'] = self.datumCBox.currentText()
+            crs = {'Coordinate System': self.systemCBox.currentText(),
+                   'Zone': self.zoneCBox.currentText(),
+                   'Datum': self.datumCBox.currentText()}
             return crs
 
-        print('Saving plots')
-        if len(self.pem_files) > 0:
-            self.window().statusBar().showMessage('Saving plots...')
+        def get_save_file():
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
             self.dialog.setDirectory(default_path)
             if __name__ == '__main__':
                 save_dir = r'C:\_Data\2019\_Mowgli Testing\test'  # For testing purposes
             else:
                 save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
+            return save_dir
+
+        print('Saving plots')
+        if len(self.pem_files) > 0:
+            self.window().statusBar().showMessage('Saving plots...')
 
             plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked(),
                            'LoopAnnotations': self.show_loop_anno_checkbox.isChecked(),
@@ -1165,55 +1166,86 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                            'LoopLabels': self.plan_map_options.loop_labels_cbox.isChecked(),
                            'LineLabels': self.plan_map_options.line_labels_cbox.isChecked(),
                            'HoleCollarLabels': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
-                           'HoleDepthLabel': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
+                           'HoleDepthLabels': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
                            'CRS': get_crs()}
 
-            if save_dir:
-                pem_files_selection, rows = self.get_selected_pem_files()
-                if pem_files_selection:
-                    pem_files = copy.copy(pem_files_selection)
-                else:
-                    pem_files = copy.copy(self.pem_files)
-                    rows = range(self.table.rowCount())
-                ri_files = []
-                for row, pem_file in zip(rows, pem_files):
-                    ri_files.append(self.pem_info_widgets[row].ri_file)
-                    self.update_pem_file_from_table(pem_file, row)
-                    if not pem_file.is_averaged():
-                        self.file_editor.average(pem_file)
-                    if not pem_file.is_split():
-                        self.file_editor.split_channels(pem_file)
-
-                if self.share_range_checkbox.isChecked():
-                    try:
-                        plot_kwargs['XMin'] = int(self.min_range_edit.text())
-                    except ValueError:
-                        plot_kwargs['XMin'] = None
-                    try:
-                        plot_kwargs['XMax'] = int(self.max_range_edit.text())
-                    except ValueError:
-                        plot_kwargs['XMax'] = None
-                else:
-                    plot_kwargs['XMin'] = None
-                    plot_kwargs['XMax'] = None
-
-                # PEM Files and RI files zipped together for when they get sorted
-                printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
-                self.window().statusBar().addPermanentWidget(printer.pb)
-                if final is True:
-                    printer.print_final_plots()
-                elif step is True:
-                    printer.print_step_plots()
-                elif plan is True:
-                    printer.print_plan_map()
-                else:
-                    raise ValueError
-                printer.pb.hide()
-                self.window().statusBar().showMessage('Plots saved', 2000)
+            pem_files_selection, rows = self.get_selected_pem_files()
+            if pem_files_selection:
+                pem_files = copy.copy(pem_files_selection)
             else:
-                self.window().statusBar().showMessage('Cancelled', 2000)
-        else:
-            pass
+                pem_files = copy.copy(self.pem_files)
+                rows = range(self.table.rowCount())
+            ri_files = []
+            for row, pem_file in zip(rows, pem_files):
+                ri_files.append(self.pem_info_widgets[row].ri_file)
+                self.update_pem_file_from_table(pem_file, row)
+                if not pem_file.is_averaged():
+                    self.file_editor.average(pem_file)
+                if not pem_file.is_split():
+                    self.file_editor.split_channels(pem_file)
+
+            if self.share_range_checkbox.isChecked():
+                try:
+                    plot_kwargs['XMin'] = int(self.min_range_edit.text())
+                except ValueError:
+                    plot_kwargs['XMin'] = None
+                try:
+                    plot_kwargs['XMax'] = int(self.max_range_edit.text())
+                except ValueError:
+                    plot_kwargs['XMax'] = None
+            else:
+                plot_kwargs['XMin'] = None
+                plot_kwargs['XMax'] = None
+
+            # Save all plots
+            if final is True:
+                if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
+                    response = self.message.question(self, 'No CRS',
+                                                     'No CRS has been selected. '
+                                                     'Do you wish to processed without a plan map?',
+                                                     self.message.Yes | self.message.No)
+                    if response == self.message.No:
+                        return
+                save_dir = get_save_file()
+                if save_dir:
+                    # PEM Files and RI files zipped together for when they get sorted
+                    printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
+                    self.window().statusBar().addPermanentWidget(printer.pb)
+                    printer.print_final_plots()
+                    printer.pb.hide()
+                else:
+                    self.window().statusBar().showMessage('Cancelled', 2000)
+
+            # Only save step plots
+            elif step is True:
+                save_dir = get_save_file()
+                if save_dir:
+                    # PEM Files and RI files zipped together for when they get sorted
+                    printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
+                    self.window().statusBar().addPermanentWidget(printer.pb)
+                    printer.print_step_plots()
+                    printer.pb.hide()
+                else:
+                    self.window().statusBar().showMessage('Cancelled', 2000)
+            # Only save plan map
+            elif plan is True:
+                if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
+                    self.message.information(self, 'No CRS',
+                                             'No CRS has been selected. '
+                                             'Please selected a CRS to proceed.')
+                else:
+                    save_dir = get_save_file()
+                    if save_dir:
+                        # PEM Files and RI files zipped together for when they get sorted
+                        printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
+                        self.window().statusBar().addPermanentWidget(printer.pb)
+                        printer.print_plan_map()
+                        printer.pb.hide()
+                    else:
+                        self.window().statusBar().showMessage('Cancelled', 2000)
+            else:
+                raise ValueError
+            self.window().statusBar().showMessage('Plots saved', 2000)
 
     def remove_file(self, table_row):
         self.table.removeRow(table_row)
@@ -1266,9 +1298,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         tags = pem_file.tags
         file = os.path.basename(pem_file.filepath)
         date = header.get('Date')
-        client = self.client_edit.text() if self.share_client_cbox.isChecked() and self.share_header_gbox.isChecked() else header.get('Client')
-        grid = self.grid_edit.text() if self.share_grid_cbox.isChecked() and self.share_header_gbox.isChecked() else header.get('Grid')
-        loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() and self.share_header_gbox.isChecked() else header.get('Loop')
+        client = self.client_edit.text() if self.share_client_cbox.isChecked() else header.get('Client')
+        grid = self.grid_edit.text() if self.share_grid_cbox.isChecked() else header.get('Grid')
+        loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() else header.get('Loop')
         current = tags.get('Current')
         coil_area = pem_file.header.get('CoilArea')
         averaged = 'Yes' if pem_file.is_averaged() else 'No'
@@ -1364,9 +1396,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             return
         for widget in self.pem_info_widgets:
             widget.fill_loop_table(selected_widget_loop)
-
-    def toggle_share_header(self):
-        self.update_table()
 
     def toggle_share_client(self):
         if self.share_client_cbox.isChecked():

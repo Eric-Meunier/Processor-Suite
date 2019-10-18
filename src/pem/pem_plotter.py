@@ -17,7 +17,6 @@ import matplotlib.ticker as ticker
 import matplotlib.text as mtext
 import matplotlib.transforms as mtransforms
 from matplotlib.font_manager import FontProperties
-from scipy.interpolate import interp1d
 import numpy as np
 from PyQt5.QtWidgets import (QProgressBar)
 from matplotlib import patches
@@ -272,7 +271,7 @@ def get_interp_data(profile_data, stations, survey_type, hide_gaps=True, gap=Non
     stations = np.array(stations, dtype='float64')
     readings = np.array(profile_data, dtype='float64')
     x_intervals = np.linspace(stations[0], stations[-1], segments)
-    f = interpolate.interp1d(stations, readings, kind=interp_method)
+    f = interp.interp1d(stations, readings, kind=interp_method)
 
     interpolated_y = f(x_intervals)
 
@@ -665,27 +664,28 @@ class PlanMap:
         self.zone = None
         self.datum = None
 
-        self.draw_loop_annotations = kwargs.get('LoopAnnotations') or False
-        self.moving_loop = kwargs.get('MovingLoop') or True
-        self.title_box = kwargs.get('TitleBox') or True
-        self.map_grid = kwargs.get('Grid') or True
-        self.scale_bar = kwargs.get('ScaleBar') or True
-        self.north_arrow = kwargs.get('NorthArrow') or True
-        self.show_legend = kwargs.get('Legend') or True
-        self.draw_loops = kwargs.get('DrawLoops') or True
-        self.draw_lines = kwargs.get('DrawLines') or True
-        self.draw_hole_collars = kwargs.get('DrawHoleCollars') or True
-        self.draw_hole_traces = kwargs.get('DrawHoleTraces') or True
-        self.loop_labels = kwargs.get('LoopLabels') or True
-        self.line_labels = kwargs.get('LineLabels') or True
-        self.hole_collar_labels = kwargs.get('HoleCollarLabels') or True
-        self.hole_depth_labels = kwargs.get('HoleDepthLabels') or True
-        self.crs = self.get_crs(kwargs.get('CRS')) or self.get_crs({'Coordinate System': 'UTM', 'Zone': '10 North', 'Datum': 'WGS 1984'})
+        self.draw_loop_annotations = kwargs.get('LoopAnnotations') if kwargs else False
+        self.moving_loop = kwargs.get('MovingLoop') if kwargs else True
+        self.title_box = kwargs.get('TitleBox') if kwargs else True
+        self.map_grid = kwargs.get('Grid') if kwargs else True
+        self.scale_bar = kwargs.get('ScaleBar') if kwargs else True
+        self.north_arrow = kwargs.get('NorthArrow') if kwargs else True
+        self.show_legend = kwargs.get('Legend') if kwargs else True
+        self.draw_loops = kwargs.get('DrawLoops') if kwargs else True
+        self.draw_lines = kwargs.get('DrawLines') if kwargs else True
+        self.draw_hole_collars = kwargs.get('DrawHoleCollars') if kwargs else True
+        self.draw_hole_traces = kwargs.get('DrawHoleTraces') if kwargs else True
+        self.loop_labels = kwargs.get('LoopLabels') if kwargs else True
+        self.line_labels = kwargs.get('LineLabels') if kwargs else True
+        self.hole_collar_labels = kwargs.get('HoleCollarLabels') if kwargs else True
+        self.hole_depth_labels = kwargs.get('HoleDepthLabels') if kwargs else True
+        self.crs = self.get_crs(kwargs.get('CRS')) if kwargs else None #self.get_crs({'Coordinate System': 'UTM', 'Zone': '10 North', 'Datum': 'WGS 1984'})
 
         self.gps_editor = GPSEditor
-        self.ax = self.fig.add_subplot(projection=self.crs)
-        # self.inset_ax = self.fig.add_axes([0.1, 0.5, 0.5, 0.3], projection=self.crs)
-        self.plot_pems()
+        if self.crs:
+            self.ax = self.fig.add_subplot(projection=self.crs)
+            # self.inset_ax = self.fig.add_axes([0.1, 0.5, 0.5, 0.3], projection=self.crs)
+            self.plot_pems()
 
     def get_crs(self, crs):
         if crs is None:
@@ -802,11 +802,11 @@ class PlanMap:
                     if seg_x and seg_y and self.draw_hole_traces is True:
 
                         # Adding the ticks on the hole trace. Both X and Y segments are interpolated first
-                        f_new_x = interp1d(np.linspace(0, len(seg_x), num=len(seg_x)), seg_x)
+                        f_new_x = interp.interp1d(np.linspace(0, len(seg_x), num=len(seg_x)), seg_x)
                         xx = np.linspace(0, len(seg_x), num=1000)
                         new_x = f_new_x(xx)
 
-                        f_new_y = interp1d(np.linspace(0, len(seg_y), num=len(seg_y)), seg_y)
+                        f_new_y = interp.interp1d(np.linspace(0, len(seg_y), num=len(seg_y)), seg_y)
                         yy = np.linspace(0, len(seg_y), num=1000)
                         new_y = f_new_y(yy)
 
@@ -824,9 +824,9 @@ class PlanMap:
                                                          lw=.5))
 
                         # Add the end tick for the borehole trace
-                            self.ax.annotate('', xy=(new_x[-1], new_y[-1]), xycoords='data', xytext=(new_x[-2], new_y[-2]),
-                                         arrowprops=dict(arrowstyle='|-|', mutation_scale=5, connectionstyle='arc3',
-                                                         lw=.5))
+                        self.ax.annotate('', xy=(new_x[-1], new_y[-1]), xycoords='data', xytext=(new_x[-2], new_y[-2]),
+                                     arrowprops=dict(arrowstyle='|-|', mutation_scale=5, connectionstyle='arc3',
+                                                     lw=.5))
 
                         # Label the depth of the hole
                         if self.hole_depth_labels:
@@ -1170,23 +1170,7 @@ class PEMPrinter:
         self.x_min = kwargs.get('XMin')
         self.x_max = kwargs.get('XMax')
         self.hide_gaps = kwargs.get('HideGaps')
-        # self.loop_annotations = kwargs.get('LoopAnnotations')
-        # self.moving_loop = kwargs.get('MovingLoop')
-        # self.title_box = kwargs.get('TitleBox')
-        # self.map_grid = kwargs.get('Grid')
-        # self.scale_bar = kwargs.get('ScaleBar')
-        # self.north_arrow = kwargs.get('NorthArrow')
-        # self.draw_loops = kwargs.get('DrawLoops')
-        # self.draw_lines = kwargs.get('DrawLines')
-        # self.draw_hole_collars = kwargs.get('DrawHoleCollars')
-        # self.draw_hole_traces = kwargs.get('DrawHoleTraces')
-        # self.loop_labels = kwargs.get('LoopLabels')
-        # self.line_labels = kwargs.get('LineLabels')
-        # self.hole_collar_labels = kwargs.get('HoleCollarLabels')
-        # self.hole_depth_labels = kwargs.get('HoleDepthLabels')
-        # self.crs = kwargs.get('CRS')
-        # self.projection = kwargs.get('Projection')
-        # self.projection = ccrs.UTM(31)
+        self.crs = kwargs.get('CRS')
         self.pb = QProgressBar()
         self.pb_count = 0
         self.pb_end = sum([len(pair[0].get_components()) for pair in self.files])
@@ -1277,14 +1261,15 @@ class PEMPrinter:
     #                 plt.close(log_figure)
 
     def print_plan_map(self):
-        with PdfPages(self.save_path + '.PDF') as pdf:
-            plan_figure = self.create_plan_figure()
-            plan_map = PlanMap(self.pem_files, plan_figure, **self.kwargs)
-            pdf.savefig(plan_map.get_map(), orientation='landscape')
-            self.pb_count += 1
-            self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
-            plt.close(plan_figure)
-        os.startfile(self.save_path + '.PDF')
+        if all([self.crs.get('Coordinate System'), self.crs.get('Datum')]):
+            with PdfPages(self.save_path + '.PDF') as pdf:
+                plan_figure = self.create_plan_figure()
+                plan_map = PlanMap(self.pem_files, plan_figure, **self.kwargs)
+                pdf.savefig(plan_map.get_map(), orientation='landscape')
+                self.pb_count += 1
+                self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
+                plt.close(plan_figure)
+            os.startfile(self.save_path + '.PDF')
 
     def print_step_plots(self):
         with PdfPages(self.save_path + '.PDF') as pdf:
@@ -1309,13 +1294,14 @@ class PEMPrinter:
         # file_name = self.pem_files[-1].header.get('LineHole')+'.PDF'
         # path = os.path.join(self.save_dir, file_name)
         with PdfPages(self.save_path + '.PDF') as pdf:
-            # Saving the Plan Map
-            map_figure = self.create_plan_figure()
-            plan_map = PlanMap(self.pem_files, map_figure, **self.kwargs)
-            pdf.savefig(plan_map.get_map(), orientation='landscape')
-            self.pb_count += 1
-            self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
-            plt.close(map_figure)
+            if all([self.crs.get('Coordinate System'), self.crs.get('Datum')]):
+                # Saving the Plan Map
+                map_figure = self.create_plan_figure()
+                plan_map = PlanMap(self.pem_files, map_figure, **self.kwargs)
+                pdf.savefig(plan_map.get_map(), orientation='landscape')
+                self.pb_count += 1
+                self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
+                plt.close(map_figure)
 
             # Saving the LIN plots
             for pem_file in self.pem_files:

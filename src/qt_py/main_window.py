@@ -107,7 +107,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.editor = None
         self.db_plot = None
-        self.conder = None
+        # self.conder = None
 
     def initActions(self):
         # self.openFile = QAction("&Open...", self)
@@ -121,8 +121,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.openDBPlot = QAction("&Open DB Plot", self)
         self.openDBPlot.triggered.connect(self.open_db_plot)
 
-        self.openConder = QAction("&Open Conder", self)
-        self.openConder.triggered.connect(self.open_conder)
+        # self.openConder = QAction("&Open Conder", self)
+        # self.openConder.triggered.connect(self.open_conder)
 
         self.closeAllWindows = QAction("&Close All", self)
         self.closeAllWindows.setShortcut("Ctrl+Shift+Del")
@@ -139,15 +139,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.toolbar = QToolBar()
         self.addToolBar(QtCore.Qt.LeftToolBarArea, self.toolbar)
 
-        self.tile_view = QAction(
-            QtGui.QIcon(os.path.join(icons_path, 'windows_stack.png')),
-            '&Tile View', self)
-        self.tile_view.setShortcut('Ctrl+ ')
-        self.tile_view.triggered.connect(self.set_view)
+        # self.tile_view = QAction(
+        #     QtGui.QIcon(os.path.join(icons_path, 'windows_stack.png')),
+        #     '&Tile View', self)
+        # self.tile_view.setShortcut('Ctrl+ ')
+        # self.tile_view.triggered.connect(self.set_view)
 
         self.pem_editor_button = QToolButton(self)
         self.pem_editor_button.setIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'plots2.png')))
+            QtGui.QIcon(os.path.join(icons_path, 'conder 32.png')))
         self.pem_editor_button.setCheckable(True)
         self.pem_editor_button.setStatusTip('PEM Editor')
         self.pem_editor_button.clicked.connect(self.toggle_editor)
@@ -159,17 +159,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db_plot_button.setStatusTip('DB Plot')
         self.db_plot_button.clicked.connect(self.toggle_db_plot)
 
-        self.conder_button = QToolButton(self)
-        self.conder_button.setIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'conder 32.png')))
-        self.conder_button.setCheckable(True)
-        self.conder_button.setStatusTip('Conder')
-        self.conder_button.clicked.connect(self.toggle_conder)
+        # self.conder_button = QToolButton(self)
+        # self.conder_button.setIcon(
+        #     QtGui.QIcon(os.path.join(icons_path, 'conder 32.png')))
+        # self.conder_button.setCheckable(True)
+        # self.conder_button.setStatusTip('Conder')
+        # self.conder_button.clicked.connect(self.toggle_conder)
 
-        self.toolbar.addAction(self.tile_view)
+        # self.toolbar.addAction(self.tile_view)
         self.toolbar.addWidget(self.pem_editor_button)
         self.toolbar.addWidget(self.db_plot_button)
-        self.toolbar.addWidget(self.conder_button)
+        # self.toolbar.addWidget(self.conder_button)
 
     # def keyPressEvent(self, e):
     #     if e.type() == QtCore.QEvent.KeyPress:
@@ -189,7 +189,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pass
 
     def clear_files(self, response=None):
-        if self.editor or self.db_plot or self.conder:
+        if self.editor or self.db_plot:
             if response is None:
                 response = self.message.question(self, 'PEMPro', 'Are you sure you want to clear all files?',
                                                  self.message.Yes | self.message.No)
@@ -199,8 +199,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.editor.clear_files()
                 if self.db_plot:
                     self.db_plot.clear_files()
-                if self.conder:
-                    self.conder.clear_files()
                 self.statusBar().showMessage('All files removed', 2000)
             else:
                 pass
@@ -245,18 +243,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db_plot_subwindow.show()
         self.set_view()
 
-    def open_conder(self):
-        if self.conder is None:
-            self.conder = Conder(parent=self)
-            self.conder_subwindow = CustomMdiSubWindow(parent=self.conder)
-            self.conder_subwindow.setWidget(self.conder)
-            self.conder_subwindow.closeWindow.connect(self.conder.clear_files)
-            self.conder_subwindow.closeWindow.connect(self.toggle_conder)
-            self.mdiArea.addSubWindow(self.conder_subwindow)
-        self.conder_button.setChecked(True)
-        self.conder.show()
-        self.conder_subwindow.show()
-        self.set_view()
+    # def open_conder(self):
+    #     if self.conder is None:
+    #         self.conder = Conder(parent=self)
+    #         self.conder_subwindow = CustomMdiSubWindow(parent=self.conder)
+    #         self.conder_subwindow.setWidget(self.conder)
+    #         self.conder_subwindow.closeWindow.connect(self.conder.clear_files)
+    #         self.conder_subwindow.closeWindow.connect(self.toggle_conder)
+    #         self.mdiArea.addSubWindow(self.conder_subwindow)
+    #     self.conder_button.setChecked(True)
+    #     self.conder.show()
+    #     self.conder_subwindow.show()
+    #     self.set_view()
 
     def toggle_editor(self):
         if self.editor is None:
@@ -287,19 +285,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.set_view()
                 self.db_plot_button.setChecked(False)
 
-    def toggle_conder(self):
-        if self.conder is None:
-            self.open_conder()
-        else:
-            if self.conder_subwindow.isHidden():
-                self.conder.show()
-                self.conder_subwindow.show()
-                self.conder_button.setChecked(True)
-                self.set_view()
-            else:
-                self.conder_subwindow.hide()
-                self.set_view()
-                self.conder_button.setChecked(False)
+    # def toggle_conder(self):
+    #     if self.conder is None:
+    #         self.open_conder()
+    #     else:
+    #         if self.conder_subwindow.isHidden():
+    #             self.conder.show()
+    #             self.conder_subwindow.show()
+    #             self.conder_button.setChecked(True)
+    #             self.set_view()
+    #         else:
+    #             self.conder_subwindow.hide()
+    #             self.set_view()
+    #             self.conder_button.setChecked(False)
 
     # def dragEnterEvent(self, e):
     #     urls = [url.toLocalFile().lower() for url in e.mimeData().urls()]
@@ -386,22 +384,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 else:
                     self.mdiArea.tileSubWindows()
 
-        if len(con_files) > 0:
-            if self.conder is None:
-                self.open_conder()
-            try:
-                self.conder.open_files(con_files)
-            except Exception as e:
-                logging.warning(str(e))
-                self.message.information(None, 'Error - Could not open selected CON files', str(e))
-                pass
-            else:
-                self.conder.show()
-                self.conder_subwindow.show()
-                if len(self.mdiArea.subWindowList()) == 1:
-                    self.conder_subwindow.showMaximized()
-                else:
-                    self.mdiArea.tileSubWindows()
+        # if len(con_files) > 0:
+        #     if self.conder is None:
+        #         self.open_conder()
+        #     try:
+        #         self.conder.open_files(con_files)
+        #     except Exception as e:
+        #         logging.warning(str(e))
+        #         self.message.information(None, 'Error - Could not open selected CON files', str(e))
+        #         pass
+        #     else:
+        #         self.conder.show()
+        #         self.conder_subwindow.show()
+        #         if len(self.mdiArea.subWindowList()) == 1:
+        #             self.conder_subwindow.showMaximized()
+        #         else:
+        #             self.mdiArea.tileSubWindows()
 
 
 def main():
