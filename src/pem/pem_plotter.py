@@ -24,7 +24,7 @@ from matplotlib import patches
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.lines import Line2D
-from scipy import interpolate
+from scipy import interpolate as interp
 from scipy import stats
 
 from src.gps.gps_editor import GPSEditor
@@ -592,12 +592,12 @@ class RotnAnnotation(mtext.Annotation):
         self.p = p
         self.pa = pa
         self.hole_collar = hole_collar
+        self.kwargs = kwargs
         if not pa:
             self.pa = label_xy
         self.calc_angle_data()
-        kwargs.update(rotation_mode=kwargs.get("rotation_mode", "anchor"))
-        # if self.hole_collar:
-        #     kwargs.update(xytext=(2, 2), textcoords='offset points')
+        self.kwargs.update(rotation_mode=kwargs.get("rotation_mode", "anchor"))
+
         mtext.Annotation.__init__(self, label_str, label_xy, **kwargs)
         self.set_transform(mtransforms.IdentityTransform())
         if 'clip_on' in kwargs:
@@ -609,9 +609,13 @@ class RotnAnnotation(mtext.Annotation):
         deg = np.rad2deg(ang)
         if self.hole_collar is True:
             deg = deg - 90
-        else:
-            if deg > 90 or deg < -90:
-                deg = deg - 180
+            self.kwargs.update(xytext=(0, 2), textcoords='offset points')
+        # else:
+        if deg > 90 or deg < -90:
+            deg = deg - 180
+            if self.hole_collar:
+                self.kwargs.update(va='top')
+                self.kwargs.update(xytext=(0, -4), textcoords='offset points')
         self.angle_data = deg
 
     def calc_xy_offset(self):
@@ -782,8 +786,9 @@ class PlanMap:
 
                 if collar and collar not in self.collars:
                     self.collars.append(collar)
-                    self.collar_handle, = self.ax.plot(collar_x, collar_y, 'o', color=self.color,
-                                                       fillstyle='none', label='Borehole Collar', zorder=2)
+                    marker_style = dict(marker='o', color='white', markeredgecolor=self.color, markersize=8)
+                    self.collar_handle, = self.ax.plot(collar_x, collar_y, fillstyle='full',
+                                                       label='Borehole Collar', zorder=3, **marker_style)
                     # Add the hole label at the collar
                     if self.hole_collar_labels:
                         collar_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
@@ -795,33 +800,34 @@ class PlanMap:
                         self.labels.append(collar_label)
 
                     if seg_x and seg_y and self.draw_hole_traces is True:
-                        self.trace_handle, = self.ax.plot(seg_x, seg_y, '--', color=self.color, label='Borehole Trace',
-                                                          zorder=2, markersize=16)
 
-                        # for i, (x, y) in enumerate(zip(seg_x[:-1], seg_y[:-1])):
-                        #     self.ax.annotate('', xy=(x, y), xycoords='data', xytext=(seg_x[i+1], seg_y[i+1]),
-                        #                      arrowprops=dict(arrowstyle='|-|', connectionstyle='arc3'))
+                        # Adding the ticks on the hole trace. Both X and Y segments are interpolated first
+                        f_new_x = interp1d(np.linspace(0, len(seg_x), num=len(seg_x)), seg_x)
+                        xx = np.linspace(0, len(seg_x), num=1000)
+                        new_x = f_new_x(xx)
 
-                        # Adding the ticks on the hole trace
-                        f_interp_seg = interp1d(seg_x, seg_y, kind='linear')
-                        new_seg_x = np.linspace(seg_x[0], seg_x[-1], num=100)
-                        interp_seg_y = f_interp_seg(new_seg_x)
-                        for i, (x, y) in enumerate(zip(new_seg_x[:-1:int(len(new_seg_x/12))], interp_seg_y[:-1:int(len(new_seg_x/12))])):
-                            pa = (x, y)
-                            p = (new_seg_x[i + 10], interp_seg_y[i + 10])
-                            # self.ax.annotate('', xy=pa, xycoords='data', xytext=p,
-                            #              arrowprops=dict(arrowstyle='|-|', connectionstyle='arc3'))
-                            tick = RotnAnnotation("|", label_xy=p, p=p, pa=pa, ax=self.ax,
-                                                  hole_collar=False, va='center', ha='center', rotation_mode='anchor',
-                                                  fontsize=6, color=self.color)
+                        f_new_y = interp1d(np.linspace(0, len(seg_y), num=len(seg_y)), seg_y)
+                        yy = np.linspace(0, len(seg_y), num=1000)
+                        new_y = f_new_y(yy)
+
+                        # Plotting the actual trace
+                        self.trace_handle, = self.ax.plot(new_x, new_y, '--', color=self.color, label='Borehole Trace',
+                                                          zorder=2, markersize=1)
+
+                        # Plotting the ticks
+                        for x, y in zip(new_x[100::100], new_y[100::100]):
+                            p = (x, y)
+                            index = list(new_x).index(x)
+                            pa = (new_x[index - 1], new_y[index - 1])
+                            self.ax.annotate('', xy=pa, xycoords='data', xytext=p,
+                                         arrowprops=dict(arrowstyle='|-|', mutation_scale=3, connectionstyle='arc3',
+                                                         lw=.5))
 
                         # Add the end tick for the borehole trace
-                        end_tick = RotnAnnotation("|",
-                                                  label_xy=(seg_x[-1], seg_y[-1]),
-                                                  p=(seg_x[-2], seg_y[-2]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
-                                                  hole_collar=False,
-                                                  va='center', ha='center', rotation_mode='anchor', fontsize=14,
-                                                  color=self.color, zorder=3)
+                            self.ax.annotate('', xy=(new_x[-1], new_y[-1]), xycoords='data', xytext=(new_x[-2], new_y[-2]),
+                                         arrowprops=dict(arrowstyle='|-|', mutation_scale=5, connectionstyle='arc3',
+                                                         lw=.5))
+
                         # Label the depth of the hole
                         if self.hole_depth_labels:
                             bh_depth = RotnAnnotation(f" {float(segments[-1][-1]):.0f} m",
@@ -942,8 +948,8 @@ class PlanMap:
             else:
                 new_width = map_width
                 new_height = new_width * (bbox.height / bbox.width)
-            x_offset = 0.06 * (new_width)
-            y_offset = 0.06 * (new_height)
+            x_offset = 0
+            y_offset = 0.06 * new_height
             new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
             new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
             new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
@@ -956,12 +962,10 @@ class PlanMap:
             def get_scale_factor():
                 # num_digit = len(str(int(current_scale)))  # number of digits in number
                 num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
-                possible_scales = [num * 10 ** num_digit for num in [1, 2, 5, 10, 20]]
-                new_scale = min(filter(lambda x: x > current_scale * 1.1, possible_scales),
-                                key=lambda x: x - current_scale * 1.1)
-                # new_scale = round(current_scale, -num_digit)  # round to 1sf
-                # if str(new_scale)[0] not in ['1', '2', '5'] or current_scale > new_scale:
-                #     new_scale = myround(new_scale, base=5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
+                scale_nums = [1., 1.25, 1.5, 2., 5.]
+                possible_scales = [num * 10 ** num_digit for num in scale_nums+list(map(lambda x: x*10, scale_nums))]
+                new_scale = min(filter(lambda x: x > current_scale * 1.20, possible_scales),
+                                key=lambda x: x - current_scale * 1.20)
                 self.map_scale = new_scale
                 scale_factor = new_scale / current_scale
                 return scale_factor
