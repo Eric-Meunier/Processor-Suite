@@ -324,7 +324,9 @@ class GPXEditor:
             name = row[4]
             stn = re.findall('\d+', re.split('-', name)[-1])
             u = utm.from_latlon(lat, lon)
-            # hemisphere = 'north' if lat >= 0 else 'south'
+            zone = u[2]
+            letter = u[3]
+            hemisphere = 'north' if lat >= 0 else 'south'
             # zone = math.floor((lon+180)/6) + 1  # Calculate the zone number
             # myProj = Proj(f"+proj=utm +zone={zone},\+{hemisphere} +ellps=WGS84 +datum=WGS84 +units=m +no_defs")  # north for north hemisphere
             # UTMx, UTMy = myProj(lon, lat)

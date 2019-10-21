@@ -776,8 +776,12 @@ class PlanMap:
                     return [segment[0] for segment in trace], [segment[1] for segment in trace]
 
             if self.draw_hole_collars is True:
-                collar = pem_file.get_collar_coords()[0]
-                collar_x, collar_y = float(collar[0]), float(collar[1])
+                try:
+                    collar = pem_file.get_collar_coords()[0]
+                except IndexError:
+                    return
+                else:
+                    collar_x, collar_y = float(collar[0]), float(collar[1])
                 segments = pem_file.get_hole_geometry()
                 if segments:
                     seg_x, seg_y = get_borehole_projection(segments)

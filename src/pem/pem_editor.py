@@ -475,7 +475,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             inf_conditions = bool(all([
                 e.answerRect().intersects(self.gps_box.geometry()),
-                inf_files is True,
+                inf_files is True or gpx_files is True,
             ]))
 
             if pem_conditions is True or gps_conditions is True or ri_conditions is True or inf_conditions is True:
