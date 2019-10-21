@@ -13,7 +13,7 @@ from itertools import chain
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QToolButton, QCheckBox,
-                             QInputDialog, QHeaderView, QGridLayout, QTableWidget, QDialogButtonBox, QVBoxLayout)
+                             QInputDialog, QHeaderView, QTableWidget, QDialogButtonBox, QVBoxLayout)
 
 from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
@@ -27,8 +27,6 @@ from src.ri.ri_file import RIFile
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.3.1'
-
 getcontext().prec = 6
 
 if getattr(sys, 'frozen', False):
@@ -39,18 +37,21 @@ if getattr(sys, 'frozen', False):
     editorWindowCreatorFile = 'qt_ui\\pem_editor_window.ui'
     lineNameEditorCreatorFile = 'qt_ui\\line_name_editor.ui'
     planMapOptionsCreatorFile = 'qt_ui\\plan_map_options.ui'
+    pemFileSplitterCreatorFile = 'qt_ui\\pem_file_splitter.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor_window.ui')
     lineNameEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\line_name_editor.ui')
     planMapOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\plan_map_options.ui')
+    pemFileSplitterCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_file_splitter.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
 Ui_LineNameEditorWidget, QtBaseClass = uic.loadUiType(lineNameEditorCreatorFile)
 Ui_PlanMapOptionsWidget, QtBaseClass = uic.loadUiType(planMapOptionsCreatorFile)
+Ui_PEMFileSplitterWidget, QtBaseClass = uic.loadUiType(pemFileSplitterCreatorFile)
 
 sys._excepthook = sys.excepthook
 
@@ -96,7 +97,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.setupUi(self)
 
-        self.setWindowTitle("PEMEditor  v" + str(__version__))
+        self.setWindowTitle("PEMEditor")
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
         self.setGeometry(500, 300, 1500, 800)
@@ -115,6 +116,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.serializer = PEMSerializer()
         self.ri_importer = BatchRIImporter(parent=self)
         self.plan_map_options = PlanMapOptions(parent=self)
+        self.pem_file_splitter = None
         # self.layout.addWidget(self)
         # self.setCentralWidget(self.table)
 
@@ -197,9 +199,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.averageAllPems.triggered.connect(lambda: self.average_select_pem(all=True))
 
         self.splitAllPems = QAction("&Split All PEM Files", self)
-        self.splitAllPems.setStatusTip("Split all PEM files")
+        self.splitAllPems.setStatusTip("Remove on-time channels for all PEM files")
         self.splitAllPems.setShortcut("F6")
-        self.splitAllPems.triggered.connect(lambda: self.split_select_pem(all=True))
+        self.splitAllPems.triggered.connect(lambda: self.split_channels_select_pem(all=True))
 
         self.merge_action = QAction("&Merge", self)
         self.merge_action.triggered.connect(self.merge_pem_files_selection)
@@ -298,11 +300,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.save_file_as_action = QAction("&Save As...", self)
                 self.table.save_file_as_action.triggered.connect(self.save_pem_file_as)
 
+                self.table.split_file_action = QAction("&Split File", self)
+                self.table.split_file_action.triggered.connect(self.split_pem_file)
+
                 self.table.average_action = QAction("&Average", self)
                 self.table.average_action.triggered.connect(self.average_select_pem)
 
-                self.table.split_action = QAction("&Split", self)
-                self.table.split_action.triggered.connect(self.split_select_pem)
+                self.table.split_action = QAction("&Split Channels", self)
+                self.table.split_action.triggered.connect(self.split_channels_select_pem)
 
                 self.table.scale_current_action = QAction("&Scale Current", self)
                 self.table.scale_current_action.triggered.connect(self.scale_current_selection)
@@ -329,11 +334,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addAction(self.table.save_file_action)
                 if len(self.table.selectionModel().selectedRows()) == 1:
                     self.table.menu.addAction(self.table.save_file_as_action)
+                    self.table.menu.addAction(self.table.split_file_action)
                 else:
                     self.table.menu.addAction(self.table.save_file_to_action)
-                self.table.menu.addAction(self.print_plan_map_action)
-                self.table.menu.addAction(self.print_step_plots_action)
-                self.table.menu.addAction(self.print_final_plots_action)
                 self.table.menu.addSeparator()
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     self.table.menu.addAction(self.merge_action)
@@ -341,7 +344,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addAction(self.table.split_action)
                 self.table.menu.addAction(self.table.scale_current_action)
                 self.table.menu.addAction(self.table.scale_ca_action)
-                if len(self.pem_files) > 1:
+                if len(self.pem_files) == 1:
                     self.table.menu.addSeparator()
                     self.table.menu.addAction(self.table.share_loop_action)
                     self.table.menu.addAction(self.table.share_collar_action)
@@ -350,6 +353,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.table.menu.addSeparator()
                     self.table.menu.addAction(self.table.rename_lines_action)
                     self.table.menu.addAction(self.table.rename_files_action)
+                self.table.menu.addSeparator()
+                self.table.menu.addAction(self.print_plan_map_action)
+                self.table.menu.addAction(self.print_step_plots_action)
+                self.table.menu.addAction(self.print_final_plots_action)
                 self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.remove_file_action)
 
@@ -736,6 +743,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             for widget in self.pem_info_widgets:
                 widget.tabs.setCurrentIndex(self.tab_num)
 
+    def split_pem_file(self):
+        pem_file, row = self.get_selected_pem_files()
+        self.pem_file_splitter = PEMFileSplitter(pem_file[0], parent=self)
+        self.pem_file_splitter.show()
+
     def average_pem_data(self, pem_file):
         """
         Average the data PEM File
@@ -763,7 +775,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.average_pem_data(pem_file)
         self.update_table()
 
-    def split_pem_data(self, pem_file):
+    def split_pem_channels(self, pem_file):
         """
         Removes the on-time channels of the PEM File
         :param pem_file: PEM File object
@@ -776,7 +788,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pem_file = self.file_editor.split_channels(pem_file)
             self.window().statusBar().showMessage('File split.', 2000)
 
-    def split_select_pem(self, all=False):
+    def split_channels_select_pem(self, all=False):
         """
         Removes the on-time channels of each selected PEM File
         :param pem_file: PEM File object
@@ -787,7 +799,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             pem_files, rows = self.pem_files, range(self.table.rowCount())
         for pem_file in pem_files:
-            self.split_pem_data(pem_file)
+            self.split_pem_channels(pem_file)
         self.update_table()
 
     def scale_coil_area(self, pem_file, new_coil_area):
@@ -867,7 +879,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                                                  self.message.Yes | self.message.No)
                 if response == self.message.Yes:
                     for pem_file in pem_files:
-                        self.split_pem_data(pem_file)
+                        self.split_pem_channels(pem_file)
                 else:
                     return
 
@@ -1808,6 +1820,70 @@ class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
             self.close()
         elif e.key() == QtCore.Qt.Key_Return:
             self.close()
+
+
+class PEMFileSplitter(QWidget, Ui_PEMFileSplitterWidget):
+
+    def __init__(self, pem_file, parent=None):
+        super().__init__()
+        self.pem_file = pem_file
+        self.parent = parent
+        self.serializer = PEMSerializer()
+        self.setupUi(self)
+        self.init_signals()
+        self.create_table()
+        self.fill_table()
+
+    def init_signals(self):
+        self.extract_btn.clicked.connect(self.extract_selection)
+        self.cancel_btn.clicked.connect(self.close)
+
+    def closeEvent(self, e):
+        e.accept()
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
+        elif e.key() == QtCore.Qt.Key_Return:
+            self.close()
+
+    def create_table(self):
+        self.columns = ['Station']
+        self.table.setColumnCount(len(self.columns))
+        self.table.setHorizontalHeaderLabels(self.columns)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+
+    def fill_table(self):
+        stations = self.pem_file.get_unique_stations()
+
+        for i, station in enumerate(stations):
+            row = i
+            self.table.insertRow(row)
+            item = QTableWidgetItem(station)
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.table.setItem(row, 0, item)
+
+    def extract_selection(self):
+        selected_rows = [model.row() for model in self.table.selectionModel().selectedRows()]
+        selected_stations = []
+        for row in selected_rows:
+            selected_stations.append(self.table.item(row, 0).text())
+
+        if selected_stations:
+            default_path = os.path.split(self.pem_file.filepath)[0]
+            save_file = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0] + '.PEM'
+            if save_file:
+                new_pem_file = copy.copy(self.pem_file)
+                selected_stations_data = list(filter(lambda x: x['Station'] in selected_stations, self.pem_file.data))
+                new_pem_file.data = selected_stations_data
+                new_pem_file.filepath = save_file
+                file = self.serializer.serialize(new_pem_file)
+                print(file, file=open(new_pem_file.filepath, 'w+'))
+                self.close()
+            else:
+                return
+
 
 def main():
     app = QApplication(sys.argv)

@@ -5,32 +5,27 @@ import os
 import re
 import sys
 from datetime import datetime
-from adjustText import adjust_text
+
 import cartopy.crs as ccrs  # import projections
-import matplotlib
-import matplotlib as mpl
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
+import matplotlib as mpl
 import matplotlib.lines as mlines
-import matplotlib.offsetbox
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import matplotlib.text as mtext
+import matplotlib.ticker as ticker
 import matplotlib.transforms as mtransforms
-from matplotlib.font_manager import FontProperties
 import numpy as np
 from PyQt5.QtWidgets import (QProgressBar)
 from matplotlib import patches
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.lines import Line2D
 from scipy import interpolate as interp
 from scipy import stats
 
 from src.gps.gps_editor import GPSEditor
 from src.pem.pem_getter import PEMGetter
-from src.pem.pem_parser import PEMParser
 
-__version__ = '0.0.1'
+__version__ = '0.1.0'
 logging.info('PEMPlotter')
 
 if getattr(sys, 'frozen', False):
@@ -968,8 +963,8 @@ class PlanMap:
                 num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
                 scale_nums = [1., 1.25, 1.5, 2., 5.]
                 possible_scales = [num * 10 ** num_digit for num in scale_nums+list(map(lambda x: x*10, scale_nums))]
-                new_scale = min(filter(lambda x: x > current_scale * 1.20, possible_scales),
-                                key=lambda x: x - current_scale * 1.20)
+                new_scale = min(filter(lambda x: x > current_scale * 1.30, possible_scales),
+                                key=lambda x: x - current_scale * 1.30)
                 self.map_scale = new_scale
                 scale_factor = new_scale / current_scale
                 return scale_factor
@@ -1058,12 +1053,12 @@ class PlanMap:
                          transform=self.ax.transAxes)
 
             self.ax.text(left_pos, top_pos - 0.167, f"{coord_sys}", family='cursive', style='italic', color='dimgray',
-                         fontname='Century Gothic', fontsize=9, va='top', ha='left', zorder=10,
+                         fontname='Century Gothic', fontsize=8, va='top', ha='left', zorder=10,
                          transform=self.ax.transAxes)
 
             self.ax.text(right_pos, top_pos - 0.167, f"Scale {scale}", family='cursive', style='italic',
                          color='dimgray',
-                         fontname='Century Gothic', fontsize=9, va='top', ha='right', zorder=10,
+                         fontname='Century Gothic', fontsize=8, va='top', ha='right', zorder=10,
                          transform=self.ax.transAxes)
 
             self.ax.add_patch(rect)
