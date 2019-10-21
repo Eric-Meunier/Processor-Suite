@@ -313,6 +313,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.share_loop_action = QAction("&Share Loop", self)
                 self.table.share_loop_action.triggered.connect(self.share_loop)
 
+                self.table.share_collar_action = QAction("&Share Collar", self)
+                self.table.share_collar_action.triggered.connect(self.share_collar)
+
+                self.table.share_segments_action = QAction("&Share Geometry", self)
+                self.table.share_segments_action.triggered.connect(self.share_segments)
+
                 self.table.rename_lines_action = QAction("&Rename Lines/Holes", self)
                 self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line'))
 
@@ -336,7 +342,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addAction(self.table.scale_current_action)
                 self.table.menu.addAction(self.table.scale_ca_action)
                 if len(self.pem_files) > 1:
+                    self.table.menu.addSeparator()
                     self.table.menu.addAction(self.table.share_loop_action)
+                    self.table.menu.addAction(self.table.share_collar_action)
+                    self.table.menu.addAction(self.table.share_segments_action)
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     self.table.menu.addSeparator()
                     self.table.menu.addAction(self.table.rename_lines_action)
@@ -1394,8 +1403,29 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             selected_widget_loop = selected_widget.get_loop_gps()
         except:
             return
-        for widget in self.pem_info_widgets:
-            widget.fill_loop_table(selected_widget_loop)
+        else:
+            for widget in self.pem_info_widgets:
+                widget.fill_loop_table(selected_widget_loop)
+
+    def share_collar(self):
+        selected_widget = self.pem_info_widgets[self.table.currentRow()]
+        try:
+            selected_widget_collar = [selected_widget.get_collar_gps()]
+        except:
+            return
+        else:
+            for widget in list(filter(lambda x: 'borehole' in x.pem_file.survey_type.lower(), self.pem_info_widgets)):
+                widget.fill_collar_gps_table(selected_widget_collar)
+
+    def share_segments(self):
+        selected_widget = self.pem_info_widgets[self.table.currentRow()]
+        try:
+            selected_widget_geometry = selected_widget.get_geometry_segments()
+        except:
+            return
+        else:
+            for widget in list(filter(lambda x: 'borehole' in x.pem_file.survey_type.lower(), self.pem_info_widgets)):
+                widget.fill_geometry_table(selected_widget_geometry)
 
     def toggle_share_client(self):
         if self.share_client_cbox.isChecked():
