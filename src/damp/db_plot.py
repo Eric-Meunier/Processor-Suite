@@ -22,7 +22,7 @@ pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -43,7 +43,7 @@ Ui_DB_Window, QtBaseClass = uic.loadUiType(DB_Window_qtCreatorFile)
 Ui_DB_Widget, QtBaseClass = uic.loadUiType(DB_Widget_qtCreatorFile)
 
 
-class DBPlot(QMainWindow): #, Ui_DB_Window):
+class DBPlot(QMainWindow):#, Ui_DB_Window):
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
@@ -74,8 +74,11 @@ class DBPlot(QMainWindow): #, Ui_DB_Window):
         # self.setupUi(self)
         grid_layout = QGridLayout()
         self.setLayout(grid_layout)
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        self.central_widget = QWidget()
+        self.central_widget_layout = QGridLayout()
+        self.central_widget.setLayout(self.central_widget_layout)
+        self.setCentralWidget(self.central_widget)
+
         self.setWindowTitle("DB Plot  v" + str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'db_plot 24.png')))
@@ -159,8 +162,8 @@ class DBPlot(QMainWindow): #, Ui_DB_Window):
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
             self.open_files(urls)
             # Resize the window
-            if self.gridLayout.sizeHint().height() > self.size().height() or self.gridLayout.sizeHint().width() > self.size().width():
-                self.resize(self.gridLayout.sizeHint().width(), self.gridLayout.sizeHint().height())
+            if self.central_widget_layout.sizeHint().height() > self.size().height() or self.central_widget_layout.sizeHint().width() > self.size().width():
+                self.resize(self.central_widget_layout.sizeHint().width(), self.central_widget_layout.sizeHint().height())
         except Exception as e:
             logging.warning(str(e))
             self.message.information(None, 'Error', str(e))
@@ -203,7 +206,7 @@ class DBPlot(QMainWindow): #, Ui_DB_Window):
     def clear_files(self):
         try:
             for widget in self.open_widgets:
-                self.gridLayout.removeWidget(widget)
+                self.central_widget_layout.removeWidget(widget)
                 widget.deleteLater()
             self.open_widgets.clear()
             self.window().statusBar().showMessage('All files removed', 2000)
@@ -218,7 +221,7 @@ class DBPlot(QMainWindow): #, Ui_DB_Window):
         if len(self.open_widgets) > 0:
             for widget in self.open_widgets:
                 if widget.underMouse():
-                    self.gridLayout.removeWidget(widget)
+                    self.central_widget_layout.removeWidget(widget)
                     widget.deleteLater()
                     self.open_widgets.remove(widget)
                     break
@@ -300,7 +303,7 @@ class DBPlot(QMainWindow): #, Ui_DB_Window):
 
     def add_plot(self, plot_widget):
         # Adding the plot object to the layout
-        self.gridLayout.addWidget(plot_widget, self.x, self.y)
+        self.central_widget_layout.addWidget(plot_widget, self.x, self.y)
         self.x += 1
         old_y = self.y
         self.y = int(self.x / 3) + old_y
@@ -417,8 +420,8 @@ class DampPlot(QWidget):#, Ui_DB_Widget):
     def __init__(self, file, show_coords=False, grid=True, show_symbols=True, parent=None):
         super(DampPlot, self).__init__(parent=parent)
         # self.setupUi(self)
-        grid_layout = QGridLayout()
-        self.setLayout(grid_layout)
+        self.gridLayout = QGridLayout()
+        self.setLayout(self.gridLayout)
         self.parent = parent
         self.pw = None
         self.__axisTime = AxisTime(orientation='bottom')
@@ -555,6 +558,12 @@ def main():
     app = QtGui.QApplication(sys.argv)
     mw = DBPlot()
     mw.show()
+    parser = DampParser()
+    plotter = DampPlot
+    file = r'C:\_Data\2019\Iscaycruz\Surface\Tumucachay\_TU-02\DUMP\October 21\Dump\DampBox234Voltage.log'
+    mw.open_files(file)
+    # d = plotter(parser.parse(file))
+    # d.show()
     app.exec_()
 
     # file = 'df.log'
