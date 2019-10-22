@@ -72,10 +72,31 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         super().__init__()
         self.parent = parent
         self.initUi()
-        self.initApps()
+
+        self.message = QMessageBox()
+        self.dialog = QFileDialog()
+        self.parser = PEMParser()
+        self.file_editor = PEMFileEditor()
+        self.message = QMessageBox()
+        self.dialog = QFileDialog()
+        # self.pem_info_widget = PEMFileInfoWidget()
+        self.gps_parser = GPSParser()
+        self.gpx_editor = GPXEditor()
+        self.serializer = PEMSerializer()
+        self.ri_importer = BatchRIImporter(parent=self)
+        self.plan_map_options = PlanMapOptions(parent=self)
+        self.pem_file_splitter = None
+        # self.layout.addWidget(self)
+        # self.setCentralWidget(self.table)
+
         self.initActions()
         self.initSignals()
 
+        self.stackedWidget.hide()
+        self.pemInfoDockWidget.hide()
+        self.plotsDockWidget.hide()
+        # self.plotsDockWidget.setWidget(self.tabWidget)
+        # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.stackedWidget)
         self.pem_files = []
         self.gps_files = []
         self.pem_info_widgets = []
@@ -102,29 +123,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
         self.setGeometry(500, 300, 1500, 800)
         center_window(self)
-
-    def initApps(self):
-        self.message = QMessageBox()
-        self.dialog = QFileDialog()
-        self.parser = PEMParser()
-        self.file_editor = PEMFileEditor()
-        self.message = QMessageBox()
-        self.dialog = QFileDialog()
-        # self.pem_info_widget = PEMFileInfoWidget()
-        self.gps_parser = GPSParser()
-        self.gpx_editor = GPXEditor()
-        self.serializer = PEMSerializer()
-        self.ri_importer = BatchRIImporter(parent=self)
-        self.plan_map_options = PlanMapOptions(parent=self)
-        self.pem_file_splitter = None
-        # self.layout.addWidget(self)
-        # self.setCentralWidget(self.table)
-
-        self.stackedWidget.hide()
-        self.pemInfoDockWidget.hide()
-        self.plotsDockWidget.hide()
-        # self.plotsDockWidget.setWidget(self.tabWidget)
-        # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.stackedWidget)
 
     def initActions(self):
         self.setAcceptDrops(True)
@@ -300,8 +298,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.save_file_as_action = QAction("&Save As...", self)
                 self.table.save_file_as_action.triggered.connect(self.save_pem_file_as)
 
-                self.table.split_file_action = QAction("&Split File", self)
-                self.table.split_file_action.triggered.connect(self.split_pem_file)
+                self.table.extract_stations_action = QAction("&Extract Stations", self)
+                self.table.extract_stations_action.triggered.connect(self.extract_stations)
 
                 self.table.average_action = QAction("&Average", self)
                 self.table.average_action.triggered.connect(self.average_select_pem)
@@ -334,7 +332,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addAction(self.table.save_file_action)
                 if len(self.table.selectionModel().selectedRows()) == 1:
                     self.table.menu.addAction(self.table.save_file_as_action)
-                    self.table.menu.addAction(self.table.split_file_action)
+                    self.table.menu.addAction(self.table.extract_stations_action)
                 else:
                     self.table.menu.addAction(self.table.save_file_to_action)
                 self.table.menu.addSeparator()
@@ -743,10 +741,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             for widget in self.pem_info_widgets:
                 widget.tabs.setCurrentIndex(self.tab_num)
 
-    def split_pem_file(self):
+    def extract_stations(self):
         pem_file, row = self.get_selected_pem_files()
         self.pem_file_splitter = PEMFileSplitter(pem_file[0], parent=self)
-        self.pem_file_splitter.show()
 
     def average_pem_data(self, pem_file):
         """
@@ -1834,6 +1831,8 @@ class PEMFileSplitter(QWidget, Ui_PEMFileSplitterWidget):
         self.create_table()
         self.fill_table()
 
+        self.show()
+
     def init_signals(self):
         self.extract_btn.clicked.connect(self.extract_selection)
         self.cancel_btn.clicked.connect(self.close)
@@ -1878,11 +1877,13 @@ class PEMFileSplitter(QWidget, Ui_PEMFileSplitterWidget):
                 selected_stations_data = list(filter(lambda x: x['Station'] in selected_stations, self.pem_file.data))
                 new_pem_file.data = selected_stations_data
                 new_pem_file.filepath = save_file
+                new_pem_file.header['NumReadings'] = str(len(selected_stations_data))
                 file = self.serializer.serialize(new_pem_file)
                 print(file, file=open(new_pem_file.filepath, 'w+'))
+                self.parent.open_pem_files(new_pem_file)
                 self.close()
             else:
-                return
+                self.close()
 
 
 def main():
