@@ -138,6 +138,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # Table changes
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
         self.stationGPSTable.cellChanged.connect(self.check_station_order)
+        self.stationGPSTable.cellChanged.connect(self.check_missing_gps)
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
 
         self.loopGPSTable.itemSelectionChanged.connect(self.toggle_loop_move_buttons)
@@ -327,6 +328,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 QAbstractScrollArea.AdjustToContents)
             self.stationGPSTable.resizeColumnsToContents()
 
+            self.missing_gps_column = ['Missing GPS']
+            self.missing_gps_table.setColumnCount(len(self.missing_gps_column))
+            self.missing_gps_table.setHorizontalHeaderLabels(self.missing_gps_column)
+
         elif 'borehole' in self.pem_file.survey_type.lower():
             self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
             self.geometry_columns = ['Tag', 'Azimuth', 'Dip', 'Seg. Length', 'Units', 'Depth']
@@ -389,6 +394,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.stationGPSTable.resizeColumnsToContents()
             self.check_station_duplicates()
             self.check_station_order()
+            self.check_missing_gps()
             self.stationGPSTable.blockSignals(False)
         else:
             pass
@@ -507,6 +513,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.dataTable.setItem(row, m, item)
 
         self.color_data_table()
+        self.check_missing_gps()
         self.dataTable.blockSignals(False)
 
     def update_pem_from_table(self, table_row, table_col):
@@ -730,6 +737,26 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     QtGui.QColor('white'))
         self.stationGPSTable.blockSignals(False)
 
+    def check_missing_gps(self):
+        """
+        Find stations that are in the Data but aren't in the GPS
+        :return: None
+        """
+        self.clear_table(self.missing_gps_table)
+        data_stations = self.pem_file.get_converted_unique_stations()
+        gps_stations = [int(row[-1]) for row in self.get_station_gps()]
+        missing_gps = []
+        for station in data_stations:
+            if station not in gps_stations:
+                missing_gps.append(str(station))
+        for i, station in enumerate(missing_gps):
+            row = i
+            self.missing_gps_table.insertRow(row)
+            item = QTableWidgetItem(station)
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            item.setForeground(QtGui.QColor('red'))
+            self.missing_gps_table.setItem(row, 0, item)
+
     def remove_table_row_selection(self, table):
         # Table (QWidgetTable) is either the loop, station, collar GPS, or geometry tables. Not dataTable.
 
@@ -750,6 +777,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if table == self.stationGPSTable:
             self.check_station_duplicates()
+            self.check_missing_gps()
             add_tags()
         elif table == self.loopGPSTable:
             add_tags()
