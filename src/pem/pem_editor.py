@@ -13,13 +13,15 @@ from itertools import chain
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QToolButton, QCheckBox,
-                             QInputDialog, QHeaderView, QTableWidget, QDialogButtonBox, QVBoxLayout)
-
+                             QInputDialog, QHeaderView, QTableWidget, QGridLayout, QDialogButtonBox, QVBoxLayout)
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
-from src.pem.pem_plotter import PEMPrinter
+from src.pem.pem_plotter import PEMPrinter, Map3D
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.pem_getter import PEMGetter
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
@@ -38,6 +40,7 @@ if getattr(sys, 'frozen', False):
     lineNameEditorCreatorFile = 'qt_ui\\line_name_editor.ui'
     planMapOptionsCreatorFile = 'qt_ui\\plan_map_options.ui'
     pemFileSplitterCreatorFile = 'qt_ui\\pem_file_splitter.ui'
+    map3DCreatorFile = 'qt_ui\\3D_map.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,6 +48,7 @@ else:
     lineNameEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\line_name_editor.ui')
     planMapOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\plan_map_options.ui')
     pemFileSplitterCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_file_splitter.ui')
+    map3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_map.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
@@ -52,6 +56,7 @@ Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
 Ui_LineNameEditorWidget, QtBaseClass = uic.loadUiType(lineNameEditorCreatorFile)
 Ui_PlanMapOptionsWidget, QtBaseClass = uic.loadUiType(planMapOptionsCreatorFile)
 Ui_PEMFileSplitterWidget, QtBaseClass = uic.loadUiType(pemFileSplitterCreatorFile)
+Ui_Map3DWidget, QtBaseClass = uic.loadUiType(map3DCreatorFile)
 
 sys._excepthook = sys.excepthook
 
@@ -73,6 +78,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.parent = parent
         self.initUi()
 
+        self.pem_files = []
+        self.gps_files = []
+        self.pem_info_widgets = []
+        self.tab_num = 2
+
         self.message = QMessageBox()
         self.dialog = QFileDialog()
         self.parser = PEMParser()
@@ -85,6 +95,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.serializer = PEMSerializer()
         self.ri_importer = BatchRIImporter(parent=self)
         self.plan_map_options = PlanMapOptions(parent=self)
+        # self.map_3d = Map3DViewer(self.pem_files)
         self.pem_file_splitter = None
         # self.layout.addWidget(self)
         # self.setCentralWidget(self.table)
@@ -97,10 +108,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.plotsDockWidget.hide()
         # self.plotsDockWidget.setWidget(self.tabWidget)
         # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.stackedWidget)
-        self.pem_files = []
-        self.gps_files = []
-        self.pem_info_widgets = []
-        self.tab_num = 2
 
         self.gps_systems = ['', 'UTM', 'Latitude/Longitude']
         self.gps_zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
@@ -278,6 +285,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.reverseAllYButton.clicked.connect(lambda: self.reverse_all_data(comp='Y'))
 
         self.systemCBox.currentIndexChanged.connect(self.toggle_zone_box)
+        self.reset_crs_btn.clicked.connect(self.reset_crs)
 
     def contextMenuEvent(self, event):
         if self.table.underMouse():
@@ -342,7 +350,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addAction(self.table.split_action)
                 self.table.menu.addAction(self.table.scale_current_action)
                 self.table.menu.addAction(self.table.scale_ca_action)
-                if len(self.pem_files) == 1:
+                if len(self.pem_files) > 1 and len(self.table.selectionModel().selectedRows()) == 1:
                     self.table.menu.addSeparator()
                     self.table.menu.addAction(self.table.share_loop_action)
                     self.table.menu.addAction(self.table.share_collar_action)
@@ -501,8 +509,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             files = [files]
         pem_files = [file for file in files if file.lower().endswith('pem')]
         gps_files = [file for file in files if
-                     file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith('seg') or file.lower().endswith('xyz')]
-        ri_files = [file for file in files if file.lower().endswith('ri1') or file.lower().endswith('ri2') or file.lower().endswith('ri3')]
+                     file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith(
+                         'seg') or file.lower().endswith('xyz')]
+        ri_files = [file for file in files if
+                    file.lower().endswith('ri1') or file.lower().endswith('ri2') or file.lower().endswith('ri3')]
         inf_files = [file for file in files if file.lower().endswith('inf')]
         gpx_files = [file for file in files if file.lower().endswith('gpx')]
 
@@ -570,7 +580,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     for note in pem_file.notes:
                         if '<GEN> CRS:' in note:
                             if self.systemCBox.currentText() == '' and self.datumCBox.currentText() == '':
-                                info = re.split(': ',note)[-1]
+                                info = re.split(': ', note)[-1]
                                 matches = re.search(r'(?P<System>UTM|Latitude/Longitude)(?P<Zone>\sZone \d+)?\s?'
                                                     r'(?P<Hemisphere>North|South)?\,\s(?P<Datum>.*)', info)
                                 system = matches.group('System')
@@ -1066,7 +1076,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.dialog.setFileMode(QFileDialog.ExistingFiles)
         self.dialog.setAcceptMode(QFileDialog.AcceptSave)
         self.dialog.setDirectory(default_path)
-        self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files)==1 else 'files'}...")
+        self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
         file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
 
         if file_dir:
@@ -1076,7 +1086,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
                 self.save_pem_file(updated_file, dir=file_dir)
             self.window().statusBar().showMessage(
-                f"Save Complete. PEM {'file' if len(pem_files)==1 else 'files'} saved to {os.path.basename(file_dir)}", 2000)
+                f"Save Complete. PEM {'file' if len(pem_files) == 1 else 'files'} saved to {os.path.basename(file_dir)}", 2000)
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
@@ -1127,7 +1137,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if not pem_files:
             pem_files, rows = copy.copy(self.pem_files), range(self.table.rowCount())
 
-        self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files)==1 else 'files'}...")
+        self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
         self.dialog.setDirectory(default_path)
         file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
@@ -1142,7 +1152,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.save_pem_file(updated_file, dir=file_dir, export=True)
 
             self.window().statusBar().showMessage(
-                'Save complete. {0} PEM {1} exported'.format(len(pem_files), 'file' if len(pem_files)==1 else 'files'), 2000)
+                'Save complete. {0} PEM {1} exported'.format(len(pem_files),
+                                                             'file' if len(pem_files) == 1 else 'files'), 2000)
             # self.update_table()
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
@@ -1162,7 +1173,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if __name__ == '__main__':
                 save_dir = r'C:\_Data\2019\_Mowgli Testing\test'  # For testing purposes
             else:
-                save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]  # Returns full filepath. For single PDF file
+                save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[
+                    0]  # Returns full filepath. For single PDF file
             return save_dir
 
         print('Saving plots')
@@ -1279,6 +1291,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.loop_edit.setText('')
             self.min_range_edit.setText('')
             self.max_range_edit.setText('')
+            self.reset_crs()
 
     # Remove selected files
     def remove_file_selection(self):
@@ -1286,6 +1299,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         for row in reversed(rows):
             self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
             self.remove_file(row)
+
+    def reset_crs(self):
+        self.systemCBox.setCurrentIndex(0)
+        self.zoneCBox.setCurrentIndex(0)
+        self.datumCBox.setCurrentIndex(0)
 
     def populate_gps_boxes(self):
         for system in self.gps_systems:
@@ -1509,7 +1527,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         def open_ri_files():
             ri_filepaths = self.ri_importer.ri_files
-            if len(ri_filepaths)>0:
+            if len(ri_filepaths) > 0:
                 for i, ri_filepath in enumerate(ri_filepaths):
                     self.pem_info_widgets[i].open_ri_file(ri_filepath)
                 self.window().statusBar().showMessage(f"Imported {str(len(ri_filepaths))} RI files", 2000)
@@ -1712,7 +1730,7 @@ class BatchRIImporter(QWidget):
             self.close()
 
     def clear_table(self):
-        while self.table.rowCount()>0:
+        while self.table.rowCount() > 0:
             self.table.removeRow(0)
 
     def open_pem_files(self, pem_files):
@@ -1737,11 +1755,11 @@ class BatchRIImporter(QWidget):
 
                 for pem_file in self.pem_files:
                     pem_components = pem_file.get_components()
-                    pem_name = re.sub('[^0-9]','', pem_file.header.get('LineHole'))[-4:]
+                    pem_name = re.sub('[^0-9]', '', pem_file.header.get('LineHole'))[-4:]
 
                     for ri_file in ri_files:
                         ri_components = ri_file.get_components()
-                        ri_name = re.sub('[^0-9]','', os.path.splitext(os.path.basename(ri_file.filepath))[0])[-4:]
+                        ri_name = re.sub('[^0-9]', '', os.path.splitext(os.path.basename(ri_file.filepath))[0])[-4:]
 
                         if pem_components == ri_components and pem_name == ri_name:
                             self.ri_files.append(ri_file.filepath)
@@ -1886,6 +1904,109 @@ class PEMFileSplitter(QWidget, Ui_PEMFileSplitterWidget):
                 self.close()
 
 
+class Map3DViewer(QWidget, Ui_Map3DWidget):
+    def __init__(self, pem_files, parent=None):
+        super().__init__()
+        self.setupUi(self)
+        self.pem_files = pem_files
+        self.parent = parent
+        self.setWindowTitle("3D Map Viewer")
+
+        self.draw_loops = self.draw_loops_cbox.isChecked()
+        self.draw_lines = self.draw_lines_cbox.isChecked()
+        self.draw_boreholes = self.draw_boreholes_cbox.isChecked()
+
+        self.label_loops = self.label_loops_cbox.isChecked()
+        self.label_lines = self.label_lines_cbox.isChecked()
+        self.label_stations = self.label_stations_cbox.isChecked()
+        self.label_boreholes = self.label_boreholes_cbox.isChecked()
+
+        self.draw_loops_cbox.toggled.connect(self.toggle_loops)
+        self.draw_lines_cbox.toggled.connect(self.toggle_lines)
+        self.draw_boreholes_cbox.toggled.connect(self.toggle_boreholes)
+
+        self.label_loops_cbox.toggled.connect(self.toggle_loop_labels)
+        self.label_lines_cbox.toggled.connect(self.toggle_line_labels)
+        self.label_stations_cbox.toggled.connect(self.toggle_station_labels)
+        self.label_boreholes_cbox.toggled.connect(self.toggle_borehole_labels)
+
+        self.figure = Figure()
+        self.canvas = FigureCanvas(self.figure)
+        self.map_layout.addWidget(self.canvas)
+        self.map_plotter = Map3D(self.figure)
+
+        self.plot_pems()
+
+    def plot_pems(self):
+        if len(self.pem_files) > 0:
+            self.figure = self.map_plotter.plot_pems(
+                self.pem_files)  # , draw_holes=self.draw_boreholes, draw_loops=self.draw_loops,
+            # draw_lines=self.draw_lines)
+
+    def toggle_loops(self):
+        if self.draw_loops_cbox.isChecked():
+            for artist in self.map_plotter.loop_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.map_plotter.loop_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_lines(self):
+        if self.draw_lines_cbox.isChecked():
+            for artist in self.map_plotter.line_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.map_plotter.line_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_boreholes(self):
+        if self.draw_boreholes_cbox.isChecked():
+            for artist in self.map_plotter.hole_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.map_plotter.hole_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_loop_labels(self):
+        if self.label_loops_cbox.isChecked():
+            for artist in self.map_plotter.loop_label_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.map_plotter.loop_label_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_line_labels(self):
+        if self.label_lines_cbox.isChecked():
+            for artist in self.map_plotter.line_label_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.map_plotter.line_label_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_station_labels(self):
+        if self.label_stations_cbox.isChecked():
+            for artist in self.map_plotter.station_label_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.map_plotter.station_label_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_borehole_labels(self):
+        if self.label_boreholes_cbox.isChecked():
+            for artist in self.map_plotter.hole_label_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.map_plotter.hole_label_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+
 def main():
     app = QApplication(sys.argv)
     mw = PEMEditorWindow()
@@ -1893,13 +2014,17 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
+
+    # mapper = Map3DViewer(pem_files)
+    # mapper.show()
+
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
     # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\1200NAv.PEM')
     # mw.open_ri_file([r'C:\_Data\2019\_Mowgli Testing\1200N.RI3'])
     # mw.print_plots(step=True)
-    # mw.print_plots(step=False)
+    mw.print_plots(final=True)
 
     app.exec_()
 

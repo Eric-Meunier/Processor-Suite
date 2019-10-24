@@ -5,7 +5,7 @@ import os
 import re
 import sys
 from datetime import datetime
-
+from timeit import default_timer as timer
 import cartopy.crs as ccrs  # import projections
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib as mpl
@@ -19,8 +19,10 @@ from PyQt5.QtWidgets import (QProgressBar)
 from matplotlib import patches
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
+from mpl_toolkits.mplot3d import Axes3D
 from scipy import interpolate as interp
 from scipy import stats
+from statistics import mean
 
 from src.gps.gps_editor import GPSEditor
 from src.pem.pem_getter import PEMGetter
@@ -328,6 +330,7 @@ def draw_lines(pem_file, component, ax, channel_low, channel_high, hide_gaps=Tru
         if offset >= len(x_intervals) * 0.85:
             offset = len(x_intervals) * 0.10
 
+
 def add_title(pem_file, component, step=False):
     """
     Adds the title header to a figure
@@ -378,7 +381,7 @@ class LINPlotter:
             for i in range(len(figure.axes) - 1):
                 ax = figure.axes[i]
                 if i == 0:
-                    ax.set_ylabel(f"Primary Pulse\n({units}")
+                    ax.set_ylabel(f"Primary Pulse\n({units})")
                 else:
                     ax.set_ylabel(f"Channel {str(channel_bounds[i][0])} - {str(channel_bounds[i][1])}\n({units})")
 
@@ -1150,6 +1153,230 @@ class PlanMap:
             return None
 
 
+class SectionPlot:
+    def __init__(self, pem_file, figure, **kwargs):
+        self.color = 'black'
+        self.fig = figure
+        self.pem_file = pem_file
+        self.gps_editor = GPSEditor()
+
+        self.loop_coords = [[float(num) for num in row] for row in self.pem_file.get_loop_coords()]
+        self.collar = self.pem_file.get_collar_coords()[0]
+        self.segments = self.pem_file.get_hole_geometry()
+        self.current = float(self.pem_file.tags.get('Current'))
+        self.survey_type = pem_files[0].survey_type.lower()
+        self.timebase = [pem_files[0].header.get('Timebase')]
+
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.plot_trace()
+        self.plot_loop()
+        self.plot_magnetic_field()
+
+    def get_extents(self):
+        min_x = min([float(row[0]) for row in self.loop_coords] + [float(self.collar[0])])
+        max_x = max([float(row[0]) for row in self.loop_coords] + [float(self.collar[0])])
+        min_y = min([float(row[1]) for row in self.loop_coords] + [float(self.collar[1])])
+        max_y = max([float(row[1]) for row in self.loop_coords] + [float(self.collar[1])])
+        min_z = min([float(row[2]) for row in self.loop_coords] + [float(self.collar[2])] + [float(self.segments[-1][4])])
+        max_z = max([float(row[2]) for row in self.loop_coords] + [float(self.collar[2])] + [float(self.segments[-1][4])])
+        return min_x, max_x, min_y, max_y, min_z, max_z
+
+    def calc_total_field(self, Px, Py, Pz, I):
+        """
+        Calculate the magnetic field at position P with current I using Biot-Savart Law. Geometry used is the loop.
+        :param P: Position at which the magnetic field is calculated
+        :param I: Current used
+        :return: Magnetic field strength
+        """
+
+        def get_magnitude(vector):
+            return math.sqrt(sum(i ** 2 for i in vector))
+
+        def scale_vectors(vector, factor):
+            """
+            :param vector: List or Tuple
+            :param factor: Float or Int
+            :return: Scaled vector
+            """
+            newvector = list(map(lambda x: x * factor, vector))
+            return newvector
+
+        mag_const = 4 * math.pi * 10 ** -7
+        integral_sum = [0, 0, 0]
+
+        for i, point in enumerate(self.loop_coords):
+            l = [point[0] - self.loop_coords[i - 1][0],
+                 point[1] - self.loop_coords[i - 1][1],
+                 point[2] - self.loop_coords[i - 1][2]]
+            AP = [Px - self.loop_coords[i - 1][0], Py - self.loop_coords[i - 1][1],
+                  Pz - self.loop_coords[i - 1][2]]
+            BP = [Px - self.loop_coords[i][0], Py - self.loop_coords[i][1], Pz - self.loop_coords[i][2]]
+            r1 = get_magnitude(AP)
+            r2 = get_magnitude(BP)
+            Dot1 = np.dot(l, AP)
+            Dot2 = np.dot(l, BP)
+            cross = np.cross(l, AP).tolist()
+            CrossSqrd = get_magnitude(cross) ** 2
+            factor = (Dot1 / r1 - Dot2 / r2) * mag_const * I / (CrossSqrd * 4 * math.pi)
+            term = scale_vectors(cross, factor)
+            integral_sum = [integral_sum[0] + term[0],
+                            integral_sum[1] + term[1],
+                            integral_sum[2] + term[2]]
+        unit = 'nT' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
+        if unit == 'pT':
+            field = scale_vectors(integral_sum, 1e12)
+        elif unit == 'nT':
+            field = scale_vectors(integral_sum, 1e9)
+        return field[0], field[1], field[2]
+
+    def plot_loop(self):
+        xs = [row[0] for row in self.loop_coords] + [self.loop_coords[0][0]]
+        ys = [row[1] for row in self.loop_coords] + [self.loop_coords[0][1]]
+        zs = [row[2] for row in self.loop_coords] + [self.loop_coords[0][2]]
+
+        self.ax.plot(xs, ys, zs, color='black')
+
+    def plot_trace(self):
+
+        def get_3D_borehole_projection(segments):
+            if not self.collar:
+                return None
+            else:
+                collar_x, collar_y, collar_z = float(self.collar[0]), float(self.collar[1]), float(self.collar[2])
+                trace = [(collar_x, collar_y, collar_z)]  # Easting and Northing tuples
+                azimuth = None
+                for segment in segments:
+                    azimuth = math.radians(float(segment[0]))
+                    dip = math.radians(float(segment[1]))
+                    seg_l = float(segment[2])
+                    delta_seg_l = seg_l * math.cos(dip)
+                    delta_elev = seg_l * math.sin(dip)
+                    dx = delta_seg_l * math.sin(azimuth)
+                    dy = delta_seg_l * math.cos(azimuth)
+                    trace.append((float(trace[-1][0]) + dx, float(trace[-1][1]) + dy, float(trace[-1][2]) - delta_elev))
+                return [segment[0] for segment in trace], \
+                       [segment[1] for segment in trace], \
+                       [segment[2] for segment in trace]
+
+        def get_section_extents(trace):
+            seg_center = None
+
+        seg_x, seg_y, seg_z = get_3D_borehole_projection(self.segments)
+        # x, y = get_section_extents(trace)
+        self.ax.plot(seg_x, seg_y, seg_z, linewidth=1)
+
+        # plt.plot(trace_x, trace_y)
+
+    def plot_magnetic_field(self, buffer=0):
+
+        min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents()
+        rows = 8.
+        x = np.arange(min_x - buffer, max_x + buffer, (max_x - min_x) * 1/rows)
+        y = np.arange(min_y - buffer, max_y + buffer, (max_y - min_y) * 1/rows)
+        z = np.arange(min_z/1.25 - buffer, max_z + buffer, (max_z - min_z) * 1/rows)
+
+        arrowlength = (16.)
+
+        xx, yy, zz = np.meshgrid(x, y, z)
+
+        vField = np.vectorize(self.calc_total_field)
+
+        print('Computing Field at {} points.....'.format(xx.size))
+        start = timer()
+
+        u, v, w = vField(xx, yy, zz, self.current)
+
+        end = timer()
+        time = round(end - start, 2)
+        print('Calculated in {} seconds'.format(str(time)))
+
+        self.ax.quiver(xx, yy, zz, u, v, w, length=arrowlength, normalize=True,
+                      color='magenta', label='Field', linewidth=.5, alpha=1,
+                      arrow_length_ratio=.6, pivot='middle', zorder=3)
+
+    def get_map(self):
+        plt.show()
+
+
+class Map3D:
+    def __init__(self, figure, parent=None):
+        self.parent = parent
+        # self.fig = plt.figure(figsize=(11, 8.5))
+        self.fig = figure
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.gps_editor = GPSEditor()
+        self.loops = []
+        self.loop_artists = []
+        self.loop_label_artists = []
+        self.lines = []
+        self.line_artists = []
+        self.line_label_artists = []
+        self.station_label_artists = []
+        self.holes = []
+        self.hole_artists = []
+        self.hole_label_artists = []
+        self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
+
+    def plot_pems(self, pem_files, draw_loops=True, draw_lines=True, draw_holes=True):
+
+        def plot_loop(pem_file):
+            loop = [[float(num) for num in row] for row in pem_file.get_loop_coords()]
+            if loop and loop not in self.loops:
+                self.loops.append(loop)
+                x, y, z = [r[0] for r in loop] + [loop[0][0]], \
+                          [r[1] for r in loop] + [loop[0][1]], \
+                          [r[2] for r in loop] + [loop[0][2]]
+                loop_artist, = self.ax.plot(x, y, z, lw=1, color='blue')
+                self.loop_artists.append(loop_artist)
+                loop_name = pem_file.header.get('Loop')
+                loop_center = self.gps_editor.get_loop_center(loop)
+                avg_z = mean(z)
+                loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name, path_effects=self.buffer,
+                             color='blue')
+                self.loop_label_artists.append(loop_label_artist)
+
+        def plot_line(pem_file):
+            line = [[float(num) for num in row] for row in pem_file.get_line_coords()]
+            if line and line not in self.loops:
+                self.lines.append(line)
+                x, y, z = [r[0] for r in line], \
+                          [r[1] for r in line], \
+                          [r[2] for r in line]
+                line_artist, = self.ax.plot(x, y, z, '-o',
+                             markersize=3, color='black', markerfacecolor = 'w', markeredgewidth = 0.3)
+                self.line_artists.append(line_artist)
+                line_name = pem_file.header.get('LineHole')
+                line_end = line[-1]
+                avg_z = mean(z)
+                line_label_artist = self.ax.text(line_end[0], line_end[1], avg_z, line_name)
+                self.line_label_artists.append(line_label_artist)
+
+                for station in line:
+                    station_label_artist = self.ax.text(station[0], station[1], station[2], f"{station[-1]:.0f}",
+                                 path_effects=self.buffer)
+                    self.station_label_artists.append(station_label_artist)
+
+        def plot_hole(pem_file):
+            pass
+
+        for pem_file in pem_files:
+            survey_type = pem_file.survey_type.lower()
+
+            if draw_loops:
+                plot_loop(pem_file)
+            if draw_lines and 'surface' in survey_type:
+                plot_line(pem_file)
+            if draw_holes and 'borehole' in survey_type:
+                plot_hole(pem_file)
+        # self.format_fig()
+        return self.fig
+
+    def format_fig(self):
+        scaling = np.array([getattr(self.ax, 'get_{}lim'.format(dim))() for dim in 'xyz'])
+        self.ax.auto_scale_xyz(*[[np.min(scaling), np.max(scaling)]] * 3)
+
+
+
 class PEMPrinter:
     """
     Class for printing PEMPLotter plots to PDF.
@@ -1358,8 +1585,10 @@ if __name__ == '__main__':
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems()
     fig = plt.figure(figsize=(11, 8.5))
-    pm = PlanMap(pem_files, fig)
-    map = pm.get_map()
+    # sm = SectionPlot(pem_files[0], fig)
+    # map = sm.get_map()
+    map = Map3D(fig)
+    map.plot_pems(pem_files)
     plt.show()
     # printer = PEMPrinter(sample_files_dir, pem_files)
     # printer.print_final_plots()
