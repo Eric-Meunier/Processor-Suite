@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import logging
 from copy import copy
 from decimal import Decimal, getcontext
 
@@ -9,6 +10,7 @@ import numpy as np
 from src.pem.pem_parser import PEMParser
 
 getcontext().prec = 6
+logging.basicConfig(filename=r'C:\_Data\2019\_Mowgli Testing\log.log', level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader

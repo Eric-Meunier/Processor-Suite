@@ -39,6 +39,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         super().__init__()
         self.parent = None
         self.pem_file = None
+        self.survey_type = None
         self.ri_file = None
         self.gps_editor = GPSEditor()
         self.gps_parser = GPSParser()
@@ -52,6 +53,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.initSignals()
 
     def initActions(self):
+        logging.info('PEMFileInfoWidget - Initializing Actions')
         self.loopGPSTable.installEventFilter(self)
         self.stationGPSTable.installEventFilter(self)
         self.collarGPSTable.installEventFilter(self)
@@ -121,6 +123,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # self.stationGPSTable.cull_gps_action.triggered.connect(self.cull_station_gps)
 
     def initSignals(self):
+        logging.info('PEMFileInfoWidget - Initializing Signals')
         # Buttons
         self.sortStationsButton.clicked.connect(self.sort_station_gps)
         self.sortLoopButton.clicked.connect(self.sort_loop_gps)
@@ -279,14 +282,19 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         return super(QWidget, self).eventFilter(source, event)
 
     def open_file(self, pem_file, parent):
+        logging.info(f'PEMFileInfoWidget - Opening PEM File {os.path.basename(pem_file.filepath)}')
         self.pem_file = pem_file
         self.parent = parent
-        self.initTables()
-        self.fill_info()
-
-        return self
+        self.survey_type = self.pem_file.survey_type
+        if self.survey_type == 'UNDEF_SURV':
+            raise ValueError('Invalid survey type')
+        else:
+            self.initTables()
+            self.fill_info()
+            return self
 
     def open_ri_file(self, filepath):
+        logging.info(f'PEMFileInfoWidget - Opening RI file {os.path.basename(filepath)}')
 
         def make_ri_table():
             columns = self.ri_file.columns
@@ -311,7 +319,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             for key in header_keys:
                 self.ri_file.header[key] = self.pem_file.header[key]
             self.ri_file.header['Current'] = self.pem_file.tags.get('Current')
-            self.ri_file.survey = self.pem_file.survey_type
+            self.ri_file.survey = self.survey_type
 
         self.ri_file = self.ri_editor.open(filepath)
         make_ri_table()
@@ -319,7 +327,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         add_header_from_pem()
 
     def initTables(self):
-        if 'surface' in self.pem_file.survey_type.lower() or 'squid' in self.pem_file.survey_type.lower():
+        logging.info('PEMFileInfoWidget - Initializing tables')
+
+        if 'surface' in self.survey_type.lower() or 'squid' in self.survey_type.lower():
             self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
             self.station_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
             self.stationGPSTable.setColumnCount(len(self.station_columns))
@@ -332,7 +342,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.missing_gps_table.setColumnCount(len(self.missing_gps_column))
             self.missing_gps_table.setHorizontalHeaderLabels(self.missing_gps_column)
 
-        elif 'borehole' in self.pem_file.survey_type.lower():
+        elif 'borehole' in self.survey_type.lower():
             self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
             self.geometry_columns = ['Tag', 'Azimuth', 'Dip', 'Seg. Length', 'Units', 'Depth']
             self.geometryTable.setColumnCount(len(self.geometry_columns))
@@ -373,6 +383,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fill the stationGPSTable with given gps data
         :param gps: station gps as a list
         """
+        logging.info('PEMFileInfoWidget - Filling station GPS table')
         if gps:
             self.clear_table(self.stationGPSTable)
             self.stationGPSTable.blockSignals(True)
@@ -404,7 +415,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fill the collarGPSTable with given collar gps data
         :param gps: collar gps as a list
         """
-
+        logging.info('PEMFileInfoWidget - Filling collar GPS table')
         if gps:
             gps = gps[0]
             self.clear_table(self.collarGPSTable)
@@ -430,6 +441,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fill the geometryTable with given segments data
         :param segments: hole segments (as a list)
         """
+        logging.info('PEMFileInfoWidget - Filling hole geometry table')
         if segments:
             self.clear_table(self.geometryTable)
             logging.info('Filling geometry table')
@@ -456,6 +468,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fill the loopGPSTable with given gps data
         :param gps: loop gps as a list
         """
+        logging.info('PEMFileInfoWidget - Filling loop GPS table')
         if gps:
             self.clear_table(self.loopGPSTable)
             for i, row in enumerate(gps):
@@ -480,6 +493,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fill the dataTable with given PEMFile data
         :param data: PEMFile object data
         """
+        logging.info('PEMFileInfoWidget - Filling data table')
         if data:
             self.clear_table(self.dataTable)
             self.dataTable.blockSignals(True)
@@ -503,6 +517,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         Updates the table based on the values in the PEM File object (self.pem_file)
         """
+        logging.info('PEMFileInfoWidget - Updating data table')
         self.dataTable.blockSignals(True)
         column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
         for station, row in zip(self.pem_file.data, range(self.dataTable.rowCount())):
@@ -522,6 +537,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param table_row: event row
         :param table_col: event column
         """
+        logging.info('PEMFileInfoWidget - Updating PEM File from table information')
         self.dataTable.blockSignals(True)
         column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
         data = self.pem_file.data
@@ -532,6 +548,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable.blockSignals(False)
 
     def color_data_table(self):
+        logging.info('PEMFileInfoWidget - Coloring data table')
 
         def color_rows_by_component():
             """
@@ -577,7 +594,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                         suffixes.append(suffix[0])
                 return statistics.mode(suffixes)
 
-            if 'surface' in self.pem_file.survey_type.lower():
+            if 'surface' in self.survey_type.lower():
                 correct_suffix = most_common_suffix()
 
                 for row in range(self.dataTable.rowCount()):
@@ -617,14 +634,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.lcdDuplicates.display(duplicates_num)
 
     def fill_info(self):
-        logging.info('PEMInfoWidget: fill_info')
+        logging.info('PEMFileInfoWidget - Filling information tab')
 
         def init_info_tab():
-            survey_type = self.pem_file.survey_type
             operator = self.pem_file.tags.get('Operator')
             loop_size = ' x '.join(self.pem_file.tags.get('LoopSize').split(' ')[0:2])
 
-            if 'surface' in survey_type.lower() or 'squid' in survey_type.lower():
+            if 'surface' in self.survey_type.lower() or 'squid' in self.survey_type.lower():
                 linetype = 'Line'
             else:
                 linetype = 'Hole'
@@ -661,7 +677,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         header = self.pem_file.header
 
         init_info_tab()
-        if 'surface' in self.pem_file.survey_type.lower():
+        if 'surface' in self.survey_type.lower():
             init_station_text()
         else:
             # init_collar_gps_text()
@@ -670,6 +686,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.fill_data_table(self.pem_file.data)
 
     def add_loop_gps(self, file):
+        logging.info(f'PEMFileInfoWidget - Adding loop GPS')
         # gps = self.gps_parser.parse_loop_gps(file)
         # if gps:
         if self.parent.autoSortLoopsCheckbox.isChecked():
@@ -678,6 +695,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_loop_table(self.gps_editor.get_loop_gps(file))
 
     def add_station_gps(self, file):
+        logging.info(f'PEMFileInfoWidget - Adding station GPS')
         # gps = self.gps_parser.parse_station_gps(file)
         # if gps:
         if self.parent.autoSortStationsCheckbox.isChecked():
@@ -686,6 +704,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_station_table(self.gps_editor.get_station_gps(file))
 
     def add_geometry(self, file):
+        logging.info(f'PEMFileInfoWidget - Adding segments')
         gps = self.gps_parser.parse_collar_gps(file)
         segments = self.gps_parser.parse_segments(file)
         if gps:
@@ -694,12 +713,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_geometry_table(self.gps_editor.get_geometry(file))
 
     def clear_table(self, table):
+        logging.info(f'PEMFileInfoWidget - Clearing table {table}')
         table.blockSignals(True)
         while table.rowCount() > 0:
             table.removeRow(0)
         table.blockSignals(False)
 
     def check_station_duplicates(self):
+        logging.info('PEMFileInfoWidget - Checking for station duplicates')
         self.stationGPSTable.blockSignals(True)
         stations_column = self.station_columns.index('Station')
         stations = []
@@ -716,6 +737,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.blockSignals(False)
 
     def check_station_order(self):
+        logging.info('PEMFileInfoWidget - Checking station order')
         self.stationGPSTable.blockSignals(True)
         stations = [int(row[-1]) for row in self.get_station_gps()]
         order = 'asc' if stations[-1] > stations[0] else 'desc'
@@ -742,6 +764,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Find stations that are in the Data but aren't in the GPS
         :return: None
         """
+        logging.info('PEMFileInfoWidget - Checking for missing station GPS')
         self.clear_table(self.missing_gps_table)
         data_stations = self.pem_file.get_converted_unique_stations()
         gps_stations = [int(row[-1]) for row in self.get_station_gps()]
@@ -758,6 +781,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.missing_gps_table.setItem(row, 0, item)
 
     def remove_table_row_selection(self, table):
+        logging.info(f'PEMFileInfoWidget - Removing row(s) from table {table}')
         # Table (QWidgetTable) is either the loop, station, collar GPS, or geometry tables. Not dataTable.
 
         def add_tags():  # tag is either 'P' or 'L'
@@ -783,6 +807,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             add_tags()
 
     def remove_data_row(self):
+        logging.info('PEMFileInfoWidget - Removing row from data table')
         selected_rows = self.get_selected_rows(self.dataTable)
 
         for row in reversed(selected_rows):
@@ -794,11 +819,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable.blockSignals(False)
 
     def remove_ri_file(self):
+        logging.info('PEMFileInfoWidget - Removing RI File')
         while self.riTable.rowCount() > 0:
             self.riTable.removeRow(0)
         self.ri_file = None
 
     def cull_station_gps(self):
+        logging.info('PEMFileInfoWidget - Culling station GPS')
         gps = self.get_station_gps()
         if gps:
             culled_gps = []
@@ -812,6 +839,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def sort_station_gps(self):
+        logging.info('PEMFileInfoWidget - Sorting station GPS')
         station_gps = self.get_station_gps()
         if station_gps:
             self.fill_station_table(self.gps_editor.get_sorted_station_gps(station_gps))
@@ -819,6 +847,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def sort_loop_gps(self):
+        logging.info('PEMFileInfoWidget - Sorting loop GPS')
         loop = self.get_loop_gps()
         if loop:
             self.fill_loop_table(self.gps_editor.get_sorted_loop_gps(loop))
@@ -826,6 +855,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def move_table_row_up(self):
+        logging.info('PEMFileInfoWidget - Moving loop GPS table row up')
         rows = self.get_selected_rows(self.loopGPSTable)
         loop_gps = self.get_loop_gps()
 
@@ -839,6 +869,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
     def move_table_row_down(self):
+        logging.info('PEMFileInfoWidget - Moving loop GPS table row down')
         rows = self.get_selected_rows(self.loopGPSTable)
         loop_gps = self.get_loop_gps()
 
@@ -860,6 +891,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.moveDownButton.setEnabled(False)
 
     def shift_gps_station_numbers(self):
+        logging.info('PEMFileInfoWidget - Shifting station GPS numbers')
         def apply_station_shift(row):
             station_column = self.station_columns.index('Station')
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
@@ -892,6 +924,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_gps_shift_amt = shift_amount
 
     def shift_station_easting(self):
+        logging.info('PEMFileInfoWidget - Shifting station GPS eastings')
         def apply_station_shift(row):
             easting_column = 1
             station = int(self.stationGPSTable.item(row, easting_column).text()) if self.stationGPSTable.item(row,
@@ -924,6 +957,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_gps_shift_amt = shift_amount
 
     def shift_station_northing(self):
+        logging.info('PEMFileInfoWidget - Shifting station GPS northings')
         def apply_station_shift(row):
             station_column = 5
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
@@ -956,6 +990,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_gps_shift_amt = shift_amount
 
     def shift_loop_elev(self):
+        logging.info('PEMFileInfoWidget - Shifting loop GPS elevation')
         def apply_elevation_shift(row):
             elevation_column = 3
             elevation = float(self.loopGPSTable.item(row, elevation_column).text()) if self.loopGPSTable.item(row,
@@ -989,6 +1024,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_loop_elev_shift_amt = shift_amount
 
     def flip_station_gps_polarity(self):
+        logging.info('PEMFileInfoWidget - Flipping station GPS number polarity')
         # Multiplies the station number by -1
 
         def flip_stn_num(row):
@@ -1016,6 +1052,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     pass
 
     def reverse_station_gps_numbers(self):
+        logging.info('PEMFileInfoWidget - Flipping the station GPS numbers end-over-end')
         # Flips the station numbers head-over-heals
         gps = self.get_station_gps()
         if gps:
@@ -1112,6 +1149,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #     self.last_stn_shift_amt = shift_amount
 
     def shift_station_numbers(self):
+        logging.info('PEMFileInfoWidget - Shifting station GPS numbers')
         # Shift the station number
         selected_rows = self.get_selected_rows(self.dataTable)
         if not selected_rows:
@@ -1124,6 +1162,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_shift_amt = shift_amount
 
     def reverse_polarity(self, selected_rows=None, component=None):
+        logging.info(f'PEMFileInfoWidget - Reversing polarity of rows {selected_rows}, component {component}')
         # Reverse the polarity of selected readings
         if not component:
             selected_rows = self.get_selected_rows(self.dataTable)
@@ -1134,10 +1173,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.window().statusBar().showMessage('Polarity flipped.', 2000)
 
     def change_station_suffix(self):
-        print('Suffix changed')
+        # print('Suffix changed')
         pass
 
     def change_component(self):
+        logging.info('PEMFileInfoWidget - Changing data component')
         components = ['Z', 'X', 'Y']
         rows = self.get_selected_rows(self.dataTable)
         for row in rows:
@@ -1153,6 +1193,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         return [model.row() for model in table.selectionModel().selectedRows()]
 
     def get_loop_gps(self):
+        logging.info('PEMFileInfoWidget - Retrieving loop GPS')
         table_gps = []
         for row in range(self.loopGPSTable.rowCount()):
             row_list = []
@@ -1165,6 +1206,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         return table_gps
 
     def get_station_gps(self):
+        logging.info('PEMFileInfoWidget - Retrieving station GPS')
         table_gps = []
         for row in range(self.stationGPSTable.rowCount()):
             row_list = []
@@ -1177,6 +1219,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         return table_gps
 
     def get_collar_gps(self):
+        logging.info('PEMFileInfoWidget - Retrieving collar GPS')
         row_list = []
         for i, column in enumerate(self.collar_columns):
             if self.collarGPSTable.item(0, i):  # Check if an item exists before trying to read it
@@ -1186,6 +1229,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         return row_list
 
     def get_geometry_segments(self):
+        logging.info('PEMFileInfoWidget - Retreiving segments')
         table_gps = []
         for row in range(self.geometryTable.rowCount()):
             row_list = []
