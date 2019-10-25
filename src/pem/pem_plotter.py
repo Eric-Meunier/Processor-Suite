@@ -1154,21 +1154,28 @@ class PlanMap:
             return None
 
 
-class SectionPlot:
-    def __init__(self, pem_file, figure, **kwargs):
+class Section3D:
+    def __init__(self, ax, pem_file, **kwargs):
         self.color = 'black'
-        self.fig = figure
         self.pem_file = pem_file
+        self.ax = ax
         self.gps_editor = GPSEditor()
 
+        self.loop_artists = []
+        self.hole_artists = []
+        self.mag_field_artists = []
+
+        self.loop_label_artists = []
+        self.loop_anno_artists = []
+        self.hole_label_artists = []
+        self.station_label_artists = []
+
+        self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
         self.loop_coords = [[float(num) for num in row] for row in self.pem_file.get_loop_coords()]
         self.collar = self.pem_file.get_collar_coords()[0]
         self.segments = self.pem_file.get_hole_geometry()
         self.current = float(self.pem_file.tags.get('Current'))
-        self.survey_type = pem_files[0].survey_type.lower()
-        self.timebase = [pem_files[0].header.get('Timebase')]
 
-        self.ax = self.fig.add_subplot(111, projection='3d')
         self.plot_trace()
         self.plot_loop()
         self.plot_magnetic_field()
@@ -1235,7 +1242,24 @@ class SectionPlot:
         ys = [row[1] for row in self.loop_coords] + [self.loop_coords[0][1]]
         zs = [row[2] for row in self.loop_coords] + [self.loop_coords[0][2]]
 
-        self.ax.plot(xs, ys, zs, color='black')
+        # Plot the loop
+        loop_artist, = self.ax.plot(xs, ys, zs, lw=1, color='blue', path_effects=self.buffer)
+        self.loop_artists.append(loop_artist)
+
+        loop_name = self.pem_file.header.get('Loop')
+        loop_center = self.gps_editor.get_loop_center(self.pem_file.get_loop_coords())
+        avg_z = mean(zs)
+
+        # Loop label
+        loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name,
+                                         path_effects=self.buffer, color='blue', ha='center', va='center')
+        self.loop_label_artists.append(loop_label_artist)
+
+        # Loop annotations
+        for i, (x, y, z) in enumerate(zip(xs, ys, zs)):
+            loop_anno_artist = self.ax.text(x, y, z, str(i), color='blue', path_effects=self.buffer,
+                                            va='bottom', ha='center', fontsize=7)
+            self.loop_anno_artists.append(loop_anno_artist)
 
     def plot_trace(self):
 
@@ -1264,7 +1288,14 @@ class SectionPlot:
 
         seg_x, seg_y, seg_z = get_3D_borehole_projection(self.segments)
         # x, y = get_section_extents(trace)
-        self.ax.plot(seg_x, seg_y, seg_z, linewidth=1)
+        # Plot hole trace
+        hole_artist, = self.ax.plot(seg_x, seg_y, seg_z, linewidth=1, color='darkred')
+        self.hole_artists.append(hole_artist)
+
+        hole_name = self.pem_file.header.get('LineHole')
+        hole_label = self.ax.text(float(self.collar[0]), float(self.collar[1]), float(self.collar[2]), hole_name,
+                                  color='darkred', path_effects=self.buffer, va='bottom', ha='center')
+        self.hole_label_artists.append(hole_label)
 
         # plt.plot(trace_x, trace_y)
 
@@ -1291,9 +1322,10 @@ class SectionPlot:
         time = round(end - start, 2)
         print('Calculated in {} seconds'.format(str(time)))
 
-        self.ax.quiver(xx, yy, zz, u, v, w, length=arrowlength, normalize=True,
-                      color='magenta', label='Field', linewidth=.5, alpha=1,
-                      arrow_length_ratio=.6, pivot='middle', zorder=3)
+        mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrowlength, normalize=True,
+                      color='black', label='Field', linewidth=.5, alpha=1,
+                      arrow_length_ratio=.6, pivot='middle', zorder=0)
+        self.mag_field_artists.append(mag_field_artist)
 
     def get_map(self):
         plt.show()

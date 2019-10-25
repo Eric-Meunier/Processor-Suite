@@ -22,7 +22,7 @@ from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
-from src.pem.pem_plotter import PEMPrinter, Map3D
+from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.pem_getter import PEMGetter
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
@@ -42,6 +42,7 @@ if getattr(sys, 'frozen', False):
     planMapOptionsCreatorFile = 'qt_ui\\plan_map_options.ui'
     pemFileSplitterCreatorFile = 'qt_ui\\pem_file_splitter.ui'
     map3DCreatorFile = 'qt_ui\\3D_map.ui'
+    section3DCreatorFile = 'qt_ui\\3D_section.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +51,7 @@ else:
     planMapOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\plan_map_options.ui')
     pemFileSplitterCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_file_splitter.ui')
     map3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_map.ui')
+    section3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_section.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
@@ -58,6 +60,7 @@ Ui_LineNameEditorWidget, QtBaseClass = uic.loadUiType(lineNameEditorCreatorFile)
 Ui_PlanMapOptionsWidget, QtBaseClass = uic.loadUiType(planMapOptionsCreatorFile)
 Ui_PEMFileSplitterWidget, QtBaseClass = uic.loadUiType(pemFileSplitterCreatorFile)
 Ui_Map3DWidget, QtBaseClass = uic.loadUiType(map3DCreatorFile)
+Ui_Section3DWidget, QtBaseClass = uic.loadUiType(section3DCreatorFile)
 
 sys._excepthook = sys.excepthook
 
@@ -96,6 +99,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.ri_importer = BatchRIImporter(parent=self)
         self.plan_map_options = PlanMapOptions(parent=self)
         self.map_viewer_3d = None
+        self.section_viewer_3d = None
         self.pem_file_splitter = None
 
         self.initActions()
@@ -261,7 +265,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.show3DMap = QAction("&3D Map", self)
         self.show3DMap.setStatusTip("Show 3D map of all PEM files")
         self.show3DMap.setShortcut('Ctrl+M')
-        self.show3DMap.triggered.connect(self.map_3d_viewer)
+        self.show3DMap.triggered.connect(self.show_map_3d_viewer)
 
         self.MapMenu = self.menubar.addMenu('&Map')
         self.MapMenu.addAction(self.show3DMap)
@@ -302,6 +306,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def contextMenuEvent(self, event):
         if self.table.underMouse():
             if self.table.selectionModel().selectedIndexes():
+                selected_pem, row = self.get_selected_pem_files()
+                survey_type = selected_pem[0].survey_type.lower()
+
                 self.table.menu = QMenu(self.table)
                 self.table.remove_file_action = QAction("&Remove", self)
                 self.table.remove_file_action.triggered.connect(self.remove_file_selection)
@@ -320,6 +327,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
                 self.table.extract_stations_action = QAction("&Extract Stations", self)
                 self.table.extract_stations_action.triggered.connect(self.extract_stations)
+
+                self.table.view_3d_section_action = QAction("&View 3D Section", self)
+                self.table.view_3d_section_action.triggered.connect(self.show_section_3d_viewer)
 
                 self.table.average_action = QAction("&Average", self)
                 self.table.average_action.triggered.connect(self.average_select_pem)
@@ -365,13 +375,16 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 if len(self.pem_files) > 1 and len(self.table.selectionModel().selectedRows()) == 1:
                     self.table.menu.addSeparator()
                     self.table.menu.addAction(self.table.share_loop_action)
-                    self.table.menu.addAction(self.table.share_collar_action)
-                    self.table.menu.addAction(self.table.share_segments_action)
+                    if 'borehole' in survey_type:
+                        self.table.menu.addAction(self.table.share_collar_action)
+                        self.table.menu.addAction(self.table.share_segments_action)
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     self.table.menu.addSeparator()
                     self.table.menu.addAction(self.table.rename_lines_action)
                     self.table.menu.addAction(self.table.rename_files_action)
                 self.table.menu.addSeparator()
+                if 'borehole' in survey_type:
+                    self.table.menu.addAction(self.table.view_3d_section_action)
                 self.table.menu.addAction(self.print_plan_map_action)
                 self.table.menu.addAction(self.print_step_plots_action)
                 self.table.menu.addAction(self.print_final_plots_action)
@@ -1189,9 +1202,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('Cancelled.', 2000)
             pass
 
-    def map_3d_viewer(self):
+    def show_map_3d_viewer(self):
         self.map_viewer_3d = Map3DViewer(self.pem_files, parent=self)
         self.map_viewer_3d.show()
+
+    def show_section_3d_viewer(self):
+        pem_file, row = self.get_selected_pem_files()
+        if 'borehole' in pem_file[0].survey_type.lower():
+            self.section_3d_viewer = Section3DViewer(pem_file[0], parent=self)
+            self.section_3d_viewer.show()
+        else:
+            self.statusBar().showMessage('Invalid survey type', 2000)
 
     def print_plots(self, final=False, step=False, plan=False):
         logging.info('PEMEditor - Printing plots')
@@ -1996,7 +2017,7 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
         self.label_stations_cbox.toggled.connect(self.toggle_station_labels)
         self.label_boreholes_cbox.toggled.connect(self.toggle_borehole_labels)
 
-        self.figure = Figure(figsize=plt.figaspect(.1))
+        self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
         self.map_layout.addWidget(self.canvas)
         self.ax = self.figure.add_subplot(111, projection='3d')
@@ -2093,6 +2114,117 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
         e.accept()
 
 
+class Section3DViewer(QWidget, Ui_Section3DWidget):
+
+    def __init__(self, pem_file, parent=None):
+        super().__init__()
+        self.setupUi(self)
+        self.pem_file = pem_file
+        self.parent = parent
+        self.setWindowTitle('3D Section Viewer')
+
+        self.draw_loop = self.draw_loop_cbox.isChecked()
+        self.draw_borehole = self.draw_borehole_cbox.isChecked()
+        self.draw_mag_field = self.draw_mag_field_cbox.isChecked()
+
+        self.label_loop = self.label_loop_cbox.isChecked()
+        self.label_loop_anno = self.label_loop_anno_cbox.isChecked()
+        self.label_borehole = self.label_borehole_cbox.isChecked()
+
+        self.draw_loop_cbox.toggled.connect(self.toggle_loop)
+        self.draw_borehole_cbox.toggled.connect(self.toggle_borehole)
+        self.draw_mag_field_cbox.toggled.connect(self.toggle_mag_field)
+
+        self.label_loop_cbox.toggled.connect(self.toggle_loop_label)
+        self.label_loop_anno_cbox.toggled.connect(self.toggle_loop_anno_labels)
+        self.label_borehole_cbox.toggled.connect(self.toggle_borehole_label)
+
+        self.figure = Figure()
+        self.canvas = FigureCanvas(self.figure)
+
+        self.map_layout.addWidget(self.canvas)
+        self.ax = self.figure.add_subplot(111, projection='3d')
+
+        self.section_plotter = Section3D(self.ax, self.pem_file, parent=self)
+        self.update_canvas()
+
+    def update_canvas(self):
+        self.toggle_loop()
+        self.toggle_borehole()
+        self.toggle_mag_field()
+        self.toggle_loop_label()
+        self.toggle_loop_anno_labels()
+        self.toggle_borehole_label()
+        # self.toggle_borehole_labels()
+
+    def toggle_loop(self):
+        if self.draw_loop_cbox.isChecked():
+            for artist in self.section_plotter.loop_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.section_plotter.loop_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_borehole(self):
+        if self.draw_borehole_cbox.isChecked():
+            for artist in self.section_plotter.hole_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.section_plotter.hole_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_mag_field(self):
+        if self.draw_mag_field_cbox.isChecked():
+            for artist in self.section_plotter.mag_field_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.section_plotter.mag_field_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_loop_label(self):
+        if self.label_loop_cbox.isChecked():
+            for artist in self.section_plotter.loop_label_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.section_plotter.loop_label_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_loop_anno_labels(self):
+        if self.label_loop_anno_cbox.isChecked():
+            for artist in self.section_plotter.loop_anno_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.section_plotter.loop_anno_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_borehole_label(self):
+        if self.label_borehole_cbox.isChecked():
+            for artist in self.section_plotter.hole_label_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.section_plotter.hole_label_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def closeEvent(self, e):
+        self.figure.clear()
+        e.accept()
+
+    # def toggle_station_labels(self):
+    #     if self.label_borehole_cbox.isChecked():
+    #         for artist in self.section_plotter.hole_label_artists:
+    #             artist.set_visible(True)
+    #     else:
+    #         for artist in self.section_plotter.hole_label_artists:
+    #             artist.set_visible(False)
+    #     self.canvas.draw()
+
+
 def main():
     app = QApplication(sys.argv)
     mw = PEMEditorWindow()
@@ -2101,8 +2233,8 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
-    # mapper = Map3DViewer(pem_files)
-    # mapper.show()
+    # section = Section3DViewer(pem_files[0])
+    # section.show()
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
     # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')
