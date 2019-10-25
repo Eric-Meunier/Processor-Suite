@@ -260,6 +260,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # Map menu
         self.show3DMap = QAction("&3D Map", self)
         self.show3DMap.setStatusTip("Show 3D map of all PEM files")
+        self.show3DMap.setShortcut('Ctrl+M')
         self.show3DMap.triggered.connect(self.map_3d_viewer)
 
         self.MapMenu = self.menubar.addMenu('&Map')
@@ -1990,6 +1991,7 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
         self.draw_boreholes_cbox.toggled.connect(self.toggle_boreholes)
 
         self.label_loops_cbox.toggled.connect(self.toggle_loop_labels)
+        self.label_loop_anno_cbox.toggled.connect(self.toggle_loop_anno_labels)
         self.label_lines_cbox.toggled.connect(self.toggle_line_labels)
         self.label_stations_cbox.toggled.connect(self.toggle_station_labels)
         self.label_boreholes_cbox.toggled.connect(self.toggle_borehole_labels)
@@ -1997,10 +1999,10 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
         self.figure = Figure(figsize=plt.figaspect(.1))
         self.canvas = FigureCanvas(self.figure)
         self.map_layout.addWidget(self.canvas)
-        self.map_plotter = Map3D(parent=self)
         self.ax = self.figure.add_subplot(111, projection='3d')
 
-        self.map_plotter.plot_pems(self.ax, self.pem_files)
+        self.map_plotter = Map3D(self.ax, self.pem_files, parent=self)
+
         self.update_canvas()
 
     def update_canvas(self):
@@ -2008,6 +2010,7 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
         self.toggle_lines()
         self.toggle_boreholes()
         self.toggle_loop_labels()
+        self.toggle_loop_anno_labels()
         self.toggle_line_labels()
         self.toggle_borehole_labels()
         self.toggle_station_labels()
@@ -2046,6 +2049,15 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
                 artist.set_visible(True)
         else:
             for artist in self.map_plotter.loop_label_artists:
+                artist.set_visible(False)
+        self.canvas.draw()
+
+    def toggle_loop_anno_labels(self):
+        if self.label_loop_anno_cbox.isChecked():
+            for artist in self.map_plotter.loop_anno_artists:
+                artist.set_visible(True)
+        else:
+            for artist in self.map_plotter.loop_anno_artists:
                 artist.set_visible(False)
         self.canvas.draw()
 

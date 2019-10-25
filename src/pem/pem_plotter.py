@@ -1300,16 +1300,18 @@ class SectionPlot:
 
 
 class Map3D:
-    def __init__(self, parent=None):
+    """
+    Class that plots all GPS from PEM Files in 3D. Draws on a given Axes3D object.
+    """
+    def __init__(self, ax, pem_files, parent=None):
         self.parent = parent
-        self.ax = None
-        # self.fig = plt.figure(figsize=(11, 8.5))
-        # self.fig = figure
-        # self.ax = self.fig.add_subplot(111, projection='3d')
+        self.pem_files = pem_files
+        self.ax = ax
         self.gps_editor = GPSEditor()
         self.loops = []
         self.loop_artists = []
         self.loop_label_artists = []
+        self.loop_anno_artists = []
         self.lines = []
         self.line_artists = []
         self.line_label_artists = []
@@ -1320,7 +1322,9 @@ class Map3D:
         self.hole_label_artists = []
         self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
 
-    def plot_pems(self, ax, pem_files):
+        self.plot_pems()
+
+    def plot_pems(self):
 
         def plot_loop(pem_file):
             loop_coords = pem_file.get_loop_coords()
@@ -1339,6 +1343,11 @@ class Map3D:
                     loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name,
                                                      path_effects=self.buffer, color='blue', ha='center', va='center')
                     self.loop_label_artists.append(loop_label_artist)
+
+                    for i, (x, y, z) in enumerate(zip(x, y, z)):
+                        loop_anno_artist = self.ax.text(x, y, z, str(i), color='blue', path_effects=self.buffer,
+                                                        va='bottom', ha='center', fontsize=7)
+                        self.loop_anno_artists.append(loop_anno_artist)
 
         def plot_line(pem_file):
             line_coords = pem_file.get_line_coords()
@@ -1403,9 +1412,7 @@ class Map3D:
                                                  path_effects=self.buffer, ha='center', va='bottom', color='darkred')
                 self.hole_label_artists.append(hole_label_artist)
 
-        self.ax = ax
-
-        for pem_file in pem_files:
+        for pem_file in self.pem_files:
             survey_type = pem_file.survey_type.lower()
 
             plot_loop(pem_file)
@@ -1414,11 +1421,9 @@ class Map3D:
             if 'borehole' in survey_type:
                 plot_hole(pem_file)
 
-        self.format_fig()
+        self.format_ax()
 
-        return self.ax
-
-    def format_fig(self):
+    def format_ax(self):
 
         def set_z_limits():
             min_x, max_x = self.ax.get_xlim()
