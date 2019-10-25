@@ -19,10 +19,11 @@ from PyQt5.QtWidgets import (QProgressBar)
 from matplotlib import patches
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
-from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
 from scipy import interpolate as interp
 from scipy import stats
 from statistics import mean
+from itertools import chain
 
 from src.gps.gps_editor import GPSEditor
 from src.pem.pem_getter import PEMGetter
@@ -1299,11 +1300,12 @@ class SectionPlot:
 
 
 class Map3D:
-    def __init__(self, figure, parent=None):
+    def __init__(self, parent=None):
         self.parent = parent
+        self.ax = None
         # self.fig = plt.figure(figsize=(11, 8.5))
-        self.fig = figure
-        self.ax = self.fig.add_subplot(111, projection='3d')
+        # self.fig = figure
+        # self.ax = self.fig.add_subplot(111, projection='3d')
         self.gps_editor = GPSEditor()
         self.loops = []
         self.loop_artists = []
@@ -1312,19 +1314,20 @@ class Map3D:
         self.line_artists = []
         self.line_label_artists = []
         self.station_label_artists = []
-        self.holes = []
+        self.collars = []
+        self.segments = []
         self.hole_artists = []
         self.hole_label_artists = []
         self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
 
-    def plot_pems(self, pem_files, draw_loops=True, draw_lines=True, draw_holes=True):
+    def plot_pems(self, ax, pem_files):
 
         def plot_loop(pem_file):
             loop_coords = pem_file.get_loop_coords()
             if loop_coords:
                 loop = [[float(num) for num in row] for row in loop_coords]
-                if loop not in self.loops:
-                    self.loops.append(loop)
+                if loop_coords not in self.loops:
+                    self.loops.append(loop_coords)
                     x, y, z = [r[0] for r in loop] + [loop[0][0]], \
                               [r[1] for r in loop] + [loop[0][1]], \
                               [r[2] for r in loop] + [loop[0][2]]
@@ -1333,31 +1336,31 @@ class Map3D:
                     loop_name = pem_file.header.get('Loop')
                     loop_center = self.gps_editor.get_loop_center(loop)
                     avg_z = mean(z)
-                    loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name, path_effects=self.buffer,
-                                 color='blue')
+                    loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name,
+                                                     path_effects=self.buffer, color='blue', ha='center', va='center')
                     self.loop_label_artists.append(loop_label_artist)
 
         def plot_line(pem_file):
             line_coords = pem_file.get_line_coords()
             if line_coords:
                 line = [[float(num) for num in row] for row in line_coords]
-                if line not in self.loops:
-                    self.lines.append(line)
+                if line not in self.lines:
+                    self.lines.append(line_coords)
                     x, y, z = [r[0] for r in line], \
                               [r[1] for r in line], \
                               [r[2] for r in line]
-                    line_artist, = self.ax.plot(x, y, z, '-o',
+                    line_artist, = self.ax.plot(x, y, z, '-o', lw=1,
                                  markersize=3, color='black', markerfacecolor = 'w', markeredgewidth = 0.3)
                     self.line_artists.append(line_artist)
                     line_name = pem_file.header.get('LineHole')
                     line_end = line[-1]
-                    avg_z = mean(z)
-                    line_label_artist = self.ax.text(line_end[0], line_end[1], avg_z, line_name)
+                    line_label_artist = self.ax.text(line_end[0], line_end[1], line_end[2], line_name, ha='center',
+                                                     va='bottom')
                     self.line_label_artists.append(line_label_artist)
 
                     for station in line:
                         station_label_artist = self.ax.text(station[0], station[1], station[2], f"{station[-1]:.0f}",
-                                     path_effects=self.buffer)
+                                     path_effects=self.buffer, ha='center', va='bottom')
                         self.station_label_artists.append(station_label_artist)
 
         def plot_hole(pem_file):
@@ -1383,33 +1386,55 @@ class Map3D:
                            [segment[1] for segment in trace], \
                            [segment[2] for segment in trace]
 
-            collar_gps = [[float(num) for num in row] for row in pem_file.get_collar_coords()]
-            segments = [[float(num) for num in row] for row in pem_file.get_hole_geometry()]
-            if collar_gps and segments:
+            collar_gps = pem_file.get_collar_coords()
+            segments = pem_file.get_hole_geometry()
+            if collar_gps and segments and segments not in self.segments:
+                self.segments.append(segments)
+
+                collar_gps = [[float(num) for num in row] for row in collar_gps]
+                segments = [[float(num) for num in row] for row in segments]
+
                 xx, yy, zz = get_3D_borehole_projection(collar_gps[0], segments)
-                hole_artist, = self.ax.plot(xx, yy, zz, '-o', lw=1, color='brown')
+                hole_artist, = self.ax.plot(xx, yy, zz, '--', lw=1, color='darkred')
                 self.hole_artists.append(hole_artist)
 
                 name = pem_file.header.get('LineHole')
                 hole_label_artist = self.ax.text(collar_gps[0][0], collar_gps[0][1], collar_gps[0][2], str(name),
-                                                 path_effects=self.buffer)
+                                                 path_effects=self.buffer, ha='center', va='bottom', color='darkred')
                 self.hole_label_artists.append(hole_label_artist)
+
+        self.ax = ax
 
         for pem_file in pem_files:
             survey_type = pem_file.survey_type.lower()
 
-            if draw_loops:
-                plot_loop(pem_file)
-            if draw_lines and 'surface' in survey_type:
+            plot_loop(pem_file)
+            if 'surface' in survey_type:
                 plot_line(pem_file)
-            if draw_holes and 'borehole' in survey_type:
+            if 'borehole' in survey_type:
                 plot_hole(pem_file)
-        # self.format_fig()
-        return self.fig
+
+        self.format_fig()
+
+        return self.ax
 
     def format_fig(self):
-        scaling = np.array([getattr(self.ax, 'get_{}lim'.format(dim))() for dim in 'xyz'])
-        self.ax.auto_scale_xyz(*[[np.min(scaling), np.max(scaling)]] * 3)
+
+        def set_z_limits():
+            min_x, max_x = self.ax.get_xlim()
+            min_y, max_y = self.ax.get_ylim()
+            min_z, max_z = self.ax.get_zlim()
+
+            x_extent, y_extent, z_extent = max_x-min_x,  max_y-min_y,  max_z-min_z
+            new_z_extent = max(x_extent, y_extent, z_extent)
+            mid_z = min_z + (abs(max_z - min_z) / 2)
+            new_z_min, new_z_max = mid_z - (new_z_extent/2), mid_z + (new_z_extent/2)
+            self.ax.set_zlim([new_z_min, new_z_max])
+
+        set_z_limits()
+        self.ax.set_xlabel('Easting')
+        self.ax.set_ylabel('Northing')
+        self.ax.set_zlabel('Elevation')
 
 
 class PEMPrinter:

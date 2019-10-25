@@ -20,7 +20,7 @@ class PEMGetter:
         for file in file_names:
             filepath = os.path.join(sample_files_dir, file)
             pem_file = self.parser().parse(filepath)
-            print('File: ' + filepath)
+            print(f'PEMGetter: Getting File {filepath}')
             # pem_files.append((pem_file, None))  # Empty second item for ri_files
             pem_files.append(pem_file)
 

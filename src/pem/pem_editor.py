@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QInputDialog, QHeaderView, QTableWidget, QGridLayout, QDialogButtonBox, QVBoxLayout)
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
 from matplotlib.figure import Figure
 from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
@@ -89,16 +90,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.file_editor = PEMFileEditor()
         self.message = QMessageBox()
         self.dialog = QFileDialog()
-        # self.pem_info_widget = PEMFileInfoWidget()
         self.gps_parser = GPSParser()
         self.gpx_editor = GPXEditor()
         self.serializer = PEMSerializer()
         self.ri_importer = BatchRIImporter(parent=self)
         self.plan_map_options = PlanMapOptions(parent=self)
-        # self.map_3d = Map3DViewer(self.pem_files)
+        self.map_viewer_3d = None
         self.pem_file_splitter = None
-        # self.layout.addWidget(self)
-        # self.setCentralWidget(self.table)
 
         self.initActions()
         self.initSignals()
@@ -136,6 +134,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         logging.info('PEMEditor - Initializing Actions')
         self.setAcceptDrops(True)
 
+        # 'File' menu
         self.openFile = QAction("&Open...", self)
         self.openFile.setShortcut("Ctrl+O")
         self.openFile.setStatusTip('Open file')
@@ -200,6 +199,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu.addAction(self.print_step_plots_action)
         self.fileMenu.addAction(self.print_final_plots_action)
 
+        # PEM menu
         self.averageAllPems = QAction("&Average All PEM Files", self)
         self.averageAllPems.setStatusTip("Average all PEM files")
         self.averageAllPems.setShortcut("F5")
@@ -234,14 +234,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.editFileNames.setShortcut("F3")
         self.editFileNames.triggered.connect(lambda: self.batch_rename(type='File'))
 
-        self.sortAllStationGps = QAction("&Sort All Station GPS", self)
-        self.sortAllStationGps.setStatusTip("Sort the station GPS for every file")
-        self.sortAllStationGps.triggered.connect(self.sort_all_station_gps)
-
-        self.sortAllLoopGps = QAction("&Sort All Loop GPS", self)
-        self.sortAllLoopGps.setStatusTip("Sort the loop GPS for every file")
-        self.sortAllLoopGps.triggered.connect(self.sort_all_loop_gps)
-
         self.PEMMenu = self.menubar.addMenu('&PEM')
         self.PEMMenu.addAction(self.editLineNames)
         self.PEMMenu.addAction(self.editFileNames)
@@ -252,9 +244,26 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.PEMMenu.addAction(self.scaleAllCurrents)
         self.PEMMenu.addAction(self.scaleAllCoilAreas)
 
+        # GPS menu
+        self.sortAllStationGps = QAction("&Sort All Station GPS", self)
+        self.sortAllStationGps.setStatusTip("Sort the station GPS for every file")
+        self.sortAllStationGps.triggered.connect(self.sort_all_station_gps)
+
+        self.sortAllLoopGps = QAction("&Sort All Loop GPS", self)
+        self.sortAllLoopGps.setStatusTip("Sort the loop GPS for every file")
+        self.sortAllLoopGps.triggered.connect(self.sort_all_loop_gps)
+
         self.GPSMenu = self.menubar.addMenu('&GPS')
         self.GPSMenu.addAction(self.sortAllStationGps)
         self.GPSMenu.addAction(self.sortAllLoopGps)
+
+        # Map menu
+        self.show3DMap = QAction("&3D Map", self)
+        self.show3DMap.setStatusTip("Show 3D map of all PEM files")
+        self.show3DMap.triggered.connect(self.map_3d_viewer)
+
+        self.MapMenu = self.menubar.addMenu('&Map')
+        self.MapMenu.addAction(self.show3DMap)
 
     def initSignals(self):
         logging.info('PEMEditor - Initializing Signals')
@@ -1179,6 +1188,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('Cancelled.', 2000)
             pass
 
+    def map_3d_viewer(self):
+        self.map_viewer_3d = Map3DViewer(self.pem_files, parent=self)
+        self.map_viewer_3d.show()
+
     def print_plots(self, final=False, step=False, plan=False):
         logging.info('PEMEditor - Printing plots')
 
@@ -1194,8 +1207,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if __name__ == '__main__':
                 save_dir = r'C:\_Data\2019\_Mowgli Testing\test'  # For testing purposes
             else:
-                save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[
-                    0]  # Returns full filepath. For single PDF file
+                save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]
+                # Returns full filepath. For single PDF file
             return save_dir
 
         if len(self.pem_files) > 0:
@@ -1694,6 +1707,10 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
 
 
 class BatchRIImporter(QWidget):
+    """
+    GUI window that imports multiple RI files. There must be equal number of RI files to PEM Files
+    and the line/file name numbers much match up.
+    """
     logging.info('BatchRIImporter')
     acceptImportSignal = QtCore.pyqtSignal()
 
@@ -1816,6 +1833,10 @@ class BatchRIImporter(QWidget):
 
 
 class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
+    """
+    GUI to display checkboxes for display options when creating the final Plan Map PDF. Buttons aren't attached
+    to any signals. The state of the checkboxes are read from PEMEditor.
+    """
     # acceptImportSignal = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
@@ -1873,6 +1894,9 @@ class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
 
 
 class PEMFileSplitter(QWidget, Ui_PEMFileSplitterWidget):
+    """
+    Class that will extract selected stations from a PEM File and save them as a new PEM File.
+    """
 
     def __init__(self, pem_file, parent=None):
         logging.info('PEMFileSplitter')
@@ -1941,7 +1965,9 @@ class PEMFileSplitter(QWidget, Ui_PEMFileSplitterWidget):
 
 
 class Map3DViewer(QWidget, Ui_Map3DWidget):
-
+    """
+    QWidget window that displays a 3D map (plotted from Map3D) of the PEM Files.
+    """
     def __init__(self, pem_files, parent=None):
         logging.info('Map3DViewer')
         super().__init__()
@@ -1968,18 +1994,24 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
         self.label_stations_cbox.toggled.connect(self.toggle_station_labels)
         self.label_boreholes_cbox.toggled.connect(self.toggle_borehole_labels)
 
-        self.figure = Figure()
+        self.figure = Figure(figsize=plt.figaspect(.1))
         self.canvas = FigureCanvas(self.figure)
         self.map_layout.addWidget(self.canvas)
-        self.map_plotter = Map3D(self.figure)
+        self.map_plotter = Map3D(parent=self)
+        self.ax = self.figure.add_subplot(111, projection='3d')
 
-        self.plot_pems()
+        self.map_plotter.plot_pems(self.ax, self.pem_files)
+        self.update_canvas()
 
-    def plot_pems(self):
-        if len(self.pem_files) > 0:
-            self.figure = self.map_plotter.plot_pems(
-                self.pem_files)  # , draw_holes=self.draw_boreholes, draw_loops=self.draw_loops,
-            # draw_lines=self.draw_lines)
+    def update_canvas(self):
+        self.toggle_loops()
+        self.toggle_lines()
+        self.toggle_boreholes()
+        self.toggle_loop_labels()
+        self.toggle_line_labels()
+        self.toggle_borehole_labels()
+        self.toggle_station_labels()
+        self.canvas.draw()
 
     def toggle_loops(self):
         if self.draw_loops_cbox.isChecked():
@@ -2044,6 +2076,10 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
                 artist.set_visible(False)
         self.canvas.draw()
 
+    def closeEvent(self, e):
+        self.figure.clear()
+        e.accept()
+
 
 def main():
     app = QApplication(sys.argv)
@@ -2053,8 +2089,8 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
-    mapper = Map3DViewer(pem_files)
-    mapper.show()
+    # mapper = Map3DViewer(pem_files)
+    # mapper.show()
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
     # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')
