@@ -39,6 +39,19 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
+
+sys._excepthook = sys.excepthook
+
+
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
+
+
 mpl.rcParams['path.simplify'] = True
 mpl.rcParams['path.simplify_threshold'] = 1.0
 mpl.rcParams['agg.path.chunksize'] = 10000
@@ -1158,10 +1171,12 @@ class Map3D:
     """
     Class that plots all GPS from PEM Files in 3D. Draws on a given Axes3D object.
     """
-    def __init__(self, ax, pem_files, parent=None):
+    def __init__(self, ax, pem_files, parent=None, set_z=True):
+        logging.info('Map3D')
         self.parent = parent
         self.pem_files = pem_files
         self.ax = ax
+        self.set_z = set_z
         self.gps_editor = GPSEditor()
         self.loops = []
         self.loop_artists = []
@@ -1172,129 +1187,146 @@ class Map3D:
         self.line_label_artists = []
         self.station_label_artists = []
         self.collars = []
-        self.segments = []
+        self.geometries = []
         self.hole_artists = []
         self.hole_label_artists = []
+        self.segment_label_artists = []
         self.buffer = [patheffects.Stroke(linewidth=1, foreground='white'), patheffects.Normal()]
 
-        self.plot_pems()
+    def get_3D_borehole_projection(self, collar_gps, segments):
+        logging.info('Map3D - Retrieving 3D borehole projection')
+        if not collar_gps:
+            return None
+        else:
+            collar_x, collar_y, collar_z = collar_gps[0], collar_gps[1], collar_gps[2]
+            trace = [(collar_x, collar_y, collar_z)]  # Easting and Northing tuples
+            azimuth = None
+            for segment in segments:
+                azimuth = math.radians(float(segment[0]))
+                dip = math.radians(float(segment[1]))
+                seg_l = float(segment[2])
+                delta_seg_l = seg_l * math.cos(dip)
+                delta_elev = seg_l * math.sin(dip)
+                dx = delta_seg_l * math.sin(azimuth)
+                dy = delta_seg_l * math.cos(azimuth)
+                trace.append(
+                    (float(trace[-1][0]) + dx, float(trace[-1][1]) + dy, float(trace[-1][2]) - delta_elev))
+            return [segment[0] for segment in trace], \
+                   [segment[1] for segment in trace], \
+                   [segment[2] for segment in trace]
 
     def plot_pems(self):
-
-        def plot_loop(pem_file):
-            loop_coords = pem_file.get_loop_coords()
-            if loop_coords:
-                loop = [[float(num) for num in row] for row in loop_coords]
-                if loop_coords not in self.loops:
-                    self.loops.append(loop_coords)
-                    x, y, z = [r[0] for r in loop] + [loop[0][0]], \
-                              [r[1] for r in loop] + [loop[0][1]], \
-                              [r[2] for r in loop] + [loop[0][2]]
-                    loop_artist, = self.ax.plot(x, y, z, lw=1, color='blue')
-                    self.loop_artists.append(loop_artist)
-                    loop_name = pem_file.header.get('Loop')
-                    loop_center = self.gps_editor.get_loop_center(loop)
-                    avg_z = mean(z)
-                    loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name,
-                                                     path_effects=self.buffer, color='blue', ha='center', va='center')
-                    self.loop_label_artists.append(loop_label_artist)
-
-                    for i, (x, y, z) in enumerate(zip(x, y, z)):
-                        loop_anno_artist = self.ax.text(x, y, z, str(i), color='blue', path_effects=self.buffer,
-                                                        va='bottom', ha='center', fontsize=7)
-                        self.loop_anno_artists.append(loop_anno_artist)
-
-        def plot_line(pem_file):
-            line_coords = pem_file.get_line_coords()
-            if line_coords:
-                line = [[float(num) for num in row] for row in line_coords]
-                if line not in self.lines:
-                    self.lines.append(line_coords)
-                    x, y, z = [r[0] for r in line], \
-                              [r[1] for r in line], \
-                              [r[2] for r in line]
-                    line_artist, = self.ax.plot(x, y, z, '-o', lw=1,
-                                 markersize=3, color='black', markerfacecolor = 'w', markeredgewidth = 0.3)
-                    self.line_artists.append(line_artist)
-                    line_name = pem_file.header.get('LineHole')
-                    line_end = line[-1]
-                    line_label_artist = self.ax.text(line_end[0], line_end[1], line_end[2], line_name, ha='center',
-                                                     va='bottom', path_effects=self.buffer, zorder=2)
-                    self.line_label_artists.append(line_label_artist)
-
-                    for station in line:
-                        station_label_artist = self.ax.text(station[0], station[1], station[2], f"{station[-1]:.0f}",
-                                     path_effects=self.buffer, ha='center', va='bottom', color='dimgray')
-                        self.station_label_artists.append(station_label_artist)
-
-        def plot_hole(pem_file):
-
-            def get_3D_borehole_projection(collar_gps, segments):
-                if not collar_gps:
-                    return None
-                else:
-                    collar_x, collar_y, collar_z = collar_gps[0], collar_gps[1], collar_gps[2]
-                    trace = [(collar_x, collar_y, collar_z)]  # Easting and Northing tuples
-                    azimuth = None
-                    for segment in segments:
-                        azimuth = math.radians(float(segment[0]))
-                        dip = math.radians(float(segment[1]))
-                        seg_l = float(segment[2])
-                        delta_seg_l = seg_l * math.cos(dip)
-                        delta_elev = seg_l * math.sin(dip)
-                        dx = delta_seg_l * math.sin(azimuth)
-                        dy = delta_seg_l * math.cos(azimuth)
-                        trace.append(
-                            (float(trace[-1][0]) + dx, float(trace[-1][1]) + dy, float(trace[-1][2]) - delta_elev))
-                    return [segment[0] for segment in trace], \
-                           [segment[1] for segment in trace], \
-                           [segment[2] for segment in trace]
-
-            collar_gps = pem_file.get_collar_coords()
-            segments = pem_file.get_hole_geometry()
-            if collar_gps and segments and segments not in self.segments:
-                self.segments.append(segments)
-
-                collar_gps = [[float(num) for num in row] for row in collar_gps]
-                segments = [[float(num) for num in row] for row in segments]
-
-                xx, yy, zz = get_3D_borehole_projection(collar_gps[0], segments)
-                hole_artist, = self.ax.plot(xx, yy, zz, '--', lw=1, color='darkred')
-                self.hole_artists.append(hole_artist)
-
-                name = pem_file.header.get('LineHole')
-                hole_label_artist = self.ax.text(collar_gps[0][0], collar_gps[0][1], collar_gps[0][2], str(name),
-                                                 path_effects=self.buffer, ha='center', va='bottom', color='darkred')
-                self.hole_label_artists.append(hole_label_artist)
-
+        logging.info('Map3D - Plotting all PEM files')
         for pem_file in self.pem_files:
             survey_type = pem_file.survey_type.lower()
 
-            plot_loop(pem_file)
+            self.plot_loop(pem_file)
             if 'surface' in survey_type:
-                plot_line(pem_file)
+                self.plot_line(pem_file)
             if 'borehole' in survey_type:
-                plot_hole(pem_file)
+                self.plot_hole(pem_file)
 
-        self.format_ax()
+    def plot_loop(self, pem_file):
+        logging.info('Map3D - Plotting loop')
+        loop_coords = pem_file.get_loop_coords()
+        if loop_coords:
+            loop = [[float(num) for num in row] for row in loop_coords]
+            if loop_coords not in self.loops:
+                self.loops.append(loop_coords)
+                x, y, z = [r[0] for r in loop] + [loop[0][0]], \
+                          [r[1] for r in loop] + [loop[0][1]], \
+                          [r[2] for r in loop] + [loop[0][2]]
+                loop_artist, = self.ax.plot(x, y, z, lw=1, color='blue')
+                self.loop_artists.append(loop_artist)
+                loop_name = pem_file.header.get('Loop')
+                loop_center = self.gps_editor.get_loop_center(loop)
+                avg_z = mean(z)
+                loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name,
+                                                 path_effects=self.buffer, color='blue', ha='center', va='center')
+                self.loop_label_artists.append(loop_label_artist)
+
+                for i, (x, y, z) in enumerate(zip(x, y, z)):
+                    loop_anno_artist = self.ax.text(x, y, z, str(i), color='blue', path_effects=self.buffer,
+                                                    va='bottom', ha='center', fontsize=7)
+                    self.loop_anno_artists.append(loop_anno_artist)
+
+    def plot_line(self, pem_file):
+        logging.info('Map3D - Plotting surface line')
+        line_coords = pem_file.get_line_coords()
+        if line_coords:
+            line = [[float(num) for num in row] for row in line_coords]
+            if line not in self.lines:
+                self.lines.append(line_coords)
+                x, y, z = [r[0] for r in line], \
+                          [r[1] for r in line], \
+                          [r[2] for r in line]
+                line_artist, = self.ax.plot(x, y, z, '-o', lw=1,
+                             markersize=3, color='black', markerfacecolor = 'w', markeredgewidth = 0.3)
+                self.line_artists.append(line_artist)
+                line_name = pem_file.header.get('LineHole')
+                line_end = line[-1]
+                line_label_artist = self.ax.text(line_end[0], line_end[1], line_end[2], line_name, ha='center',
+                                                 va='bottom', path_effects=self.buffer, zorder=5)
+                self.line_label_artists.append(line_label_artist)
+
+                for station in line:
+                    station_label_artist = self.ax.text(station[0], station[1], station[2], f"{station[-1]:.0f}",
+                                                        fontsize=7, path_effects=self.buffer, ha='center', va='bottom',
+                                                        color='dimgray')
+                    self.station_label_artists.append(station_label_artist)
+
+    def plot_hole(self, pem_file):
+        logging.info('Map3D - Plotting borehole')
+
+        collar_gps = pem_file.get_collar_coords()
+        segments = pem_file.get_hole_geometry()
+        if collar_gps and segments and segments not in self.geometries:
+            self.geometries.append(segments)
+
+            collar_gps = [[float(num) for num in row] for row in collar_gps]
+            segments = [[float(num) for num in row] for row in segments]
+
+            xx, yy, zz = self.get_3D_borehole_projection(collar_gps[0], segments)
+            hole_artist, = self.ax.plot(xx, yy, zz, '--', lw=1, color='darkred')
+            self.hole_artists.append(hole_artist)
+
+            name = pem_file.header.get('LineHole')
+            hole_label_artist = self.ax.text(collar_gps[0][0], collar_gps[0][1], collar_gps[0][2], str(name), zorder=5,
+                                             path_effects=self.buffer, ha='center', va='bottom', color='darkred')
+            self.hole_label_artists.append(hole_label_artist)
+
+            for i, (x, y, z) in enumerate(list(zip(xx, yy, zz))[1:]):
+                segment_label_artist = self.ax.text(x, y, z, f"{segments[i][-1]:.0f}", fontsize=7,
+                                                    path_effects=self.buffer, ha='center', va='bottom', color='darkred')
+                self.segment_label_artists.append(segment_label_artist)
 
     def format_ax(self):
+        logging.info('Map3D - Formatting axes')
 
-        def set_z_limits():
+        def set_limits():
             min_x, max_x = self.ax.get_xlim()
             min_y, max_y = self.ax.get_ylim()
             min_z, max_z = self.ax.get_zlim()
 
-            x_extent, y_extent, z_extent = max_x-min_x,  max_y-min_y,  max_z-min_z
-            new_z_extent = max(x_extent, y_extent, z_extent)
-            mid_z = min_z + (abs(max_z - min_z) / 2)
-            new_z_min, new_z_max = mid_z - (new_z_extent/2), mid_z + (new_z_extent/2)
-            self.ax.set_zlim([new_z_min, new_z_max])
+            max_range = np.array([max_x - min_x, max_y - min_y, max_z - min_z]).max() / 2.0
 
-        set_z_limits()
+            mid_x = (max_x + min_x) * 0.5
+            mid_y = (max_y + min_y) * 0.5
+            mid_z = (max_z + min_z) * 0.5
+            self.ax.set_xlim(mid_x - max_range, mid_x + max_range)
+            self.ax.set_ylim(mid_y - max_range, mid_y + max_range)
+            if self.set_z:
+                self.ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
+        set_limits()
+
         self.ax.set_xlabel('Easting')
         self.ax.set_ylabel('Northing')
         self.ax.set_zlabel('Elevation')
+
+        self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
+        self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
+        self.ax.zaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
 
 
 class MagneticFieldCalculator:
@@ -1303,6 +1335,7 @@ class MagneticFieldCalculator:
     :param: pem_file: PEMFile object
     """
     def __init__(self, pem_file):
+        logging.info('MagneticFieldCalculator')
         self.pem_file = pem_file
         self.loop_coords = [[float(num) for num in row] for row in self.pem_file.get_loop_coords()]
         self.collar = self.pem_file.get_collar_coords()[0]
@@ -1316,7 +1349,6 @@ class MagneticFieldCalculator:
         :param I: Current used
         :return: Magnetic field strength
         """
-
         def get_magnitude(vector):
             return math.sqrt(sum(i ** 2 for i in vector))
 
@@ -1365,6 +1397,7 @@ class MagneticFieldCalculator:
         return newvector[0], newvector[1], newvector[2]
 
     def get_extents(self):
+        logging.info('MagneticFieldCalculator - Retrieving extents')
         min_x = min([float(row[0]) for row in self.loop_coords] + [float(self.collar[0])])
         max_x = max([float(row[0]) for row in self.loop_coords] + [float(self.collar[0])])
         min_y = min([float(row[1]) for row in self.loop_coords] + [float(self.collar[1])])
@@ -1374,6 +1407,7 @@ class MagneticFieldCalculator:
         return min_x, max_x, min_y, max_y, min_z, max_z
 
     def get_3d_magnetic_field(self, num_rows, buffer=0):
+        logging.info('MagneticFieldCalculator - Creating mesh grid and creating vector field')
         # Create a mesh grid
         min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents()
         arrow_len = (max_z - min_z) // 16
@@ -1399,114 +1433,195 @@ class MagneticFieldCalculator:
 
         return xx, yy, zz, u, v, w, arrow_len
 
-    def get_2d_magnetic_field(self, p1, p2):
-
+    def get_2d_magnetic_field(self, x1, x2, y1, y2, num_rows=8):
         v_proj = np.vectorize(self.project)
         v_field = np.vectorize(self.calc_total_field)
 
+        min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents()
 
-class Section2D(MagneticFieldCalculator):
-    def __init__(self, ax, pem_file):
-        if isinstance(pem_file, list):
-            pem_file = pem_file[0]
-        self.pem_file = pem_file
-        super().__init__(self.pem_file)
-        self.ax = ax
+        x = np.arange(x1, x2, abs(x2 - x1) * 1 / num_rows)
+        y = np.arange(y1, y2, abs(y2 - y1) * 1 / num_rows)
+        z = np.arange(min_z, max_z, (max_z - min_z) * 1 / num_rows)
+        xx, yy, zz = np.meshgrid(x, y, z)
+
+        print('Computing Field at {} points.....'.format(xx.size))
+        start = timer()
+
+        # Calculate the magnetic field at each mesh grid point
+        u, v, w = v_field(xx, yy, zz, self.current)
+
+        end = timer()
+        time = round(end - start, 2)
+        print('Calculated in {} seconds'.format(str(time)))
+
+        return xx, yy, zz, u, v, w, 16.
 
 
-class Section3D(MagneticFieldCalculator):
+class Section3D(Map3D, MagneticFieldCalculator):
     def __init__(self, ax, pem_file, **kwargs):
+        logging.info('Section3D')
         if isinstance(pem_file, list):
             pem_file = pem_file[0]
         self.pem_file = pem_file
-        super().__init__(self.pem_file)
         self.ax = ax
-        self.gps_editor = GPSEditor()
+        Map3D.__init__(self, self.ax, self.pem_file, set_z=False)
+        MagneticFieldCalculator.__init__(self, self.pem_file)
 
-        self.loop_artists = []
-        self.hole_artists = []
         self.mag_field_artists = []
-
-        self.loop_label_artists = []
-        self.loop_anno_artists = []
-        self.hole_label_artists = []
-        self.station_label_artists = []
-
         self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
 
-        self.plot_trace()
-        self.plot_loop()
-        self.plot_magnetic_field()
+        self.plot_hole(self.pem_file)
+        self.plot_loop(self.pem_file)
+        # self.plot_2d_magnetic_field()
+        # self.plot_3d_magnetic_field()
 
-    def plot_loop(self):
-        xs = [row[0] for row in self.loop_coords] + [self.loop_coords[0][0]]
-        ys = [row[1] for row in self.loop_coords] + [self.loop_coords[0][1]]
-        zs = [row[2] for row in self.loop_coords] + [self.loop_coords[0][2]]
+    def plot_2d_magnetic_field(self):#, Px1, Px2, Py1, Py2):
+        logging.info('Section3D - Plotting magnetic field')
+        xx, yy, zz, u, v, w, arrow_len = self.get_2d_magnetic_field()
 
-        # Plot the loop
-        loop_artist, = self.ax.plot(xs, ys, zs, lw=1, color='blue', path_effects=self.buffer)
-        self.loop_artists.append(loop_artist)
+        mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
+                      color='black', label='Field', linewidth=.5, alpha=1,
+                      arrow_length_ratio=.7, pivot='middle', zorder=0)
+        self.mag_field_artists.append(mag_field_artist)
 
-        loop_name = self.pem_file.header.get('Loop')
-        loop_center = self.gps_editor.get_loop_center(self.pem_file.get_loop_coords())
-        avg_z = mean(zs)
-
-        # Loop label
-        loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name,
-                                         path_effects=self.buffer, color='blue', ha='center', va='center')
-        self.loop_label_artists.append(loop_label_artist)
-
-        # Loop annotations
-        for i, (x, y, z) in enumerate(zip(xs, ys, zs)):
-            loop_anno_artist = self.ax.text(x, y, z, str(i), color='blue', path_effects=self.buffer,
-                                            va='bottom', ha='center', fontsize=7)
-            self.loop_anno_artists.append(loop_anno_artist)
-
-    def plot_trace(self):
-
-        def get_3D_borehole_projection(segments):
-            if not self.collar:
-                return None
-            else:
-                collar_x, collar_y, collar_z = float(self.collar[0]), float(self.collar[1]), float(self.collar[2])
-                trace = [(collar_x, collar_y, collar_z)]  # Easting and Northing tuples
-                azimuth = None
-                for segment in segments:
-                    azimuth = math.radians(float(segment[0]))
-                    dip = math.radians(float(segment[1]))
-                    seg_l = float(segment[2])
-                    delta_seg_l = seg_l * math.cos(dip)
-                    delta_elev = seg_l * math.sin(dip)
-                    dx = delta_seg_l * math.sin(azimuth)
-                    dy = delta_seg_l * math.cos(azimuth)
-                    trace.append((float(trace[-1][0]) + dx, float(trace[-1][1]) + dy, float(trace[-1][2]) - delta_elev))
-                return [segment[0] for segment in trace], \
-                       [segment[1] for segment in trace], \
-                       [segment[2] for segment in trace]
-
-        def get_section_extents(trace):
-            seg_center = None
-
-        seg_x, seg_y, seg_z = get_3D_borehole_projection(self.segments)
-        # x, y = get_section_extents(trace)
-        # Plot hole trace
-        hole_artist, = self.ax.plot(seg_x, seg_y, seg_z, linewidth=1, color='darkred')
-        self.hole_artists.append(hole_artist)
-
-        hole_name = self.pem_file.header.get('LineHole')
-        hole_label = self.ax.text(float(self.collar[0]), float(self.collar[1]), float(self.collar[2]), hole_name,
-                                  color='darkred', path_effects=self.buffer, va='bottom', ha='center')
-        self.hole_label_artists.append(hole_label)
-
-        # plt.plot(trace_x, trace_y)
-
-    def plot_magnetic_field(self, num_rows=8):
+    def plot_3d_magnetic_field(self, num_rows=8):
+        logging.info('Section3D - Plotting magnetic field')
         xx, yy, zz, u, v, w, arrow_len = self.get_3d_magnetic_field(num_rows, buffer=10)
         # 3D Quiver
         mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
                       color='black', label='Field', linewidth=.5, alpha=1,
                       arrow_length_ratio=.7, pivot='middle', zorder=0)
         self.mag_field_artists.append(mag_field_artist)
+
+
+class DraggablePoint:
+
+    lock = None #  only one can be animated at a time
+
+    def __init__(self, parent, x=0.1, y=0.1, size=0.1):
+
+        self.parent = parent
+        self.point = patches.Ellipse((x, y), size, size * 3, fc='r', alpha=0.5, edgecolor='r')
+        self.x = x
+        self.y = y
+        parent.figure.axes[0].add_patch(self.point)
+        self.press = None
+        self.background = None
+        self.connect()
+
+        if self.parent.list_points:
+            line_x = [self.parent.list_points[0].x, self.x]
+            line_y = [self.parent.list_points[0].y, self.y]
+
+            self.line = mlines.Line2D(line_x, line_y, color='r', alpha=0.5)
+            parent.figure.axes[0].add_line(self.line)
+
+    def connect(self):
+
+        'connect to all the events we need'
+
+        self.cidpress = self.point.figure.canvas.mpl_connect('button_press_event', self.on_press)
+        self.cidrelease = self.point.figure.canvas.mpl_connect('button_release_event', self.on_release)
+        self.cidmotion = self.point.figure.canvas.mpl_connect('motion_notify_event', self.on_motion)
+
+
+    def on_press(self, event):
+
+        if event.inaxes != self.point.axes: return
+        if DraggablePoint.lock is not None: return
+        contains, attrd = self.point.contains(event)
+        if not contains: return
+        self.press = (self.point.center), event.xdata, event.ydata
+        DraggablePoint.lock = self
+
+        # draw everything but the selected rectangle and store the pixel buffer
+        canvas = self.point.figure.canvas
+        axes = self.point.axes
+        self.point.set_animated(True)
+        if self == self.parent.list_points[1]:
+            self.line.set_animated(True)
+        else:
+            self.parent.list_points[1].line.set_animated(True)
+        canvas.draw()
+        self.background = canvas.copy_from_bbox(self.point.axes.bbox)
+
+        # now redraw just the rectangle
+        axes.draw_artist(self.point)
+
+        # and blit just the redrawn area
+        canvas.blit(axes.bbox)
+
+
+    def on_motion(self, event):
+
+        if DraggablePoint.lock is not self:
+            return
+        if event.inaxes != self.point.axes: return
+        self.point.center, xpress, ypress = self.press
+        dx = event.xdata - xpress
+        dy = event.ydata - ypress
+        self.point.center = (self.point.center[0]+dx, self.point.center[1]+dy)
+
+        canvas = self.point.figure.canvas
+        axes = self.point.axes
+        # restore the background region
+        canvas.restore_region(self.background)
+
+        # redraw just the current rectangle
+        axes.draw_artist(self.point)
+
+        if self == self.parent.list_points[1]:
+            axes.draw_artist(self.line)
+        else:
+            self.parent.list_points[1].line.set_animated(True)
+            axes.draw_artist(self.parent.list_points[1].line)
+
+        self.x = self.point.center[0]
+        self.y = self.point.center[1]
+
+        if self == self.parent.list_points[1]:
+            line_x = [self.parent.list_points[0].x, self.x]
+            line_y = [self.parent.list_points[0].y, self.y]
+            self.line.set_data(line_x, line_y)
+        else:
+            line_x = [self.x, self.parent.list_points[1].x]
+            line_y = [self.y, self.parent.list_points[1].y]
+
+            self.parent.list_points[1].line.set_data(line_x, line_y)
+
+        # blit just the redrawn area
+        canvas.blit(axes.bbox)
+
+
+    def on_release(self, event):
+
+        'on release we reset the press data'
+        if DraggablePoint.lock is not self:
+            return
+
+        self.press = None
+        DraggablePoint.lock = None
+
+        # turn off the rect animation property and reset the background
+        self.point.set_animated(False)
+        if self == self.parent.list_points[1]:
+            self.line.set_animated(False)
+        else:
+            self.parent.list_points[1].line.set_animated(False)
+
+        self.background = None
+
+        # redraw the full figure
+        self.point.figure.canvas.draw()
+
+        self.x = self.point.center[0]
+        self.y = self.point.center[1]
+
+    def disconnect(self):
+        'disconnect all the stored connection ids'
+        self.point.figure.canvas.mpl_disconnect(self.cidpress)
+        self.point.figure.canvas.mpl_disconnect(self.cidrelease)
+        self.point.figure.canvas.mpl_disconnect(self.cidmotion)
 
 
 class PEMPrinter:
