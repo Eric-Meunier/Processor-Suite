@@ -2,7 +2,6 @@ import os
 import sys
 import logging
 from src.damp.db_plot import DBPlot
-from src.con_file.confile_modder import Conder
 from src.pem.pem_editor import PEMEditorWindow
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QMdiArea,
                              QTabWidget, QMdiSubWindow, QToolButton,

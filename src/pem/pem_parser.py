@@ -136,6 +136,8 @@ class PEMParser:
             survey_type = 'Borehole Induction'
         elif survey_type.casefold() == 'b-rad':
             survey_type = 'Borehole Induction'
+        elif survey_type.casefold() == 'b-otool':
+            survey_type = 'Borehole Induction'
         elif survey_type.casefold() == 's-flux':
             survey_type = 'Surface Fluxgate'
         elif survey_type.casefold() == 'bh-flux':

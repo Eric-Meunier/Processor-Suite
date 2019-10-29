@@ -2024,6 +2024,7 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
 
         self.map_plotter = Map3D(self.ax, self.pem_files, parent=self)
 
+        # Show/hide features based on the current state of the checkboxes
         self.update_canvas()
 
     def update_canvas(self):
@@ -2121,6 +2122,10 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         self.setupUi(self)
         self.pem_file = pem_file
         self.parent = parent
+        # self.clickp1 = None
+        # self.clickp2 = None
+        # self.plan_lines = []
+
         self.setWindowTitle('3D Section Viewer')
 
         self.draw_loop = self.draw_loop_cbox.isChecked()
@@ -2141,12 +2146,73 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
+        # self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)  # Needed for key-press events
+        # self.canvas.setFocus()
 
         self.map_layout.addWidget(self.canvas)
         self.ax = self.figure.add_subplot(111, projection='3d')
 
         self.section_plotter = Section3D(self.ax, self.pem_file, parent=self)
         self.update_canvas()
+
+        # self.cid_press = self.figure.canvas.mpl_connect('key_press_event', self.mpl_onpress)
+        # self.cid_release = self.figure.canvas.mpl_connect('key_release_event', self.mpl_onrelease)
+
+    def mpl_onclick(self, event):
+
+        def get_mouse_xyz():
+            x = float(self.ax.format_coord(event.xdata, event.ydata).split(',')[0].strip().split('=')[-1])
+            y = float(self.ax.format_coord(event.xdata, event.ydata).split(',')[1].strip().split('=')[-1])
+            z = float(self.ax.format_coord(event.xdata, event.ydata).split(',')[2].strip().split('=')[-1])
+            return x, y, z
+
+        if plt.get_current_fig_manager().toolbar.mode != '' or event.xdata is None:
+            return
+        if event.button == 3:
+            if self.clickp1 is None:
+                self.clickp1 = get_mouse_xyz()
+                print(f'P1: {self.ax.format_coord(event.xdata, event.ydata)}')
+                self.ax.plot([self.clickp1[0]], [self.clickp1[1]], [self.clickp1[2]], 'ro', label='1')
+        #     self.plan_lines.append(self.ax.lines[-1])
+                self.canvas.draw()
+        #
+            elif self.clickp2 is None:
+                self.clickp2 = get_mouse_xyz()
+                print(f'P2: {self.ax.format_coord(event.xdata, event.ydata)}')
+                self.ax.plot([self.clickp2[0]], [self.clickp2[1]], [self.clickp2[2]], 'bo', label='2')
+                self.canvas.draw()
+            else:
+                self.clickp1 = None
+                self.clickp2 = None
+        #     self.clickp2 = [int(event.xdata), int(event.ydata)]
+        #
+        #     if self.clickp2 == self.clickp1:
+        #         self.clickp1, self.clickp2 = None, None
+        #         raise NameError('P1 != P2, reset')
+        #
+        #     print(f'P2: {self.clickp2}')
+        #
+        #     self.ax.plot([self.clickp1[0], self.clickp2[0]],
+        #                        [self.clickp1[1], self.clickp2[1]], 'r', label='L')
+        #     self.plan_lines.append(self.ax.lines[-1])
+        #
+        #     plt.draw()
+        #
+        #     print('Plotting section...')
+
+    def mpl_onpress(self, event):
+        # print('press ', event.key)
+        sys.stdout.flush()
+        if event.key == 'control':
+            self.cid_click = self.figure.canvas.mpl_connect('button_press_event', self.mpl_onclick)
+        elif event.key == 'escape':
+            self.clickp1 = None
+            self.clickp2 = None
+
+    def mpl_onrelease(self, event):
+        # print('release ', event.key)
+        if event.key == 'control':
+            self.figure.canvas.mpl_disconnect(self.cid_click)
 
     def update_canvas(self):
         self.toggle_loop()
@@ -2233,8 +2299,8 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
-    # section = Section3DViewer(pem_files[0])
-    # section.show()
+    section = Section3DViewer(pem_files[0])
+    section.show()
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
     # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')
