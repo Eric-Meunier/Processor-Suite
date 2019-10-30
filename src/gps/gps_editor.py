@@ -34,7 +34,7 @@ class GPSEditor:
     """
 
     def __init__(self):
-        logging.info('GPSEditor')
+        # logging.info('GPSEditor')
         self.parser = GPSParser()
 
     def sort_loop(self, gps_data):
@@ -205,7 +205,7 @@ class GPSParser:
     """
 
     def __init__(self):
-        logging.info('GPSParser')
+        # logging.info('GPSParser')
         # self.re_station_gps = re.compile(
         #     r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
         self.re_station_gps = re.compile(
@@ -310,7 +310,7 @@ class INFParser:
 class GPXEditor:
 
     def parse_gpx(self, filepath):
-        logging.info('GPXEditor')
+        # logging.info('GPXEditor')
         gpx_file = open(filepath, 'r')
         gpx = gpxpy.parse(gpx_file)
         gps = []
@@ -324,6 +324,7 @@ class GPXEditor:
         :param gpx_filepath: filepath of a GPX file
         :return: List of rows of UTM gps with elevation, units (0 or 1) and comment/name from the GPX waypoint
         """
+        logging.info('GPXEditor - Converting GPX file coordinates to UTM')
         gps = self.parse_gpx(gpx_filepath)
         zone = None
         hemisphere = None

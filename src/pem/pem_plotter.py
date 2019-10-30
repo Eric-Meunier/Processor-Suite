@@ -20,6 +20,7 @@ from matplotlib import patches
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
 from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
+import mpl_toolkits.mplot3d.art3d as art3d
 from scipy import interpolate as interp
 from scipy import stats
 from statistics import mean
@@ -1199,7 +1200,7 @@ class Map3D:
             return None
         else:
             collar_x, collar_y, collar_z = collar_gps[0], collar_gps[1], collar_gps[2]
-            trace = [(collar_x, collar_y, collar_z)]  # Easting and Northing tuples
+            trace = [(float(collar_x), float(collar_y), float(collar_z))]  # Easting and Northing tuples
             azimuth = None
             for segment in segments:
                 azimuth = math.radians(float(segment[0]))
@@ -1433,28 +1434,30 @@ class MagneticFieldCalculator:
 
         return xx, yy, zz, u, v, w, arrow_len
 
-    def get_2d_magnetic_field(self, x1, x2, y1, y2, num_rows=8):
+    def get_2d_magnetic_field(self, p1, p2, num_rows=12):
         v_proj = np.vectorize(self.project)
         v_field = np.vectorize(self.calc_total_field)
 
         min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents()
+        pxs = [p1[0], p2[0]]
+        pys = [p1[1], p2[1]]
 
-        x = np.arange(x1, x2, abs(x2 - x1) * 1 / num_rows)
-        y = np.arange(y1, y2, abs(y2 - y1) * 1 / num_rows)
-        z = np.arange(min_z, max_z, (max_z - min_z) * 1 / num_rows)
-        xx, yy, zz = np.meshgrid(x, y, z)
+        interp_x = np.linspace(min(pxs), max(pxs), num_rows)
+        interp_y = np.interp(interp_x, pxs, pys)
+        z = np.linspace(min_z, max_z, num_rows)
+        xx, zz = np.meshgrid(interp_x, z)
 
         print('Computing Field at {} points.....'.format(xx.size))
         start = timer()
 
         # Calculate the magnetic field at each mesh grid point
-        u, v, w = v_field(xx, yy, zz, self.current)
+        u, v, w = v_field(interp_x, interp_y, z, self.current)
 
         end = timer()
         time = round(end - start, 2)
         print('Calculated in {} seconds'.format(str(time)))
 
-        return xx, yy, zz, u, v, w, 16.
+        return xx, interp_y, zz, u, v, w, 16.
 
 
 class Section3D(Map3D, MagneticFieldCalculator):
@@ -1472,13 +1475,58 @@ class Section3D(Map3D, MagneticFieldCalculator):
 
         self.plot_hole(self.pem_file)
         self.plot_loop(self.pem_file)
-        # self.plot_2d_magnetic_field()
+        self.plot_2d_magnetic_field()
         # self.plot_3d_magnetic_field()
 
     def plot_2d_magnetic_field(self):#, Px1, Px2, Py1, Py2):
         logging.info('Section3D - Plotting magnetic field')
-        xx, yy, zz, u, v, w, arrow_len = self.get_2d_magnetic_field()
 
+        def get_section_extents(percentile=80):
+            """
+            Find the 50th percentile down the hole, use that as the center of the section, and find the
+            X and Y extents of that section line. Azimuth used is from the 80th percentile.
+            """
+            collar = self.pem_file.get_collar_coords()[0]
+            segments = self.pem_files.get_hole_geometry()
+            azimuths = [float(row[0]) for row in segments]
+            dips = [float(row[1]) for row in segments]
+            depths = [float(row[-1]) for row in segments]
+            units = segments[0][-2]
+
+            # Splitting the segments into 1000 pieces
+            interp_depths = np.linspace(depths[0], depths[-1], 1000)
+            interp_az = np.interp(interp_depths, depths, azimuths)
+            interp_dip = np.interp(interp_depths, depths, dips)
+            interp_lens = [float(segments[0][-1])]
+            for depth, next_depth in zip(interp_depths[:-1], interp_depths[1:]):
+                interp_lens.append(next_depth - depth)
+
+            # Recreating the segments with the interpreted data
+            interp_segments = list(zip(interp_az, interp_dip, interp_lens, [units]*len(interp_depths), interp_depths))
+
+            interp_x, interp_y, interp_z = self.get_3D_borehole_projection(collar, interp_segments)
+
+            # Find the depth that is 80% down the hole
+            perc_depth = np.percentile(interp_depths, percentile)
+
+            # Nearest index of the 50th and 80th percentile depths
+            i_perc_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i]-perc_depth))
+
+            line_center_x, line_center_y = interp_x[i_perc_depth], interp_y[i_perc_depth]
+            line_az = interp_az[i_perc_depth]
+            line_len = math.ceil(depths[-1] / 400) * 300
+            dx = math.cos(math.radians(90-line_az)) * (line_len / 2)
+            dy = math.sin(math.radians(90-line_az)) * (line_len / 2)
+
+            line_xy_1 = (line_center_x + dx, line_center_y + dy)
+            line_xy_2 = (line_center_x - dx, line_center_y - dy)
+
+            return line_xy_1, line_xy_2
+
+
+        p1, p2 = get_section_extents()
+        xx, yy, zz, u, v, w, arrow_len = self.get_2d_magnetic_field(p1, p2)
+        #
         mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
                       color='black', label='Field', linewidth=.5, alpha=1,
                       arrow_length_ratio=.7, pivot='middle', zorder=0)
@@ -1492,136 +1540,6 @@ class Section3D(Map3D, MagneticFieldCalculator):
                       color='black', label='Field', linewidth=.5, alpha=1,
                       arrow_length_ratio=.7, pivot='middle', zorder=0)
         self.mag_field_artists.append(mag_field_artist)
-
-
-class DraggablePoint:
-
-    lock = None #  only one can be animated at a time
-
-    def __init__(self, parent, x=0.1, y=0.1, size=0.1):
-
-        self.parent = parent
-        self.point = patches.Ellipse((x, y), size, size * 3, fc='r', alpha=0.5, edgecolor='r')
-        self.x = x
-        self.y = y
-        parent.figure.axes[0].add_patch(self.point)
-        self.press = None
-        self.background = None
-        self.connect()
-
-        if self.parent.list_points:
-            line_x = [self.parent.list_points[0].x, self.x]
-            line_y = [self.parent.list_points[0].y, self.y]
-
-            self.line = mlines.Line2D(line_x, line_y, color='r', alpha=0.5)
-            parent.figure.axes[0].add_line(self.line)
-
-    def connect(self):
-
-        'connect to all the events we need'
-
-        self.cidpress = self.point.figure.canvas.mpl_connect('button_press_event', self.on_press)
-        self.cidrelease = self.point.figure.canvas.mpl_connect('button_release_event', self.on_release)
-        self.cidmotion = self.point.figure.canvas.mpl_connect('motion_notify_event', self.on_motion)
-
-
-    def on_press(self, event):
-
-        if event.inaxes != self.point.axes: return
-        if DraggablePoint.lock is not None: return
-        contains, attrd = self.point.contains(event)
-        if not contains: return
-        self.press = (self.point.center), event.xdata, event.ydata
-        DraggablePoint.lock = self
-
-        # draw everything but the selected rectangle and store the pixel buffer
-        canvas = self.point.figure.canvas
-        axes = self.point.axes
-        self.point.set_animated(True)
-        if self == self.parent.list_points[1]:
-            self.line.set_animated(True)
-        else:
-            self.parent.list_points[1].line.set_animated(True)
-        canvas.draw()
-        self.background = canvas.copy_from_bbox(self.point.axes.bbox)
-
-        # now redraw just the rectangle
-        axes.draw_artist(self.point)
-
-        # and blit just the redrawn area
-        canvas.blit(axes.bbox)
-
-
-    def on_motion(self, event):
-
-        if DraggablePoint.lock is not self:
-            return
-        if event.inaxes != self.point.axes: return
-        self.point.center, xpress, ypress = self.press
-        dx = event.xdata - xpress
-        dy = event.ydata - ypress
-        self.point.center = (self.point.center[0]+dx, self.point.center[1]+dy)
-
-        canvas = self.point.figure.canvas
-        axes = self.point.axes
-        # restore the background region
-        canvas.restore_region(self.background)
-
-        # redraw just the current rectangle
-        axes.draw_artist(self.point)
-
-        if self == self.parent.list_points[1]:
-            axes.draw_artist(self.line)
-        else:
-            self.parent.list_points[1].line.set_animated(True)
-            axes.draw_artist(self.parent.list_points[1].line)
-
-        self.x = self.point.center[0]
-        self.y = self.point.center[1]
-
-        if self == self.parent.list_points[1]:
-            line_x = [self.parent.list_points[0].x, self.x]
-            line_y = [self.parent.list_points[0].y, self.y]
-            self.line.set_data(line_x, line_y)
-        else:
-            line_x = [self.x, self.parent.list_points[1].x]
-            line_y = [self.y, self.parent.list_points[1].y]
-
-            self.parent.list_points[1].line.set_data(line_x, line_y)
-
-        # blit just the redrawn area
-        canvas.blit(axes.bbox)
-
-
-    def on_release(self, event):
-
-        'on release we reset the press data'
-        if DraggablePoint.lock is not self:
-            return
-
-        self.press = None
-        DraggablePoint.lock = None
-
-        # turn off the rect animation property and reset the background
-        self.point.set_animated(False)
-        if self == self.parent.list_points[1]:
-            self.line.set_animated(False)
-        else:
-            self.parent.list_points[1].line.set_animated(False)
-
-        self.background = None
-
-        # redraw the full figure
-        self.point.figure.canvas.draw()
-
-        self.x = self.point.center[0]
-        self.y = self.point.center[1]
-
-    def disconnect(self):
-        'disconnect all the stored connection ids'
-        self.point.figure.canvas.mpl_disconnect(self.cidpress)
-        self.point.figure.canvas.mpl_disconnect(self.cidrelease)
-        self.point.figure.canvas.mpl_disconnect(self.cidmotion)
 
 
 class PEMPrinter:

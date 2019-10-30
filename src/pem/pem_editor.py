@@ -22,7 +22,7 @@ from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
-from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D#, DraggablePoint
+from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.pem_getter import PEMGetter
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
@@ -2136,9 +2136,6 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         self.pem_file = pem_file
         self.parent = parent
         self.list_points = []
-        # self.clickp1 = None
-        # self.clickp2 = None
-        # self.plan_lines = []
 
         self.setWindowTitle('3D Section Viewer')
 
@@ -2169,8 +2166,6 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
 
         self.section_plotter = Section3D(self.ax, self.pem_file, parent=self)
         self.section_plotter.format_ax()
-        # self.plotDraggablePoints((self.ax.get_xlim()[0], self.ax.get_ylim()[0]),
-        #                          (self.ax.get_xlim()[0], self.ax.get_ylim()[1]))
         self.update_canvas()
 
         # self.cid_press = self.figure.canvas.mpl_connect('key_press_event', self.mpl_onpress)
@@ -2231,16 +2226,6 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         # print('release ', event.key)
         if event.key == 'control':
             self.figure.canvas.mpl_disconnect(self.cid_click)
-
-
-    # def plotDraggablePoints(self, xy1, xy2, size=2):
-    #
-    #     """Plot and define the 2 draggable points of the baseline"""
-    #
-    #     # del(self.list_points[:])
-    #     self.list_points.append(DraggablePoint(self, xy1[0], xy1[1], size))
-    #     self.list_points.append(DraggablePoint(self, xy2[0], xy2[1], size))
-    #     self.canvas.draw()
 
     def update_canvas(self):
         self.toggle_loop()
@@ -2327,11 +2312,11 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
-    # section = Section3DViewer(pem_files)
-    # section.show()
+    section = Section3DViewer(pem_files)
+    section.show()
 
-    map = Map3DViewer(pem_files)
-    map.show()
+    # map = Map3DViewer(pem_files)
+    # map.show()
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
     # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')

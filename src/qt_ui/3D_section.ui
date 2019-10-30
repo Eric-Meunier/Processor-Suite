@@ -27,7 +27,7 @@
      </property>
      <property name="minimumSize">
       <size>
-       <width>130</width>
+       <width>150</width>
        <height>0</height>
       </size>
      </property>
@@ -111,16 +111,6 @@
      </layout>
     </widget>
    </item>
-   <item row="4" column="1">
-    <widget class="QSlider" name="horizontalSlider">
-     <property name="value">
-      <number>50</number>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="0">
     <widget class="QGroupBox" name="groupBox">
      <property name="sizePolicy">
@@ -131,7 +121,7 @@
      </property>
      <property name="minimumSize">
       <size>
-       <width>130</width>
+       <width>150</width>
        <height>0</height>
       </size>
      </property>
