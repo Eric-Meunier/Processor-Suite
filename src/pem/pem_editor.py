@@ -2151,10 +2151,14 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         self.draw_borehole_cbox.toggled.connect(self.toggle_borehole)
         self.draw_mag_field_cbox.toggled.connect(self.toggle_mag_field)
 
+        self.draw_grid = self.draw_grid_cbox.isChecked()
+
         self.label_loop_cbox.toggled.connect(self.toggle_loop_label)
         self.label_loop_anno_cbox.toggled.connect(self.toggle_loop_anno_labels)
         self.label_borehole_cbox.toggled.connect(self.toggle_borehole_label)
         self.label_segments_cbox.toggled.connect(self.toggle_segment_labels)
+
+        self.draw_grid_cbox.toggled.connect(self.toggle_grid)
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
@@ -2235,6 +2239,14 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         self.toggle_loop_anno_labels()
         self.toggle_borehole_label()
         self.toggle_segment_labels()
+        self.toggle_grid()
+
+    def toggle_grid(self):
+        if self.draw_grid:
+            self.ax.grid(b=True)
+        else:
+            self.ax.grid(b=False)
+        self.canvas.draw()
 
     def toggle_loop(self):
         if self.draw_loop_cbox.isChecked():
@@ -2312,11 +2324,11 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
-    section = Section3DViewer(pem_files)
-    section.show()
+    # section = Section3DViewer(pem_files)
+    # section.show()
 
-    # map = Map3DViewer(pem_files)
-    # map.show()
+    map = Map3DViewer(pem_files)
+    map.show()
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
     # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')

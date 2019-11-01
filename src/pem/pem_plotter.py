@@ -1348,13 +1348,14 @@ class MagneticFieldCalculator:
         Calculate the magnetic field at position P with current I using Biot-Savart Law. Geometry used is the loop.
         :param P: Position at which the magnetic field is calculated
         :param I: Current used
-        :return: Magnetic field strength
+        :return: Magnetic field strength for each component
         """
         def get_magnitude(vector):
             return math.sqrt(sum(i ** 2 for i in vector))
 
         def scale_vectors(vector, factor):
             """
+            Multiplies vectors by a factor
             :param vector: List or Tuple
             :param factor: Float or Int
             :return: Scaled vector
@@ -1386,7 +1387,7 @@ class MagneticFieldCalculator:
         unit = 'nT' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
         if unit == 'pT':
             field = scale_vectors(integral_sum, 1e12)
-        elif unit == 'nT':
+        else:
             field = scale_vectors(integral_sum, 1e9)
         return field[0], field[1], field[2]
 
@@ -1434,30 +1435,62 @@ class MagneticFieldCalculator:
 
         return xx, yy, zz, u, v, w, arrow_len
 
-    def get_2d_magnetic_field(self, p1, p2, num_rows=12):
+    def get_2d_magnetic_field(self, p1, p2, spacing=None, arrow_len=None, num_rows=12):
+
+        def get_angle_2V(v1, v2):
+            len1 = math.sqrt(sum(i ** 2 for i in v1))
+            len2 = math.sqrt(sum(i ** 2 for i in v2))
+            angle = math.acos(np.dot(v1, v2) / (len1 * len2))
+            return angle
+
         v_proj = np.vectorize(self.project)
         v_field = np.vectorize(self.calc_total_field)
 
-        min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents()
-        pxs = [p1[0], p2[0]]
-        pys = [p1[1], p2[1]]
+        # Vector to point and normal of cross section
+        vec = [p2[0] - p1[0], p2[1] - p1[1], 0]
+        planeNormal = np.cross(vec, [0, 0, -1])
 
-        interp_x = np.linspace(min(pxs), max(pxs), num_rows)
-        interp_y = np.interp(interp_x, pxs, pys)
-        z = np.linspace(min_z, max_z, num_rows)
-        xx, zz = np.meshgrid(interp_x, z)
+        # Angle between the plane and j_hat
+        theta = get_angle_2V(planeNormal, [0, 1, 0])
+
+        # Fixes angles where p2.y is less than p1.y
+        if p2[1] < p1[1]:
+            theta = -theta
+
+        # Creating the grid
+        min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents()
+        min_z = max_z - (float(math.floor(min_z / 400) * 400))
+        line_len = round(math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2))
+        if arrow_len is None:
+            arrow_len = float(line_len // 30)
+        # Spacing between the arrows
+        if spacing is None:
+            # spacing = (abs(min_x - max_x) + abs(min_y - max_y)) // 30
+            spacing = line_len // 20
+
+        a = np.arange(-10, line_len, spacing)
+        b = np.zeros(1)
+        c = np.arange(min_z, max_z, line_len // 20)
+
+        xx, yy, zz = np.meshgrid(a, b, c)
+
+        xx_rot = xx * math.cos(theta) - yy * math.sin(theta)
+        yy_rot = xx * math.sin(theta) + yy * math.cos(theta)
+
+        xx = xx_rot + p1[0]
+        yy = yy_rot + p1[1]
 
         print('Computing Field at {} points.....'.format(xx.size))
         start = timer()
 
-        # Calculate the magnetic field at each mesh grid point
-        u, v, w = v_field(interp_x, interp_y, z, self.current)
+        # Calculate the magnetic field at each grid point
+        u, v, w = v_field(xx, yy, zz, self.current)
 
         end = timer()
         time = round(end - start, 2)
         print('Calculated in {} seconds'.format(str(time)))
 
-        return xx, interp_y, zz, u, v, w, 16.
+        return xx, yy, zz, u, v, w, arrow_len
 
 
 class Section3D(Map3D, MagneticFieldCalculator):
@@ -1478,58 +1511,66 @@ class Section3D(Map3D, MagneticFieldCalculator):
         self.plot_2d_magnetic_field()
         # self.plot_3d_magnetic_field()
 
-    def plot_2d_magnetic_field(self):#, Px1, Px2, Py1, Py2):
+    def get_section_extents(self, percentile=80):
+        """
+        Find the 50th percentile down the hole, use that as the center of the section, and find the
+        X and Y extents of that section line. Azimuth used is from the 80th percentile.
+        """
+        collar = self.pem_file.get_collar_coords()[0]
+        segments = self.pem_files.get_hole_geometry()
+        azimuths = [float(row[0]) for row in segments]
+        dips = [float(row[1]) for row in segments]
+        depths = [float(row[-1]) for row in segments]
+        units = segments[0][-2]
+
+        # Splitting the segments into 1000 pieces
+        interp_depths = np.linspace(depths[0], depths[-1], 1000)
+        interp_az = np.interp(interp_depths, depths, azimuths)
+        interp_dip = np.interp(interp_depths, depths, dips)
+        interp_lens = [float(segments[0][-1])]
+        for depth, next_depth in zip(interp_depths[:-1], interp_depths[1:]):
+            interp_lens.append(next_depth - depth)
+
+        # Recreating the segments with the interpreted data
+        interp_segments = list(zip(interp_az, interp_dip, interp_lens, [units] * len(interp_depths), interp_depths))
+
+        interp_x, interp_y, interp_z = self.get_3D_borehole_projection(collar, interp_segments)
+
+        # Find the depths that are 50% and var percentile% down the hole
+        perc_50_depth = np.percentile(interp_depths, 50)
+        perc_depth = np.percentile(interp_depths, percentile)
+
+        # Nearest index of the 50th and var percentile% depths
+        i_perc_50_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - perc_50_depth))
+        i_perc_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - perc_depth))
+
+        line_center_x, line_center_y = interp_x[i_perc_50_depth], interp_y[i_perc_50_depth]
+        line_az = interp_az[i_perc_depth]
+        print(f"Line azimuth: {line_az}°")
+        line_len = math.ceil(depths[-1] / 400) * 300
+        dx = math.cos(math.radians(90 - line_az)) * (line_len / 2)
+        dy = math.sin(math.radians(90 - line_az)) * (line_len / 2)
+
+        line_xy_1 = (line_center_x + dx, line_center_y + dy)
+        line_xy_2 = (line_center_x - dx, line_center_y - dy)
+
+        # # Just for testing
+        # xs = [line_center_x + dx, line_center_x, line_center_x-dx]
+        # ys = [line_center_y + dy, line_center_y, line_center_y-dy]
+        # zs = [float(collar[2])]*3
+        #
+        # self.ax.plot(xs, ys, zs, '-o', color='magenta')
+
+        return line_xy_1, line_xy_2
+
+    def plot_2d_magnetic_field(self):
         logging.info('Section3D - Plotting magnetic field')
 
-        def get_section_extents(percentile=80):
-            """
-            Find the 50th percentile down the hole, use that as the center of the section, and find the
-            X and Y extents of that section line. Azimuth used is from the 80th percentile.
-            """
-            collar = self.pem_file.get_collar_coords()[0]
-            segments = self.pem_files.get_hole_geometry()
-            azimuths = [float(row[0]) for row in segments]
-            dips = [float(row[1]) for row in segments]
-            depths = [float(row[-1]) for row in segments]
-            units = segments[0][-2]
-
-            # Splitting the segments into 1000 pieces
-            interp_depths = np.linspace(depths[0], depths[-1], 1000)
-            interp_az = np.interp(interp_depths, depths, azimuths)
-            interp_dip = np.interp(interp_depths, depths, dips)
-            interp_lens = [float(segments[0][-1])]
-            for depth, next_depth in zip(interp_depths[:-1], interp_depths[1:]):
-                interp_lens.append(next_depth - depth)
-
-            # Recreating the segments with the interpreted data
-            interp_segments = list(zip(interp_az, interp_dip, interp_lens, [units]*len(interp_depths), interp_depths))
-
-            interp_x, interp_y, interp_z = self.get_3D_borehole_projection(collar, interp_segments)
-
-            # Find the depth that is 80% down the hole
-            perc_depth = np.percentile(interp_depths, percentile)
-
-            # Nearest index of the 50th and 80th percentile depths
-            i_perc_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i]-perc_depth))
-
-            line_center_x, line_center_y = interp_x[i_perc_depth], interp_y[i_perc_depth]
-            line_az = interp_az[i_perc_depth]
-            line_len = math.ceil(depths[-1] / 400) * 300
-            dx = math.cos(math.radians(90-line_az)) * (line_len / 2)
-            dy = math.sin(math.radians(90-line_az)) * (line_len / 2)
-
-            line_xy_1 = (line_center_x + dx, line_center_y + dy)
-            line_xy_2 = (line_center_x - dx, line_center_y - dy)
-
-            return line_xy_1, line_xy_2
-
-
-        p1, p2 = get_section_extents()
+        p1, p2 = self.get_section_extents()
         xx, yy, zz, u, v, w, arrow_len = self.get_2d_magnetic_field(p1, p2)
-        #
         mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
-                      color='black', label='Field', linewidth=.5, alpha=1,
-                      arrow_length_ratio=.7, pivot='middle', zorder=0)
+                      color='black', label='Field', linewidth=.5, alpha=1.,
+                      arrow_length_ratio=.3, pivot='middle', zorder=0)
         self.mag_field_artists.append(mag_field_artist)
 
     def plot_3d_magnetic_field(self, num_rows=8):
@@ -1538,7 +1579,7 @@ class Section3D(Map3D, MagneticFieldCalculator):
         # 3D Quiver
         mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
                       color='black', label='Field', linewidth=.5, alpha=1,
-                      arrow_length_ratio=.7, pivot='middle', zorder=0)
+                      arrow_length_ratio=.3, pivot='middle', zorder=0)
         self.mag_field_artists.append(mag_field_artist)
 
 
