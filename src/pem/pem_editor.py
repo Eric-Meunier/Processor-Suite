@@ -24,7 +24,6 @@ from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D
 from src.pem.pem_serializer import PEMSerializer
-from src.pem.pem_getter import PEMGetter
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.ri.ri_file import RIFile
 
@@ -2317,6 +2316,7 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
 
 
 def main():
+    from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMEditorWindow()
     mw.show()

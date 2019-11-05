@@ -135,7 +135,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
         self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
-
+        self.create_stations_btn.clicked.connect(self.create_stations)
         self.reversePolarityButton.clicked.connect(self.reverse_polarity)
 
         # Table changes
@@ -1085,6 +1085,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #             self.fill_loop_table(self.gps_editor.get_gps(loop))
     #     else:
     #         pass
+
+    def create_stations(self):
+        data_stations = self.pem_file.get_converted_unique_stations()
+        station_column = 5
+        for row, station in enumerate(data_stations):
+            item = QTableWidgetItem(str(station))
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.stationGPSTable.setItem(row, station_column, item)
 
     def calc_distance(self):
         def get_row_gps(row):

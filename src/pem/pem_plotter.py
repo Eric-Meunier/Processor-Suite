@@ -27,7 +27,6 @@ from statistics import mean
 from itertools import chain
 
 from src.gps.gps_editor import GPSEditor
-from src.pem.pem_getter import PEMGetter
 
 __version__ = '0.1.0'
 logging.info('PEMPlotter')
@@ -1788,6 +1787,7 @@ class PEMPrinter:
 #     """
 
 if __name__ == '__main__':
+    from src.pem.pem_getter import PEMGetter
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems()
     fig = plt.figure(figsize=(11, 8.5))

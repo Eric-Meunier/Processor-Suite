@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>4</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -278,6 +278,27 @@
              <string>↑↓ Stations</string>
             </property>
            </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="create_stations_btn">
+            <property name="text">
+             <string>Make Stations
+From Data</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_6">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
           </item>
           <item>
            <widget class="QPushButton" name="cullStationGPSButton">

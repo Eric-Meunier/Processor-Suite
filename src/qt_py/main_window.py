@@ -1,16 +1,18 @@
+import logging
 import os
 import sys
-import logging
+
+from PyQt5 import (QtCore, QtGui, uic)
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QDesktopWidget, QMessageBox, QMdiArea,
+                             QMdiSubWindow, QToolButton,
+                             QFileDialog, QAction, QToolBar)
+
 from src.damp.db_plot import DBPlot
 from src.pem.pem_editor import PEMEditorWindow
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox, QMdiArea,
-                             QTabWidget, QMdiSubWindow, QToolButton,
-                             QFileDialog, QAbstractScrollArea, QTableWidgetItem, QMenuBar, QAction, QMenu, QToolBar)
-from PyQt5 import (QtCore, QtGui, uic)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.4.2'
+__version__ = '0.5.0'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader

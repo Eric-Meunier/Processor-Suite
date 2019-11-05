@@ -355,19 +355,14 @@ class GPXEditor:
 
 
 def main():
-    samples_path = r'C:\_Data\2019\_Mowgli Testing'
-    file_names = [f for f in os.listdir(samples_path) if
-                  isfile(join(samples_path, f)) and f.lower().endswith('.txt')]
-    file_paths = []
+    from src.pem.pem_getter import PEMGetter
+    pg = PEMGetter()
+    pem_files = pg.get_pems()
     gps_editor = GPSEditor()
     gps_parser = GPSParser()
-    for file in file_names:
-        file_paths.append(join(samples_path, file))
+    gpx_editor = GPXEditor()
 
-    for filepath in file_paths:
-        file = gps_parser.open(filepath)
-        gps_editor.get_station_gps(file)
-
+    gpx_editor.get_utm(pem_files[0].filepath)
 
 if __name__ == '__main__':
     main()
