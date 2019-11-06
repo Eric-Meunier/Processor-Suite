@@ -135,7 +135,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
         self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
-        self.create_stations_btn.clicked.connect(self.create_stations)
+        self.stations_from_data_btn.clicked.connect(self.stations_from_data)
         self.reversePolarityButton.clicked.connect(self.reverse_polarity)
 
         # Table changes
@@ -1086,7 +1086,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #     else:
     #         pass
 
-    def create_stations(self):
+    def stations_from_data(self):
         data_stations = self.pem_file.get_converted_unique_stations()
         station_column = 5
         for row, station in enumerate(data_stations):

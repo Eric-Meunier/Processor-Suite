@@ -26,4 +26,4 @@ if __name__ == '__main__':
 
         pem_file.filepath = os.path.join(filepath)
         save_file = saver().serialize(pem_file)
-        # print(save_file, file=open(pem_file.filepath, 'w+'))
+        print(save_file, file=open(pem_file.filepath, 'w+'))

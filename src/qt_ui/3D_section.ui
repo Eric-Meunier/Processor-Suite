@@ -165,16 +165,6 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QCheckBox" name="draw_grid_cbox">
-        <property name="text">
-         <string>Grid</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>

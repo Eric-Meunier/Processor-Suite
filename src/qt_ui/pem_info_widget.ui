@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>620</height>
+    <width>759</width>
+    <height>799</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -280,7 +280,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="create_stations_btn">
+           <widget class="QPushButton" name="stations_from_data_btn">
             <property name="text">
              <string>Make Stations
 From Data</string>
@@ -288,22 +288,10 @@ From Data</string>
            </widget>
           </item>
           <item>
-           <spacer name="verticalSpacer_6">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
            <widget class="QPushButton" name="cullStationGPSButton">
             <property name="text">
-             <string>Cull GPS</string>
+             <string>Delete GPS
+Not In Data</string>
             </property>
            </widget>
           </item>

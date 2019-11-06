@@ -1349,45 +1349,97 @@ class MagneticFieldCalculator:
         :param I: Current used
         :return: Magnetic field strength for each component
         """
-        def get_magnitude(vector):
-            return math.sqrt(sum(i ** 2 for i in vector))
+        # def get_magnitude(vector):
+        #     return math.sqrt(sum(i ** 2 for i in vector))
+        #
+        # def scale_vectors(vector, factor):
+        #     """
+        #     Multiplies vectors by a factor
+        #     :param vector: List or Tuple
+        #     :param factor: Float or Int
+        #     :return: Scaled vector
+        #     """
+        #     newvector = list(map(lambda x: x * factor, vector))
+        #     return newvector
+        #
+        # mag_const = 4 * math.pi * 10 ** -7
+        # integral_sum = [0, 0, 0]
+        #
+        # for i, point in enumerate(self.loop_coords):
+        #     l = [point[0] - self.loop_coords[i - 1][0],
+        #          point[1] - self.loop_coords[i - 1][1],
+        #          point[2] - self.loop_coords[i - 1][2]]
+        #     AP = [Px - self.loop_coords[i - 1][0], Py - self.loop_coords[i - 1][1],
+        #           Pz - self.loop_coords[i - 1][2]]
+        #     BP = [Px - self.loop_coords[i][0], Py - self.loop_coords[i][1], Pz - self.loop_coords[i][2]]
+        #     r1 = get_magnitude(AP)
+        #     r2 = get_magnitude(BP)
+        #     Dot1 = np.dot(l, AP)
+        #     Dot2 = np.dot(l, BP)
+        #     cross = np.cross(l, AP).tolist()
+        #     CrossSqrd = get_magnitude(cross) ** 2
+        #     factor = (Dot1 / r1 - Dot2 / r2) * mag_const * I / (CrossSqrd * 4 * math.pi)
+        #     term = scale_vectors(cross, factor)
+        #     integral_sum = [integral_sum[0] + term[0],
+        #                     integral_sum[1] + term[1],
+        #                     integral_sum[2] + term[2]]
+        # unit = 'nT' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
+        # if unit == 'pT':
+        #     field = scale_vectors(integral_sum, 1e12)
+        # else:
+        #     field = scale_vectors(integral_sum, 1e9)
+        # return field[0], field[1], field[2]
 
-        def scale_vectors(vector, factor):
-            """
-            Multiplies vectors by a factor
-            :param vector: List or Tuple
-            :param factor: Float or Int
-            :return: Scaled vector
-            """
-            newvector = list(map(lambda x: x * factor, vector))
-            return newvector
+        def loop_difference(loop_listorarray):
+            loop_array = np.array(loop_listorarray)
+            loop_diff = np.append(np.diff(loop_array, axis=0),
+                                  [loop_array[0] - loop_array[-1]], axis=0)
+            return loop_diff
 
-        mag_const = 4 * math.pi * 10 ** -7
-        integral_sum = [0, 0, 0]
+        def array_shift(arr, shift_num):
+            result = np.empty_like(arr)
+            if shift_num > 0:
+                result[:shift_num] = arr[-shift_num:]
+                result[shift_num:] = arr[:-shift_num]
+            elif shift_num < 0:
+                result[shift_num:] = arr[:-shift_num]
+                result[:shift_num] = arr[-shift_num:]
+            else:
+                result[:] = arr
+            return result
 
-        for i, point in enumerate(self.loop_coords):
-            l = [point[0] - self.loop_coords[i - 1][0],
-                 point[1] - self.loop_coords[i - 1][1],
-                 point[2] - self.loop_coords[i - 1][2]]
-            AP = [Px - self.loop_coords[i - 1][0], Py - self.loop_coords[i - 1][1],
-                  Pz - self.loop_coords[i - 1][2]]
-            BP = [Px - self.loop_coords[i][0], Py - self.loop_coords[i][1], Pz - self.loop_coords[i][2]]
-            r1 = get_magnitude(AP)
-            r2 = get_magnitude(BP)
-            Dot1 = np.dot(l, AP)
-            Dot2 = np.dot(l, BP)
-            cross = np.cross(l, AP).tolist()
-            CrossSqrd = get_magnitude(cross) ** 2
-            factor = (Dot1 / r1 - Dot2 / r2) * mag_const * I / (CrossSqrd * 4 * math.pi)
-            term = scale_vectors(cross, factor)
-            integral_sum = [integral_sum[0] + term[0],
-                            integral_sum[1] + term[1],
-                            integral_sum[2] + term[2]]
+        u0 = 1.25663706e-6
+        loop_array = np.array(self.loop_coords)
+        loop_array = np.delete(loop_array, 3, 1)  # Delete the units column
+        point = np.array([Px, Py, Pz])
+        loop_diff = loop_difference(loop_array)
+
+        AP = point - loop_array
+        BP = array_shift(AP, -1)
+
+        r1 = np.sqrt((AP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
+        r2 = np.sqrt((BP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
+        Dot1 = np.multiply(AP, loop_diff).sum(1)
+        Dot2 = np.multiply(BP, loop_diff).sum(1)
+        cross = np.cross(loop_diff, AP)
+
+        CrossSqrd = (np.sqrt((cross ** 2).sum(-1))[..., np.newaxis]).squeeze() ** 2
+        top = (Dot1 / r1 - Dot2 / r2) * u0 * I
+        bottom = (CrossSqrd * 4 * np.pi)
+        factor = (top / bottom)
+        factor = factor[..., np.newaxis]
+
+        field = cross * factor
+        field = np.sum(field, axis=0)
+
         unit = 'nT' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
         if unit == 'pT':
-            field = scale_vectors(integral_sum, 1e12)
+            field *= 1e12
+        elif unit == 'nT':
+            field *= 1e9
         else:
-            field = scale_vectors(integral_sum, 1e9)
+            raise NotImplemented('Invalid Units')
+
         return field[0], field[1], field[2]
 
     def project(self, normal_plane, vector):
@@ -1442,7 +1494,10 @@ class MagneticFieldCalculator:
             angle = math.acos(np.dot(v1, v2) / (len1 * len2))
             return angle
 
-        v_proj = np.vectorize(self.project)
+        def wrapper_proj(i, j, k, normal_plane):
+            return self.project(normal_plane, [i, j, k])
+
+        v_proj = np.vectorize(wrapper_proj, excluded=[3])
         v_field = np.vectorize(self.calc_total_field)
 
         # Vector to point and normal of cross section
@@ -1458,7 +1513,8 @@ class MagneticFieldCalculator:
 
         # Creating the grid
         min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents()
-        min_z = max_z - (float(math.floor(min_z / 400) * 400))
+        # Calculate the Z so that it is like a section plot
+        min_z = max_z - ((float(math.floor(min_z / 400) + 1) * 400))
         line_len = round(math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2))
         if arrow_len is None:
             arrow_len = float(line_len // 30)
@@ -1484,12 +1540,21 @@ class MagneticFieldCalculator:
 
         # Calculate the magnetic field at each grid point
         u, v, w = v_field(xx, yy, zz, self.current)
+        # Project the arrows
+        uproj, vproj, wproj = v_proj(u, v, w, planeNormal)
 
         end = timer()
         time = round(end - start, 2)
         print('Calculated in {} seconds'.format(str(time)))
 
-        return xx, yy, zz, u, v, w, arrow_len
+        return xx, yy, zz, uproj, vproj, wproj, arrow_len
+
+
+# class SectionPlot:
+#     def __init__(self, pem_file, figure, **kwargs):
+#         self.color = 'black'
+#         self.fig = figure
+#         self.pem_file = pem_file
 
 
 class Section3D(Map3D, MagneticFieldCalculator):
@@ -1507,8 +1572,6 @@ class Section3D(Map3D, MagneticFieldCalculator):
 
         self.plot_hole(self.pem_file)
         self.plot_loop(self.pem_file)
-        self.plot_2d_magnetic_field()
-        # self.plot_3d_magnetic_field()
 
     def get_section_extents(self, percentile=80):
         """
@@ -1572,14 +1635,15 @@ class Section3D(Map3D, MagneticFieldCalculator):
                       arrow_length_ratio=.3, pivot='middle', zorder=0)
         self.mag_field_artists.append(mag_field_artist)
 
-    def plot_3d_magnetic_field(self, num_rows=8):
-        logging.info('Section3D - Plotting magnetic field')
-        xx, yy, zz, u, v, w, arrow_len = self.get_3d_magnetic_field(num_rows, buffer=10)
-        # 3D Quiver
-        mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
-                      color='black', label='Field', linewidth=.5, alpha=1,
-                      arrow_length_ratio=.3, pivot='middle', zorder=0)
-        self.mag_field_artists.append(mag_field_artist)
+    # Not used
+    # def plot_3d_magnetic_field(self, num_rows=8):
+    #     logging.info('Section3D - Plotting magnetic field')
+    #     xx, yy, zz, u, v, w, arrow_len = self.get_3d_magnetic_field(num_rows, buffer=10)
+    #     # 3D Quiver
+    #     mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
+    #                   color='black', label='Field', linewidth=.5, alpha=1,
+    #                   arrow_length_ratio=.3, pivot='middle', zorder=0)
+    #     self.mag_field_artists.append(mag_field_artist)
 
 
 class PEMPrinter:

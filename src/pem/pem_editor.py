@@ -382,8 +382,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.table.menu.addAction(self.table.rename_lines_action)
                     self.table.menu.addAction(self.table.rename_files_action)
                 self.table.menu.addSeparator()
-                # if 'borehole' in survey_type:
-                #     self.table.menu.addAction(self.table.view_3d_section_action)
+                if 'borehole' in survey_type:
+                    self.table.menu.addAction(self.table.view_3d_section_action)
                 self.table.menu.addAction(self.print_plan_map_action)
                 self.table.menu.addAction(self.print_step_plots_action)
                 self.table.menu.addAction(self.print_final_plots_action)
@@ -2150,14 +2150,10 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         self.draw_borehole_cbox.toggled.connect(self.toggle_borehole)
         self.draw_mag_field_cbox.toggled.connect(self.toggle_mag_field)
 
-        self.draw_grid = self.draw_grid_cbox.isChecked()
-
         self.label_loop_cbox.toggled.connect(self.toggle_loop_label)
         self.label_loop_anno_cbox.toggled.connect(self.toggle_loop_anno_labels)
         self.label_borehole_cbox.toggled.connect(self.toggle_borehole_label)
         self.label_segments_cbox.toggled.connect(self.toggle_segment_labels)
-
-        self.draw_grid_cbox.toggled.connect(self.toggle_grid)
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
@@ -2168,9 +2164,11 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         self.ax = self.figure.add_subplot(111, projection='3d')
 
         self.section_plotter = Section3D(self.ax, self.pem_file, parent=self)
+        self.section_plotter.plot_2d_magnetic_field()
         self.section_plotter.format_ax()
         self.update_canvas()
-
+    """
+    Not used
         # self.cid_press = self.figure.canvas.mpl_connect('key_press_event', self.mpl_onpress)
         # self.cid_release = self.figure.canvas.mpl_connect('key_release_event', self.mpl_onrelease)
 
@@ -2229,6 +2227,7 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         # print('release ', event.key)
         if event.key == 'control':
             self.figure.canvas.mpl_disconnect(self.cid_click)
+    """
 
     def update_canvas(self):
         self.toggle_loop()
@@ -2238,14 +2237,6 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         self.toggle_loop_anno_labels()
         self.toggle_borehole_label()
         self.toggle_segment_labels()
-        self.toggle_grid()
-
-    def toggle_grid(self):
-        if self.draw_grid:
-            self.ax.grid(b=True)
-        else:
-            self.ax.grid(b=False)
-        self.canvas.draw()
 
     def toggle_loop(self):
         if self.draw_loop_cbox.isChecked():
@@ -2324,11 +2315,11 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
-    # section = Section3DViewer(pem_files)
-    # section.show()
+    section = Section3DViewer(pem_files)
+    section.show()
 
-    map = Map3DViewer(pem_files)
-    map.show()
+    # map = Map3DViewer(pem_files)
+    # map.show()
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
     # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')

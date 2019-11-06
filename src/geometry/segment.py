@@ -2,6 +2,7 @@ import re
 import pandas as pd
 import numpy as np
 
+
 class SegmentCalculator:
     """
     Create a segment file out of a DAD file. The file must have the first three columns be Depth, then Azimuth, then Dip.
@@ -47,7 +48,7 @@ class SegmentCalculator:
 
         return depths, azimuths, dips
 
-    def get_segments(self, filepath):
+    def get_segments(self, filepath, seg_interval=10):
         """
         Create a segments file from a DAD file.
         :param filepath: Filepath of the DAD file in either text, excel, or CSV format.
@@ -56,31 +57,32 @@ class SegmentCalculator:
         depths, azimuths, dips = self.parse_file(filepath)
         if all([depths, azimuths, dips]):
             seg_len = 1
+            # Segment everything into 1m long pieces and interpolate.
             interp_depths = np.arange(0, depths[-1], seg_len)
             interp_az = np.interp(interp_depths, depths, azimuths)
             interp_dips = np.interp(interp_depths, depths, dips)
 
-        self.save_seg_file(interp_depths, interp_az, interp_dips)
-        return interp_depths, interp_az, interp_dips
+            seg_depths = np.arange(interp_depths[0], interp_depths[-1]+1, seg_interval)
+            indexes = [list(interp_depths).index(depth) for depth in seg_depths]
+            seg_az = [interp_az[index] for index in indexes]
+            seg_dips = [interp_dips[index] for index in indexes]
+            seg_lengths = [seg_depths[1]-seg_depths[0]]+list(map(lambda x,y: y-x, seg_depths[0:-1], seg_depths[1:]))
 
-    def save_seg_file(self, depths, azimuths, dips):
+            self.save_seg_file(seg_depths, seg_az, seg_dips, seg_lengths)
+            return seg_depths, seg_az, seg_dips, seg_lengths
+
+    def save_seg_file(self, depths, azimuths, dips, seg_lengths):
         segments = ""
 
-        # for depth, az, dip in zip(interp_depths, interp_az, interp_dips):
-        #     row = f"{az:.2f} {-dip:.2f} {seg_len:.1f} 2 {depth}\n"
-        #     segments += row
-        #
-        # print(segments, file=open(r'N:\GeophysicsShare\Temp\_TEST SEG.SEG', 'w+'))
-            # segments = []
-            # for i, (depth, azimuth, dip) in enumerate(zip(depths, azimuths, dips)):
-            #     depth = depth + sum(depths[0:i])
-            #     azimuth = azimuth + sum(azimuths[0:i])
-            #     dip = dip + sum(dips[0:i])
-            #     segments.append([depth, azimuth, dip])
+        for depth, az, dip, seg_len in zip(depths, azimuths, dips, seg_lengths):
+            row = f"{az:.2f} {-dip:.2f} {seg_len:.1f} 2 {depth}\n"
+            segments += row
+
+        print(segments, file=open(r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\_TEST SEG.SEG', 'w+'))
 
 
 if __name__ == '__main__':
     # filepath = r'C:\_Data\2019\Eastern\Osisko\Planning\OM19-7443-01\gyro.xlsx'
-    filepath = r'N:\GeophysicsShare\Temp\tool.dad'
+    filepath = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\tool.dad'
     c = SegmentCalculator()
     c.get_segments(filepath)
