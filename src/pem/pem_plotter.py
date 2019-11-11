@@ -1131,8 +1131,9 @@ class PlanMap:
         self.ax.xaxis.set_visible(True)  # Required to actually get the labels to show in UTM
         self.ax.yaxis.set_visible(True)
         self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
-        self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
-        self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
+        if self.system == 'UTM':
+            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
+            self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
         self.ax.xaxis.set_ticks_position('top')
         plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
         plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
@@ -1207,11 +1208,38 @@ class MapPlotMethods:
                    [segment[1] for segment in trace], \
                    [segment[2] for segment in trace]
 
-    def get_section_extents(self, pem_file, percentile=80):
+    def get_section_extents(self, pem_file, percentile=80, hole_depth=None, section_plot=False, plot_width=None):
         """
         Find the 50th percentile down the hole, use that as the center of the section, and find the
         X and Y extents of that section line. Azimuth used is from the 80th percentile.
         """
+
+        def calc_scale_factor(p1, p2, plot_width):
+            """
+            Modifies the two cross-section points so they will create a map with an appropriate scale
+            :param p1: xy tuple of one of the current extent points
+            :param p2: xy tuple of the other extent point
+            :return: A factor by which to multiply the change in X and change in Y
+            """
+            def get_scale_factor():
+                # num_digit = len(str(int(current_scale)))  # number of digits in number
+                num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
+                scale_nums = [1., 1.25, 1.5, 2., 5.]
+                possible_scales = [num * 10 ** num_digit for num in
+                                   scale_nums + list(map(lambda x: x * 10, scale_nums))]
+                new_scale = min(filter(lambda x: x > current_scale, possible_scales),
+                                key=lambda x: x - current_scale)
+                self.map_scale = new_scale
+                scale_factor = new_scale / current_scale
+                return scale_factor
+
+            xmin, xmax, ymin, ymax = min([p1[0], p2[0]]), max([p1[0], p2[0]]), min([p1[1], p2[1]]), max([p1[1], p2[1]])
+            dist = math.sqrt((xmax - xmin)**2 + (ymax - ymin)**2)
+            bbox_width = plot_width  # Section plot width in m (after subplot adjustment)
+            current_scale = dist / bbox_width
+            scale_factor = get_scale_factor()
+            return scale_factor
+
         collar = pem_file.get_collar_coords()[0]
         segments = pem_file.get_hole_geometry()
         azimuths = [float(row[0]) for row in segments]
@@ -1234,15 +1262,16 @@ class MapPlotMethods:
 
         # Find the depths that are 50% and var percentile% down the hole
         perc_50_depth = np.percentile(interp_depths, 50)
-        perc_depth = np.percentile(interp_depths, percentile)
+        if hole_depth is None:
+            hole_depth = np.percentile(interp_depths, percentile)
 
         # Nearest index of the 50th and var percentile% depths
         i_perc_50_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - perc_50_depth))
-        i_perc_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - perc_depth))
+        i_perc_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - hole_depth))
 
         line_center_x, line_center_y = interp_x[i_perc_50_depth], interp_y[i_perc_50_depth]
         line_az = interp_az[i_perc_depth]
-        print(f"Line azimuth: {line_az}°")
+        print(f"Line azimuth: {line_az:.0f}°")
         line_len = math.ceil(depths[-1] / 400) * 300
         dx = math.cos(math.radians(90 - line_az)) * (line_len / 2)
         dy = math.sin(math.radians(90 - line_az)) * (line_len / 2)
@@ -1250,7 +1279,16 @@ class MapPlotMethods:
         line_xy_1 = (line_center_x - dx, line_center_y - dy)
         line_xy_2 = (line_center_x + dx, line_center_y + dy)
 
-        return line_xy_1, line_xy_2
+        if section_plot:
+            plot_width = plot_width
+            scale_factor = calc_scale_factor(line_xy_1, line_xy_2, plot_width)
+            dx = dx * scale_factor
+            dy = dy * scale_factor
+
+            line_xy_1 = (line_center_x - dx, line_center_y - dy)
+            line_xy_2 = (line_center_x + dx, line_center_y + dy)
+
+        return line_xy_1, line_xy_2, line_az
 
 
 class Map3D(MapPlotMethods):
@@ -1592,7 +1630,7 @@ class Section3D(Map3D, MagneticFieldCalculator):
     def plot_2d_magnetic_field(self):
         logging.info('Section3D - Plotting magnetic field')
 
-        p1, p2 = self.get_section_extents(self.pem_file)
+        p1, p2, line_az = self.get_section_extents(self.pem_file)
         xx, yy, zz, u, v, w, arrow_len = self.get_2d_magnetic_field(p1, p2)
         mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
                       color='black', label='Field', linewidth=.5, alpha=1.,
@@ -1611,21 +1649,34 @@ class Section3D(Map3D, MagneticFieldCalculator):
 
 
 class SectionPlot(MagneticFieldCalculator):
-    def __init__(self, pem_file, fig, **kwargs):
+    """
+    Plots the section plot (magnetic field vector plot) of a single borehole on a given figure object.
+    By default the azimuth selected is the 80th percentile down the hole, but this is selected by the user.
+    """
+    def __init__(self, pem_file, fig, hole_depth=None, **kwargs):
         self.color = 'black'
         self.fig = fig
         self.ax = self.fig.add_subplot()
         self.pem_file = pem_file
-        # self.collar_gps = [float(item) for item in self.pem_file.get_collar_coords()[0]]
-        #         # self.segments = self.pem_file.get_hole_geometry()
+        self.hole_depth = hole_depth
         MagneticFieldCalculator.__init__(self, self.pem_file)
         self.buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
 
-        self.p1, self.p2 = self.get_section_extents(self.pem_file)
-        self.line_len = round(math.sqrt((self.p1[0] - self.p2[0]) ** 2 + (self.p1[1] - self.p2[1]) ** 2))
-        self.plot_mag_section()
+        plt.subplots_adjust(left=0.055, bottom=0.03, right=0.97, top=0.955)
+        bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
+        plot_width = bbox.width * .0254
+        self.p1, self.p2, self.line_az = self.get_section_extents(self.pem_file, hole_depth=self.hole_depth,
+                                                                  section_plot=True, plot_width=plot_width)
+        self.line_len = math.sqrt((self.p1[0] - self.p2[0]) ** 2 + (self.p1[1] - self.p2[1]) ** 2)
+        self.section_depth = self.line_len * (bbox.height/bbox.width)
+        self.units = 'm' if self.segments[0][3] == 2 else 'ft'
+
         self.plot_hole_section()
+        self.plot_mag_section()
         self.format_figure()
+        filename = r'C:\Users\Eric\Desktop\Section.PDF'
+        plt.savefig(filename, dpi='figure', orientation='portrait')
+        os.startfile(filename)
 
     def get_hole_projection(self):
         """
@@ -1650,6 +1701,13 @@ class SectionPlot(MagneticFieldCalculator):
 
     def format_figure(self):
 
+        def calc_scale():
+            (xmin, xmax) = self.ax.get_xlim()
+            map_width = xmax - xmin
+            bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
+            current_scale = map_width / (bbox.width * .0254)
+            return current_scale
+
         def add_scale_bar():
             """
             Adds scale bar to the axes.
@@ -1662,6 +1720,14 @@ class SectionPlot(MagneticFieldCalculator):
                 return base * math.ceil(x / base)
 
             def add_rectangles(left_bar_pos, bar_center, right_bar_pos, y):
+                """
+                Draw the scale bar itself, using multiple rectangles.
+                :param left_bar_pos: Axes position of the left-most part of the scale bar
+                :param bar_center: Axes position center scale bar
+                :param right_bar_pos: Axes position of the right-most part of the scale bar
+                :param y: Axes height of the desired location of the scale bar
+                :return: None
+                """
                 rect_height = 0.005
                 line_width = 0.4
                 sm_rect_width = (bar_center - left_bar_pos) / 5
@@ -1686,34 +1752,27 @@ class SectionPlot(MagneticFieldCalculator):
                                            linewidth=line_width, transform=self.ax.transAxes, zorder=9)
                 patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height, ec='k',
                                            facecolor='w', linewidth=line_width, transform=self.ax.transAxes, zorder=9)
+                # Background rectangle
+                patch3 = patches.Rectangle((left_bar_pos, y - rect_height), big_rect_width*2, rect_height*2, ec='k',
+                                           facecolor='w', linewidth=line_width, transform=self.ax.transAxes, zorder=5,
+                                           path_effects=buffer)
                 self.ax.add_patch(patch1)
                 self.ax.add_patch(patch2)
+                self.ax.add_patch(patch3)
 
-            bar_center = 0.5  # Half way across the axes
-            bar_height_pos = 0.05
-            map_width = self.ax.get_extent()[1] - self.ax.get_extent()[0]
+            # bar_center = 0.85
+            bar_center = 0.015 + (0.38/2)
+            bar_height_pos = 0.25
+            map_width = self.line_len
             num_digit = int(np.floor(np.log10(map_width)))  # number of digits in number
             bar_map_length = round(map_width, -num_digit)  # round to 1sf
-            bar_map_length = myround(bar_map_length / 8, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
-            if bar_map_length > 10000:
-                units = 'kilometers'
-                bar_map_length = bar_map_length / 1000
-            else:
-                units = 'meters'
-            buffer = [patheffects.Stroke(linewidth=1, foreground='white'), patheffects.Normal()]
+            bar_map_length = myround(bar_map_length / 4, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
+            units = 'meters' if self.units == 'm' else 'feet'
+
+            buffer = [patheffects.Stroke(linewidth=5, foreground='white'), patheffects.Normal()]
             bar_ax_length = bar_map_length / map_width
             left_bar_pos = bar_center - (bar_ax_length / 2)
             right_bar_pos = bar_center + (bar_ax_length / 2)
-
-            # Simple tick scale
-            # self.ax.plot([left_bar_pos, bar_center, right_bar_pos], [bar_height_pos]*3, color='k',
-            #              linewidth=1, transform=self.ax.transAxes, path_effects=buffer)
-            # self.ax.plot([left_bar_pos], [bar_height_pos], marker=3, color='k', lw=5,transform=self.ax.transAxes,
-            #              path_effects=buffer)
-            # self.ax.plot([right_bar_pos], [bar_height_pos], marker=3, color='k', transform=self.ax.transAxes,
-            #              path_effects=buffer)
-            # self.ax.text(bar_center, bar_height_pos+.005, f"{bar_map_length:.0f} {units}", ha='center',
-            #              transform=self.ax.transAxes, path_effects=buffer)
 
             add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
             self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
@@ -1737,7 +1796,8 @@ class SectionPlot(MagneticFieldCalculator):
             b_xmin = 0.015  # Title box
             b_width = 0.38
             b_ymin = 0.015
-            b_height = 0.185
+            b_height = 0.165
+
             center_pos = b_xmin + (b_width / 2)
             right_pos = b_xmin + b_width - .01
             left_pos = b_xmin + .01
@@ -1747,10 +1807,10 @@ class SectionPlot(MagneticFieldCalculator):
             line_1 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
                                    linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
 
-            line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .105, top_pos - .105],
+            line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .098, top_pos - .098],
                                    linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
 
-            line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .143, top_pos - .143],
+            line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .135, top_pos - .135],
                                    linewidth=.5, color='gray', transform=self.ax.transAxes, zorder=10)
 
             # Title box rectangle
@@ -1763,7 +1823,7 @@ class SectionPlot(MagneticFieldCalculator):
             loop = self.pem_file.header.get('Loop')
             hole = self.pem_file.header.get('LineHole')
 
-            # scale = f"1:{self.map_scale:,.0f}"
+            scale = f"1:{calc_scale():,.0f}"
 
             self.ax.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
                          fontname='Century Gothic', fontsize=11, ha='center', zorder=10, transform=self.ax.transAxes)
@@ -1780,15 +1840,15 @@ class SectionPlot(MagneticFieldCalculator):
                          fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(center_pos, top_pos - 0.111, f"Timebase: {self.pem_file.header.get('Timebase')} ms\n{get_survey_date()}",
+            self.ax.text(center_pos, top_pos - 0.105, f"Timebase: {self.pem_file.header.get('Timebase')} ms\n{get_survey_date()}",
                          fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(left_pos, top_pos - 0.155, f"{'coord_sys'}", family='cursive', style='italic', color='dimgray',
+            self.ax.text(left_pos, top_pos - 0.140, f"Section Azimuth: {self.line_az:.0f}°", family='cursive', style='italic', color='dimgray',
                          fontname='Century Gothic', fontsize=8, va='top', ha='left', zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(right_pos, top_pos - 0.155, f"Scale {'scale'}", family='cursive', style='italic',
+            self.ax.text(right_pos, top_pos - 0.140, f"Scale {scale}", family='cursive', style='italic',
                          color='dimgray',
                          fontname='Century Gothic', fontsize=8, va='top', ha='right', zorder=10,
                          transform=self.ax.transAxes)
@@ -1800,18 +1860,21 @@ class SectionPlot(MagneticFieldCalculator):
             self.ax.add_line(line_2)
             self.ax.add_line(line_3)
 
-        plt.subplots_adjust(left=0.06, bottom=0.03, right=0.97, top=0.95)
-
         self.ax.xaxis.set_visible(False)
         self.ax.yaxis.set_visible(True)
-        # self.ax.set_ylabel('Elevation (m)')
+        self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, va='center')
 
+        if self.units == 'm':
+            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} m'))
+        else:
+            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} ft'))
+        # self.ax.set_ylabel('Elevation (m)')
         # self.ax.spines['left'].set_visible(False)
         # self.ax.spines['right'].set_visible(False)
         # self.ax.spines['bottom'].set_visible(False)
 
         add_title()
-        # add_scale_bar()
+        add_scale_bar()
 
     def plot_mag_section(self):
         """
@@ -1841,10 +1904,7 @@ class SectionPlot(MagneticFieldCalculator):
             theta = -theta
 
         hole_elevation = self.collar[2]
-        # Creating the grid
-        min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents(self.pem_file)
-        # Calculate the Z so that it is like a section plot
-        min_z = max_z - ((float(math.floor(self.segments[-1][-1] / 400) + 1) * 400))
+        min_z = hole_elevation - self.section_depth
 
         try:
             length = np.arange(0, self.line_len + 30, self.line_len // 25)
@@ -1883,18 +1943,20 @@ class SectionPlot(MagneticFieldCalculator):
         print('Calculated in {} seconds'.format(str(time)))
         self.ax.set_xlim(0, self.line_len)
         self.ax.set_ylim(min_z, hole_elevation)
+
         # Plot the vector arrows
-        self.ax.quiver(xx, zz, plotx, plotz, color='k', label='Field', pivot='middle', zorder=0)
+        self.ax.quiver(xx, zz, plotx, plotz, color='dimgray', label='Field', pivot='middle', zorder=0,
+                       units='dots', scale=.045, width=.6, headlength=9, headwidth=5)
 
         # Plot Labelling
-        lefttext = str(int(self.p1[0])) + 'E, ' + str(int(self.p1[1])) + 'N'
-        righttext = str(int(self.p2[0])) + 'E, ' + str(int(self.p2[1])) + 'N'
+        lefttext = f'{self.p1[0]:,.0f}m E\n{self.p1[1]:,.0f}m N'
+        righttext = f'{self.p2[0]:,.0f}m E\n{self.p2[1]:,.0f}m N'
         self.ax.text(0, 1.01, lefttext, color='k', ha='left', size='small', path_effects=self.buffer,
-                     zorder=10, transform=self.ax.transAxes)
+                     zorder=9, transform=self.ax.transAxes)
         self.ax.text(1, 1.01, righttext, color='k', ha='right', size='small',
-                     path_effects=self.buffer, zorder=10, transform=self.ax.transAxes)
+                     path_effects=self.buffer, zorder=9, transform=self.ax.transAxes)
         plt.draw()
-        plt.pause(0.0001)
+        # plt.pause(0.0001)
 
     def plot_hole_section(self):
         azimuths = [float(row[0]) for row in self.segments]
@@ -1922,12 +1984,10 @@ class SectionPlot(MagneticFieldCalculator):
                                                 dtype='float64')
 
         # Plotting station ticks on the projected hole
-        station_depths = [self.collar[2]-station for station in self.pem_file.get_converted_unique_stations()]
+        stations = self.pem_file.get_converted_unique_stations()
 
-        marker_indexes = []
-        for station in station_depths:
-            index = min(range(len(interp_z)), key=lambda i: abs(interp_z[i] - station))
-            marker_indexes.append(index)
+        # Marker indexes are the station depth as a percentage of the max station depth
+        station_indexes = [int(station/self.segments[-1][-1]*1000) for station in stations]
 
         plotx = []
         plotz = []
@@ -1948,13 +2008,32 @@ class SectionPlot(MagneticFieldCalculator):
                 # Circle at top of hole
                 self.ax.plot([dist], [q_proj[2]], 'o', markerfacecolor='w', markeredgecolor='k',
                              path_effects=self.buffer, zorder=11)
+                # Hole name label
                 hole_name = self.pem_file.header.get('LineHole')
-                self.ax.text(dist, q_proj[2] + (abs(interp_z[-1]-interp_z[0])*.05), hole_name, color='k', ha='center')
+                trans = mtransforms.blended_transform_factory(self.ax.transData, self.ax.transAxes)
+                self.ax.text(dist, 1.01, hole_name, color='k', ha='center', size=10, transform=trans, zorder=10)
             elif i == len(hole_trace) - 1:
+                # Label end-of-hole depth
                 hole_len = self.segments[-1][-1]
-                self.ax.text(dist + self.line_len*.01, q_proj[2], f"{hole_len:.0f} m", color='k', ha='left', path_effects=self.buffer,
-                             zorder=10)
-        self.ax.plot(plotx, plotz, color='k', lw=1, path_effects=self.buffer, zorder=10, markevery=marker_indexes)
+                self.ax.text(dist + self.line_len*.01, q_proj[2], f"{hole_len:.0f} m", color='k', ha='left',
+                             path_effects=self.buffer, zorder=10)
+
+        # Plot the hole section line
+        self.ax.plot(plotx, plotz, color='k', lw=1, path_effects=self.buffer, zorder=10)
+
+        # Plotting the ticks
+        for i, (x, z) in enumerate(zip(plotx, plotz)):
+            if i in station_indexes:
+                p = (x, z)
+                index = list(plotx).index(x)
+                pa = (plotx[index - 1], plotz[index - 1])
+                self.ax.annotate('', xy=pa, xycoords='data', xytext=p, zorder=12,
+                                 arrowprops=dict(arrowstyle='|-|', mutation_scale=3, connectionstyle='arc3',
+                                                 lw=.5))
+
+        # # Markers are plotted separately so they don't have a buffer around them like the line does
+        # self.ax.plot(plotx, plotz, 'o', color='k', lw=1, zorder=11,
+        #              markevery=station_indexes, markersize=4, markerfacecolor='w')
 
 
 class PEMPrinter:
@@ -2158,7 +2237,7 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems()
-    fig = plt.figure(figsize=(8.5, 11))
+    fig = plt.figure(figsize=(8.5, 11), dpi=100)
     # ax = fig.add_subplot()
     # sm = SectionPlot(pem_files[0], fig)
     # map = sm.get_map()
