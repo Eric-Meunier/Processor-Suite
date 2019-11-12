@@ -158,20 +158,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.export_final_pems_action.setStatusTip("Export the final PEM files")
         self.export_final_pems_action.triggered.connect(self.export_final_pems)
 
-        self.print_plan_map_action = QAction("&Print Plan Map PDF", self)
-        self.print_plan_map_action.setShortcut("F10")
-        self.print_plan_map_action.setStatusTip("Print a plan map to PDF")
-        self.print_plan_map_action.triggered.connect(lambda: self.print_plots(plan=True))
-
-        self.print_step_plots_action = QAction("&Print Step Plots PDF", self)
-        self.print_step_plots_action.setShortcut("F11")
-        self.print_step_plots_action.setStatusTip("Print the step plots to PDF")
-        self.print_step_plots_action.triggered.connect(lambda: self.print_plots(step=True))
-
-        self.print_final_plots_action = QAction("&Print Final Plots PDF", self)
-        self.print_final_plots_action.setShortcut("F12")
-        self.print_final_plots_action.setStatusTip("Print the final plots to PDF")
-        self.print_final_plots_action.triggered.connect(lambda: self.print_plots(final=True))
+        self.print_plots_action = QAction("&Print Plots to PDF", self)
+        self.print_plots_action.setShortcut("F12")
+        self.print_plots_action.setStatusTip("Print plots to a PDF file")
+        self.print_plots_action.triggered.connect(self.print_plots)
 
         self.del_file = QAction("&Remove File", self)
         self.del_file.setShortcut("Del")
@@ -198,9 +188,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu.addAction(self.import_ri_files_action)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.export_final_pems_action)
-        self.fileMenu.addAction(self.print_plan_map_action)
-        self.fileMenu.addAction(self.print_step_plots_action)
-        self.fileMenu.addAction(self.print_final_plots_action)
+        self.fileMenu.addAction(self.print_plots_action)
 
         # PEM menu
         self.averageAllPems = QAction("&Average All PEM Files", self)
@@ -305,8 +293,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def contextMenuEvent(self, event):
         if self.table.underMouse():
             if self.table.selectionModel().selectedIndexes():
-                selected_pem, row = self.get_selected_pem_files()
-                survey_type = selected_pem[0].survey_type.lower()
+                selected_pems, rows = self.get_selected_pem_files()
+                survey_type = selected_pems[0].survey_type.lower()
 
                 self.table.menu = QMenu(self.table)
                 self.table.remove_file_action = QAction("&Remove", self)
@@ -323,6 +311,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
                 self.table.save_file_as_action = QAction("&Save As...", self)
                 self.table.save_file_as_action.triggered.connect(self.save_pem_file_as)
+
+                self.table.print_plots_action = QAction("&Print Plots", self)
+                self.table.print_plots_action.triggered.connect(lambda: self.print_plots(pem_files=selected_pems, rows=rows))
 
                 self.table.extract_stations_action = QAction("&Extract Stations", self)
                 self.table.extract_stations_action.triggered.connect(self.extract_stations)
@@ -365,6 +356,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 else:
                     self.table.menu.addAction(self.table.save_file_to_action)
                 self.table.menu.addSeparator()
+                self.table.menu.addAction(self.table.print_plots_action)
+                self.table.menu.addSeparator()
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     self.table.menu.addAction(self.merge_action)
                 self.table.menu.addAction(self.table.average_action)
@@ -384,10 +377,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addSeparator()
                 if 'borehole' in survey_type:
                     self.table.menu.addAction(self.table.view_3d_section_action)
-                self.table.menu.addAction(self.print_plan_map_action)
-                self.table.menu.addAction(self.print_step_plots_action)
-                self.table.menu.addAction(self.print_final_plots_action)
-                self.table.menu.addSeparator()
+                    self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.remove_file_action)
 
                 self.table.menu.popup(QtGui.QCursor.pos())
@@ -1213,7 +1203,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.statusBar().showMessage('Invalid survey type', 2000)
 
-    def print_plots(self, final=False, step=False, plan=False):
+    def print_plots(self, pem_files=None, rows=None):
+        """
+        Save the final plots as PDFs for the selected PEM files. If no PEM files are selected, it saves it for all open PEM files
+        :param pem_files: PEMFile objects
+        :param rows: Corresponding rows of the selected PEM files in order to link the RI file to the correct PEM file
+        :return: None
+        """
         logging.info('PEMEditor - Printing plots')
 
         def get_crs():
@@ -1226,16 +1222,21 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
             self.dialog.setDirectory(default_path)
             if __name__ == '__main__':
-                save_dir = r'C:\_Data\2019\_Mowgli Testing\test'  # For testing purposes
+                save_dir = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\test'  # For testing purposes
             else:
                 save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]
                 # Returns full filepath. For single PDF file
             return save_dir
 
         if len(self.pem_files) > 0:
+
+            if pem_files is None:
+                pem_files = self.pem_files
+                rows = range(0, len(pem_files))
             self.window().statusBar().showMessage('Saving plots...')
 
-            plot_kwargs = {'HideGaps': self.hide_gaps_checkbox.isChecked(),
+            plot_kwargs = {'ShareRange': self.share_range_checkbox.isChecked(),
+                           'HideGaps': self.hide_gaps_checkbox.isChecked(),
                            'LoopAnnotations': self.show_loop_anno_checkbox.isChecked(),
                            'MovingLoop': self.movingLoopCBox.isChecked(),
                            'TitleBox': self.plan_map_options.title_box_cbox.isChecked(),
@@ -1251,22 +1252,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                            'LineLabels': self.plan_map_options.line_labels_cbox.isChecked(),
                            'HoleCollarLabels': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
                            'HoleDepthLabels': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
-                           'CRS': get_crs()}
-
-            pem_files_selection, rows = self.get_selected_pem_files()
-            if pem_files_selection:
-                pem_files = copy.copy(pem_files_selection)
-            else:
-                pem_files = copy.copy(self.pem_files)
-                rows = range(self.table.rowCount())
-            ri_files = []
-            for row, pem_file in zip(rows, pem_files):
-                ri_files.append(self.pem_info_widgets[row].ri_file)
-                self.update_pem_file_from_table(pem_file, row)
-                if not pem_file.is_averaged():
-                    self.file_editor.average(pem_file)
-                if not pem_file.is_split():
-                    self.file_editor.split_channels(pem_file)
+                           'CRS': get_crs(),
+                           'LINPlots': self.output_lin_cbox.isChecked(),
+                           'LOGPlots': self.output_log_cbox.isChecked(),
+                           'STEPPlots': self.output_step_cbox.isChecked(),
+                           'PlanMap': self.output_plan_map_cbox.isChecked(),
+                           'SectionPlot': self.output_section_cbox.isChecked(),
+                           'LabelSectionTicks': self.label_section_depths_cbox.isChecked(),
+                           'SectionDepth': self.section_depth_edit.text()}
 
             if self.share_range_checkbox.isChecked():
                 try:
@@ -1281,54 +1274,34 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 plot_kwargs['XMin'] = None
                 plot_kwargs['XMax'] = None
 
-            # Save all plots
-            if final is True:
-                if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
-                    response = self.message.question(self, 'No CRS',
-                                                     'No CRS has been selected. '
-                                                     'Do you wish to processed without a plan map?',
-                                                     self.message.Yes | self.message.No)
-                    if response == self.message.No:
-                        return
-                save_dir = get_save_file()
-                if save_dir:
-                    # PEM Files and RI files zipped together for when they get sorted
-                    printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
-                    self.window().statusBar().addPermanentWidget(printer.pb)
-                    printer.print_final_plots()
-                    printer.pb.hide()
-                else:
-                    self.window().statusBar().showMessage('Cancelled', 2000)
+            ri_files = []
+            for row, pem_file in zip(rows, pem_files):
+                ri_files.append(self.pem_info_widgets[row].ri_file)
+                # self.update_pem_file_from_table(pem_file, row)
+                if not pem_file.is_averaged():
+                    self.file_editor.average(pem_file)
+                if not pem_file.is_split():
+                    self.file_editor.split_channels(pem_file)
 
-            # Only save step plots
-            elif step is True:
-                save_dir = get_save_file()
-                if save_dir:
-                    # PEM Files and RI files zipped together for when they get sorted
-                    printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
-                    self.window().statusBar().addPermanentWidget(printer.pb)
-                    printer.print_step_plots()
-                    printer.pb.hide()
-                else:
-                    self.window().statusBar().showMessage('Cancelled', 2000)
-            # Only save plan map
-            elif plan is True:
-                if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
-                    self.message.information(self, 'No CRS',
-                                             'No CRS has been selected. '
-                                             'Please selected a CRS to proceed.')
-                else:
-                    save_dir = get_save_file()
-                    if save_dir:
-                        # PEM Files and RI files zipped together for when they get sorted
-                        printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
-                        self.window().statusBar().addPermanentWidget(printer.pb)
-                        printer.print_plan_map()
-                        printer.pb.hide()
-                    else:
-                        self.window().statusBar().showMessage('Cancelled', 2000)
+            save_dir = get_save_file()
+            if save_dir:
+                if self.output_plan_map_cbox.isChecked():
+                    pass
+                    # if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
+                    #     response = self.message.question(self, 'No CRS',
+                    #                                      'No CRS has been selected. '
+                    #                                      'Do you wish to processed without a plan map?',
+                    #                                      self.message.Yes | self.message.No)
+                    #     if response == self.message.No:
+                    #         return
+                # PEM Files and RI files zipped together for when they get sorted
+                printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
+                self.window().statusBar().addPermanentWidget(printer.pb)
+                # printer.print_final_plots()
+                printer.pb.hide()
             else:
-                raise ValueError
+                self.window().statusBar().showMessage('Cancelled', 2000)
+
             self.window().statusBar().showMessage('Plots saved', 2000)
 
     def remove_file(self, table_row):
@@ -2315,8 +2288,8 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
-    section = Section3DViewer(pem_files)
-    section.show()
+    # section = Section3DViewer(pem_files)
+    # section.show()
 
     # map = Map3DViewer(pem_files)
     # map.show()
@@ -2326,7 +2299,7 @@ def main():
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\1200NAv.PEM')
     # mw.open_ri_file([r'C:\_Data\2019\_Mowgli Testing\1200N.RI3'])
-    # mw.print_plots(step=True)
+    mw.print_plots()
     # mw.print_plots(final=True)
 
     app.exec_()

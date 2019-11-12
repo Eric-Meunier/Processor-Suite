@@ -405,7 +405,7 @@
             <widget class="QLineEdit" name="section_depth_edit"/>
            </item>
            <item row="1" column="0" colspan="2">
-            <widget class="QCheckBox" name="label_section_plot_ticks_cbox">
+            <widget class="QCheckBox" name="label_section_depths_cbox">
              <property name="text">
               <string>Label Ticks</string>
              </property>
