@@ -272,7 +272,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.share_client_cbox.stateChanged.connect(self.toggle_share_client)
         self.share_grid_cbox.stateChanged.connect(self.toggle_share_grid)
         self.share_loop_cbox.stateChanged.connect(self.toggle_share_loop)
-        self.reset_header_btn.clicked.connect(self.fill_share_header)
+        # self.reset_header_btn.clicked.connect(self.fill_share_header)
         self.client_edit.textChanged.connect(self.update_table)
         self.grid_edit.textChanged.connect(self.update_table)
         self.loop_edit.textChanged.connect(self.update_table)
@@ -313,7 +313,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.save_file_as_action.triggered.connect(self.save_pem_file_as)
 
                 self.table.print_plots_action = QAction("&Print Plots", self)
-                self.table.print_plots_action.triggered.connect(lambda: self.print_plots(pem_files=selected_pems, rows=rows))
+                self.table.print_plots_action.triggered.connect(lambda: self.print_plots(selected_files=True))
 
                 self.table.extract_stations_action = QAction("&Extract Stations", self)
                 self.table.extract_stations_action.triggered.connect(self.extract_stations)
@@ -502,7 +502,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             ]))
 
             inf_conditions = bool(all([
-                e.answerRect().intersects(self.gps_box.geometry()),
+                e.answerRect().intersects(self.main_frame_gps_tab.geometry()),
                 inf_files is True or gpx_files is True,
             ]))
 
@@ -1203,10 +1203,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.statusBar().showMessage('Invalid survey type', 2000)
 
-    def print_plots(self, pem_files=None, rows=None):
+    def print_plots(self, selected_files=False):
         """
         Save the final plots as PDFs for the selected PEM files. If no PEM files are selected, it saves it for all open PEM files
-        :param pem_files: PEMFile objects
+        :param pem_files: List of PEMFile objects
         :param rows: Corresponding rows of the selected PEM files in order to link the RI file to the correct PEM file
         :return: None
         """
@@ -1230,7 +1230,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if len(self.pem_files) > 0:
 
-            if pem_files is None:
+            if selected_files is True:
+                pem_files, rows = self.get_selected_pem_files()
+            else:
                 pem_files = self.pem_files
                 rows = range(0, len(pem_files))
             self.window().statusBar().showMessage('Saving plots...')
@@ -1277,7 +1279,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             ri_files = []
             for row, pem_file in zip(rows, pem_files):
                 ri_files.append(self.pem_info_widgets[row].ri_file)
-                # self.update_pem_file_from_table(pem_file, row)
+                self.update_pem_file_from_table(pem_file, row)
                 if not pem_file.is_averaged():
                     self.file_editor.average(pem_file)
                 if not pem_file.is_split():
@@ -2290,7 +2292,11 @@ def main():
 
     # section = Section3DViewer(pem_files)
     # section.show()
-
+    mw.share_loop_cbox.setChecked(False)
+    mw.output_lin_cbox.setChecked(False)
+    mw.output_log_cbox.setChecked(False),
+    mw.output_step_cbox.setChecked(False),
+    mw.output_section_cbox.setChecked(False),
     # map = Map3DViewer(pem_files)
     # map.show()
 

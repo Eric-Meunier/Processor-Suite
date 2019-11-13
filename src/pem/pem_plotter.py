@@ -758,23 +758,18 @@ class PlanMap:
 
         def add_line_to_map(pem_file):
 
-            def get_rotation(eastings, northings):
-                ang = np.arctan2(eastings[0] - eastings[-1], northings[0] - northings[-1])
-                deg = np.rad2deg(ang)
-                return deg
-
             line_gps = pem_file.get_station_coords()
+            # Plotting the line and adding the line label
             if line_gps and line_gps not in self.lines:
                 self.lines.append(line_gps)
                 eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
+                angle = math.degrees(math.atan2(northings[-1]-northings[0], eastings[-1] - eastings[0]))
+                angle = angle-180 if abs(angle) > 90 else angle
                 if self.line_labels:
-                    line_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
-                                                label_xy=(float(line_gps[0][0]), float(line_gps[0][1])),
-                                                p=(eastings[0], northings[0]), pa=(eastings[-1], northings[-1]),
-                                                va='bottom', ha='center', color=self.color, zorder=5,
-                                                path_effects=label_buffer)
+                    line_label = self.ax.text(eastings[0], northings[0], f"{pem_file.header.get('LineHole')}",
+                                              rotation=angle, ha='center', va='bottom', zorder=5, color=self.color,
+                                              path_effects=label_buffer)
                     self.labels.append(line_label)
-                # marker_rotation = get_rotation(eastings, northings)
                 self.station_handle, = self.ax.plot(eastings, northings, '-o', markersize=3, color=self.color,
                                                     markerfacecolor='w', markeredgewidth=0.3,
                                                     label='Surface Line', transform=self.crs, zorder=2)  # Plot the line
@@ -815,14 +810,14 @@ class PlanMap:
                     self.collars.append(collar)
                     marker_style = dict(marker='o', color='white', markeredgecolor=self.color, markersize=8)
                     self.collar_handle, = self.ax.plot(collar_x, collar_y, fillstyle='full',
-                                                       label='Borehole Collar', zorder=3, **marker_style)
+                                                       label='Borehole Collar', zorder=4, **marker_style)
                     # Add the hole label at the collar
                     if self.hole_collar_labels:
                         collar_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
                                                       label_xy=(collar_x, collar_y),
                                                       p=(seg_x[0], seg_y[0]), pa=(seg_x[1], seg_y[1]), ax=self.ax,
                                                       hole_collar=True,
-                                                      va='bottom', ha='center', color=self.color, zorder=4,
+                                                      va='bottom', ha='center', color=self.color, zorder=5,
                                                       path_effects=label_buffer)
                         self.labels.append(collar_label)
 
@@ -862,7 +857,7 @@ class PlanMap:
                                                       p=(seg_x[-2], seg_y[-2]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
                                                       hole_collar=True,
                                                       va='bottom', ha='left', fontsize=8, color=self.color,
-                                                      path_effects=label_buffer, zorder=4)
+                                                      path_effects=label_buffer, zorder=3)
                 else:
                     pass
 
@@ -876,7 +871,8 @@ class PlanMap:
                 add_hole_to_map(pem_file)
 
             if self.draw_loops is True:
-                add_loop_to_map(pem_file)
+                if len(self.loops) == 0:
+                    add_loop_to_map(pem_file)
 
     def format_figure(self):
 
@@ -1679,7 +1675,10 @@ class SectionPlot(MagneticFieldCalculator):
         self.ax = self.fig.add_subplot()
         self.pem_file = pem_files[0]
         self.stations = stations
-        self.hole_depth = hole_depth
+        try:
+            self.hole_depth = int(hole_depth)
+        except ValueError:
+            self.hole_depth = None
         MagneticFieldCalculator.__init__(self, self.pem_file)
         self.buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
 
@@ -1691,6 +1690,7 @@ class SectionPlot(MagneticFieldCalculator):
         self.line_len = math.sqrt((self.p1[0] - self.p2[0]) ** 2 + (self.p1[1] - self.p2[1]) ** 2)
         self.section_depth = self.line_len * (bbox.height / bbox.width)
         self.units = 'm' if self.segments[0][3] == 2 else 'ft'
+        self.label_ticks = kwargs.get('LabelSectionTicks')
 
         self.plot_hole_section()
         self.plot_mag_section()
@@ -1893,10 +1893,6 @@ class SectionPlot(MagneticFieldCalculator):
             self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} m'))
         else:
             self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} ft'))
-        # self.ax.set_ylabel('Elevation (m)')
-        # self.ax.spines['left'].set_visible(False)
-        # self.ax.spines['right'].set_visible(False)
-        # self.ax.spines['bottom'].set_visible(False)
 
         add_title()
         add_scale_bar()
@@ -2041,8 +2037,9 @@ class SectionPlot(MagneticFieldCalculator):
             elif i == len(hole_trace) - 1:
                 # Label end-of-hole depth
                 hole_len = self.segments[-1][-1]
+                angle = math.degrees(math.atan2(plotz[-1]-plotz[-100], plotx[-1]-plotx[-100])) + 90
                 self.ax.text(dist + self.line_len * .01, q_proj[2], f"{hole_len:.0f} m", color='k', ha='left',
-                             path_effects=self.buffer, zorder=10)
+                             rotation=angle, path_effects=self.buffer, zorder=10, rotation_mode='anchor')
 
         # Plot the hole section line
         self.ax.plot(plotx, plotz, color='k', lw=1, path_effects=self.buffer, zorder=10)
@@ -2053,9 +2050,14 @@ class SectionPlot(MagneticFieldCalculator):
                 p = (x, z)
                 index = list(plotx).index(x)
                 pa = (plotx[index - 1], plotz[index - 1])
+                angle = math.degrees(math.atan2(pa[1] - p[1], pa[0] - p[0])) - 90
                 self.ax.annotate('', xy=pa, xycoords='data', xytext=p, zorder=12,
                                  arrowprops=dict(arrowstyle='|-|', mutation_scale=3, connectionstyle='arc3',
                                                  lw=.5))
+                # Label the station ticks
+                if self.label_ticks:
+                    self.ax.text(x, z, f"{self.stations[station_indexes.index(i)]} {self.units}", rotation=angle,
+                             color='dimgray', size=8)
 
         # # Markers are plotted separately so they don't have a buffer around them like the line does
         # self.ax.plot(plotx, plotz, 'o', color='k', lw=1, zorder=11,
@@ -2129,10 +2131,10 @@ class PEMPrinter:
                         [pem_file.get_converted_unique_stations() for pem_file in pem_files])))
 
                     section_plotter = SectionPlot(pem_files, self.section_figure, stations=stations,
-                                                  hole_depth=section_depth)
+                                                  hole_depth=section_depth, **self.kwargs)
                     section_fig = section_plotter.get_section_plot()
                     pdf.savefig(section_fig)
-                    self.section_figure.axes[0].clear()
+                    self.section_figure.clear()
 
                 # Saving the LIN plots
                 if self.print_lin_plots is True:
@@ -2199,6 +2201,7 @@ class PEMPrinter:
                 for survey, files in unique_bhs.items():
                     pem_files = [pair[0] for pair in files]
                     ri_files = [pair[1] for pair in files]
+
                     x_min, x_max = None, None
                     if self.x_min is None and self.share_range is True:
                         x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
@@ -2225,6 +2228,9 @@ class PEMPrinter:
                     print(loop, list(files))
 
                 for loop, files in unique_grids.items():
+                    pem_files = [pair[0] for pair in files]
+                    ri_files = [pair[1] for pair in files]
+
                     x_min, x_max = None, None
                     if self.x_min is None and self.share_range is True:
                         x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
@@ -2237,8 +2243,6 @@ class PEMPrinter:
                     else:
                         x_max = self.x_max
 
-                    pem_files = [pair[0] for pair in files]
-                    ri_files = [pair[1] for pair in files]
                     save_plots(pem_files, ri_files, x_min, x_max)
 
         os.startfile(self.save_path + '.PDF')
@@ -2298,12 +2302,11 @@ if __name__ == '__main__':
 
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems()
-    pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
+    # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
     fig = plt.figure(figsize=(8.5, 11), dpi=100)
+    # plan_map = PlanMap(pem_files, fig)
     # ax = fig.add_subplot()
-    # sm = SectionPlot(pem_files[0], fig)
-    # map = sm.get_map()
-    section = SectionPlot(pem_files[0], fig)
+    section = SectionPlot(pem_files, fig)
     plt.show()
     # printer = PEMPrinter(sample_files_dir, pem_files)
     # printer.print_final_plots()
