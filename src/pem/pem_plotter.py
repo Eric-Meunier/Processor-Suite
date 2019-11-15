@@ -17,6 +17,7 @@ import matplotlib.ticker as ticker
 import matplotlib.transforms as mtransforms
 import numpy as np
 from PyQt5.QtWidgets import (QProgressBar)
+from PyQt5 import QtGui, QtCore
 from matplotlib import patches
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
@@ -395,7 +396,7 @@ class LINPlotter(PlotMethods):
                 if i == 0:
                     ax.set_ylabel(f"Primary Pulse\n({units})")
                 else:
-                    ax.set_ylabel(f"Channel {str(channel_bounds[i][0])} - {str(channel_bounds[i][1])}\n({units})")
+                    ax.set_ylabel(f"Channel {channel_bounds[i][0]} - {channel_bounds[i][1]}\n({units})")
 
         def calc_channel_bounds():
             # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
@@ -813,12 +814,10 @@ class PlanMap:
                                                        label='Borehole Collar', zorder=4, **marker_style)
                     # Add the hole label at the collar
                     if self.hole_collar_labels:
-                        collar_label = RotnAnnotation(f"{pem_file.header.get('LineHole')}",
-                                                      label_xy=(collar_x, collar_y),
-                                                      p=(seg_x[0], seg_y[0]), pa=(seg_x[1], seg_y[1]), ax=self.ax,
-                                                      hole_collar=True,
-                                                      va='bottom', ha='center', color=self.color, zorder=5,
-                                                      path_effects=label_buffer)
+                        angle = math.degrees(math.atan2(seg_y[1] - seg_y[0], seg_x[1] - seg_x[0])) + 90
+                        collar_label = self.ax.text(collar_x, collar_y, f"{pem_file.header.get('LineHole')}",
+                                                    va='bottom', ha='center', color=self.color, zorder=5,
+                                                    path_effects=label_buffer, rotation=angle)
                         self.labels.append(collar_label)
 
                     if seg_x and seg_y and self.draw_hole_traces is True:
@@ -2090,18 +2089,20 @@ class PEMPrinter:
         self.print_log_plots = kwargs.get('LOGPlots')
         self.print_step_plots = kwargs.get('STEPPlots')
         self.crs = kwargs.get('CRS')
-        self.pb = QProgressBar()
+
+        self.pb = CustomProgressBar()
         self.pb_count = 0
-        self.pb_end = sum([len(pair[0].get_components()) for pair in self.files])
+        self.pb_end = 0
         self.pb.setValue(0)
 
-        self.map_figure = self.create_plan_figure()
-        self.section_figure = self.create_section_figure()
+        # self.map_figure = self.create_plan_figure()
+        # self.section_figure = self.create_section_figure()
         # self.lin_figure = self.create_lin_figure()
         # self.log_figure = self.create_log_figure()
         # self.step_figure = self.create_step_figure()
 
-        self.print_files()
+        self.portrait_fig = plt.figure(figsize=(8.5, 11), num=1, clear=True)
+        self.landscape_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
 
     def print_files(self):
 
@@ -2118,38 +2119,53 @@ class PEMPrinter:
         def save_plots(pem_files, ri_files, x_min, x_max):
                 # Saving the Plan Map
                 if all([self.crs.get('Coordinate System'), self.crs.get('Datum')]) and self.print_plan_maps is True:
-                    plan_map = PlanMap(pem_files, self.map_figure, **self.kwargs)
-                    pdf.savefig(plan_map.get_map(), orientation='landscape')
-                    self.pb_count += 1
-                    self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
-                    self.map_figure.clf()
+                    if any([pem_file.has_any_gps() for pem_file in pem_files]):
+                        self.pb.setText(f"Saving plan map for {', '.join([pem_file.header.get('LineHole') for pem_file in pem_files])}")
+                        plan_map = PlanMap(pem_files, self.landscape_fig, **self.kwargs)
+                        pdf.savefig(plan_map.get_map(), orientation='landscape')
+                        self.pb_count += 1
+                        self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
+                        self.landscape_fig.clf()
+                    else:
+                        print('No PEM file has any GPS to plot on the plan map.')
 
                 # Save the Section plot as long as it is a borehole survey
                 if self.print_section_plot is True and 'borehole' in pem_files[0].survey_type.lower():
-                    section_depth = self.kwargs.get('SectionDepth')
-                    stations = sorted(set(itertools.chain.from_iterable(
-                        [pem_file.get_converted_unique_stations() for pem_file in pem_files])))
+                    if pem_files[0].has_collar_gps() and pem_files[0].has_loop_gps() and pem_files[0].has_geometry():
+                        self.pb.setText(f"Saving section plot for {pem_files[0].header.get('LineHole')}")
+                        section_depth = self.kwargs.get('SectionDepth')
+                        stations = sorted(set(itertools.chain.from_iterable(
+                            [pem_file.get_converted_unique_stations() for pem_file in pem_files])))
 
-                    section_plotter = SectionPlot(pem_files, self.section_figure, stations=stations,
-                                                  hole_depth=section_depth, **self.kwargs)
-                    section_fig = section_plotter.get_section_plot()
-                    pdf.savefig(section_fig)
-                    self.section_figure.clear()
+                        section_plotter = SectionPlot(pem_files, self.portrait_fig, stations=stations,
+                                                      hole_depth=section_depth, **self.kwargs)
+                        section_fig = section_plotter.get_section_plot()
+                        pdf.savefig(section_fig)
+                        self.pb_count += 1
+                        self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
+                        self.portrait_fig.clear()
+                    else:
+                        print('No PEM file has the GPS required to make a section plot.')
 
                 # Saving the LIN plots
                 if self.print_lin_plots is True:
                     for pem_file in pem_files:
                         components = pem_file.get_components()
                         for component in components:
+                            self.pb.setText(
+                                f"Saving LIN plot for {pem_file.header.get('LineHole')}, component {component}")
                             # TODO Can this be done without creating a figure every time?
-                            lin_figure = self.create_lin_figure()
+                            # Clear figure and re-add axes
+                            # lin_figure = self.create_lin_figure()
+                            self.configure_lin_fig()
                             lin_plotter = LINPlotter()
-                            plotted_fig = lin_plotter.plot(pem_file, component, lin_figure, x_min=x_min,
+                            plotted_fig = lin_plotter.plot(pem_file, component, self.portrait_fig, x_min=x_min,
                                                            x_max=x_max, hide_gaps=self.hide_gaps)
                             pdf.savefig(plotted_fig)
                             self.pb_count += 1
                             self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
-                            plt.close(lin_figure)
+                            self.portrait_fig.clear()
+                            # plt.close(lin_figure)
                             # for ax in self.lin_figure.axes:
                             #     ax.clear()
 
@@ -2158,14 +2174,18 @@ class PEMPrinter:
                     for pem_file in pem_files:
                         components = pem_file.get_components()
                         for component in components:
-                            log_figure = self.create_log_figure()
+                            self.pb.setText(
+                                f"Saving LOG plot for {pem_file.header.get('LineHole')}, component {component}")
+                            # log_figure = self.create_log_figure()
+                            self.configure_log_fig()
                             log_plotter = LOGPlotter()
-                            plotted_fig = log_plotter.plot(pem_file, component, log_figure, x_min=x_min,
+                            plotted_fig = log_plotter.plot(pem_file, component, self.portrait_fig, x_min=x_min,
                                                            x_max=x_max, hide_gaps=self.hide_gaps)
                             pdf.savefig(plotted_fig)
                             self.pb_count += 1
                             self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
-                            plt.close(log_figure)
+                            self.portrait_fig.clear()
+                            # plt.close(log_figure)
 
                 # Saving the STEP plots
                 if self.print_step_plots is True:
@@ -2173,36 +2193,80 @@ class PEMPrinter:
                         if ri_file:
                             components = pem_file.get_components()
                             for component in components:
-                                step_figure = self.create_step_figure()
+                                self.pb.setText(
+                                    f"Saving STEP plot for {pem_file.header.get('LineHole')}, component {component}")
+                                # step_figure = self.create_step_figure()
+                                self.configure_step_fig()
                                 step_plotter = STEPPlotter()
-                                plotted_fig = step_plotter.plot(pem_file, ri_file, component, step_figure,
+                                plotted_fig = step_plotter.plot(pem_file, ri_file, component, self.portrait_fig,
                                                                 x_min=x_min, x_max=x_max, hide_gaps=self.hide_gaps)
                                 pdf.savefig(plotted_fig)
                                 self.pb_count += 1
                                 self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
-                                plt.close(step_figure)
+                                self.portrait_fig.clear()
+                                # plt.close(step_figure)
+
+        def set_pb_max(unique_bhs, unique_grids):
+            total_count = 0
+
+            if unique_bhs:
+                for survey, file in unique_bhs.items():
+                    num_plots = file[0].get_components()
+                    if self.print_plan_maps:
+                        total_count += 1
+                    if self.print_section_plot:
+                        total_count += 1
+                    if self.print_lin_plots:
+                        total_count += num_plots
+                    if self.print_log_plots:
+                        total_count += num_plots
+                    if self.print_step_plots:
+                        total_count += num_plots
+
+            if unique_grids:
+                for loop, lines in unique_grids.items():
+                    num_plots = sum([len(file[0].get_components()) for file in lines])
+                    if self.print_plan_maps:
+                        total_count += 1
+                    if self.print_lin_plots:
+                        total_count += num_plots
+                    if self.print_log_plots:
+                        total_count += num_plots
+                    if self.print_step_plots:
+                        total_count += num_plots
+
+            self.pb_end = total_count
+            self.pb.setMaximum(total_count)
+
+        unique_bhs = defaultdict()
+        unique_grids = defaultdict()
 
         bh_files = list(filter(lambda x: 'borehole' in x[0].survey_type.lower(), self.files))
         sf_files = list(filter(lambda x: 'surface' in x[0].survey_type.lower(), self.files))
 
+        # Group the files by unique surveys i.e. each entry is the same borehole and same loop
+        for survey, files in itertools.groupby(bh_files, key=lambda x: (
+                x[0].header.get('LineHole'), x[0].header.get('Loop'))):
+            unique_bhs[survey] = list(files)
+            print(survey, list(files))
+
+        # Group the files by unique surveys i.e. each entry is the same borehole and same loop
+        for loop, files in itertools.groupby(sf_files, key=lambda x: x[0].header.get('Loop')):
+            unique_grids[loop] = list(files)
+            print(loop, list(files))
+
+        set_pb_max(unique_bhs, unique_grids)
+
         with PdfPages(self.save_path + '.PDF') as pdf:
             if any(bh_files):
-                unique_bhs = defaultdict()
                 bh_files.sort(key=lambda x: x[0].get_components(), reverse=True)
                 bh_files.sort(key=lambda x: natural_keys(x[0].header['Loop']))
                 bh_files.sort(key=lambda x: natural_keys(x[0].header['LineHole']))
-
-                # Group the files by unique surveys i.e. each entry is the same borehole and same loop
-                for survey, files in itertools.groupby(bh_files, key=lambda x: (
-                x[0].header.get('LineHole'), x[0].header.get('Loop'))):
-                    unique_bhs[survey] = list(files)
-                    print(survey, list(files))
 
                 for survey, files in unique_bhs.items():
                     pem_files = [pair[0] for pair in files]
                     ri_files = [pair[1] for pair in files]
 
-                    x_min, x_max = None, None
                     if self.x_min is None and self.share_range is True:
                         x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
                                                                    pem_file in pem_files]))
@@ -2216,22 +2280,17 @@ class PEMPrinter:
 
                     save_plots(pem_files, ri_files, x_min, x_max)
 
+                    self.pb.setText('Complete')
+
             if any(sf_files):
-                unique_grids = defaultdict()
                 sf_files.sort(key=lambda x: x[0].get_components(), reverse=True)
                 sf_files.sort(key=lambda x: natural_keys(x[0].header['LineHole']))
                 sf_files.sort(key=lambda x: natural_keys(x[0].header['Loop']))
-
-                # Group the files by unique surveys i.e. each entry is the same borehole and same loop
-                for loop, files in itertools.groupby(sf_files, key=lambda x: x[0].header.get('Loop')):
-                    unique_grids[loop] = list(files)
-                    print(loop, list(files))
 
                 for loop, files in unique_grids.items():
                     pem_files = [pair[0] for pair in files]
                     ri_files = [pair[1] for pair in files]
 
-                    x_min, x_max = None, None
                     if self.x_min is None and self.share_range is True:
                         x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
                                                                    pem_file in pem_files]))
@@ -2247,54 +2306,61 @@ class PEMPrinter:
 
         os.startfile(self.save_path + '.PDF')
 
-    def create_plan_figure(self):
+    def configure_lin_fig(self):
         """
-        Creates an empty Plan figure
-        :return: Figure object
+        Add the subplots for a lin plot
         """
-        fig = plt.figure(figsize=(11, 8.5))
-        return fig
-
-    def create_section_figure(self):
-        """
-        Creates an empty Section figure
-        :return: Figure object
-        """
-        fig = plt.figure(figsize=(8.5, 11), dpi=100)
-        return fig
-
-    def create_lin_figure(self):
-        """
-        Creates the blank LIN figure
-        :return: Figure object
-        """
-        lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8.5, 11), sharex=True)
+        self.portrait_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True)
         ax6 = ax5.twiny()
         ax6.get_shared_x_axes().join(ax5, ax6)
 
-        return lin_fig
-
-    def create_log_figure(self):
+    def configure_log_fig(self):
         """
-        Creates an empty but formatted LOG figure
-        :return: Figure object
+        Configure the lob plot axes
         """
-        log_fig, ax = plt.subplots(1, 1, figsize=(8.5, 11))
+        self.portrait_fig, ax = plt.subplots(1, 1, num=1, clear=True)
         ax2 = ax.twiny()
         ax2.get_shared_x_axes().join(ax, ax2)
         plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
 
-        return log_fig
-
-    def create_step_figure(self):
+    def configure_step_fig(self):
         """
-        Creates the blank Step figure
-        :return: Figure object
+        Configure the step plot figure
         """
-        stp_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(8.5, 11), sharex=True)
+        self.portrait_fig, (ax1, ax2, ax3, ax4) = self.portrait_fig.add_subplot(4, 1, num=1, sharex=True, clear=True)
         ax5 = ax4.twiny()
         ax5.get_shared_x_axes().join(ax4, ax5)
-        return stp_fig
+
+
+class CustomProgressBar(QProgressBar):
+
+    def __init__(self):
+        super().__init__()
+        self.setMinimum(0)
+        self.setAlignment(QtCore.Qt.AlignCenter)
+        self._text = None
+
+        COMPLETED_STYLE = """
+        QProgressBar {
+            border: 2px solid grey;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        QProgressBar::chunk {
+            background-color: #88B0EB;
+            width: 20px;
+        }
+        """
+        # '#37DA7E' for green
+        self.setStyleSheet(COMPLETED_STYLE)
+
+
+    def setText(self, text):
+        self._text = text
+
+    def text(self):
+        return self._text
 
 
 if __name__ == '__main__':
@@ -2302,6 +2368,8 @@ if __name__ == '__main__':
 
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems()
+    # for pem_file in pem_files:
+    #     pem_file.has_collar_gps()
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
     fig = plt.figure(figsize=(8.5, 11), dpi=100)
     # plan_map = PlanMap(pem_files, fig)

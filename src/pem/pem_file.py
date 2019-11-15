@@ -44,6 +44,40 @@ class PEMFile:
         else:
             return False
 
+    def has_collar_gps(self):
+        collar = self.get_collar_coords()
+        if collar and all(collar):
+            return True
+        else:
+            return False
+
+    def has_geometry(self):
+        geometry = self.get_hole_geometry()
+        if geometry and all(geometry):
+            return True
+        else:
+            return False
+
+    def has_loop_gps(self):
+        loop = self.get_loop_coords()
+        if loop and all(loop):
+            return True
+        else:
+            return False
+
+    def has_station_gps(self):
+        line = self.get_station_coords()
+        if line and all(line):
+            return True
+        else:
+            return False
+
+    def has_any_gps(self):
+        if any([self.has_collar_gps(), self.has_geometry(), self.has_station_gps(), self.has_loop_gps()]):
+            return True
+        else:
+            return False
+
     def get_tags(self):
         return self.tags
 

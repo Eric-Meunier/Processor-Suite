@@ -1288,18 +1288,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             save_dir = get_save_file()
             if save_dir:
                 if self.output_plan_map_cbox.isChecked():
-                    pass
-                    # if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
-                    #     response = self.message.question(self, 'No CRS',
-                    #                                      'No CRS has been selected. '
-                    #                                      'Do you wish to processed without a plan map?',
-                    #                                      self.message.Yes | self.message.No)
-                    #     if response == self.message.No:
-                    #         return
+                    if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
+                        response = self.message.question(self, 'No CRS',
+                                                         'No CRS has been selected. '
+                                                         'Do you wish to processed without a plan map?',
+                                                         self.message.Yes | self.message.No)
+                        if response == self.message.No:
+                            return
                 # PEM Files and RI files zipped together for when they get sorted
                 printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
                 self.window().statusBar().addPermanentWidget(printer.pb)
-                # printer.print_final_plots()
+                printer.print_files()
                 printer.pb.hide()
             else:
                 self.window().statusBar().showMessage('Cancelled', 2000)
@@ -2293,10 +2292,10 @@ def main():
     # section = Section3DViewer(pem_files)
     # section.show()
     mw.share_loop_cbox.setChecked(False)
-    mw.output_lin_cbox.setChecked(False)
-    mw.output_log_cbox.setChecked(False),
-    mw.output_step_cbox.setChecked(False),
-    mw.output_section_cbox.setChecked(False),
+    # mw.output_lin_cbox.setChecked(False)
+    # mw.output_log_cbox.setChecked(False),
+    # mw.output_step_cbox.setChecked(False),
+    # mw.output_section_cbox.setChecked(False),
     # map = Map3DViewer(pem_files)
     # map.show()
 
@@ -2305,7 +2304,7 @@ def main():
 
     # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\1200NAv.PEM')
     # mw.open_ri_file([r'C:\_Data\2019\_Mowgli Testing\1200N.RI3'])
-    mw.print_plots()
+    # mw.print_plots()
     # mw.print_plots(final=True)
 
     app.exec_()
