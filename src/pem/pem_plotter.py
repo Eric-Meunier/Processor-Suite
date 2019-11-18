@@ -2039,9 +2039,8 @@ class SectionPlot(MagneticFieldCalculator):
                 index = list(plotx).index(x)
                 pa = (plotx[index - 1], plotz[index - 1])
                 angle = math.degrees(math.atan2(pa[1] - p[1], pa[0] - p[0])) - 90
-                self.ax.annotate('', xy=pa, xycoords='data', xytext=p, zorder=12,
-                                 arrowprops=dict(arrowstyle='|-|', mutation_scale=3, connectionstyle='arc3',
-                                                 lw=.5))
+                self.ax.text(x, z, '|', rotation=angle+90, ha='center', va='center', zorder=12)
+
                 # Label the station ticks
                 if self.label_ticks:
                     self.ax.text(x, z, f"{self.stations[station_indexes.index(i)]} {self.units}", rotation=angle,
@@ -2084,12 +2083,6 @@ class PEMPrinter:
         self.pb_end = 0
         self.pb.setValue(0)
 
-        # self.map_figure = self.create_plan_figure()
-        # self.section_figure = self.create_section_figure()
-        # self.lin_figure = self.create_lin_figure()
-        # self.log_figure = self.create_log_figure()
-        # self.step_figure = self.create_step_figure()
-
         self.portrait_fig = plt.figure(figsize=(8.5, 11), num=1, clear=True)
         self.landscape_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
 
@@ -2113,7 +2106,7 @@ class PEMPrinter:
                         plan_map = PlanMap(pem_files, self.landscape_fig, **self.kwargs)
                         pdf.savefig(plan_map.get_map(), orientation='landscape')
                         self.pb_count += 1
-                        self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
+                        self.pb.setValue(self.pb_count)
                         self.landscape_fig.clf()
                     else:
                         print('No PEM file has any GPS to plot on the plan map.')
@@ -2131,7 +2124,7 @@ class PEMPrinter:
                         section_fig = section_plotter.get_section_plot()
                         pdf.savefig(section_fig)
                         self.pb_count += 1
-                        self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
+                        self.pb.setValue(self.pb_count)
                         self.portrait_fig.clear()
                     else:
                         print('No PEM file has the GPS required to make a section plot.')
@@ -2150,7 +2143,7 @@ class PEMPrinter:
                                                            x_max=x_max, hide_gaps=self.hide_gaps)
                             pdf.savefig(plotted_fig)
                             self.pb_count += 1
-                            self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
+                            self.pb.setValue(self.pb_count)
                             self.portrait_fig.clear()
 
                 # Saving the LOG plots
@@ -2167,7 +2160,7 @@ class PEMPrinter:
                                                            x_max=x_max, hide_gaps=self.hide_gaps)
                             pdf.savefig(plotted_fig)
                             self.pb_count += 1
-                            self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
+                            self.pb.setValue(self.pb_count)
                             self.portrait_fig.clear()
 
                 # Saving the STEP plots
@@ -2184,7 +2177,7 @@ class PEMPrinter:
                                                                 x_min=x_min, x_max=x_max, hide_gaps=self.hide_gaps)
                                 pdf.savefig(plotted_fig)
                                 self.pb_count += 1
-                                self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
+                                self.pb.setValue(self.pb_count)
                                 self.portrait_fig.clear()
 
         def set_pb_max(unique_bhs, unique_grids):
@@ -2194,15 +2187,18 @@ class PEMPrinter:
                 for survey, files in unique_bhs.items():
                     num_plots = sum([len(file[0].get_components()) for file in files])
                     if self.print_plan_maps:
-                        total_count += 1
+                        if any([file[0].has_any_gps() for file in files]):
+                            total_count += 1
                     if self.print_section_plot:
-                        total_count += 1
+                        if any([file[0].has_collar_gps() and file[0].has_geometry() and file[0].has_loop_gps() for file in files]):
+                            total_count += 1
                     if self.print_lin_plots:
                         total_count += num_plots
                     if self.print_log_plots:
                         total_count += num_plots
                     if self.print_step_plots:
-                        total_count += num_plots
+                        if all([file[1] for file in files]):
+                            total_count += num_plots
 
             if unique_grids:
                 for loop, lines in unique_grids.items():
@@ -2237,7 +2233,7 @@ class PEMPrinter:
             unique_grids[loop] = list(files)
             print(loop, list(files))
 
-        set_pb_max(unique_bhs, unique_grids)
+        set_pb_max(unique_bhs, unique_grids)  # Set the maximum for the progress bar
 
         with PdfPages(self.save_path + '.PDF') as pdf:
             if any(bh_files):
