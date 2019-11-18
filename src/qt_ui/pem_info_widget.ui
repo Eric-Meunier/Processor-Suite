@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -483,6 +483,12 @@ Not In Data</string>
       <layout class="QGridLayout" name="gridLayout_6">
        <item row="0" column="0">
         <widget class="QTableWidget" name="dataTable">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
          </property>

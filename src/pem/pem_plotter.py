@@ -647,7 +647,168 @@ class RotnAnnotation(mtext.Annotation):
     _rotation = property(_get_rotation, _set_rotation)
 
 
-class PlanMap:
+class MapPlotMethods:
+
+    # def __init__(self, pem_file):
+    #     self.pem_file = pem_file
+
+    def get_extents(self, pem_file):
+        logging.info('MapPlotMethods - Retrieving extents')
+        loop_coords = pem_file.get_loop_coords()
+        collar = pem_file.get_collar_coords()[0]
+        segments = pem_file.get_hole_geometry()
+        min_x = min([float(row[0]) for row in loop_coords] + [float(collar[0])])
+        max_x = max([float(row[0]) for row in loop_coords] + [float(collar[0])])
+        min_y = min([float(row[1]) for row in loop_coords] + [float(collar[1])])
+        max_y = max([float(row[1]) for row in loop_coords] + [float(collar[1])])
+        min_z = min(
+            [float(row[2]) for row in loop_coords] + [float(collar[2])] + [float(collar[2]) - float(segments[-1][4])])
+        max_z = max(
+            [float(row[2]) for row in loop_coords] + [float(collar[2])] + [float(collar[2]) - float(segments[-1][4])])
+        return min_x, max_x, min_y, max_y, min_z, max_z
+
+    def get_3D_borehole_projection(self, collar_gps, segments, interp_segments=None):
+        """
+        Uses the segments to create a 3D projection of a borehole trace. Can be broken up into segments and interpolated.
+        :param collar_gps: Collar GPS of the borehole (easting, northing, elevation)
+        :param segments: Segments of a borehole trace (Azimuth, dip, segment length, units, depth)
+        :param interp_segments: Desired number of segments to be output
+        :return: Hole trace easting, northing, and elevation
+        """
+        logging.info('MapPlotMethods - Retrieving 3D borehole projection')
+        if not collar_gps:
+            return None
+        else:
+            collar_x, collar_y, collar_z = collar_gps[0], collar_gps[1], collar_gps[2]
+
+            if interp_segments:
+                azimuths = [float(row[0]) for row in segments]
+                dips = [float(row[1]) for row in segments]
+                depths = [float(row[-1]) for row in segments]
+                units = segments[0][-2]
+
+                interp_depths = np.linspace(depths[0], depths[-1], interp_segments)
+                interp_az = np.interp(interp_depths, depths, azimuths)
+                interp_dip = np.interp(interp_depths, depths, dips)
+                interp_lens = [float(segments[0][-1])]
+
+                for depth, next_depth in zip(interp_depths[:-1], interp_depths[1:]):
+                    interp_lens.append(next_depth - depth)
+
+                segments = list(
+                    zip(interp_az, interp_dip, interp_lens, [units] * len(interp_depths), interp_depths))
+
+            # trace = [(float(collar_x), float(collar_y), float(collar_z))]  # Easting and Northing tuples
+            eastings = [float(collar_x)]
+            northings = [float(collar_y)]
+            depths = [float(collar_z)]
+            azimuth = None
+
+            for segment in segments:
+                azimuth = math.radians(float(segment[0]))
+                dip = math.radians(float(segment[1]))
+                seg_l = float(segment[2])
+                delta_seg_l = seg_l * math.cos(dip)
+                dz = seg_l * math.sin(dip)
+                dx = delta_seg_l * math.sin(azimuth)
+                dy = delta_seg_l * math.cos(azimuth)
+
+                eastings.append(float(eastings[-1] + dx))
+                northings.append(float(northings[-1] + dy))
+                depths.append(float(depths[-1] - dz))
+                # trace.append(
+                #     (float(trace[-1][0]) + dx, float(trace[-1][1]) + dy, float(trace[-1][2]) - delta_elev))
+
+            return eastings, northings, depths
+            # return [segment[0] for segment in trace], \
+            #        [segment[1] for segment in trace], \
+            #        [segment[2] for segment in trace]
+
+    def get_section_extents(self, pem_file, hole_depth=None, section_plot=False, plot_width=None):
+        """
+        Find the 50th percentile down the hole, use that as the center of the section, and find the
+        X and Y extents of that section line. Azimuth used is from the 80th percentile.
+        """
+
+        def calc_scale_factor(p1, p2, plot_width):
+            """
+            Modifies the two cross-section points so they will create a map with an appropriate scale
+            :param p1: xy tuple of one of the current extent points
+            :param p2: xy tuple of the other extent point
+            :return: A factor by which to multiply the change in X and change in Y
+            """
+
+            def get_scale_factor():
+                # num_digit = len(str(int(current_scale)))  # number of digits in number
+                num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
+                scale_nums = [1., 1.25, 1.5, 2., 5.]
+                possible_scales = [num * 10 ** num_digit for num in
+                                   scale_nums + list(map(lambda x: x * 10, scale_nums))]
+                new_scale = min(filter(lambda x: x > current_scale, possible_scales),
+                                key=lambda x: x - current_scale)
+                self.map_scale = new_scale
+                scale_factor = new_scale / current_scale
+                return scale_factor
+
+            xmin, xmax, ymin, ymax = min([p1[0], p2[0]]), max([p1[0], p2[0]]), min([p1[1], p2[1]]), max([p1[1], p2[1]])
+            dist = math.sqrt((xmax - xmin) ** 2 + (ymax - ymin) ** 2)
+            bbox_width = plot_width  # Section plot width in m (after subplot adjustment)
+            current_scale = dist / bbox_width
+            scale_factor = get_scale_factor()
+            return scale_factor
+
+        collar = pem_file.get_collar_coords()[0]
+        segments = pem_file.get_hole_geometry()
+        azimuths = [float(row[0]) for row in segments]
+        dips = [float(row[1]) for row in segments]
+        depths = [float(row[-1]) for row in segments]
+        units = segments[0][-2]
+
+        # Splitting the segments into 1000 pieces
+        interp_depths = np.linspace(depths[0], depths[-1], 1000)
+        interp_az = np.interp(interp_depths, depths, azimuths)
+        interp_dip = np.interp(interp_depths, depths, dips)
+        interp_lens = [float(segments[0][-1])]
+        for depth, next_depth in zip(interp_depths[:-1], interp_depths[1:]):
+            interp_lens.append(next_depth - depth)
+
+        # Recreating the segments with the interpreted data
+        interp_segments = list(zip(interp_az, interp_dip, interp_lens, [units] * len(interp_depths), interp_depths))
+
+        interp_x, interp_y, interp_z = self.get_3D_borehole_projection(collar, interp_segments)
+
+        # Find the depths that are 50% and var percentile% down the hole
+        perc_50_depth = np.percentile(interp_depths, 50)
+        if not hole_depth:
+            hole_depth = np.percentile(interp_depths, 80)
+
+        # Nearest index of the 50th and var percentile% depths
+        i_perc_50_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - perc_50_depth))
+        i_perc_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - hole_depth))
+
+        line_center_x, line_center_y = interp_x[i_perc_50_depth], interp_y[i_perc_50_depth]
+        line_az = interp_az[i_perc_depth]
+        print(f"Line azimuth: {line_az:.0f}°")
+        line_len = math.ceil(depths[-1] / 400) * 300
+        dx = math.cos(math.radians(90 - line_az)) * (line_len / 2)
+        dy = math.sin(math.radians(90 - line_az)) * (line_len / 2)
+
+        line_xy_1 = (line_center_x - dx, line_center_y - dy)
+        line_xy_2 = (line_center_x + dx, line_center_y + dy)
+
+        if section_plot:
+            plot_width = plot_width
+            scale_factor = calc_scale_factor(line_xy_1, line_xy_2, plot_width)
+            dx = dx * scale_factor
+            dy = dy * scale_factor
+
+            line_xy_1 = (line_center_x - dx, line_center_y - dy)
+            line_xy_2 = (line_center_x + dx, line_center_y + dy)
+
+        return line_xy_1, line_xy_2, line_az
+
+
+class PlanMap(MapPlotMethods):
     """
     Draws a plan map on a given Matplotlib figure object. Only makes a plan map for one survey type and timebase.
     :param: pem_Files: list of pem_files
@@ -655,6 +816,7 @@ class PlanMap:
     """
 
     def __init__(self, pem_files, figure, **kwargs):
+        super().__init__()
         self.color = 'black'
         self.fig = figure
         self.pem_files = []
@@ -777,33 +939,16 @@ class PlanMap:
 
         def add_hole_to_map(pem_file):
 
-            def get_borehole_projection(segments):
-                if not collar:
-                    return None
-                else:
-                    trace = [(collar_x, collar_y)]  # Easting and Northing tuples
-                    azimuth = None
-                    for segment in segments:
-                        azimuth = math.radians(float(segment[0]))
-                        dip = math.radians(float(segment[1]))
-                        seg_l = float(segment[2])
-                        delta_seg_l = seg_l * math.cos(dip)
-                        delta_elev = seg_l * math.sin(dip)
-                        dx = delta_seg_l * math.sin(azimuth)
-                        dy = delta_seg_l * math.cos(azimuth)
-                        trace.append((float(trace[-1][0]) + dx, float(trace[-1][1]) + dy))
-                    return [segment[0] for segment in trace], [segment[1] for segment in trace]
-
             if self.draw_hole_collars is True:
                 try:
                     collar = pem_file.get_collar_coords()[0]
                 except IndexError:
                     return
                 else:
-                    collar_x, collar_y = float(collar[0]), float(collar[1])
+                    collar_x, collar_y, collar_z = float(collar[0]), float(collar[1]), float(collar[2])
                 segments = pem_file.get_hole_geometry()
-                if segments:
-                    seg_x, seg_y = get_borehole_projection(segments)
+                if segments and collar:
+                    seg_x, seg_y, seg_z = self.get_3D_borehole_projection(collar, segments, interp_segments=1000)
                 else:
                     seg_x, seg_y = None, None
 
@@ -817,46 +962,32 @@ class PlanMap:
                         angle = math.degrees(math.atan2(seg_y[1] - seg_y[0], seg_x[1] - seg_x[0])) + 90
                         collar_label = self.ax.text(collar_x, collar_y, f"{pem_file.header.get('LineHole')}",
                                                     va='bottom', ha='center', color=self.color, zorder=5,
-                                                    path_effects=label_buffer, rotation=angle)
+                                                    path_effects=label_buffer, rotation=angle, rotation_mode='anchor')
                         self.labels.append(collar_label)
 
                     if seg_x and seg_y and self.draw_hole_traces is True:
-
-                        # Adding the ticks on the hole trace. Both X and Y segments are interpolated first
-                        f_new_x = interp.interp1d(np.linspace(0, len(seg_x), num=len(seg_x)), seg_x)
-                        xx = np.linspace(0, len(seg_x), num=1000)
-                        new_x = f_new_x(xx)
-
-                        f_new_y = interp.interp1d(np.linspace(0, len(seg_y), num=len(seg_y)), seg_y)
-                        yy = np.linspace(0, len(seg_y), num=1000)
-                        new_y = f_new_y(yy)
-
-                        # Plotting the actual trace
-                        self.trace_handle, = self.ax.plot(new_x, new_y, '--', color=self.color, label='Borehole Trace',
+                        # Plot the trace
+                        self.trace_handle, = self.ax.plot(seg_x, seg_y, '--', color=self.color, label='Borehole Trace',
                                                           zorder=2, markersize=1)
 
-                        # Plotting the ticks
-                        for x, y in zip(new_x[100::100], new_y[100::100]):
-                            p = (x, y)
-                            index = list(new_x).index(x)
-                            pa = (new_x[index - 1], new_y[index - 1])
-                            self.ax.annotate('', xy=pa, xycoords='data', xytext=p,
-                                             arrowprops=dict(arrowstyle='|-|', mutation_scale=3, connectionstyle='arc3',
-                                                             lw=.5))
+                        # Plot the ticks. Ticks are placed at evenly spaced depths
+                        depths = np.linspace(min(seg_z), collar_z, 10)
+                        indexes = [min(range(len(seg_z)), key=lambda i: abs(seg_z[i] - depth)) for depth in depths]
 
-                        # Add the end tick for the borehole trace
-                        self.ax.annotate('', xy=(new_x[-1], new_y[-1]), xycoords='data', xytext=(new_x[-2], new_y[-2]),
-                                         arrowprops=dict(arrowstyle='|-|', mutation_scale=5, connectionstyle='arc3',
-                                                         lw=.5))
+                        for index in indexes[1:-1]:
+                            angle = math.degrees(math.atan2(seg_y[index+1] - seg_y[index], seg_x[index+1] - seg_x[index]))
+                            self.ax.text(seg_x[index], seg_y[index], '|', rotation=angle, color=self.color, va='center',
+                                         ha='center', fontsize=6)
 
-                        # Label the depth of the hole
+                        # Add the end tick for the borehole trace and the label
+                        angle = math.degrees(math.atan2(seg_y[-1] - seg_y[-2], seg_x[-1] - seg_x[-2]))
+                        self.ax.text(seg_x[-1], seg_y[-1], '|', rotation=angle, color=self.color, va='center',
+                                         ha='center', fontsize=9)
+
                         if self.hole_depth_labels:
-                            bh_depth = RotnAnnotation(f" {float(segments[-1][-1]):.0f} m",
-                                                      label_xy=(seg_x[-1], seg_y[-1]),
-                                                      p=(seg_x[-2], seg_y[-2]), pa=(seg_x[-1], seg_y[-1]), ax=self.ax,
-                                                      hole_collar=True,
-                                                      va='bottom', ha='left', fontsize=8, color=self.color,
-                                                      path_effects=label_buffer, zorder=3)
+                            bh_depth = self.ax.text(seg_x[-1], seg_y[-1], f" {float(segments[-1][-1]):.0f} m",
+                                                    rotation=angle+90, fontsize=8, color=self.color,
+                                                    path_effects=label_buffer, zorder=3, rotation_mode='anchor')
                 else:
                     pass
 
@@ -1175,132 +1306,6 @@ class PlanMap:
             return self.fig
         else:
             return None
-
-
-class MapPlotMethods:
-
-    # def __init__(self, pem_file):
-    #     self.pem_file = pem_file
-
-    def get_extents(self, pem_file):
-        logging.info('MapPlotMethods - Retrieving extents')
-        loop_coords = pem_file.get_loop_coords()
-        collar = pem_file.get_collar_coords()[0]
-        segments = pem_file.get_hole_geometry()
-        min_x = min([float(row[0]) for row in loop_coords] + [float(collar[0])])
-        max_x = max([float(row[0]) for row in loop_coords] + [float(collar[0])])
-        min_y = min([float(row[1]) for row in loop_coords] + [float(collar[1])])
-        max_y = max([float(row[1]) for row in loop_coords] + [float(collar[1])])
-        min_z = min(
-            [float(row[2]) for row in loop_coords] + [float(collar[2])] + [float(collar[2]) - float(segments[-1][4])])
-        max_z = max(
-            [float(row[2]) for row in loop_coords] + [float(collar[2])] + [float(collar[2]) - float(segments[-1][4])])
-        return min_x, max_x, min_y, max_y, min_z, max_z
-
-    def get_3D_borehole_projection(self, collar_gps, segments):
-        logging.info('MapPlotMethods - Retrieving 3D borehole projection')
-        if not collar_gps:
-            return None
-        else:
-            collar_x, collar_y, collar_z = collar_gps[0], collar_gps[1], collar_gps[2]
-            trace = [(float(collar_x), float(collar_y), float(collar_z))]  # Easting and Northing tuples
-            azimuth = None
-            for segment in segments:
-                azimuth = math.radians(float(segment[0]))
-                dip = math.radians(float(segment[1]))
-                seg_l = float(segment[2])
-                delta_seg_l = seg_l * math.cos(dip)
-                delta_elev = seg_l * math.sin(dip)
-                dx = delta_seg_l * math.sin(azimuth)
-                dy = delta_seg_l * math.cos(azimuth)
-                trace.append(
-                    (float(trace[-1][0]) + dx, float(trace[-1][1]) + dy, float(trace[-1][2]) - delta_elev))
-            return [segment[0] for segment in trace], \
-                   [segment[1] for segment in trace], \
-                   [segment[2] for segment in trace]
-
-    def get_section_extents(self, pem_file, hole_depth=None, section_plot=False, plot_width=None):
-        """
-        Find the 50th percentile down the hole, use that as the center of the section, and find the
-        X and Y extents of that section line. Azimuth used is from the 80th percentile.
-        """
-
-        def calc_scale_factor(p1, p2, plot_width):
-            """
-            Modifies the two cross-section points so they will create a map with an appropriate scale
-            :param p1: xy tuple of one of the current extent points
-            :param p2: xy tuple of the other extent point
-            :return: A factor by which to multiply the change in X and change in Y
-            """
-
-            def get_scale_factor():
-                # num_digit = len(str(int(current_scale)))  # number of digits in number
-                num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
-                scale_nums = [1., 1.25, 1.5, 2., 5.]
-                possible_scales = [num * 10 ** num_digit for num in
-                                   scale_nums + list(map(lambda x: x * 10, scale_nums))]
-                new_scale = min(filter(lambda x: x > current_scale, possible_scales),
-                                key=lambda x: x - current_scale)
-                self.map_scale = new_scale
-                scale_factor = new_scale / current_scale
-                return scale_factor
-
-            xmin, xmax, ymin, ymax = min([p1[0], p2[0]]), max([p1[0], p2[0]]), min([p1[1], p2[1]]), max([p1[1], p2[1]])
-            dist = math.sqrt((xmax - xmin) ** 2 + (ymax - ymin) ** 2)
-            bbox_width = plot_width  # Section plot width in m (after subplot adjustment)
-            current_scale = dist / bbox_width
-            scale_factor = get_scale_factor()
-            return scale_factor
-
-        collar = pem_file.get_collar_coords()[0]
-        segments = pem_file.get_hole_geometry()
-        azimuths = [float(row[0]) for row in segments]
-        dips = [float(row[1]) for row in segments]
-        depths = [float(row[-1]) for row in segments]
-        units = segments[0][-2]
-
-        # Splitting the segments into 1000 pieces
-        interp_depths = np.linspace(depths[0], depths[-1], 1000)
-        interp_az = np.interp(interp_depths, depths, azimuths)
-        interp_dip = np.interp(interp_depths, depths, dips)
-        interp_lens = [float(segments[0][-1])]
-        for depth, next_depth in zip(interp_depths[:-1], interp_depths[1:]):
-            interp_lens.append(next_depth - depth)
-
-        # Recreating the segments with the interpreted data
-        interp_segments = list(zip(interp_az, interp_dip, interp_lens, [units] * len(interp_depths), interp_depths))
-
-        interp_x, interp_y, interp_z = self.get_3D_borehole_projection(collar, interp_segments)
-
-        # Find the depths that are 50% and var percentile% down the hole
-        perc_50_depth = np.percentile(interp_depths, 50)
-        if not hole_depth:
-            hole_depth = np.percentile(interp_depths, 80)
-
-        # Nearest index of the 50th and var percentile% depths
-        i_perc_50_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - perc_50_depth))
-        i_perc_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - hole_depth))
-
-        line_center_x, line_center_y = interp_x[i_perc_50_depth], interp_y[i_perc_50_depth]
-        line_az = interp_az[i_perc_depth]
-        print(f"Line azimuth: {line_az:.0f}°")
-        line_len = math.ceil(depths[-1] / 400) * 300
-        dx = math.cos(math.radians(90 - line_az)) * (line_len / 2)
-        dy = math.sin(math.radians(90 - line_az)) * (line_len / 2)
-
-        line_xy_1 = (line_center_x - dx, line_center_y - dy)
-        line_xy_2 = (line_center_x + dx, line_center_y + dy)
-
-        if section_plot:
-            plot_width = plot_width
-            scale_factor = calc_scale_factor(line_xy_1, line_xy_2, plot_width)
-            dx = dx * scale_factor
-            dy = dy * scale_factor
-
-            line_xy_1 = (line_center_x - dx, line_center_y - dy)
-            line_xy_2 = (line_center_x + dx, line_center_y + dy)
-
-        return line_xy_1, line_xy_2, line_az
 
 
 class Map3D(MapPlotMethods):
@@ -1979,29 +1984,13 @@ class SectionPlot(MagneticFieldCalculator):
         # plt.pause(0.0001)
 
     def plot_hole_section(self):
-        azimuths = [float(row[0]) for row in self.segments]
-        dips = [float(row[1]) for row in self.segments]
-        depths = [float(row[-1]) for row in self.segments]
-        units = self.segments[0][-2]
-
         p = np.array([self.p1[0], self.p1[1], 0])
         vec = [self.p2[0] - self.p1[0], self.p2[1] - self.p1[1], 0]
         planeNormal = np.cross(vec, [0, 0, -1])
         planeNormal = planeNormal / self.get_magnitude(planeNormal)
 
-        # Splitting the segments into 1000 pieces. Only done because of markers.
-        interp_depths = np.linspace(depths[0], depths[-1], 1000)
-        interp_az = np.interp(interp_depths, depths, azimuths)
-        interp_dip = np.interp(interp_depths, depths, dips)
-        interp_lens = [float(self.segments[0][-1])]
-        for depth, next_depth in zip(interp_depths[:-1], interp_depths[1:]):
-            interp_lens.append(next_depth - depth)
-
-        # Recreating the segments with the interpreted data
-        interp_segments = list(zip(interp_az, interp_dip, interp_lens, [units] * len(interp_depths), interp_depths))
-
-        interp_x, interp_y, interp_z = np.array(self.get_3D_borehole_projection(self.collar, interp_segments),
-                                                dtype='float64')
+        interp_x, interp_y, interp_z = np.array(self.get_3D_borehole_projection(
+            self.collar, self.segments, interp_segments=1000), dtype='float64')
 
         # Plotting station ticks on the projected hole
         if self.stations is None:
@@ -2152,40 +2141,34 @@ class PEMPrinter:
                     for pem_file in pem_files:
                         components = pem_file.get_components()
                         for component in components:
-                            self.pb.setText(
-                                f"Saving LIN plot for {pem_file.header.get('LineHole')}, component {component}")
-                            # TODO Can this be done without creating a figure every time?
-                            # Clear figure and re-add axes
-                            # lin_figure = self.create_lin_figure()
                             self.configure_lin_fig()
                             lin_plotter = LINPlotter()
+                            self.pb.setText(
+                                f"Saving LIN plot for {pem_file.header.get('LineHole')}, component {component}")
+
                             plotted_fig = lin_plotter.plot(pem_file, component, self.portrait_fig, x_min=x_min,
                                                            x_max=x_max, hide_gaps=self.hide_gaps)
                             pdf.savefig(plotted_fig)
                             self.pb_count += 1
                             self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
                             self.portrait_fig.clear()
-                            # plt.close(lin_figure)
-                            # for ax in self.lin_figure.axes:
-                            #     ax.clear()
 
                 # Saving the LOG plots
                 if self.print_log_plots is True:
                     for pem_file in pem_files:
                         components = pem_file.get_components()
                         for component in components:
-                            self.pb.setText(
-                                f"Saving LOG plot for {pem_file.header.get('LineHole')}, component {component}")
-                            # log_figure = self.create_log_figure()
                             self.configure_log_fig()
                             log_plotter = LOGPlotter()
+                            self.pb.setText(
+                                f"Saving LOG plot for {pem_file.header.get('LineHole')}, component {component}")
+
                             plotted_fig = log_plotter.plot(pem_file, component, self.portrait_fig, x_min=x_min,
                                                            x_max=x_max, hide_gaps=self.hide_gaps)
                             pdf.savefig(plotted_fig)
                             self.pb_count += 1
                             self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
                             self.portrait_fig.clear()
-                            # plt.close(log_figure)
 
                 # Saving the STEP plots
                 if self.print_step_plots is True:
@@ -2195,7 +2178,6 @@ class PEMPrinter:
                             for component in components:
                                 self.pb.setText(
                                     f"Saving STEP plot for {pem_file.header.get('LineHole')}, component {component}")
-                                # step_figure = self.create_step_figure()
                                 self.configure_step_fig()
                                 step_plotter = STEPPlotter()
                                 plotted_fig = step_plotter.plot(pem_file, ri_file, component, self.portrait_fig,
@@ -2204,14 +2186,13 @@ class PEMPrinter:
                                 self.pb_count += 1
                                 self.pb.setValue(int((self.pb_count / self.pb_end) * 100))
                                 self.portrait_fig.clear()
-                                # plt.close(step_figure)
 
         def set_pb_max(unique_bhs, unique_grids):
             total_count = 0
 
             if unique_bhs:
-                for survey, file in unique_bhs.items():
-                    num_plots = file[0].get_components()
+                for survey, files in unique_bhs.items():
+                    num_plots = sum([len(file[0].get_components()) for file in files])
                     if self.print_plan_maps:
                         total_count += 1
                     if self.print_section_plot:
@@ -2236,6 +2217,7 @@ class PEMPrinter:
                         total_count += num_plots
 
             self.pb_end = total_count
+            print(f"Number of PDF pages: {total_count}")
             self.pb.setMaximum(total_count)
 
         unique_bhs = defaultdict()
@@ -2304,6 +2286,8 @@ class PEMPrinter:
 
                     save_plots(pem_files, ri_files, x_min, x_max)
 
+        plt.close(self.portrait_fig)
+        plt.close(self.landscape_fig)
         os.startfile(self.save_path + '.PDF')
 
     def configure_lin_fig(self):

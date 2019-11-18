@@ -1295,6 +1295,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                                                          self.message.Yes | self.message.No)
                         if response == self.message.No:
                             return
+
                 # PEM Files and RI files zipped together for when they get sorted
                 printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
                 self.window().statusBar().addPermanentWidget(printer.pb)
@@ -2292,10 +2293,11 @@ def main():
     # section = Section3DViewer(pem_files)
     # section.show()
     mw.share_loop_cbox.setChecked(False)
-    # mw.output_lin_cbox.setChecked(False)
-    # mw.output_log_cbox.setChecked(False),
-    # mw.output_step_cbox.setChecked(False),
-    # mw.output_section_cbox.setChecked(False),
+    mw.output_lin_cbox.setChecked(False)
+    mw.output_log_cbox.setChecked(False)
+    mw.output_step_cbox.setChecked(False)
+    mw.output_section_cbox.setChecked(False)
+    mw.print_plots()
     # map = Map3DViewer(pem_files)
     # map.show()
 
