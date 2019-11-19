@@ -137,6 +137,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
         self.stations_from_data_btn.clicked.connect(self.stations_from_data)
         self.reversePolarityButton.clicked.connect(self.reverse_polarity)
+        self.rename_duplicate_stations_btn.clicked.connect(self.rename_duplicate_stations)
 
         # Table changes
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
@@ -491,7 +492,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def fill_data_table(self, data):
         """
         Fill the dataTable with given PEMFile data
-        :param data: PEMFile object data
+        :param data: PEMFile data
         """
         logging.info('PEMFileInfoWidget - Filling data table')
         if data:
@@ -1196,6 +1197,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 new_comp_item = QTableWidgetItem(new_comp)
                 new_comp_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.dataTable.setItem(row, self.data_columns.index('Comp.'), new_comp_item)
+
+    def rename_duplicate_stations(self):
+        self.pem_file = self.file_editor.rename_duplicates(self.pem_file)
+        self.clear_table(self.dataTable)
+        self.fill_data_table(self.pem_file.data)
 
     def get_selected_rows(self, table):
         return [model.row() for model in table.selectionModel().selectedRows()]

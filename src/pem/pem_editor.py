@@ -268,6 +268,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.table.cellChanged.connect(self.table_value_changed)
 
         self.plan_map_options_btn.clicked.connect(self.plan_map_options.show)
+        self.print_plots_btn.clicked.connect(self.print_plots)
 
         self.share_client_cbox.stateChanged.connect(self.toggle_share_client)
         self.share_grid_cbox.stateChanged.connect(self.toggle_share_grid)
@@ -1209,7 +1210,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def print_plots(self, selected_files=False):
         """
-        Save the final plots as PDFs for the selected PEM files. If no PEM files are selected, it saves it for all open PEM files
+        Save the final plots as PDFs for the selected PEM files. If no PEM files are selected, it saves it for all open
+        PEM files
         :param pem_files: List of PEMFile objects
         :param rows: Corresponding rows of the selected PEM files in order to link the RI file to the correct PEM file
         :return: None
@@ -1291,6 +1293,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.file_editor.average(pem_file)
                 if not pem_file.is_split():
                     self.file_editor.split_channels(pem_file)
+
             save_dir = get_save_file()
             if save_dir:
                 if self.output_plan_map_cbox.isChecked():
@@ -2298,12 +2301,12 @@ def main():
 
     # section = Section3DViewer(pem_files)
     # section.show()
-    mw.share_loop_cbox.setChecked(False)
-    mw.output_lin_cbox.setChecked(False)
-    mw.output_log_cbox.setChecked(False)
-    mw.output_step_cbox.setChecked(False)
-    mw.output_section_cbox.setChecked(False)
-    mw.print_plots()
+    # mw.share_loop_cbox.setChecked(False)
+    # mw.output_lin_cbox.setChecked(False)
+    # mw.output_log_cbox.setChecked(False)
+    # mw.output_step_cbox.setChecked(False)
+    # mw.output_section_cbox.setChecked(False)
+    # mw.print_plots()
     # map = Map3DViewer(pem_files)
     # map.show()
 

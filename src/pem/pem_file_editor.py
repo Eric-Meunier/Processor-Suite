@@ -186,6 +186,21 @@ class PEMFileEditor:
             reading['Station'] = new_station
         return pem_file
 
+    def rename_duplicates(self, pem_file):
+        data = pem_file.get_data()
+        for reading in data:
+            station_num = int(re.findall('-?\d+', reading['Station'])[0])
+            station_suffix = re.findall('[nsewNSEW]', reading['Station'])
+            if str(station_num)[-1] == '1' or str(station_num)[-1] == '6':
+                print(f"station {station_num} changed to {station_num-1}")
+                station_num -= 1
+                reading['Station'] = str(station_num) + station_suffix[0] if station_suffix else str(station_num)
+            elif str(station_num)[-1] == '4' or str(station_num)[-1] == '9':
+                print(f"station {station_num} changed to {station_num + 1}")
+                station_num += 1
+                reading['Station'] = str(station_num)+station_suffix[0] if station_suffix else str(station_num)
+        return pem_file
+
     def reverse_polarity(self, pem_file, rows=None, component=None):
         """
         Flip the data for given readings
@@ -204,25 +219,11 @@ class PEMFileEditor:
 
 
 if __name__ == '__main__':
+    from src.pem.pem_getter import PEMGetter
     editor = PEMFileEditor()
     parser = PEMParser()
+    getter = PEMGetter()
 
-    # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-    sample_files = r'C:\Users\Eric\Desktop\All survey types'
-    file_names = [f for f in os.listdir(sample_files) if
-                  os.path.isfile(os.path.join(sample_files, f)) and f.lower().endswith('.pem')]
-    file_paths = []
+    pem_files = getter.get_pems()
 
-    file = os.path.join(sample_files, file_names[0])
-    for file in file_names:
-        filepath = os.path.join(sample_files, file)
-        print('File: ' + filepath)
-
-        pem_file = parser.parse(filepath)
-        editor.shift_stations(pem_file, 1000)
-    # file = r'C:\Users\Eric\Desktop\600N.PEM'
-    # file = r'C:\Users\Eric\Desktop\All survey types\CDR2 SQUID.PEM'
-    # file = r'C:\Users\Eric\Desktop\2400NAv.PEM'
-    #
-    # pem_file = parser.parse(file)
-    # editor.shift_stations(pem_file, 1000)
+    editor.rename_duplicates(pem_files[0])

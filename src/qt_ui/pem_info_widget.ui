@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>4</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -492,6 +492,9 @@ Not In Data</string>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
          </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item row="0" column="1">
@@ -578,6 +581,14 @@ Not In Data</string>
            <widget class="QLCDNumber" name="lcdDuplicates">
             <property name="segmentStyle">
              <enum>QLCDNumber::Flat</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="rename_duplicate_stations_btn">
+            <property name="text">
+             <string>Auto-Rename
+Duplicate Stations</string>
             </property>
            </widget>
           </item>
