@@ -692,6 +692,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         coord_sys = crs.get('Coordinate System')
         coord_zone = crs.get('Coordinate Zone')
         datum = crs.get('Datum')
+        if 'NAD 1983' in datum:
+            datum = 'NAD 1983'
+        elif 'NAD 1927' in datum:
+            datum = 'NAD 1927'
         self.systemCBox.setCurrentIndex(self.gps_systems.index(coord_sys))
         self.zoneCBox.setCurrentIndex(self.gps_zones.index(coord_zone))
         self.datumCBox.setCurrentIndex(self.gps_datums.index(datum))
@@ -1231,10 +1235,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if len(self.pem_files) > 0:
 
             if selected_files is True:
-                pem_files, rows = self.get_selected_pem_files()
+                input_pem_files, rows = self.get_selected_pem_files()
             else:
-                pem_files = self.pem_files
-                rows = range(0, len(pem_files))
+                input_pem_files = self.pem_files
+                rows = range(0, len(input_pem_files))
+
+            # Needs to be deepcopied or else it changes the pem files in self.pem_files
+            pem_files = copy.deepcopy(input_pem_files)
             self.window().statusBar().showMessage('Saving plots...')
 
             plot_kwargs = {'ShareRange': self.share_range_checkbox.isChecked(),
@@ -1284,7 +1291,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.file_editor.average(pem_file)
                 if not pem_file.is_split():
                     self.file_editor.split_channels(pem_file)
-
             save_dir = get_save_file()
             if save_dir:
                 if self.output_plan_map_cbox.isChecked():
@@ -2293,10 +2299,10 @@ def main():
     # section = Section3DViewer(pem_files)
     # section.show()
     mw.share_loop_cbox.setChecked(False)
-    # mw.output_lin_cbox.setChecked(False)
-    # mw.output_log_cbox.setChecked(False)
-    # mw.output_step_cbox.setChecked(False)
-    # mw.output_section_cbox.setChecked(False)
+    mw.output_lin_cbox.setChecked(False)
+    mw.output_log_cbox.setChecked(False)
+    mw.output_step_cbox.setChecked(False)
+    mw.output_section_cbox.setChecked(False)
     mw.print_plots()
     # map = Map3DViewer(pem_files)
     # map.show()

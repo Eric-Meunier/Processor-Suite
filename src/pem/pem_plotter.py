@@ -959,33 +959,39 @@ class PlanMap(MapPlotMethods):
                                                        label='Borehole Collar', zorder=4, **marker_style)
                     # Add the hole label at the collar
                     if self.hole_collar_labels:
-                        angle = math.degrees(math.atan2(seg_y[1] - seg_y[0], seg_x[1] - seg_x[0])) + 90
-                        collar_label = self.ax.text(collar_x, collar_y, f"{pem_file.header.get('LineHole')}",
-                                                    va='bottom', ha='center', color=self.color, zorder=5,
-                                                    path_effects=label_buffer, rotation=angle, rotation_mode='anchor')
+                        angle = math.degrees(math.atan2(seg_y[-1] - seg_y[0], seg_x[-1] - seg_x[0]))
+                        align = 'left' if angle > 90 or angle < -90 else 'right'
+                        collar_label = self.ax.text(collar_x, collar_y, f"  {pem_file.header.get('LineHole')}  ",
+                                                    va='center', ha=align, color=self.color, zorder=5,
+                                                    path_effects=label_buffer)
                         self.labels.append(collar_label)
 
                     if seg_x and seg_y and self.draw_hole_traces is True:
-                        # Plot the trace
-                        self.trace_handle, = self.ax.plot(seg_x, seg_y, '--', color=self.color, label='Borehole Trace',
-                                                          zorder=2, markersize=1)
 
-                        # Plot the ticks. Ticks are placed at evenly spaced depths
+                        # Calculating tick indexes. Ticks are placed at evenly spaced depths.
                         depths = np.linspace(min(seg_z), collar_z, 10)
                         indexes = [min(range(len(seg_z)), key=lambda i: abs(seg_z[i] - depth)) for depth in depths]
 
+                        # Hole trace is plotted using marker positions so that they match perfectly.
+                        index_x = [seg_x[index] for index in indexes]  # Marker positions
+                        index_y = [seg_y[index] for index in indexes]
+
+                        # Plotting the hole trace
+                        self.trace_handle, = self.ax.plot(index_x, index_y, '--', color=self.color)
+
+                        # Plotting the markers
                         for index in indexes[1:-1]:
                             angle = math.degrees(math.atan2(seg_y[index+1] - seg_y[index], seg_x[index+1] - seg_x[index]))
-                            self.ax.text(seg_x[index], seg_y[index], '|', rotation=angle, color=self.color, va='center',
-                                         ha='center', fontsize=6)
+                            self.ax.plot(seg_x[index], seg_y[index], markersize=5, marker=(2, 0, angle),
+                                         mew=.5, color=self.color)
 
                         # Add the end tick for the borehole trace and the label
                         angle = math.degrees(math.atan2(seg_y[-1] - seg_y[-2], seg_x[-1] - seg_x[-2]))
                         self.ax.text(seg_x[-1], seg_y[-1], '|', rotation=angle, color=self.color, va='center',
-                                         ha='center', fontsize=9)
+                                     ha='center', fontsize=9)
 
                         if self.hole_depth_labels:
-                            bh_depth = self.ax.text(seg_x[-1], seg_y[-1], f" {float(segments[-1][-1]):.0f} m",
+                            bh_depth = self.ax.text(seg_x[-1], seg_y[-1], f"  {float(segments[-1][-1]):.0f} m",
                                                     rotation=angle+90, fontsize=8, color=self.color,
                                                     path_effects=label_buffer, zorder=3, rotation_mode='anchor')
                 else:
@@ -2039,7 +2045,8 @@ class SectionPlot(MagneticFieldCalculator):
                 index = list(plotx).index(x)
                 pa = (plotx[index - 1], plotz[index - 1])
                 angle = math.degrees(math.atan2(pa[1] - p[1], pa[0] - p[0])) - 90
-                self.ax.text(x, z, '|', rotation=angle+90, ha='center', va='center', zorder=12)
+
+                self.ax.text(x, z, '|', rotation=angle+90, ha='center', va='center', zorder=12, rotation_mode='anchor')
 
                 # Label the station ticks
                 if self.label_ticks:
@@ -2057,7 +2064,7 @@ class SectionPlot(MagneticFieldCalculator):
 class PEMPrinter:
     """
     Class for printing PEMPLotter plots to PDF.
-    Creates the figures for PEMPlotter so they may be closed after they are saved.
+    Creates a single portrait and a single landscape figure object and re-uses them for all plots.
     :param pem_files: List of PEMFile objects
     :param save_path: Desired save location for the PDFs
     :param kwargs: Plotting kwargs such as hide_gaps, gaps, and x limits used in PEMPlotter.
@@ -2099,7 +2106,7 @@ class PEMPrinter:
             return [atoi(c) for c in re.split(r'(\d+)', text)]
 
         def save_plots(pem_files, ri_files, x_min, x_max):
-                # Saving the Plan Map
+                # Saving the Plan Map. Must have a CRS.
                 if all([self.crs.get('Coordinate System'), self.crs.get('Datum')]) and self.print_plan_maps is True:
                     if any([pem_file.has_any_gps() for pem_file in pem_files]):
                         self.pb.setText(f"Saving plan map for {', '.join([pem_file.header.get('LineHole') for pem_file in pem_files])}")
@@ -2111,7 +2118,7 @@ class PEMPrinter:
                     else:
                         print('No PEM file has any GPS to plot on the plan map.')
 
-                # Save the Section plot as long as it is a borehole survey
+                # Save the Section plot as long as it is a borehole survey. Must have loop, collar GPS and segments.
                 if self.print_section_plot is True and 'borehole' in pem_files[0].survey_type.lower():
                     if pem_files[0].has_collar_gps() and pem_files[0].has_loop_gps() and pem_files[0].has_geometry():
                         self.pb.setText(f"Saving section plot for {pem_files[0].header.get('LineHole')}")
@@ -2163,7 +2170,7 @@ class PEMPrinter:
                             self.pb.setValue(self.pb_count)
                             self.portrait_fig.clear()
 
-                # Saving the STEP plots
+                # Saving the STEP plots. Must have RI files associated with the PEM file.
                 if self.print_step_plots is True:
                     for pem_file, ri_file in zip(pem_files, ri_files):
                         if ri_file:
@@ -2181,6 +2188,12 @@ class PEMPrinter:
                                 self.portrait_fig.clear()
 
         def set_pb_max(unique_bhs, unique_grids):
+            """
+            Calculate the progress bar maximum value. I.E. calculates how many PDF pages will be made.
+            :param unique_bhs: Dict of unique borehole surveys (different hole name and loop name)
+            :param unique_grids: Dict of unique surface grids (different loop names)
+            :return: Sets the maximum value of self.pb.
+            """
             total_count = 0
 
             if unique_bhs:
@@ -2204,13 +2217,15 @@ class PEMPrinter:
                 for loop, lines in unique_grids.items():
                     num_plots = sum([len(file[0].get_components()) for file in lines])
                     if self.print_plan_maps:
-                        total_count += 1
+                        if any([file[0].has_any_gps() for file in lines]):
+                            total_count += 1
                     if self.print_lin_plots:
                         total_count += num_plots
                     if self.print_log_plots:
                         total_count += num_plots
                     if self.print_step_plots:
-                        total_count += num_plots
+                        if all([file[1] for file in lines]):
+                            total_count += num_plots
 
             self.pb_end = total_count
             print(f"Number of PDF pages: {total_count}")
@@ -2221,6 +2236,16 @@ class PEMPrinter:
 
         bh_files = list(filter(lambda x: 'borehole' in x[0].survey_type.lower(), self.files))
         sf_files = list(filter(lambda x: 'surface' in x[0].survey_type.lower(), self.files))
+
+        if any(bh_files):
+            bh_files.sort(key=lambda x: x[0].get_components(), reverse=True)
+            bh_files.sort(key=lambda x: natural_keys(x[0].header['Loop']))
+            bh_files.sort(key=lambda x: natural_keys(x[0].header['LineHole']))
+
+        if any(sf_files):
+            sf_files.sort(key=lambda x: x[0].get_components(), reverse=True)
+            sf_files.sort(key=lambda x: natural_keys(x[0].header['LineHole']))
+            sf_files.sort(key=lambda x: natural_keys(x[0].header['Loop']))
 
         # Group the files by unique surveys i.e. each entry is the same borehole and same loop
         for survey, files in itertools.groupby(bh_files, key=lambda x: (
@@ -2236,51 +2261,36 @@ class PEMPrinter:
         set_pb_max(unique_bhs, unique_grids)  # Set the maximum for the progress bar
 
         with PdfPages(self.save_path + '.PDF') as pdf:
-            if any(bh_files):
-                bh_files.sort(key=lambda x: x[0].get_components(), reverse=True)
-                bh_files.sort(key=lambda x: natural_keys(x[0].header['Loop']))
-                bh_files.sort(key=lambda x: natural_keys(x[0].header['LineHole']))
+            for survey, files in unique_bhs.items():
+                 pem_files = [pair[0] for pair in files]
+                 ri_files = [pair[1] for pair in files]
+                 if self.x_min is None and self.share_range is True:
+                     x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
+                                                                pem_file in pem_files]))
+                 else:
+                     x_min = self.x_min
+                 if self.x_max is None and self.share_range is True:
+                     x_max = max(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
+                                                                pem_file in pem_files]))
+                 else:
+                     x_max = self.x_max
+                 save_plots(pem_files, ri_files, x_min, x_max)
+                 self.pb.setText('Complete')
 
-                for survey, files in unique_bhs.items():
-                    pem_files = [pair[0] for pair in files]
-                    ri_files = [pair[1] for pair in files]
-
-                    if self.x_min is None and self.share_range is True:
-                        x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
-                                                                   pem_file in pem_files]))
-                    else:
-                        x_min = self.x_min
-                    if self.x_max is None and self.share_range is True:
-                        x_max = max(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
-                                                                   pem_file in pem_files]))
-                    else:
-                        x_max = self.x_max
-
-                    save_plots(pem_files, ri_files, x_min, x_max)
-
-                    self.pb.setText('Complete')
-
-            if any(sf_files):
-                sf_files.sort(key=lambda x: x[0].get_components(), reverse=True)
-                sf_files.sort(key=lambda x: natural_keys(x[0].header['LineHole']))
-                sf_files.sort(key=lambda x: natural_keys(x[0].header['Loop']))
-
-                for loop, files in unique_grids.items():
-                    pem_files = [pair[0] for pair in files]
-                    ri_files = [pair[1] for pair in files]
-
-                    if self.x_min is None and self.share_range is True:
-                        x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
-                                                                   pem_file in pem_files]))
-                    else:
-                        x_min = self.x_min
-                    if self.x_max is None and self.share_range is True:
-                        x_max = max(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
-                                                                   pem_file in pem_files]))
-                    else:
-                        x_max = self.x_max
-
-                    save_plots(pem_files, ri_files, x_min, x_max)
+            for loop, files in unique_grids.items():
+                pem_files = [pair[0] for pair in files]
+                ri_files = [pair[1] for pair in files]
+                if self.x_min is None and self.share_range is True:
+                    x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
+                                                               pem_file in pem_files]))
+                else:
+                    x_min = self.x_min
+                if self.x_max is None and self.share_range is True:
+                    x_max = max(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
+                                                               pem_file in pem_files]))
+                else:
+                    x_max = self.x_max
+                save_plots(pem_files, ri_files, x_min, x_max)
 
         plt.close(self.portrait_fig)
         plt.close(self.landscape_fig)
@@ -2334,7 +2344,6 @@ class CustomProgressBar(QProgressBar):
         """
         # '#37DA7E' for green
         self.setStyleSheet(COMPLETED_STYLE)
-
 
     def setText(self, text):
         self._text = text
