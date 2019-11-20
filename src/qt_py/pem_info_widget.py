@@ -146,6 +146,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.cellChanged.connect(self.check_missing_gps)
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
 
+        self.stationGPSTable.itemSelectionChanged.connect(lambda: self.shiftStationGPSSpinbox.setValue(0))
+        self.loopGPSTable.itemSelectionChanged.connect(lambda: self.shift_elevation_spinbox.setValue(0))
+        self.dataTable.itemSelectionChanged.connect(lambda: self.shiftStationSpinbox.setValue(0))
+
         self.loopGPSTable.itemSelectionChanged.connect(self.toggle_loop_move_buttons)
         self.dataTable.cellChanged.connect(self.update_pem_from_table)
 
@@ -969,7 +973,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         logging.info('PEMFileInfoWidget - Shifting station GPS numbers')
-
+        print('Shifting station GPS numbers')
         def apply_station_shift(row):
             station_column = self.station_columns.index('Station')
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
@@ -1280,9 +1284,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def change_station_suffix(self):
         """
         Change the suffix letter from the station number for selected rows in the dataTable. Only for surface files.
+        Input suffix must be either N, S, E, or W, case doesn't matter.
         :return: None
         """
-        if 'borehole' in self.survey_type.lower():
+        if 'borehole' in self.survey_type.lower():  # Shouldn't be needed since the button is disabled for boreholes
             return
 
         suffix, okPressed = QInputDialog.getText(self, "Change Station Suffix", "New Suffix:")

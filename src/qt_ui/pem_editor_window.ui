@@ -210,7 +210,7 @@
       </property>
       <property name="maximumSize">
        <size>
-        <width>230</width>
+        <width>210</width>
         <height>16777215</height>
        </size>
       </property>
@@ -258,7 +258,8 @@
               </font>
              </property>
              <property name="text">
-              <string>Auto-Sort Station Positions</string>
+              <string>Auto-Sort
+Station Positions</string>
              </property>
              <property name="checked">
               <bool>true</bool>
@@ -292,14 +293,14 @@
            <item row="0" column="1">
             <widget class="QComboBox" name="systemCBox">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>120</width>
+               <width>0</width>
                <height>0</height>
               </size>
              </property>
@@ -317,14 +318,14 @@
            <item row="2" column="1">
             <widget class="QComboBox" name="datumCBox">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>120</width>
+               <width>0</width>
                <height>0</height>
               </size>
              </property>
@@ -352,14 +353,14 @@
               <bool>false</bool>
              </property>
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>120</width>
+               <width>0</width>
                <height>0</height>
               </size>
              </property>
@@ -390,6 +391,12 @@
            </item>
            <item row="0" column="0">
             <widget class="QLabel" name="label">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="text">
               <string>System:</string>
              </property>
@@ -418,17 +425,17 @@
         <string>Data</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_7">
-        <item alignment="Qt::AlignHCenter">
+        <item>
          <widget class="QGroupBox" name="groupBox_2">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+           <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="minimumSize">
            <size>
-            <width>200</width>
+            <width>0</width>
             <height>0</height>
            </size>
           </property>
@@ -441,9 +448,15 @@
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
             <widget class="QPushButton" name="reverseAllZButton">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="minimumSize">
               <size>
-               <width>180</width>
+               <width>0</width>
                <height>23</height>
               </size>
              </property>
@@ -457,9 +470,15 @@
            </item>
            <item>
             <widget class="QPushButton" name="reverseAllXButton">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="minimumSize">
               <size>
-               <width>180</width>
+               <width>0</width>
                <height>23</height>
               </size>
              </property>
@@ -471,11 +490,17 @@
              </property>
             </widget>
            </item>
-           <item alignment="Qt::AlignHCenter">
+           <item>
             <widget class="QPushButton" name="reverseAllYButton">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="minimumSize">
               <size>
-               <width>180</width>
+               <width>0</width>
                <height>23</height>
               </size>
              </property>
@@ -493,7 +518,8 @@
         <item>
          <widget class="QPushButton" name="rename_all_repeat_stations_btn">
           <property name="text">
-           <string>Auto-Rename All Repeat Stations</string>
+           <string>Auto-Rename
+All Repeat Stations</string>
           </property>
          </widget>
         </item>
@@ -538,14 +564,14 @@
            <item row="1" column="1">
             <widget class="QLineEdit" name="max_range_edit">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>125</width>
+               <width>0</width>
                <height>0</height>
               </size>
              </property>
@@ -594,14 +620,14 @@
            <item row="2" column="1">
             <widget class="QLineEdit" name="min_range_edit">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>125</width>
+               <width>0</width>
                <height>0</height>
               </size>
              </property>
