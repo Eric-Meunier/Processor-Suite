@@ -284,6 +284,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         return super(QWidget, self).eventFilter(source, event)
 
     def open_file(self, pem_file, parent):
+        """
+        Action of opening a PEM file.
+        :param pem_file: PEMFile object.
+        :param parent: parent widget (PEMEditor)
+        :return: None
+        """
         logging.info(f'PEMFileInfoWidget - Opening PEM File {os.path.basename(pem_file.filepath)}')
         self.pem_file = pem_file
         self.parent = parent
@@ -296,6 +302,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             return self
 
     def open_ri_file(self, filepath):
+        """
+        Action of opening an RI file. Adds the contents of the RI file to the RIFileTable.
+        :param filepath: Filepath of the RI file.
+        :return: None
+        """
         logging.info(f'PEMFileInfoWidget - Opening RI file {os.path.basename(filepath)}')
 
         def make_ri_table():
@@ -329,6 +340,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         add_header_from_pem()
 
     def initTables(self):
+        """
+        Adds the columns and formats each table.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Initializing tables')
 
         if 'surface' in self.survey_type.lower() or 'squid' in self.survey_type.lower():
@@ -550,6 +565,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable.blockSignals(False)
 
     def color_data_table(self):
+        """
+        Colors the rows and cells of the dataTable based on several criteria.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Coloring data table')
 
         def color_rows_by_component():
@@ -636,6 +655,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.lcdRepeats.display(self.repeats_num)
 
     def fill_info(self):
+        """
+        Fills the tabs with the PEM file information when a PEM file is first opened.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Filling information tab')
 
         def init_info_tab():
@@ -688,18 +711,24 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.fill_data_table(self.pem_file.data)
 
     def add_loop_gps(self, file):
+        """
+        Add the loop GPS from a PEM file to the LoopGPSTable.
+        :param file: PEMFile object
+        :return: None
+        """
         logging.info(f'PEMFileInfoWidget - Adding loop GPS')
-        # gps = self.gps_parser.parse_loop_gps(file)
-        # if gps:
         if self.parent.autoSortLoopsCheckbox.isChecked():
             self.fill_loop_table(self.gps_editor.get_sorted_loop_gps(file))
         else:
             self.fill_loop_table(self.gps_editor.get_loop_gps(file))
 
     def add_station_gps(self, file):
+        """
+        Add the station GPS from a PEM file to the StationGPSTable.
+        :param file: PEMFile object
+        :return: None
+        """
         logging.info(f'PEMFileInfoWidget - Adding station GPS')
-        # gps = self.gps_parser.parse_station_gps(file)
-        # if gps:
         if self.parent.autoSortStationsCheckbox.isChecked():
             self.fill_station_table(self.gps_editor.get_sorted_station_gps(file))
         else:
@@ -887,6 +916,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def move_table_row_up(self):
+        """
+        Move selected rows of the LoopGPSTable up.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Moving loop GPS table row up')
         rows = self.get_selected_rows(self.loopGPSTable)
         loop_gps = self.get_loop_gps()
@@ -901,6 +934,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
     def move_table_row_down(self):
+        """
+        Move selected rows of the LoopGPSTable down.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Moving loop GPS table row down')
         rows = self.get_selected_rows(self.loopGPSTable)
         loop_gps = self.get_loop_gps()
@@ -915,6 +952,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
     def toggle_loop_move_buttons(self):
+        """
+        Slot: Enables or disables the loopGPS arrow buttons whenever a row in the table is selected or de-selected.
+        :return: None
+        """
         if self.loopGPSTable.selectionModel().selectedRows():
             self.moveUpButton.setEnabled(True)
             self.moveDownButton.setEnabled(True)
@@ -923,6 +964,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.moveDownButton.setEnabled(False)
 
     def shift_gps_station_numbers(self):
+        """
+        Shift the station GPS number from the selected rows of the StationGPSTable. If no rows are currently selected,
+        it will do the shift for the entire table.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Shifting station GPS numbers')
 
         def apply_station_shift(row):
@@ -956,6 +1002,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_gps_shift_amt = shift_amount
 
     def shift_station_easting(self):
+        """
+        Shift the station GPS easting from the selected rows of the StationGPSTable. If no rows are currently selected,
+        it will do the shift for the entire table.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Shifting station GPS eastings')
         def apply_station_shift(row):
             easting_column = 1
@@ -989,6 +1040,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_gps_shift_amt = shift_amount
 
     def shift_station_northing(self):
+        """
+        Shift the station GPS northing from the selected rows of the StationGPSTable. If no rows are currently selected,
+        it will do the shift for the entire table.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Shifting station GPS northings')
         def apply_station_shift(row):
             station_column = 5
@@ -1022,6 +1078,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_gps_shift_amt = shift_amount
 
     def shift_loop_elev(self):
+        """
+        Shift the loop GPS elevation from the selected rows of the LoopGPSTable. If no rows are currently selected,
+        it will do the shift for the entire table.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Shifting loop GPS elevation')
         def apply_elevation_shift(row):
             elevation_column = 3
@@ -1056,8 +1117,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_loop_elev_shift_amt = shift_amount
 
     def flip_station_gps_polarity(self):
+        """
+        Multiplies the station number of the selected rows of the StationGPSTable by -1. If no rows are selected it will
+        do so for all rows.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Flipping station GPS number polarity')
-        # Multiplies the station number by -1
 
         def flip_stn_num(row):
             station_column = 5
@@ -1084,8 +1149,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     pass
 
     def reverse_station_gps_numbers(self):
+        """
+        Flips the station numbers from the StationGPSTable head-over-heals.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Flipping the station GPS numbers end-over-end')
-        # Flips the station numbers head-over-heals
         gps = self.get_station_gps()
         if gps:
             reversed_stations = list(reversed(list(map(lambda x: int(x[-1]), gps))))
@@ -1098,27 +1166,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
-    # def format_station_gps_text(self):
-    #     current_gps = self.station_gps_parser.parse(self.get_station_gps())
-    #     if current_gps:
-    #         if self.parent.autoSortStationsCheckbox.isChecked():
-    #             self.fill_station_table(current_gps.get_sorted_gps())
-    #         else:
-    #             self.fill_station_table(current_gps.get_gps())
-    #     else:
-    #         pass
-
-    # def format_loop_gps_text(self):
-    #     loop = self.get_loop_gps()
-    #     if loop:
-    #         if self.parent.autoSortLoopsCheckbox.isChecked():
-    #             self.fill_loop_table(self.gps_editor.get_sorted_gps(loop))
-    #         else:
-    #             self.fill_loop_table(self.gps_editor.get_gps(loop))
-    #     else:
-    #         pass
-
     def stations_from_data(self):
+        """
+        Fills the GPS station numbers in the StationGPSTable using the station numbers in the data.
+        :return: None
+        """
         data_stations = self.pem_file.get_converted_unique_stations()
         station_column = 5
         for row, station in enumerate(data_stations):
@@ -1127,6 +1179,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.stationGPSTable.setItem(row, station_column, item)
 
     def calc_distance(self):
+        """
+        Calculate the distance between the two rows of GPS points and sets the LCD to this number.
+        :return: None
+        """
         def get_row_gps(row):
             east_col = self.station_columns.index('Easting')
             north_col = self.station_columns.index('Northing')
@@ -1189,8 +1245,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #     self.last_stn_shift_amt = shift_amount
 
     def shift_station_numbers(self):
+        """
+        Shift the data station number.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Shifting station GPS numbers')
-        # Shift the station number
         selected_rows = self.get_selected_rows(self.dataTable)
         if not selected_rows:
             selected_rows = range(self.dataTable.rowCount())
@@ -1202,8 +1261,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_shift_amt = shift_amount
 
     def reverse_polarity(self, selected_rows=None, component=None):
+        """
+        Reverse the polarity of selected readings
+        :param selected_rows: Selected rows from the dataTable to be changed. If none is selected, it will reverse
+        the polarity for all rows.
+        :param component: Selected component to be changed. If none is selected, it will reverse the polarity for
+        all rows.
+        :return: None
+        """
         logging.info(f'PEMFileInfoWidget - Reversing polarity of rows {selected_rows}, component {component}')
-        # Reverse the polarity of selected readings
         if not component:
             selected_rows = self.get_selected_rows(self.dataTable)
         if component or selected_rows:
@@ -1217,6 +1283,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         pass
 
     def change_component(self):
+        """
+        Rotates the reading component of all selected rows from the dataTable to the next one in the list.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Changing data component')
         components = ['Z', 'X', 'Y']
         rows = self.get_selected_rows(self.dataTable)
@@ -1230,6 +1300,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.dataTable.setItem(row, self.data_columns.index('Comp.'), new_comp_item)
 
     def rename_repeat_stations(self):
+        """
+        Change any station name in the dataTable that is a repeat station
+        (i.e. any station ending in 1,4,6,9 to 0,5,5,0 respectively).
+        :return: None
+        """
         if self.repeats_num > 0:
             print('Renaming repeats')
             self.pem_file = self.file_editor.rename_repeats(self.pem_file)
@@ -1238,9 +1313,18 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def get_selected_rows(self, table):
+        """
+        Return the rows that are currently selected from a given table.
+        :param table: QTableWidget table.
+        :return: List of rows that are selected.
+        """
         return [model.row() for model in table.selectionModel().selectedRows()]
 
     def get_loop_gps(self):
+        """
+        Collect the GPS in the LoopGPS table.
+        :return: List of station GPS values from the LoopGPS table.
+        """
         logging.info('PEMFileInfoWidget - Retrieving loop GPS')
         table_gps = []
         for row in range(self.loopGPSTable.rowCount()):
@@ -1254,6 +1338,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         return table_gps
 
     def get_station_gps(self):
+        """
+        Collect the GPS in the StationGPS table.
+        :return: List of station GPS values from the StationGPS table.
+        """
         logging.info('PEMFileInfoWidget - Retrieving station GPS')
         table_gps = []
         for row in range(self.stationGPSTable.rowCount()):

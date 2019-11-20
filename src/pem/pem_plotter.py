@@ -648,11 +648,16 @@ class RotnAnnotation(mtext.Annotation):
 
 
 class MapPlotMethods:
-
-    # def __init__(self, pem_file):
-    #     self.pem_file = pem_file
+    """
+    Collection of methods for plotting maps.
+    """
 
     def get_extents(self, pem_file):
+        """
+        Calculate the GPS extents of each dimension of the PEM file.
+        :param pem_file: PEMFile object
+        :return: Range of GPS in all 3 components
+        """
         logging.info('MapPlotMethods - Retrieving extents')
         loop_coords = pem_file.get_loop_coords()
         collar = pem_file.get_collar_coords()[0]
@@ -698,7 +703,6 @@ class MapPlotMethods:
                 segments = list(
                     zip(interp_az, interp_dip, interp_lens, [units] * len(interp_depths), interp_depths))
 
-            # trace = [(float(collar_x), float(collar_y), float(collar_z))]  # Easting and Northing tuples
             eastings = [float(collar_x)]
             northings = [float(collar_y)]
             depths = [float(collar_z)]
@@ -716,20 +720,20 @@ class MapPlotMethods:
                 eastings.append(float(eastings[-1] + dx))
                 northings.append(float(northings[-1] + dy))
                 depths.append(float(depths[-1] - dz))
-                # trace.append(
-                #     (float(trace[-1][0]) + dx, float(trace[-1][1]) + dy, float(trace[-1][2]) - delta_elev))
 
             return eastings, northings, depths
-            # return [segment[0] for segment in trace], \
-            #        [segment[1] for segment in trace], \
-            #        [segment[2] for segment in trace]
 
     def get_section_extents(self, pem_file, hole_depth=None, section_plot=False, plot_width=None):
         """
         Find the 50th percentile down the hole, use that as the center of the section, and find the
-        X and Y extents of that section line. Azimuth used is from the 80th percentile.
+        X and Y extents of that section line. Default azimuth used is from the 80th percentile if no hole_depth is given.
+        :param pem_file: PEMFile object
+        :param hole_depth: Desired hole depth to use to find the azimuth of the section
+        :param section_plot: Bool: If True, will scale the plot such that the scale is of an acceptable value. Used
+        for 2D section plots.
+        :param plot_width: Physical width of the plot in meters.
+        :return: XY coordinates of each end of the section line, and the azimuth of that line.
         """
-
         def calc_scale_factor(p1, p2, plot_width):
             """
             Modifies the two cross-section points so they will create a map with an appropriate scale
@@ -1120,6 +1124,10 @@ class PlanMap(MapPlotMethods):
             self.ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
 
         def set_scale():
+            """
+            Changes the extent of the plot such that the scale is an acceptable value.
+            :return: None
+            """
 
             def get_scale_factor():
                 # num_digit = len(str(int(current_scale)))  # number of digits in number
@@ -1149,6 +1157,10 @@ class PlanMap(MapPlotMethods):
             self.ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
 
         def add_title():
+            """
+            Adds the title box to the plot.
+            :return: None
+            """
 
             def get_survey_dates():
                 survey_dates = [pem_file.header.get('Date') for pem_file in self.pem_files]
@@ -1233,6 +1245,10 @@ class PlanMap(MapPlotMethods):
             self.ax.add_line(line_3)
 
         def add_north_arrow():
+            """
+            Adds the north arrow to the plot. The arrow is manually drawn, and is always fixed in position and size.
+            :return: None
+            """
 
             def ax_len(pixel_length):  # Calculate the equivalent axes size for a given pixel length
                 return shaft_len * (pixel_length / 300)  # 267 is pixel length of old north arrow
@@ -1310,6 +1326,10 @@ class PlanMap(MapPlotMethods):
                            edgecolor='k')
 
     def get_map(self):
+        """
+        Retuns the figure if anything is plotted in it.
+        :return: Matplotlib Figure object.
+        """
         if any([self.loops, self.lines, self.collars, self.holes]):
             self.format_figure()
             return self.fig

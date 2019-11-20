@@ -2320,6 +2320,10 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
 
 
 class Section3DViewer(QWidget, Ui_Section3DWidget):
+    """
+    Displays a 3D vector plot of a borehole. Plots the vector plot itself in 2D, on a plane that is automatically
+    calculated
+    """
 
     def __init__(self, pem_file, parent=None):
         super().__init__()
