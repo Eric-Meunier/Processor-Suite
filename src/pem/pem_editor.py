@@ -1224,10 +1224,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.save_pem_file(updated_file)
             self.pem_info_widgets[row].open_file(updated_file, parent=self)  # Updates the PEMInfoWidget tables
         if len(pem_files) == 1:
-            self.parent.window().statusBar().showMessage(
+            self.window().statusBar().showMessage(
                 'Save Complete. PEM file {} saved.'.format(os.path.basename(pem_files[0].filepath)), 2000)
         else:
-            self.parent.window().statusBar().showMessage(
+            self.window().statusBar().showMessage(
                 'Save Complete. {} files saved.'.format(str(len(pem_files))), 2000)
         self.update_table()
 

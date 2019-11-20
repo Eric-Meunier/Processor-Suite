@@ -6,8 +6,8 @@ import statistics
 import sys
 import numpy as np
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QAction, QMenu)
-
+from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox)
+from collections import Counter
 from src.gps.gps_editor import GPSParser, GPSEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.ri.ri_file import RIFile
@@ -603,7 +603,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         def color_wrong_suffix():
             """
-            Color the dataTable rows where the suffix is different from the mode
+            Color the dataTable rows where the station suffix is different from the mode
             """
 
             def most_common_suffix():
@@ -613,7 +613,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     suffix = re.findall('[NSEW]', station)
                     if suffix:
                         suffixes.append(suffix[0])
-                return statistics.mode(suffixes)
+                count = Counter(suffixes)
+                return count.most_common()[0][0]
 
             if 'surface' in self.survey_type.lower():
                 correct_suffix = most_common_suffix()
@@ -643,10 +644,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     if station_num[-1] == '1' or station_num[-1] == '6':
                         repeats += 1
                         item.setFont(boldFont)
-                        item.setForeground(QtGui.QColor('red'))
                     else:
                         item.setFont(normalFont)
-                        item.setForeground(QtGui.QColor('black'))
             return repeats
 
         color_rows_by_component()
@@ -1279,8 +1278,34 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.window().statusBar().showMessage('Polarity flipped.', 2000)
 
     def change_station_suffix(self):
-        # print('Suffix changed')
-        pass
+        """
+        Change the suffix letter from the station number for selected rows in the dataTable. Only for surface files.
+        :return: None
+        """
+        if 'borehole' in self.survey_type.lower():
+            return
+
+        suffix, okPressed = QInputDialog.getText(self, "Change Station Suffix", "New Suffix:")
+        if okPressed and suffix.upper() in ['N', 'E', 'S', 'W']:
+            station_col = self.data_columns.index('Station')
+            rows = self.get_selected_rows(self.dataTable)
+            if not rows:
+                rows = range(self.dataTable.rowCount())
+            for row in rows:
+                station = self.dataTable.item(row, station_col).text()
+                new_station = re.sub('[NESW]', suffix.upper(), station)
+
+                new_station_item = QTableWidgetItem(new_station)
+                new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.dataTable.setItem(row, station_col, new_station_item)
+        elif okPressed:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setWindowTitle('Invalid Suffix')
+            msg.setText('Suffix must be one of [NSEW]')
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.buttonClicked.connect(msg.close)
+            msg.exec()
 
     def change_component(self):
         """
