@@ -31,7 +31,7 @@
       </property>
       <property name="maximumSize">
        <size>
-        <width>257</width>
+        <width>230</width>
         <height>16777215</height>
        </size>
       </property>
@@ -196,10 +196,16 @@
     <item row="1" column="0">
      <widget class="QTabWidget" name="main_frame_tab">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Maximum" vsizetype="Minimum">
+       <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>230</width>
+        <height>16777215</height>
+       </size>
       </property>
       <property name="tabPosition">
        <enum>QTabWidget::West</enum>
@@ -475,7 +481,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="rename_all_duplicate_stations_btn">
+            <widget class="QPushButton" name="rename_all_repeat_stations_btn">
              <property name="text">
               <string>Auto-Rename All Duplicate Stations</string>
              </property>

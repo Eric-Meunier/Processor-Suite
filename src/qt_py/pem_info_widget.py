@@ -48,6 +48,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
+        self.repeats_num = 0
         self.setupUi(self)
         self.initActions()
         self.initSignals()
@@ -137,7 +138,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
         self.stations_from_data_btn.clicked.connect(self.stations_from_data)
         self.reversePolarityButton.clicked.connect(self.reverse_polarity)
-        self.rename_duplicate_stations_btn.clicked.connect(self.rename_duplicate_stations)
+        self.rename_repeat_stations_btn.clicked.connect(self.rename_repeat_stations)
 
         # Table changes
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
@@ -345,7 +346,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         elif 'borehole' in self.survey_type.lower():
             self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
-            self.geometry_columns = ['Tag', 'Azimuth', 'Dip', 'Seg. Length', 'Units', 'Depth']
+            self.geometry_columns = ['Tag', 'Azimuth', 'Dip', 'Segment\nLength', 'Units', 'Depth']
             self.geometryTable.setColumnCount(len(self.geometry_columns))
             self.geometryTable.setHorizontalHeaderLabels(self.geometry_columns)
             self.geometryTable.setSizeAdjustPolicy(
@@ -369,7 +370,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.loopGPSTable.resizeColumnsToContents()
 
-        self.data_columns = ['Station', 'Comp.', 'R. Index', 'Reading #', 'Stacks', 'ZTS']
+        self.data_columns = ['Station', 'Comp.', 'Reading\nIndex', 'Reading\nNumber', 'Stacks', 'ZTS']
         self.dataTable.blockSignals(True)
         self.dataTable.setColumnCount(len(self.data_columns))
         self.dataTable.setHorizontalHeaderLabels(self.data_columns)
@@ -611,7 +612,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             """
             Makes the station number cell bold if it ends with '1'
             """
-            duplicates = 0
+            repeats = 0
             boldFont = QtGui.QFont()
             boldFont.setBold(True)
             normalFont = QtGui.QFont()
@@ -621,18 +622,18 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 if item:
                     station_num = re.findall('\d+', item.text())[0]
                     if station_num[-1] == '1' or station_num[-1] == '6':
-                        duplicates += 1
+                        repeats += 1
                         item.setFont(boldFont)
                         item.setForeground(QtGui.QColor('red'))
                     else:
                         item.setFont(normalFont)
                         item.setForeground(QtGui.QColor('black'))
-            return duplicates
+            return repeats
 
         color_rows_by_component()
         color_wrong_suffix()
-        duplicates_num = bolden_repeat_stations()
-        self.lcdDuplicates.display(duplicates_num)
+        self.repeats_num = bolden_repeat_stations()
+        self.lcdRepeats.display(self.repeats_num)
 
     def fill_info(self):
         logging.info('PEMFileInfoWidget - Filling information tab')
@@ -714,6 +715,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_geometry_table(self.gps_editor.get_geometry(file))
 
     def clear_table(self, table):
+        """
+        Clear a given table
+        """
         logging.info(f'PEMFileInfoWidget - Clearing table {table}')
         table.blockSignals(True)
         while table.rowCount() > 0:
@@ -721,6 +725,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         table.blockSignals(False)
 
     def check_station_duplicates(self):
+        """
+        Colors stationGPS table rows to indicate duplicate station numbers in the GPS.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Checking for station duplicates')
         self.stationGPSTable.blockSignals(True)
         stations_column = self.station_columns.index('Station')
@@ -738,6 +746,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.blockSignals(False)
 
     def check_station_order(self):
+        """
+        Colors the stationGPS rows, station number column, based on issues with the ordering of the station numbers.
+        This is done by first creating a list of ordered numbers based on the first and last GPS station numbers,
+        then comparing these values with the coinciding value in the table.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Checking station order')
         self.stationGPSTable.blockSignals(True)
         stations = [int(row[-1]) for row in self.get_station_gps()]
@@ -782,6 +796,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.missing_gps_table.setItem(row, 0, item)
 
     def remove_table_row_selection(self, table):
+        """
+        Remove a selected row from a given table
+        :param table: QTableWidget table
+        :return: None
+        """
         logging.info(f'PEMFileInfoWidget - Removing row(s) from table {table}')
         # Table (QWidgetTable) is either the loop, station, collar GPS, or geometry tables. Not dataTable.
 
@@ -808,6 +827,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             add_tags()
 
     def remove_data_row(self):
+        """
+        Remove a row from the data table.
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Removing row from data table')
         selected_rows = self.get_selected_rows(self.dataTable)
 
@@ -820,12 +843,20 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable.blockSignals(False)
 
     def remove_ri_file(self):
+        """
+        Remove an RI file
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Removing RI File')
         while self.riTable.rowCount() > 0:
             self.riTable.removeRow(0)
         self.ri_file = None
 
     def cull_station_gps(self):
+        """
+        Remove all station GPS from the stationGPSTable where the station number isn't in the PEM data
+        :return: None
+        """
         logging.info('PEMFileInfoWidget - Culling station GPS')
         gps = self.get_station_gps()
         if gps:
@@ -893,6 +924,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def shift_gps_station_numbers(self):
         logging.info('PEMFileInfoWidget - Shifting station GPS numbers')
+
         def apply_station_shift(row):
             station_column = self.station_columns.index('Station')
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
@@ -905,7 +937,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 pass
 
         selected_rows = self.get_selected_rows(self.stationGPSTable)
-
         shift_amount = self.shiftStationGPSSpinbox.value()
 
         if selected_rows:
@@ -1198,10 +1229,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 new_comp_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.dataTable.setItem(row, self.data_columns.index('Comp.'), new_comp_item)
 
-    def rename_duplicate_stations(self):
-        self.pem_file = self.file_editor.rename_duplicates(self.pem_file)
-        self.clear_table(self.dataTable)
-        self.fill_data_table(self.pem_file.data)
+    def rename_repeat_stations(self):
+        if self.repeats_num > 0:
+            print('Renaming repeats')
+            self.pem_file = self.file_editor.rename_repeats(self.pem_file)
+            self.update_data_table()
+        else:
+            pass
 
     def get_selected_rows(self, table):
         return [model.row() for model in table.selectionModel().selectedRows()]

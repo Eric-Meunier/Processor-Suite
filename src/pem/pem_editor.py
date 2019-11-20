@@ -287,6 +287,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.reverseAllZButton.clicked.connect(lambda: self.reverse_all_data(comp='Z'))
         self.reverseAllXButton.clicked.connect(lambda: self.reverse_all_data(comp='X'))
         self.reverseAllYButton.clicked.connect(lambda: self.reverse_all_data(comp='Y'))
+        self.rename_all_repeat_stations_btn.clicked.connect(self.rename_all_repeat_stations)
 
         self.systemCBox.currentIndexChanged.connect(self.toggle_zone_box)
         self.reset_crs_btn.clicked.connect(self.reset_crs)
@@ -343,6 +344,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.share_segments_action = QAction("&Share Geometry", self)
                 self.table.share_segments_action.triggered.connect(self.share_segments)
 
+                self.table.share_station_gps_action = QAction("&Share Station GPS", self)
+                self.table.share_station_gps_action.triggered.connect(self.share_station_gps)
+
                 self.table.rename_lines_action = QAction("&Rename Lines/Holes", self)
                 self.table.rename_lines_action.triggered.connect(lambda: self.batch_rename(type='Line'))
 
@@ -371,6 +375,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     if 'borehole' in survey_type:
                         self.table.menu.addAction(self.table.share_collar_action)
                         self.table.menu.addAction(self.table.share_segments_action)
+                    elif 'surface' in survey_type or 'squid' in survey_type:
+                        self.table.menu.addAction(self.table.share_station_gps_action)
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     self.table.menu.addSeparator()
                     self.table.menu.addAction(self.table.rename_lines_action)
@@ -1470,6 +1476,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.max_range_edit.setText('')
 
     def share_loop(self):
+        """
+        Share the loop GPS of one file with all other opened PEM files.
+        :return: None
+        """
         logging.info('PEMEditor - Sharing loop GPS')
         selected_widget = self.pem_info_widgets[self.table.currentRow()]
         try:
@@ -1481,6 +1491,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 widget.fill_loop_table(selected_widget_loop)
 
     def share_collar(self):
+        """
+        Share the collar GPS of one file with all other opened PEM files. Will only do so for borehole files.
+        :return: None
+        """
         logging.info('PEMEditor - Sharing collar GPS')
         selected_widget = self.pem_info_widgets[self.table.currentRow()]
         try:
@@ -1492,6 +1506,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 widget.fill_collar_gps_table(selected_widget_collar)
 
     def share_segments(self):
+        """
+        Share the segments of one file with all other opened PEM files. Will only do so for borehole files.
+        :return: None
+        """
         logging.info('PEMEditor - Sharing borehole segments')
         selected_widget = self.pem_info_widgets[self.table.currentRow()]
         try:
@@ -1501,6 +1519,31 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             for widget in list(filter(lambda x: 'borehole' in x.pem_file.survey_type.lower(), self.pem_info_widgets)):
                 widget.fill_geometry_table(selected_widget_geometry)
+
+    def share_station_gps(self):
+        """
+        Share the station GPS of one file with all other opened PEM files. Will only do so for surface files.
+        :return: None
+        """
+        logging.info('PEMEditor - Sharing line GPS')
+        selected_widget = self.pem_info_widgets[self.table.currentRow()]
+        try:
+            selected_widget_station_gps = selected_widget.get_station_gps()
+        except:
+            return
+        else:
+            for widget in list(filter(lambda x: 'surface' in x.pem_file.survey_type.lower()
+                    or 'squid' in x.pem_file.survey_type.lower(), self.pem_info_widgets)):
+                widget.fill_station_table(selected_widget_station_gps)
+
+    def rename_all_repeat_stations(self):
+        """
+        Rename all repeat stations (i.e. stations ending in 1, or 6... to a 0 or 5).
+        :return: None
+        """
+        if any(self.pem_files):
+            for widget in self.pem_info_widgets:
+                widget.rename_repeat_stations()
 
     def toggle_share_client(self):
         if self.share_client_cbox.isChecked():
@@ -1552,6 +1595,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.zoneCBox.setEnabled(False)
 
     def batch_rename(self, type):
+        """
+        Opens the BatchNameEditor for renaming multiple file names and/or line/hole names.
+        :param type: File names or line/hole names
+        :return: None
+        """
         logging.info('PEMEditor - Batch renaming')
 
         def rename_pem_files():
@@ -1573,6 +1621,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.batch_name_editor.show()
 
     def import_ri_files(self):
+        """
+        Opens BatchRIImporter for bulk importing RI files.
+        :return: None
+        """
         logging.info('PEMEditor - Importing RI Files')
 
         def open_ri_files():

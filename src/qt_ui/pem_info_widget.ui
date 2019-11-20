@@ -227,6 +227,12 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="maximumSize">
+          <size>
+           <width>120</width>
+           <height>16777215</height>
+          </size>
+         </property>
          <property name="title">
           <string>Station Editing</string>
          </property>
@@ -505,6 +511,12 @@ Not In Data</string>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="maximumSize">
+          <size>
+           <width>120</width>
+           <height>16777215</height>
+          </size>
+         </property>
          <property name="title">
           <string>Data Editing</string>
          </property>
@@ -546,14 +558,16 @@ Not In Data</string>
           <item>
            <widget class="QPushButton" name="changeComponentButton">
             <property name="text">
-             <string>Change Component</string>
+             <string>Change
+Component</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QPushButton" name="changeStationSuffixButton">
             <property name="text">
-             <string>Change Suffix</string>
+             <string>Change
+Suffix</string>
             </property>
            </widget>
           </item>
@@ -573,22 +587,23 @@ Not In Data</string>
           <item>
            <widget class="QLabel" name="label_3">
             <property name="text">
-             <string>Duplicate Stations:</string>
+             <string>Repeat
+Stations:</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLCDNumber" name="lcdDuplicates">
+           <widget class="QLCDNumber" name="lcdRepeats">
             <property name="segmentStyle">
              <enum>QLCDNumber::Flat</enum>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="rename_duplicate_stations_btn">
+           <widget class="QPushButton" name="rename_repeat_stations_btn">
             <property name="text">
              <string>Auto-Rename
-Duplicate Stations</string>
+Repeats</string>
             </property>
            </widget>
           </item>

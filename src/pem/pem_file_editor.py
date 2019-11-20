@@ -186,7 +186,13 @@ class PEMFileEditor:
             reading['Station'] = new_station
         return pem_file
 
-    def rename_duplicates(self, pem_file):
+    def rename_repeats(self, pem_file):
+        """
+        Rename any stations that end with 1, 4, 6, or 9, numbers usually used to indicate that the station is a
+        repeat from a previous section, to the nearest number 0 or 5.
+        :param pem_file: PEMFile object
+        :return: PEMFile object with stations renamed
+        """
         data = pem_file.get_data()
         for reading in data:
             station_num = int(re.findall('-?\d+', reading['Station'])[0])
