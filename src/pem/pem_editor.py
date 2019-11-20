@@ -283,6 +283,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.hide_gaps_checkbox.stateChanged.connect(self.toggle_hide_gaps)
         self.min_range_edit.textChanged.connect(self.update_table)
         self.max_range_edit.textChanged.connect(self.update_table)
+        self.auto_name_line_btn.clicked.connect(self.auto_name_lines)
 
         self.reverseAllZButton.clicked.connect(lambda: self.reverse_all_data(comp='Z'))
         self.reverseAllXButton.clicked.connect(lambda: self.reverse_all_data(comp='X'))
@@ -867,7 +868,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             else:
                 pem_files, rows = self.pem_files, range(self.table.rowCount())
             for pem_file, row in zip(pem_files, rows):
-                coil_column = self.columns.index('Coil Area')
+                coil_column = self.table_columns.index('Coil Area')
                 self.scale_coil_area(pem_file, coil_area)
                 self.table.item(row, coil_column).setText(str(coil_area))
 
@@ -893,7 +894,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             else:
                 pem_files, rows = self.pem_files, range(self.table.rowCount())
             for pem_file, row in zip(pem_files, rows):
-                coil_column = self.columns.index('Current')
+                coil_column = self.table_columns.index('Current')
                 self.scale_current(pem_file, current)
                 self.table.item(row, coil_column).setText(str(current))
 
@@ -963,7 +964,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def table_value_changed(self, row, col):
         logging.info(f'PEMEditor - Table value changed at row {row} and column {col}')
-        if col == self.columns.index('Coil Area'):
+        if col == self.table_columns.index('Coil Area'):
             pem_file = self.pem_files[row]
             old_value = int(pem_file.header.get('CoilArea'))
             try:
@@ -976,7 +977,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.window().statusBar().showMessage(
                         f"Coil area changed from {str(old_value)} to {str(new_value)}", 2000)
 
-        if col == self.columns.index('File'):
+        if col == self.table_columns.index('File'):
             pem_file = self.pem_files[row]
             old_path = copy.copy(pem_file.filepath)
             new_value = self.table.item(row, col).text()
@@ -997,7 +998,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def check_for_table_anomalies(self):
         logging.info('PEMEditor - Checking for table anomalies')
         self.table.blockSignals(True)
-        date_column = self.columns.index('Date')
+        date_column = self.table_columns.index('Date')
         current_year = str(datetime.datetime.now().year)
 
         for row in range(self.table.rowCount()):
@@ -1058,17 +1059,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if filepath is None:
             pem_file.filepath = os.path.join(os.path.split(pem_file.filepath)[0],
-                                             self.table.item(table_row, self.columns.index('File')).text())
+                                             self.table.item(table_row, self.table_columns.index('File')).text())
         else:
             pem_file.filepath = filepath
 
         add_crs_tag()
-        pem_file.header['Date'] = self.table.item(table_row, self.columns.index('Date')).text()
-        pem_file.header['Client'] = self.table.item(table_row, self.columns.index('Client')).text()
-        pem_file.header['Grid'] = self.table.item(table_row, self.columns.index('Grid')).text()
-        pem_file.header['LineHole'] = self.table.item(table_row, self.columns.index('Line/Hole')).text()
-        pem_file.header['Loop'] = self.table.item(table_row, self.columns.index('Loop')).text()
-        pem_file.tags['Current'] = self.table.item(table_row, self.columns.index('Current')).text()
+        pem_file.header['Date'] = self.table.item(table_row, self.table_columns.index('Date')).text()
+        pem_file.header['Client'] = self.table.item(table_row, self.table_columns.index('Client')).text()
+        pem_file.header['Grid'] = self.table.item(table_row, self.table_columns.index('Grid')).text()
+        pem_file.header['LineHole'] = self.table.item(table_row, self.table_columns.index('Line/Hole')).text()
+        pem_file.header['Loop'] = self.table.item(table_row, self.table_columns.index('Loop')).text()
+        pem_file.tags['Current'] = self.table.item(table_row, self.table_columns.index('Current')).text()
         pem_file.loop_coords = self.stackedWidget.widget(table_row).get_loop_gps()
 
         if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower():
@@ -1159,7 +1160,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.dialog.setFileMode(QFileDialog.ExistingFiles)
         self.dialog.setAcceptMode(QFileDialog.AcceptSave)
         self.dialog.setDirectory(default_path)
-        self.window().statusBar().showMessage('Saving PEM files...')
+        self.window().statusBar().showMessage('Saving PEM files...', 2000)
         file_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM)')[0]  # Returns full filepath
 
         if file_path:
@@ -1250,7 +1251,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             # Needs to be deepcopied or else it changes the pem files in self.pem_files
             pem_files = copy.deepcopy(input_pem_files)
-            self.window().statusBar().showMessage('Saving plots...')
+            self.window().statusBar().showMessage('Saving plots...', 2000)
 
             plot_kwargs = {'ShareRange': self.share_range_checkbox.isChecked(),
                            'HideGaps': self.hide_gaps_checkbox.isChecked(),
@@ -1362,10 +1363,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     # Creates the table when the editor is first opened
     def create_table(self):
-        self.columns = ['File', 'Date', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'Coil Area', 'First Station',
+        self.table_columns = ['File', 'Date', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'Coil Area', 'First Station',
                         'Last Station', 'Averaged', 'Split']
-        self.table.setColumnCount(len(self.columns))
-        self.table.setHorizontalHeaderLabels(self.columns)
+        self.table.setColumnCount(len(self.table_columns))
+        self.table.setHorizontalHeaderLabels(self.table_columns)
         self.table.setSizeAdjustPolicy(
             QAbstractScrollArea.AdjustToContents)
         # self.table.resizeColumnsToContents()
@@ -1400,18 +1401,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         row_pos = self.table.rowCount()
         self.table.insertRow(row_pos)
 
-        for i, column in enumerate(self.columns):
+        for i, column in enumerate(self.table_columns):
             item = QTableWidgetItem(new_row[i])
-            if i == self.columns.index('Averaged') or i == self.columns.index('Split'):
+            if i == self.table_columns.index('Averaged') or i == self.table_columns.index('Split'):
                 item.setFlags(QtCore.Qt.ItemIsSelectable)
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row_pos, i, item)
 
-        if self.table.item(row_pos, self.columns.index('Averaged')).text().lower() == 'no':
-            self.table.item(row_pos, self.columns.index('Averaged')).setForeground(QtGui.QColor('red'))
+        if self.table.item(row_pos, self.table_columns.index('Averaged')).text().lower() == 'no':
+            self.table.item(row_pos, self.table_columns.index('Averaged')).setForeground(QtGui.QColor('red'))
 
-        if self.table.item(row_pos, self.columns.index('Split')).text().lower() == 'no':
-            self.table.item(row_pos, self.columns.index('Split')).setForeground(QtGui.QColor('red'))
+        if self.table.item(row_pos, self.table_columns.index('Split')).text().lower() == 'no':
+            self.table.item(row_pos, self.table_columns.index('Split')).setForeground(QtGui.QColor('red'))
 
         self.check_for_table_changes(pem_file, row_pos)
         self.check_for_table_anomalies()
@@ -1535,6 +1536,37 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             for widget in list(filter(lambda x: 'surface' in x.pem_file.survey_type.lower()
                     or 'squid' in x.pem_file.survey_type.lower(), self.pem_info_widgets)):
                 widget.fill_station_table(selected_widget_station_gps)
+
+    def auto_name_lines(self):
+        """
+        Rename the line and hole names based on the file name. For boreholes, looks for a space character, and uses
+        everything before the space (if it exists) as the new name. If there's no space it will use the entire filename
+        (minus the extension) as the new name. For surface, it looks for numbers followed by any suffix (NSEW) and uses
+        that (with the suffix) as the new name. Makes the change in the table and saves it in the PEM file in memory.
+        :return: None
+        """
+        if any(self.pem_files):
+            file_name_column = self.table_columns.index('File')
+            line_name_column = self.table_columns.index('Line/Hole')
+            new_name = ''
+            for row in range(self.table.rowCount()):
+                pem_file = self.pem_files[row]
+                survey_type = pem_file.survey_type.lower()
+                file_name = self.table.item(row, file_name_column).text()
+                if 'borehole' in survey_type:
+                    # hole_name = re.findall('(.*)(xy|XY|z|Z)', file_name)
+                    hole_name = os.path.splitext(file_name)
+                    if hole_name:
+                        new_name = re.split('\s', hole_name[0])[0]
+                else:
+                    line_name = re.findall('\d+[nsewNSEW]', file_name)
+                    if line_name:
+                        new_name = line_name[0].strip()
+
+                pem_file.header['LineHole'] = new_name
+                name_item = QTableWidgetItem(new_name)
+                name_item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.table.setItem(row, line_name_column, name_item)
 
     def rename_all_repeat_stations(self):
         """
@@ -1660,7 +1692,7 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         else:
             self.setWindowTitle('Rename files names')
 
-        self.columns = ['Old Name', 'New Name']
+        self.table_columns = ['Old Name', 'New Name']
         self.addEdit.setText('[n]')
         self.addEdit.textEdited.connect(self.update_table)
         self.removeEdit.textEdited.connect(self.update_table)
@@ -1676,8 +1708,8 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
 
     def create_table(self):
         # Creates and populates the table
-        self.table.setColumnCount(len(self.columns))
-        self.table.setHorizontalHeaderLabels(self.columns)
+        self.table.setColumnCount(len(self.table_columns))
+        self.table.setHorizontalHeaderLabels(self.table_columns)
         self.table.setSizeAdjustPolicy(
             QAbstractScrollArea.AdjustToContents)
         header = self.table.horizontalHeader()
@@ -1982,9 +2014,9 @@ class PEMFileSplitter(QWidget, Ui_PEMFileSplitterWidget):
             self.close()
 
     def create_table(self):
-        self.columns = ['Station']
-        self.table.setColumnCount(len(self.columns))
-        self.table.setHorizontalHeaderLabels(self.columns)
+        self.table_columns = ['Station']
+        self.table.setColumnCount(len(self.table_columns))
+        self.table.setHorizontalHeaderLabels(self.table_columns)
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
 

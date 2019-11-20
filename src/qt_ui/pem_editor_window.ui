@@ -153,6 +153,13 @@
          </property>
         </widget>
        </item>
+       <item row="3" column="0" colspan="2">
+        <widget class="QPushButton" name="auto_name_line_btn">
+         <property name="text">
+          <string>Auto-Name Lines/Holes</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
@@ -211,7 +218,7 @@
        <enum>QTabWidget::West</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="main_frame_gps_tab">
        <attribute name="title">
@@ -411,7 +418,7 @@
         <string>Data</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_7">
-        <item>
+        <item alignment="Qt::AlignHCenter">
          <widget class="QGroupBox" name="groupBox_2">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
@@ -426,7 +433,7 @@
            </size>
           </property>
           <property name="title">
-           <string>Data</string>
+           <string>Data Reversal</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -464,7 +471,7 @@
              </property>
             </widget>
            </item>
-           <item>
+           <item alignment="Qt::AlignHCenter">
             <widget class="QPushButton" name="reverseAllYButton">
              <property name="minimumSize">
               <size>
@@ -480,14 +487,14 @@
              </property>
             </widget>
            </item>
-           <item>
-            <widget class="QPushButton" name="rename_all_repeat_stations_btn">
-             <property name="text">
-              <string>Auto-Rename All Duplicate Stations</string>
-             </property>
-            </widget>
-           </item>
           </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="rename_all_repeat_stations_btn">
+          <property name="text">
+           <string>Auto-Rename All Repeat Stations</string>
+          </property>
          </widget>
         </item>
         <item>

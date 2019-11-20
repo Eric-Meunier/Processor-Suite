@@ -969,7 +969,10 @@ class PlanMap(MapPlotMethods):
                     if seg_x and seg_y and self.draw_hole_traces is True:
 
                         # Calculating tick indexes. Ticks are placed at evenly spaced depths.
-                        depths = np.linspace(min(seg_z), collar_z, 10)
+                        # depths = np.linspace(min(seg_z), collar_z, 10)  # Spaced such that there are 10 segments
+                        depths = np.arange(min(seg_z), collar_z+1, 50)  # Spaced every 50m
+
+                        # Find the index of the seg_z depth nearest each depths value.
                         indexes = [min(range(len(seg_z)), key=lambda i: abs(seg_z[i] - depth)) for depth in depths]
 
                         # Hole trace is plotted using marker positions so that they match perfectly.
