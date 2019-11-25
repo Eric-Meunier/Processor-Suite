@@ -835,7 +835,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             return
         else:
             pem_file = self.file_editor.average(pem_file)
-            self.window().statusBar().showMessage('File averaged.', 2000)
+            self.window().statusBar().showMessage('File(s) averaged.', 2000)
 
     def average_select_pem(self, all=False):
         """
@@ -863,7 +863,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             return
         else:
             pem_file = self.file_editor.split_channels(pem_file)
-            self.window().statusBar().showMessage('File split.', 2000)
+            self.window().statusBar().showMessage('File(s) split.', 2000)
 
     def split_channels_select_pem(self, all=False):
         """
@@ -1374,6 +1374,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fill_pem_row(pem_file, row)
 
     def refresh_table_row(self, pem_file, row):
+        """
+        Clear the row and fill in the PEM file's information
+        :param pem_file: PEMFile object
+        :param row: Corresponding row of the PEM file in the main table
+        :return: None
+        """
         self.table.blockSignals(True)
         for i, column in enumerate(self.table_columns):
             item = QTableWidgetItem('')
@@ -1392,6 +1398,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         split_col = self.table_columns.index('Split')
         suffix_col = self.table_columns.index('Suffix\nWarnings')
         repeat_col = self.table_columns.index('Repeat\nStations')
+        pem_has_gps = self.pem_files[row].has_all_gps()
 
         for i, column in enumerate(self.table_columns):
             item = self.table.item(row, i)
@@ -1418,11 +1425,16 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     else:
                         item.setForeground(QtGui.QColor('black'))
 
+        if not pem_has_gps:
+            self.color_row(self.table, row, 'magenta')
+
     def fill_pem_row(self, pem_file, row, special_cols_only=False):
         """
         Adds the information from a PEM file to the main table. Blocks the table signals while doing so.
         :param pem_file: PEMFile object
         :param row: int: row of the PEM file in the table
+        :param special_cols_only: bool: Whether to only fill in the information from the non-editable columns (i.e.
+        from the 'First Station' column to the end.
         :return: None
         """
         logging.info(f'PEMEditor - Adding PEM File {os.path.basename(pem_file.filepath)} to table')
@@ -1516,23 +1528,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.window().statusBar().showMessage(
                     f"File renamed to {str(new_value)}", 2000)
 
-        # Add first and last station
-        # special_cols = [self.table_columns.index(col) for col in ['Averaged','Split','Suffix\nWarnings','Repeat\nStations']]
+        # Spec cols are columns that shouldn't be edited manually, thus this re-fills the cells based on the
+        # information from the PEM file
         spec_cols = self.table_columns[self.table_columns.index('First\nStation'):]
         spec_col_nums = [self.table_columns.index(col) for col in spec_cols]
         if col in spec_col_nums:
             self.fill_pem_row(pem_file, row, special_cols_only=True)
-            # if col == self.table_columns.index('Averaged'):
-            #     value = 'Yes' if pem_file.is_averaged() else 'No'
-            # elif col == self.table_columns.index('Split'):
-            #     value = 'Yes' if pem_file.is_split() else 'No'
-            # elif col == self.table_columns.index('Suffix\nWarnings'):
-            #     value = str(info_widget.suffix_warnings)
-            # elif col == self.table_columns.index('Suffix\nWarnings'):
-            #     value = str(info_widget.num_repeat_stations)
-            # item = QTableWidgetItem(value)
-            # item.setTextAlignment(QtCore.Qt.AlignCenter)
-            # self.table.setItem(row, col, item)
 
         # self.color_table_row_text(row)
         self.check_for_table_changes(pem_file, row)
@@ -1650,7 +1651,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         return pem_file
 
-    def color_table_row(self, table, rowIndex, color, alpha=50):
+    def color_row(self, table, rowIndex, color, alpha=50):
         """
         Color an entire table row
         :param rowIndex: Int: Row of the table to color
@@ -1663,23 +1664,23 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         for j in range(table.columnCount()):
             table.item(rowIndex, j).setBackground(color)
         table.blockSignals(False)
-
-    def update_table_row_colors(self):
-        """
-        Signal slot: Colors the row of the table whose PEM file doesn't have all the GPS it should
-        :return: None
-        """
-        self.table.blockSignals(True)
-        for row in range(self.table.rowCount()):
-            pem_file = self.pem_files[row]
-            if not all([pem_file.has_collar_gps(), pem_file.has_geometry(), pem_file.has_loop_gps()]) or not all(
-                [pem_file.has_station_gps(), pem_file.has_loop_gps()]):
-                print(f'Coloring row {row} magenta')
-                self.color_table_row(self.table, row, 'magenta', alpha=50)
-            else:
-                print(f'Coloring row {row} white')
-                self.color_table_row(self.table, row, 'white', alpha=50)
-        self.table.blockSignals(False)
+    #
+    # def update_table_row_colors(self):
+    #     """
+    #     Signal slot: Colors the row of the table whose PEM file doesn't have all the GPS it should
+    #     :return: None
+    #     """
+    #     self.table.blockSignals(True)
+    #     for row in range(self.table.rowCount()):
+    #         pem_file = self.pem_files[row]
+    #         if not all([pem_file.has_collar_gps(), pem_file.has_geometry(), pem_file.has_loop_gps()]) or not all(
+    #             [pem_file.has_station_gps(), pem_file.has_loop_gps()]):
+    #             print(f'Coloring row {row} magenta')
+    #             self.color_table_row(self.table, row, 'magenta', alpha=50)
+    #         else:
+    #             print(f'Coloring row {row} white')
+    #             self.color_table_row(self.table, row, 'white', alpha=50)
+    #     self.table.blockSignals(False)
 
     # def update_repeat_stations_cells(self):
     #     """

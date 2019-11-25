@@ -150,11 +150,17 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
         self.stationGPSTable.cellChanged.connect(self.check_station_order)
         self.stationGPSTable.cellChanged.connect(self.check_missing_gps)
+        # self.stationGPSTable.cellChanged.connect(self.refresh_tables_signal.emit)
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
         self.stationGPSTable.itemSelectionChanged.connect(lambda: self.shiftStationGPSSpinbox.setValue(0))
 
+        # self.loopGPSTable.cellChanged.connect(self.refresh_tables_signal.emit)
         self.loopGPSTable.itemSelectionChanged.connect(self.toggle_loop_move_buttons)
         self.loopGPSTable.itemSelectionChanged.connect(lambda: self.shift_elevation_spinbox.setValue(0))
+
+        # self.collarGPSTable.cellChanged.connect(self.refresh_tables_signal.emit)
+
+        # self.geometryTable.cellChanged.connect(self.refresh_tables_signal.emit)
 
         self.dataTable.itemSelectionChanged.connect(lambda: self.shiftStationSpinbox.setValue(0))
         self.dataTable.cellChanged.connect(self.update_pem_from_table)
@@ -874,7 +880,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             add_tags()
         elif table == self.loopGPSTable:
             add_tags()
-        self.gps_changed_signal.emit()
+        self.refresh_tables_signal.emit()
 
     def remove_data_row(self):
         """

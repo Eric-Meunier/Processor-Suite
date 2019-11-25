@@ -78,6 +78,18 @@ class PEMFile:
         else:
             return False
 
+    def has_all_gps(self):
+        if 'borehole' in self.survey_type.lower():
+            if not all([self.has_loop_gps(), self.has_collar_gps(), self.has_geometry()]):
+                return False
+            else:
+                return True
+        if 'surface' in self.survey_type.lower() or 'squid' in self.survey_type.lower():
+            if not all([self.has_loop_gps(), self.has_station_gps()]):
+                return False
+            else:
+                return True
+
     def get_tags(self):
         return self.tags
 
