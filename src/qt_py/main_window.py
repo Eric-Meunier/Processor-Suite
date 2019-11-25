@@ -12,7 +12,7 @@ from src.pem.pem_editor import PEMEditorWindow
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.5.1'
+__version__ = '0.6.0'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader

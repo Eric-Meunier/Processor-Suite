@@ -584,7 +584,7 @@ class STEPPlotter(PlotMethods):
 
         draw_step_lines(figure, profile_data, hide_gaps=hide_gaps)
 
-        self.add_title(pem_file, component, figure, step=True)
+        self.add_title(pem_file, component, step=True)
         add_ylabel(profile_data, num_channels_to_plot)
         self.format_figure(figure, step=True)
         self.format_yaxis(pem_file, figure, step=True)
@@ -974,7 +974,7 @@ class PlanMap(MapPlotMethods):
 
                         # Calculating tick indexes. Ticks are placed at evenly spaced depths.
                         # depths = np.linspace(min(seg_z), collar_z, 10)  # Spaced such that there are 10 segments
-                        depths = np.arange(min(seg_z), collar_z+1, 50)  # Spaced every 50m
+                        depths = np.arange(collar_z, min(seg_z)-51, -50)  # Spaced every 50m, starting from the top
 
                         # Find the index of the seg_z depth nearest each depths value.
                         indexes = [min(range(len(seg_z)), key=lambda i: abs(seg_z[i] - depth)) for depth in depths]
@@ -2340,7 +2340,7 @@ class PEMPrinter:
         """
         Configure the step plot figure
         """
-        self.portrait_fig, (ax1, ax2, ax3, ax4) = self.portrait_fig.add_subplot(4, 1, num=1, sharex=True, clear=True)
+        self.portrait_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True)
         ax5 = ax4.twiny()
         ax5.get_shared_x_axes().join(ax4, ax5)
 

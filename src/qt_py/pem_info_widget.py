@@ -33,7 +33,10 @@ logging.info('PEMFileInfoWidget')
 
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
-    # loop_change_signal = QtCore.pyqtSignal()
+    # suffix_warning_signal = QtCore.pyqtSignal()
+    # repeat_stations_signal = QtCore.pyqtSignal()
+    # gps_changed_signal = QtCore.pyqtSignal()
+    refresh_tables_signal = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -48,7 +51,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
-        self.repeats_num = 0
+
+        self.num_repeat_stations = 0
+        self.suffix_warnings = 0
+
         self.setupUi(self)
         self.initActions()
         self.initSignals()
@@ -145,12 +151,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.cellChanged.connect(self.check_station_order)
         self.stationGPSTable.cellChanged.connect(self.check_missing_gps)
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
-
         self.stationGPSTable.itemSelectionChanged.connect(lambda: self.shiftStationGPSSpinbox.setValue(0))
-        self.loopGPSTable.itemSelectionChanged.connect(lambda: self.shift_elevation_spinbox.setValue(0))
-        self.dataTable.itemSelectionChanged.connect(lambda: self.shiftStationSpinbox.setValue(0))
 
         self.loopGPSTable.itemSelectionChanged.connect(self.toggle_loop_move_buttons)
+        self.loopGPSTable.itemSelectionChanged.connect(lambda: self.shift_elevation_spinbox.setValue(0))
+
+        self.dataTable.itemSelectionChanged.connect(lambda: self.shiftStationSpinbox.setValue(0))
         self.dataTable.cellChanged.connect(self.update_pem_from_table)
 
         # Spinboxes
@@ -303,6 +309,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             self.initTables()
             self.fill_info()
+            # self.gps_changed_signal.emit()
             return self
 
     def open_ri_file(self, filepath):
@@ -427,6 +434,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.check_station_duplicates()
             self.check_station_order()
             self.check_missing_gps()
+            # self.gps_changed_signal.emit()
             self.stationGPSTable.blockSignals(False)
         else:
             pass
@@ -565,6 +573,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         table_value = self.dataTable.item(table_row, table_col).text()
         data[table_row][column_keys[table_col]] = table_value
 
+        # if table_col == self.data_columns.index('Station'):
+        #     print("Emitting from update_pem_from_table")
+            # self.suffix_warning_signal.emit()
+            # self.repeat_stations_signal.emit()
         self.color_data_table()
         self.dataTable.blockSignals(False)
 
@@ -622,19 +634,22 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
             if 'surface' in self.survey_type.lower():
                 correct_suffix = most_common_suffix()
-
+                count = 0
                 for row in range(self.dataTable.rowCount()):
                     item = self.dataTable.item(row, self.data_columns.index('Station'))
                     if item:
                         station_suffix = re.findall('[NSEW]', item.text().upper())
                         if not station_suffix or station_suffix[0] != correct_suffix:
+                            count += 1
                             item.setForeground(QtGui.QColor('red'))
                         else:
                             item.setForeground(QtGui.QColor('black'))
+                self.suffix_warnings = count
+                # self.suffix_warning_signal.emit()
 
         def bolden_repeat_stations():
             """
-            Makes the station number cell bold if it ends with '1'
+            Makes the station number cell bold if it ends with either 1, 4, 5, 9.
             """
             repeats = 0
             boldFont = QtGui.QFont()
@@ -645,7 +660,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 item = self.dataTable.item(row, self.data_columns.index('Station'))
                 if item:
                     station_num = re.findall('\d+', item.text())[0]
-                    if station_num[-1] == '1' or station_num[-1] == '6':
+                    if station_num[-1] == '1' or station_num[-1] == '4' or station_num[-1] == '6' or station_num[-1] == '9':
                         repeats += 1
                         item.setFont(boldFont)
                     else:
@@ -654,8 +669,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         color_rows_by_component()
         color_wrong_suffix()
-        self.repeats_num = bolden_repeat_stations()
-        self.lcdRepeats.display(self.repeats_num)
+        self.num_repeat_stations = bolden_repeat_stations()
+        self.refresh_tables_signal.emit()
+        # self.num_repeat_stations_signal.emit()
+        self.lcdRepeats.display(self.num_repeat_stations)
 
     def fill_info(self):
         """
@@ -750,7 +767,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         Clear a given table
         """
-        logging.info(f'PEMFileInfoWidget - Clearing table {table}')
+        logging.info(f'PEMFileInfoWidget - Clearing table')
         table.blockSignals(True)
         while table.rowCount() > 0:
             table.removeRow(0)
@@ -857,6 +874,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             add_tags()
         elif table == self.loopGPSTable:
             add_tags()
+        self.gps_changed_signal.emit()
 
     def remove_data_row(self):
         """
@@ -1335,10 +1353,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         (i.e. any station ending in 1,4,6,9 to 0,5,5,0 respectively).
         :return: None
         """
-        if self.repeats_num > 0:
-            print('Renaming repeats')
+        if self.num_repeat_stations > 0:
+            self.window().statusBar().showMessage(f'{self.num_repeat_stations} repeat station(s) automatically renamed.', 2000)
             self.pem_file = self.file_editor.rename_repeats(self.pem_file)
             self.update_data_table()
+            self.refresh_tables_signal.emit()
         else:
             pass
 
