@@ -33,10 +33,7 @@ logging.info('PEMFileInfoWidget')
 
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
-    # suffix_warning_signal = QtCore.pyqtSignal()
-    # repeat_stations_signal = QtCore.pyqtSignal()
-    # gps_changed_signal = QtCore.pyqtSignal()
-    refresh_tables_signal = QtCore.pyqtSignal()
+    refresh_tables_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to refresh its main table.
 
     def __init__(self):
         super().__init__()
@@ -150,17 +147,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
         self.stationGPSTable.cellChanged.connect(self.check_station_order)
         self.stationGPSTable.cellChanged.connect(self.check_missing_gps)
-        # self.stationGPSTable.cellChanged.connect(self.refresh_tables_signal.emit)
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
         self.stationGPSTable.itemSelectionChanged.connect(lambda: self.shiftStationGPSSpinbox.setValue(0))
 
-        # self.loopGPSTable.cellChanged.connect(self.refresh_tables_signal.emit)
         self.loopGPSTable.itemSelectionChanged.connect(self.toggle_loop_move_buttons)
         self.loopGPSTable.itemSelectionChanged.connect(lambda: self.shift_elevation_spinbox.setValue(0))
-
-        # self.collarGPSTable.cellChanged.connect(self.refresh_tables_signal.emit)
-
-        # self.geometryTable.cellChanged.connect(self.refresh_tables_signal.emit)
 
         self.dataTable.itemSelectionChanged.connect(lambda: self.shiftStationSpinbox.setValue(0))
         self.dataTable.cellChanged.connect(self.update_pem_from_table)
@@ -315,7 +306,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             self.initTables()
             self.fill_info()
-            # self.gps_changed_signal.emit()
             return self
 
     def open_ri_file(self, filepath):
@@ -651,7 +641,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                         else:
                             item.setForeground(QtGui.QColor('black'))
                 self.suffix_warnings = count
-                # self.suffix_warning_signal.emit()
 
         def bolden_repeat_stations():
             """
@@ -677,7 +666,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         color_wrong_suffix()
         self.num_repeat_stations = bolden_repeat_stations()
         self.refresh_tables_signal.emit()
-        # self.num_repeat_stations_signal.emit()
         self.lcdRepeats.display(self.num_repeat_stations)
 
     def fill_info(self):

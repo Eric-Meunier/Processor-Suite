@@ -1132,11 +1132,13 @@ class PlanMap(MapPlotMethods):
             def get_scale_factor():
                 # num_digit = len(str(int(current_scale)))  # number of digits in number
                 num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
-                scale_nums = [1., 1.25, 1.5, 2., 5.]
+                scale_nums = [1., 1.25, 1.5, 2., 2.5, 5.]
                 possible_scales = [num * 10 ** num_digit for num in
                                    scale_nums + list(map(lambda x: x * 10, scale_nums))]
                 new_scale = min(filter(lambda x: x > current_scale * 1.30, possible_scales),
                                 key=lambda x: x - current_scale * 1.30)
+                if new_scale == 1500:
+                    new_scale = 2000
                 self.map_scale = new_scale
                 scale_factor = new_scale / current_scale
                 return scale_factor
