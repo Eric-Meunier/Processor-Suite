@@ -796,6 +796,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Sort the PEM files (and their associated files/widget) in the main table.
         :return: None
         """
+
+        def alphaNumOrder(string):
+            """ Returns all numbers on 5 digits to let sort the string with numeric order.
+            Ex: alphaNumOrder("a6b12.125")  ==> "a00006b00012.00125"
+            """
+            return ''.join([format(int(x), '05d') if x.isdigit()
+                            else x for x in re.split(r'(\d+)', string)])
+
         if len(self.pem_files) > 0:
             # Cannot simply sort the widgets in stackedWidget so they are removed and re-added.
             [self.stackedWidget.removeWidget(widget) for widget in self.pem_info_widgets]
@@ -803,8 +811,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             # Sorting the pem_files and pem_file_widgets using the pem_file basename as key.
             sorted_files = [(pem_file, piw) for pem_file, piw in
                             sorted(zip(self.pem_files, self.pem_info_widgets),
-                                   key=lambda pair: os.path.basename(pair[0].filepath),
+                                   key=lambda pair: alphaNumOrder(os.path.basename(pair[0].filepath)),
                                    reverse=False)]
+
             self.pem_files = [pair[0] for pair in sorted_files]
             self.pem_info_widgets = [pair[1] for pair in sorted_files]
             [self.stackedWidget.addWidget(widget) for widget in self.pem_info_widgets]
@@ -979,6 +988,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :param pem_files: List of PEMFile objects
         :return: Single merged PEMFile object
         """
+
         # logging.info('PEMEditor - Merging PEM Files')
 
         # Check that all selected files split or all un-split.
@@ -1058,7 +1068,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if backup is True:
             pem_file.old_filepath = os.path.join(file_dir, file_name + extension)
-            file_name = '[Backup]'+file_name
+            file_name = '[Backup]' + file_name
             extension += '.bak'
 
         # # If the file is not being exported, add the '[M]' tag if the file was merged.
@@ -1157,7 +1167,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
-    def export_pem_files(self, export_final=False, all=False):
+    def export_pem_files(self, export_final=False, all=True):
         """
         Saves all PEM files to a desired location (keeps them opened) and removes any tags.
         :return: None
@@ -1166,7 +1176,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pem_files, rows = self.get_selected_pem_files()
         else:
             pem_files, rows = self.pem_files, range(self.table.rowCount())
-        
+
         self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
         self.dialog.setDirectory(default_path)
@@ -1703,6 +1713,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         for j in range(table.columnCount()):
             table.item(rowIndex, j).setBackground(color)
         table.blockSignals(False)
+
     #
     # def update_table_row_colors(self):
     #     """
@@ -1939,7 +1950,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 widget.rename_repeat_stations()
                 self.refresh_table_row(self.pem_files[i], i)
             # self.refresh_table()
-            self.window().statusBar().showMessage(f'{num_repeat_stations} repeat station(s) automatically renamed.', 2000)
+            self.window().statusBar().showMessage(f'{num_repeat_stations} repeat station(s) automatically renamed.',
+                                                  2000)
 
     def toggle_share_client(self):
         if self.share_client_cbox.isChecked():
