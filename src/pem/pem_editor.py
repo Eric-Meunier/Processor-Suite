@@ -73,6 +73,14 @@ def exception_hook(exctype, value, traceback):
 sys.excepthook = exception_hook
 
 
+def alpha_num_sort(string):
+    """ Returns all numbers on 5 digits to let sort the string with numeric order.
+    Ex: alphaNumOrder("a6b12.125")  ==> "a00006b00012.00125"
+    """
+    return ''.join([format(int(x), '05d') if x.isdigit()
+                    else x for x in re.split(r'(\d+)', string)])
+
+
 class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     # logging.info('PEMEditor')
 
@@ -670,6 +678,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if len(self.pem_files) > 0:
                 # self.window().statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
                 self.fill_share_range()
+        self.sort_files()
             # self.update_table_row_colors()
             # self.update_repeat_stations_cells()
             # self.update_suffix_warnings_cells()
@@ -797,13 +806,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
 
-        def alphaNumOrder(string):
-            """ Returns all numbers on 5 digits to let sort the string with numeric order.
-            Ex: alphaNumOrder("a6b12.125")  ==> "a00006b00012.00125"
-            """
-            return ''.join([format(int(x), '05d') if x.isdigit()
-                            else x for x in re.split(r'(\d+)', string)])
-
         if len(self.pem_files) > 0:
             # Cannot simply sort the widgets in stackedWidget so they are removed and re-added.
             [self.stackedWidget.removeWidget(widget) for widget in self.pem_info_widgets]
@@ -811,7 +813,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             # Sorting the pem_files and pem_file_widgets using the pem_file basename as key.
             sorted_files = [(pem_file, piw) for pem_file, piw in
                             sorted(zip(self.pem_files, self.pem_info_widgets),
-                                   key=lambda pair: alphaNumOrder(os.path.basename(pair[0].filepath)),
+                                   key=lambda pair: alpha_num_sort(os.path.basename(pair[0].filepath)),
                                    reverse=False)]
 
             self.pem_files = [pair[0] for pair in sorted_files]
@@ -2264,10 +2266,12 @@ class BatchRIImporter(QWidget):
             self.table.setItem(row_pos, 0, item)
 
     def open_ri_files(self, ri_filepaths):
+        ri_filepaths.sort(key=lambda path: alpha_num_sort(os.path.basename(path)), reverse=False)
         self.ri_files = []
 
         if len(ri_filepaths) == len(self.pem_files):
 
+            # Only for boreholes, match up the RI1 file for Z, and RI2 file for XY
             if all(['borehole' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
                 ri_files = [self.ri_parser().open(filepath) for filepath in ri_filepaths]
 
@@ -2772,10 +2776,10 @@ def main():
     # section.show()
     # mw.share_loop_cbox.setChecked(False)
     # mw.output_lin_cbox.setChecked(False)
-    mw.output_log_cbox.setChecked(False)
+    # mw.output_log_cbox.setChecked(False)
     # mw.output_step_cbox.setChecked(False)
-    mw.output_section_cbox.setChecked(False)
-    mw.output_plan_map_cbox.setChecked(False)
+    # mw.output_section_cbox.setChecked(False)
+    # mw.output_plan_map_cbox.setChecked(False)
     # mw.print_plots()
     # map = Map3DViewer(pem_files)
     # map.show()
