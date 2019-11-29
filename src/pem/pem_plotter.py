@@ -516,10 +516,7 @@ class STEPPlotter(PlotMethods):
 
             for i, key in enumerate(keys):
                 interp_data, x_intervals = self.get_interp_data(profile_data[key], stations, survey_type,
-                                                           hide_gaps=hide_gaps)
-                mask = np.isclose(interp_data, interp_data.astype('float64'))
-                x_intervals = x_intervals[mask]
-                interp_data = interp_data[mask]
+                                                                hide_gaps=hide_gaps)
 
                 if i < 3:  # Plotting TP, PP, and S1 to the first axes
                     ax = fig.axes[0]
@@ -547,9 +544,6 @@ class STEPPlotter(PlotMethods):
             # Plotting the off-time channels to the fourth axes
             for i, channel in enumerate(off_time_channel_data[-num_channels_to_plot:]):
                 interp_data, x_intervals = self.get_interp_data(channel, stations, survey_type, hide_gaps=hide_gaps)
-                mask = np.isclose(interp_data, interp_data.astype('float64'))
-                x_intervals = x_intervals[mask]
-                interp_data = interp_data[mask]
                 ax = fig.axes[3]
                 ax.plot(x_intervals, interp_data, color=line_color)
                 annotate_line(ax, str(num_off_time_channels - i), interp_data, x_intervals, offset)
