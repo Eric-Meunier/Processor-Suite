@@ -110,6 +110,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.initActions()
         self.initSignals()
+        self.allow_signals = True
 
         self.stackedWidget.hide()
         self.pemInfoDockWidget.hide()
@@ -560,6 +561,19 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
         self.open_files(urls)
 
+    def block_signals(self):
+        print('Blocking all signals')
+        for thing in [self.table, self.client_edit, self.grid_edit, self.loop_edit, self.min_range_edit,
+                            self.max_range_edit]:
+            thing.blockSignals(True)
+
+    def enable_signals(self):
+        if self.allow_signals:
+            print('Enabling all signals')
+            for thing in [self.table, self.client_edit, self.grid_edit, self.loop_edit, self.min_range_edit,
+                                self.max_range_edit]:
+                thing.blockSignals(False)
+
     def open_files(self, files):
         """
         First step of opening a PEM, GPS, RI, GPX, or INF file.
@@ -598,10 +612,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def open_pem_files(self, pem_files):
         """
         Action of opening a PEM file. Will not open a PEM file if it is already opened.
-        :param pem_files: Filepaths for the PEM Files
+        :param pem_files: list: Filepaths for the PEM Files
         """
-
-        # logging.info('PEMEditor - Opening PEM Files')
 
         def is_opened(pem_file):
             # pem_file is the pem_file filepath, not the PEMFile object.
@@ -618,9 +630,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
+        self.block_signals()
+        self.allow_signals = False
         self.stackedWidget.show()
         self.pemInfoDockWidget.show()
-        # self.table.blockSignals(True)
 
         for pem_file in pem_files:
             if isinstance(pem_file, PEMFile):
@@ -634,6 +647,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     pem_file = self.parser.parse(pem_file)
                     print(f'Opening {os.path.basename(pem_file.filepath)}')
                 try:
+                    pemInfoWidget.blockSignals(True)
                     pem_widget = pemInfoWidget.open_file(pem_file, parent=self)
                     pem_widget.tabs.setCurrentIndex(self.tab_num)
                     pem_widget.tabs.currentChanged.connect(self.change_pem_info_tab)
@@ -642,7 +656,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.stackedWidget.addWidget(pem_widget)
 
                     self.add_pem_to_table(pem_file)
-
+                    pemInfoWidget.blockSignals(False)
                     # Fill in the GPS System information based on the existing GEN tag if it's not yet filled.
                     for note in pem_file.notes:
                         if '<GEN> CRS:' in note:
@@ -663,7 +677,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
                     # Fill the shared header and station info if it's the first PEM File opened
                     if len(self.pem_files) == 1:
-                        # TODO This section refreshes the table after each setText. Because of signals?
+                        # Block the signals or else the table gets refreshed on every edit.
+                        # for edit_widget in [self.client_edit, self.grid_edit, self.loop_edit, self.min_range_edit,
+                        #                     self.max_range_edit]:
+                        #     edit_widget.blockSignals(True)
+
                         if self.client_edit.text() == '':
                             self.client_edit.setText(self.pem_files[0].header['Client'])
                         if self.grid_edit.text() == '':
@@ -679,18 +697,22 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                         if self.max_range_edit.text() == '':
                             max_range = str(max(chain.from_iterable(all_stations)))
                             self.max_range_edit.setText(max_range)
+                        # Re-enable the signals.
+                        # for edit_widget in [self.client_edit, self.grid_edit, self.loop_edit, self.min_range_edit,
+                        #                     self.max_range_edit]:
+                            # edit_widget.blockSignals(False)
+                        # self.refresh_table()
                 except Exception as e:
-                    # logging.info(str(e))
                     self.message.information(None, 'PEMEditor: open_pem_files error', str(e))
 
-            if len(self.pem_files) > 0:
-                # self.window().statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
-                self.fill_share_range()
+        if len(self.pem_files) > 0:
+            self.fill_share_range()
         self.sort_files()
-        # self.table.blockSignals(False)
-            # self.update_table_row_colors()
-            # self.update_repeat_stations_cells()
-            # self.update_suffix_warnings_cells()
+        self.allow_signals = True
+        self.enable_signals()
+        # self.update_table_row_colors()
+        # self.update_repeat_stations_cells()
+        # self.update_suffix_warnings_cells()
 
     def open_gps_files(self, gps_files):
         """
@@ -1414,6 +1436,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # header.setSectionResizeMode(2, QHeaderView.Stretch)
         # header.setSectionResizeMode(3, QHeaderView.Stretch)
 
+    def add_pem_to_table(self, pem_file):
+        """
+        Add a new row to the table and fill in the row with the PEM file's information.
+        :param pem_file: PEMFile object
+        :return: None
+        """
+        print(f"Adding a new row to table for PEM file {os.path.basename(pem_file.filepath)}")
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        self.fill_pem_row(pem_file, row)
+
     def refresh_table(self, single_row=False):
         """
         Deletes and re-populates the table rows with the new information. Blocks table signals while doing so.
@@ -1421,12 +1454,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         """
         # logging.info('PEMEditor - Refreshing PEMEditor table')
         if len(self.pem_files) > 0:
-            print('Refreshing table')
+
             self.table.blockSignals(True)
             if single_row:
                 index = self.stackedWidget.currentIndex()
+                print(f'Refreshing table row {index}')
                 self.refresh_table_row(self.pem_files[index], index)
             else:
+                print('Refreshing entire table')
                 while self.table.rowCount() > 0:
                     self.table.removeRow(0)
                 for row, pem_file in enumerate(self.pem_files):
@@ -1434,19 +1469,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 # self.update_table_row_colors()
                 # self.update_repeat_stations_cells()
                 # self.update_suffix_warnings_cells()
-            self.table.blockSignals(False)
+            if self.allow_signals:
+                self.table.blockSignals(False)
         else:
             pass
-
-    def add_pem_to_table(self, pem_file):
-        """
-        Add a new row to the table and fill in the row with the PEM file's information.
-        :param pem_file: PEMFile object
-        :return: None
-        """
-        row = self.table.rowCount()
-        self.table.insertRow(row)
-        self.fill_pem_row(pem_file, row)
 
     def refresh_table_row(self, pem_file, row):
         """
@@ -1461,7 +1487,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, i, item)
         self.fill_pem_row(pem_file, row)
-        self.table.blockSignals(False)
+        if self.allow_signals:
+            self.table.blockSignals(False)
 
     def color_table_row_text(self, row):
         """
@@ -1469,6 +1496,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :param row: Row of the main table to check and color
         :return: None
         """
+        self.table.blockSignals(True)
         average_col = self.table_columns.index('Averaged')
         split_col = self.table_columns.index('Split')
         suffix_col = self.table_columns.index('Suffix\nWarnings')
@@ -1503,6 +1531,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if not pem_has_gps:
             self.color_row(self.table, row, 'magenta')
 
+        if self.allow_signals:
+            self.table.blockSignals(False)
+
     def fill_pem_row(self, pem_file, row, special_cols_only=False):
         """
         Adds the information from a PEM file to the main table. Blocks the table signals while doing so.
@@ -1512,7 +1543,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         from the 'First Station' column to the end.
         :return: None
         """
-        logging.info(f'PEMEditor - Adding PEM File {os.path.basename(pem_file.filepath)} to table')
+        print(f"Filling info from PEM File {os.path.basename(pem_file.filepath)} to table")
         self.table.blockSignals(True)
 
         # pem_file_index = self.pem_files.index(pem_file)
@@ -1562,7 +1593,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.color_table_row_text(row)
         self.check_for_table_changes(pem_file, row)
         self.check_for_table_anomalies()
-        self.table.blockSignals(False)
+        if self.allow_signals:
+            self.table.blockSignals(False)
 
     def table_value_changed(self, row, col):
         """
@@ -1615,7 +1647,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # self.color_table_row_text(row)
         self.check_for_table_changes(pem_file, row)
         self.check_for_table_anomalies()
-        self.table.blockSignals(False)
+        if self.allow_signals:
+            self.table.blockSignals(False)
 
     def check_for_table_anomalies(self):
         """
@@ -1636,7 +1669,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.table.item(row, date_column).setForeground(QtGui.QColor('red'))
                 else:
                     self.table.item(row, date_column).setForeground(QtGui.QColor('black'))
-        self.table.blockSignals(False)
+        if self.allow_signals:
+            self.table.blockSignals(False)
 
     def check_for_table_changes(self, pem_file, row):
         """
@@ -1646,6 +1680,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         # logging.info('PEMEditor - Checking for table changes')
+        self.table.blockSignals(True)
         boldFont = QtGui.QFont()
         boldFont.setBold(True)
         normalFont = QtGui.QFont()
@@ -1677,6 +1712,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 else:
                     self.table.item(row, column).setFont(normalFont)
         self.table.resizeColumnsToContents()
+
+        if self.allow_signals:
+            self.table.blockSignals(False)
 
     def update_pem_file_from_table(self, pem_file, table_row, filepath=None):
         """
@@ -1740,7 +1778,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         color.setAlpha(alpha)
         for j in range(table.columnCount()):
             table.item(rowIndex, j).setBackground(color)
-        table.blockSignals(False)
+        if self.allow_signals:
+            table.blockSignals(False)
 
     #
     # def update_table_row_colors(self):
@@ -1868,7 +1907,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 max(chain.from_iterable(all_stations)))
             self.min_range_edit.setText(min_range)
             self.max_range_edit.setText(max_range)
-            # self.update_table()
         else:
             self.min_range_edit.setText('')
             self.max_range_edit.setText('')

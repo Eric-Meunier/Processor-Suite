@@ -297,7 +297,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param parent: parent widget (PEMEditor)
         :return: None
         """
-        logging.info(f'PEMFileInfoWidget - Opening PEM File {os.path.basename(pem_file.filepath)}')
+        print(f'PEMFileInfoWidget - Opening PEM File {os.path.basename(pem_file.filepath)}')
         self.pem_file = pem_file
         self.parent = parent
         self.survey_type = self.pem_file.survey_type
