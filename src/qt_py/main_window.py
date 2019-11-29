@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QDesktopWidget, QMessage
                              QFileDialog, QAction, QToolBar)
 
 from src.damp.db_plot import DBPlot
-from src.pem.pem_editor import PEMEditorWindow
+from src.qt_py.pem_editor import PEMEditorWindow
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 

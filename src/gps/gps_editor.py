@@ -24,7 +24,7 @@ else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
 samples_path = os.path.join(application_path, "sample_files")
-logging.basicConfig(filename=r'C:\_Data\2019\_Mowgli Testing\log.log', level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+logging.basicConfig(filename=r'C:\_Data\2019\_Mowgli Testing\log.log', level= logging.info, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 
 class GPSEditor:
@@ -34,11 +34,11 @@ class GPSEditor:
     """
 
     def __init__(self):
-        # logging.info('GPSEditor')
+        # # logging.info('GPSEditor')
         self.parser = GPSParser()
 
     def sort_loop(self, gps_data):
-        logging.info('GPSEditor - Sorting loop GPS')
+        # logging.info('GPSEditor - Sorting loop GPS')
         loop_gps = self.parser.parse_loop_gps(gps_data)
         if not loop_gps:
             return None
@@ -72,7 +72,7 @@ class GPSEditor:
         loop_gps = self.parser.parse_loop_gps(gps)
         if not loop_gps:
             return None
-        logging.info('GPSEditor - Retrieving loop GPS center point')
+        # logging.info('GPSEditor - Retrieving loop GPS center point')
         loop_coords_tuples = []  # Easting and Northing
 
         # Splitting up the coordinates from a string to something usable
@@ -87,7 +87,7 @@ class GPSEditor:
         return center
 
     def sort_line(self, gps):
-        logging.info('GPSEditor - Sorting line GPS')
+        # logging.info('GPSEditor - Sorting line GPS')
         station_gps = self.parser.parse_station_gps(gps)
         if not station_gps:
             return None
@@ -138,7 +138,7 @@ class GPSEditor:
         :param gps_data: List without tags
         :return: List of strings
         """
-        logging.info('GPSEditor - Formatting GPS')
+        # logging.info('GPSEditor - Formatting GPS')
 
         def format_row(row):
             for i, item in enumerate(row):
@@ -157,7 +157,7 @@ class GPSEditor:
         return formatted_gps
 
     def cull_loop(self, gps):
-        logging.info('GPSEditor - Culling loop GPS')
+        # logging.info('GPSEditor - Culling loop GPS')
 
         loop_gps = self.parser.parse_loop_gps(gps)
         if loop_gps:
@@ -169,30 +169,30 @@ class GPSEditor:
         return loop_gps
 
     def get_station_gps(self, gps):
-        logging.info('GPSEditor - Retrieving station GPS')
+        # logging.info('GPSEditor - Retrieving station GPS')
         return self.format_gps(self.parser.parse_station_gps(gps))
 
     def get_loop_gps(self, gps):
-        logging.info('GPSEditor - Retrieving loop GPS')
+        # logging.info('GPSEditor - Retrieving loop GPS')
         return self.format_gps(self.parser.parse_loop_gps(gps))
 
     def get_sorted_station_gps(self, gps):
-        logging.info('GPSEditor - Retrieving sorted station GPS')
+        # logging.info('GPSEditor - Retrieving sorted station GPS')
         return self.sort_line(gps)
 
     def get_sorted_loop_gps(self, gps):
-        logging.info('GPSEditor - Retrieving sorted loop GPS')
+        # logging.info('GPSEditor - Retrieving sorted loop GPS')
         return self.sort_loop(gps)
 
     def get_geometry(self, file):
-        logging.info('GPSEditor - Retrieving segments')
+        # logging.info('GPSEditor - Retrieving segments')
         segments = self.parser.parse_segments(file)
         if not segments:
             return []
         return segments
 
     def get_collar_gps(self, file):
-        logging.info('GPSEditor - Retrieving collar GPS')
+        # logging.info('GPSEditor - Retrieving collar GPS')
         gps = self.parser.parse_collar_gps(file)
         if not gps:
             return []
@@ -205,7 +205,7 @@ class GPSParser:
     """
 
     def __init__(self):
-        # logging.info('GPSParser')
+        # # logging.info('GPSParser')
         # self.re_station_gps = re.compile(
         #     r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
         self.re_station_gps = re.compile(
@@ -295,7 +295,7 @@ class GPSParser:
 class INFParser:
 
     def get_crs(self, filepath):
-        logging.info('INFParser')
+        # logging.info('INFParser')
         crs = {}
         with open(filepath, 'r') as in_file:
             file = in_file.read()
@@ -324,7 +324,7 @@ class GPXEditor:
         :param gpx_filepath: filepath of a GPX file
         :return: List of rows of UTM gps with elevation, units (0 or 1) and comment/name from the GPX waypoint
         """
-        logging.info('GPXEditor - Converting GPX file coordinates to UTM')
+        # logging.info('GPXEditor - Converting GPX file coordinates to UTM')
         gps = self.parse_gpx(gpx_filepath)
         zone = None
         hemisphere = None

@@ -164,17 +164,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.saveFiles.setStatusTip("Save all files")
         self.saveFiles.triggered.connect(lambda: self.save_pem_file_selection(all=True))
 
-        self.export_pems_action = QAction("&Save Files To...", self)
+        self.export_pems_action = QAction("&Export Files...", self)
         self.export_pems_action.setShortcut("F11")
-        self.export_pems_action.setStatusTip("Save all files at specified location.")
+        self.export_pems_action.setStatusTip("Export all files to a specified location.")
         self.export_pems_action.triggered.connect(lambda: self.export_pem_files(all=True))
 
-        self.export_pem_files_action = QAction("&Export Final PEM Files", self)
+        self.export_pem_files_action = QAction("&Export Final PEM Files...", self)
         self.export_pem_files_action.setShortcut("F9")
         self.export_pem_files_action.setStatusTip("Export the final PEM files")
         self.export_pem_files_action.triggered.connect(lambda: self.export_pem_files(export_final=True))
 
-        self.print_plots_action = QAction("&Print Plots to PDF", self)
+        self.print_plots_action = QAction("&Print Plots to PDF...", self)
         self.print_plots_action.setShortcut("F12")
         self.print_plots_action.setStatusTip("Print plots to a PDF file")
         self.print_plots_action.triggered.connect(self.print_plots)
@@ -195,6 +195,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.sort_files_action.setStatusTip("Sort all files in the table.")
         self.sort_files_action.triggered.connect(self.sort_files)
 
+        self.backup_files_action = QAction("&Backup Files", self)
+        # self.sortFiles.setShortcut("Shift+Del")
+        self.backup_files_action.setStatusTip("Backup all files in the table.")
+        self.backup_files_action.triggered.connect(self.backup_files)
+
         self.import_ri_files_action = QAction("&Import RI Files", self)
         self.import_ri_files_action.setShortcut("Ctrl+I")
         self.import_ri_files_action.setStatusTip("Import multiple RI files")
@@ -204,7 +209,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.saveFiles)
         self.fileMenu.addAction(self.export_pems_action)
-        self.fileMenu.addAction(self.sort_files_action)
+        self.fileMenu.addAction(self.backup_files_action)
+        # self.fileMenu.addAction(self.sort_files_action)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.clearFiles)
         self.fileMenu.addSeparator()
@@ -614,6 +620,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.stackedWidget.show()
         self.pemInfoDockWidget.show()
+        # self.table.blockSignals(True)
 
         for pem_file in pem_files:
             if isinstance(pem_file, PEMFile):
@@ -633,6 +640,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.pem_files.append(pem_file)
                     self.pem_info_widgets.append(pem_widget)
                     self.stackedWidget.addWidget(pem_widget)
+
                     self.add_pem_to_table(pem_file)
 
                     # Fill in the GPS System information based on the existing GEN tag if it's not yet filled.
@@ -679,6 +687,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 # self.window().statusBar().showMessage('Opened {0} PEM Files'.format(len(files)), 2000)
                 self.fill_share_range()
         self.sort_files()
+        # self.table.blockSignals(False)
             # self.update_table_row_colors()
             # self.update_repeat_stations_cells()
             # self.update_suffix_warnings_cells()
@@ -805,7 +814,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Sort the PEM files (and their associated files/widget) in the main table.
         :return: None
         """
-
         if len(self.pem_files) > 0:
             # Cannot simply sort the widgets in stackedWidget so they are removed and re-added.
             [self.stackedWidget.removeWidget(widget) for widget in self.pem_info_widgets]
@@ -818,9 +826,22 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             self.pem_files = [pair[0] for pair in sorted_files]
             self.pem_info_widgets = [pair[1] for pair in sorted_files]
+            # Re-adding the pem_info_widgets
             [self.stackedWidget.addWidget(widget) for widget in self.pem_info_widgets]
-
             self.refresh_table()
+
+    def backup_files(self):
+        """
+        Create a backup (.bak) file for each opened PEM file, saved in a backup folder.
+        :return: None
+        """
+        logging.info('PEMEditor - Backing Up All Files')
+        if len(self.pem_files) > 0:
+            for pem_file in self.pem_files:
+                print(f"Backing up {os.path.basename(pem_file.filepath)}")
+                pem_file = copy.deepcopy(pem_file)
+                self.save_pem_file(pem_file, backup=True, remove_old=False)
+            self.window().statusBar().showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
 
     def get_selected_pem_files(self):
         """
@@ -855,28 +876,28 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Opens the PEMFileSplitter window, which will allow selected stations to be saved as a new PEM file.
         :return: None
         """
-        # logging.info('PEMEditor - Extract stations')
+        logging.info('PEMEditor - Extract stations')
         pem_file, row = self.get_selected_pem_files()
         self.pem_file_splitter = PEMFileSplitter(pem_file[0], parent=self)
 
-    def average_pem_data(self, pem_file):
-        """
-        Average the data PEM File
-        :param pem_file: PEM File object
-        :return: PEM File object with the data averaged
-        """
-        # logging.info('PEMEditor - Averaging PEM File data')
-        if pem_file.is_averaged():
-            self.window().statusBar().showMessage('File is already averaged.', 2000)
-            return
-        else:
-            pem_file = self.file_editor.average(pem_file)
-            self.window().statusBar().showMessage('File(s) averaged.', 2000)
+    # def average_pem_data(self, pem_file):
+    #     """
+    #     Average the data PEM File
+    #     :param pem_file: PEM File object
+    #     :return: PEM File object with the data averaged
+    #     """
+    #     # logging.info('PEMEditor - Averaging PEM File data')
+    #     if pem_file.is_averaged():
+    #         # self.window().statusBar().showMessage('File is already averaged.', 2000)
+    #         return
+    #     else:
+    #         pem_file = self.file_editor.average(pem_file)
+    #         # self.window().statusBar().showMessage('File(s) averaged.', 2000)
 
     def average_select_pem(self, all=False):
         """
         Average the data of each PEM File selected
-        :param pem_file: PEM File object
+        :param all: Bool: Whether or not to average all opened PEM files.
         :return: PEM File object with the data averaged
         """
         if not all:
@@ -884,75 +905,81 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             pem_files, rows = self.pem_files, range(self.table.rowCount())
         for pem_file, row in zip(pem_files, rows):
-            self.average_pem_data(pem_file)
-            self.refresh_table_row(pem_file, row)
+            if not pem_file.is_averaged():
+                print(f"Averaging {os.path.basename(pem_file.filepath)}")
+                # Save a backup of the un-averaged file first
+                self.save_pem_file(pem_file, backup=True, tag='[-A]')
+                pem_file = self.file_editor.average(pem_file)
+                self.refresh_table_row(pem_file, row)
 
-    def split_pem_channels(self, pem_file):
-        """
-        Removes the on-time channels of the PEM File
-        :param pem_file: PEM File object
-        :return: PEM File object with the on-time channels removed from the data
-        """
-        # logging.info('PEMEditor - Splitting PEM File channels')
-        if pem_file.is_split():
-            self.window().statusBar().showMessage('File is already split.', 2000)
-            return
-        else:
-            pem_file = self.file_editor.split_channels(pem_file)
-            self.window().statusBar().showMessage('File(s) split.', 2000)
+    # def split_pem_channels(self, pem_file):
+    #     """
+    #     Removes the on-time channels of the PEM File
+    #     :param pem_file: PEM File object
+    #     :return: PEM File object with the on-time channels removed from the data
+    #     """
+    #     # logging.info('PEMEditor - Splitting PEM File channels')
+    #     if pem_file.is_split():
+    #         self.window().statusBar().showMessage('File is already split.', 2000)
+    #         return
+    #     else:
+    #         pem_file = self.file_editor.split_channels(pem_file)
+    #         self.window().statusBar().showMessage('File(s) split.', 2000)
 
     def split_channels_select_pem(self, all=False):
         """
         Removes the on-time channels of each selected PEM File
-        :param pem_file: PEM File object
-        :return: PEM File object with the on-time channels removed from the data
+        :param all: bool: Whether or not to split channels for all opened PEM files or only selected ones.
+        :return: None
         """
         if not all:
             pem_files, rows = self.get_selected_pem_files()
         else:
             pem_files, rows = self.pem_files, range(self.table.rowCount())
+
         for pem_file, row in zip(pem_files, rows):
-            self.split_pem_channels(pem_file)
+            print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
+            self.save_pem_file(pem_file, backup=True, tag='[-S]')
+            pem_file = self.file_editor.split_channels(pem_file)
             self.refresh_table_row(pem_file, row)
 
-    def scale_coil_area(self, pem_file, new_coil_area):
+    # def scale_coil_area(self, pem_file, new_coil_area):
+    #     """
+    #     Scales the data according to the coil area change
+    #     :param pem_file: PEM File object
+    #     :param new_coil_area: Desired coil area
+    #     :return: PEM File with the data scaled  by the coil area change
+    #     """
+    #     pem_file = self.file_editor.scale_coil_area(pem_file, new_coil_area)
+
+    def scale_coil_area_selection(self, coil_area=None, all=False):
         """
         Scales the data according to the coil area change
-        :param pem_file: PEM File object
-        :param new_coil_area: Desired coil area
-        :return: PEM File with the data scaled  by the coil area change
+        :param all: bool: Whether or not to scale coil area for all opened PEM files or only selected ones.
         """
-        # logging.info('PEMEditor - Scaling PEM File data by coil area')
-        pem_file = self.file_editor.scale_coil_area(pem_file, new_coil_area)
-        # self.refresh_table()
+        if not coil_area:
+            coil_area, okPressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:")
+            if not okPressed:
+                return
+        if not all:
+            pem_files, rows = self.get_selected_pem_files()
+        else:
+            pem_files, rows = self.pem_files, range(self.table.rowCount())
+        for pem_file, row in zip(pem_files, rows):
+            print(f"Performing coil area change for {os.path.basename(pem_file.filepath)}")
+            coil_column = self.table_columns.index('Coil Area')
+            pem_file = self.file_editor.scale_coil_area(pem_file, coil_area)
+            self.table.item(row, coil_column).setText(str(coil_area))
+            self.refresh_table_row(pem_file, row)
 
-    def scale_coil_area_selection(self, all=False):
-        """
-        Scales the data according to the user-input coil area
-        :return: PEM File with the data scaled  by the coil area change
-        """
-        coil_area, okPressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:")
-        if okPressed:
-            if not all:
-                pem_files, rows = self.get_selected_pem_files()
-            else:
-                pem_files, rows = self.pem_files, range(self.table.rowCount())
-            for pem_file, row in zip(pem_files, rows):
-                coil_column = self.table_columns.index('Coil Area')
-                self.scale_coil_area(pem_file, coil_area)
-                self.table.item(row, coil_column).setText(str(coil_area))
-                self.refresh_table_row(pem_file, row)
-
-    def scale_current(self, pem_file, new_current):
-        """
-        Scale the data according to the change in current
-        :param pem_file: PEM File object
-        :param new_current: Desired current to scale the data to
-        :return: PEM File object with the data scaled
-        """
-        # logging.info('PEMEditor - Scaling PEM File data by current')
-        pem_file = self.file_editor.scale_current(pem_file, new_current)
-        # self.refresh_table()
+    # def scale_current(self, pem_file, new_current):
+    #     """
+    #     Scale the data according to the change in current
+    #     :param pem_file: PEM File object
+    #     :param new_current: Desired current to scale the data to
+    #     :return: PEM File object with the data scaled
+    #     """
+    #     pem_file = self.file_editor.scale_current(pem_file, new_current)
 
     def scale_current_selection(self, all=False):
         """
@@ -991,7 +1018,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :return: Single merged PEMFile object
         """
 
-        # logging.info('PEMEditor - Merging PEM Files')
+        print(f"Merging {', '.join([os.path.basename(pem_file.filepath) for pem_file in pem_files])}")
 
         # Check that all selected files split or all un-split.
         def pem_files_eligible():
@@ -1021,20 +1048,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 list(chain([int(pem_file.header.get('NumReadings')) for pem_file in pem_files]))))
             merged_pem.is_merged = True
 
-            # Add the '[M]'
             dir = os.path.split(merged_pem.filepath)[0]
             extension = os.path.splitext(merged_pem.filepath)[-1]
             file_name = os.path.splitext(os.path.basename(merged_pem.filepath))[0]
-            if '[M]' not in file_name:
-                file_name += '[M]'
 
             merged_pem.filepath = os.path.join(dir, file_name + extension)
-            self.save_pem_file(merged_pem)
             return merged_pem
 
     def merge_pem_files_selection(self):
         pem_files, rows = self.get_selected_pem_files()
-
         if len(pem_files) > 1:
             # First update the PEM Files from the table
             for pem_file, row in zip(pem_files, rows):
@@ -1043,20 +1065,23 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if merged_pem:
                 # Backup and remove the old files:
                 for row in reversed(rows):
-                    self.save_pem_file(self.pem_files[row], backup=True)
+                    pem_file = copy.deepcopy(self.pem_files[row])
+                    self.save_pem_file(pem_file, tag='[-M]', backup=True, remove_old=True)
                     self.remove_file(row)
+                self.save_pem_file(merged_pem, tag='[M]')
                 self.open_pem_files(merged_pem)
-                self.sort_files()
         else:
             self.message.information(None, 'Error', 'Must select multiple PEM Files')
 
-    def save_pem_file(self, pem_file, dir=None, export=False, backup=False):
+    def save_pem_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
         """
         Action of saving a PEM file to a .PEM file.
         :param pem_file: PEMFile object to be saved.
         :param dir: Save file location. If None, is uses the file directory of the first PEM file as the default.
+        :param tag: str: Tag to append to the file name ('[A]', '[S]', '[M]'...)
         :param export: Bool: if False, adds a [M] tag if the file was merged.
-        :param backup: Bool: If true, will create a backup .bak file with '[Backup]' tag, and remove the old .PEM file.
+        :param backup: Bool: If true, will save file to a '[Backup]' folder.
+        :param remove_old: Bool: If true, will delete the old file.
         :return: None
         """
         # logging.info('PEMEditor - Saving PEM File')
@@ -1066,26 +1091,25 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             file_dir = dir
         file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
         extension = os.path.splitext(pem_file.filepath)[-1]
-        overwrite = True
 
+        # Create a backup folder if it doesn't exist, and use it as the new file dir.
         if backup is True:
             pem_file.old_filepath = os.path.join(file_dir, file_name + extension)
-            file_name = '[Backup]' + file_name
+            if not os.path.exists(os.path.join(file_dir, '[Backup]')):
+                print('Creating back up folder')
+                os.mkdir(os.path.join(file_dir, '[Backup]'))
+            file_dir = os.path.join(file_dir, '[Backup]')
             extension += '.bak'
 
-        # # If the file is not being exported, add the '[M]' tag if the file was merged.
-        # if not export:
-        #     if pem_file.is_merged:
-        #         if '[M]' not in file_name:
-        #             # file_name = re.sub('\s\[M\]', '', file_name)
-        #             file_name = file_name + ' [M]'
-        #             overwrite = False
+        if tag and tag not in file_name:
+            file_name += tag
 
-        pem_file.filepath = os.path.join(file_dir + '/' + file_name + extension)
+        pem_file.filepath = os.path.join(file_dir, file_name + extension)
         save_file = self.serializer.serialize(pem_file)
         print(save_file, file=open(pem_file.filepath, 'w+'))
 
-        if overwrite is True and pem_file.old_filepath:
+        if pem_file.old_filepath and remove_old is True:
+            print(f'Removing old file {os.path.basename(pem_file.old_filepath)}')
             os.remove(pem_file.old_filepath)
             pem_file.old_filepath = None
 
@@ -1542,13 +1566,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def table_value_changed(self, row, col):
         """
-        Signal Slot: Action done when a value in the main table was changed. Example: Changing the coil area of the data if the
+        Signal Slot: Action taken when a value in the main table was changed. Example: Changing the coil area of the data if the
         coil area cell is changed, or changing the filepath of a PEM file when the file name cell is changed.
         :param row: Row of the main table that the change was made.
         :param col: Column of the main table that the change was made.
         :return: None
         """
-        # logging.info(f'PEMEditor - Table value changed at row {row} and column {col}')
+        print(f'Table value changed at row {row} and column {col}')
 
         self.table.blockSignals(True)
         pem_file = self.pem_files[row]
@@ -1558,26 +1582,28 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             old_value = int(pem_file.header.get('CoilArea'))
             try:
                 new_value = int(self.table.item(row, col).text())
+                print(f"Coil area changed to {new_value}")
             except ValueError:
+                print("Value is not an integer.")
                 pass
             else:
                 if int(old_value) != int(new_value):
-                    self.scale_coil_area(pem_file, int(new_value))
+                    self.scale_coil_area_selection(coil_area=int(new_value))
                     self.window().statusBar().showMessage(
-                        f"Coil area changed from {str(old_value)} to {str(new_value)}", 2000)
+                        f"Coil area changed from {old_value} to {new_value}", 2000)
 
         if col == self.table_columns.index('File'):
             pem_file = self.pem_files[row]
-            old_path = copy.copy(pem_file.filepath)
+            old_path = copy.deepcopy(pem_file.filepath)
             new_value = self.table.item(row, col).text()
 
             if new_value != os.path.basename(pem_file.filepath):
                 # if pem_file.old_filepath is None:
                 pem_file.old_filepath = old_path
                 new_path = '/'.join(old_path.split('/')[:-1]) + '/' + new_value
+                print(f"Renaming {os.path.basename(old_path)} to {os.path.basename(new_path)}")
                 pem_file.filepath = new_path
-                self.window().statusBar().showMessage(
-                    f"File renamed to {str(new_value)}", 2000)
+                self.window().statusBar().showMessage(f"File renamed to {str(new_value)}", 2000)
 
         # Spec cols are columns that shouldn't be edited manually, thus this re-fills the cells based on the
         # information from the PEM file
