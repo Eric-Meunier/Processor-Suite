@@ -12,7 +12,7 @@ from itertools import chain
 
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
-                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QToolButton, QCheckBox,
+                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QProgressBar, QCheckBox,
                              QInputDialog, QHeaderView, QTableWidget, QGridLayout, QDialogButtonBox, QVBoxLayout)
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -22,7 +22,7 @@ from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
-from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D
+from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar
 from src.pem.pem_serializer import PEMSerializer
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.ri.ri_file import RIFile
@@ -102,6 +102,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.gps_parser = GPSParser()
         self.gpx_editor = GPXEditor()
         self.serializer = PEMSerializer()
+        self.pg = CustomProgressBar()
         self.ri_importer = BatchRIImporter(parent=self)
         self.plan_map_options = PlanMapOptions(parent=self)
         self.map_viewer_3d = None
@@ -634,6 +635,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.allow_signals = False
         self.stackedWidget.show()
         self.pemInfoDockWidget.show()
+        self.window().statusBar().addPermanentWidget(self.pg)
+        self.pg.setMaximum(len(pem_files))
+        self.pg.show()
+        count = 0
 
         for pem_file in pem_files:
             if isinstance(pem_file, PEMFile):
@@ -657,6 +662,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
                     self.add_pem_to_table(pem_file)
                     pemInfoWidget.blockSignals(False)
+
                     # Fill in the GPS System information based on the existing GEN tag if it's not yet filled.
                     for note in pem_file.notes:
                         if '<GEN> CRS:' in note:
@@ -677,11 +683,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
                     # Fill the shared header and station info if it's the first PEM File opened
                     if len(self.pem_files) == 1:
-                        # Block the signals or else the table gets refreshed on every edit.
-                        # for edit_widget in [self.client_edit, self.grid_edit, self.loop_edit, self.min_range_edit,
-                        #                     self.max_range_edit]:
-                        #     edit_widget.blockSignals(True)
-
                         if self.client_edit.text() == '':
                             self.client_edit.setText(self.pem_files[0].header['Client'])
                         if self.grid_edit.text() == '':
@@ -697,11 +698,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                         if self.max_range_edit.text() == '':
                             max_range = str(max(chain.from_iterable(all_stations)))
                             self.max_range_edit.setText(max_range)
-                        # Re-enable the signals.
-                        # for edit_widget in [self.client_edit, self.grid_edit, self.loop_edit, self.min_range_edit,
-                        #                     self.max_range_edit]:
-                            # edit_widget.blockSignals(False)
-                        # self.refresh_table()
+
+                        count += 1
+                        self.pg.setValue(count)
                 except Exception as e:
                     self.message.information(None, 'PEMEditor: open_pem_files error', str(e))
 
@@ -710,6 +709,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.sort_files()
         self.allow_signals = True
         self.enable_signals()
+        self.pg.hide()
         # self.update_table_row_colors()
         # self.update_repeat_stations_cells()
         # self.update_suffix_warnings_cells()
@@ -903,20 +903,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         pem_file, row = self.get_selected_pem_files()
         self.pem_file_splitter = PEMFileSplitter(pem_file[0], parent=self)
 
-    # def average_pem_data(self, pem_file):
-    #     """
-    #     Average the data PEM File
-    #     :param pem_file: PEM File object
-    #     :return: PEM File object with the data averaged
-    #     """
-    #     # logging.info('PEMEditor - Averaging PEM File data')
-    #     if pem_file.is_averaged():
-    #         # self.window().statusBar().showMessage('File is already averaged.', 2000)
-    #         return
-    #     else:
-    #         pem_file = self.file_editor.average(pem_file)
-    #         # self.window().statusBar().showMessage('File(s) averaged.', 2000)
-
     def average_pem_data(self, all=False):
         """
         Average the data of each PEM File selected
@@ -931,7 +917,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if not pem_file.is_averaged():
                 print(f"Averaging {os.path.basename(pem_file.filepath)}")
                 # Save a backup of the un-averaged file first
-                self.save_pem_file(pem_file, backup=True, tag='[-A]')
+                self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]')
                 pem_file = self.file_editor.average(pem_file)
                 self.refresh_table_row(pem_file, row)
 
@@ -949,18 +935,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         for pem_file, row in zip(pem_files, rows):
             if not pem_file.is_split():
                 print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
-                self.save_pem_file(pem_file, backup=True, tag='[-S]')
+                self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]')
                 pem_file = self.file_editor.split_channels(pem_file)
                 self.refresh_table_row(pem_file, row)
-
-    # def scale_coil_area(self, pem_file, new_coil_area):
-    #     """
-    #     Scales the data according to the coil area change
-    #     :param pem_file: PEM File object
-    #     :param new_coil_area: Desired coil area
-    #     :return: PEM File with the data scaled  by the coil area change
-    #     """
-    #     pem_file = self.file_editor.scale_coil_area(pem_file, new_coil_area)
 
     def scale_coil_area_selection(self, coil_area=None, all=False):
         """
@@ -982,15 +959,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.table.item(row, coil_column).setText(str(coil_area))
             self.refresh_table_row(pem_file, row)
 
-    # def scale_current(self, pem_file, new_current):
-    #     """
-    #     Scale the data according to the change in current
-    #     :param pem_file: PEM File object
-    #     :param new_current: Desired current to scale the data to
-    #     :return: PEM File object with the data scaled
-    #     """
-    #     pem_file = self.file_editor.scale_current(pem_file, new_current)
-
     def scale_pem_current(self, all=False):
         """
         Scale the data by current for the selected PEM Files
@@ -1005,7 +973,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 pem_files, rows = self.pem_files, range(self.table.rowCount())
             for pem_file, row in zip(pem_files, rows):
                 coil_column = self.table_columns.index('Current')
-                self.scale_current(pem_file, current)
+                pem_file = self.file_editor.scale_current(pem_file, current)
                 self.table.item(row, coil_column).setText(str(current))
                 self.refresh_table_row(pem_file, row)
 
@@ -1134,20 +1102,29 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             else:
                 pem_files, rows = self.pem_files, range(self.table.rowCount())
 
+            self.pg.setMaximum(len(pem_files))
+            self.pg.show()
+            self.window().statusBar().addPermanentWidget(self.pg)
+
             # Update all the PEM files in memory first.
             for row, pem_file in zip(rows, pem_files):
                 pem_file = self.update_pem_file_from_table(pem_file, row)
 
             # This is split from the above for loop because the table is refreshed when pem_info_widget opens a file, /
             # and it would cause changes in the table to be ignored.
+            count = 0
             for row, pem_file in zip(rows, pem_files):
+                self.pg.setText(f"Saving {os.path.basename(pem_file.filepath)}")
                 self.save_pem_file(pem_file)
                 # Block the signals because it only updates the row corresponding to the current stackedWidget.
                 self.pem_info_widgets[row].blockSignals(True)
                 self.pem_info_widgets[row].open_file(pem_file, parent=self)  # Updates the PEMInfoWidget tables
                 self.pem_info_widgets[row].blockSignals(False)
+                count += 1
+                self.pg.setValue(count)
 
             self.refresh_table()
+            self.pg.hide()
             self.window().statusBar().showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
 
     def save_pem_file_as(self):

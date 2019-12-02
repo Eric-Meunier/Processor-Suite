@@ -1194,12 +1194,15 @@ class PlanMap(MapPlotMethods):
             client = self.pem_files[0].header.get("Client")
             grid = self.pem_files[0].header.get("Grid")
             loops = natural_sort(self.loop_names)
-            if self.moving_loop and len(loops) > 1:
-                loop_text = f"Loop: {loops[0]} to {loops[-1]}"
-            else:
-                loop_text = f"Loop: {', '.join(loops)}"
+            hole = self.pem_files[0].header.get('LineHole')
 
-            hole = f"Hole: {self.pem_files[0].header.get('LineHole')}"
+            if 'surface' in self.survey_type:
+                if self.moving_loop and len(loops) > 1:
+                    survey_text = f"Loop: {loops[0]} to {loops[-1]}"
+                else:
+                    survey_text = f"Loop: {', '.join(loops)}"
+            else:
+                survey_text = f"Hole: {hole}    Loop: {', '.join(loops)}"
 
             coord_sys = f"{self.system}{' Zone ' + self.zone.title() if self.zone else ''}, {self.datum.upper()}"
             scale = f"1:{self.map_scale:,.0f}"
@@ -1216,8 +1219,7 @@ class PlanMap(MapPlotMethods):
                          fontname='Century Gothic', fontsize=9, ha='center', zorder=10, transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
-            f"{loop_text if 'surface' in self.survey_type else hole}",
-                         fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
+                         f"{survey_text}", fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
                          transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.124, f"Timebase: {', '.join(self.timebase)} ms\n{get_survey_dates()}",
