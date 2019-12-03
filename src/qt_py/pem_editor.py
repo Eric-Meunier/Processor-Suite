@@ -8,8 +8,8 @@ import pstats
 import sys
 import time
 from decimal import getcontext
-from itertools import chain
-
+from itertools import chain, groupby
+from collections import defaultdict
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QProgressBar, QCheckBox,
@@ -318,6 +318,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.min_range_edit.textChanged.connect(lambda: self.refresh_table(single_row=False))
         self.max_range_edit.textChanged.connect(lambda: self.refresh_table(single_row=False))
         self.auto_name_line_btn.clicked.connect(self.auto_name_lines)
+        self.auto_merge_files_btn.clicked.connect(self.auto_merge_pem_files)
 
         self.reverseAllZButton.clicked.connect(lambda: self.reverse_all_data(comp='Z'))
         self.reverseAllXButton.clicked.connect(lambda: self.reverse_all_data(comp='X'))
@@ -637,6 +638,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.pemInfoDockWidget.show()
         self.window().statusBar().addPermanentWidget(self.pg)
         self.pg.setMaximum(len(pem_files))
+        self.pg.setValue(0)
         self.pg.show()
         count = 0
 
@@ -651,6 +653,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 if not isinstance(pem_file, PEMFile):
                     pem_file = self.parser.parse(pem_file)
                     print(f'Opening {os.path.basename(pem_file.filepath)}')
+                self.pg.setText(f"Opening {os.path.basename(pem_file.filepath)}")
                 try:
                     pemInfoWidget.blockSignals(True)
                     pem_widget = pemInfoWidget.open_file(pem_file, parent=self)
@@ -699,8 +702,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                             max_range = str(max(chain.from_iterable(all_stations)))
                             self.max_range_edit.setText(max_range)
 
-                        count += 1
-                        self.pg.setValue(count)
+                    count += 1
+                    self.pg.setValue(count)
                 except Exception as e:
                     self.message.information(None, 'PEMEditor: open_pem_files error', str(e))
 
@@ -917,7 +920,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if not pem_file.is_averaged():
                 print(f"Averaging {os.path.basename(pem_file.filepath)}")
                 # Save a backup of the un-averaged file first
-                self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]')
+                if self.auto_create_backup_files_cbox.isChecked():
+                    self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]')
                 pem_file = self.file_editor.average(pem_file)
                 self.refresh_table_row(pem_file, row)
 
@@ -935,7 +939,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         for pem_file, row in zip(pem_files, rows):
             if not pem_file.is_split():
                 print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
-                self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]')
+                if self.auto_create_backup_files_cbox.isChecked():
+                    self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]')
                 pem_file = self.file_editor.split_channels(pem_file)
                 self.refresh_table_row(pem_file, row)
 
@@ -1044,12 +1049,52 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 # Backup and remove the old files:
                 for row in reversed(rows):
                     pem_file = copy.deepcopy(self.pem_files[row])
-                    self.save_pem_file(pem_file, tag='[-M]', backup=True, remove_old=True)
-                    self.remove_file(row)
+                    if self.auto_create_backup_files_cbox.isChecked():
+                        self.save_pem_file(pem_file, tag='[-M]', backup=True,
+                                           remove_old=self.delete_merged_files_cbox.isChecked())
+                    if self.delete_merged_files_cbox.isChecked():
+                        self.remove_file(row)
                 self.save_pem_file(merged_pem, tag='[M]')
                 self.open_pem_files(merged_pem)
         else:
             self.message.information(None, 'Error', 'Must select multiple PEM Files')
+
+    def auto_merge_pem_files(self):
+        """
+
+        :return:
+        """
+
+        if len(self.pem_files) > 0:
+            files_to_open = []
+            updated_pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in
+                                 zip(copy.deepcopy(self.pem_files), range(self.table.rowCount()))]
+            bh_files = [pem_file for pem_file in updated_pem_files if 'borehole' in pem_file.survey_type.lower()]
+            sf_files = [pem_file for pem_file in updated_pem_files if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower()]
+
+            for loop, pem_files in groupby(sf_files, key=lambda x: x.header.get('Loop')):
+                print(f"Auto merging loop {loop}")
+                for line, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
+                    pem_files = list(pem_files)
+                    if len(pem_files) > 1:
+                        print(f"Auto merging line {line}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
+                        rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
+                        merged_pem = self.merge_pem_files(pem_files)
+                        if merged_pem:
+                            # Backup and remove the old files:
+                            for row in reversed(rows):
+                                pem_file = updated_pem_files[row]
+                                if self.auto_create_backup_files_cbox.isChecked():
+                                    self.save_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
+                                                       remove_old=self.delete_merged_files_cbox.isChecked())
+                                if self.delete_merged_files_cbox.isChecked():
+                                    self.remove_file(row)
+                                    updated_pem_files.pop(row)
+                                    # pem_files.pop(0)
+                            self.save_pem_file(merged_pem, tag='[M]')
+                            # Open the files later to not deal with changes in index when files are opened.
+                            files_to_open.append(merged_pem)
+            self.open_pem_files(files_to_open)
 
     def save_pem_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
         """
@@ -2771,6 +2816,7 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
+    # mw.auto_merge_pem_files()
     # mw.sort_files()
     # section = Section3DViewer(pem_files)
     # section.show()
