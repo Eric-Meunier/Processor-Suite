@@ -636,6 +636,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.allow_signals = False
         self.stackedWidget.show()
         self.pemInfoDockWidget.show()
+        files_to_add = []
         self.window().statusBar().addPermanentWidget(self.pg)
         self.pg.setMaximum(len(pem_files))
         self.pg.setValue(0)
@@ -663,7 +664,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.pem_info_widgets.append(pem_widget)
                     self.stackedWidget.addWidget(pem_widget)
 
-                    self.add_pem_to_table(pem_file)
+                    files_to_add.append(pem_file)
+                    # self.add_pem_to_table(pem_file)  # Add all files together later.
                     pemInfoWidget.blockSignals(False)
 
                     # Fill in the GPS System information based on the existing GEN tag if it's not yet filled.
@@ -709,6 +711,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if len(self.pem_files) > 0:
             self.fill_share_range()
+
+        # Add all files to the table at once for aesthetics.
+        [self.add_pem_to_table(pem_file) for pem_file in files_to_add]
         self.sort_files()
         self.allow_signals = True
         self.enable_signals()
@@ -722,7 +727,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Adds GPS information from the gps_files to the PEMFile object
         :param gps_files: Text or gpx file(s) with GPS information in them
         """
-
         # logging.info('PEMEditor - Opening GPS Files')
         def read_gps_files(gps_files):  # Merges files together if there are multiple files
             if len(gps_files) > 1:
@@ -1061,40 +1065,68 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def auto_merge_pem_files(self):
         """
-
-        :return:
+        Automatically merge PEM files. Groups surface files up by loop name first, then by line name, then does the merge.
+        :return: None
         """
-
+        # TODO Needs to check for split channels before merging
         if len(self.pem_files) > 0:
+            self.pg.setValue(0)
+            self.window().statusBar().addPermanentWidget(self.pg)
+            self.pg.show()
+
             files_to_open = []
             updated_pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in
                                  zip(copy.deepcopy(self.pem_files), range(self.table.rowCount()))]
             bh_files = [pem_file for pem_file in updated_pem_files if 'borehole' in pem_file.survey_type.lower()]
             sf_files = [pem_file for pem_file in updated_pem_files if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower()]
 
-            for loop, pem_files in groupby(sf_files, key=lambda x: x.header.get('Loop')):
+            # # Surface lines
+            # for loop, pem_files in groupby(sf_files, key=lambda x: x.header.get('Loop')):
+            #     print(f"Auto merging loop {loop}")
+            #     for line, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
+            #         pem_files = list(pem_files)
+            #         if len(pem_files) > 1:
+            #             print(f"Auto merging line {line}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
+            #             rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
+            #             merged_pem = self.merge_pem_files(pem_files)
+            #             if merged_pem:
+            #                 # Backup and remove the old files:
+            #                 for row in reversed(rows):
+            #                     pem_file = updated_pem_files[row]
+            #                     if self.auto_create_backup_files_cbox.isChecked():
+            #                         self.save_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
+            #                                            remove_old=self.delete_merged_files_cbox.isChecked())
+            #                     if self.delete_merged_files_cbox.isChecked():
+            #                         self.remove_file(row)
+            #                         updated_pem_files.pop(row)
+            #                 self.save_pem_file(merged_pem, tag='[M]')
+            #                 # Open the files later to not deal with changes in index when files are opened.
+            #                 files_to_open.append(merged_pem)
+            # Boreholes
+            for loop, pem_files in groupby(bh_files, key=lambda x: x.header.get('Loop')):
                 print(f"Auto merging loop {loop}")
-                for line, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
-                    pem_files = list(pem_files)
-                    if len(pem_files) > 1:
-                        print(f"Auto merging line {line}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
-                        rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
-                        merged_pem = self.merge_pem_files(pem_files)
-                        if merged_pem:
-                            # Backup and remove the old files:
-                            for row in reversed(rows):
-                                pem_file = updated_pem_files[row]
-                                if self.auto_create_backup_files_cbox.isChecked():
-                                    self.save_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
-                                                       remove_old=self.delete_merged_files_cbox.isChecked())
-                                if self.delete_merged_files_cbox.isChecked():
-                                    self.remove_file(row)
-                                    updated_pem_files.pop(row)
-                                    # pem_files.pop(0)
-                            self.save_pem_file(merged_pem, tag='[M]')
-                            # Open the files later to not deal with changes in index when files are opened.
-                            files_to_open.append(merged_pem)
-            self.open_pem_files(files_to_open)
+                for hole, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
+                    for components, pem_files in groupby(pem_files, key=lambda x: x.get_components()):
+                        print(f"Components: {components}")
+                        pem_files = list(pem_files)
+                        if len(pem_files) > 1:
+                            print(f"Auto merging hole {hole}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
+                            rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
+                            merged_pem = self.merge_pem_files(pem_files)
+                            if merged_pem:
+                                # Backup and remove the old files:
+                                for row in reversed(rows):
+                                    pem_file = updated_pem_files[row]
+                                    # if self.auto_create_backup_files_cbox.isChecked():
+                                    #     self.save_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
+                                    #                        remove_old=self.delete_merged_files_cbox.isChecked())
+                                    # if self.delete_merged_files_cbox.isChecked():
+                                    #     self.remove_file(row)
+                                    #     updated_pem_files.pop(row)
+                                # self.save_pem_file(merged_pem, tag='[M]')
+                                # Open the files later to not deal with changes in index when files are opened.
+                                files_to_open.append(merged_pem)
+            # self.open_pem_files(files_to_open)
 
     def save_pem_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
         """
@@ -1132,8 +1164,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if pem_file.old_filepath and remove_old is True:
             print(f'Removing old file {os.path.basename(pem_file.old_filepath)}')
-            os.remove(pem_file.old_filepath)
-            pem_file.old_filepath = None
+            try:
+                os.remove(pem_file.old_filepath)
+            except FileNotFoundError:
+                print(f'File not found, assuming it was already removed')
+            finally:
+                pem_file.old_filepath = None
 
     def save_pem_file_selection(self, all=False):
         """
@@ -1217,7 +1253,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
                 extension = os.path.splitext(pem_file.filepath)[-1]
                 if export_final is True:
-                    file_name = re.sub('_\d+', '', re.sub('\[\w\]', '', file_name))  # Removes underscore-dates and tags
+                    file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))  # Removes underscore-dates and tags
                 updated_file.filepath = os.path.join(file_dir, file_name + extension)
                 self.save_pem_file(updated_file, dir=file_dir)
             self.refresh_table()
@@ -1353,7 +1389,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :param table_row: Table row of the PEM file.
         :return: None
         """
-        # logging.info(f'PEMEditor - Removing file at row {table_row}')
         self.table.removeRow(table_row)
         self.stackedWidget.removeWidget(self.stackedWidget.widget(table_row))
         del self.pem_files[table_row]
@@ -1372,8 +1407,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
     def remove_file_selection(self):
         pem_files, rows = self.get_selected_pem_files()
         for row in reversed(rows):
-            self.window().statusBar().showMessage('{0} removed'.format(self.pem_files[row].filepath), 2000)
             self.remove_file(row)
+        self.window().statusBar().showMessage(f"{len(rows)} files removed.")
 
     def reset_crs(self):
         """
@@ -1961,6 +1996,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         that (with the suffix) as the new name. Makes the change in the table and saves it in the PEM file in memory.
         :return: None
         """
+        # TODO Should only be for surface lines
         if any(self.pem_files):
             file_name_column = self.table_columns.index('File')
             line_name_column = self.table_columns.index('Line/Hole')

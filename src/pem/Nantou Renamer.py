@@ -19,11 +19,18 @@ if __name__ == '__main__':
 
         loop = pem_file.header.get('Loop')
         line = pem_file.header.get('LineHole')
-        # new_name = f"{line.split('00E')[0]}EL{loop.split('-')[-1]}"  # Before step
-        new_name = f"{line.split('E')[0]}00E"  # After step
-        print(f"Loop: {loop}\nLine: {line}\nNew Name: {new_name}\n\n")
+
+        # Before step
+        # new_name = f"{line.split('00E')[0]}EL{loop.split('-')[-1]}"
+        # new_filepath = os.path.join(os.path.dirname(filepath), new_name + '.PEM')
+
+        # After step
+        new_name = f"{line.split('E')[0]}00E"
+        new_filepath = filepath
+
+        print(f"Loop: {loop}\nLine: {line}\nNew Name: {new_name}\nNew File: {new_filepath}\n\n")
         pem_file.header['LineHole'] = new_name
 
         pem_file.filepath = os.path.join(filepath)
         save_file = saver().serialize(pem_file)
-        print(save_file, file=open(pem_file.filepath, 'w+'))
+        print(save_file, file=open(new_filepath, 'w+'))
