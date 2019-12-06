@@ -9,10 +9,11 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QDesktopWidget, QMessage
 
 from src.damp.db_plot import DBPlot
 from src.qt_py.pem_editor import PEMEditorWindow
+from src.gps.gpx_creator import GPXCreator
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -74,6 +75,7 @@ class CustomMdiSubWindow(QMdiSubWindow):
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     windowChange = QtCore.pyqtSignal()
+
     def __init__(self):
         super().__init__()
         self.initUi()
@@ -94,7 +96,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
-        self.setGeometry(500, 300, 1600, 900)
+        self.setGeometry(500, 300, 1800, 1000)
 
         center_window(self)
         # self.showMaximized()
@@ -108,7 +110,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.editor = None
         self.db_plot = None
-        # self.conder = None
+        self.gpx_creator = None
 
     def initActions(self):
         # self.openFile = QAction("&Open...", self)
@@ -122,8 +124,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.openDBPlot = QAction("&Open DB Plot", self)
         self.openDBPlot.triggered.connect(self.open_db_plot)
 
-        # self.openConder = QAction("&Open Conder", self)
-        # self.openConder.triggered.connect(self.open_conder)
+        self.openGPXCreator = QAction("&Open Conder", self)
+        self.openGPXCreator.triggered.connect(self.open_gpx_creator)
 
         self.closeAllWindows = QAction("&Close All", self)
         self.closeAllWindows.setShortcut("Ctrl+Shift+Del")
@@ -160,17 +162,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db_plot_button.setStatusTip('DB Plot')
         self.db_plot_button.clicked.connect(self.toggle_db_plot)
 
-        # self.conder_button = QToolButton(self)
-        # self.conder_button.setIcon(
+        self.gpx_creator_button = QToolButton(self)
+        # self.gpx_creator_button.setIcon(
         #     QtGui.QIcon(os.path.join(icons_path, 'conder 32.png')))
-        # self.conder_button.setCheckable(True)
-        # self.conder_button.setStatusTip('Conder')
-        # self.conder_button.clicked.connect(self.toggle_conder)
+        self.gpx_creator_button.setCheckable(True)
+        self.gpx_creator_button.setStatusTip('GPX Creator')
+        self.gpx_creator_button.clicked.connect(self.toggle_gpx_creator)
 
         # self.toolbar.addAction(self.tile_view)
         self.toolbar.addWidget(self.pem_editor_button)
         self.toolbar.addWidget(self.db_plot_button)
-        # self.toolbar.addWidget(self.conder_button)
+        self.toolbar.addWidget(self.gpx_creator_button)
 
     # def keyPressEvent(self, e):
     #     if e.type() == QtCore.QEvent.KeyPress:
@@ -190,7 +192,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pass
 
     def clear_files(self, response=None):
-        if self.editor or self.db_plot:
+        if self.editor or self.db_plot or self.gpx_creator:
             if response is None:
                 response = self.message.question(self, 'PEMPro', 'Are you sure you want to clear all files?',
                                                  self.message.Yes | self.message.No)
@@ -200,6 +202,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.editor.clear_files()
                 if self.db_plot:
                     self.db_plot.clear_files()
+                if self.gpx_creator:
+                    self.gpx_creator.reset()
                 self.statusBar().showMessage('All files removed', 2000)
             else:
                 pass
@@ -244,18 +248,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db_plot_subwindow.show()
         self.set_view()
 
-    # def open_conder(self):
-    #     if self.conder is None:
-    #         self.conder = Conder(parent=self)
-    #         self.conder_subwindow = CustomMdiSubWindow(parent=self.conder)
-    #         self.conder_subwindow.setWidget(self.conder)
-    #         self.conder_subwindow.closeWindow.connect(self.conder.clear_files)
-    #         self.conder_subwindow.closeWindow.connect(self.toggle_conder)
-    #         self.mdiArea.addSubWindow(self.conder_subwindow)
-    #     self.conder_button.setChecked(True)
-    #     self.conder.show()
-    #     self.conder_subwindow.show()
-    #     self.set_view()
+    def open_gpx_creator(self):
+        if self.gpx_creator is None:
+            self.gpx_creator = GPXCreator()
+            self.gpx_creator_subwindow = CustomMdiSubWindow(parent=self.gpx_creator)
+            self.gpx_creator_subwindow.setWidget(self.gpx_creator)
+            self.gpx_creator_subwindow.closeWindow.connect(self.gpx_creator.reset)
+            self.gpx_creator_subwindow.closeWindow.connect(self.toggle_gpx_creator)
+            self.mdiArea.addSubWindow(self.gpx_creator_subwindow)
+        self.gpx_creator_button.setChecked(True)
+        self.gpx_creator.show()
+        self.gpx_creator_subwindow.show()
+        self.set_view()
 
     def toggle_editor(self):
         if self.editor is None:
@@ -286,19 +290,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.set_view()
                 self.db_plot_button.setChecked(False)
 
-    # def toggle_conder(self):
-    #     if self.conder is None:
-    #         self.open_conder()
-    #     else:
-    #         if self.conder_subwindow.isHidden():
-    #             self.conder.show()
-    #             self.conder_subwindow.show()
-    #             self.conder_button.setChecked(True)
-    #             self.set_view()
-    #         else:
-    #             self.conder_subwindow.hide()
-    #             self.set_view()
-    #             self.conder_button.setChecked(False)
+    def toggle_gpx_creator(self):
+        if self.gpx_creator is None:
+            self.open_gpx_creator()
+        else:
+            if self.gpx_creator_subwindow.isHidden():
+                self.gpx_creator.show()
+                self.gpx_creator_subwindow.show()
+                self.gpx_creator_button.setChecked(True)
+                self.set_view()
+            else:
+                self.gpx_creator_subwindow.hide()
+                self.set_view()
+                self.gpx_creator_button.setChecked(False)
 
     # def dragEnterEvent(self, e):
     #     urls = [url.toLocalFile().lower() for url in e.mimeData().urls()]
@@ -323,84 +327,84 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     #     urls = [url.toLocalFile() for url in e.mimeData().urls()]
     #     self.open_files(urls)
 
-    def open_file_dialog(self):
-        accepted_extensions = ['pem', 'con', 'txt', 'log', 'rtf']
-        try:
-            files = self.dialog.getOpenFileNames(self, 'Open Files',
-                                                 filter='All Files (*.*);; PEM files (*.pem);; '
-                                                        'Damp files (*.txt *.log *.rtf);; CON files (*.con)')
-            if files[0] != '':
-                for file in files[0]:
-                    if file.split('.')[-1].lower() in accepted_extensions:
-                        self.open_files(file)
-                    else:
-                        pass
-            else:
-                pass
-        except Exception as e:
-            logging.warning(str(e))
-            self.message.information(None, 'Error', str(e))
-            pass
-
-    def open_files(self, files):
-        if not isinstance(files, list) and isinstance(files, str):
-            files = [files]
-
-        pem_files = [file for file in files if file.lower().endswith('pem')]
-        con_files = [file for file in files if file.lower().endswith('con')]
-        damp_files = [file for file in files if file.lower().endswith('txt') or file.lower().endswith('log')
-                      or file.lower().endswith('rtf')]
-
-        if len(pem_files) > 0:
-            if self.editor is None:
-                self.open_editor()
-            try:
-                self.editor.open_files(pem_files)
-            except Exception as e:
-                logging.warning(str(e))
-                self.message.information(None, 'Error - Could not open selected PEM files', str(e))
-                pass
-            else:
-                self.editor.show()
-                self.editor_subwindow.show()
-                # if len(self.mdiArea.subWindowList()) == 1:
-                #     self.editor_subwindow.showMaximized()
-                # else:
-                #     self.mdiArea.tileSubWindows()
-
-        if len(damp_files) > 0:
-            if self.db_plot is None:
-                self.open_db_plot()
-            try:
-                self.db_plot.open_files(damp_files)
-            except Exception as e:
-                logging.warning(str(e))
-                self.message.information(None, 'Error - Could not open selected damping box files', str(e))
-                pass
-            else:
-                self.db_plot.show()
-                self.db_plot_subwindow.show()
-                if len(self.mdiArea.subWindowList()) == 1:
-                    self.db_plot_subwindow.showMaximized()
-                else:
-                    self.mdiArea.tileSubWindows()
-
-        # if len(con_files) > 0:
-        #     if self.conder is None:
-        #         self.open_conder()
-        #     try:
-        #         self.conder.open_files(con_files)
-        #     except Exception as e:
-        #         logging.warning(str(e))
-        #         self.message.information(None, 'Error - Could not open selected CON files', str(e))
-        #         pass
-        #     else:
-        #         self.conder.show()
-        #         self.conder_subwindow.show()
-        #         if len(self.mdiArea.subWindowList()) == 1:
-        #             self.conder_subwindow.showMaximized()
-        #         else:
-        #             self.mdiArea.tileSubWindows()
+    # def open_file_dialog(self):
+    #     accepted_extensions = ['pem', 'con', 'txt', 'log', 'rtf']
+    #     try:
+    #         files = self.dialog.getOpenFileNames(self, 'Open Files',
+    #                                              filter='All Files (*.*);; PEM files (*.pem);; '
+    #                                                     'Damp files (*.txt *.log *.rtf);; CON files (*.con)')
+    #         if files[0] != '':
+    #             for file in files[0]:
+    #                 if file.split('.')[-1].lower() in accepted_extensions:
+    #                     self.open_files(file)
+    #                 else:
+    #                     pass
+    #         else:
+    #             pass
+    #     except Exception as e:
+    #         logging.warning(str(e))
+    #         self.message.information(None, 'Error', str(e))
+    #         pass
+    #
+    # def open_files(self, files):
+    #     if not isinstance(files, list) and isinstance(files, str):
+    #         files = [files]
+    #
+    #     pem_files = [file for file in files if file.lower().endswith('pem')]
+    #     con_files = [file for file in files if file.lower().endswith('con')]
+    #     damp_files = [file for file in files if file.lower().endswith('txt') or file.lower().endswith('log')
+    #                   or file.lower().endswith('rtf')]
+    #
+    #     if len(pem_files) > 0:
+    #         if self.editor is None:
+    #             self.open_editor()
+    #         try:
+    #             self.editor.open_files(pem_files)
+    #         except Exception as e:
+    #             logging.warning(str(e))
+    #             self.message.information(None, 'Error - Could not open selected PEM files', str(e))
+    #             pass
+    #         else:
+    #             self.editor.show()
+    #             self.editor_subwindow.show()
+    #             # if len(self.mdiArea.subWindowList()) == 1:
+    #             #     self.editor_subwindow.showMaximized()
+    #             # else:
+    #             #     self.mdiArea.tileSubWindows()
+    #
+    #     if len(damp_files) > 0:
+    #         if self.db_plot is None:
+    #             self.open_db_plot()
+    #         try:
+    #             self.db_plot.open_files(damp_files)
+    #         except Exception as e:
+    #             logging.warning(str(e))
+    #             self.message.information(None, 'Error - Could not open selected damping box files', str(e))
+    #             pass
+    #         else:
+    #             self.db_plot.show()
+    #             self.db_plot_subwindow.show()
+    #             if len(self.mdiArea.subWindowList()) == 1:
+    #                 self.db_plot_subwindow.showMaximized()
+    #             else:
+    #                 self.mdiArea.tileSubWindows()
+    #
+    #     # if len(con_files) > 0:
+    #     #     if self.gpx_creator is None:
+    #     #         self.open_gpx_creator()
+    #     #     try:
+    #     #         self.gpx_creator.open_files(con_files)
+    #     #     except Exception as e:
+    #     #         logging.warning(str(e))
+    #     #         self.message.information(None, 'Error - Could not open selected CON files', str(e))
+    #     #         pass
+    #     #     else:
+    #     #         self.gpx_creator.show()
+    #     #         self.gpx_creator_subwindow.show()
+    #     #         if len(self.mdiArea.subWindowList()) == 1:
+    #     #             self.gpx_creator_subwindow.showMaximized()
+    #     #         else:
+    #     #             self.mdiArea.tileSubWindows()
 
 
 def main():
