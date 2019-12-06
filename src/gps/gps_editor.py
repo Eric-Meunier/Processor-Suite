@@ -7,7 +7,7 @@ import sys
 from functools import reduce
 from math import hypot
 from os.path import isfile, join
-from src.gps.gpx import gpxpy
+from src.gps.gpx_module import gpxpy
 import utm
 
 import numpy as np

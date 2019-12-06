@@ -2,9 +2,12 @@ import pandas as pd
 import utm
 import sys
 import os
+import re
+import csv
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QAction, QTableWidgetItem)
-from src.gps.gpx import gpxpy
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction)
+from src.gps.gpx_module import gpxpy
+from src.gps.gpx_module.gpxpy import gpx
 
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
@@ -29,6 +32,10 @@ sys.excepthook = exception_hook
 
 
 class GPXCreator(QMainWindow, Ui_GPXCreator):
+    """
+    Program to convert a CSV file into a GPX file. The datum of the intput GPS must be NAD 83 or WGS 84.
+    Columns of the CSV must be 'Name', 'Comment', 'Easting', 'Northing'.
+    """
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -36,6 +43,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         # self.setWindowIcon(
         #     QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
         self.dialog = QFileDialog()
+        self.message = QMessageBox()
         self.setAcceptDrops(True)
 
         self.filepath = None
@@ -43,11 +51,18 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         for zone in self.gps_zones:
             self.zone_number_box.addItem(zone)
 
+        # Actions
+        self.del_file = QAction("&Remove Row", self)
+        self.del_file.setShortcut("Del")
+        self.del_file.triggered.connect(self.remove_row)
+        self.addAction(self.del_file)
+
         # Signals
         self.importCSV.triggered.connect(self.open_file_dialog)
         self.exportGPX.triggered.connect(self.save_file_dialog)
+        self.create_csv_template_action.triggered.connect(self.create_csv_template)
         self.export_gpx_btn.clicked.connect(self.save_file_dialog)
-
+        self.auto_name_btn.clicked.connect(self.auto_name)
         self.system_box.currentIndexChanged.connect(self.toggle_utm_boxes)
 
     def open_file_dialog(self):
@@ -66,9 +81,10 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
 
     def save_file_dialog(self):
         """
-        Open files through the file dialog
+        Retrieve a file name and path for the save file through the file dialog
         """
-        file = self.dialog.getSaveFileName(self, 'Save File', filter='GPX file (*.gpx);; All files(*.*)')
+        default_path = os.path.dirname(self.filepath)
+        file = self.dialog.getSaveFileName(self, 'Save File', default_path, filter='GPX file (*.gpx);; All files(*.*)')
         if file[0] != '':
             self.export_gpx(file[0])
         else:
@@ -88,13 +104,57 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         else:
             e.ignore()
 
+    def get_selected_rows(self):
+        rows = [model.row() for model in self.table.selectionModel().selectedRows()]
+        return rows
+
+    def remove_row(self):
+        rows = self.get_selected_rows()
+        if rows:
+            for row in reversed(rows):
+                self.table.removeRow(row)
+
+    def create_csv_template(self):
+        """
+        Create an empty CSV file with the correct columns.
+        :return: None
+        """
+        file = self.dialog.getSaveFileName(self, 'Save File', filter='CSV file (*.csv);; All files(*.*)')[0]
+        if file != '':
+            with open(file, 'w') as csvfile:
+                filewriter = csv.writer(csvfile, delimiter=',',
+                                        quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                filewriter.writerow(['Name', 'Comment', 'Easting', 'Northing'])
+                os.startfile(file)
+        else:
+            pass
+
+    def auto_name(self):
+        """
+        Append the Comment to the Name to create unique names
+        :return: None
+        """
+        if self.table.rowCount() > 0:
+            for row in range(self.table.rowCount()):
+                name = self.table.item(row, 0).text()
+                comment = self.table.item(row, 1).text()
+
+                new_name = f"{name} - {comment}"
+                item = QTableWidgetItem(new_name)
+                self.table.setItem(row, 0, item)
+
     def import_csv(self, filepath):
+        """
+        Add the information from the CSV to the table.
+        :param filepath: str: filepath of the CSV file to convert to GPX
+        :return: None
+        """
 
         def write_df_to_table(df):
-            headers = list(df)
+            # headers = list(df)
             self.table.setRowCount(df.shape[0])
-            self.table.setColumnCount(df.shape[1])
-            self.table.setHorizontalHeaderLabels(headers)
+            # self.table.setColumnCount(df.shape[1])
+            # self.table.setHorizontalHeaderLabels(headers)
 
             # getting data from df is computationally costly so convert it to array first
             df_array = df.values
@@ -104,7 +164,13 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
                     if col in [0, 1]:
                         item = QTableWidgetItem(str(value))
                     else:
-                        item = QTableWidgetItem(f"{value:.2f}")
+                        try:
+                            value = float(value)
+                        except ValueError:
+                            item = QTableWidgetItem('Error')
+                        else:
+                            item = QTableWidgetItem(f"{value:.4f}")
+
                     self.table.setItem(row, col, item)
 
         self.filepath = filepath
@@ -114,8 +180,63 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.statusBar().showMessage(f'Opened file {os.path.basename(self.filepath)}', 2000)
 
     def export_gpx(self, savepath):
-        gpx = gpxpy.gpx.GPX()
+        """
+        Save a GPX file from the information in the table.
+        :param savepath: str: filepath of the GPX file to create.
+        :return: None
+        """
         print('Exporting GPX...')
+        self.statusBar().showMessage(f"Saving GPX file...")
+
+        gpx = gpxpy.gpx.GPX()
+        # datum = self.datum_box.currentText()
+        if not self.system_box.currentText():
+            self.message.information(self, 'Error', 'Coordinate system cannot be empty.')
+            return
+
+        if self.system_box.currentText() == 'UTM':
+            zone = self.zone_number_box.currentText()
+            zone_letter = self.zone_letter_box.currentText()
+
+            if not zone or not zone_letter:
+                self.message.information(self, 'Error', 'Zone number and zone letter cannot be empty.')
+                return
+
+            zone_number = int(re.findall('\d+', zone)[0])
+
+            for row in range(self.table.rowCount()):
+                name = self.table.item(row, 0).text()
+                desc = self.table.item(row, 1).text()
+                try:
+                    east = int(float(self.table.item(row, 2).text()))
+                    north = int(float(self.table.item(row, 3).text()))
+                except ValueError:
+                    pass
+                else:
+                    # UTM converted to lat lon
+                    lat, lon = utm.to_latlon(east, north, zone_number=zone_number, zone_letter=zone_letter)
+                    waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=name, comment=desc)
+                    gpx.waypoints.append(waypoint)
+
+        elif self.system_box.currentText() == 'Lat/Lon':
+            for row in range(self.table.rowCount()):
+                name = self.table.item(row, 0).text()
+                desc = self.table.item(row, 1).text()
+                try:
+                    lat = float(self.table.item(row, 2).text())
+                    lon = float(self.table.item(row, 3).text())
+                except ValueError:
+                    pass
+                else:
+                    waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=name, comment=desc)
+                    gpx.waypoints.append(waypoint)
+
+        with open(savepath, 'w') as f:
+            f.write(gpx.to_xml())
+        self.statusBar().showMessage('Save complete.', 2000)
+
+        if self.open_file_cbox.isChecked():
+            os.startfile(savepath)
 
     def toggle_utm_boxes(self):
         if self.system_box.currentText() == 'UTM':
@@ -129,6 +250,14 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
             self.zone_number_label.setEnabled(False)
             self.zone_letter_label.setEnabled(False)
 
+    def reset(self):
+        while self.table.rowCount() > 0:
+            self.table.removeRow(0)
+        self.system_box.setCurrentText('')
+        self.zone_number_box.setCurrentText('')
+        self.zone_letter_box.setCurrentText('')
+
+
 def main():
     app = QApplication(sys.argv)
 
@@ -136,7 +265,11 @@ def main():
     gpx_creator.show()
     file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\gps.csv'
     gpx_creator.import_csv(file)
-    gpx_creator.export_gpx('sdfs')
+    gpx_creator.system_box.setCurrentText('UTM')
+    # gpx_creator.datum_box.setCurrentText('WGS 1983')
+    gpx_creator.zone_number_box.setCurrentText('37 North')
+    gpx_creator.zone_letter_box.setCurrentText('P')
+    # gpx_creator.export_gpx('sdfs')
 
     sys.exit(app.exec())
 

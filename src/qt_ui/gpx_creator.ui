@@ -15,30 +15,6 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="1">
-     <widget class="QTableWidget" name="table">
-      <column>
-       <property name="text">
-        <string>Name</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Description</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Easting</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Northing</string>
-       </property>
-      </column>
-     </widget>
-    </item>
     <item row="0" column="0">
      <widget class="QFrame" name="frame">
       <property name="frameShape">
@@ -49,215 +25,275 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <widget class="QLabel" name="label">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Input Information</string>
          </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Coordinate System</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="system_box">
+            <item>
+             <property name="text">
+              <string/>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>UTM</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Lat/Lon</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Fixed</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="zone_number_label">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>UTM Zone Number</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="zone_number_box">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Fixed</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="zone_letter_label">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>UTM Zone Letter</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="zone_letter_box">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <item>
+             <property name="text">
+              <string/>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>C</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>D</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>E</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>F</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>G</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>H</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>I</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>J</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>K</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>L</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>M</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>N</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>O</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>P</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Q</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>R</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>S</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>T</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>U</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>V</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>W</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>X</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_5">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Fixed</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>10</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_2">
+            <property name="font">
+             <font>
+              <italic>true</italic>
+             </font>
+            </property>
+            <property name="text">
+             <string>Input datum must
+be NAD83 or WGS84.</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="auto_name_btn">
          <property name="text">
-          <string>Coordinate System:</string>
+          <string>Append Comment
+to Name</string>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="system_box">
-         <item>
-          <property name="text">
-           <string/>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>UTM</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Lat/Lon</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>Datum:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="datum_box">
-         <item>
-          <property name="text">
-           <string/>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>NAD 1927</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>NAD 1983</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>WGS 1983</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="zone_number_label">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>UTM Zone Number:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="zone_number_box">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="zone_letter_label">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>UTM Zone Letter:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="zone_letter_box">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <item>
-          <property name="text">
-           <string/>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>C</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>D</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>E</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>F</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>G</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>H</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>I</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>J</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>K</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>L</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>M</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>N</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>O</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>P</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Q</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>R</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>S</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>T</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>U</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>V</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>W</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>X</string>
-          </property>
-         </item>
         </widget>
        </item>
        <item>
@@ -274,13 +310,65 @@
         </spacer>
        </item>
        <item>
+        <widget class="QCheckBox" name="open_file_cbox">
+         <property name="text">
+          <string>Open File After Save</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="export_gpx_btn">
          <property name="text">
           <string>Export GPX</string>
          </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
         </widget>
        </item>
       </layout>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QTableWidget" name="table">
+      <property name="alternatingRowColors">
+       <bool>false</bool>
+      </property>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectRows</enum>
+      </property>
+      <property name="gridStyle">
+       <enum>Qt::SolidLine</enum>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
+      <column>
+       <property name="text">
+        <string>Name</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Comment</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Easting</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Northing</string>
+       </property>
+      </column>
      </widget>
     </item>
    </layout>
@@ -300,6 +388,8 @@
     </property>
     <addaction name="importCSV"/>
     <addaction name="exportGPX"/>
+    <addaction name="separator"/>
+    <addaction name="create_csv_template_action"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -312,6 +402,11 @@
   <action name="exportGPX">
    <property name="text">
     <string>Export GPX</string>
+   </property>
+  </action>
+  <action name="create_csv_template_action">
+   <property name="text">
+    <string>Create CSV Template</string>
    </property>
   </action>
  </widget>
