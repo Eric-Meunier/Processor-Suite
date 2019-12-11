@@ -95,8 +95,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)  # Init for the .UI file
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
-        self.setGeometry(500, 300, 1800, 1000)
+            QtGui.QIcon(os.path.join(icons_path, 'conder.png')))
+        self.setGeometry(500, 300, 1800, 900)
 
         center_window(self)
         # self.showMaximized()
@@ -150,9 +150,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.pem_editor_button = QToolButton(self)
         self.pem_editor_button.setIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'conder 32.png')))
+            QtGui.QIcon(os.path.join(icons_path, 'pem_editor_3.svg')))
         self.pem_editor_button.setCheckable(True)
         self.pem_editor_button.setStatusTip('PEM Editor')
+        self.pem_editor_button.setToolTip('PEM Editor')
         self.pem_editor_button.clicked.connect(self.toggle_editor)
 
         self.db_plot_button = QToolButton(self)
@@ -160,13 +161,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QtGui.QIcon(os.path.join(icons_path, 'db_plot 32.png')))
         self.db_plot_button.setCheckable(True)
         self.db_plot_button.setStatusTip('DB Plot')
+        self.db_plot_button.setToolTip('DB Plot')
         self.db_plot_button.clicked.connect(self.toggle_db_plot)
 
         self.gpx_creator_button = QToolButton(self)
-        # self.gpx_creator_button.setIcon(
-        #     QtGui.QIcon(os.path.join(icons_path, 'conder 32.png')))
+        self.gpx_creator_button.setIcon(
+            QtGui.QIcon(os.path.join(icons_path, 'gpx_creator_4.svg')))
         self.gpx_creator_button.setCheckable(True)
         self.gpx_creator_button.setStatusTip('GPX Creator')
+        self.gpx_creator_button.setToolTip('GPX Creator')
         self.gpx_creator_button.clicked.connect(self.toggle_gpx_creator)
 
         # self.toolbar.addAction(self.tile_view)

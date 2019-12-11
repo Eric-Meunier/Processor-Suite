@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QProgressBar, QCheckBox,
                              QInputDialog, QHeaderView, QTableWidget, QGridLayout, QDialogButtonBox, QVBoxLayout)
 import matplotlib.pyplot as plt
+# from pyqtspinner.spinner import WaitingSpinner
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
 from matplotlib.figure import Figure
@@ -103,6 +104,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.gpx_editor = GPXEditor()
         self.serializer = PEMSerializer()
         self.pg = CustomProgressBar()
+        # self.spinner = WaitingSpinner(self.table)
         self.ri_importer = BatchRIImporter(parent=self)
         self.plan_map_options = PlanMapOptions(parent=self)
         self.map_viewer_3d = None
@@ -131,7 +133,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Initializing the UI.
         :return: None
         """
-
         # logging.info('PEMEditor - Initializing UI')
         def center_window(self):
             qtRectangle = self.frameGeometry()
@@ -143,7 +144,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.setWindowTitle("PEMEditor")
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
+            QtGui.QIcon(os.path.join(icons_path, 'pem_editor_3.svg')))
         self.setGeometry(500, 300, 1500, 800)
         center_window(self)
 
@@ -576,6 +577,19 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                                 self.max_range_edit]:
                 thing.blockSignals(False)
 
+    def start_pg(self, min=0, max=100):
+        """
+        Add the progress bar to the status bar and make it visible.
+        :param min: Starting value of the progress bar, usually 0.
+        :param max: Maximum value of the progress bar.
+        :return: None
+        """
+        self.pg.setValue(min)
+        self.pg.setMaximum(max)
+        self.pg.setText('')
+        self.window().statusBar().addPermanentWidget(self.pg)
+        self.pg.show()
+
     def open_files(self, files):
         """
         First step of opening a PEM, GPS, RI, GPX, or INF file.
@@ -637,10 +651,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.stackedWidget.show()
         self.pemInfoDockWidget.show()
         files_to_add = []
-        self.window().statusBar().addPermanentWidget(self.pg)
-        self.pg.setMaximum(len(pem_files))
-        self.pg.setValue(0)
-        self.pg.show()
+        self.start_pg(min=0, max=len(pem_files))
         count = 0
 
         for pem_file in pem_files:
@@ -920,14 +931,25 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pem_files, rows = self.get_selected_pem_files()
         else:
             pem_files, rows = self.pem_files, range(self.table.rowCount())
+
+        if not pem_files:
+            return
+
+        self.start_pg(min=0, max=len(pem_files))
+        count = 0
         for pem_file, row in zip(pem_files, rows):
             if not pem_file.is_averaged():
                 print(f"Averaging {os.path.basename(pem_file.filepath)}")
+                self.pg.setText(f"Averaging {os.path.basename(pem_file.filepath)}")
                 # Save a backup of the un-averaged file first
                 if self.auto_create_backup_files_cbox.isChecked():
                     self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]')
                 pem_file = self.file_editor.average(pem_file)
+                self.pem_info_widgets[row].open_file(pem_file, parent=self)
                 self.refresh_table_row(pem_file, row)
+                count += 1
+                self.pg.setValue(count)
+        self.pg.hide()
 
     def split_pem_channels(self, all=False):
         """
@@ -939,14 +961,23 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pem_files, rows = self.get_selected_pem_files()
         else:
             pem_files, rows = self.pem_files, range(self.table.rowCount())
+        if not pem_files:
+            return
 
+        self.start_pg(min=0, max=len(pem_files))
+        count = 0
         for pem_file, row in zip(pem_files, rows):
             if not pem_file.is_split():
                 print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
+                self.pg.setText(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
                 if self.auto_create_backup_files_cbox.isChecked():
                     self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]')
                 pem_file = self.file_editor.split_channels(pem_file)
+                self.pem_info_widgets[row].open_file(pem_file, parent=self)
                 self.refresh_table_row(pem_file, row)
+                count += 1
+                self.pg.setValue(count)
+        self.pg.hide()
 
     def scale_coil_area_selection(self, coil_area=None, all=False):
         """
@@ -1068,46 +1099,48 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Automatically merge PEM files. Groups surface files up by loop name first, then by line name, then does the merge.
         :return: None
         """
-        # TODO Needs to check for split channels before merging
         if len(self.pem_files) > 0:
-            self.pg.setValue(0)
-            self.window().statusBar().addPermanentWidget(self.pg)
-            self.pg.show()
-
             files_to_open = []
+            # self.spinner.start()
+            # self.spinner.show()
+
+            # time.sleep(.1)
             updated_pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in
                                  zip(copy.deepcopy(self.pem_files), range(self.table.rowCount()))]
             bh_files = [pem_file for pem_file in updated_pem_files if 'borehole' in pem_file.survey_type.lower()]
             sf_files = [pem_file for pem_file in updated_pem_files if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower()]
 
-            # # Surface lines
-            # for loop, pem_files in groupby(sf_files, key=lambda x: x.header.get('Loop')):
-            #     print(f"Auto merging loop {loop}")
-            #     for line, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
-            #         pem_files = list(pem_files)
-            #         if len(pem_files) > 1:
-            #             print(f"Auto merging line {line}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
-            #             rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
-            #             merged_pem = self.merge_pem_files(pem_files)
-            #             if merged_pem:
-            #                 # Backup and remove the old files:
-            #                 for row in reversed(rows):
-            #                     pem_file = updated_pem_files[row]
-            #                     if self.auto_create_backup_files_cbox.isChecked():
-            #                         self.save_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
-            #                                            remove_old=self.delete_merged_files_cbox.isChecked())
-            #                     if self.delete_merged_files_cbox.isChecked():
-            #                         self.remove_file(row)
-            #                         updated_pem_files.pop(row)
-            #                 self.save_pem_file(merged_pem, tag='[M]')
-            #                 # Open the files later to not deal with changes in index when files are opened.
-            #                 files_to_open.append(merged_pem)
+            # Surface lines
+            for loop, pem_files in groupby(sf_files, key=lambda x: x.header.get('Loop')):
+                print(f"Auto merging loop {loop}")
+                for line, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
+                    pem_files = list(pem_files)
+                    if len(pem_files) > 1:
+                        print(f"Auto merging line {line}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
+                        rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
+                        merged_pem = self.merge_pem_files(pem_files)
+                        if merged_pem:
+                            # Backup and remove the old files:
+                            for row in reversed(rows):
+                                pem_file = updated_pem_files[row]
+                                if self.auto_create_backup_files_cbox.isChecked():
+                                    self.save_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
+                                                       remove_old=self.delete_merged_files_cbox.isChecked())
+                                if self.delete_merged_files_cbox.isChecked():
+                                    self.remove_file(row)
+                                    updated_pem_files.pop(row)
+                            self.save_pem_file(merged_pem, tag='[M]')
+                            # Open the files later to not deal with changes in index when files are opened.
+                            files_to_open.append(merged_pem)
+
             # Boreholes
             for loop, pem_files in groupby(bh_files, key=lambda x: x.header.get('Loop')):
-                print(f"Auto merging loop {loop}")
+                print(f"Loop {loop}")
                 for hole, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
+                    print(f"Hole {hole}")
+                    pem_files = sorted(list(pem_files), key=lambda x: x.get_components())
                     for components, pem_files in groupby(pem_files, key=lambda x: x.get_components()):
-                        print(f"Components: {components}")
+                        print(f"Components {components}")
                         pem_files = list(pem_files)
                         if len(pem_files) > 1:
                             print(f"Auto merging hole {hole}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
@@ -1117,16 +1150,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                                 # Backup and remove the old files:
                                 for row in reversed(rows):
                                     pem_file = updated_pem_files[row]
-                                    # if self.auto_create_backup_files_cbox.isChecked():
-                                    #     self.save_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
-                                    #                        remove_old=self.delete_merged_files_cbox.isChecked())
-                                    # if self.delete_merged_files_cbox.isChecked():
-                                    #     self.remove_file(row)
-                                    #     updated_pem_files.pop(row)
-                                # self.save_pem_file(merged_pem, tag='[M]')
+                                    if self.auto_create_backup_files_cbox.isChecked():
+                                        self.save_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
+                                                           remove_old=self.delete_merged_files_cbox.isChecked())
+                                    if self.delete_merged_files_cbox.isChecked():
+                                        self.remove_file(row)
+                                        updated_pem_files.pop(row)
+                                self.save_pem_file(merged_pem, tag='[M]')
                                 # Open the files later to not deal with changes in index when files are opened.
                                 files_to_open.append(merged_pem)
-            # self.open_pem_files(files_to_open)
+            self.open_pem_files(files_to_open)
+            # self.spinner.stop()
 
     def save_pem_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
         """
@@ -2852,6 +2886,10 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
+    # spinner = WaitingSpinner(mw.table)
+    # spinner.start()
+    # spinner.show()
+
     # mw.auto_merge_pem_files()
     # mw.sort_files()
     # section = Section3DViewer(pem_files)

@@ -336,10 +336,11 @@ class GPXEditor:
             units = row[3]
             name = row[4]
             stn = re.findall('\d+', re.split('-', name)[-1])
+            stn = stn[0] if stn else ''
             u = utm.from_latlon(lat, lon)
             zone = u[2]
             letter = u[3]
-            hemisphere = 'north' if lat >= 0 else 'south'
+            # hemisphere = 'north' if lat >= 0 else 'south'
             # zone = math.floor((lon+180)/6) + 1  # Calculate the zone number
             # myProj = Proj(f"+proj=utm +zone={zone},\+{hemisphere} +ellps=WGS84 +datum=WGS84 +units=m +no_defs")  # north for north hemisphere
             # UTMx, UTMy = myProj(lon, lat)

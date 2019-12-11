@@ -12,9 +12,11 @@ from src.gps.gpx_module.gpxpy import gpx
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
     gpxCreatorFile = 'qt_ui\\gpx_creator.ui'
+    icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     gpxCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\gpx_creator.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
 Ui_GPXCreator, QtBaseClass = uic.loadUiType(gpxCreatorFile)
@@ -40,8 +42,8 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle("GPX Creator")
-        # self.setWindowIcon(
-        #     QtGui.QIcon(os.path.join(icons_path, 'crone_logo.ico')))
+        self.setWindowIcon(
+            QtGui.QIcon(os.path.join(icons_path, 'gpx_creator_4.svg')))
         self.dialog = QFileDialog()
         self.message = QMessageBox()
         self.setAcceptDrops(True)
@@ -59,9 +61,9 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
 
         # Signals
         self.importCSV.triggered.connect(self.open_file_dialog)
-        self.exportGPX.triggered.connect(self.save_file_dialog)
+        self.exportGPX.triggered.connect(self.export_gpx)
         self.create_csv_template_action.triggered.connect(self.create_csv_template)
-        self.export_gpx_btn.clicked.connect(self.save_file_dialog)
+        self.export_gpx_btn.clicked.connect(self.export_gpx)
         self.auto_name_btn.clicked.connect(self.auto_name)
         self.system_box.currentIndexChanged.connect(self.toggle_utm_boxes)
 
@@ -79,17 +81,6 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         else:
             pass
 
-    def save_file_dialog(self):
-        """
-        Retrieve a file name and path for the save file through the file dialog
-        """
-        default_path = os.path.dirname(self.filepath)
-        file = self.dialog.getSaveFileName(self, 'Save File', default_path, filter='GPX file (*.gpx);; All files(*.*)')
-        if file[0] != '':
-            self.export_gpx(file[0])
-        else:
-            pass
-
     def dragEnterEvent(self, e):
         e.accept()
 
@@ -104,12 +95,8 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         else:
             e.ignore()
 
-    def get_selected_rows(self):
-        rows = [model.row() for model in self.table.selectionModel().selectedRows()]
-        return rows
-
     def remove_row(self):
-        rows = self.get_selected_rows()
+        rows = [model.row() for model in self.table.selectionModel().selectedRows()]
         if rows:
             for row in reversed(rows):
                 self.table.removeRow(row)
@@ -179,15 +166,24 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         print(f'Opening file {os.path.basename(self.filepath)}')
         self.statusBar().showMessage(f'Opened file {os.path.basename(self.filepath)}', 2000)
 
-    def export_gpx(self, savepath):
+    def export_gpx(self):
         """
         Save a GPX file from the information in the table.
-        :param savepath: str: filepath of the GPX file to create.
         :return: None
         """
+
+        if not self.table.rowCount() > 0:
+            return
+
         print('Exporting GPX...')
         self.statusBar().showMessage(f"Saving GPX file...")
 
+        default_path = os.path.dirname(self.filepath)
+        file = self.dialog.getSaveFileName(self, 'Save File', default_path, filter='GPX file (*.gpx);; All files(*.*)')
+        if file[0] == '':
+            return
+
+        savepath = file[0]
         gpx = gpxpy.gpx.GPX()
         # datum = self.datum_box.currentText()
         if not self.system_box.currentText():
