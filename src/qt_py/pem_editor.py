@@ -1442,7 +1442,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         pem_files, rows = self.get_selected_pem_files()
         for row in reversed(rows):
             self.remove_file(row)
-        self.window().statusBar().showMessage(f"{len(rows)} files removed.")
+        self.window().statusBar().showMessage(f"{len(rows)} files removed.", 2000)
 
     def reset_crs(self):
         """
