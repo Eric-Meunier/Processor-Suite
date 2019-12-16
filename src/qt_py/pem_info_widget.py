@@ -148,12 +148,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.cellChanged.connect(self.check_station_order)
         self.stationGPSTable.cellChanged.connect(self.check_missing_gps)
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
-        self.stationGPSTable.itemSelectionChanged.connect(lambda: self.shiftStationGPSSpinbox.setValue(0))
+        self.stationGPSTable.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
 
         self.loopGPSTable.itemSelectionChanged.connect(self.toggle_loop_move_buttons)
-        self.loopGPSTable.itemSelectionChanged.connect(lambda: self.shift_elevation_spinbox.setValue(0))
+        self.loopGPSTable.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shift_elevation_spinbox))
 
-        self.dataTable.itemSelectionChanged.connect(lambda: self.shiftStationSpinbox.setValue(0))
+        self.dataTable.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationSpinbox))
         self.dataTable.cellChanged.connect(self.update_pem_from_table)
 
         # Spinboxes
@@ -1274,6 +1274,19 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.update_data_table()
         self.dataTable.resizeColumnsToContents()
         self.last_stn_shift_amt = shift_amount
+
+    def reset_spinbox(self, spinbox):
+        """
+        Reset the spinbox value to 0 when a table selection is changed without triggering the spinbox signals
+        :param spinbox: QSpinbox object, the one associated with the table.
+        :return: None
+        """
+        spinbox.blockSignals(True)
+        spinbox.setValue(0)
+        self.last_stn_gps_shift_amt = 0
+        self.last_loop_elev_shift_amt = 0
+        self.last_stn_shift_amt = 0
+        spinbox.blockSignals(False)
 
     def reverse_polarity(self, selected_rows=None, component=None):
         """

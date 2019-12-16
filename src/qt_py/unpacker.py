@@ -215,7 +215,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
     def accept_changes(self):
 
-        def make_move(folder_name, table):
+        def make_move(folder_name, table, append_date=False):
             if table.rowCount() > 0:
                 if not os.path.isdir(os.path.join(new_folder, folder_name)):
                     os.mkdir(os.path.join(new_folder, folder_name))
@@ -224,6 +224,8 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                     root = table.item(row, 1).text()
                     old_path = os.path.join(root, file)
                     new_path = os.path.join(os.path.join(new_folder, folder_name), file)
+                    if append_date:
+                        new_path = os.path.join(new_path, add file and date )
                     os.rename(old_path, new_path)
 
 
@@ -232,16 +234,12 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         if not os.path.isdir(new_folder):
             os.mkdir(new_folder)
 
-        if self.dump_table.rowCount() > 0:
-            if not os.path.isdir(os.path.join(new_folder, 'Dump')):
-                os.mkdir(os.path.join(new_folder, 'Dump'))
-
-            for row in range(self.dump_table.rowCount()):
-                file = self.dump_table.item(row, 0).text()
-                root = self.dump_table.item(row, 1).text()
-                old_path = os.path.join(root, file)
-                new_path = os.path.join(os.path.join(new_folder, 'Dump'), file)
-                os.rename(old_path, new_path)
+        make_move('Dump', self.dump_table)
+        make_move('Damp', self.damp_table)
+        make_move('PEM', self.pem_table, append_date=True)
+        make_move('GPS', self.gps_table, append_date=True)
+        make_move('Geometry', self.geometry_table)
+        make_move('Other', self.other_table)
 
 
 def main():
