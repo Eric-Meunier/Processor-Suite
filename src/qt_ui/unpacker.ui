@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>743</width>
+    <width>810</width>
     <height>783</height>
    </rect>
   </property>
@@ -49,6 +49,9 @@
        </item>
        <item row="2" column="0">
         <widget class="QTreeView" name="dir_tree">
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOn</enum>
+         </property>
          <property name="autoExpandDelay">
           <number>0</number>
          </property>
@@ -69,7 +72,7 @@
        <item row="1" column="0">
         <widget class="QLabel" name="label_8">
          <property name="text">
-          <string>Dump directory</string>
+          <string>Dump directory:</string>
          </property>
         </widget>
        </item>
@@ -77,6 +80,12 @@
         <widget class="QLabel" name="dir_label">
          <property name="text">
           <string>TextLabel</string>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="wordWrap">
+          <bool>false</bool>
          </property>
         </widget>
        </item>
@@ -140,7 +149,7 @@
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QTableWidget" name="dump_table">
+        <widget class="UnpackerTable" name="dump_table">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -155,9 +164,18 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>16777215</width>
+           <width>200</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="autoScroll">
+          <bool>false</bool>
+         </property>
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
          </property>
          <property name="dragEnabled">
           <bool>true</bool>
@@ -170,6 +188,9 @@
          </property>
          <property name="defaultDropAction">
           <enum>Qt::MoveAction</enum>
+         </property>
+         <property name="selectionMode">
+          <enum>QAbstractItemView::ExtendedSelection</enum>
          </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
@@ -195,16 +216,20 @@
           <property name="text">
            <string>Directory</string>
           </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>ID</string>
+          <property name="foreground">
+           <brush brushstyle="NoBrush">
+            <color alpha="0">
+             <red>0</red>
+             <green>0</green>
+             <blue>0</blue>
+            </color>
+           </brush>
           </property>
          </column>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QTableWidget" name="damp_table">
+        <widget class="UnpackerTable" name="damp_table">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -219,9 +244,18 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>16777215</width>
+           <width>200</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="autoScroll">
+          <bool>false</bool>
+         </property>
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
          </property>
          <property name="dragEnabled">
           <bool>true</bool>
@@ -263,15 +297,10 @@
            <string>Directory</string>
           </property>
          </column>
-         <column>
-          <property name="text">
-           <string>ID</string>
-          </property>
-         </column>
         </widget>
        </item>
        <item row="3" column="0">
-        <widget class="QTableWidget" name="pem_table">
+        <widget class="UnpackerTable" name="pem_table">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -286,9 +315,18 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>16777215</width>
+           <width>200</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="autoScroll">
+          <bool>false</bool>
+         </property>
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
          </property>
          <property name="dragEnabled">
           <bool>true</bool>
@@ -327,11 +365,6 @@
            <string>Directory</string>
           </property>
          </column>
-         <column>
-          <property name="text">
-           <string>ID</string>
-          </property>
-         </column>
         </widget>
        </item>
        <item row="0" column="1" alignment="Qt::AlignHCenter">
@@ -349,7 +382,7 @@
         </widget>
        </item>
        <item row="3" column="1">
-        <widget class="QTableWidget" name="gps_table">
+        <widget class="UnpackerTable" name="gps_table">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -364,9 +397,18 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>16777215</width>
+           <width>200</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="autoScroll">
+          <bool>false</bool>
+         </property>
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
          </property>
          <property name="dragEnabled">
           <bool>true</bool>
@@ -382,6 +424,9 @@
          </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+         <property name="showGrid">
+          <bool>false</bool>
          </property>
          <attribute name="horizontalHeaderVisible">
           <bool>false</bool>
@@ -400,11 +445,6 @@
          <column>
           <property name="text">
            <string>Directory</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>ID</string>
           </property>
          </column>
         </widget>
@@ -424,12 +464,27 @@
         </widget>
        </item>
        <item row="5" column="0">
-        <widget class="QTableWidget" name="geometry_table">
+        <widget class="UnpackerTable" name="geometry_table">
          <property name="minimumSize">
           <size>
            <width>200</width>
            <height>200</height>
           </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="autoScroll">
+          <bool>false</bool>
+         </property>
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
          </property>
          <property name="dragEnabled">
           <bool>true</bool>
@@ -445,6 +500,9 @@
          </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+         <property name="showGrid">
+          <bool>false</bool>
          </property>
          <attribute name="horizontalHeaderVisible">
           <bool>false</bool>
@@ -463,11 +521,6 @@
          <column>
           <property name="text">
            <string>Directory</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>ID</string>
           </property>
          </column>
         </widget>
@@ -488,12 +541,27 @@
         </widget>
        </item>
        <item row="5" column="1">
-        <widget class="QTableWidget" name="other_table">
+        <widget class="UnpackerTable" name="other_table">
          <property name="minimumSize">
           <size>
            <width>200</width>
            <height>200</height>
           </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="autoScroll">
+          <bool>false</bool>
+         </property>
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
          </property>
          <property name="dragEnabled">
           <bool>true</bool>
@@ -509,6 +577,9 @@
          </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+         <property name="showGrid">
+          <bool>false</bool>
          </property>
          <attribute name="horizontalHeaderVisible">
           <bool>false</bool>
@@ -529,11 +600,6 @@
            <string>Directory</string>
           </property>
          </column>
-         <column>
-          <property name="text">
-           <string>ID</string>
-          </property>
-         </column>
         </widget>
        </item>
       </layout>
@@ -545,7 +611,7 @@
        <enum>Qt::Horizontal</enum>
       </property>
       <property name="standardButtons">
-       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+       <set>QDialogButtonBox::Close|QDialogButtonBox::Ok</set>
       </property>
      </widget>
     </item>
@@ -556,7 +622,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>743</width>
+     <width>810</width>
      <height>21</height>
     </rect>
    </property>
@@ -582,6 +648,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UnpackerTable</class>
+   <extends>QTableWidget</extends>
+   <header>src.qt_py.custom_tables</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

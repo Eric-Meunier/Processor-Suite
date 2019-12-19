@@ -1288,6 +1288,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 extension = os.path.splitext(pem_file.filepath)[-1]
                 if export_final is True:
                     file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))  # Removes underscore-dates and tags
+                    if 'surface' in pem_file.survey_type.lower():
+                        file_name = file_name.upper()
+                        if file_name[0] == 'C':
+                            file_name = file_name[1:]
+                        if pem_file.is_averaged() and 'AV' not in file_name:
+                            file_name = file_name + 'Av'
+
                 updated_file.filepath = os.path.join(file_dir, file_name + extension)
                 self.save_pem_file(updated_file, dir=file_dir)
             self.refresh_table()
@@ -1412,10 +1419,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.window().statusBar().addPermanentWidget(printer.pb)
                 printer.print_files()
                 printer.pb.hide()
+                self.window().statusBar().showMessage('Plots saved', 2000)
             else:
                 self.window().statusBar().showMessage('Cancelled', 2000)
-
-            self.window().statusBar().showMessage('Plots saved', 2000)
 
     def remove_file(self, table_row):
         """
