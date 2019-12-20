@@ -1,15 +1,11 @@
 import sys
 import os
-import re
-import csv
-import time
-from zipfile import ZipFile
 from pyunpack import Archive
 from shutil import copyfile, rmtree
 from pathlib import Path
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction,
-                             QFileSystemModel, QAbstractItemView, QErrorMessage, QTableWidget)
+                             QFileSystemModel, QAbstractItemView, QErrorMessage, QMenu)
 
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
@@ -34,6 +30,10 @@ def exception_hook(exctype, value, traceback):
 
 sys.excepthook = exception_hook
 
+icons_lib = {
+    'cor': QtGui.QIcon(os.path.join(icons_path, 'pathfinder_cor.ico'))
+}
+
 
 class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
@@ -53,6 +53,8 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.path = ''
         self.model.setRootPath(QtCore.QDir.rootPath())
         self.dir_tree.setModel(self.model)
+        self.dir_tree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.dir_tree.customContextMenuRequested.connect(self.open_menu)
         self.move_dir_tree_to(self.model.rootPath())
         self.calendar_widget.setSelectedDate(QtCore.QDate.currentDate())
 
@@ -72,10 +74,28 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.reset_action.triggered.connect(self.reset)
 
         self.format_widgets()
-        # self.set_date()
 
     def remove_row(self):
         pass
+
+    def open_menu(self, position):
+        """
+        Right click context menu for directory tree
+        :param position:
+        :return: None
+        """
+
+        def add_dump_folder():
+            path = self.get_current_path()
+            dump_path = os.path.join(path, 'Dump')
+            if os.path.isdir(dump_path):
+                self.statusBar().showMessage('Dump folder already exists')
+            else:
+                os.mkdir(dump_path)
+
+        menu = QMenu()
+        menu.addAction('Add Dump Folder', add_dump_folder)
+        menu.exec_(self.dir_tree.viewport().mapToGlobal(position))
 
     def clear_table(self, table):
         """
@@ -163,14 +183,11 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             extract_dir = os.path.dirname(url)
             new_folder_dir = os.path.splitext(url)[0]
 
+            # extract_dir = self.get_current_path()
+            # new_folder_dir = os.path.join(self.get_current_path(), os.path.splitext(os.path.basename(url))[0])
+
             Archive(url).extractall(extract_dir)
             self.open_folder(new_folder_dir)
-            # with ZipFile(url, mode='r') as zip:
-            #     print(f"Extracting {os.path.basename(url)}")
-            #     extract_dir = os.path.dirname(url)
-            #     zip.extractall(extract_dir)
-            #     new_dir = os.path.splitext(url)[0]
-            #     self.open_folder(new_dir)
 
     def format_widgets(self):
         self.dump_table.setColumnWidth(0, 200)
@@ -195,10 +212,18 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             row = table.rowCount()
             table.insertRow(row)
 
+            # icon = QtGui.QIcon(QtGui.QPixmap(os.path.join(icons_path, 'pathfinder_cor.ico')))
+            # icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'pathfinder_cor.ico'))
+            icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'plots1.png'))
+            icon = QtGui.QIcon(icon_pix)
+            print(f"Icon valid: {not icon_pix.isNull()}")
+            # file_item = QTableWidgetItem(icon, file)
             file_item = QTableWidgetItem(file)
             dir_item = QTableWidgetItem(dir)
+
             file_item.setFlags(file_item.flags() ^ QtCore.Qt.ItemIsDropEnabled)
             dir_item.setFlags(dir_item.flags() ^ QtCore.Qt.ItemIsDropEnabled)
+
             table.setItem(row, 0, file_item)
             table.setItem(row, 1, dir_item)
 
@@ -296,9 +321,9 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                             self.error.showMessage(f'Cannot find \"{old_path}\"')
 
         date = self.calendar_widget.selectedDate()
-        new_folder = os.path.join(str(Path(self.path).parents[0]), date.toString('MMMM dd, yyyy'))
+        new_folder = os.path.join(self.get_current_path(), date.toString('MMMM dd, yyyy'))
         if os.path.isdir(new_folder):
-            response = self.message.question(self, '',
+            response = self.message.question(self, 'Unpacker',
                                   f"Folder \"{new_folder}\" already exists. Would you like to unpack in the existing folder?",
                                   self.message.Yes | self.message.No)
             if response == self.message.No:
@@ -308,8 +333,8 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
         make_move('Dump', self.dump_table)
         make_move('Damp', self.damp_table)
-        make_move('PEM', self.pem_table, additional_folder=os.path.join(str(Path(self.path).parents[1]), 'RAW'))
-        make_move('GPS', self.gps_table, additional_folder=os.path.join(str(Path(self.path).parents[1]), 'GPS'))
+        make_move('PEM', self.pem_table, additional_folder=os.path.join(str(Path(self.get_current_path()).parents[0]), 'RAW'))
+        make_move('GPS', self.gps_table, additional_folder=os.path.join(str(Path(self.get_current_path()).parents[0]), 'GPS'))
         make_move('Geometry', self.geometry_table)
         make_move('Other', self.other_table)
 
@@ -325,8 +350,8 @@ def main():
     up = Unpacker()
     up.move(app.desktop().screen().rect().center() - up.rect().center())
     up.show()
-    folder = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\MRC-111\DUMP\Oct 31st 2019'
-    zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\MRC-111\DUMP\Oct 31st 2019.zip'
+    folder = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19'
+    zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
     # up.open_folder(folder)
 
     sys.exit(app.exec())
