@@ -208,17 +208,41 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         :return: None
         """
 
-        def add_to_table(file, dir, table):
+        def get_icon(ext):
+            ext = ext.lower()
+            if ext in ['xls', 'xlsx', 'csv']:
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'excel_file.png'))
+                icon = QtGui.QIcon(icon_pix)
+            elif ext in ['rtf', 'docx', 'doc']:
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'word_file.png'))
+                icon = QtGui.QIcon(icon_pix)
+            elif ext in ['log', 'txt', 'xyz', 'seg', 'dad']:
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'txt_file.png'))
+                icon = QtGui.QIcon(icon_pix)
+            elif ext in ['pem', 'dmp', 'dmp2']:
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'crone_logo.png'))
+                icon = QtGui.QIcon(icon_pix)
+            elif ext in ['gpx', 'gdb']:
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'garmin_file.png'))
+                icon = QtGui.QIcon(icon_pix)
+            elif ext in ['ssf']:
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'ssf_file.png'))
+                icon = QtGui.QIcon(icon_pix)
+            elif ext in ['cor']:
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'cor_file.png'))
+                icon = QtGui.QIcon(icon_pix)
+            else:
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'none_file.png'))
+                icon = QtGui.QIcon(icon_pix)
+            return icon
+
+        def add_to_table(file, dir, table, extension):
             row = table.rowCount()
             table.insertRow(row)
 
-            # icon = QtGui.QIcon(QtGui.QPixmap(os.path.join(icons_path, 'pathfinder_cor.ico')))
-            # icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'pathfinder_cor.ico'))
-            icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'plots1.png'))
-            icon = QtGui.QIcon(icon_pix)
-            print(f"Icon valid: {not icon_pix.isNull()}")
-            # file_item = QTableWidgetItem(icon, file)
-            file_item = QTableWidgetItem(file)
+            icon = get_icon(extension)
+            file_item = QTableWidgetItem(icon, file)
+            # file_item = QTableWidgetItem(file)
             dir_item = QTableWidgetItem(dir)
 
             file_item.setFlags(file_item.flags() ^ QtCore.Qt.ItemIsDropEnabled)
@@ -245,30 +269,37 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             for file in files:
                 if any([file.lower().endswith(ext) for ext in pem_extensions]):
                     print(f"{file} is a PEM file")
-                    add_to_table(file, root, self.pem_table)
+                    ext = os.path.splitext(file)[-1][1:]
+                    add_to_table(file, root, self.pem_table, ext)
 
                 elif any([file.lower().endswith(ext) for ext in damp_extensions]) and not os.path.split(root)[
                                                                                               -1].lower() == 'gps':
                     print(f"{file} is a Damp file")
-                    add_to_table(file, root, self.damp_table)
+                    ext = os.path.splitext(file)[-1][1:]
+                    add_to_table(file, root, self.damp_table, ext)
 
                 elif any([file.lower().endswith(ext) for ext in dump_extensions]) and not os.path.split(root)[
                                                                                               -1].lower() == 'gps':
                     print(f"{file} is a Dump file")
-                    add_to_table(file, root, self.dump_table)
+                    ext = os.path.splitext(file)[-1][1:]
+                    add_to_table(file, root, self.dump_table, ext)
 
                 elif any([file.lower().endswith(ext) for ext in gps_extensions]):
+
                     print(f"{file} is a GPS file")
-                    add_to_table(file, root, self.gps_table)
+                    ext = os.path.splitext(file)[-1][1:]
+                    add_to_table(file, root, self.gps_table, ext)
 
                 elif any([file.lower().endswith(ext) for ext in geometry_extensions]) and not os.path.split(root)[
                                                                                                   -1].lower() == 'gps':
                     print(f"{file} is a Geometry file")
-                    add_to_table(file, root, self.geometry_table)
+                    ext = os.path.splitext(file)[-1][1:]
+                    add_to_table(file, root, self.geometry_table, ext)
 
                 else:
                     print(f"{file} is another file")
-                    add_to_table(file, root, self.other_table)
+                    ext = os.path.splitext(file)[-1][1:]
+                    add_to_table(file, root, self.other_table, ext)
 
     def accept_changes(self):
         """
@@ -352,7 +383,7 @@ def main():
     up.show()
     folder = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19'
     zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
-    # up.open_folder(folder)
+    up.open_folder(folder)
 
     sys.exit(app.exec())
 
