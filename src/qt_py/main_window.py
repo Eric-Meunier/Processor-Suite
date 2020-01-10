@@ -8,12 +8,13 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QDesktopWidget, QMessage
                              QFileDialog, QAction, QToolBar)
 
 from src.damp.db_plot import DBPlot
+from src.qt_py.unpacker import Unpacker
 from src.qt_py.pem_editor import PEMEditorWindow
 from src.gps.gpx_creator import GPXCreator
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.7.0'
+__version__ = '0.8.0'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -111,6 +112,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.editor = None
         self.db_plot = None
         self.gpx_creator = None
+        self.unpacker = None
 
     def initActions(self):
         # self.openFile = QAction("&Open...", self)
@@ -126,6 +128,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.openGPXCreator = QAction("&Open Conder", self)
         self.openGPXCreator.triggered.connect(self.open_gpx_creator)
+
+        self.openUnpacker = QAction("&Open Unpacker", self)
+        self.openUnpacker.triggered.connect(self.open_unpacker)
 
         self.closeAllWindows = QAction("&Close All", self)
         self.closeAllWindows.setShortcut("Ctrl+Shift+Del")
@@ -150,7 +155,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.pem_editor_button = QToolButton(self)
         self.pem_editor_button.setIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'pem_editor_3.svg')))
+            QtGui.QIcon(os.path.join(icons_path, 'pem_editor_3.png')))
         self.pem_editor_button.setCheckable(True)
         self.pem_editor_button.setStatusTip('PEM Editor')
         self.pem_editor_button.setToolTip('PEM Editor')
@@ -166,13 +171,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.gpx_creator_button = QToolButton(self)
         self.gpx_creator_button.setIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'gpx_creator_4.svg')))
+            QtGui.QIcon(os.path.join(icons_path, 'gpx_creator_4.png')))
         self.gpx_creator_button.setCheckable(True)
         self.gpx_creator_button.setStatusTip('GPX Creator')
         self.gpx_creator_button.setToolTip('GPX Creator')
         self.gpx_creator_button.clicked.connect(self.toggle_gpx_creator)
 
+        self.unpacker_button = QToolButton(self)
+        self.unpacker_button.setIcon(
+            QtGui.QIcon(os.path.join(icons_path, 'unpacker_1.png')))
+        self.unpacker_button.setCheckable(True)
+        self.unpacker_button.setStatusTip('Unpacker')
+        self.unpacker_button.setToolTip('Unpacker')
+        self.unpacker_button.clicked.connect(self.toggle_unpacker)
+
         # self.toolbar.addAction(self.tile_view)
+        self.toolbar.addWidget(self.unpacker_button)
         self.toolbar.addWidget(self.pem_editor_button)
         self.toolbar.addWidget(self.db_plot_button)
         self.toolbar.addWidget(self.gpx_creator_button)
@@ -207,6 +221,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.db_plot.clear_files()
                 if self.gpx_creator:
                     self.gpx_creator.reset()
+                if self.unpacker:
+                    self.unpacker.reset()
                 self.statusBar().showMessage('All files removed', 2000)
             else:
                 pass
@@ -264,6 +280,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.gpx_creator_subwindow.show()
         self.set_view()
 
+    def open_unpacker(self):
+        if self.unpacker is None:
+            self.unpacker = Unpacker()
+            self.unpacker_subwindow = CustomMdiSubWindow(parent=self.unpacker)
+            self.unpacker_subwindow.setWidget(self.unpacker)
+            self.unpacker_subwindow.closeWindow.connect(self.unpacker.reset)
+            self.unpacker_subwindow.closeWindow.connect(self.toggle_unpacker)
+            self.mdiArea.addSubWindow(self.unpacker_subwindow)
+        self.unpacker_button.setChecked(True)
+        self.unpacker.show()
+        self.unpacker_subwindow.show()
+        self.set_view()
+
     def toggle_editor(self):
         if self.editor is None:
             self.open_editor()
@@ -307,107 +336,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.set_view()
                 self.gpx_creator_button.setChecked(False)
 
-    # def dragEnterEvent(self, e):
-    #     urls = [url.toLocalFile().lower() for url in e.mimeData().urls()]
-    #     accepted_extensions = ['pem', 'con', 'txt', 'log', 'rtf']
-    #
-    #     def check_extension(urls):
-    #         for url in urls:
-    #             url_ext = url.split('.')[-1].lower()
-    #             if url_ext in accepted_extensions:
-    #                 continue
-    #             else:
-    #                 return False
-    #         return True
-    #
-    #     if check_extension(urls):
-    #         e.accept()
-    #     else:
-    #         self.statusBar().showMessage('Invalid file type', 1000)
-    #         e.ignore()
-    #
-    # def dropEvent(self, e):
-    #     urls = [url.toLocalFile() for url in e.mimeData().urls()]
-    #     self.open_files(urls)
-
-    # def open_file_dialog(self):
-    #     accepted_extensions = ['pem', 'con', 'txt', 'log', 'rtf']
-    #     try:
-    #         files = self.dialog.getOpenFileNames(self, 'Open Files',
-    #                                              filter='All Files (*.*);; PEM files (*.pem);; '
-    #                                                     'Damp files (*.txt *.log *.rtf);; CON files (*.con)')
-    #         if files[0] != '':
-    #             for file in files[0]:
-    #                 if file.split('.')[-1].lower() in accepted_extensions:
-    #                     self.open_files(file)
-    #                 else:
-    #                     pass
-    #         else:
-    #             pass
-    #     except Exception as e:
-    #         logging.warning(str(e))
-    #         self.message.information(None, 'Error', str(e))
-    #         pass
-    #
-    # def open_files(self, files):
-    #     if not isinstance(files, list) and isinstance(files, str):
-    #         files = [files]
-    #
-    #     pem_files = [file for file in files if file.lower().endswith('pem')]
-    #     con_files = [file for file in files if file.lower().endswith('con')]
-    #     damp_files = [file for file in files if file.lower().endswith('txt') or file.lower().endswith('log')
-    #                   or file.lower().endswith('rtf')]
-    #
-    #     if len(pem_files) > 0:
-    #         if self.editor is None:
-    #             self.open_editor()
-    #         try:
-    #             self.editor.open_files(pem_files)
-    #         except Exception as e:
-    #             logging.warning(str(e))
-    #             self.message.information(None, 'Error - Could not open selected PEM files', str(e))
-    #             pass
-    #         else:
-    #             self.editor.show()
-    #             self.editor_subwindow.show()
-    #             # if len(self.mdiArea.subWindowList()) == 1:
-    #             #     self.editor_subwindow.showMaximized()
-    #             # else:
-    #             #     self.mdiArea.tileSubWindows()
-    #
-    #     if len(damp_files) > 0:
-    #         if self.db_plot is None:
-    #             self.open_db_plot()
-    #         try:
-    #             self.db_plot.open_files(damp_files)
-    #         except Exception as e:
-    #             logging.warning(str(e))
-    #             self.message.information(None, 'Error - Could not open selected damping box files', str(e))
-    #             pass
-    #         else:
-    #             self.db_plot.show()
-    #             self.db_plot_subwindow.show()
-    #             if len(self.mdiArea.subWindowList()) == 1:
-    #                 self.db_plot_subwindow.showMaximized()
-    #             else:
-    #                 self.mdiArea.tileSubWindows()
-    #
-    #     # if len(con_files) > 0:
-    #     #     if self.gpx_creator is None:
-    #     #         self.open_gpx_creator()
-    #     #     try:
-    #     #         self.gpx_creator.open_files(con_files)
-    #     #     except Exception as e:
-    #     #         logging.warning(str(e))
-    #     #         self.message.information(None, 'Error - Could not open selected CON files', str(e))
-    #     #         pass
-    #     #     else:
-    #     #         self.gpx_creator.show()
-    #     #         self.gpx_creator_subwindow.show()
-    #     #         if len(self.mdiArea.subWindowList()) == 1:
-    #     #             self.gpx_creator_subwindow.showMaximized()
-    #     #         else:
-    #     #             self.mdiArea.tileSubWindows()
+    def toggle_unpacker(self):
+        if self.unpacker is None:
+            self.open_unpacker()
+        else:
+            if self.unpacker_subwindow.isHidden():
+                self.unpacker.show()
+                self.unpacker_subwindow.show()
+                self.unpacker_button.setChecked(True)
+                self.set_view()
+            else:
+                self.unpacker_subwindow.hide()
+                self.set_view()
+                self.unpacker_button.setChecked(False)
 
 
 def main():

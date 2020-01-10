@@ -7,6 +7,7 @@ import sys
 from datetime import datetime
 from timeit import default_timer as timer
 from collections import defaultdict
+import cartopy
 import cartopy.crs as ccrs  # import projections
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib as mpl
@@ -73,8 +74,8 @@ class PlotMethods:
     """
     Collection of methods for plotting LIN, LOG, and STEP plots
     """
-
-    def add_rectangle(self, figure):
+    @staticmethod
+    def add_rectangle(figure):
         """
         Draws a rectangle around a figure object
         """

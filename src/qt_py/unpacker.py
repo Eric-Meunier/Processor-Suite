@@ -1,5 +1,6 @@
 import sys
 import os
+import src.qt_py.custom_tables
 from pyunpack import Archive
 from shutil import copyfile, rmtree
 from pathlib import Path
@@ -42,7 +43,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.setupUi(self)
         self.setWindowTitle('Unpacker')
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'unpacker_1.svg')))
+            QtGui.QIcon(os.path.join(icons_path, 'unpacker_1.png')))
 
         self.dialog = QFileDialog()
         self.message = QMessageBox()
@@ -56,7 +57,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.dir_tree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.dir_tree.customContextMenuRequested.connect(self.open_menu)
         self.move_dir_tree_to(self.model.rootPath())
-        self.calendar_widget.setSelectedDate(QtCore.QDate.currentDate())
+        self.set_current_date()
 
         self.setAcceptDrops(True)
 
@@ -74,6 +75,9 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.reset_action.triggered.connect(self.reset)
 
         self.format_widgets()
+
+    def set_current_date(self):
+        self.calendar_widget.setSelectedDate(QtCore.QDate.currentDate())
 
     def remove_row(self):
         pass
@@ -119,6 +123,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             self.dir_label.setText('')
             self.dir_tree.collapseAll()
             self.move_dir_tree_to(self.model.rootPath())
+            self.set_current_date()
 
     def move_dir_tree_to(self, path):
         """
@@ -242,7 +247,6 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
             icon = get_icon(extension)
             file_item = QTableWidgetItem(icon, file)
-            # file_item = QTableWidgetItem(file)
             dir_item = QTableWidgetItem(dir)
 
             file_item.setFlags(file_item.flags() ^ QtCore.Qt.ItemIsDropEnabled)
