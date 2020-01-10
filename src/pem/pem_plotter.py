@@ -926,12 +926,18 @@ class PlanMap(MapPlotMethods):
                 self.lines.append(line_gps)
                 eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
                 angle = math.degrees(math.atan2(northings[-1]-northings[0], eastings[-1] - eastings[0]))
-                angle = angle-180 if abs(angle) > 90 else angle
-                if self.line_labels:
-                    line_label = self.ax.text(eastings[0], northings[0], f"{pem_file.header.get('LineHole')}",
-                                              rotation=angle, ha='center', va='bottom', zorder=5, color=self.color,
-                                              path_effects=label_buffer)
-                    self.labels.append(line_label)
+
+                if abs(angle) > 90:
+                    x, y = eastings[-1], northings[-1]
+                    # Flip the label if it's upside-down
+                    angle = angle - 180
+                else:
+                    x, y = eastings[0], northings[0]
+
+                line_label = self.ax.text(x, y, f" {pem_file.header.get('LineHole')} ",
+                                          rotation=angle, rotation_mode='anchor', ha='right', va='center', zorder=5, color=self.color,
+                                          path_effects=label_buffer)
+                self.labels.append(line_label)
                 self.station_handle, = self.ax.plot(eastings, northings, '-o', markersize=3, color=self.color,
                                                     markerfacecolor='w', markeredgewidth=0.3,
                                                     label='Surface Line', transform=self.crs, zorder=2)  # Plot the line
@@ -1000,7 +1006,7 @@ class PlanMap(MapPlotMethods):
                     pass
 
         for pem_file in self.pem_files:
-            label_buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
+            label_buffer = [patheffects.Stroke(linewidth=1.5, foreground='white'), patheffects.Normal()]
 
             if 'surface' in pem_file.survey_type.lower() and self.draw_lines is True:
                 add_line_to_map(pem_file)

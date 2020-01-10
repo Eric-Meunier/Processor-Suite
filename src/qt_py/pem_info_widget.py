@@ -6,7 +6,8 @@ import statistics
 import sys
 import numpy as np
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox)
+from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
+                             QFileDialog)
 from collections import Counter
 from src.gps.gps_editor import GPSParser, GPSEditor
 from src.pem.pem_file_editor import PEMFileEditor
@@ -45,6 +46,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.gps_parser = GPSParser()
         self.file_editor = PEMFileEditor()
         self.ri_editor = RIFile()
+        self.dialog = QFileDialog()
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
@@ -142,6 +144,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stations_from_data_btn.clicked.connect(self.stations_from_data)
         self.reversePolarityButton.clicked.connect(self.reverse_polarity)
         self.rename_repeat_stations_btn.clicked.connect(self.rename_repeat_stations)
+
+        self.export_gps_btn.clicked.connect(self.export_gps)
 
         # Table changes
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
@@ -1227,38 +1231,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             self.lcdDistance.display(0)
 
-    # def shift_station_numbers(self):
-    #     def apply_station_shift(row):
-    #         station_column = self.data_columns.index('Station')
-    #         if self.dataTable.item(row, station_column):
-    #             station = self.dataTable.item(row, station_column).text()
-    #         else:
-    #             station = None
-    #
-    #         if station is not None or station == 0:
-    #             station_num = int(re.findall('\d+', station)[0])
-    #             new_station_num = station_num + (shift_amount - self.last_stn_shift_amt)
-    #             new_station = re.sub(str(station_num), str(new_station_num), station)
-    #             new_station_item = QTableWidgetItem(str(new_station))
-    #             new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
-    #             self.pem_file.data[row]['Station'] = new_station
-    #             self.dataTable.setItem(row, station_column, new_station_item)
-    #         else:
-    #             pass
-    #
-    #     selected_rows = [model.row() for model in self.dataTable.selectionModel().selectedRows()]
-    #     shift_amount = self.shiftStationSpinbox.value()
-    #
-    #     if selected_rows:
-    #         for row in selected_rows:
-    #             apply_station_shift(row)
-    #
-    #     else:
-    #         if self.dataTable.rowCount() > 0:
-    #             for row in range(self.dataTable.rowCount()):
-    #                 apply_station_shift(row)
-    #     self.last_stn_shift_amt = shift_amount
-
     def shift_station_numbers(self):
         """
         Shift the data station number.
@@ -1432,3 +1404,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     row_list.append('')
             table_gps.append(row_list)
         return table_gps
+
+    def export_gps(self):
+        gps = self.get_station_gps()
+        if gps:
+            gps_str = ''
+            for line in gps:
+                gps_str += ' '.join(line) + '\n'
+
+            default_path = os.path.dirname(self.pem_file.filepath)
+            selected_path = self.dialog.getSaveFileName(self, 'Save File', directory=default_path,
+                                                        filter='Text files (*.txt);; CSV files (*.csv);; All files(*.*)')
+            if selected_path[0]:
+                with open(selected_path[0], 'w+') as file:
+                    file.write(gps_str)
+                os.startfile(selected_path[0])
+            else:
+                self.window().statusBar().showMessage('Cancelled.', 2000)
+

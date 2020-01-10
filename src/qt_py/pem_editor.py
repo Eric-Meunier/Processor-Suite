@@ -94,12 +94,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.pem_info_widgets = []
         self.tab_num = 2
 
-        self.message = QMessageBox()
         self.dialog = QFileDialog()
         self.parser = PEMParser()
         self.file_editor = PEMFileEditor()
         self.message = QMessageBox()
-        self.dialog = QFileDialog()
         self.gps_parser = GPSParser()
         self.gpx_editor = GPXEditor()
         self.serializer = PEMSerializer()
@@ -165,7 +163,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.saveFiles = QAction("&Save Files", self)
         self.saveFiles.setShortcut("Ctrl+S")
         self.saveFiles.setStatusTip("Save all files")
-        self.saveFiles.triggered.connect(lambda: self.save_pem_file_selection(all=True))
+        self.saveFiles.triggered.connect(lambda: self.save_pem_files(all=True))
 
         self.export_pems_action = QAction("&Export Files...", self)
         self.export_pems_action.setShortcut("F11")
@@ -348,7 +346,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.open_file_action.triggered.connect(self.open_in_text_editor)
 
                 self.table.save_file_action = QAction("&Save", self)
-                self.table.save_file_action.triggered.connect(self.save_pem_file_selection)
+                self.table.save_file_action.triggered.connect(self.save_pem_files)
 
                 self.table.export_pem_action = QAction("&Export...", self)
                 self.table.export_pem_action.triggered.connect(self.export_pem_files)
@@ -881,7 +879,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             for pem_file in self.pem_files:
                 print(f"Backing up {os.path.basename(pem_file.filepath)}")
                 pem_file = copy.deepcopy(pem_file)
-                self.save_pem_file(pem_file, backup=True, tag='[B]', remove_old=False)
+                self.save_pem_file_to_file(pem_file, backup=True, tag='[B]', remove_old=False)
             self.window().statusBar().showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
 
     def get_selected_pem_files(self):
@@ -943,7 +941,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.pg.setText(f"Averaging {os.path.basename(pem_file.filepath)}")
                 # Save a backup of the un-averaged file first
                 if self.auto_create_backup_files_cbox.isChecked():
-                    self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]')
+                    self.save_pem_file_to_file(copy.deepcopy(pem_file), backup=True, tag='[-A]')
                 pem_file = self.file_editor.average(pem_file)
                 self.pem_info_widgets[row].open_file(pem_file, parent=self)
                 self.refresh_table_row(pem_file, row)
@@ -971,7 +969,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
                 self.pg.setText(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
                 if self.auto_create_backup_files_cbox.isChecked():
-                    self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]')
+                    self.save_pem_file_to_file(copy.deepcopy(pem_file), backup=True, tag='[-S]')
                 pem_file = self.file_editor.split_channels(pem_file)
                 self.pem_info_widgets[row].open_file(pem_file, parent=self)
                 self.refresh_table_row(pem_file, row)
@@ -1085,11 +1083,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 for row in reversed(rows):
                     pem_file = copy.deepcopy(self.pem_files[row])
                     if self.auto_create_backup_files_cbox.isChecked():
-                        self.save_pem_file(pem_file, tag='[-M]', backup=True,
-                                           remove_old=self.delete_merged_files_cbox.isChecked())
+                        self.save_pem_file_to_file(pem_file, tag='[-M]', backup=True,
+                                                   remove_old=self.delete_merged_files_cbox.isChecked())
                     if self.delete_merged_files_cbox.isChecked():
                         self.remove_file(row)
-                self.save_pem_file(merged_pem, tag='[M]')
+                self.save_pem_file_to_file(merged_pem, tag='[M]')
                 self.open_pem_files(merged_pem)
         else:
             self.message.information(None, 'Error', 'Must select multiple PEM Files')
@@ -1124,12 +1122,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                             for row in reversed(rows):
                                 pem_file = updated_pem_files[row]
                                 if self.auto_create_backup_files_cbox.isChecked():
-                                    self.save_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
-                                                       remove_old=self.delete_merged_files_cbox.isChecked())
+                                    self.save_pem_file_to_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
+                                                               remove_old=self.delete_merged_files_cbox.isChecked())
                                 if self.delete_merged_files_cbox.isChecked():
                                     self.remove_file(row)
                                     updated_pem_files.pop(row)
-                            self.save_pem_file(merged_pem, tag='[M]')
+                            self.save_pem_file_to_file(merged_pem, tag='[M]')
                             # Open the files later to not deal with changes in index when files are opened.
                             files_to_open.append(merged_pem)
 
@@ -1151,18 +1149,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                                 for row in reversed(rows):
                                     pem_file = updated_pem_files[row]
                                     if self.auto_create_backup_files_cbox.isChecked():
-                                        self.save_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
-                                                           remove_old=self.delete_merged_files_cbox.isChecked())
+                                        self.save_pem_file_to_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
+                                                                   remove_old=self.delete_merged_files_cbox.isChecked())
                                     if self.delete_merged_files_cbox.isChecked():
                                         self.remove_file(row)
                                         updated_pem_files.pop(row)
-                                self.save_pem_file(merged_pem, tag='[M]')
+                                self.save_pem_file_to_file(merged_pem, tag='[M]')
                                 # Open the files later to not deal with changes in index when files are opened.
                                 files_to_open.append(merged_pem)
             self.open_pem_files(files_to_open)
             # self.spinner.stop()
 
-    def save_pem_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
+    def save_pem_file_to_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
         """
         Action of saving a PEM file to a .PEM file.
         :param pem_file: PEMFile object to be saved.
@@ -1205,10 +1203,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             finally:
                 pem_file.old_filepath = None
 
-    def save_pem_file_selection(self, all=False):
+    def save_pem_files(self, all=False):
         """
         Save all selected PEM files.
-        :param all: Bool: if True, savles all opened PEM files instead of only the selected ones.
+        :param all: Bool: if True, saves all opened PEM files instead of only the selected ones.
         :return: None
         """
         if len(self.pem_files) > 0:
@@ -1230,7 +1228,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             count = 0
             for row, pem_file in zip(rows, pem_files):
                 self.pg.setText(f"Saving {os.path.basename(pem_file.filepath)}")
-                self.save_pem_file(pem_file)
+                self.save_pem_file_to_file(pem_file)
                 # Block the signals because it only updates the row corresponding to the current stackedWidget.
                 self.pem_info_widgets[row].blockSignals(True)
                 self.pem_info_widgets[row].open_file(pem_file, parent=self)  # Updates the PEMInfoWidget tables
@@ -1260,7 +1258,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pem_file.filepath = file_path
             updated_file = self.update_pem_file_from_table(pem_file, row, filepath=file_path)
 
-            self.save_pem_file(updated_file)
+            self.save_pem_file_to_file(updated_file)
             self.window().statusBar().showMessage(
                 'Save Complete. PEM file saved as {}'.format(os.path.basename(file_path)), 2000)
         else:
@@ -1296,7 +1294,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                             file_name = file_name + 'Av'
 
                 updated_file.filepath = os.path.join(file_dir, file_name + extension)
-                self.save_pem_file(updated_file, dir=file_dir)
+                self.save_pem_file_to_file(updated_file, dir=file_dir)
             self.refresh_table()
             self.window().statusBar().showMessage(
                 f"Save complete. {len(pem_files)} PEM {'file' if len(pem_files) == 1 else 'files'} exported", 2000)
@@ -1781,8 +1779,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         table.
         :return: None
         """
-
-        # logging.info('PEMEditor - Updating PEM File from Table info')
 
         def add_crs_tag():
             system = self.systemCBox.currentText()
