@@ -1036,21 +1036,35 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         print(f"Merging {', '.join([os.path.basename(pem_file.filepath) for pem_file in pem_files])}")
 
-        # Check that all selected files split or all un-split.
-        def pem_files_eligible():
-            # if all([pem_file.is_averaged() for pem_file in pem_files]) or all(
-            #         [not pem_file.is_averaged() for pem_file in pem_files]):
-            if all([pem_file.is_split() for pem_file in pem_files]) or all(
-                    [not pem_file.is_split() for pem_file in pem_files]):
-                return True
-            else:
-                return False
-
         if isinstance(pem_files, list) and len(pem_files) > 1:
             # Data merging section
-            if not pem_files_eligible():
+            currents = [float(pem_file.tags.get('Current')) for pem_file in pem_files]
+            coil_areas = [float(pem_file.header.get('CoilArea')) for pem_file in pem_files]
+
+            # If any currents are different
+            if not all([current == currents[0] for current in currents]):
                 response = self.message.question(self, 'Merge PEM Files',
-                                                 'Both files have not been split. Would you like to split the unsplit file(s) and proceed with merging?',
+                                                 'Not all files have the same current. Proceed with merging anyway?',
+                                                 self.message.Yes | self.message.No)
+                if response == self.message.No:
+                    self.window().statusBar().showMessage('Aborted.', 2000)
+                    return
+
+            # If any coil areas are different
+            if not all([coil_area == coil_areas[0] for coil_area in coil_areas]):
+                response = self.message.question(self, 'Merge PEM Files',
+                                                 'Not all files have the same coil area. Proceed with merging anyway?',
+                                                 self.message.Yes | self.message.No)
+                if response == self.message.No:
+                    self.window().statusBar().showMessage('Aborted.', 2000)
+                    return
+
+            # If the files aren't all split or un-split
+            if not all([pem_file.is_split() for pem_file in pem_files]) or all(
+                    [not pem_file.is_split() for pem_file in pem_files]):
+                response = self.message.question(self, 'Merge PEM Files',
+                                                 'There is a mix of channel splitting in the selected files. '
+                                                 'Would you like to split the unsplit file(s) and proceed with merging?',
                                                  self.message.Yes | self.message.No)
                 if response == self.message.Yes:
                     for pem_file in pem_files:

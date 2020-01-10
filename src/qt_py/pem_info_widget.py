@@ -1406,6 +1406,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         return table_gps
 
     def export_gps(self):
+        """
+        Export the GPS in the station GPS table to a text or CSV file.
+        :return: None
+        """
         gps = self.get_station_gps()
         if gps:
             gps_str = ''
