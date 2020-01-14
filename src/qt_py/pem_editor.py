@@ -7,6 +7,7 @@ import re
 import pstats
 import sys
 import time
+from shutil import copyfile
 from decimal import getcontext
 from itertools import chain, groupby
 from collections import defaultdict
@@ -1692,17 +1693,22 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.window().statusBar().showMessage(
                         f"Coil area changed from {old_value} to {new_value}", 2000)
 
+        # Changing the name of a file
         if col == self.table_columns.index('File'):
             pem_file = self.pem_files[row]
             old_path = copy.deepcopy(pem_file.filepath)
             new_value = self.table.item(row, col).text()
 
-            if new_value != os.path.basename(pem_file.filepath):
-                # if pem_file.old_filepath is None:
+            if new_value != os.path.basename(pem_file.filepath) and new_value:
                 pem_file.old_filepath = old_path
-                new_path = '/'.join(old_path.split('/')[:-1]) + '/' + new_value
+                new_path = os.path.join(os.path.dirname(old_path), new_value)
                 print(f"Renaming {os.path.basename(old_path)} to {os.path.basename(new_path)}")
+
+                # Create a copy and delete the old one.
+                copyfile(old_path, new_path)
                 pem_file.filepath = new_path
+                os.remove(old_path)
+
                 self.window().statusBar().showMessage(f"File renamed to {str(new_value)}", 2000)
 
         # Spec cols are columns that shouldn't be edited manually, thus this re-fills the cells based on the

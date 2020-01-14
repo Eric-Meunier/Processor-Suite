@@ -14,7 +14,7 @@ from src.gps.gpx_creator import GPXCreator
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.8.0'
+__version__ = '0.8.1'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -283,6 +283,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def open_unpacker(self):
         if self.unpacker is None:
             self.unpacker = Unpacker()
+            self.unpacker.closeSignal.connect(self.toggle_unpacker)
             self.unpacker_subwindow = CustomMdiSubWindow(parent=self.unpacker)
             self.unpacker_subwindow.setWidget(self.unpacker)
             self.unpacker_subwindow.closeWindow.connect(self.unpacker.reset)

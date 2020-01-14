@@ -37,6 +37,7 @@ icons_lib = {
 
 
 class Unpacker(QMainWindow, Ui_UnpackerCreator):
+    closeSignal = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -81,6 +82,11 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
     def remove_row(self):
         pass
+
+    def closeEvent(self, e):
+        self.closeSignal.emit()
+        self.reset()
+        e.accept()
 
     def open_menu(self, position):
         """
