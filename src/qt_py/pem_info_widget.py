@@ -12,6 +12,7 @@ from collections import Counter
 from src.gps.gps_editor import GPSParser, GPSEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.ri.ri_file import RIFile
+from src.qt_py.custom_tables import CustomTableWidgetItem
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
@@ -31,6 +32,14 @@ else:
 Ui_PEMInfoWidget, QtBaseClass = uic.loadUiType(pemInfoWidgetCreatorFile)
 
 logging.info('PEMFileInfoWidget')
+
+
+def alpha_num_sort(string):
+    """ Returns all numbers on 5 digits to let sort the string with numeric order.
+    Ex: alphaNumOrder("a6b12.125")  ==> "a00006b00012.00125"
+    """
+    return ''.join([format(int(x), '05d') if x.isdigit()
+                    else x for x in re.split(r'(\d+)', string)])
 
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
@@ -146,6 +155,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.rename_repeat_stations_btn.clicked.connect(self.rename_repeat_stations)
 
         self.export_gps_btn.clicked.connect(self.export_gps)
+
+        # Radio buttons
+        self.station_sort_rbtn.clicked.connect(self.fill_data_table)
+        self.component_sort_rbtn.clicked.connect(self.fill_data_table)
+        self.reading_num_sort_rbtn.clicked.connect(self.fill_data_table)
 
         # Table changes
         self.stationGPSTable.cellChanged.connect(self.check_station_duplicates)
@@ -517,12 +531,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
-    def fill_data_table(self, data):
+    def fill_data_table(self):
         """
         Fill the dataTable with given PEMFile data
         :param data: PEMFile data
         """
         logging.info('PEMFileInfoWidget - Filling data table')
+        data = self.get_sorted_data()
         if data:
             self.clear_table(self.dataTable)
             self.dataTable.blockSignals(True)
@@ -530,17 +545,36 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             for i, station in enumerate(data):
                 row_pos = self.dataTable.rowCount()
                 self.dataTable.insertRow(row_pos)
-                items = [QTableWidgetItem(station[j]) for j in column_keys]
-
-                for m, item in enumerate(items):
+                for j, column in enumerate(column_keys):
+                    # if column in ['ReadingIndex', 'ReadingNumber', 'NumStacks']:
+                    #     item = CustomTableWidgetItem(station[column], int(station[column]))
+                    # else:
+                    #     item = CustomTableWidgetItem(station[column], station[column])
+                    item = CustomTableWidgetItem(station[column], station[column])
                     item.setTextAlignment(QtCore.Qt.AlignCenter)
-                    self.dataTable.setItem(row_pos, m, item)
+                    self.dataTable.setItem(row_pos, j, item)
 
             self.color_data_table()
             self.dataTable.resizeColumnsToContents()
             self.dataTable.blockSignals(False)
         else:
             pass
+
+    def get_sorted_data(self):
+        data = self.pem_file.data
+
+        if self.station_sort_rbtn.isChecked():
+            data.sort(key=lambda data: alpha_num_sort(data['Component']), reverse=False)
+            data.sort(key=lambda data: alpha_num_sort(data['Station']), reverse=False)
+
+        elif self.component_sort_rbtn.isChecked():
+            data.sort(key=lambda data: alpha_num_sort(data['Station']), reverse=False)
+            data.sort(key=lambda data: alpha_num_sort(data['Component']), reverse=False)
+
+        elif self.reading_num_sort_rbtn.isChecked():
+            data.sort(key=lambda data: alpha_num_sort(data['ReadingNumber']), reverse=False)
+
+        return data
 
     def update_data_table(self):
         """
@@ -573,10 +607,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         table_value = self.dataTable.item(table_row, table_col).text()
         data[table_row][column_keys[table_col]] = table_value
 
-        # if table_col == self.data_columns.index('Station'):
-        #     print("Emitting from update_pem_from_table")
-            # self.suffix_warning_signal.emit()
-            # self.repeat_stations_signal.emit()
         self.color_data_table()
         self.dataTable.blockSignals(False)
 
@@ -726,7 +756,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # init_collar_gps_text()
             init_geometry_text()
         init_loop_text()
-        self.fill_data_table(self.pem_file.data)
+        self.fill_data_table()
 
     def add_loop_gps(self, file):
         """

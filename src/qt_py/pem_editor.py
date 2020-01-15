@@ -144,7 +144,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.setWindowTitle("PEMEditor")
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'pem_editor_3.svg')))
-        self.setGeometry(500, 300, 1500, 800)
+        self.setGeometry(500, 300, 1700, 900)
         center_window(self)
 
     def initActions(self):
@@ -247,12 +247,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.editLineNames = QAction("&Rename All Lines/Holes", self)
         self.editLineNames.setStatusTip("Rename all line/hole names")
-        self.editLineNames.setShortcut("F2")
+        # self.editLineNames.setShortcut("F2")
         self.editLineNames.triggered.connect(lambda: self.batch_rename(type='Line'))
 
         self.editFileNames = QAction("&Rename All Files", self)
         self.editFileNames.setStatusTip("Rename all file names")
-        self.editFileNames.setShortcut("F3")
+        # self.editFileNames.setShortcut("F3")
         self.editFileNames.triggered.connect(lambda: self.batch_rename(type='File'))
 
         self.PEMMenu = self.menubar.addMenu('&PEM')

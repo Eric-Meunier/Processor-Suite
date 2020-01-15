@@ -1,5 +1,5 @@
 from PyQt5 import (QtCore, QtGui)
-from PyQt5.QtWidgets import (QTableWidgetItem, QAbstractItemView, QTableWidget)
+from PyQt5.QtWidgets import (QTableWidgetItem, QTableWidget)
 
 
 class UnpackerTable(QTableWidget):
@@ -45,3 +45,13 @@ class UnpackerTable(QTableWidget):
             return True
         # noinspection PyTypeChecker
         return rect.contains(pos, True) and not (int(self.model().flags(index)) & QtCore.Qt.ItemIsDropEnabled) and pos.y() >= rect.center().y()
+
+
+class CustomTableWidgetItem(QTableWidgetItem):
+    def __init__(self, text, sortKey):
+            QTableWidgetItem.__init__(self, text, QTableWidgetItem.UserType)
+            self.sortKey = sortKey
+
+    #Qt uses a simple < check for sorting items, override this to use the sortKey
+    def __lt__(self, other):
+            return self.sortKey < other.sortKey
