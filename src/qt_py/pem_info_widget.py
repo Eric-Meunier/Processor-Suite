@@ -1303,6 +1303,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if not component:
             selected_rows = self.get_selected_rows(self.dataTable)
         if component or selected_rows:
+            if component:
+                note = f"<HE3> {component.upper()} Polarity Reversed."
+                if note not in self.pem_file.notes:
+                    self.pem_file.notes.append(note)
+                else:
+                    self.pem_file.notes.remove(note)
             self.pem_file = self.file_editor.reverse_polarity(self.pem_file, rows=selected_rows, component=component)
             self.update_data_table()
             self.dataTable.resizeColumnsToContents()
