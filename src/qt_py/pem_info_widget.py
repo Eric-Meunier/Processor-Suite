@@ -398,6 +398,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.collarGPSTable.setHorizontalHeaderLabels(self.collar_columns)
             self.collarGPSTable.setSizeAdjustPolicy(
                 QAbstractScrollArea.AdjustToContents)
+            tag_item = QTableWidgetItem('<P00>')
+            units_item = QTableWidgetItem('0')
+            tag_item.setTextAlignment(QtCore.Qt.AlignCenter)
+            units_item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.collarGPSTable.setItem(0, 0, tag_item)
+            self.collarGPSTable.setItem(0, 4, units_item)
             self.collarGPSTable.resizeColumnsToContents()
 
             self.changeStationSuffixButton.setEnabled(False)
@@ -559,6 +565,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.dataTable.blockSignals(False)
         else:
             pass
+
 
     def get_sorted_data(self):
         data = self.pem_file.data
@@ -744,7 +751,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
                 if isinstance(value, list):
                     span_start = row
-                    value_list = [str(i) for i in value]
+                    value_list = [f"{i:.6f}" for i in value]
                     value_item = QTableWidgetItem(str(value_list[0]))
                     self.info_table.setItem(row, 1, value_item)
                     for value in value_list[1:]:
