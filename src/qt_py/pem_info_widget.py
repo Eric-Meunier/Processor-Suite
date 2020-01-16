@@ -710,27 +710,65 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         logging.info('PEMFileInfoWidget - Filling information tab')
 
         def init_info_tab():
-            operator = self.pem_file.tags.get('Operator')
+            """
+            Adds all information from the header, tags, and notes into the info_table.
+            :return: None
+            """
+            self.clear_table(self.info_table)
+            bold_font = QtGui.QFont()
+            bold_font.setBold(True)
+
+            header = self.pem_file.header
+            tags = self.pem_file.tags
+            notes = self.pem_file.notes
             loop_size = ' x '.join(self.pem_file.tags.get('LoopSize').split(' ')[0:2])
 
-            if 'surface' in self.survey_type.lower() or 'squid' in self.survey_type.lower():
-                linetype = 'Line'
-            else:
-                linetype = 'Hole'
+            for i, (key, value) in enumerate(tags.items()):
+                row = self.info_table.rowCount()
+                self.info_table.insertRow(row)
 
-            # Set text first to remove anything that was there bofore
-            self.info_text_edit.setText('<html><b>Operator: </b</html> {operator}'.format(operator=operator))
-            self.info_text_edit.append('<html><b>Loop Size: </b</html> {loop_size}'.format(loop_size=loop_size))
-            # Fill the info tab
-            for k, v in header.items():
-                unwanted_keys = ['Convension', 'IsNormalized', 'PrimeFieldValue', 'ChannelTimes']
-                if k not in unwanted_keys:
-                    if k == 'LineHole':
-                        k = linetype
-                    self.info_text_edit.append('<html><b>{k}:</b</html>\t{v}'.format(k=k, v=v))
+                key_item = QTableWidgetItem(key)
+                key_item.setFont(bold_font)
+                value_item = QTableWidgetItem(str(value))
 
-            self.info_text_edit.append(
-                '<html><b>Notes: </b</html> {notes}'.format(notes='\n'.join(self.pem_file.notes)))
+                self.info_table.setItem(row, 0, key_item)
+                self.info_table.setItem(row, 1, value_item)
+
+            for i, (key, value) in enumerate(header.items()):
+                row = self.info_table.rowCount()
+                self.info_table.insertRow(row)
+
+                key_item = QTableWidgetItem(key)
+                key_item.setFont(bold_font)
+                self.info_table.setItem(row, 0, key_item)
+
+                if isinstance(value, list):
+                    span_start = row
+                    value_list = [str(i) for i in value]
+                    value_item = QTableWidgetItem(str(value_list[0]))
+                    self.info_table.setItem(row, 1, value_item)
+                    for value in value_list[1:]:
+                        row = self.info_table.rowCount()
+                        self.info_table.insertRow(row)
+                        value_item = QTableWidgetItem(str(value))
+                        self.info_table.setItem(row, 1, value_item)
+                    self.info_table.setSpan(span_start, 0, len(value_list), 1)
+
+                value_item = QTableWidgetItem(str(value))
+                self.info_table.setItem(row, 1, value_item)
+
+            span_start = self.info_table.rowCount()
+            for note in notes:
+                row = self.info_table.rowCount()
+                self.info_table.insertRow(row)
+
+                note_item = QTableWidgetItem(note)
+                self.info_table.setItem(row, 1, note_item)
+
+            notes_key_item = QTableWidgetItem('Notes')
+            notes_key_item.setFont(bold_font)
+            self.info_table.setSpan(span_start, 0, len(notes), 1)
+            self.info_table.setItem(span_start, 0, notes_key_item)
 
         def init_station_text():
             # Fill station GPS
@@ -746,8 +784,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # Fill loop GPS
             pem_loop_gps = self.pem_file.loop_coords
             self.add_loop_gps(pem_loop_gps)
-
-        header = self.pem_file.header
 
         init_info_tab()
         if 'surface' in self.survey_type.lower():
@@ -1304,7 +1340,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             selected_rows = self.get_selected_rows(self.dataTable)
         if component or selected_rows:
             if component:
-                note = f"<HE3> {component.upper()} Polarity Reversed."
+                note = f"<HE3> {component.upper()} component polarity reversed."
                 if note not in self.pem_file.notes:
                     self.pem_file.notes.append(note)
                 else:
