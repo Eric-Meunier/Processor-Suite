@@ -7,7 +7,7 @@ import sys
 import numpy as np
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
-                             QFileDialog)
+                             QFileDialog, QErrorMessage)
 from collections import Counter
 from src.gps.gps_editor import GPSParser, GPSEditor
 from src.pem.pem_file_editor import PEMFileEditor
@@ -56,6 +56,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.file_editor = PEMFileEditor()
         self.ri_editor = RIFile()
         self.dialog = QFileDialog()
+        self.error = QErrorMessage()
+        self.message = QMessageBox()
+        self.message.setIcon(QMessageBox.Information)
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
@@ -1347,7 +1350,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             selected_rows = self.get_selected_rows(self.dataTable)
         if component or selected_rows:
             if component:
-                note = f"<HE3> {component.upper()} component polarity reversed."
+                note = f"<HE3> {component.upper()} component polarity reversed"
                 if note not in self.pem_file.notes:
                     self.pem_file.notes.append(note)
                 else:
@@ -1380,13 +1383,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.dataTable.setItem(row, station_col, new_station_item)
         elif okPressed:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
-            msg.setWindowTitle('Invalid Suffix')
-            msg.setText('Suffix must be one of [NSEW]')
-            msg.setStandardButtons(QMessageBox.Ok)
-            msg.buttonClicked.connect(msg.close)
-            msg.exec()
+            self.message.setWindowTitle('Invalid Suffix')
+            self.message.setText('Suffix must be one of [NSEW]')
+            self.message.setStandardButtons(QMessageBox.Ok)
+            self.message.buttonClicked.connect(self.message.close)
+            self.message.exec()
 
     def change_component(self):
         """
@@ -1394,16 +1395,20 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         logging.info('PEMFileInfoWidget - Changing data component')
-        components = ['Z', 'X', 'Y']
-        rows = self.get_selected_rows(self.dataTable)
-        for row in rows:
-            table_comp = self.dataTable.item(row, self.data_columns.index('Comp.')).text()
-            index = components.index(table_comp)
-            if index or index == 0:
-                new_comp = components[(index+1) % 3]
-                new_comp_item = QTableWidgetItem(new_comp)
+
+        new_comp, okPressed = QInputDialog.getText(self, "Change Component", "New Component:")
+        if okPressed and new_comp.upper() in ['Z', 'X', 'Y']:
+            rows = self.get_selected_rows(self.dataTable)
+            for row in rows:
+                new_comp_item = QTableWidgetItem(new_comp.upper())
                 new_comp_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.dataTable.setItem(row, self.data_columns.index('Comp.'), new_comp_item)
+        elif okPressed:
+            self.message.setWindowTitle('Invalid Component')
+            self.message.setText('Component must be one of [Z, X, Y]')
+            self.message.setStandardButtons(QMessageBox.Ok)
+            self.message.buttonClicked.connect(self.message.close)
+            self.message.exec()
 
     def rename_repeat_stations(self):
         """
