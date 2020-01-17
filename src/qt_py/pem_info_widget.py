@@ -745,27 +745,28 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.info_table.setItem(row, 1, value_item)
 
             for i, (key, value) in enumerate(header.items()):
-                row = self.info_table.rowCount()
-                self.info_table.insertRow(row)
+                if key != 'ChannelTimes':
+                    row = self.info_table.rowCount()
+                    self.info_table.insertRow(row)
 
-                key_item = QTableWidgetItem(key)
-                key_item.setFont(bold_font)
-                self.info_table.setItem(row, 0, key_item)
+                    key_item = QTableWidgetItem(key)
+                    key_item.setFont(bold_font)
+                    self.info_table.setItem(row, 0, key_item)
 
-                if isinstance(value, list):
-                    span_start = row
-                    value_list = [f"{i:.6f}" for i in value]
-                    value_item = QTableWidgetItem(str(value_list[0]))
+                    # if isinstance(value, list):
+                    #     span_start = row
+                    #     value_list = [f"{i:.6f}" for i in value]
+                    #     value_item = QTableWidgetItem(str(value_list[0]))
+                    #     self.info_table.setItem(row, 1, value_item)
+                    #     for value in value_list[1:]:
+                    #         row = self.info_table.rowCount()
+                    #         self.info_table.insertRow(row)
+                    #         value_item = QTableWidgetItem(str(value))
+                    #         self.info_table.setItem(row, 1, value_item)
+                    #     self.info_table.setSpan(span_start, 0, len(value_list), 1)
+
+                    value_item = QTableWidgetItem(str(value))
                     self.info_table.setItem(row, 1, value_item)
-                    for value in value_list[1:]:
-                        row = self.info_table.rowCount()
-                        self.info_table.insertRow(row)
-                        value_item = QTableWidgetItem(str(value))
-                        self.info_table.setItem(row, 1, value_item)
-                    self.info_table.setSpan(span_start, 0, len(value_list), 1)
-
-                value_item = QTableWidgetItem(str(value))
-                self.info_table.setItem(row, 1, value_item)
 
             span_start = self.info_table.rowCount()
             for note in notes:
@@ -1349,7 +1350,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if not component:
             selected_rows = self.get_selected_rows(self.dataTable)
         if component or selected_rows:
-            if component:
+            if component and component in self.pem_file.get_components():
                 note = f"<HE3> {component.upper()} component polarity reversed"
                 if note not in self.pem_file.notes:
                     self.pem_file.notes.append(note)

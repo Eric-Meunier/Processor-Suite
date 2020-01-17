@@ -66,7 +66,10 @@ class PEMParser:
                     tags[group] = match.group(index).split('~')[0].split()[0]
                 else:
                     tags[group] = match.group(index).strip()
-        return tags
+        if tags:
+            return tags
+        else:
+            raise ValueError('Error parsing the tags.')
 
     def parse_loop(self, file):
         loop_gps = re.findall(self.re_loop_coords, file)
@@ -94,7 +97,10 @@ class PEMParser:
                     header[group] = match.group(index)
             header['ChannelTimes'] = ([Decimal(x) for x in match.group('ChannelTimes').split()])
 
-        return header
+        if header:
+            return header
+        else:
+            raise ValueError('Error parsing the header.')
 
     def parse_data(self, file):
         survey_data = []
@@ -111,7 +117,10 @@ class PEMParser:
 
             survey_data.append(reading)
 
-        return survey_data
+        if survey_data:
+            return survey_data
+        else:
+            raise ValueError('Error parsing the survey data.')
 
     def get_components(self, data):
         unique_components = []
@@ -145,7 +154,7 @@ class PEMParser:
         elif survey_type.casefold() == 's-squid':
             survey_type = 'SQUID'
         else:
-            survey_type = 'UNDEF_SURV'
+            raise ValueError(f"Invalid survey type: {survey_type}")
 
         return survey_type
 

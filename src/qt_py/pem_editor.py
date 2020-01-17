@@ -14,7 +14,7 @@ from collections import defaultdict
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QProgressBar, QCheckBox,
-                             QInputDialog, QHeaderView, QTableWidget, QGridLayout, QDialogButtonBox, QVBoxLayout)
+                             QInputDialog, QHeaderView, QTableWidget, QErrorMessage, QDialogButtonBox, QVBoxLayout)
 import matplotlib.pyplot as plt
 # from pyqtspinner.spinner import WaitingSpinner
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -99,6 +99,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.parser = PEMParser()
         self.file_editor = PEMFileEditor()
         self.message = QMessageBox()
+        self.error = QErrorMessage()
         self.gps_parser = GPSParser()
         self.gpx_editor = GPXEditor()
         self.serializer = PEMSerializer()
@@ -656,13 +657,21 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         for pem_file in pem_files:
             if isinstance(pem_file, PEMFile):
                 pem_file = pem_file.filepath
-            # Check that the PEM File isn't already opened
+
             if not is_opened(pem_file):
                 pemInfoWidget = PEMFileInfoWidget()
                 pemInfoWidget.refresh_tables_signal.connect(lambda: self.refresh_table(single_row=True))
 
                 if not isinstance(pem_file, PEMFile):
-                    pem_file = self.parser.parse(pem_file)
+                    try:
+                        pem_file = self.parser.parse(pem_file)
+                    except ValueError as e:
+                        self.error.setWindowTitle(f"Open PEM File Error")
+                        self.error.showMessage(f"The following error occurred while opening PEM File {os.path.basename(pem_file)}:"
+                                               f"\n{str(e)}")
+                        self.pg.hide()
+                        continue
+
                     print(f'Opening {os.path.basename(pem_file.filepath)}')
                 self.pg.setText(f"Opening {os.path.basename(pem_file.filepath)}")
                 try:
@@ -675,7 +684,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.stackedWidget.addWidget(pem_widget)
 
                     files_to_add.append(pem_file)
-                    # self.add_pem_to_table(pem_file)  # Add all files together later.
                     pemInfoWidget.blockSignals(False)
 
                     # Fill in the GPS System information based on the existing GEN tag if it's not yet filled.
@@ -717,7 +725,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     count += 1
                     self.pg.setValue(count)
                 except Exception as e:
-                    self.message.information(None, 'PEMEditor: open_pem_files error', str(e))
+                    self.error.setWindowTitle('Open PEM File Error')
+                    self.error.showMessage(str(e))
 
         if len(self.pem_files) > 0:
             self.fill_share_range()
