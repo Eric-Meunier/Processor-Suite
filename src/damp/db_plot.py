@@ -7,7 +7,7 @@ import codecs
 import statistics as stats
 import pyqtgraph as pg
 import logging
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QGridLayout, QDesktopWidget, QMessageBox)
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QErrorMessage, QGridLayout, QDesktopWidget, QMessageBox)
 from PyQt5 import (QtCore, QtGui, uic)
 
 sys._excepthook = sys.excepthook
@@ -29,21 +29,21 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
-    DB_Window_qtCreatorFile = 'qt_ui\\db_plot_window.ui'
     DB_Widget_qtCreatorFile = 'qt_ui\\db_plot_widget.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    DB_Window_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_window.ui')
     DB_Widget_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_widget.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
-Ui_DB_Window, QtBaseClass = uic.loadUiType(DB_Window_qtCreatorFile)
 Ui_DB_Widget, QtBaseClass = uic.loadUiType(DB_Widget_qtCreatorFile)
 
 
-class DBPlot(QMainWindow):#, Ui_DB_Window):
+class DBPlot(QMainWindow):
+    """
+    Window that contains all opened DampPlot objects
+    """
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
@@ -61,8 +61,10 @@ class DBPlot(QMainWindow):#, Ui_DB_Window):
 
         self.damp_parser = DampParser()
         self.message = QMessageBox()
+        self.error = QErrorMessage()
         self.dialog = QtGui.QFileDialog()
         self.open_widgets = []
+        self.opened_files = []
 
     def initUi(self):
         def center_window(self):
@@ -187,21 +189,33 @@ class DBPlot(QMainWindow):#, Ui_DB_Window):
             pass
 
     def open_files(self, files):
+        """
+        Parse and plot damping box data.
+        :param files: str: filepath of files to open
+        :return: None
+        """
         # Only work with lists (to accomodate files with multiple logs, so if input isn't a list, makes it one
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
         for file in files:
-            try:
-                damp_data = self.damp_parser.parse(file)
-            except Exception as e:
-                logging.warning(str(e))
-                self.message.information(None, 'Error', str(e))
-                return
-            else:
-                damp_plot = DampPlot(damp_data, grid=self.show_grids, show_coords=self.show_coords,
-                                     show_symbols=self.show_symbols)
-                self.open_widgets.append(damp_plot)
-                self.add_plot(damp_plot)
+            if os.path.abspath(file) not in self.opened_files:
+                try:
+                    damp_data = self.damp_parser.parse(file)
+                except Exception as e:
+                    logging.warning(str(e))
+                    self.message.information(None, 'Error', str(e))
+                    return
+                else:
+                    if damp_data:
+                        damp_plot = DampPlot(damp_data, grid=self.show_grids, show_coords=self.show_coords,
+                                             show_symbols=self.show_symbols)
+                        self.open_widgets.append(damp_plot)
+                        self.opened_files.append(os.path.abspath(file))
+                        self.add_plot(damp_plot)
+                    else:
+                        self.message.information(None, 'Open Damping Box File Error', f'No damping box data found in {os.path.basename(file)}')
+                        # self.error.setWindowTitle('Open Damping Box File Error')
+                        # self.error.showMessage(f'No damping box data found in {os.path.basename(file)}')
 
     def clear_files(self):
         try:
@@ -209,6 +223,7 @@ class DBPlot(QMainWindow):#, Ui_DB_Window):
                 self.central_widget_layout.removeWidget(widget)
                 widget.deleteLater()
             self.open_widgets.clear()
+            self.opened_files = []
             self.window().statusBar().showMessage('All files removed', 2000)
             self.x = 0
             self.y = 0
@@ -221,10 +236,13 @@ class DBPlot(QMainWindow):#, Ui_DB_Window):
         if len(self.open_widgets) > 0:
             for widget in self.open_widgets:
                 if widget.underMouse():
+                    index = self.open_widgets.index(widget)
                     self.central_widget_layout.removeWidget(widget)
                     widget.deleteLater()
                     self.open_widgets.remove(widget)
+                    self.opened_files.pop(index)
                     break
+            self.arrange_plots()
 
     def reset_range(self):
         if len(self.open_widgets) > 0:
@@ -233,7 +251,7 @@ class DBPlot(QMainWindow):#, Ui_DB_Window):
                     widget.set_ranges()
 
             except Exception as e:
-                self.message.information(None, 'Error', str(e))
+                self.message.information(None, 'Error Resetting Range', str(e))
                 logging.info(str(e))
                 pass
 
@@ -311,8 +329,23 @@ class DBPlot(QMainWindow):#, Ui_DB_Window):
         if old_y != self.y:
             self.x = 0
 
+    def arrange_plots(self):
+        """
+        Re-arranges the layout of the plots for when a file is removed.
+        :return: None
+        """
+        for widget in self.open_widgets:
+            self.central_widget_layout.removeWidget(widget)
+
+        self.x, self.y = 0, 0
+        for widget in self.open_widgets:
+            self.add_plot(widget)
+
 
 class DampParser:
+    """
+    Class that parses damping box data.
+    """
     def __init__(self):
         self.re_split_ramp = re.compile(
             r'read\s+\d{8}([\r\n].*$)*', re.MULTILINE
@@ -335,6 +368,11 @@ class DampParser:
         )
 
     def format_data(self, raw_data):
+        """
+        Formats the date to be date objects and the current to be in Amps.
+        :param raw_data: list: Freshly parsed damping box data.
+        :return: List of times and list of currents.
+        """
         times = []
         currents = []
 
@@ -353,6 +391,11 @@ class DampParser:
             return None
 
     def get_date(self, dates):
+        """
+        Finds and returns the oldest date.
+        :param dates: list: list of string dates
+        :return: The oldest date as a datetime.date object
+        """
         if dates:
             formatted_dates = []
 
@@ -366,6 +409,11 @@ class DampParser:
             return None
 
     def parse(self, filepath):
+        """
+        Parse the damping box data
+        :param filepath: filepath of the damping box data.
+        :return: dict: list of times (as integers), list of currents, the date, filename and folderpath.
+        """
         file = None
         damp_data = []
         survey_date = None
@@ -415,11 +463,13 @@ class DampParser:
         return damp_data
 
 
-class DampPlot(QWidget):#, Ui_DB_Widget):
+class DampPlot(QWidget):
+    """
+    Plot of the damping box data.
+    """
 
     def __init__(self, file, show_coords=False, grid=True, show_symbols=True, parent=None):
         super(DampPlot, self).__init__(parent=parent)
-        # self.setupUi(self)
         self.gridLayout = QGridLayout()
         self.setLayout(self.gridLayout)
         self.parent = parent
@@ -447,6 +497,10 @@ class DampPlot(QWidget):#, Ui_DB_Widget):
         self.text.hide()
 
     def create_plot(self):
+        """
+        Creates a pyqtgraph plot and plots the damping box data on it.
+        :return: None
+        """
         tick_label_font = QtGui.QFont()
         tick_label_font.setPixelSize(11)
         tick_label_font.setBold(False)
@@ -527,6 +581,10 @@ class DampPlot(QWidget):#, Ui_DB_Widget):
         self.pw.scene().sigMouseMoved.connect(mouseMoved)
 
     def set_ranges(self):
+        """
+        Automatically calculate and set the range of the plots.
+        :return: None
+        """
 
         offset = 0.5 * (max([stats.median(currents) for currents in self.currents]) - min(
             [stats.median(currents) for currents in self.currents]))
@@ -560,8 +618,9 @@ def main():
     mw.show()
     parser = DampParser()
     plotter = DampPlot
-    file = r'C:\_Data\2019\Iscaycruz\Surface\Tumucachay\_TU-02\DUMP\October 21\Dump\DampBox234Voltage.log'
-    mw.open_files(file)
+    files = [r'C:\_Data\2020\Iscaycruz\Surface\Yanagarin\Loop 2\Dump\January 11, 2020\Damp\YAT-Log(234)-20200111-171807.txt',
+             r'C:\_Data\2020\Iscaycruz\Surface\Yanagarin\Loop 2\Dump\January 11, 2020\Damp\YAT-Log(234)-20200111-171818.txt']
+    mw.open_files(files)
     # d = plotter(parser.parse(file))
     # d.show()
     app.exec_()

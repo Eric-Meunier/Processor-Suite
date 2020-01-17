@@ -373,7 +373,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             os.mkdir(new_folder)
 
         make_move('Dump', self.dump_table)
-        make_move('Damp', self.damp_table)
+        make_move('Damp', self.damp_table, additional_folder=os.path.join(str(Path(self.get_current_path()).parents[0]), 'DAMP'))
         make_move('PEM', self.pem_table, additional_folder=os.path.join(str(Path(self.get_current_path()).parents[0]), 'RAW'))
         make_move('GPS', self.gps_table, additional_folder=os.path.join(str(Path(self.get_current_path()).parents[0]), 'GPS'))
         make_move('Geometry', self.geometry_table)

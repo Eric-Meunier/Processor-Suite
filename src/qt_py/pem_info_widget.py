@@ -157,7 +157,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.reversePolarityButton.clicked.connect(self.reverse_polarity)
         self.rename_repeat_stations_btn.clicked.connect(self.rename_repeat_stations)
 
-        self.export_gps_btn.clicked.connect(self.export_gps)
+        self.export_station_gps_btn.clicked.connect(lambda: self.export_gps('station'))
+        self.export_loop_gps_btn.clicked.connect(lambda: self.export_gps('loop'))
 
         # Radio buttons
         self.station_sort_rbtn.clicked.connect(self.fill_data_table)
@@ -1490,12 +1491,17 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             table_gps.append(row_list)
         return table_gps
 
-    def export_gps(self):
+    def export_gps(self, type):
         """
         Export the GPS in the station GPS table to a text or CSV file.
+        :type: str: 'station' or 'loop'
         :return: None
         """
-        gps = self.get_station_gps()
+        if type == 'station':
+            gps = self.get_station_gps()
+        else:
+            gps = self.get_loop_gps()
+
         if gps:
             gps_str = ''
             for line in gps:
