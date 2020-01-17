@@ -283,7 +283,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def open_unpacker(self):
         if self.unpacker is None:
             self.unpacker = Unpacker()
-            self.unpacker.closeSignal.connect(self.toggle_unpacker)
             self.unpacker_subwindow = CustomMdiSubWindow(parent=self.unpacker)
             self.unpacker_subwindow.setWidget(self.unpacker)
             self.unpacker_subwindow.closeWindow.connect(self.unpacker.reset)
@@ -357,11 +356,6 @@ def main():
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
-    window.toggle_db_plot()
-    # files = [
-    #     r'C:\_Data\2020\Iscaycruz\Surface\Yanagarin\Loop 2\Dump\January 11, 2020\Damp\YAT-Log(234)-20200111-171807.txt',
-    #     r'C:\_Data\2020\Iscaycruz\Surface\Yanagarin\Loop 2\Dump\January 11, 2020\Damp\YAT-Log(234)-20200111-171818.txt']
-    # window.db_plot.open_files(files)
     timer = QtCore.QTimer()
     timer.timeout.connect(lambda: None)
     timer.start(100)

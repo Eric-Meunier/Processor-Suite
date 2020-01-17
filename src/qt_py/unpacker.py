@@ -6,7 +6,7 @@ from shutil import copyfile, rmtree
 from pathlib import Path
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction,
-                             QFileSystemModel, QAbstractItemView, QErrorMessage, QMenu)
+                             QFileSystemModel, QAbstractItemView, QErrorMessage, QMenu, QDialogButtonBox)
 
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
@@ -37,7 +37,6 @@ icons_lib = {
 
 
 class Unpacker(QMainWindow, Ui_UnpackerCreator):
-    closeSignal = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -62,15 +61,9 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
         self.setAcceptDrops(True)
 
-        # Actions
-        self.del_file = QAction("&Remove Row", self)
-        self.del_file.setShortcut("Del")
-        self.del_file.triggered.connect(self.remove_row)
-        self.addAction(self.del_file)
-
         # Signals
         self.buttonBox.accepted.connect(self.accept_changes)
-        self.buttonBox.rejected.connect(self.close)
+        self.buttonBox.button(QDialogButtonBox.Reset).clicked.connect(self.reset)
         self.dir_tree.clicked.connect(self.change_dir_label)
         self.open_folder_action.triggered.connect(self.open_file_dialog)
         self.reset_action.triggered.connect(self.reset)
@@ -80,11 +73,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
     def set_current_date(self):
         self.calendar_widget.setSelectedDate(QtCore.QDate.currentDate())
 
-    def remove_row(self):
-        pass
-
     def closeEvent(self, e):
-        self.closeSignal.emit()
         self.reset()
         e.accept()
 
@@ -353,14 +342,25 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
                                 additional_path = os.path.join(additional_folder, new_file_name)
                                 copyfile(old_path, additional_path)
-                        try:
-                            print(f"Moving \"{old_path}\" to \"{new_path}\"")
-                            copyfile(old_path, new_path)
-                        except FileExistsError:
-                            self.error.showMessage(f'\"{new_path}\" exists already')
-                        except FileNotFoundError:
-                            self.error.showMessage(f'Cannot find \"{old_path}\"')
 
+                        if os.path.abspath(old_path) == os.path.abspath(new_path):
+                            continue
+                        else:
+                            try:
+                                print(f"Moving \"{old_path}\" to \"{new_path}\"")
+                                copyfile(old_path, new_path)
+                            except FileExistsError:
+                                self.error.setWindowTitle('Error - File Exists')
+                                self.error.showMessage(f'\"{new_path}\" exists already')
+                            except FileNotFoundError:
+                                self.error.setWindowTitle('Error - File Not Found')
+                                self.error.showMessage(f'Cannot find \"{old_path}\"')
+                            except Exception as e:
+                                self.error.setWindowTitle('Exception')
+                                self.error.showMessage(f'{e}')
+                                continue
+
+        delete_old_folder = True
         date = self.calendar_widget.selectedDate()
         new_folder = os.path.join(self.get_current_path(), date.toString('MMMM dd, yyyy'))
         if os.path.isdir(new_folder):
@@ -369,6 +369,8 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                                   self.message.Yes | self.message.No)
             if response == self.message.No:
                 return
+            else:
+                delete_old_folder = False
         else:
             os.mkdir(new_folder)
 
@@ -380,7 +382,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         make_move('Other', self.other_table)
 
         self.reset(tables_only=True)
-        if self.path != new_folder:
+        if self.path != new_folder and delete_old_folder is True:
             rmtree(self.path)
         self.statusBar().showMessage('Complete.', 2000)
 

@@ -214,8 +214,6 @@ class DBPlot(QMainWindow):
                         self.add_plot(damp_plot)
                     else:
                         self.message.information(None, 'Open Damping Box File Error', f'No damping box data found in {os.path.basename(file)}')
-                        # self.error.setWindowTitle('Open Damping Box File Error')
-                        # self.error.showMessage(f'No damping box data found in {os.path.basename(file)}')
 
     def clear_files(self):
         try:
