@@ -673,7 +673,7 @@ class MapPlotMethods:
         :param collar_gps: Collar GPS of the borehole (easting, northing, elevation)
         :param segments: Segments of a borehole trace (Azimuth, dip, segment length, units, depth)
         :param interp_segments: Desired number of segments to be output
-        :return: Hole trace easting, northing, and elevation
+        :return: list of hole trace tuples (easting, northing, elevation)
         """
         logging.info('MapPlotMethods - Retrieving 3D borehole projection')
         if not collar_gps:
@@ -1340,6 +1340,16 @@ class PlanMap(MapPlotMethods):
             return self.fig
         else:
             return None
+
+
+class ContourPlot(MapPlotMethods):
+    """
+    Plot PEM surface data as a contour plot.
+    """
+
+    def __init__(self, ax, pem_files, parent=None):
+        MapPlotMethods.__init__(self)
+
 
 
 class Map3D(MapPlotMethods):

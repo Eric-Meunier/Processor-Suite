@@ -7,6 +7,8 @@ import re
 import pstats
 import sys
 import time
+import utm
+import simplekml
 from shutil import copyfile
 from decimal import getcontext
 from itertools import chain, groupby
@@ -24,7 +26,7 @@ from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
-from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar
+from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods
 from src.pem.pem_serializer import PEMSerializer
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.ri.ri_file import RIFile
@@ -103,6 +105,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.gps_parser = GPSParser()
         self.gpx_editor = GPXEditor()
         self.serializer = PEMSerializer()
+        self.mpm = MapPlotMethods()
         self.pg = CustomProgressBar()
         # self.spinner = WaitingSpinner(self.table)
         self.ri_importer = BatchRIImporter(parent=self)
@@ -121,7 +124,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # self.plotsDockWidget.setWidget(self.tabWidget)
         # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.stackedWidget)
 
-        self.gps_systems = ['', 'UTM', 'Latitude/Longitude']
+        self.gps_systems = ['', 'UTM']
         self.gps_zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
         self.gps_datums = ['', 'NAD 1927', 'NAD 1983', 'WGS 1984']
 
@@ -267,6 +270,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.PEMMenu.addAction(self.scaleAllCoilAreas)
 
         # GPS menu
+        self.saveAsKMZFile = QAction("&Save as KMZ", self)
+        self.saveAsKMZFile.setStatusTip("Create a KMZ file using all GPS in the opened PEM file(s)")
+        self.saveAsKMZFile.triggered.connect(self.save_as_kmz)
+
         self.sortAllStationGps = QAction("&Sort All Station GPS", self)
         self.sortAllStationGps.setStatusTip("Sort the station GPS for every file")
         self.sortAllStationGps.triggered.connect(self.sort_all_station_gps)
@@ -276,6 +283,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.sortAllLoopGps.triggered.connect(self.sort_all_loop_gps)
 
         self.GPSMenu = self.menubar.addMenu('&GPS')
+        self.GPSMenu.addAction(self.saveAsKMZFile)
+        self.GPSMenu.addSeparator()
         self.GPSMenu.addAction(self.sortAllStationGps)
         self.GPSMenu.addAction(self.sortAllLoopGps)
 
@@ -1337,6 +1346,132 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.section_3d_viewer.show()
         else:
             self.statusBar().showMessage('Invalid survey type', 2000)
+
+    def save_as_kmz(self):
+
+        if len(self.pem_files) == 0:
+            return
+
+        if not any([pem_file.has_any_gps() for pem_file in self.pem_files]):
+            self.message.information(self, 'Error', 'No GPS to show')
+            return
+
+        if self.datumCBox.currentText() == 'NAD 1927':
+            self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
+            return
+
+        if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() =='', self.datumCBox.currentText() == '']):
+            self.message.information(self, 'Error', 'GPS system information is incomplete')
+            return
+
+        kml = simplekml.Kml()
+        pem_files = [pem_file for pem_file in self.pem_files if pem_file.has_any_gps()]
+
+        zone = self.zoneCBox.currentText()
+        zone_num = int(re.search('\d+', zone).group())
+        north = True if 'n' in zone.lower() else False
+
+        line_style = simplekml.Style()
+        line_style.linestyle.width = 4
+        line_style.linestyle.color = simplekml.Color.magenta
+
+        station_style = simplekml.Style()
+        station_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/paddle/wht-square.png'
+        station_style.iconstyle.color = simplekml.Color.magenta
+
+        trace_style = simplekml.Style()
+        trace_style.linestyle.width = 2
+        trace_style.linestyle.color = simplekml.Color.magenta
+
+        collar_style = simplekml.Style()
+        collar_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/paddle/wht-stars.png'
+        collar_style.iconstyle.color = simplekml.Color.magenta
+
+        loops = []
+        loop_names = []
+        lines = []
+        line_names = []
+        traces = []
+        hole_names = []
+
+        for pem_file in pem_files:
+            loop_gps = pem_file.get_loop_coords()
+            loop_gps.append(loop_gps[0])
+            loop_name = pem_file.header.get('Loop')
+            if loop_gps not in loops:
+                loops.append(loop_gps)
+                loop_names.append(loop_name)
+            if 'surface' in pem_file.survey_type.lower():
+                line_gps = pem_file.get_line_coords()
+                line_name = pem_file.header.get('LineHole')
+                if line_gps not in lines:
+                    lines.append(line_gps)
+                    line_names.append(line_name)
+            else:
+                borehole_projection = self.mpm.get_3D_borehole_projection(pem_file.get_collar_coords()[0], pem_file.get_hole_geometry(), 100)
+                trace_gps = list(zip(borehole_projection[0], borehole_projection[1]))
+                hole_name = pem_file.header.get('LineHole')
+                if trace_gps not in traces:
+                    traces.append(trace_gps)
+                    hole_names.append(hole_name)
+
+        for loop_gps, name in zip(loops, loop_names):
+            loop_coords = []
+            for row in loop_gps:
+                easting = float(row[0])
+                northing = float(row[1])
+                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+                loop_coords.append((lon, lat))
+                # kml.newpoint(coords=[(lon, lat)])
+            ls = kml.newlinestring(name=name)
+            ls.coords = loop_coords
+            ls.extrude = 1
+            ls.style = line_style
+
+        for line_gps, name in zip(lines, line_names):
+            line_coords = []
+            folder = kml.newfolder(name=name)
+            for row in line_gps:
+                easting = float(row[0])
+                northing = float(row[1])
+                station = row[-1]
+                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+                line_coords.append((lon, lat))
+                new_point = folder.newpoint(name=f"{station}", coords=[(lon, lat)])
+                new_point.style = station_style
+
+            ls = folder.newlinestring(name=name)
+            ls.coords = line_coords
+            ls.extrude = 1
+            ls.style = trace_style
+
+        for trace_gps, name in zip(traces, hole_names):
+            trace_coords = []
+            folder = kml.newfolder(name=name)
+            for row in trace_gps:
+                easting = float(row[0])
+                northing = float(row[1])
+                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+                trace_coords.append((lon, lat))
+                # new_point = kml.newpoint(name=name, coords=[(lon, lat)])
+                # new_point.style = collar_style
+
+            collar = folder.newpoint(name=name, coords=[trace_coords[0]])
+            collar.style = collar_style
+            ls = folder.newlinestring(name=name)
+            ls.coords = trace_coords
+            ls.extrude = 1
+            ls.style = trace_style
+
+        default_path = os.path.split(self.pem_files[-1].filepath)[0]
+        self.dialog.setDirectory(default_path)
+        save_dir = QFileDialog.getSaveFileName(self, 'Save KMZ File', default_path, 'KMZ Files (*.KMZ)')[0]
+        if save_dir:
+            kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
+            kml.savekmz(kmz_save_dir, format=False)
+            os.startfile(kmz_save_dir)
+        else:
+            self.window().statusBar().showMessage('Cancelled.', 2000)
 
     def print_plots(self, selected_files=False):
         """
@@ -2917,6 +3052,7 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
+    mw.save_as_kmz()
     # spinner = WaitingSpinner(mw.table)
     # spinner.start()
     # spinner.show()

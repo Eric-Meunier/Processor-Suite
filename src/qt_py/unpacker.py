@@ -332,13 +332,17 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                             if not os.path.isdir(additional_folder):
                                 os.mkdir(additional_folder)
                             file_name = os.path.splitext(file)[0]
-                            if 'pp' in file_name.lower() or 'soa' in file_name.lower():
+                            if 'soa' in file_name.lower():
                                 print(f"Skipping {file_name}")
-
                             else:
                                 ext = os.path.splitext(file)[-1]
                                 date_str = date.toString('dd')
-                                new_file_name = f"{file_name}_{date_str}{ext}"
+                                if folder_name.lower() == 'damp':
+                                    new_file_name = f"{date_str}_{file_name}{ext}"
+                                elif 'pp' in file_name.lower():
+                                    new_file_name = f"_{date_str}_{file_name}{ext}"
+                                else:
+                                    new_file_name = f"{file_name}_{date_str}{ext}"
 
                                 additional_path = os.path.join(additional_folder, new_file_name)
                                 copyfile(old_path, additional_path)
