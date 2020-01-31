@@ -14,7 +14,7 @@ from src.gps.gpx_creator import GPXCreator
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.8.4'
+__version__ = '0.8.5'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader

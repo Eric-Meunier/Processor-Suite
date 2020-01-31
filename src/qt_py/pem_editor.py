@@ -1348,6 +1348,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.statusBar().showMessage('Invalid survey type', 2000)
 
     def save_as_kmz(self):
+        """
+        Saves all GPS from the opened PEM files as a KMZ file. Utilizes 'simplekml' module. Only works with NAD 83
+        or WGS 84.
+        :return: None
+        """
 
         if len(self.pem_files) == 0:
             return
@@ -1375,8 +1380,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         line_style.linestyle.width = 4
         line_style.linestyle.color = simplekml.Color.magenta
 
+        loop_style = simplekml.Style()
+        loop_style.linestyle.width = 4
+        loop_style.linestyle.color = simplekml.Color.yellow
+
         station_style = simplekml.Style()
-        station_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/paddle/wht-square.png'
+        station_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png'
         station_style.iconstyle.color = simplekml.Color.magenta
 
         trace_style = simplekml.Style()
@@ -1398,42 +1407,42 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             loop_gps = pem_file.get_loop_coords()
             loop_gps.append(loop_gps[0])
             loop_name = pem_file.header.get('Loop')
-            if loop_gps not in loops:
+            if loop_gps and loop_gps not in loops:
                 loops.append(loop_gps)
                 loop_names.append(loop_name)
             if 'surface' in pem_file.survey_type.lower():
                 line_gps = pem_file.get_line_coords()
                 line_name = pem_file.header.get('LineHole')
-                if line_gps not in lines:
+                if line_gps and line_gps not in lines:
                     lines.append(line_gps)
                     line_names.append(line_name)
             else:
                 borehole_projection = self.mpm.get_3D_borehole_projection(pem_file.get_collar_coords()[0], pem_file.get_hole_geometry(), 100)
                 trace_gps = list(zip(borehole_projection[0], borehole_projection[1]))
                 hole_name = pem_file.header.get('LineHole')
-                if trace_gps not in traces:
+                if trace_gps and trace_gps not in traces:
                     traces.append(trace_gps)
                     hole_names.append(hole_name)
 
         for loop_gps, name in zip(loops, loop_names):
             loop_coords = []
             for row in loop_gps:
-                easting = float(row[0])
-                northing = float(row[1])
+                easting = int(float(row[0]))
+                northing = int(float(row[1]))
                 lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
                 loop_coords.append((lon, lat))
-                # kml.newpoint(coords=[(lon, lat)])
+
             ls = kml.newlinestring(name=name)
             ls.coords = loop_coords
             ls.extrude = 1
-            ls.style = line_style
+            ls.style = loop_style
 
         for line_gps, name in zip(lines, line_names):
             line_coords = []
             folder = kml.newfolder(name=name)
             for row in line_gps:
-                easting = float(row[0])
-                northing = float(row[1])
+                easting = int(float(row[0]))
+                northing = int(float(row[1]))
                 station = row[-1]
                 lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
                 line_coords.append((lon, lat))
@@ -1449,12 +1458,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             trace_coords = []
             folder = kml.newfolder(name=name)
             for row in trace_gps:
-                easting = float(row[0])
-                northing = float(row[1])
+                easting = int(float(row[0]))
+                northing = int(float(row[1]))
                 lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
                 trace_coords.append((lon, lat))
-                # new_point = kml.newpoint(name=name, coords=[(lon, lat)])
-                # new_point.style = collar_style
 
             collar = folder.newpoint(name=name, coords=[trace_coords[0]])
             collar.style = collar_style
