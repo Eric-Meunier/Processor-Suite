@@ -26,7 +26,7 @@ from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
-from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods
+from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods, ContourMap
 from src.pem.pem_serializer import PEMSerializer
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.ri.ri_file import RIFile
@@ -46,6 +46,7 @@ if getattr(sys, 'frozen', False):
     pemFileSplitterCreatorFile = 'qt_ui\\pem_file_splitter.ui'
     map3DCreatorFile = 'qt_ui\\3D_map.ui'
     section3DCreatorFile = 'qt_ui\\3D_section.ui'
+    contourMapCreatorFile = 'qt_ui\\contour_map.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
@@ -55,6 +56,7 @@ else:
     pemFileSplitterCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_file_splitter.ui')
     map3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_map.ui')
     section3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_section.ui')
+    contourMapCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\contour_map.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
@@ -64,6 +66,7 @@ Ui_PlanMapOptionsWidget, QtBaseClass = uic.loadUiType(planMapOptionsCreatorFile)
 Ui_PEMFileSplitterWidget, QtBaseClass = uic.loadUiType(pemFileSplitterCreatorFile)
 Ui_Map3DWidget, QtBaseClass = uic.loadUiType(map3DCreatorFile)
 Ui_Section3DWidget, QtBaseClass = uic.loadUiType(section3DCreatorFile)
+Ui_ContourMapCreatorFile, QtBaseClass = uic.loadUiType(contourMapCreatorFile)
 
 sys._excepthook = sys.excepthook
 
@@ -113,6 +116,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.map_viewer_3d = None
         self.section_viewer_3d = None
         self.pem_file_splitter = None
+        self.contour_viewer = None
 
         self.initActions()
         self.initSignals()
@@ -294,8 +298,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.show3DMap.setShortcut('Ctrl+M')
         self.show3DMap.triggered.connect(self.show_map_3d_viewer)
 
+        self.showContourMap = QAction("&Contour Map", self)
+        self.showContourMap.setStatusTip("Show a contour map of surface PEM files")
+        self.showContourMap.triggered.connect(self.show_contour_map_viewer)
+
         self.MapMenu = self.menubar.addMenu('&Map')
         self.MapMenu.addAction(self.show3DMap)
+        self.MapMenu.addAction(self.showContourMap)
 
     def initSignals(self):
         """
@@ -968,16 +977,21 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.pg.setValue(count)
         self.pg.hide()
 
-    def split_pem_channels(self, all=False):
+    def split_pem_channels(self, pem_files=[], all=False):
         """
         Removes the on-time channels of each selected PEM File
         :param all: bool: Whether or not to split channels for all opened PEM files or only selected ones.
         :return: None
         """
-        if not all:
-            pem_files, rows = self.get_selected_pem_files()
+
+        if not pem_files:
+            if not all:
+                pem_files, rows = self.get_selected_pem_files()
+            else:
+                pem_files, rows = self.pem_files, range(self.table.rowCount())
         else:
-            pem_files, rows = self.pem_files, range(self.table.rowCount())
+            pem_files, rows = pem_files, [self.pem_files.index(pem_file) for pem_file in pem_files]
+
         if not pem_files:
             return
 
@@ -1062,8 +1076,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             # If any currents are different
             if not all([current == currents[0] for current in currents]):
-                response = self.message.question(self, 'Merge PEM Files',
-                                                 'Not all files have the same current. Proceed with merging anyway?',
+                response = self.message.question(self, 'Warning - Inequal Current',
+                                                 f"{', '.join([os.path.basename(pem_file.filepath) for pem_file in pem_files])} do not have the same current. Proceed with merging anyway?",
                                                  self.message.Yes | self.message.No)
                 if response == self.message.No:
                     self.window().statusBar().showMessage('Aborted.', 2000)
@@ -1071,15 +1085,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             # If any coil areas are different
             if not all([coil_area == coil_areas[0] for coil_area in coil_areas]):
-                response = self.message.question(self, 'Merge PEM Files',
-                                                 'Not all files have the same coil area. Proceed with merging anyway?',
+                response = self.message.question(self, 'Warning - Inequal Coil Areas',
+                                                 f"{', '.join([os.path.basename(pem_file.filepath) for pem_file in pem_files])} do not have the same coil area. Proceed with merging anyway?",
                                                  self.message.Yes | self.message.No)
                 if response == self.message.No:
                     self.window().statusBar().showMessage('Aborted.', 2000)
                     return
 
             # If the files aren't all split or un-split
-            if not all([pem_file.is_split() for pem_file in pem_files]) or all(
+            if any([pem_file.is_split() for pem_file in pem_files]) and any(
                     [not pem_file.is_split() for pem_file in pem_files]):
                 response = self.message.question(self, 'Merge PEM Files',
                                                  'There is a mix of channel splitting in the selected files. '
@@ -1136,14 +1150,28 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             # self.spinner.show()
 
             # time.sleep(.1)
+            # updated_pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in
+            #                      zip(copy.deepcopy(self.pem_files), range(self.table.rowCount()))]
             updated_pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in
-                                 zip(copy.deepcopy(self.pem_files), range(self.table.rowCount()))]
+                                                      zip(self.pem_files, range(self.table.rowCount()))]
             bh_files = [pem_file for pem_file in updated_pem_files if 'borehole' in pem_file.survey_type.lower()]
             sf_files = [pem_file for pem_file in updated_pem_files if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower()]
 
             # Surface lines
             for loop, pem_files in groupby(sf_files, key=lambda x: x.header.get('Loop')):
                 print(f"Auto merging loop {loop}")
+                pem_files = list(pem_files)
+                if any([pem_file.is_split() for pem_file in pem_files]) and any(
+                        [not pem_file.is_split() for pem_file in pem_files]):
+                    response = self.message.question(self, 'Merge PEM Files',
+                                                     'There is a mix of channel splitting in the selected files. '
+                                                     'Would you like to split the unsplit file(s) and proceed with merging?',
+                                                     self.message.Yes | self.message.No)
+                    if response == self.message.Yes:
+                        self.split_pem_channels(pem_files, all=False)
+                    else:
+                        return
+
                 for line, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
                     pem_files = list(pem_files)
                     if len(pem_files) > 1:
@@ -1167,6 +1195,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             # Boreholes
             for loop, pem_files in groupby(bh_files, key=lambda x: x.header.get('Loop')):
                 print(f"Loop {loop}")
+                pem_files = list(pem_files)
+                if any([pem_file.is_split() for pem_file in pem_files]) and any(
+                        [not pem_file.is_split() for pem_file in pem_files]):
+                    response = self.message.question(self, 'Merge PEM Files',
+                                                     'There is a mix of channel splitting in the selected files. '
+                                                     'Would you like to split the unsplit file(s) and proceed with merging?',
+                                                     self.message.Yes | self.message.No)
+                    if response == self.message.Yes:
+                        self.split_pem_channels(pem_files, all=False)
+                    else:
+                        return
+
                 for hole, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
                     print(f"Hole {hole}")
                     pem_files = sorted(list(pem_files), key=lambda x: x.get_components())
@@ -1346,6 +1386,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.section_3d_viewer.show()
         else:
             self.statusBar().showMessage('Invalid survey type', 2000)
+
+    def show_contour_map_viewer(self):
+        self.contour_map_viewer = ContourMapViewer(self.pem_files, parent=self)
+        self.contour_map_viewer.show()
 
     def save_as_kmz(self):
         """
@@ -1567,17 +1611,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 if not pem_file.is_split():
                     self.file_editor.split_channels(pem_file)
 
+            if self.output_plan_map_cbox.isChecked():
+                if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
+                    response = self.message.question(self, 'No CRS',
+                                                     'No CRS has been selected. '
+                                                     'Do you wish to proceed without a plan map?',
+                                                     self.message.Yes | self.message.No)
+                    if response == self.message.No:
+                        return
+
             save_dir = get_save_file()
             if save_dir:
-                if self.output_plan_map_cbox.isChecked():
-                    if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
-                        response = self.message.question(self, 'No CRS',
-                                                         'No CRS has been selected. '
-                                                         'Do you wish to processed without a plan map?',
-                                                         self.message.Yes | self.message.No)
-                        if response == self.message.No:
-                            return
-
                 # PEM Files and RI files zipped together for when they get sorted
                 printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
                 self.window().statusBar().addPermanentWidget(printer.pb)
@@ -3051,6 +3095,43 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         e.accept()
 
 
+class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
+
+    def __init__(self, pem_files, parent=None):
+        super().__init__()
+        self.setupUi(self)
+        self.setWindowTitle('Contour Map Viewer')
+
+        self.cmap = ContourMap()
+        self.parent = parent
+        self.pem_files = pem_files
+
+        self.slider.valueChanged.connect(self.change_lcd_num)
+
+        self.figure = Figure()
+        self.canvas = FigureCanvas(self.figure)
+        self.map_layout.addWidget(self.canvas)
+        self.ax = self.figure.add_subplot(111)
+        self.ax.spines['right'].set_visible(False)
+        self.ax.spines['top'].set_visible(False)
+        self.ax.spines['bottom'].set_visible(False)
+        self.ax.spines['left'].set_visible(False)
+        self.ax.yaxis.tick_right()
+        self.ax.tick_params(axis='y', which='major', labelrotation=90)
+        plt.setp(self.ax.get_yticklabels(), va='center')
+
+        self.cmap.plot_contour(self.ax, self.pem_files, 'z', 15)
+        # self.section_plotter.format_ax()
+        # self.update_canvas()
+
+    def change_lcd_num(self):
+        self.lcd.display(self.slider.value())
+
+        for artist in self.cmap.contour_artists:
+            artist.set_visible(False)
+        self.canvas.draw()
+
+
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
@@ -3059,7 +3140,9 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
-    mw.save_as_kmz()
+    # mw.auto_merge_pem_files()
+    # mw.show_contour_map_viewer()
+    # mw.save_as_kmz()
     # spinner = WaitingSpinner(mw.table)
     # spinner.start()
     # spinner.show()

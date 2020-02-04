@@ -24,7 +24,6 @@ else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
 samples_path = os.path.join(application_path, "sample_files")
-logging.basicConfig(filename=r'C:\_Data\2019\_Mowgli Testing\log.log', level= logging.info, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 
 class GPSEditor:

@@ -97,7 +97,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'conder.png')))
-        self.setGeometry(500, 300, 1800, 900)
+        # self.setGeometry(500, 300, 1024, 768)
+        self.setGeometry(500, 300, 1800, 1000)
 
         center_window(self)
         # self.showMaximized()

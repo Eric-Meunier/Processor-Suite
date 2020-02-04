@@ -10,6 +10,7 @@ from collections import defaultdict
 import cartopy
 import cartopy.crs as ccrs  # import projections
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
+import matplotlib.tri as tri
 import matplotlib as mpl
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
@@ -17,10 +18,12 @@ import matplotlib.text as mtext
 import matplotlib.ticker as ticker
 import matplotlib.transforms as mtransforms
 import numpy as np
+from numpy import linspace, meshgrid
 from PyQt5.QtWidgets import (QProgressBar)
 from PyQt5 import QtGui, QtCore
 from matplotlib import patches
 from matplotlib import patheffects
+from scipy.interpolate import griddata
 from matplotlib.backends.backend_pdf import PdfPages
 from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
 import mpl_toolkits.mplot3d.art3d as art3d
@@ -1342,14 +1345,127 @@ class PlanMap(MapPlotMethods):
             return None
 
 
-class ContourPlot(MapPlotMethods):
+class ContourMap(MapPlotMethods):
     """
-    Plot PEM surface data as a contour plot.
+    Plots PEM surface data as a contour plot. Only for surface data. PEM files must all belong to the same loop.
     """
 
-    def __init__(self, ax, pem_files, parent=None):
+    def __init__(self, parent=None):
         MapPlotMethods.__init__(self)
 
+        self.parent = parent
+        self.gps_editor = GPSEditor
+
+        self.contour_artists = []
+        self.loops = []
+        self.loop_names = []
+        self.lines = []
+        self.labels = []
+
+        self.loop_handle = None
+        self.station_handle = None
+
+    def plot_contour(self, ax, pem_files, component, channel):
+
+        def convert_station(station):
+            """
+            Converts a single station name into a number, negative if the stations was S or W
+            :return: Integer station number
+            """
+            if re.match(r"\d+(S|W)", station):
+                station = (-int(re.sub(r"\D", "", station)))
+
+            else:
+                station = (int(re.sub(r"\D", "", station)))
+
+            return station
+
+        def plot_pem(pem_file):
+            # # Adding the loop
+            # loop_gps = pem_file.get_loop_coords()
+            # if loop_gps and loop_gps not in self.loops:
+            #     self.loops.append(loop_gps)
+            #     self.loop_names.append(pem_file.header.get('Loop'))
+            #     loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
+            #     eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in
+            #                                                                     loop_gps]
+            #     eastings.insert(0, eastings[-1])  # To close up the loop
+            #     northings.insert(0, northings[-1])
+            #     zorder = 4
+            #     loop_label = ax.text(loop_center[0], loop_center[1],
+            #                               f"Tx Loop {pem_file.header.get('Loop')}",
+            #                               ha='center',
+            #                               color=color, zorder=zorder,
+            #                               path_effects=label_buffer)  # Add the loop name
+            #
+            #     self.loop_handle, = ax.plot(eastings, northings, color=color,
+            #                                      label='Transmitter Loop', zorder=2)  # Plot the loop
+            #
+            #     for i, (x, y) in enumerate(list(zip(eastings, northings))):
+            #         ax.annotate(i, xy=(x, y), va='center', ha='center', fontsize=7,
+            #                           path_effects=label_buffer,
+            #                           zorder=3, color=color, transform=ax.transData)
+
+            # Adding the line GPS
+            line_gps = pem_file.get_station_coords()
+            # Plotting the line and adding the line label
+            if line_gps and line_gps not in self.lines:
+                self.lines.append(line_gps)
+                eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in
+                                                                                line_gps]
+                angle = math.degrees(math.atan2(northings[-1] - northings[0], eastings[-1] - eastings[0]))
+
+                if abs(angle) > 90:
+                    x, y = eastings[-1], northings[-1]
+                    # Flip the label if it's upside-down
+                    angle = angle - 180
+                else:
+                    x, y = eastings[0], northings[0]
+
+                line_label = ax.text(x, y, f" {pem_file.header.get('LineHole')} ",
+                                          rotation=angle, rotation_mode='anchor', ha='right', va='center',
+                                          zorder=5, color=color,
+                                          path_effects=label_buffer)
+                self.labels.append(line_label)
+                self.station_handle, = ax.plot(eastings, northings, '-o', markersize=3, color=color,
+                                                    markerfacecolor='w', markeredgewidth=0.3,
+                                                    label='Surface Line',zorder=2)  # Plot the line
+
+        xs = np.array([])
+        ys = np.array([])
+        zs = np.array([])
+
+        label_buffer = [patheffects.Stroke(linewidth=1.5, foreground='white'), patheffects.Normal()]
+        color = 'k'
+
+        for pem_file in pem_files:
+            plot_pem(pem_file)
+            line_gps = pem_file.get_line_coords()
+            data = pem_file.get_data()
+
+            for gps in line_gps:
+                easting = float(gps[0])
+                northing = float(gps[1])
+                station_num = int(gps[-1])
+
+                station_data = list(filter(lambda station: convert_station(station['Station']) == station_num, data))
+                component_data = list(filter(lambda station: station['Component'].lower() == component.lower(), station_data))
+
+                if component_data:
+                    xs = np.append(xs, easting)
+                    ys = np.append(ys, northing)
+                    zs = np.append(zs, float(component_data[0]['Data'][channel]))
+
+        numcols, numrows = 1000, 1000
+        xi = np.linspace(xs.min()-10, xs.max()+10, numcols)
+        yi = np.linspace(ys.min()-10, ys.max()+10, numrows)
+        xi, yi = np.meshgrid(xi, yi)
+
+        zi = griddata((xs, ys), zs, (xi, yi), method='cubic')
+
+        contour = ax.contourf(xi, yi, zi, cmap='jet')
+        self.contour_artists.append(contour)
+        return contour
 
 
 class Map3D(MapPlotMethods):
@@ -2395,13 +2511,14 @@ if __name__ == '__main__':
 
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems()
-    # for pem_file in pem_files:
-    #     pem_file.has_collar_gps()
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
-    fig = plt.figure(figsize=(8.5, 11), dpi=100)
+    fig = plt.figure(figsize=(11, 8.5), dpi=100)
     # plan_map = PlanMap(pem_files, fig)
-    # ax = fig.add_subplot()
-    section = SectionPlot(pem_files, fig)
+    ax = fig.add_subplot()
+    component = 'z'
+    channel = 15
+    contour = ContourMap()
+    contour.plot_contour(ax, pem_files, component, channel)
     plt.show()
     # printer = PEMPrinter(sample_files_dir, pem_files)
     # printer.print_final_plots()
