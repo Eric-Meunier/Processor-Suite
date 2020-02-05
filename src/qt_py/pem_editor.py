@@ -3106,30 +3106,35 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.parent = parent
         self.pem_files = pem_files
 
-        self.slider.valueChanged.connect(self.change_lcd_num)
+        self.channel_spinbox.valueChanged.connect(self.draw_map)
+        self.z_rbtn.clicked.connect(self.draw_map)
+        self.x_rbtn.clicked.connect(self.draw_map)
+        self.y_rbtn.clicked.connect(self.draw_map)
+        # self.tf_rbtn.clicked.connect(self.draw_map)
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
         self.map_layout.addWidget(self.canvas)
-        self.ax = self.figure.add_subplot(111)
-        self.ax.spines['right'].set_visible(False)
-        self.ax.spines['top'].set_visible(False)
-        self.ax.spines['bottom'].set_visible(False)
-        self.ax.spines['left'].set_visible(False)
-        self.ax.yaxis.tick_right()
-        self.ax.tick_params(axis='y', which='major', labelrotation=90)
-        plt.setp(self.ax.get_yticklabels(), va='center')
+        # self.ax = self.figure.add_subplot(111)
+        self.draw_map()
 
-        self.cmap.plot_contour(self.ax, self.pem_files, 'z', 15)
-        # self.section_plotter.format_ax()
-        # self.update_canvas()
+    def draw_map(self):
 
-    def change_lcd_num(self):
-        self.lcd.display(self.slider.value())
+        component = self.get_selected_component()
+        channel = self.channel_spinbox.value()
 
-        for artist in self.cmap.contour_artists:
-            artist.set_visible(False)
+        self.cmap.plot_contour(self.figure, self.pem_files, component, channel, plot_lines=self.plot_lines_cbox.isChecked())
         self.canvas.draw()
+
+    def get_selected_component(self):
+        if self.z_rbtn.isChecked():
+            return 'z'
+        elif self.x_rbtn.isChecked():
+            return 'x'
+        elif self.x_rbtn.isChecked():
+            return 'y'
+        elif self.x_rbtn.isChecked():
+            return 'tf'
 
 
 def main():
@@ -3140,6 +3145,7 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
+    # mw.show_contour_map_viewer()
     # mw.auto_merge_pem_files()
     # mw.show_contour_map_viewer()
     # mw.save_as_kmz()
@@ -3155,8 +3161,8 @@ def main():
     # mw.output_lin_cbox.setChecked(False)
     # mw.output_log_cbox.setChecked(False)
     # mw.output_step_cbox.setChecked(False)
-    # mw.output_section_cbox.setChecked(False)
-    # mw.output_plan_map_cbox.setChecked(False)
+    mw.output_section_cbox.setChecked(False)
+    mw.output_plan_map_cbox.setChecked(False)
     # mw.print_plots()
     # map = Map3DViewer(pem_files)
     # map.show()

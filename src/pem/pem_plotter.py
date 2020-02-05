@@ -19,7 +19,7 @@ import matplotlib.ticker as ticker
 import matplotlib.transforms as mtransforms
 import numpy as np
 from numpy import linspace, meshgrid
-from PyQt5.QtWidgets import (QProgressBar)
+from PyQt5.QtWidgets import (QProgressBar, QErrorMessage)
 from PyQt5 import QtGui, QtCore
 from matplotlib import patches
 from matplotlib import patheffects
@@ -146,49 +146,50 @@ class PlotMethods:
 
                 if 'induction' in survey_type.lower():
                     if step is True:
-                        if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                            new_low = new_high * -1
-                        elif ax in axes[2:4] and (y_limits[1] - y_limits[0]) < 3:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                            new_low = new_high * -1
+                        if ax == axes[1] and (y_limits[1] < 15 or y_limits[0] > -15):
+                            new_high = math.ceil(max(y_limits[1]+5, 0))
+                            new_low = math.floor(min(y_limits[0]-5, 0))
+                        elif ax in axes[2:4] and (y_limits[1] < 3 or y_limits[0] > -3):
+                            new_high = math.ceil(max(y_limits[1]+1, 0))
+                            new_low = math.floor(min(y_limits[0]-1, 0))
                         else:
                             new_high = math.ceil(max(y_limits[1], 0))
                             new_low = math.floor(min(y_limits[0], 0))
                     else:
-                        if (y_limits[1] - y_limits[0]) < 3:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                            new_low = new_high * -1
+                        if y_limits[1] < 3 or y_limits[0] > -3:
+                            new_high = math.ceil(max(y_limits[1]+1, 0))
+                            new_low = math.floor(min(y_limits[0]-1, 0))
                         else:
                             new_high = math.ceil(max(y_limits[1], 0))
                             new_low = math.floor(min(y_limits[0], 0))
 
                 elif 'fluxgate' in survey_type.lower():
                     if step is True:
-                        if ax == axes[1] and (y_limits[1] - y_limits[0]) < 20:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                            new_low = new_high * -1
-                        elif ax == axes[2] and (y_limits[1] - y_limits[0]) < 3:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 1)
-                            new_low = new_high * -1
-                        elif ax == axes[3] and (y_limits[1] - y_limits[0]) < 30:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                            new_low = new_high * -1
+                        if ax == axes[1] and (y_limits[1] < 15 or y_limits[0] > -15):
+                            new_high = math.ceil(max(y_limits[1]+5, 0))
+                            new_low = math.floor(min(y_limits[0]-5, 0))
+                        elif ax == axes[2] and (y_limits[1] < 3 or y_limits[0] > -3):
+                            new_high = math.ceil(max(y_limits[1]+1, 0))
+                            new_low = math.floor(min(y_limits[0]-1, 0))
+                        elif ax == axes[3] and (y_limits[1] < 30 or y_limits[0] > -30):
+                            new_high = math.ceil(max(y_limits[1]+10, 0))
+                            new_low = math.floor(min(y_limits[0]-10, 0))
                         else:
                             new_high = math.ceil(max(y_limits[1], 0))
                             new_low = math.floor(min(y_limits[0], 0))
                     else:
-                        if (y_limits[1] - y_limits[0]) < 30:
-                            new_high = math.ceil(((y_limits[1] - y_limits[0]) / 2) + 10)
-                            new_low = new_high * -1
+                        if y_limits[1] < 30 or y_limits[0] > -30:
+                            new_high = math.ceil(max(y_limits[1]+10, 0))
+                            new_low = math.floor(min(y_limits[0]-10, 0))
                         else:
                             new_high = math.ceil(max(y_limits[1], 0))
                             new_low = math.floor(min(y_limits[0], 0))
 
                 ax.set_ylim(new_low, new_high)
+                ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', integer=True, steps=[1, 2, 5, 10]))
                 ax.set_yticks(ax.get_yticks())
-                ax.yaxis.set_major_locator(ticker.AutoLocator())
-                ax.set_yticks(ax.get_yticks())  # This is used twice to avoid half-integer tick values
+                # ax.yaxis.set_major_locator(ticker.AutoLocator())
+                # ax.set_yticks(ax.get_yticks())  # This is used twice to avoid half-integer tick values
 
             elif ax.get_yscale() == 'symlog':
                 y_limits = ax.get_ylim()
@@ -1356,7 +1357,6 @@ class ContourMap(MapPlotMethods):
         self.parent = parent
         self.gps_editor = GPSEditor
 
-        self.contour_artists = []
         self.loops = []
         self.loop_names = []
         self.lines = []
@@ -1365,7 +1365,7 @@ class ContourMap(MapPlotMethods):
         self.loop_handle = None
         self.station_handle = None
 
-    def plot_contour(self, ax, pem_files, component, channel):
+    def plot_contour(self, fig, pem_files, component, channel, plot_lines=False):
 
         def convert_station(station):
             """
@@ -1381,31 +1381,6 @@ class ContourMap(MapPlotMethods):
             return station
 
         def plot_pem(pem_file):
-            # # Adding the loop
-            # loop_gps = pem_file.get_loop_coords()
-            # if loop_gps and loop_gps not in self.loops:
-            #     self.loops.append(loop_gps)
-            #     self.loop_names.append(pem_file.header.get('Loop'))
-            #     loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
-            #     eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in
-            #                                                                     loop_gps]
-            #     eastings.insert(0, eastings[-1])  # To close up the loop
-            #     northings.insert(0, northings[-1])
-            #     zorder = 4
-            #     loop_label = ax.text(loop_center[0], loop_center[1],
-            #                               f"Tx Loop {pem_file.header.get('Loop')}",
-            #                               ha='center',
-            #                               color=color, zorder=zorder,
-            #                               path_effects=label_buffer)  # Add the loop name
-            #
-            #     self.loop_handle, = ax.plot(eastings, northings, color=color,
-            #                                      label='Transmitter Loop', zorder=2)  # Plot the loop
-            #
-            #     for i, (x, y) in enumerate(list(zip(eastings, northings))):
-            #         ax.annotate(i, xy=(x, y), va='center', ha='center', fontsize=7,
-            #                           path_effects=label_buffer,
-            #                           zorder=3, color=color, transform=ax.transData)
-
             # Adding the line GPS
             line_gps = pem_file.get_station_coords()
             # Plotting the line and adding the line label
@@ -1431,6 +1406,21 @@ class ContourMap(MapPlotMethods):
                                                     markerfacecolor='w', markeredgewidth=0.3,
                                                     label='Surface Line',zorder=2)  # Plot the line
 
+        def format_figure():
+            ax.cla()
+            cbar_ax.cla()
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.yaxis.tick_right()
+            ax.tick_params(axis='y', which='major', labelrotation=90)
+            plt.setp(ax.get_yticklabels(), va='center')
+
+        ax = fig.add_subplot(443)
+        cbar_ax = fig.add_subplot(144)
+        format_figure()
+
         xs = np.array([])
         ys = np.array([])
         zs = np.array([])
@@ -1439,32 +1429,35 @@ class ContourMap(MapPlotMethods):
         color = 'k'
 
         for pem_file in pem_files:
-            plot_pem(pem_file)
+            if plot_lines:
+                plot_pem(pem_file)
             line_gps = pem_file.get_line_coords()
             data = pem_file.get_data()
 
-            for gps in line_gps:
-                easting = float(gps[0])
-                northing = float(gps[1])
-                station_num = int(gps[-1])
+            if line_gps:
+                for gps in line_gps:
+                    easting = float(gps[0])
+                    northing = float(gps[1])
+                    station_num = int(gps[-1])
 
-                station_data = list(filter(lambda station: convert_station(station['Station']) == station_num, data))
-                component_data = list(filter(lambda station: station['Component'].lower() == component.lower(), station_data))
+                    station_data = list(filter(lambda station: convert_station(station['Station']) == station_num, data))
+                    component_data = list(filter(lambda station: station['Component'].lower() == component.lower(), station_data))
 
-                if component_data:
-                    xs = np.append(xs, easting)
-                    ys = np.append(ys, northing)
-                    zs = np.append(zs, float(component_data[0]['Data'][channel]))
+                    if component_data:
+                        xs = np.append(xs, easting)
+                        ys = np.append(ys, northing)
+                        zs = np.append(zs, float(component_data[0]['Data'][channel]))
 
         numcols, numrows = 1000, 1000
         xi = np.linspace(xs.min()-10, xs.max()+10, numcols)
         yi = np.linspace(ys.min()-10, ys.max()+10, numrows)
         xi, yi = np.meshgrid(xi, yi)
 
-        zi = griddata((xs, ys), zs, (xi, yi), method='cubic')
+        zi = griddata((xs, ys), zs, (xi, yi), method='linear')
 
         contour = ax.contourf(xi, yi, zi, cmap='jet')
-        self.contour_artists.append(contour)
+        cbar = fig.colorbar(contour, cax=cbar_ax)
+
         return contour
 
 
@@ -1481,6 +1474,7 @@ class Map3D(MapPlotMethods):
         logging.info('Map3D')
         MapPlotMethods.__init__(self)
         self.parent = parent
+        self.error = QErrorMessage()
         self.pem_files = pem_files
         self.ax = ax
         self.set_z = set_z
@@ -1515,50 +1509,66 @@ class Map3D(MapPlotMethods):
         logging.info('Map3D - Plotting loop')
         loop_coords = pem_file.get_loop_coords()
         if loop_coords:
-            loop = [[float(num) for num in row] for row in loop_coords]
-            if loop_coords not in self.loops:
-                self.loops.append(loop_coords)
-                x, y, z = [r[0] for r in loop] + [loop[0][0]], \
-                          [r[1] for r in loop] + [loop[0][1]], \
-                          [r[2] for r in loop] + [loop[0][2]]
-                loop_artist, = self.ax.plot(x, y, z, lw=1, color='blue')
-                self.loop_artists.append(loop_artist)
-                loop_name = pem_file.header.get('Loop')
-                loop_center = self.gps_editor.get_loop_center(loop)
-                avg_z = mean(z)
-                loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name,
-                                                 path_effects=self.buffer, color='blue', ha='center', va='center')
-                self.loop_label_artists.append(loop_label_artist)
+            try:
+                loop = [[float(num) for num in row] for row in loop_coords]
+            except ValueError as e:
+                self.error.setWindowTitle(f"3D Map Error")
+                self.error.showMessage(
+                    f"The following error occurred while creating the 3D map for {os.path.basename(pem_file.filepath)}:"
+                    f"\n{str(e)}")
+                return
+            else:
+                if loop_coords not in self.loops:
+                    self.loops.append(loop_coords)
+                    x, y, z = [r[0] for r in loop] + [loop[0][0]], \
+                              [r[1] for r in loop] + [loop[0][1]], \
+                              [r[2] for r in loop] + [loop[0][2]]
+                    loop_artist, = self.ax.plot(x, y, z, lw=1, color='blue')
+                    self.loop_artists.append(loop_artist)
+                    loop_name = pem_file.header.get('Loop')
+                    loop_center = self.gps_editor.get_loop_center(loop)
+                    avg_z = mean(z)
+                    loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name,
+                                                     path_effects=self.buffer, color='blue', ha='center', va='center')
+                    self.loop_label_artists.append(loop_label_artist)
 
-                for i, (x, y, z) in enumerate(zip(x, y, z)):
-                    loop_anno_artist = self.ax.text(x, y, z, str(i), color='blue', path_effects=self.buffer,
-                                                    va='bottom', ha='center', fontsize=7)
-                    self.loop_anno_artists.append(loop_anno_artist)
+                    for i, (x, y, z) in enumerate(zip(x, y, z)):
+                        loop_anno_artist = self.ax.text(x, y, z, str(i), color='blue', path_effects=self.buffer,
+                                                        va='bottom', ha='center', fontsize=7)
+                        self.loop_anno_artists.append(loop_anno_artist)
 
     def plot_line(self, pem_file):
         logging.info('Map3D - Plotting surface line')
         line_coords = pem_file.get_line_coords()
         if line_coords:
-            line = [[float(num) for num in row] for row in line_coords]
-            if line not in self.lines:
-                self.lines.append(line_coords)
-                x, y, z = [r[0] for r in line], \
-                          [r[1] for r in line], \
-                          [r[2] for r in line]
-                line_artist, = self.ax.plot(x, y, z, '-o', lw=1,
-                                            markersize=3, color='black', markerfacecolor='w', markeredgewidth=0.3)
-                self.line_artists.append(line_artist)
-                line_name = pem_file.header.get('LineHole')
-                line_end = line[-1]
-                line_label_artist = self.ax.text(line_end[0], line_end[1], line_end[2], line_name, ha='center',
-                                                 va='bottom', path_effects=self.buffer, zorder=5)
-                self.line_label_artists.append(line_label_artist)
+            try:
+                line = [[float(num) for num in row] for row in line_coords]
+            except ValueError as e:
+                self.error.setWindowTitle(f"3D Map Error")
+                self.error.showMessage(
+                    f"The following error occurred while creating the 3D map for {os.path.basename(pem_file.filepath)}:"
+                    f"\n{str(e)}")
+                return
+            else:
+                if line not in self.lines:
+                    self.lines.append(line_coords)
+                    x, y, z = [r[0] for r in line], \
+                              [r[1] for r in line], \
+                              [r[2] for r in line]
+                    line_artist, = self.ax.plot(x, y, z, '-o', lw=1,
+                                                markersize=3, color='black', markerfacecolor='w', markeredgewidth=0.3)
+                    self.line_artists.append(line_artist)
+                    line_name = pem_file.header.get('LineHole')
+                    line_end = line[-1]
+                    line_label_artist = self.ax.text(line_end[0], line_end[1], line_end[2], line_name, ha='center',
+                                                     va='bottom', path_effects=self.buffer, zorder=5)
+                    self.line_label_artists.append(line_label_artist)
 
-                for station in line:
-                    station_label_artist = self.ax.text(station[0], station[1], station[2], f"{station[-1]:.0f}",
-                                                        fontsize=7, path_effects=self.buffer, ha='center', va='bottom',
-                                                        color='dimgray')
-                    self.station_label_artists.append(station_label_artist)
+                    for station in line:
+                        station_label_artist = self.ax.text(station[0], station[1], station[2], f"{station[-1]:.0f}",
+                                                            fontsize=7, path_effects=self.buffer, ha='center', va='bottom',
+                                                            color='dimgray')
+                        self.station_label_artists.append(station_label_artist)
 
     def plot_hole(self, pem_file):
         logging.info('Map3D - Plotting borehole')

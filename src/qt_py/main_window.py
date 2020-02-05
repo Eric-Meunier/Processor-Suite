@@ -98,7 +98,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'conder.png')))
         # self.setGeometry(500, 300, 1024, 768)
-        self.setGeometry(500, 300, 1800, 1000)
+        self.setGeometry(500, 300, 1800, 900)
 
         center_window(self)
         # self.showMaximized()
