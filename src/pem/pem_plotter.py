@@ -8,6 +8,7 @@ from datetime import datetime
 from timeit import default_timer as timer
 from collections import defaultdict
 import cartopy
+import colorcet as cc
 import cartopy.crs as ccrs  # import projections
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib.tri as tri
@@ -1357,15 +1358,8 @@ class ContourMap(MapPlotMethods):
         self.parent = parent
         self.gps_editor = GPSEditor
 
-        self.loops = []
-        self.loop_names = []
-        self.lines = []
-        self.labels = []
-
-        self.loop_handle = None
-        self.station_handle = None
-
-    def plot_contour(self, fig, pem_files, component, channel, plot_lines=False):
+    def plot_contour(self, fig, pem_files, component, channel, colormap, interp_method, draw_grid=False,
+                     plot_lines=True, plot_stations=True):
 
         def convert_station(station):
             """
@@ -1402,9 +1396,13 @@ class ContourMap(MapPlotMethods):
                                           zorder=5, color=color,
                                           path_effects=label_buffer)
                 self.labels.append(line_label)
-                self.station_handle, = ax.plot(eastings, northings, '-o', markersize=3, color=color,
-                                                    markerfacecolor='w', markeredgewidth=0.3,
-                                                    label='Surface Line',zorder=2)  # Plot the line
+
+                if plot_lines:
+                    self.station_handle, = ax.plot(eastings, northings, '-', color=color, label='Surface Line', zorder=2)  # Plot the line
+                if plot_stations:
+                    self.station_handle, = ax.plot(eastings, northings, 'o', markersize=3, color=color,
+                                                        markerfacecolor='w', markeredgewidth=0.3,
+                                                        label='Station', zorder=2)  # Plot the line
 
         def format_figure():
             ax.cla()
@@ -1413,13 +1411,26 @@ class ContourMap(MapPlotMethods):
             ax.spines['top'].set_visible(False)
             ax.spines['bottom'].set_visible(False)
             ax.spines['left'].set_visible(False)
+            if draw_grid:
+                ax.grid()
+            else:
+                ax.grid(False)
             ax.yaxis.tick_right()
             ax.tick_params(axis='y', which='major', labelrotation=90)
             plt.setp(ax.get_yticklabels(), va='center')
+            ax.axis('equal')
 
-        ax = fig.add_subplot(443)
-        cbar_ax = fig.add_subplot(144)
+        ax = plt.subplot2grid((90,110), (0, 0), rowspan=90, colspan=90, fig=fig)
+        cbar_ax = plt.subplot2grid((90,110), (0, 108), rowspan=90, colspan=2, fig=fig)
         format_figure()
+
+        self.loops = []
+        self.loop_names = []
+        self.lines = []
+        self.labels = []
+
+        self.loop_handle = None
+        self.station_handle = None
 
         xs = np.array([])
         ys = np.array([])
@@ -1429,10 +1440,10 @@ class ContourMap(MapPlotMethods):
         color = 'k'
 
         for pem_file in pem_files:
-            if plot_lines:
+            if plot_lines or plot_stations:
                 plot_pem(pem_file)
             line_gps = pem_file.get_line_coords()
-            data = pem_file.get_data()
+            pem_data = pem_file.get_data()
 
             if line_gps:
                 for gps in line_gps:
@@ -1440,25 +1451,31 @@ class ContourMap(MapPlotMethods):
                     northing = float(gps[1])
                     station_num = int(gps[-1])
 
-                    station_data = list(filter(lambda station: convert_station(station['Station']) == station_num, data))
-                    component_data = list(filter(lambda station: station['Component'].lower() == component.lower(), station_data))
+                    station_data = list(filter(lambda station: convert_station(station['Station']) == station_num, pem_data))
+                    if component.lower() == 'tf':
+                        all_component_data = [component['Data'][channel] for component in station_data]
+                        data = math.sqrt(sum([component_data**2 for component_data in all_component_data]))
+                    else:
+                        component_data = list(filter(lambda station: station['Component'].lower() == component.lower(), station_data))
+                        if component_data:
+                            data = float(component_data[0]['Data'][channel])
 
-                    if component_data:
+                    if data:
                         xs = np.append(xs, easting)
                         ys = np.append(ys, northing)
-                        zs = np.append(zs, float(component_data[0]['Data'][channel]))
+                        zs = np.append(zs, data)
+            else:
+                print(f"Skipping {os.path.basename(pem_file.filepath)} because it has no line GPS")
 
-        numcols, numrows = 1000, 1000
-        xi = np.linspace(xs.min()-10, xs.max()+10, numcols)
-        yi = np.linspace(ys.min()-10, ys.max()+10, numrows)
+        numcols, numrows = 100, 100
+        xi = np.linspace(xs.min(), xs.max(), numcols)
+        yi = np.linspace(ys.min(), ys.max(), numrows)
         xi, yi = np.meshgrid(xi, yi)
 
-        zi = griddata((xs, ys), zs, (xi, yi), method='linear')
+        zi = griddata((xs, ys), np.log10(zs), (xi, yi), method=interp_method)
 
-        contour = ax.contourf(xi, yi, zi, cmap='jet')
+        contour = ax.contourf(xi, yi, zi, cmap=colormap, levels=25)
         cbar = fig.colorbar(contour, cax=cbar_ax)
-
-        return contour
 
 
 class Map3D(MapPlotMethods):

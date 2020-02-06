@@ -19,7 +19,8 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QInputDialog, QHeaderView, QTableWidget, QErrorMessage, QDialogButtonBox, QVBoxLayout)
 import matplotlib.pyplot as plt
 # from pyqtspinner.spinner import WaitingSpinner
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import colorcet as cc
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
 from matplotlib.figure import Figure
 from src.pem.pem_file import PEMFile
@@ -1388,8 +1389,20 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.statusBar().showMessage('Invalid survey type', 2000)
 
     def show_contour_map_viewer(self):
-        self.contour_map_viewer = ContourMapViewer(self.pem_files, parent=self)
-        self.contour_map_viewer.show()
+        if len(self.pem_files) > 1:
+            try:
+                self.contour_map_viewer = ContourMapViewer(self.pem_files, parent=self)
+            except TypeError as e:
+                self.error.setWindowTitle('Error')
+                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
+                return
+            except ValueError as e:
+                self.error.setWindowTitle('Error')
+                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
+            else:
+                self.contour_map_viewer.show()
+        else:
+            self.window().statusBar().showMessage("Must have more than 1 surface PEM file open", 2000)
 
     def save_as_kmz(self):
         """
@@ -3101,40 +3114,109 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('Contour Map Viewer')
+        self.error = QErrorMessage()
+        self.file_editor = PEMFileEditor()
 
         self.cmap = ContourMap()
         self.parent = parent
-        self.pem_files = pem_files
+        self.pem_files = [copy.deepcopy(pem_file) for pem_file in pem_files if 'surface' in pem_file.survey_type.lower()]
+        if len(self.pem_files) < 2:
+            raise TypeError("There are fewer than 2 eligible surface PEM files")
+
+        for pem_file in self.pem_files:
+            if not pem_file.is_averaged():
+                print(f"Averaging {os.path.basename(pem_file.filepath)}")
+                pem_file = self.file_editor.average(pem_file)
+
+        self.components = [pem_file.get_components() for pem_file in self.pem_files]
+        self.components = list(set([item for sublist in self.components for item in sublist]))
+        self.components.append('TF')
+
+        if 'Z' not in self.components:
+            self.z_rbtn.setEnabled(False)
+            self.z_rbtn.setChecked(False)
+        elif 'X' not in self.components:
+            self.x_rbtn.setEnabled(False)
+            self.x_rbtn.setChecked(False)
+        elif 'Y' not in self.components:
+            self.y_rbtn.setEnabled(False)
+            self.y_rbtn.setChecked(False)
+        # else:
+        #     raise ValueError("No valid components found")
+
+        self.num_channels = min([int(pem_file.header.get('NumChannels')) for pem_file in self.pem_files])
+        self.channel_spinbox.setMaximum(self.num_channels)
 
         self.channel_spinbox.valueChanged.connect(self.draw_map)
         self.z_rbtn.clicked.connect(self.draw_map)
         self.x_rbtn.clicked.connect(self.draw_map)
         self.y_rbtn.clicked.connect(self.draw_map)
-        # self.tf_rbtn.clicked.connect(self.draw_map)
+        self.tf_rbtn.clicked.connect(self.draw_map)
+        self.cmap_cbox.currentIndexChanged.connect(self.draw_map)
+        self.interp_cbox.currentIndexChanged.connect(self.draw_map)
+        self.plot_lines_cbox.toggled.connect(self.draw_map)
+        self.plot_stations_cbox.toggled.connect(self.draw_map)
+        self.grid_cbox.toggled.connect(self.draw_map)
+        self.save_figure_btn.clicked.connect(self.save_figure)
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
+        # NavigationToolbar(self.canvas, self)
         self.map_layout.addWidget(self.canvas)
-        # self.ax = self.figure.add_subplot(111)
         self.draw_map()
 
     def draw_map(self):
 
-        component = self.get_selected_component()
-        channel = self.channel_spinbox.value()
+        component = self.get_selected_component().upper()
+        if component not in self.components:
+            return
 
-        self.cmap.plot_contour(self.figure, self.pem_files, component, channel, plot_lines=self.plot_lines_cbox.isChecked())
+        channel = self.channel_spinbox.value()
+        colormap = self.get_selected_colormap()
+        interp_method = self.get_selected_interp_method()
+
+        self.cmap.plot_contour(self.figure, self.pem_files, component, channel, colormap,
+                               interp_method, draw_grid=self.grid_cbox.isChecked(), plot_lines=self.plot_lines_cbox.isChecked(),
+                               plot_stations=self.plot_stations_cbox.isChecked())
         self.canvas.draw()
 
     def get_selected_component(self):
         if self.z_rbtn.isChecked():
-            return 'z'
+            return 'Z'
         elif self.x_rbtn.isChecked():
-            return 'x'
-        elif self.x_rbtn.isChecked():
-            return 'y'
-        elif self.x_rbtn.isChecked():
-            return 'tf'
+            return 'X'
+        elif self.y_rbtn.isChecked():
+            return 'Y'
+        elif self.tf_rbtn.isChecked():
+            return 'TF'
+
+    def get_selected_interp_method(self):
+        return self.interp_cbox.currentText().lower()
+
+    def get_selected_colormap(self):
+        if self.cmap_cbox.currentText().lower() == 'cool':
+            return 'cool'
+        elif self.cmap_cbox.currentText().lower() == 'viridis':
+            return 'viridis'
+        elif self.cmap_cbox.currentText().lower() == 'blues':
+            return 'Blues'
+        elif self.cmap_cbox.currentText().lower() == 'inferno':
+            return 'inferno'
+        elif self.cmap_cbox.currentText().lower() == 'rainbow':
+            return 'rainbow'
+        elif self.cmap_cbox.currentText().lower() == 'coolwarm':
+            return 'coolwarm'
+        elif self.cmap_cbox.currentText().lower() == 'bmw':
+            return cc.cm.bmw
+        elif self.cmap_cbox.currentText().lower() == 'kbc':
+            return cc.cm.kbc
+
+    def save_figure(self):
+        if len(self.pem_files) > 0:
+            default_path = os.path.abspath(self.pem_files[0].filepath)
+            path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', default_path, 'PDF Files (*.PDF)')
+            if path:
+                self.canvas.print_figure(path)
 
 
 def main():
@@ -3145,7 +3227,7 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
-    # mw.show_contour_map_viewer()
+    mw.show_contour_map_viewer()
     # mw.auto_merge_pem_files()
     # mw.show_contour_map_viewer()
     # mw.save_as_kmz()
@@ -3161,8 +3243,8 @@ def main():
     # mw.output_lin_cbox.setChecked(False)
     # mw.output_log_cbox.setChecked(False)
     # mw.output_step_cbox.setChecked(False)
-    mw.output_section_cbox.setChecked(False)
-    mw.output_plan_map_cbox.setChecked(False)
+    # mw.output_section_cbox.setChecked(False)
+    # mw.output_plan_map_cbox.setChecked(False)
     # mw.print_plots()
     # map = Map3DViewer(pem_files)
     # map.show()
