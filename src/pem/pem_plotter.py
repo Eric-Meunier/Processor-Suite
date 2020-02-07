@@ -993,10 +993,11 @@ class PlanMap(MapPlotMethods):
                         self.trace_handle, = self.ax.plot(index_x, index_y, '--', color=self.color)
 
                         # Plotting the markers
-                        for index in indexes[1:-1]:
-                            angle = math.degrees(math.atan2(seg_y[index+1] - seg_y[index], seg_x[index+1] - seg_x[index]))
-                            self.ax.plot(seg_x[index], seg_y[index], markersize=5, marker=(2, 0, angle),
-                                         mew=.5, color=self.color)
+                        for index in indexes[1:]:
+                            if index != indexes[-1]:
+                                angle = math.degrees(math.atan2(seg_y[index+1] - seg_y[index], seg_x[index+1] - seg_x[index]))
+                                self.ax.plot(seg_x[index], seg_y[index], markersize=5, marker=(2, 0, angle),
+                                             mew=.5, color=self.color)
 
                         # Add the end tick for the borehole trace and the label
                         angle = math.degrees(math.atan2(seg_y[-1] - seg_y[-2], seg_x[-1] - seg_x[-2]))
@@ -1500,7 +1501,7 @@ class ContourMap(MapPlotMethods):
             zi = griddata((xs, ys), zs, (xi, yi), method=interp_method)
 
             ax.use_sticky_edges = False
-            # ax.margins(0.1, 0.1)
+            # ax.margins(0, 0)
             contour = ax.contourf(xi, yi, zi, cmap=colormap, levels=25)
 
             cbar = fig.colorbar(contour, cax=cbar_ax)

@@ -144,7 +144,7 @@ class GPSEditor:
                 if i <= 2:
                     row[i] = '{:0.2f}'.format(float(item))
                 else:
-                    row[i] = str(item)
+                    row[i] = str(int(item))
             return row
 
         if not gps:
