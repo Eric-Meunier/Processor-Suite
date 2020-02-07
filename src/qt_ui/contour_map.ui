@@ -106,6 +106,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="title_box_cbox">
+        <property name="text">
+         <string>Title Box</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="verticalSpacer_3">
         <property name="orientation">
          <enum>Qt::Vertical</enum>

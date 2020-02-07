@@ -78,8 +78,8 @@ class PlotMethods:
     """
     Collection of methods for plotting LIN, LOG, and STEP plots
     """
-    @staticmethod
-    def add_rectangle(figure):
+    # @staticmethod
+    def add_rectangle(self, figure):
         """
         Draws a rectangle around a figure object
         """
@@ -1360,7 +1360,7 @@ class ContourMap(MapPlotMethods):
         self.gps_editor = GPSEditor
 
     def plot_contour(self, fig, pem_files, component, channel, colormap, interp_method, draw_grid=False,
-                     plot_lines=True, plot_stations=False, plot_station_labels=False):
+                     plot_lines=True, plot_stations=False, plot_station_labels=False, title_box=False):
 
         def convert_station(station):
             """
@@ -1427,19 +1427,96 @@ class ContourMap(MapPlotMethods):
             ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}N'))
             ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}E'))
 
+        def add_title():
+            """
+            Adds the title box to the plot.
+            :return: None
+            """
+
+            center_pos = 0.5
+            right_pos = 0.75
+            left_pos = 0.25
+            top_pos = 0.95
+
+            # Separating lines
+            # line_1 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
+            #                        linewidth=1, color='gray', transform=ax.transAxes, zorder=10)
+            #
+            # line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
+            #                        linewidth=1, color='gray', transform=ax.transAxes, zorder=10)
+            #
+            # line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
+            #                        linewidth=.5, color='gray', transform=ax.transAxes, zorder=10)
+            #
+            # # Title box rectangle
+            # rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='k',
+            #                               boxstyle="round,pad=0.005", facecolor='white', zorder=9,
+            #                               transform=ax.transAxes)
+
+            client = pem_files[0].header.get("Client")
+            grid = pem_files[0].header.get("Grid")
+            # loops = natural_sort(loop_names)
+            # hole = pem_files[0].header.get('LineHole')
+
+            # if 'surface' in survey_type:
+            #     if moving_loop and len(loops) > 1:
+            #         survey_text = f"Loop: {loops[0]} to {loops[-1]}"
+            #     else:
+            #         survey_text = f"Loop: {', '.join(loops)}"
+            # else:
+            #     survey_text = f"Hole: {hole}    Loop: {', '.join(loops)}"
+
+            # coord_sys = f"{system}{' Zone ' + zone.title() if zone else ''}, {datum.upper()}"
+            # scale = f"1:{map_scale:,.0f}"
+
+            fig.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
+                         fontname='Century Gothic', fontsize=11, ha='center', zorder=10)
+
+            fig.text(center_pos, top_pos - 0.020, f"{interp_method.title()} Interpolated Contour Map", family='cursive',
+                         fontname='Century Gothic', fontsize=10, ha='center', zorder=10)
+
+            fig.text(center_pos, top_pos - 0.040, f"{pem_files[0].survey_type.title()} Pulse EM Survey", family='cursive',
+                         style='italic', fontname='Century Gothic', fontsize=9, ha='center', zorder=10)
+
+            fig.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n", fontname='Century Gothic', fontsize=10,
+                    va='top', ha='center', zorder=10)
+
+            # ax.text(center_pos, top_pos - 0.124, f"Timebase: {', '.join(timebase)} ms\n{get_survey_dates()}",
+            #              fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=10,
+            #              transform=ax.transAxes)
+            #
+            fig.text(left_pos, top_pos - 0.167, f"Channel {channel}", family='cursive', style='italic', color='dimgray',
+                         fontname='Century Gothic', fontsize=8, va='top', ha='left', zorder=10)
+            #
+            fig.text(right_pos, top_pos - 0.167, f"{component.upper()} Component", family='cursive', style='italic',
+                         color='dimgray',
+                         fontname='Century Gothic', fontsize=8, va='top', ha='right', zorder=10)
+            # TODO Need to clear the fig?
+            # ax.add_patch(rect)
+            # shadow = patches.Shadow(rect, 0.002, -0.002)
+            # ax.add_patch(shadow)
+            # ax.add_line(line_1)
+            # ax.add_line(line_2)
+            # ax.add_line(line_3)
+
+        def add_rectangle():
+            rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
+                                     facecolor='none', transform=fig.transFigure)
+            fig.patches.append(rect)
+
         # Create a large grid in order to specify the placement of the colorbar
         ax = plt.subplot2grid((90,110), (0, 0), rowspan=90, colspan=90, fig=fig)
         ax.set_aspect('equal')
         cbar_ax = plt.subplot2grid((90,110), (0, 108), rowspan=90, colspan=2, fig=fig)
         format_figure()
+        add_rectangle()
+        if title_box:
+            add_title()
 
         self.loops = []
         self.loop_names = []
         self.lines = []
         self.labels = []
-
-        self.loop_handle = None
-        self.station_handle = None
 
         xs = np.array([])
         ys = np.array([])
@@ -1507,6 +1584,7 @@ class ContourMap(MapPlotMethods):
             cbar = fig.colorbar(contour, cax=cbar_ax)
             cbar_ax.set_xlabel(f"{units}")
             cbar.ax.get_xaxis().labelpad = 10
+
             # cbar.ax.xaxis.set_label_position('top')
             # cbar.ax.set_ylabel('# of contacts', rotation=270)
 

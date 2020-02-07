@@ -3158,6 +3158,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.plot_stations_cbox.toggled.connect(self.draw_map)
         self.label_stations_cbox.toggled.connect(self.draw_map)
         self.grid_cbox.toggled.connect(self.draw_map)
+        self.title_box_cbox.toggled.connect(self.draw_map)
         self.save_figure_btn.clicked.connect(self.save_figure)
 
         self.figure = Figure(figsize=(11, 8.5))
@@ -3180,7 +3181,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                                interp_method, draw_grid=self.grid_cbox.isChecked(),
                                plot_lines=self.plot_lines_cbox.isChecked(),
                                plot_stations=self.plot_stations_cbox.isChecked(),
-                               plot_station_labels=self.label_stations_cbox.isChecked())
+                               plot_station_labels=self.label_stations_cbox.isChecked(),
+                               title_box=self.title_box_cbox.isChecked())
         self.canvas.draw()
 
     def get_selected_component(self):
@@ -3219,7 +3221,12 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             default_path = os.path.abspath(self.pem_files[0].filepath)
             path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', default_path, 'PDF Files (*.PDF)')
             if path:
-                self.canvas.print_figure(path)
+                # resize the figure to 8.5 x 11, then back to the original size after it's been printed
+                size = self.figure.get_size_inches()
+                self.figure.set_size_inches(11, 8.5)
+                self.figure.savefig(path, orientation='landscape')
+                self.figure.set_size_inches(size)
+                self.canvas.draw()
                 os.startfile(path)
 
 
@@ -3231,7 +3238,7 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
-    # mw.show_contour_map_viewer()
+    mw.show_contour_map_viewer()
     # mw.auto_merge_pem_files()
     # mw.show_contour_map_viewer()
     # mw.save_as_kmz()
@@ -3244,12 +3251,12 @@ def main():
     # section = Section3DViewer(pem_files)
     # section.show()
     # mw.share_loop_cbox.setChecked(False)
-    mw.output_lin_cbox.setChecked(False)
-    mw.output_log_cbox.setChecked(False)
-    mw.output_step_cbox.setChecked(False)
-    mw.output_section_cbox.setChecked(False)
+    # mw.output_lin_cbox.setChecked(False)
+    # mw.output_log_cbox.setChecked(False)
+    # mw.output_step_cbox.setChecked(False)
+    # mw.output_section_cbox.setChecked(False)
     # mw.output_plan_map_cbox.setChecked(False)
-    mw.print_plots()
+    # mw.print_plots()
     # map = Map3DViewer(pem_files)
     # map.show()
 
