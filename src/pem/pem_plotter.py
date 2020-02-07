@@ -1359,7 +1359,7 @@ class ContourMap(MapPlotMethods):
         self.gps_editor = GPSEditor
 
     def plot_contour(self, fig, pem_files, component, channel, colormap, interp_method, draw_grid=False,
-                     plot_lines=True, plot_stations=True):
+                     plot_lines=True, plot_stations=False, plot_station_labels=False):
 
         def convert_station(station):
             """
@@ -1393,8 +1393,7 @@ class ContourMap(MapPlotMethods):
 
                 line_label = ax.text(x, y, f" {pem_file.header.get('LineHole')} ",
                                           rotation=angle, rotation_mode='anchor', ha='right', va='center',
-                                          zorder=5, color=color,
-                                          path_effects=label_buffer)
+                                          zorder=5, color=color, path_effects=label_buffer)
                 self.labels.append(line_label)
 
                 if plot_lines:
@@ -1403,24 +1402,33 @@ class ContourMap(MapPlotMethods):
                     self.station_handle, = ax.plot(eastings, northings, 'o', markersize=3, color=color,
                                                         markerfacecolor='w', markeredgewidth=0.3,
                                                         label='Station', zorder=2)  # Plot the line
+                if plot_station_labels:
+                    for station in line_gps:
+                        station_label_artist = ax.text(float(station[0]), float(station[1]), f"{station[-1]}",
+                                                            fontsize=7, path_effects=label_buffer, ha='center',
+                                                            va='bottom', color='k')
+                        # self.station_label_artists.append(station_label_artist)
 
         def format_figure():
             ax.cla()
             cbar_ax.cla()
-            ax.spines['right'].set_visible(False)
+            # ax.spines['right'].set_visible(False)
             ax.spines['top'].set_visible(False)
-            ax.spines['bottom'].set_visible(False)
+            # ax.spines['bottom'].set_visible(False)
             ax.spines['left'].set_visible(False)
             if draw_grid:
                 ax.grid()
             else:
                 ax.grid(False)
             ax.yaxis.tick_right()
-            ax.tick_params(axis='y', which='major', labelrotation=90)
-            plt.setp(ax.get_yticklabels(), va='center')
-            ax.axis('equal')
+            ax.set_yticklabels(ax.get_yticklabels(), rotation=0, va='center')
+            ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
+            ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}N'))
+            ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}E'))
 
+        # Create a large grid in order to specify the placement of the colorbar
         ax = plt.subplot2grid((90,110), (0, 0), rowspan=90, colspan=90, fig=fig)
+        ax.set_aspect('equal')
         cbar_ax = plt.subplot2grid((90,110), (0, 108), rowspan=90, colspan=2, fig=fig)
         format_figure()
 
@@ -1438,12 +1446,19 @@ class ContourMap(MapPlotMethods):
 
         label_buffer = [patheffects.Stroke(linewidth=1.5, foreground='white'), patheffects.Normal()]
         color = 'k'
+        if all(['induction' in pem_file.survey_type.lower() for pem_file in pem_files]):
+            units = 'nT/s'
+        elif all(['fluxgate' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower() for pem_file in pem_files]):
+            units = 'pT'
+        else:
+            raise ValueError('Not all survey types are the same.')
 
         for pem_file in pem_files:
-            if plot_lines or plot_stations:
+            if any([plot_lines, plot_stations, plot_station_labels]):
                 plot_pem(pem_file)
             line_gps = pem_file.get_line_coords()
             pem_data = pem_file.get_data()
+            pem_stations = [convert_station(station) for station in pem_file.get_unique_stations()]
 
             if line_gps:
                 for gps in line_gps:
@@ -1451,31 +1466,48 @@ class ContourMap(MapPlotMethods):
                     northing = float(gps[1])
                     station_num = int(gps[-1])
 
-                    station_data = list(filter(lambda station: convert_station(station['Station']) == station_num, pem_data))
-                    if component.lower() == 'tf':
-                        all_component_data = [component['Data'][channel] for component in station_data]
-                        data = math.sqrt(sum([component_data**2 for component_data in all_component_data]))
-                    else:
-                        component_data = list(filter(lambda station: station['Component'].lower() == component.lower(), station_data))
-                        if component_data:
-                            data = float(component_data[0]['Data'][channel])
+                    if station_num in pem_stations:
+                        station_data = list(filter(lambda station: convert_station(station['Station']) == station_num, pem_data))
+                        if component.lower() == 'tf':
+                            all_component_data = [component['Data'][channel] for component in station_data]
+                            data = math.sqrt(sum([component_data**2 for component_data in all_component_data]))
+                        else:
+                            component_data = list(filter(lambda station: station['Component'].lower() == component.lower(), station_data))
+                            if component_data:
+                                data = float(component_data[0]['Data'][channel])
+                            else:
+                                data = None
 
-                    if data:
-                        xs = np.append(xs, easting)
-                        ys = np.append(ys, northing)
-                        zs = np.append(zs, data)
+                        if data:
+                            xs = np.append(xs, easting)
+                            ys = np.append(ys, northing)
+                            zs = np.append(zs, data)
+                        else:
+                            print(f"No data for channel {channel} of station {station_num} ({component} component) in file {os.path.basename(pem_file.filepath)}")
+                    else:
+                        print(f"Station {station_num} not in file {os.path.basename(pem_file.filepath)}")
             else:
                 print(f"Skipping {os.path.basename(pem_file.filepath)} because it has no line GPS")
 
-        numcols, numrows = 100, 100
-        xi = np.linspace(xs.min(), xs.max(), numcols)
-        yi = np.linspace(ys.min(), ys.max(), numrows)
-        xi, yi = np.meshgrid(xi, yi)
+        if all([len(xs) > 0, len(ys) > 0, len(zs) > 0]):
+            # Creating a 2D grid for the interpolation
+            numcols, numrows = 100, 100
+            xi = np.linspace(xs.min(), xs.max(), numcols)
+            yi = np.linspace(ys.min(), ys.max(), numrows)
+            xi, yi = np.meshgrid(xi, yi)
 
-        zi = griddata((xs, ys), np.log10(zs), (xi, yi), method=interp_method)
+            # Interpolating the 2D grid data
+            zi = griddata((xs, ys), zs, (xi, yi), method=interp_method)
 
-        contour = ax.contourf(xi, yi, zi, cmap=colormap, levels=25)
-        cbar = fig.colorbar(contour, cax=cbar_ax)
+            ax.use_sticky_edges = False
+            # ax.margins(0.1, 0.1)
+            contour = ax.contourf(xi, yi, zi, cmap=colormap, levels=25)
+
+            cbar = fig.colorbar(contour, cax=cbar_ax)
+            cbar_ax.set_xlabel(f"{units}")
+            cbar.ax.get_xaxis().labelpad = 10
+            # cbar.ax.xaxis.set_label_position('top')
+            # cbar.ax.set_ylabel('# of contacts', rotation=270)
 
 
 class Map3D(MapPlotMethods):

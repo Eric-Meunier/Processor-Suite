@@ -3156,10 +3156,11 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.interp_cbox.currentIndexChanged.connect(self.draw_map)
         self.plot_lines_cbox.toggled.connect(self.draw_map)
         self.plot_stations_cbox.toggled.connect(self.draw_map)
+        self.label_stations_cbox.toggled.connect(self.draw_map)
         self.grid_cbox.toggled.connect(self.draw_map)
         self.save_figure_btn.clicked.connect(self.save_figure)
 
-        self.figure = Figure()
+        self.figure = Figure(figsize=(11, 8.5))
         self.canvas = FigureCanvas(self.figure)
         # NavigationToolbar(self.canvas, self)
         self.map_layout.addWidget(self.canvas)
@@ -3176,8 +3177,10 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         interp_method = self.get_selected_interp_method()
 
         self.cmap.plot_contour(self.figure, self.pem_files, component, channel, colormap,
-                               interp_method, draw_grid=self.grid_cbox.isChecked(), plot_lines=self.plot_lines_cbox.isChecked(),
-                               plot_stations=self.plot_stations_cbox.isChecked())
+                               interp_method, draw_grid=self.grid_cbox.isChecked(),
+                               plot_lines=self.plot_lines_cbox.isChecked(),
+                               plot_stations=self.plot_stations_cbox.isChecked(),
+                               plot_station_labels=self.label_stations_cbox.isChecked())
         self.canvas.draw()
 
     def get_selected_component(self):
@@ -3217,6 +3220,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', default_path, 'PDF Files (*.PDF)')
             if path:
                 self.canvas.print_figure(path)
+                os.startfile(path)
 
 
 def main():

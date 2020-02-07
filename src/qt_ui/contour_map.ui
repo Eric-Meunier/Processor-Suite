@@ -17,14 +17,14 @@
    <item row="4" column="0">
     <widget class="QSpinBox" name="channel_spinbox">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
      <property name="minimumSize">
       <size>
-       <width>120</width>
+       <width>0</width>
        <height>0</height>
       </size>
      </property>
@@ -36,7 +36,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
+   <item row="3" column="0" alignment="Qt::AlignHCenter">
     <widget class="QLabel" name="label">
      <property name="text">
       <string>Channel</string>
@@ -63,7 +63,7 @@
     <widget class="QGroupBox" name="groupBox">
      <property name="minimumSize">
       <size>
-       <width>120</width>
+       <width>130</width>
        <height>0</height>
       </size>
      </property>
@@ -87,7 +87,14 @@
          <string>Plot Stations</string>
         </property>
         <property name="checked">
-         <bool>true</bool>
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="label_stations_cbox">
+        <property name="text">
+         <string>Label Stations</string>
         </property>
        </widget>
       </item>
@@ -213,6 +220,12 @@
    </item>
    <item row="0" column="0">
     <widget class="QGroupBox" name="groupBox_2">
+     <property name="minimumSize">
+      <size>
+       <width>130</width>
+       <height>0</height>
+      </size>
+     </property>
      <property name="title">
       <string>Component</string>
      </property>
