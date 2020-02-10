@@ -39,7 +39,7 @@
        <enum>QTabWidget::West</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="main_frame_file_tab">
        <attribute name="title">
@@ -595,12 +595,9 @@ All Repeat Stations</string>
            <item row="2" column="0">
             <widget class="QLabel" name="label_4">
              <property name="text">
-              <string>Hole Depth</string>
+              <string>Hole Depth (Optional):</string>
              </property>
             </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QLineEdit" name="section_depth_edit"/>
            </item>
            <item row="1" column="0" colspan="2">
             <widget class="QCheckBox" name="label_section_depths_cbox">
@@ -608,6 +605,9 @@ All Repeat Stations</string>
               <string>Label Ticks</string>
              </property>
             </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLineEdit" name="section_depth_edit"/>
            </item>
           </layout>
          </widget>

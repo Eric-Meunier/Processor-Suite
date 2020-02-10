@@ -750,6 +750,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if len(self.pem_files) > 0:
             self.fill_share_range()
 
+        if not self.autoSortLoopsCheckbox.isChecked():
+            self.message.warning(self, 'Warning', 'Loops aren\'t being sorted.')
+
         # Add all files to the table at once for aesthetics.
         [self.add_pem_to_table(pem_file) for pem_file in files_to_add]
         self.sort_files()
@@ -1349,6 +1352,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pem_files, rows = self.pem_files, range(self.table.rowCount())
 
         self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
+        if any([self.systemCBox.currentText()=='', self.zoneCBox.currentText()=='', self.datumCBox.currentText()=='']):
+            response = self.message.question(self, 'No CRS',
+                                                     'No CRS has been selected. '
+                                                     'Do you wish to proceed with no CRS information?',
+                                                     self.message.Yes | self.message.No)
+            if response == self.message.No:
+                return
+
         default_path = os.path.split(self.pem_files[-1].filepath)[0]
         self.dialog.setDirectory(default_path)
         file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
@@ -1377,10 +1388,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pass
 
     def show_map_3d_viewer(self):
+        """
+        Opens the 3D Map Viewer window
+        :return: None
+        """
         self.map_viewer_3d = Map3DViewer(self.pem_files, parent=self)
         self.map_viewer_3d.show()
 
     def show_section_3d_viewer(self):
+        """
+        Opens the 3D Borehole Section Viewer window
+        :return: None
+        """
         pem_file, row = self.get_selected_pem_files()
         if 'borehole' in pem_file[0].survey_type.lower():
             self.section_3d_viewer = Section3DViewer(pem_file[0], parent=self)
@@ -1389,6 +1408,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.statusBar().showMessage('Invalid survey type', 2000)
 
     def show_contour_map_viewer(self):
+        """
+        Opens the Contour Map Viewer window
+        :return: None
+        """
         if len(self.pem_files) > 1:
             try:
                 self.contour_map_viewer = ContourMapViewer(self.pem_files, parent=self)
