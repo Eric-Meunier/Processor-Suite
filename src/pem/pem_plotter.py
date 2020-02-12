@@ -24,7 +24,6 @@ from PyQt5.QtWidgets import (QProgressBar, QErrorMessage)
 from PyQt5 import QtGui, QtCore
 from matplotlib import patches
 from matplotlib import patheffects
-from scipy.interpolate import griddata
 from matplotlib.backends.backend_pdf import PdfPages
 from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
 import mpl_toolkits.mplot3d.art3d as art3d
@@ -1359,8 +1358,10 @@ class ContourMap(MapPlotMethods):
         self.parent = parent
         self.gps_editor = GPSEditor
 
-    def plot_contour(self, fig, pem_files, component, channel, colormap, interp_method, draw_grid=False,
-                     plot_lines=True, plot_stations=False, plot_station_labels=False, title_box=False):
+    def plot_contour(self, fig, pem_files, component, channel, colormap, interp_method, channel_time='',
+                     draw_grid=False, plot_loops=True, label_loops=False, label_lines=True, plot_lines=True,
+                     plot_stations=False, label_stations=False,
+                     title_box=False, gamma=1, grid_size=100):
 
         def convert_station(station):
             """
@@ -1376,13 +1377,17 @@ class ContourMap(MapPlotMethods):
             return station
 
         def plot_pem(pem_file):
-            # Adding the line GPS
+            """
+            Plots the GPS information (lines, stations, loops) from the PEM file
+            :param pem_file: PEMFile object
+            :return: None
+            """
+
             line_gps = pem_file.get_station_coords()
             # Plotting the line and adding the line label
             if line_gps and line_gps not in self.lines:
                 self.lines.append(line_gps)
-                eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in
-                                                                                line_gps]
+                eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
                 angle = math.degrees(math.atan2(northings[-1] - northings[0], eastings[-1] - eastings[0]))
 
                 if abs(angle) > 90:
@@ -1392,23 +1397,39 @@ class ContourMap(MapPlotMethods):
                 else:
                     x, y = eastings[0], northings[0]
 
-                line_label = ax.text(x, y, f" {pem_file.header.get('LineHole')} ",
-                                          rotation=angle, rotation_mode='anchor', ha='right', va='center',
-                                          zorder=5, color=color, path_effects=label_buffer)
-                self.labels.append(line_label)
-
                 if plot_lines:
-                    self.station_handle, = ax.plot(eastings, northings, '-', color=color, label='Surface Line', zorder=2)  # Plot the line
+                    line_plot = ax.plot(eastings, northings, '-', color=color, label='Surface Line', zorder=2)  # Plot the line
                 if plot_stations:
-                    self.station_handle, = ax.plot(eastings, northings, 'o', markersize=3, color=color,
-                                                        markerfacecolor='w', markeredgewidth=0.3,
-                                                        label='Station', zorder=2)  # Plot the line
-                if plot_station_labels:
+                    station_marking = ax.plot(eastings, northings, 'o', markersize=3, color=color,
+                            markerfacecolor='w', markeredgewidth=0.3,
+                            label='Station', zorder=2, clip_on=True)  # Plot the line
+                if label_lines:
+                    line_label = ax.text(x, y, f" {pem_file.header.get('LineHole')} ",
+                            rotation=angle, rotation_mode='anchor', ha='right', va='center',
+                            zorder=5, color=color, path_effects=label_buffer, clip_on=True)
+                if label_stations:
                     for station in line_gps:
-                        station_label_artist = ax.text(float(station[0]), float(station[1]), f"{station[-1]}",
-                                                            fontsize=7, path_effects=label_buffer, ha='center',
-                                                            va='bottom', color='k')
-                        # self.station_label_artists.append(station_label_artist)
+                        station_label = ax.text(float(station[0]), float(station[1]), f"{station[-1]}",
+                                fontsize=7, path_effects=label_buffer, ha='center',
+                                va='bottom', color='k', clip_on=True)
+
+            # Plot the loop
+            if plot_loops:
+                loop_gps = pem_file.get_loop_coords()
+                if loop_gps and loop_gps not in self.loops:
+
+                    self.loops.append(loop_gps)
+                    eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
+                    eastings.insert(0, eastings[-1])  # To close up the loop
+                    northings.insert(0, northings[-1])
+
+                    loop_plot = ax.plot(eastings, northings, '-', color='blue', label='Loop', zorder=2)  # Plot the line
+
+                    if label_loops:
+                        loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
+                        loop_label = ax.text(loop_center[0], loop_center[1], f" {pem_file.header.get('Loop')} ",
+                                                  ha='center', va='center', fontsize=7,
+                                                  zorder=5, color='blue', path_effects=label_buffer, clip_on=True)
 
         def format_figure():
             ax.cla()
@@ -1429,75 +1450,38 @@ class ContourMap(MapPlotMethods):
 
         def add_title():
             """
-            Adds the title box to the plot.
+            Adds the title box to the plot. Removes any existing text first.
             :return: None
             """
 
-            center_pos = 0.5
-            right_pos = 0.75
-            left_pos = 0.25
-            top_pos = 0.95
+            for text in reversed(fig.texts):
+                text.remove()
 
-            # Separating lines
-            # line_1 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
-            #                        linewidth=1, color='gray', transform=ax.transAxes, zorder=10)
-            #
-            # line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
-            #                        linewidth=1, color='gray', transform=ax.transAxes, zorder=10)
-            #
-            # line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
-            #                        linewidth=.5, color='gray', transform=ax.transAxes, zorder=10)
-            #
-            # # Title box rectangle
-            # rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='k',
-            #                               boxstyle="round,pad=0.005", facecolor='white', zorder=9,
-            #                               transform=ax.transAxes)
+            if title_box:
+                center_pos = 0.5
+                top_pos = 0.95
 
-            client = pem_files[0].header.get("Client")
-            grid = pem_files[0].header.get("Grid")
-            # loops = natural_sort(loop_names)
-            # hole = pem_files[0].header.get('LineHole')
+                client = pem_files[0].header.get("Client")
+                grid = pem_files[0].header.get("Grid")
+                loops = natural_sort(self.loop_names)
+                if len(loops) > 3:
+                    loop_text = f"Loop: {loops[0]} to {loops[-1]}"
+                else:
+                    loop_text = f"Loop: {', '.join(loops)}"
 
-            # if 'surface' in survey_type:
-            #     if moving_loop and len(loops) > 1:
-            #         survey_text = f"Loop: {loops[0]} to {loops[-1]}"
-            #     else:
-            #         survey_text = f"Loop: {', '.join(loops)}"
-            # else:
-            #     survey_text = f"Hole: {hole}    Loop: {', '.join(loops)}"
+                # coord_sys = f"{system}{' Zone ' + zone.title() if zone else ''}, {datum.upper()}"
+                # scale = f"1:{map_scale:,.0f}"
 
-            # coord_sys = f"{system}{' Zone ' + zone.title() if zone else ''}, {datum.upper()}"
-            # scale = f"1:{map_scale:,.0f}"
+                crone_text = fig.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
+                                      fontname='Century Gothic', fontsize=11, ha='center', zorder=10)
 
-            fig.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
-                         fontname='Century Gothic', fontsize=11, ha='center', zorder=10)
+                survey_text = fig.text(center_pos, top_pos - 0.036, f"{interp_method.title()}-Interpolation Contour Map"
+                f"\n{pem_files[0].survey_type.title()} Pulse EM Survey",
+                                       family='cursive', style='italic', fontname='Century Gothic', fontsize=9,
+                                       ha='center', zorder=10)
 
-            fig.text(center_pos, top_pos - 0.020, f"{interp_method.title()} Interpolated Contour Map", family='cursive',
-                         fontname='Century Gothic', fontsize=10, ha='center', zorder=10)
-
-            fig.text(center_pos, top_pos - 0.040, f"{pem_files[0].survey_type.title()} Pulse EM Survey", family='cursive',
-                         style='italic', fontname='Century Gothic', fontsize=9, ha='center', zorder=10)
-
-            fig.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n", fontname='Century Gothic', fontsize=10,
-                    va='top', ha='center', zorder=10)
-
-            # ax.text(center_pos, top_pos - 0.124, f"Timebase: {', '.join(timebase)} ms\n{get_survey_dates()}",
-            #              fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=10,
-            #              transform=ax.transAxes)
-            #
-            fig.text(left_pos, top_pos - 0.167, f"Channel {channel}", family='cursive', style='italic', color='dimgray',
-                         fontname='Century Gothic', fontsize=8, va='top', ha='left', zorder=10)
-            #
-            fig.text(right_pos, top_pos - 0.167, f"{component.upper()} Component", family='cursive', style='italic',
-                         color='dimgray',
-                         fontname='Century Gothic', fontsize=8, va='top', ha='right', zorder=10)
-            # TODO Need to clear the fig?
-            # ax.add_patch(rect)
-            # shadow = patches.Shadow(rect, 0.002, -0.002)
-            # ax.add_patch(shadow)
-            # ax.add_line(line_1)
-            # ax.add_line(line_2)
-            # ax.add_line(line_3)
+                header_text = fig.text(center_pos, top_pos - 0.046, f"{client}\n{grid}\n{loop_text}",
+                                       fontname='Century Gothic', fontsize=9.5, va='top', ha='center', zorder=10)
 
         def add_rectangle():
             rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
@@ -1505,13 +1489,11 @@ class ContourMap(MapPlotMethods):
             fig.patches.append(rect)
 
         # Create a large grid in order to specify the placement of the colorbar
-        ax = plt.subplot2grid((90,110), (0, 0), rowspan=90, colspan=90, fig=fig)
+        ax = plt.subplot2grid((90, 110), (0, 0), rowspan=90, colspan=90, fig=fig)
+        # plt.subplots_adjust(top=0.2)
         ax.set_aspect('equal')
-        cbar_ax = plt.subplot2grid((90,110), (0, 108), rowspan=90, colspan=2, fig=fig)
+        cbar_ax = plt.subplot2grid((90, 110), (0, 108), rowspan=90, colspan=2, fig=fig)
         format_figure()
-        add_rectangle()
-        if title_box:
-            add_title()
 
         self.loops = []
         self.loop_names = []
@@ -1522,7 +1504,7 @@ class ContourMap(MapPlotMethods):
         ys = np.array([])
         zs = np.array([])
 
-        label_buffer = [patheffects.Stroke(linewidth=1.5, foreground='white'), patheffects.Normal()]
+        label_buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
         color = 'k'
         if all(['induction' in pem_file.survey_type.lower() for pem_file in pem_files]):
             units = 'nT/s'
@@ -1531,12 +1513,14 @@ class ContourMap(MapPlotMethods):
         else:
             raise ValueError('Not all survey types are the same.')
 
+        # Create the lists of eastings (xs), northings (ys) and data values (zs)
         for pem_file in pem_files:
-            if any([plot_lines, plot_stations, plot_station_labels]):
-                plot_pem(pem_file)
+            plot_pem(pem_file)
             line_gps = pem_file.get_line_coords()
             pem_data = pem_file.get_data()
             pem_stations = [convert_station(station) for station in pem_file.get_unique_stations()]
+            pem_channels = int(pem_file.header.get("NumChannels"))
+            loop_name = pem_file.header.get("Loop")
 
             if line_gps:
                 for gps in line_gps:
@@ -1545,23 +1529,29 @@ class ContourMap(MapPlotMethods):
                     station_num = int(gps[-1])
 
                     if station_num in pem_stations:
-                        station_data = list(filter(lambda station: convert_station(station['Station']) == station_num, pem_data))
-                        if component.lower() == 'tf':
-                            all_component_data = [component['Data'][channel] for component in station_data]
-                            data = math.sqrt(sum([component_data**2 for component_data in all_component_data]))
-                        else:
-                            component_data = list(filter(lambda station: station['Component'].lower() == component.lower(), station_data))
-                            if component_data:
-                                data = float(component_data[0]['Data'][channel])
+                        if channel <= pem_channels:
+                            station_data = list(filter(lambda station: convert_station(station['Station']) == station_num, pem_data))
+                            if component.lower() == 'tf':
+                                all_component_data = [component['Data'][channel] for component in station_data]
+                                data = math.sqrt(sum([component_data**2 for component_data in all_component_data]))
                             else:
-                                data = None
+                                component_data = list(filter(lambda station: station['Component'].lower() == component.lower(), station_data))
+                                if component_data:
+                                    data = float(component_data[0]['Data'][channel])
+                                else:
+                                    data = None
 
-                        if data:
-                            xs = np.append(xs, easting)
-                            ys = np.append(ys, northing)
-                            zs = np.append(zs, data)
+                            if data:
+                                # Loop name appended here in-case no data is being plotted for the current PEM file
+                                if loop_name not in self.loop_names:
+                                    self.loop_names.append(loop_name)
+                                xs = np.append(xs, easting)
+                                ys = np.append(ys, northing)
+                                zs = np.append(zs, data)
+                            else:
+                                print(f"No data for channel {channel} of station {station_num} ({component} component) in file {os.path.basename(pem_file.filepath)}")
                         else:
-                            print(f"No data for channel {channel} of station {station_num} ({component} component) in file {os.path.basename(pem_file.filepath)}")
+                            print(f"Channel {channel} not in file {os.path.basename(pem_file.filepath)}")
                     else:
                         print(f"Station {station_num} not in file {os.path.basename(pem_file.filepath)}")
             else:
@@ -1569,21 +1559,44 @@ class ContourMap(MapPlotMethods):
 
         if all([len(xs) > 0, len(ys) > 0, len(zs) > 0]):
             # Creating a 2D grid for the interpolation
-            numcols, numrows = 100, 100
+            numcols, numrows = grid_size, grid_size
             xi = np.linspace(xs.min(), xs.max(), numcols)
             yi = np.linspace(ys.min(), ys.max(), numrows)
             xi, yi = np.meshgrid(xi, yi)
 
             # Interpolating the 2D grid data
-            zi = griddata((xs, ys), zs, (xi, yi), method=interp_method)
+            zi = interp.griddata((xs, ys), zs, (xi, yi), method=interp_method)
 
-            ax.use_sticky_edges = False
-            # ax.margins(0, 0)
-            contour = ax.contourf(xi, yi, zi, cmap=colormap, levels=25)
+            ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
+            # ax.margins(0, 0)  # used to 'zoom' in or out
+
+            norm=None
+            if colormap == 'geosoft':
+                # Creating a custom colormap
+                custom_colors = [(0, 0, 1), (0, 1, 1), (0, 1, 0), (1, 1, 0), (1, 0.5, 0), (1, 0, 0), (1, 0, 1), (1, .8, 1)]
+                custom_cmap = mpl.colors.LinearSegmentedColormap.from_list('custom', custom_colors)
+                custom_cmap.set_under('blue')
+                custom_cmap.set_over('magenta')
+                colormap = custom_cmap
+                # vmax = zs.max()
+                # vmin = zs.min()
+                # center = math.log((vmax-vmin), 10)
+                norm=mpl.colors.PowerNorm(gamma=gamma)
+                # norm=mpl.colors.SymLogNorm(10, linscale=10)
+
+            contour = ax.contourf(xi, yi, zi, cmap=colormap, norm=norm, levels=50)
 
             cbar = fig.colorbar(contour, cax=cbar_ax)
             cbar_ax.set_xlabel(f"{units}")
             cbar.ax.get_xaxis().labelpad = 10
+
+            add_rectangle()
+            add_title()
+
+            component_text = f"{component.upper()} Component" if component != 'TF' else 'Total Field'
+            info_text = fig.text(0, 1.09, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
+                                 transform=cbar_ax.transAxes, color='k', fontname='Century Gothic', fontsize=9,
+                                 va='top', ha='center', zorder=10)
 
             # cbar.ax.xaxis.set_label_position('top')
             # cbar.ax.set_ylabel('# of contacts', rotation=270)
@@ -1656,7 +1669,7 @@ class Map3D(MapPlotMethods):
                     loop_name = pem_file.header.get('Loop')
                     loop_center = self.gps_editor.get_loop_center(loop)
                     avg_z = mean(z)
-                    loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name,
+                    loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name, clip_on=True,
                                                      path_effects=self.buffer, color='blue', ha='center', va='center')
                     self.loop_label_artists.append(loop_label_artist)
 
@@ -1689,13 +1702,13 @@ class Map3D(MapPlotMethods):
                     line_name = pem_file.header.get('LineHole')
                     line_end = line[-1]
                     line_label_artist = self.ax.text(line_end[0], line_end[1], line_end[2], line_name, ha='center',
-                                                     va='bottom', path_effects=self.buffer, zorder=5)
+                                                     va='bottom', path_effects=self.buffer, zorder=5, clip_on=True)
                     self.line_label_artists.append(line_label_artist)
 
                     for station in line:
                         station_label_artist = self.ax.text(station[0], station[1], station[2], f"{station[-1]:.0f}",
                                                             fontsize=7, path_effects=self.buffer, ha='center', va='bottom',
-                                                            color='dimgray')
+                                                            color='dimgray', clip_on=True)
                         self.station_label_artists.append(station_label_artist)
 
     def plot_hole(self, pem_file):
@@ -2653,10 +2666,10 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(11, 8.5), dpi=100)
     # plan_map = PlanMap(pem_files, fig)
     ax = fig.add_subplot()
-    component = 'z'
-    channel = 15
-    contour = ContourMap()
-    contour.plot_contour(ax, pem_files, component, channel)
+    # component = 'z'
+    # channel = 15
+    # contour = ContourMap()
+    # contour.plot_contour(ax, pem_files, component, channel)
     plt.show()
     # printer = PEMPrinter(sample_files_dir, pem_files)
     # printer.print_final_plots()

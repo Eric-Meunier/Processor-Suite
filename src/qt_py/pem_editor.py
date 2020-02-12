@@ -8,6 +8,7 @@ import pstats
 import sys
 import time
 import utm
+import numpy as np
 import simplekml
 from shutil import copyfile
 from decimal import getcontext
@@ -17,6 +18,7 @@ from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QProgressBar, QCheckBox,
                              QInputDialog, QHeaderView, QTableWidget, QErrorMessage, QDialogButtonBox, QVBoxLayout)
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 # from pyqtspinner.spinner import WaitingSpinner
 import colorcet as cc
@@ -1413,8 +1415,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         if len(self.pem_files) > 1:
+            pem_files = copy.deepcopy(self.pem_files)
             try:
-                self.contour_map_viewer = ContourMapViewer(self.pem_files, parent=self)
+                self.contour_map_viewer = ContourMapViewer(pem_files, parent=self)
             except TypeError as e:
                 self.error.setWindowTitle('Error')
                 self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
@@ -1445,7 +1448,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
             return
 
-        if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() =='', self.datumCBox.currentText() == '']):
+        if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() == '',
+                self.datumCBox.currentText() == '']):
             self.message.information(self, 'Error', 'GPS system information is incomplete')
             return
 
@@ -1483,6 +1487,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         traces = []
         hole_names = []
 
+        # Grouping up the loops, lines and boreholes into lists.
         for pem_file in pem_files:
             loop_gps = pem_file.get_loop_coords()
             loop_gps.append(loop_gps[0])
@@ -1504,6 +1509,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     traces.append(trace_gps)
                     hole_names.append(hole_name)
 
+        # Creates KMZ objects for the loops.
         for loop_gps, name in zip(loops, loop_names):
             loop_coords = []
             for row in loop_gps:
@@ -1517,6 +1523,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             ls.extrude = 1
             ls.style = loop_style
 
+        # Creates KMZ objects for the lines.
         for line_gps, name in zip(lines, line_names):
             line_coords = []
             folder = kml.newfolder(name=name)
@@ -1534,6 +1541,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             ls.extrude = 1
             ls.style = trace_style
 
+        # Creates KMZ objects for the boreholes.
         for trace_gps, name in zip(traces, hole_names):
             trace_coords = []
             folder = kml.newfolder(name=name)
@@ -2840,7 +2848,12 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
         self.map_layout.addWidget(self.canvas)
+        self.figure.subplots_adjust(left=-0.1, bottom=-0.1, right=1.1, top=1.1)
         self.ax = self.figure.add_subplot(111, projection='3d')
+
+        # self.toolbar = ContourMapToolbar(self.canvas, self)
+        # self.toolbar_layout.addWidget(self.toolbar)
+        # self.toolbar.setFixedHeight(30)
 
         self.map_plotter = Map3D(self.ax, self.pem_files, parent=self)
         self.map_plotter.plot_pems()
@@ -3142,7 +3155,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
         self.cmap = ContourMap()
         self.parent = parent
-        self.pem_files = [copy.deepcopy(pem_file) for pem_file in pem_files if 'surface' in pem_file.survey_type.lower()]
+        self.pem_files = [pem_file for pem_file in pem_files if 'surface' in pem_file.survey_type.lower()]
         if len(self.pem_files) < 2:
             raise TypeError("There are fewer than 2 eligible surface PEM files")
 
@@ -3150,6 +3163,12 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             if not pem_file.is_averaged():
                 print(f"Averaging {os.path.basename(pem_file.filepath)}")
                 pem_file = self.file_editor.average(pem_file)
+
+        # Either all files must be split or all un-split
+        if not all([pem_file.is_split() for pem_file in pem_files]):
+            for pem_file in self.pem_files:
+                print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
+                pem_file = self.file_editor.split_channels(pem_file)
 
         self.components = [pem_file.get_components() for pem_file in self.pem_files]
         self.components = list(set([item for sublist in self.components for item in sublist]))
@@ -3164,21 +3183,36 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         elif 'Y' not in self.components:
             self.y_rbtn.setEnabled(False)
             self.y_rbtn.setChecked(False)
-        # else:
-        #     raise ValueError("No valid components found")
 
-        self.num_channels = min([int(pem_file.header.get('NumChannels')) for pem_file in self.pem_files])
-        self.channel_spinbox.setMaximum(self.num_channels)
+        pem_file_channels = np.array([int(pem_file.header.get('NumChannels')) for pem_file in self.pem_files])
+        max_channels = pem_file_channels.max()
+        self.channel_spinbox.setMaximum(max_channels)
+
+        self.channel_times = self.pem_files[np.argmax(pem_file_channels)].header.get('ChannelTimes')
+        self.channel_pairs = list(map(lambda x, y: (x, y), self.channel_times[:-1], self.channel_times[1:]))
+
+        if all([pem_file.is_split() for pem_file in self.pem_files]):
+            # Remove the gap channel for split files
+            for i, pair in enumerate(self.channel_pairs):
+                if float(pair[0]) >= -0.0001 and float(pair[1]) <= 0.000048:
+                    print(f"Removing channel {i} from the channel pairs")
+                    self.channel_pairs.pop(i)
+                    # self.channel_times.pop(i)
 
         self.channel_spinbox.valueChanged.connect(self.draw_map)
+        self.gamma_spinbox.valueChanged.connect(self.draw_map)
+        self.gridsize_spinbox.valueChanged.connect(self.draw_map)
         self.z_rbtn.clicked.connect(self.draw_map)
         self.x_rbtn.clicked.connect(self.draw_map)
         self.y_rbtn.clicked.connect(self.draw_map)
         self.tf_rbtn.clicked.connect(self.draw_map)
         self.cmap_cbox.currentIndexChanged.connect(self.draw_map)
         self.interp_cbox.currentIndexChanged.connect(self.draw_map)
+        self.plot_loops_cbox.toggled.connect(self.draw_map)
         self.plot_lines_cbox.toggled.connect(self.draw_map)
         self.plot_stations_cbox.toggled.connect(self.draw_map)
+        self.label_loops_cbox.toggled.connect(self.draw_map)
+        self.label_lines_cbox.toggled.connect(self.draw_map)
         self.label_stations_cbox.toggled.connect(self.draw_map)
         self.grid_cbox.toggled.connect(self.draw_map)
         self.title_box_cbox.toggled.connect(self.draw_map)
@@ -3186,27 +3220,46 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
         self.figure = Figure(figsize=(11, 8.5))
         self.canvas = FigureCanvas(self.figure)
-        # NavigationToolbar(self.canvas, self)
+        self.toolbar = ContourMapToolbar(self.canvas, self)
+        self.toolbar_layout.addWidget(self.toolbar)
+        self.toolbar.setFixedHeight(30)
         self.map_layout.addWidget(self.canvas)
         self.draw_map()
 
     def draw_map(self):
+
+        def get_channel_time(channel):
+            current_pair = self.channel_pairs[channel]
+            channel_center = (current_pair[1] - current_pair[0]) / 2 + current_pair[0]
+            channel_time = channel_center
+            return channel_time
 
         component = self.get_selected_component().upper()
         if component not in self.components:
             return
 
         channel = self.channel_spinbox.value()
+        channel_time = get_channel_time(channel)
+        self.time_label.setText(f"{channel_time * 1000:.3f}ms")
         colormap = self.get_selected_colormap()
         interp_method = self.get_selected_interp_method()
 
-        self.cmap.plot_contour(self.figure, self.pem_files, component, channel, colormap,
-                               interp_method, draw_grid=self.grid_cbox.isChecked(),
+        try:
+            self.cmap.plot_contour(self.figure, self.pem_files, component, channel, colormap,
+                               interp_method, draw_grid=self.grid_cbox.isChecked(), channel_time=channel_time,
+                               plot_loops=self.plot_loops_cbox.isChecked(),
                                plot_lines=self.plot_lines_cbox.isChecked(),
-                               plot_stations=self.plot_stations_cbox.isChecked(),
-                               plot_station_labels=self.label_stations_cbox.isChecked(),
-                               title_box=self.title_box_cbox.isChecked())
-        self.canvas.draw()
+                               plot_stations=bool(self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
+                               label_lines=bool(self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
+                               label_loops=bool(self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
+                               label_stations=bool(self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
+                               title_box=self.title_box_cbox.isChecked(),
+                               gamma=self.gamma_spinbox.value(),
+                               grid_size=self.gridsize_spinbox.value())
+        except Exception as e:
+            self.error.showMessage(f"The following error occured while creating the contour plot:\n{str(e)}")
+        else:
+            self.canvas.draw()
 
     def get_selected_component(self):
         if self.z_rbtn.isChecked():
@@ -3222,6 +3275,11 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         return self.interp_cbox.currentText().lower()
 
     def get_selected_colormap(self):
+        # geosoft_colors = [(0, 0, 1), (0, 1, 1), (0, 1, 0), (1, 1, 0), (1, 0.5, 0), (1, 0, 0), (1, 0, 1), (1, .8, 1)]
+        # geosoft_cmap = mpl.colors.LinearSegmentedColormap.from_list('custom', geosoft_colors)
+        # geosoft_cmap.set_under('blue')
+        # geosoft_cmap.set_over('magenta')
+
         if self.cmap_cbox.currentText().lower() == 'cool':
             return 'cool'
         elif self.cmap_cbox.currentText().lower() == 'viridis':
@@ -3234,6 +3292,10 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             return 'rainbow'
         elif self.cmap_cbox.currentText().lower() == 'coolwarm':
             return 'coolwarm'
+        # elif self.cmap_cbox.currentText().lower() == 'geosoft':
+        #     return geosoft_cmap
+        elif self.cmap_cbox.currentText().lower() == 'geosoft':
+            return 'geosoft'
         elif self.cmap_cbox.currentText().lower() == 'bmw':
             return cc.cm.bmw
         elif self.cmap_cbox.currentText().lower() == 'kbc':
@@ -3242,7 +3304,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
     def save_figure(self):
         if len(self.pem_files) > 0:
             default_path = os.path.abspath(self.pem_files[0].filepath)
-            path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', default_path, 'PDF Files (*.PDF)')
+            path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', default_path,
+                                                    'PDF Files (*.PDF);;PNG Files (*.PNG);;JPG Files (*.JPG')
             if path:
                 # resize the figure to 8.5 x 11, then back to the original size after it's been printed
                 size = self.figure.get_size_inches()
@@ -3251,6 +3314,12 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                 self.figure.set_size_inches(size)
                 self.canvas.draw()
                 os.startfile(path)
+
+
+class ContourMapToolbar(NavigationToolbar):
+    # only display the buttons we need
+    toolitems = [t for t in NavigationToolbar.toolitems if
+                 t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
 
 
 def main():
