@@ -1594,9 +1594,9 @@ class ContourMap(MapPlotMethods):
             add_title()
 
             component_text = f"{component.upper()} Component" if component != 'TF' else 'Total Field'
-            info_text = fig.text(0, 1.09, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
+            info_text = fig.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
                                  transform=cbar_ax.transAxes, color='k', fontname='Century Gothic', fontsize=9,
-                                 va='top', ha='center', zorder=10)
+                                 va='bottom', ha='center', zorder=10)
 
             # cbar.ax.xaxis.set_label_position('top')
             # cbar.ax.set_ylabel('# of contacts', rotation=270)
@@ -1904,8 +1904,13 @@ class MagneticFieldCalculator(MapPlotMethods):
 
         # Creating the grid
         min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents(self.pem_file)
+        max_z = float(self.pem_file.get_collar_coords()[0][2]) + 10
+        min_z = max_z - abs(float(self.pem_file.get_hole_geometry()[-1][4]))
+
         # Calculate the Z so that it is like a section plot
-        min_z = max_z - ((float(math.floor(min_z / 400) + 1) * 400))
+        # Wasn't working very well, replaced with the above.
+        # min_z = max_z - abs((float(math.floor(min_z / 400) + 1) * 400))
+
         line_len = round(math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2))
         if arrow_len is None:
             arrow_len = float(line_len // 30)

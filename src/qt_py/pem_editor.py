@@ -279,6 +279,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # GPS menu
         self.saveAsKMZFile = QAction("&Save as KMZ", self)
         self.saveAsKMZFile.setStatusTip("Create a KMZ file using all GPS in the opened PEM file(s)")
+        self.saveAsKMZFile.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
         self.saveAsKMZFile.triggered.connect(self.save_as_kmz)
 
         self.sortAllStationGps = QAction("&Sort All Station GPS", self)
@@ -299,9 +300,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.show3DMap = QAction("&3D Map", self)
         self.show3DMap.setStatusTip("Show 3D map of all PEM files")
         self.show3DMap.setShortcut('Ctrl+M')
+        self.show3DMap.setIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map2.png')))
         self.show3DMap.triggered.connect(self.show_map_3d_viewer)
 
         self.showContourMap = QAction("&Contour Map", self)
+        self.showContourMap.setIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map3.png')))
         self.showContourMap.setStatusTip("Show a contour map of surface PEM files")
         self.showContourMap.triggered.connect(self.show_contour_map_viewer)
 
@@ -384,6 +387,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.extract_stations_action.triggered.connect(self.extract_stations)
 
                 self.table.view_3d_section_action = QAction("&View 3D Section", self)
+                self.table.view_3d_section_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
                 self.table.view_3d_section_action.triggered.connect(self.show_section_3d_viewer)
 
                 self.table.average_action = QAction("&Average", self)
@@ -2824,6 +2828,7 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
         self.pem_files = pem_files
         self.parent = parent
         self.setWindowTitle("3D Map Viewer")
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map2.png')))
 
         self.draw_loops = self.draw_loops_cbox.isChecked()
         self.draw_lines = self.draw_lines_cbox.isChecked()
@@ -2974,6 +2979,7 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         self.list_points = []
 
         self.setWindowTitle('3D Section Viewer')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
 
         self.draw_loop = self.draw_loop_cbox.isChecked()
         self.draw_borehole = self.draw_borehole_cbox.isChecked()
@@ -3150,6 +3156,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('Contour Map Viewer')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map3.png')))
         self.error = QErrorMessage()
         self.file_editor = PEMFileEditor()
 
@@ -3230,7 +3237,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
         def get_channel_time(channel):
             current_pair = self.channel_pairs[channel]
-            channel_center = (current_pair[1] - current_pair[0]) / 2 + current_pair[0]
+            channel_center = (float(current_pair[1]) - float(current_pair[0])) / 2 + float(current_pair[0])
             channel_time = channel_center
             return channel_time
 
@@ -3275,11 +3282,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         return self.interp_cbox.currentText().lower()
 
     def get_selected_colormap(self):
-        # geosoft_colors = [(0, 0, 1), (0, 1, 1), (0, 1, 0), (1, 1, 0), (1, 0.5, 0), (1, 0, 0), (1, 0, 1), (1, .8, 1)]
-        # geosoft_cmap = mpl.colors.LinearSegmentedColormap.from_list('custom', geosoft_colors)
-        # geosoft_cmap.set_under('blue')
-        # geosoft_cmap.set_over('magenta')
-
         if self.cmap_cbox.currentText().lower() == 'cool':
             return 'cool'
         elif self.cmap_cbox.currentText().lower() == 'viridis':
@@ -3292,8 +3294,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             return 'rainbow'
         elif self.cmap_cbox.currentText().lower() == 'coolwarm':
             return 'coolwarm'
-        # elif self.cmap_cbox.currentText().lower() == 'geosoft':
-        #     return geosoft_cmap
         elif self.cmap_cbox.currentText().lower() == 'geosoft':
             return 'geosoft'
         elif self.cmap_cbox.currentText().lower() == 'bmw':
