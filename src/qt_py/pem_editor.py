@@ -3221,6 +3221,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.label_loops_cbox.toggled.connect(self.draw_map)
         self.label_lines_cbox.toggled.connect(self.draw_map)
         self.label_stations_cbox.toggled.connect(self.draw_map)
+        self.plot_elevation_cbox.toggled.connect(self.draw_map)
         self.grid_cbox.toggled.connect(self.draw_map)
         self.title_box_cbox.toggled.connect(self.draw_map)
         self.save_figure_btn.clicked.connect(self.save_figure)
@@ -3260,6 +3261,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                                label_lines=bool(self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
                                label_loops=bool(self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
                                label_stations=bool(self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
+                               elevation_contours=self.plot_elevation_cbox.isChecked(),
                                title_box=self.title_box_cbox.isChecked(),
                                gamma=self.gamma_spinbox.value(),
                                grid_size=self.gridsize_spinbox.value())

@@ -190,7 +190,7 @@
       <string>Options</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="14" column="0">
+      <item row="15" column="0">
        <widget class="QDoubleSpinBox" name="gamma_spinbox">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -209,7 +209,7 @@
         </property>
        </widget>
       </item>
-      <item row="9" column="0" colspan="2">
+      <item row="10" column="0" colspan="2">
        <spacer name="verticalSpacer_2">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -225,7 +225,7 @@
         </property>
        </spacer>
       </item>
-      <item row="7" column="0" colspan="2">
+      <item row="8" column="0" colspan="2">
        <widget class="QLabel" name="label_2">
         <property name="text">
          <string>Colormap:</string>
@@ -274,7 +274,7 @@
         </layout>
        </widget>
       </item>
-      <item row="11" column="0" colspan="2">
+      <item row="12" column="0" colspan="2">
        <widget class="QComboBox" name="interp_cbox">
         <item>
          <property name="text">
@@ -293,7 +293,7 @@
         </item>
        </widget>
       </item>
-      <item row="14" column="1" alignment="Qt::AlignRight">
+      <item row="15" column="1" alignment="Qt::AlignRight">
        <widget class="QSpinBox" name="gridsize_spinbox">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -337,14 +337,14 @@
         </layout>
        </widget>
       </item>
-      <item row="4" column="0" colspan="2">
+      <item row="5" column="0" colspan="2">
        <widget class="QCheckBox" name="grid_cbox">
         <property name="text">
          <string>Grid</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="0" colspan="2">
+      <item row="6" column="0" colspan="2">
        <widget class="QCheckBox" name="title_box_cbox">
         <property name="text">
          <string>Title Box</string>
@@ -354,7 +354,7 @@
         </property>
        </widget>
       </item>
-      <item row="8" column="0" colspan="2">
+      <item row="9" column="0" colspan="2">
        <widget class="QComboBox" name="cmap_cbox">
         <property name="currentText">
          <string>Geosoft</string>
@@ -404,7 +404,7 @@
         </item>
        </widget>
       </item>
-      <item row="12" column="0" colspan="2">
+      <item row="13" column="0" colspan="2">
        <spacer name="verticalSpacer_4">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -420,7 +420,7 @@
         </property>
        </spacer>
       </item>
-      <item row="6" column="0" colspan="2">
+      <item row="7" column="0" colspan="2">
        <spacer name="verticalSpacer_3">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -436,7 +436,7 @@
         </property>
        </spacer>
       </item>
-      <item row="13" column="1" alignment="Qt::AlignRight">
+      <item row="14" column="1" alignment="Qt::AlignRight">
        <widget class="QLabel" name="label_5">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
@@ -449,17 +449,24 @@
         </property>
        </widget>
       </item>
-      <item row="13" column="0">
+      <item row="14" column="0">
        <widget class="QLabel" name="label_4">
         <property name="text">
          <string>Gamma</string>
         </property>
        </widget>
       </item>
-      <item row="10" column="0" colspan="2">
+      <item row="11" column="0" colspan="2">
        <widget class="QLabel" name="label_3">
         <property name="text">
          <string>Interpolation Method:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0" colspan="2">
+       <widget class="QCheckBox" name="plot_elevation_cbox">
+        <property name="text">
+         <string>Elevation Contour</string>
         </property>
        </widget>
       </item>
