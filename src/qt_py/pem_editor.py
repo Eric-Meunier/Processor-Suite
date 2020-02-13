@@ -3207,7 +3207,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                     # self.channel_times.pop(i)
 
         self.channel_spinbox.valueChanged.connect(self.draw_map)
-        self.gamma_spinbox.valueChanged.connect(self.draw_map)
         self.gridsize_spinbox.valueChanged.connect(self.draw_map)
         self.z_rbtn.clicked.connect(self.draw_map)
         self.x_rbtn.clicked.connect(self.draw_map)
@@ -3221,6 +3220,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.label_loops_cbox.toggled.connect(self.draw_map)
         self.label_lines_cbox.toggled.connect(self.draw_map)
         self.label_stations_cbox.toggled.connect(self.draw_map)
+        self.contour_lines_cbox.toggled.connect(self.draw_map)
         self.plot_elevation_cbox.toggled.connect(self.draw_map)
         self.grid_cbox.toggled.connect(self.draw_map)
         self.title_box_cbox.toggled.connect(self.draw_map)
@@ -3255,6 +3255,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         try:
             self.cmap.plot_contour(self.figure, self.pem_files, component, channel, colormap,
                                interp_method, draw_grid=self.grid_cbox.isChecked(), channel_time=channel_time,
+                               contour_lines=self.contour_lines_cbox.isChecked(),
                                plot_loops=self.plot_loops_cbox.isChecked(),
                                plot_lines=self.plot_lines_cbox.isChecked(),
                                plot_stations=bool(self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
@@ -3263,7 +3264,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                                label_stations=bool(self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
                                elevation_contours=self.plot_elevation_cbox.isChecked(),
                                title_box=self.title_box_cbox.isChecked(),
-                               gamma=self.gamma_spinbox.value(),
                                grid_size=self.gridsize_spinbox.value())
         except Exception as e:
             self.error.showMessage(f"The following error occured while creating the contour plot:\n{str(e)}")

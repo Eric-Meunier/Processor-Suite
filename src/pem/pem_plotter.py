@@ -1362,7 +1362,7 @@ class ContourMap(MapPlotMethods):
         self.color = 'k'
 
     def plot_contour(self, fig, pem_files, component, channel, colormap, interp_method, channel_time='',
-                     plot_loops=True, label_loops=False, label_lines=True, plot_lines=True,
+                     contour_lines=True, plot_loops=True, label_loops=False, label_lines=True, plot_lines=True,
                      plot_stations=False, label_stations=False, elevation_contours=False, draw_grid=False,
                      title_box=False, gamma=1, grid_size=100):
 
@@ -1420,7 +1420,6 @@ class ContourMap(MapPlotMethods):
             if plot_loops:
                 loop_gps = pem_file.get_loop_coords()
                 if loop_gps and loop_gps not in loops:
-
                     loops.append(loop_gps)
                     eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
                     eastings.insert(0, eastings[-1])  # To close up the loop
@@ -1568,10 +1567,11 @@ class ContourMap(MapPlotMethods):
             raise ValueError('Not all survey types are the same.')
 
         add_rectangle()
-        add_title()
         format_figure()
-        [plot_pem_gps(pem_file) for pem_file in pem_files]
+
         xs, ys, zs, ds = get_arrays(component, channel)
+        [plot_pem_gps(pem_file) for pem_file in pem_files]
+        add_title()
 
         if all([len(xs) > 0, len(ys) > 0, len(zs) > 0, len(ds) > 0]):
             # Creating a 2D grid for the interpolation
@@ -1580,29 +1580,37 @@ class ContourMap(MapPlotMethods):
             yi = np.linspace(ys.min(), ys.max(), numrows)
             xx, yy = np.meshgrid(xi, yi)
 
-            # Interpolating the 2D grid data
-            di = interp.griddata((xs, ys), ds, (xx, yy), method=interp_method)
-
             norm=None
+            # Creating a custom colormap
             if colormap == 'geosoft':
-                # Creating a custom colormap
+                # Blue > Teal > Green > Yellow > Red > Orange > Magenta > Light pink
                 custom_colors = [(0, 0, 1), (0, 1, 1), (0, 1, 0), (1, 1, 0), (1, 0.5, 0), (1, 0, 0), (1, 0, 1), (1, .8, 1)]
                 custom_cmap = mpl.colors.LinearSegmentedColormap.from_list('custom', custom_colors)
                 custom_cmap.set_under('blue')
                 custom_cmap.set_over('magenta')
                 colormap = custom_cmap
-                # vmax = zs.max()
-                # vmin = zs.min()
-                # center = math.log((vmax-vmin), 10)
-                norm=mpl.colors.PowerNorm(gamma=gamma)
-                # norm=mpl.colors.SymLogNorm(10, linscale=10)
 
-            contour = ax.contourf(xi, yi, di, cmap=colormap, norm=norm, levels=50)
+            # Interpolating the 2D grid data
+            di = interp.griddata((xs, ys), ds, (xx, yy), method=interp_method)
 
-            cbar = fig.colorbar(contour, cax=cbar_ax)
+            # Elevation contour lines
+            if elevation_contours:
+                zi = interp.griddata((xs, ys), zs, (xx, yy), method=interp_method)
+                contour = ax.contour(xi, yi, zi, colors='black', alpha=0.8)
+                # contourf = ax.contourf(xi, yi, zi, cmap=colormap)
+                ax.clabel(contour, fontsize=6, inline=True, inline_spacing=0.5, fmt='%d')
+
+            # Data filled contour
+            contourf = ax.contourf(xi, yi, di, cmap=colormap, norm=norm, levels=50)
+            if contour_lines:
+                contour_lines = ax.contour(xi, yi, di, colors='black', alpha=1, levels=50)
+
+            # Colorbar for the data contours
+            cbar = fig.colorbar(contourf, cax=cbar_ax)
             cbar_ax.set_xlabel(f"{units}")
             cbar.ax.get_xaxis().labelpad = 10
 
+            # Component and channel text at the top right of the figure
             component_text = f"{component.upper()} Component" if component != 'TF' else 'Total Field'
             info_text = fig.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
                                  transform=cbar_ax.transAxes, color='k', fontname='Century Gothic', fontsize=9,
