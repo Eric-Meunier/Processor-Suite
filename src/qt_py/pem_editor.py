@@ -3207,20 +3207,16 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                     # self.channel_times.pop(i)
 
         self.channel_spinbox.valueChanged.connect(self.draw_map)
-        self.gridsize_spinbox.valueChanged.connect(self.draw_map)
         self.z_rbtn.clicked.connect(self.draw_map)
         self.x_rbtn.clicked.connect(self.draw_map)
         self.y_rbtn.clicked.connect(self.draw_map)
         self.tf_rbtn.clicked.connect(self.draw_map)
-        self.cmap_cbox.currentIndexChanged.connect(self.draw_map)
-        self.interp_cbox.currentIndexChanged.connect(self.draw_map)
         self.plot_loops_cbox.toggled.connect(self.draw_map)
         self.plot_lines_cbox.toggled.connect(self.draw_map)
         self.plot_stations_cbox.toggled.connect(self.draw_map)
         self.label_loops_cbox.toggled.connect(self.draw_map)
         self.label_lines_cbox.toggled.connect(self.draw_map)
         self.label_stations_cbox.toggled.connect(self.draw_map)
-        self.contour_lines_cbox.toggled.connect(self.draw_map)
         self.plot_elevation_cbox.toggled.connect(self.draw_map)
         self.grid_cbox.toggled.connect(self.draw_map)
         self.title_box_cbox.toggled.connect(self.draw_map)
@@ -3249,22 +3245,23 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         channel = self.channel_spinbox.value()
         channel_time = get_channel_time(channel)
         self.time_label.setText(f"{channel_time * 1000:.3f}ms")
-        colormap = self.get_selected_colormap()
-        interp_method = self.get_selected_interp_method()
 
         try:
-            self.cmap.plot_contour(self.figure, self.pem_files, component, channel, colormap,
-                               interp_method, draw_grid=self.grid_cbox.isChecked(), channel_time=channel_time,
-                               contour_lines=self.contour_lines_cbox.isChecked(),
-                               plot_loops=self.plot_loops_cbox.isChecked(),
-                               plot_lines=self.plot_lines_cbox.isChecked(),
-                               plot_stations=bool(self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
-                               label_lines=bool(self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
-                               label_loops=bool(self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
-                               label_stations=bool(self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
-                               elevation_contours=self.plot_elevation_cbox.isChecked(),
-                               title_box=self.title_box_cbox.isChecked(),
-                               grid_size=self.gridsize_spinbox.value())
+            self.cmap.plot_contour(self.figure, self.pem_files, component, channel,
+                                   draw_grid=self.grid_cbox.isChecked(),
+                                   channel_time=channel_time,
+                                   plot_loops=self.plot_loops_cbox.isChecked(),
+                                   plot_lines=self.plot_lines_cbox.isChecked(),
+                                   plot_stations=bool(
+                                       self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
+                                   label_lines=bool(
+                                       self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
+                                   label_loops=bool(
+                                       self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
+                                   label_stations=bool(
+                                       self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
+                                   elevation_contours=self.plot_elevation_cbox.isChecked(),
+                                   title_box=self.title_box_cbox.isChecked())
         except Exception as e:
             self.error.showMessage(f"The following error occured while creating the contour plot:\n{str(e)}")
         else:
@@ -3279,29 +3276,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             return 'Y'
         elif self.tf_rbtn.isChecked():
             return 'TF'
-
-    def get_selected_interp_method(self):
-        return self.interp_cbox.currentText().lower()
-
-    def get_selected_colormap(self):
-        if self.cmap_cbox.currentText().lower() == 'cool':
-            return 'cool'
-        elif self.cmap_cbox.currentText().lower() == 'viridis':
-            return 'viridis'
-        elif self.cmap_cbox.currentText().lower() == 'blues':
-            return 'Blues'
-        elif self.cmap_cbox.currentText().lower() == 'inferno':
-            return 'inferno'
-        elif self.cmap_cbox.currentText().lower() == 'rainbow':
-            return 'rainbow'
-        elif self.cmap_cbox.currentText().lower() == 'coolwarm':
-            return 'coolwarm'
-        elif self.cmap_cbox.currentText().lower() == 'geosoft':
-            return 'geosoft'
-        elif self.cmap_cbox.currentText().lower() == 'bmw':
-            return cc.cm.bmw
-        elif self.cmap_cbox.currentText().lower() == 'kbc':
-            return cc.cm.kbc
 
     def save_figure(self):
         if len(self.pem_files) > 0:

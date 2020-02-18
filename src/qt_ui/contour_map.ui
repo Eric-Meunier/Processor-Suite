@@ -197,29 +197,6 @@
       <string>Options</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="11" column="0" colspan="2">
-       <spacer name="verticalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Minimum</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>10</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="9" column="0" colspan="2">
-       <widget class="QLabel" name="label_2">
-        <property name="text">
-         <string>Colormap:</string>
-        </property>
-       </widget>
-      </item>
       <item row="1" column="0" colspan="2">
        <widget class="QGroupBox" name="plot_lines_cbox">
         <property name="title">
@@ -262,23 +239,31 @@
         </layout>
        </widget>
       </item>
-      <item row="13" column="0" colspan="2">
-       <widget class="QComboBox" name="interp_cbox">
-        <item>
-         <property name="text">
-          <string>Cubic</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Linear</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Nearest</string>
-         </property>
-        </item>
+      <item row="5" column="0" colspan="2">
+       <widget class="QCheckBox" name="grid_cbox">
+        <property name="text">
+         <string>Grid</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0" colspan="2">
+       <widget class="QCheckBox" name="title_box_cbox">
+        <property name="text">
+         <string>Title Box</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0" colspan="2">
+       <widget class="QCheckBox" name="plot_elevation_cbox">
+        <property name="text">
+         <string>Elevation Contour</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item row="0" column="0" colspan="2">
@@ -301,164 +286,6 @@
           </widget>
          </item>
         </layout>
-       </widget>
-      </item>
-      <item row="6" column="0" colspan="2">
-       <widget class="QCheckBox" name="grid_cbox">
-        <property name="text">
-         <string>Grid</string>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="0" colspan="2">
-       <widget class="QCheckBox" name="title_box_cbox">
-        <property name="text">
-         <string>Title Box</string>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="10" column="0" colspan="2">
-       <widget class="QComboBox" name="cmap_cbox">
-        <property name="currentText">
-         <string>Geosoft</string>
-        </property>
-        <property name="currentIndex">
-         <number>3</number>
-        </property>
-        <item>
-         <property name="text">
-          <string>Blues</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>BMW</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Coolwarm</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Geosoft</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>KBC</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Inferno</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Rainbow</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Viridis</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="14" column="0" colspan="2">
-       <spacer name="verticalSpacer_4">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Fixed</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>10</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="8" column="0" colspan="2">
-       <spacer name="verticalSpacer_3">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Minimum</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>10</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="5" column="0" colspan="2">
-       <widget class="QCheckBox" name="plot_elevation_cbox">
-        <property name="text">
-         <string>Elevation Contour</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="12" column="0" colspan="2">
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>Interpolation Method:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0" colspan="2">
-       <widget class="QCheckBox" name="contour_lines_cbox">
-        <property name="text">
-         <string>Contour Lines</string>
-        </property>
-       </widget>
-      </item>
-      <item row="16" column="0" colspan="2">
-       <widget class="QSpinBox" name="gridsize_spinbox">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimum">
-         <number>5</number>
-        </property>
-        <property name="maximum">
-         <number>1000</number>
-        </property>
-        <property name="singleStep">
-         <number>10</number>
-        </property>
-        <property name="value">
-         <number>100</number>
-        </property>
-       </widget>
-      </item>
-      <item row="15" column="0" colspan="2">
-       <widget class="QLabel" name="label_5">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>Grid Size</string>
-        </property>
        </widget>
       </item>
      </layout>

@@ -1361,10 +1361,29 @@ class ContourMap(MapPlotMethods):
         self.label_buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
         self.color = 'k'
 
-    def plot_contour(self, fig, pem_files, component, channel, colormap, interp_method, channel_time='',
-                     contour_lines=True, plot_loops=True, label_loops=False, label_lines=True, plot_lines=True,
-                     plot_stations=False, label_stations=False, elevation_contours=False, draw_grid=False,
-                     title_box=False, gamma=1, grid_size=100):
+    def plot_contour(self, fig, pem_files, component, channel,
+                     channel_time='', contour_lines=True, plot_loops=True, label_loops=False, label_lines=True,
+                     plot_lines=True, plot_stations=False, label_stations=False, elevation_contours=False,
+                     draw_grid=False, title_box=False):
+        """
+        Plots the filled contour map on a given Matplotlib Figure object.
+        :param fig: Matplotlib Figure object
+        :param pem_files: list: PEMFile objects. Must be surface surveys, must have station GPS, and must all be
+        of the same general survey type (nT/s vs pT).
+        :param component: str: Component to plot (X, Y, Z, or Total Field (TF).
+        :param channel: int: Channel to plot.
+        :param channel_time: float: The time of the center of the channel's gate.
+        :param plot_loops: bool: Whether or not to plot the loop
+        :param label_loops: bool: Show or hide loop labels
+        :param label_lines: bool: Show or hide line labels
+        :param plot_lines: bool: Show or hide surface lines
+        :param plot_stations: bool: Show or hide station markers
+        :param label_stations: bool: Show or hide label of each station
+        :param elevation_contours: bool: Show or hide elevation contour lines
+        :param draw_grid: bool: Show or hide grid
+        :param title_box: bool: Show or hide title information
+        :return: None
+        """
 
         def convert_station(station):
             """
@@ -1477,7 +1496,7 @@ class ContourMap(MapPlotMethods):
                 crone_text = fig.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
                                       fontname='Century Gothic', fontsize=11, ha='center', zorder=10)
 
-                survey_text = fig.text(center_pos, top_pos - 0.036, f"{interp_method.title()}-Interpolation Contour Map"
+                survey_text = fig.text(center_pos, top_pos - 0.036, f"Cubic-Interpolation Contour Map"
                 f"\n{pem_files[0].survey_type.title()} Pulse EM Survey",
                                        family='cursive', style='italic', fontname='Century Gothic', fontsize=9,
                                        ha='center', zorder=10)
@@ -1575,35 +1594,31 @@ class ContourMap(MapPlotMethods):
 
         if all([len(xs) > 0, len(ys) > 0, len(zs) > 0, len(ds) > 0]):
             # Creating a 2D grid for the interpolation
-            numcols, numrows = grid_size, grid_size
+            numcols, numrows = 100, 100
             xi = np.linspace(xs.min(), xs.max(), numcols)
             yi = np.linspace(ys.min(), ys.max(), numrows)
             xx, yy = np.meshgrid(xi, yi)
 
-            norm=None
             # Creating a custom colormap
-            if colormap == 'geosoft':
-                # Blue > Teal > Green > Yellow > Red > Orange > Magenta > Light pink
-                custom_colors = [(0, 0, 1), (0, 1, 1), (0, 1, 0), (1, 1, 0), (1, 0.5, 0), (1, 0, 0), (1, 0, 1), (1, .8, 1)]
-                custom_cmap = mpl.colors.LinearSegmentedColormap.from_list('custom', custom_colors)
-                custom_cmap.set_under('blue')
-                custom_cmap.set_over('magenta')
-                colormap = custom_cmap
+            # Blue > Teal > Green > Yellow > Red > Orange > Magenta > Light pink
+            custom_colors = [(0, 0, 1), (0, 1, 1), (0, 1, 0), (1, 1, 0), (1, 0.5, 0), (1, 0, 0), (1, 0, 1), (1, .8, 1)]
+            custom_cmap = mpl.colors.LinearSegmentedColormap.from_list('custom', custom_colors)
+            custom_cmap.set_under('blue')
+            custom_cmap.set_over('magenta')
+            colormap = custom_cmap
 
             # Interpolating the 2D grid data
-            di = interp.griddata((xs, ys), ds, (xx, yy), method=interp_method)
+            di = interp.griddata((xs, ys), ds, (xx, yy), method='cubic')
 
             # Elevation contour lines
             if elevation_contours:
-                zi = interp.griddata((xs, ys), zs, (xx, yy), method=interp_method)
+                zi = interp.griddata((xs, ys), zs, (xx, yy), method='cubic')
                 contour = ax.contour(xi, yi, zi, colors='black', alpha=0.8)
                 # contourf = ax.contourf(xi, yi, zi, cmap=colormap)
                 ax.clabel(contour, fontsize=6, inline=True, inline_spacing=0.5, fmt='%d')
 
             # Data filled contour
-            contourf = ax.contourf(xi, yi, di, cmap=colormap, norm=norm, levels=50)
-            if contour_lines:
-                contour_lines = ax.contour(xi, yi, di, colors='black', alpha=1, levels=50)
+            contourf = ax.contourf(xi, yi, di, cmap=colormap, levels=50)
 
             # Colorbar for the data contours
             cbar = fig.colorbar(contourf, cax=cbar_ax)
