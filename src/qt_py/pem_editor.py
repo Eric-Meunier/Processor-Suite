@@ -154,7 +154,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.setWindowTitle("PEMEditor")
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'pem_editor_3.svg')))
+            QtGui.QIcon(os.path.join(icons_path, 'pem_editor_3.png')))
         self.setGeometry(500, 300, 1700, 900)
         center_window(self)
 
@@ -1702,7 +1702,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def remove_file_selection(self):
         pem_files, rows = self.get_selected_pem_files()
-        for row in reversed(rows):
+        for row in rows:
             self.remove_file(row)
         self.window().statusBar().showMessage(f"{len(rows)} files removed.", 2000)
 
@@ -3321,7 +3321,7 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
-    mw.show_contour_map_viewer()
+    # mw.show_contour_map_viewer()
     # mw.auto_merge_pem_files()
     # mw.show_contour_map_viewer()
     # mw.save_as_kmz()
