@@ -1349,7 +1349,7 @@ class PlanMap(MapPlotMethods):
 
 class ContourMap(MapPlotMethods):
     """
-    Plots PEM surface data as a contour plot. Only for surface data. PEM files must all belong to the same loop.
+    Plots PEM surface data as a contour plot. Only for surface data.
     """
 
     def __init__(self, parent=None):
@@ -1361,8 +1361,16 @@ class ContourMap(MapPlotMethods):
         self.label_buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
         self.color = 'k'
 
+        # Creating a custom colormap that imitates the Geosoft colors
+        # Blue > Teal > Green > Yellow > Red > Orange > Magenta > Light pink
+        custom_colors = [(0, 0, 1), (0, 1, 1), (0, 1, 0), (1, 1, 0), (1, 0.5, 0), (1, 0, 0), (1, 0, 1), (1, .8, 1)]
+        custom_cmap = mpl.colors.LinearSegmentedColormap.from_list('custom', custom_colors)
+        custom_cmap.set_under('blue')
+        custom_cmap.set_over('magenta')
+        self.colormap = custom_cmap
+
     def plot_contour(self, fig, pem_files, component, channel,
-                     channel_time='', contour_lines=True, plot_loops=True, label_loops=False, label_lines=True,
+                     channel_time='', plot_loops=True, label_loops=False, label_lines=True,
                      plot_lines=True, plot_stations=False, label_stations=False, elevation_contours=False,
                      draw_grid=False, title_box=False):
         """
@@ -1589,6 +1597,7 @@ class ContourMap(MapPlotMethods):
         format_figure()
 
         xs, ys, zs, ds = get_arrays(component, channel)
+        # Plot the GPS from each PEM file onto the plot.
         [plot_pem_gps(pem_file) for pem_file in pem_files]
         add_title()
 
@@ -1598,14 +1607,6 @@ class ContourMap(MapPlotMethods):
             xi = np.linspace(xs.min(), xs.max(), numcols)
             yi = np.linspace(ys.min(), ys.max(), numrows)
             xx, yy = np.meshgrid(xi, yi)
-
-            # Creating a custom colormap
-            # Blue > Teal > Green > Yellow > Red > Orange > Magenta > Light pink
-            custom_colors = [(0, 0, 1), (0, 1, 1), (0, 1, 0), (1, 1, 0), (1, 0.5, 0), (1, 0, 0), (1, 0, 1), (1, .8, 1)]
-            custom_cmap = mpl.colors.LinearSegmentedColormap.from_list('custom', custom_colors)
-            custom_cmap.set_under('blue')
-            custom_cmap.set_over('magenta')
-            colormap = custom_cmap
 
             # Interpolating the 2D grid data
             di = interp.griddata((xs, ys), ds, (xx, yy), method='cubic')
@@ -1618,7 +1619,7 @@ class ContourMap(MapPlotMethods):
                 ax.clabel(contour, fontsize=6, inline=True, inline_spacing=0.5, fmt='%d')
 
             # Data filled contour
-            contourf = ax.contourf(xi, yi, di, cmap=colormap, levels=50)
+            contourf = ax.contourf(xi, yi, di, cmap=self.colormap, levels=50)
 
             # Colorbar for the data contours
             cbar = fig.colorbar(contourf, cax=cbar_ax)

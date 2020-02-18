@@ -1873,7 +1873,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         client = self.client_edit.text() if self.share_client_cbox.isChecked() else header.get('Client')
         grid = self.grid_edit.text() if self.share_grid_cbox.isChecked() else header.get('Grid')
         loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() else header.get('Loop')
-        current = tags.get('Current')
+        current = f"{float(tags.get('Current')):.1f}"
         coil_area = pem_file.header.get('CoilArea')
         averaged = 'Yes' if pem_file.is_averaged() else 'No'
         split = 'Yes' if pem_file.is_split() else 'No'
@@ -2390,8 +2390,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :param type: File names or line/hole names
         :return: None
         """
-
-        # logging.info('PEMEditor - Batch renaming')
 
         def rename_pem_files():
             if len(self.batch_name_editor.pem_files) > 0:
@@ -3151,6 +3149,10 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
 
 
 class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
+    """
+    Window that hosts the ContourMap. Filters the given PEMFiles to only include surface surveys. Either all files
+    can be un-split, or if there are any split files, it will split the rest. Averages all files.
+    """
 
     def __init__(self, pem_files, parent=None):
         super().__init__()
@@ -3163,9 +3165,11 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.cmap = ContourMap()
         self.parent = parent
         self.pem_files = [pem_file for pem_file in pem_files if 'surface' in pem_file.survey_type.lower()]
+        # Must be at least 2 eligible surface PEM files.
         if len(self.pem_files) < 2:
             raise TypeError("There are fewer than 2 eligible surface PEM files")
 
+        # Averages any file not already averaged.
         for pem_file in self.pem_files:
             if not pem_file.is_averaged():
                 print(f"Averaging {os.path.basename(pem_file.filepath)}")
@@ -3181,6 +3185,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.components = list(set([item for sublist in self.components for item in sublist]))
         self.components.append('TF')
 
+        # Disables the radio buttons of any component for which there is no data.
         if 'Z' not in self.components:
             self.z_rbtn.setEnabled(False)
             self.z_rbtn.setChecked(False)
@@ -3191,20 +3196,22 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             self.y_rbtn.setEnabled(False)
             self.y_rbtn.setChecked(False)
 
+        # Checks the number of channels in each PEM file. The largest number becomes the maximum of the channel spinbox.
         pem_file_channels = np.array([int(pem_file.header.get('NumChannels')) for pem_file in self.pem_files])
         max_channels = pem_file_channels.max()
         self.channel_spinbox.setMaximum(max_channels)
 
+        # Channel pairs created for use when finding the center-gate time of the current selected channel.
         self.channel_times = self.pem_files[np.argmax(pem_file_channels)].header.get('ChannelTimes')
         self.channel_pairs = list(map(lambda x, y: (x, y), self.channel_times[:-1], self.channel_times[1:]))
 
+        # If all files are split, removes the gap channel. Only an issue for split files.
         if all([pem_file.is_split() for pem_file in self.pem_files]):
             # Remove the gap channel for split files
             for i, pair in enumerate(self.channel_pairs):
                 if float(pair[0]) >= -0.0001 and float(pair[1]) <= 0.000048:
                     print(f"Removing channel {i} from the channel pairs")
                     self.channel_pairs.pop(i)
-                    # self.channel_times.pop(i)
 
         self.channel_spinbox.valueChanged.connect(self.draw_map)
         self.z_rbtn.clicked.connect(self.draw_map)
@@ -3233,6 +3240,11 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
     def draw_map(self):
 
         def get_channel_time(channel):
+            """
+            Retrieve the gate-center time of a channel based on the channel times table.
+            :param channel: int: channel number
+            :return: float: channel center time.
+            """
             current_pair = self.channel_pairs[channel]
             channel_center = (float(current_pair[1]) - float(current_pair[0])) / 2 + float(current_pair[0])
             channel_time = channel_center
@@ -3293,6 +3305,9 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
 
 class ContourMapToolbar(NavigationToolbar):
+    """
+    Custom Matplotlib toolbar for ContourMap.
+    """
     # only display the buttons we need
     toolitems = [t for t in NavigationToolbar.toolitems if
                  t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
