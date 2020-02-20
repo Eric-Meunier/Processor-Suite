@@ -31,6 +31,7 @@ from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods, ContourMap
 from src.pem.pem_serializer import PEMSerializer
+from src.pem.xyz_serializer import XYZSerializer
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.ri.ri_file import RIFile
 
@@ -927,6 +928,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         """
         selected_pem_files = []
         rows = [model.row() for model in self.table.selectionModel().selectedRows()]
+        rows.sort(reverse=True)
         for row in rows:
             selected_pem_files.append(self.pem_files[row])
         return selected_pem_files, rows
@@ -1571,6 +1573,31 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             os.startfile(kmz_save_dir)
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
+
+    def save_as_xyz(self, selected_files=False):
+        """
+        Save the selected PEM files as XYZ files.
+        :param selected_files: bool: Save selected files. False means all opened files will be saved.
+        :return: None
+        """
+
+        xyz_serializer = XYZSerializer()
+        if selected_files:
+            pem_files, rows = self.get_selected_pem_files()
+        else:
+            pem_files, rows = self.pem_files, range(0, len(self.pem_files))
+
+        if pem_files:
+            default_path = os.path.split(self.pem_files[-1].filepath)[0]
+            # self.dialog.setDirectory(default_path)
+            if __name__ == '__main__':
+                file_dir = default_path
+            else:
+                file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
+
+            if file_dir:
+                for pem_file in pem_files:
+                    xyz_file = xyz_serializer.serialize_pem(pem_file)
 
     def print_plots(self, selected_files=False):
         """
@@ -3321,6 +3348,8 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
+
+    # mw.save_as_xyz(selected_files=False)
     # mw.show_contour_map_viewer()
     # mw.auto_merge_pem_files()
     # mw.show_contour_map_viewer()
