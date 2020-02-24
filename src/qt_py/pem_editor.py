@@ -1254,7 +1254,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.open_pem_files(files_to_open)
             # self.spinner.stop()
 
-    def save_pem_file_to_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
+    def save_pem_file_to_file(self, pem_file, dir=None, tag=None, backup=False):
         """
         Action of saving a PEM file to a .PEM file.
         :param pem_file: PEMFile object to be saved.
@@ -1288,7 +1288,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         save_file = self.serializer.serialize(pem_file)
         print(save_file, file=open(pem_file.filepath, 'w+'))
 
-        if pem_file.old_filepath and remove_old is True:
+        # Remove the old filepath if the filename was changed.
+        if pem_file.old_filepath:
             print(f'Removing old file {os.path.basename(pem_file.old_filepath)}')
             try:
                 os.remove(pem_file.old_filepath)
@@ -2434,17 +2435,23 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         """
 
         def rename_pem_files():
+
             if len(self.batch_name_editor.pem_files) > 0:
+                # self.block_signals()
                 self.batch_name_editor.accept_changes()
                 for i, row in enumerate(rows):
                     self.pem_files[row] = self.batch_name_editor.pem_files[i]
+                    # item = QTableWidgetItem(os.path.basename(self.pem_files[row].filepath))
+                    # self.table.setItem(row, 0, item)
                     # Create a copy and delete the old one.
-                    copyfile(self.pem_files[row].old_filepath, self.pem_files[row].filepath)
-                    self.window().statusBar().showMessage(
-                        f"{os.path.basename(self.pem_files[row].old_filepath)} renamed to {os.path.basename(self.pem_files[row].filepath)}",
-                        2000)
-                    os.remove(self.pem_files[row].old_filepath)
-                # self.refresh_table()
+                    # copyfile(self.pem_files[row].old_filepath, self.pem_files[row].filepath)
+                    # self.window().statusBar().showMessage(
+                    #     f"{os.path.basename(self.pem_files[row].old_filepath)} renamed to {os.path.basename(self.pem_files[row].filepath)}",
+                    #     2000)
+                    # os.remove(self.pem_files[row].old_filepath)
+                    # self.pem_files[row].old_filepath = None
+                self.refresh_table()
+                # self.enable_signals()
 
         pem_files, rows = self.get_selected_pem_files()
         if not pem_files:
