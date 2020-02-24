@@ -1577,6 +1577,13 @@ class ContourMap(MapPlotMethods):
 
             return xs, ys, zs, ds
 
+        if all(['induction' in pem_file.survey_type.lower() for pem_file in pem_files]):
+            units = 'nT/s'
+        elif all(['fluxgate' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower() for pem_file in pem_files]):
+            units = 'pT'
+        else:
+            raise ValueError('Not all survey types are the same.')
+
         loops = []
         loop_names = []
         lines = []
@@ -1585,13 +1592,6 @@ class ContourMap(MapPlotMethods):
         # Create a large grid in order to specify the placement of the colorbar
         ax = plt.subplot2grid((90, 110), (0, 0), rowspan=90, colspan=90, fig=fig)
         cbar_ax = plt.subplot2grid((90, 110), (0, 108), rowspan=90, colspan=2, fig=fig)
-
-        if all(['induction' in pem_file.survey_type.lower() for pem_file in pem_files]):
-            units = 'nT/s'
-        elif all(['fluxgate' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower() for pem_file in pem_files]):
-            units = 'pT'
-        else:
-            raise ValueError('Not all survey types are the same.')
 
         add_rectangle()
         format_figure()

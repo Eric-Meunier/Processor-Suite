@@ -122,7 +122,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.pem_file_splitter = None
         self.contour_viewer = None
 
-        self.initActions()
+        self.initMenus()
         self.initSignals()
         self.allow_signals = True
 
@@ -159,7 +159,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.setGeometry(500, 300, 1700, 900)
         center_window(self)
 
-    def initActions(self):
+    def initMenus(self):
         """
         Initializing all actions.
         :return: None
@@ -177,6 +177,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.saveFiles.setShortcut("Ctrl+S")
         self.saveFiles.setStatusTip("Save all files")
         self.saveFiles.triggered.connect(lambda: self.save_pem_files(all=True))
+
+        self.save_files_as_xyz_action = QAction("&Save Files As XYZ", self)
+        self.save_files_as_xyz_action.setStatusTip("Save all files as XYZ files. Only for surface surveys.")
+        self.save_files_as_xyz_action.triggered.connect(lambda: self.save_as_xyz(selected_files=False))
 
         self.export_pems_action = QAction("&Export Files...", self)
         self.export_pems_action.setShortcut("F11")
@@ -204,10 +208,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.clearFiles.setStatusTip("Clear all files")
         self.clearFiles.triggered.connect(self.clear_files)
 
-        self.sort_files_action = QAction("&Sort Table", self)
-        # self.sortFiles.setShortcut("Shift+Del")
-        self.sort_files_action.setStatusTip("Sort all files in the table.")
-        self.sort_files_action.triggered.connect(self.sort_files)
+        # self.sort_files_action = QAction("&Sort Table", self)
+        # self.sort_files_action.setStatusTip("Sort all files in the table.")
+        # self.sort_files_action.triggered.connect(self.sort_files)
 
         self.backup_files_action = QAction("&Backup Files", self)
         # self.sortFiles.setShortcut("Shift+Del")
@@ -222,6 +225,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.fileMenu = self.menubar.addMenu('&File')
         self.fileMenu.addAction(self.openFile)
         self.fileMenu.addAction(self.saveFiles)
+        self.fileMenu.addAction(self.save_files_as_xyz_action)
         self.fileMenu.addAction(self.export_pems_action)
         self.fileMenu.addAction(self.export_pem_files_action)
         self.fileMenu.addAction(self.backup_files_action)
@@ -381,6 +385,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.save_file_as_action = QAction("&Save As...", self)
                 self.table.save_file_as_action.triggered.connect(self.save_pem_file_as)
 
+                self.table.save_as_xyz_action = QAction("&Save As XYZ...", self)
+                self.table.save_as_xyz_action.triggered.connect(lambda: self.save_as_xyz(selected_files=True))
+
                 self.table.print_plots_action = QAction("&Print Plots", self)
                 self.table.print_plots_action.triggered.connect(lambda: self.print_plots(selected_files=True))
 
@@ -425,8 +432,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addAction(self.table.save_file_action)
                 if len(self.table.selectionModel().selectedRows()) == 1:
                     self.table.menu.addAction(self.table.save_file_as_action)
+                    self.table.menu.addAction(self.table.save_as_xyz_action)
                     self.table.menu.addAction(self.table.extract_stations_action)
                 else:
+                    self.table.menu.addAction(self.table.save_as_xyz_action)
                     self.table.menu.addAction(self.table.export_pem_action)
                 self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.print_plots_action)
@@ -1088,7 +1097,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             # If any currents are different
             if not all([current == currents[0] for current in currents]):
-                response = self.message.question(self, 'Warning - Inequal Current',
+                response = self.message.question(self, 'Warning - Unequal Current',
                                                  f"{', '.join([os.path.basename(pem_file.filepath) for pem_file in pem_files])} do not have the same current. Proceed with merging anyway?",
                                                  self.message.Yes | self.message.No)
                 if response == self.message.No:
@@ -1097,7 +1106,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             # If any coil areas are different
             if not all([coil_area == coil_areas[0] for coil_area in coil_areas]):
-                response = self.message.question(self, 'Warning - Inequal Coil Areas',
+                response = self.message.question(self, 'Warning - Unequal Coil Areas',
                                                  f"{', '.join([os.path.basename(pem_file.filepath) for pem_file in pem_files])} do not have the same coil area. Proceed with merging anyway?",
                                                  self.message.Yes | self.message.No)
                 if response == self.message.No:
@@ -1349,93 +1358,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
-    def export_pem_files(self, export_final=False, all=True):
-        """
-        Saves all PEM files to a desired location (keeps them opened) and removes any tags.
-        :return: None
-        """
-        if all is False:
-            pem_files, rows = self.get_selected_pem_files()
-        else:
-            pem_files, rows = self.pem_files, range(self.table.rowCount())
-
-        self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
-        if any([self.systemCBox.currentText()=='', self.zoneCBox.currentText()=='', self.datumCBox.currentText()=='']):
-            response = self.message.question(self, 'No CRS',
-                                                     'No CRS has been selected. '
-                                                     'Do you wish to proceed with no CRS information?',
-                                                     self.message.Yes | self.message.No)
-            if response == self.message.No:
-                return
-
-        default_path = os.path.split(self.pem_files[-1].filepath)[0]
-        self.dialog.setDirectory(default_path)
-        file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
-
-        if file_dir:
-            for pem_file, row in zip(pem_files, rows):
-                updated_file = self.update_pem_file_from_table(pem_file, row)
-                file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
-                extension = os.path.splitext(pem_file.filepath)[-1]
-                if export_final is True:
-                    file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))  # Removes underscore-dates and tags
-                    if 'surface' in pem_file.survey_type.lower():
-                        file_name = file_name.upper()
-                        if file_name[0] == 'C':
-                            file_name = file_name[1:]
-                        if pem_file.is_averaged() and 'AV' not in file_name:
-                            file_name = file_name + 'Av'
-
-                updated_file.filepath = os.path.join(file_dir, file_name + extension)
-                self.save_pem_file_to_file(updated_file, dir=file_dir)
-            self.refresh_table()
-            self.window().statusBar().showMessage(
-                f"Save complete. {len(pem_files)} PEM {'file' if len(pem_files) == 1 else 'files'} exported", 2000)
-        else:
-            self.window().statusBar().showMessage('Cancelled.', 2000)
-            pass
-
-    def show_map_3d_viewer(self):
-        """
-        Opens the 3D Map Viewer window
-        :return: None
-        """
-        self.map_viewer_3d = Map3DViewer(self.pem_files, parent=self)
-        self.map_viewer_3d.show()
-
-    def show_section_3d_viewer(self):
-        """
-        Opens the 3D Borehole Section Viewer window
-        :return: None
-        """
-        pem_file, row = self.get_selected_pem_files()
-        if 'borehole' in pem_file[0].survey_type.lower():
-            self.section_3d_viewer = Section3DViewer(pem_file[0], parent=self)
-            self.section_3d_viewer.show()
-        else:
-            self.statusBar().showMessage('Invalid survey type', 2000)
-
-    def show_contour_map_viewer(self):
-        """
-        Opens the Contour Map Viewer window
-        :return: None
-        """
-        if len(self.pem_files) > 1:
-            pem_files = copy.deepcopy(self.pem_files)
-            try:
-                self.contour_map_viewer = ContourMapViewer(pem_files, parent=self)
-            except TypeError as e:
-                self.error.setWindowTitle('Error')
-                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
-                return
-            except ValueError as e:
-                self.error.setWindowTitle('Error')
-                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
-            else:
-                self.contour_map_viewer.show()
-        else:
-            self.window().statusBar().showMessage("Must have more than 1 surface PEM file open", 2000)
-
     def save_as_kmz(self):
         """
         Saves all GPS from the opened PEM files as a KMZ file. Utilizes 'simplekml' module. Only works with NAD 83
@@ -1576,11 +1498,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def save_as_xyz(self, selected_files=False):
         """
-        Save the selected PEM files as XYZ files.
+        Save the selected PEM files as XYZ files. Only for surface PEM files.
         :param selected_files: bool: Save selected files. False means all opened files will be saved.
         :return: None
         """
-
         xyz_serializer = XYZSerializer()
         if selected_files:
             pem_files, rows = self.get_selected_pem_files()
@@ -1589,7 +1510,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         if pem_files:
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
-            # self.dialog.setDirectory(default_path)
             if __name__ == '__main__':
                 file_dir = default_path
             else:
@@ -1597,7 +1517,99 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             if file_dir:
                 for pem_file in pem_files:
-                    xyz_file = xyz_serializer.serialize_pem(pem_file)
+                    if 'surface' in pem_file.survey_type.lower():
+                        file_name = os.path.splitext(pem_file.filepath)[0] + '.xyz'
+                        xyz_file = xyz_serializer.serialize_pem(pem_file)
+                        with open(file_name, 'w+') as file:
+                            file.write(xyz_file)
+                        os.startfile(file_name)
+
+    def export_pem_files(self, export_final=False, all=True):
+        """
+        Saves all PEM files to a desired location (keeps them opened) and removes any tags.
+        :return: None
+        """
+        if all is False:
+            pem_files, rows = self.get_selected_pem_files()
+        else:
+            pem_files, rows = self.pem_files, range(self.table.rowCount())
+
+        self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
+        if any([self.systemCBox.currentText()=='', self.zoneCBox.currentText()=='', self.datumCBox.currentText()=='']):
+            response = self.message.question(self, 'No CRS',
+                                                     'No CRS has been selected. '
+                                                     'Do you wish to proceed with no CRS information?',
+                                                     self.message.Yes | self.message.No)
+            if response == self.message.No:
+                return
+
+        default_path = os.path.split(self.pem_files[-1].filepath)[0]
+        self.dialog.setDirectory(default_path)
+        file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
+
+        if file_dir:
+            for pem_file, row in zip(pem_files, rows):
+                updated_file = self.update_pem_file_from_table(pem_file, row)
+                file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
+                extension = os.path.splitext(pem_file.filepath)[-1]
+                if export_final is True:
+                    file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))  # Removes underscore-dates and tags
+                    if 'surface' in pem_file.survey_type.lower():
+                        file_name = file_name.upper()
+                        if file_name[0] == 'C':
+                            file_name = file_name[1:]
+                        if pem_file.is_averaged() and 'AV' not in file_name:
+                            file_name = file_name + 'Av'
+
+                updated_file.filepath = os.path.join(file_dir, file_name + extension)
+                self.save_pem_file_to_file(updated_file, dir=file_dir)
+            self.refresh_table()
+            self.window().statusBar().showMessage(
+                f"Save complete. {len(pem_files)} PEM {'file' if len(pem_files) == 1 else 'files'} exported", 2000)
+        else:
+            self.window().statusBar().showMessage('Cancelled.', 2000)
+            pass
+
+    def show_map_3d_viewer(self):
+        """
+        Opens the 3D Map Viewer window
+        :return: None
+        """
+        self.map_viewer_3d = Map3DViewer(self.pem_files, parent=self)
+        self.map_viewer_3d.show()
+
+    def show_section_3d_viewer(self):
+        """
+        Opens the 3D Borehole Section Viewer window
+        :return: None
+        """
+        pem_file, row = self.get_selected_pem_files()
+        if 'borehole' in pem_file[0].survey_type.lower():
+            self.section_3d_viewer = Section3DViewer(pem_file[0], parent=self)
+            self.section_3d_viewer.show()
+        else:
+            self.statusBar().showMessage('Invalid survey type', 2000)
+
+    def show_contour_map_viewer(self):
+        """
+        Opens the Contour Map Viewer window
+        :return: None
+        """
+        if len(self.pem_files) > 1:
+            pem_files = copy.deepcopy(self.pem_files)
+            try:
+                self.contour_map_viewer = ContourMapViewer(pem_files, parent=self)
+            except TypeError as e:
+                self.error.setWindowTitle('Error')
+                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
+                return
+            except ValueError as e:
+                self.error.setWindowTitle('Error')
+                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
+            else:
+                self.contour_map_viewer.show()
+        else:
+            self.window().statusBar().showMessage("Must have more than 1 surface PEM file open", 2000)
 
     def print_plots(self, selected_files=False):
         """
@@ -1698,11 +1710,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             save_dir = get_save_file()
             if save_dir:
                 # PEM Files and RI files zipped together for when they get sorted
-                printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
-                self.window().statusBar().addPermanentWidget(printer.pb)
-                printer.print_files()
-                printer.pb.hide()
-                self.window().statusBar().showMessage('Plots saved', 2000)
+                try:
+                    printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
+                    self.window().statusBar().addPermanentWidget(printer.pb)
+                    printer.print_files()
+                    printer.pb.hide()
+                    self.window().statusBar().showMessage('Plots saved', 2000)
+                except IOError:
+                    self.message.information(self, 'Error', 'File is currently opened')
+                    printer.pb.hide()
             else:
                 self.window().statusBar().showMessage('Cancelled', 2000)
 
@@ -1793,7 +1809,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         """
         # logging.info('PEMEditor - Refreshing PEMEditor table')
         if len(self.pem_files) > 0:
-
             self.table.blockSignals(True)
             if single_row:
                 index = self.stackedWidget.currentIndex()
@@ -2423,7 +2438,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.batch_name_editor.accept_changes()
                 for i, row in enumerate(rows):
                     self.pem_files[row] = self.batch_name_editor.pem_files[i]
-                self.refresh_table()
+                    # Create a copy and delete the old one.
+                    copyfile(self.pem_files[row].old_filepath, self.pem_files[row].filepath)
+                    self.window().statusBar().showMessage(
+                        f"{os.path.basename(self.pem_files[row].old_filepath)} renamed to {os.path.basename(self.pem_files[row].filepath)}",
+                        2000)
+                    os.remove(self.pem_files[row].old_filepath)
+                # self.refresh_table()
 
         pem_files, rows = self.get_selected_pem_files()
         if not pem_files:
@@ -2433,7 +2454,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.batch_name_editor.buttonBox.accepted.connect(rename_pem_files)
         self.batch_name_editor.acceptChangesSignal.connect(rename_pem_files)
         self.batch_name_editor.buttonBox.rejected.connect(self.batch_name_editor.close)
-
         self.batch_name_editor.show()
 
     def import_ri_files(self):
@@ -2529,7 +2549,6 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
     def update_table(self):
         # Every time a change is made in the line edits, this function is called and updates the entries in the table
         for row in range(self.table.rowCount()):
-
             # Split the text based on '[n]'. Anything before it becomes the prefix, and everything after is added as a suffix
             if self.type == 'Line':
                 # Immediately replace what's in the removeEdit object with nothing
@@ -2563,8 +2582,8 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
                 if self.type == 'Line':
                     pem_file.header['LineHole'] = new_name
                 else:
-                    old_path = copy.copy(pem_file.filepath)
-                    new_path = '/'.join(old_path.split('/')[:-1]) + '/' + new_name
+                    old_path = copy.deepcopy(os.path.abspath(pem_file.filepath))
+                    new_path = os.path.join(os.path.dirname(pem_file.filepath), new_name)
                     if pem_file.old_filepath is None:
                         pem_file.old_filepath = old_path
                     pem_file.filepath = new_path
