@@ -147,8 +147,8 @@ class PlotMethods:
                 if 'induction' in survey_type.lower():
                     if step is True:
                         if ax == axes[1] and (y_limits[1] < 15 or y_limits[0] > -15):
-                            new_high = math.ceil(max(y_limits[1]+5, 0))
-                            new_low = math.floor(min(y_limits[0]-5, 0))
+                            new_high = math.ceil(max(y_limits[1]+10, 0))
+                            new_low = math.floor(min(y_limits[0]-10, 0))
                         elif ax in axes[2:4] and (y_limits[1] < 3 or y_limits[0] > -3):
                             new_high = math.ceil(max(y_limits[1]+1, 0))
                             new_low = math.floor(min(y_limits[0]-1, 0))
@@ -166,8 +166,8 @@ class PlotMethods:
                 elif 'fluxgate' in survey_type.lower():
                     if step is True:
                         if ax == axes[1] and (y_limits[1] < 15 or y_limits[0] > -15):
-                            new_high = math.ceil(max(y_limits[1]+5, 0))
-                            new_low = math.floor(min(y_limits[0]-5, 0))
+                            new_high = math.ceil(max(y_limits[1]+10, 0))
+                            new_low = math.floor(min(y_limits[0]-10, 0))
                         elif ax == axes[2] and (y_limits[1] < 3 or y_limits[0] > -3):
                             new_high = math.ceil(max(y_limits[1]+1, 0))
                             new_low = math.floor(min(y_limits[0]-1, 0))

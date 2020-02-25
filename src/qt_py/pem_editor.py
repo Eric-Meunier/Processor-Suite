@@ -1011,6 +1011,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             else:
                 pem_files, rows = self.pem_files, range(self.table.rowCount())
         else:
+            if not isinstance(pem_files, list):
+                pem_files = [pem_files]
             pem_files, rows = pem_files, [self.pem_files.index(pem_file) for pem_file in pem_files]
 
         if not pem_files:
@@ -1254,7 +1256,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.open_pem_files(files_to_open)
             # self.spinner.stop()
 
-    def save_pem_file_to_file(self, pem_file, dir=None, tag=None, backup=False):
+    def save_pem_file_to_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=True):
         """
         Action of saving a PEM file to a .PEM file.
         :param pem_file: PEMFile object to be saved.
@@ -1289,7 +1291,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         print(save_file, file=open(pem_file.filepath, 'w+'))
 
         # Remove the old filepath if the filename was changed.
-        if pem_file.old_filepath:
+        if pem_file.old_filepath and remove_old is True:
             print(f'Removing old file {os.path.basename(pem_file.old_filepath)}')
             try:
                 os.remove(pem_file.old_filepath)

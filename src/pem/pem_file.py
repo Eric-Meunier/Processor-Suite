@@ -151,26 +151,55 @@ class PEMFile:
 
         return station
 
-    def get_profile_data(self, component_data):
+    # def get_profile_data(self, component_data):
+    #     """
+    #     Transforms the data so it is ready to be plotted for LIN and LOG plots
+    #     :param component_data: Data (dict) for a single component (i.e. Z, X, or Y)
+    #     :return: Dictionary where each key is a channel, and the values of those keys are a list of
+    #     dictionaries which contain the stations and readings of all readings of that channel
+    #     """
+    #     profile_data = {}
+    #     num_channels = len(component_data[0]['Data'])
+    #
+    #     for channel in range(0, num_channels):
+    #         # profile_data[channel] = {}
+    #         channel_data = []
+    #
+    #         for i, station in enumerate(component_data):
+    #             reading = station['Data'][channel]
+    #             station_number = int(self.convert_station(station['Station']))
+    #             channel_data.append({'Station': station_number, 'Reading': reading})
+    #
+    #         profile_data[channel] = channel_data
+    #
+    #     return profile_data
+
+    def get_profile_data(self):
         """
         Transforms the data so it is ready to be plotted for LIN and LOG plots
-        :param component_data: Data (dict) for a single component (i.e. Z, X, or Y)
         :return: Dictionary where each key is a channel, and the values of those keys are a list of
         dictionaries which contain the stations and readings of all readings of that channel
         """
+
+        components = self.get_components()
         profile_data = {}
-        num_channels = len(component_data[0]['Data'])
 
-        for channel in range(0, num_channels):
-            # profile_data[channel] = {}
-            channel_data = []
+        for component in components:
+            component_profile_data = {}
+            component_data = [station for station in self.data if station['Component'] == component]
+            num_channels = len(component_data[0]['Data'])
 
-            for i, station in enumerate(component_data):
-                reading = station['Data'][channel]
-                station_number = int(self.convert_station(station['Station']))
-                channel_data.append({'Station': station_number, 'Reading': reading})
+            for channel in range(0, num_channels):
+                channel_data = []
 
-            profile_data[channel] = channel_data
+                for i, station in enumerate(component_data):
+                    reading = station['Data'][channel]
+                    station_number = int(self.convert_station(station['Station']))
+                    channel_data.append({'Station': station_number, 'Reading': reading})
+
+                component_profile_data[channel] = channel_data
+
+            profile_data[component] = component_profile_data
 
         return profile_data
 

@@ -223,6 +223,8 @@ class PEMFileEditor:
             reading['Data'] = decay * -1
         return pem_file
 
+    def auto_clean(self, pem_file):
+        profile_data = pem_file.get_profile_data()
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
@@ -232,4 +234,4 @@ if __name__ == '__main__':
 
     pem_files = getter.get_pems()
 
-    editor.rename_duplicates(pem_files[0])
+    editor.auto_clean(pem_files[0])
