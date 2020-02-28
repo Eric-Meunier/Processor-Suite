@@ -1565,7 +1565,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                             file_name = file_name + 'Av'
 
                 updated_file.filepath = os.path.join(file_dir, file_name + extension)
-                self.save_pem_file_to_file(updated_file, dir=file_dir)
+                self.save_pem_file_to_file(updated_file, dir=file_dir, remove_old=False)
             self.refresh_table()
             self.window().statusBar().showMessage(
                 f"Save complete. {len(pem_files)} PEM {'file' if len(pem_files) == 1 else 'files'} exported", 2000)
@@ -3378,7 +3378,7 @@ def main():
     mw.open_pem_files(pem_files)
 
     # mw.save_as_xyz(selected_files=False)
-    # mw.show_contour_map_viewer()
+    mw.show_contour_map_viewer()
     # mw.auto_merge_pem_files()
     # mw.show_contour_map_viewer()
     # mw.save_as_kmz()

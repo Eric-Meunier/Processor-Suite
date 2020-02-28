@@ -1,7 +1,9 @@
-import os
-import sys
-import re
+import itertools
 import logging
+from colorama import Fore, Back, Style
+import os
+import re
+import sys
 from copy import copy
 from decimal import Decimal, getcontext
 
@@ -224,7 +226,60 @@ class PEMFileEditor:
         return pem_file
 
     def auto_clean(self, pem_file):
-        profile_data = pem_file.get_profile_data()
+
+        def same_decay_lengths(decays):
+            length = len(decays[0])
+            for decay in decays:
+                if len(decay) != length:
+                    return False
+            return True
+
+        def within_SE(std, mean, value):
+            upper_lim, lower_lim = mean + (2 * std), mean - (2 * std)
+            print(Fore.BLACK + f"Upper limit: {upper_lim}  Value: {value}  Lower limit: {lower_lim}")
+            if value > upper_lim or value < lower_lim:
+                return False
+            else:
+                return True
+
+        if not pem_file.is_averaged():
+            pem_data = pem_file.data
+            cleaned_data = []
+            # components = pem_file.get_components()
+            components = 'Z'
+
+            for component in components:
+                component_data = [station for station in pem_data if station['Component'] == component]
+
+                # Group the decays from the same stations together
+                for station, readings in itertools.groupby(component_data, key=lambda x: x['Station']):
+                    readings = list(readings)
+                    decays = [reading['Data'] for reading in list(readings)]
+                    if same_decay_lengths(decays):
+                        for channel in range(len(decays[0])):
+                            print(Fore.BLACK + Back.LIGHTMAGENTA_EX + f"Station: {station}  Channel: {channel}")
+                            channel_values = np.array([decay[channel] for decay in decays])
+
+                            if len(channel_values) > 2:
+                                std = channel_values.std()
+                                mean = channel_values.mean()
+                                print(Fore.BLACK + f"STD: {std}  Mean: {mean}")
+
+                                for index, value in enumerate(channel_values):
+                                    if not within_SE(std, mean, value):
+                                        print(Fore.RED + f"Station: {station}  Channel: {channel}  Component: {component}")
+                                        print(Fore.RED + f"STD: {std}  Mean: {mean}")
+                                        print(Fore.RED + f"Value: {value}  Within SE: {within_SE(std, mean, value)}")
+                                        print(Fore.MAGENTA + f"Removing reading index {index} of station {station}, component {component}")
+                                        decays.pop(index)
+                                        readings.pop(index)
+                                        component_data.remove(readings[index])
+                                        break
+                    else:
+                        raise ValueError('Not all decay lengths are the same')
+
+            pem_data = component_data
+
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter

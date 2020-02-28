@@ -176,9 +176,10 @@ class PEMFile:
 
     def get_profile_data(self):
         """
-        Transforms the data so it is ready to be plotted for LIN and LOG plots
+        Transforms the data from the PEM file in profile
         :return: Dictionary where each key is a channel, and the values of those keys are a list of
-        dictionaries which contain the stations and readings of all readings of that channel
+        dictionaries which contain the stations and readings of all readings of that channel. Each component has
+        such a dictionary.
         """
 
         components = self.get_components()
