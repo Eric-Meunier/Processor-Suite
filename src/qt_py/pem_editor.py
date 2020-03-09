@@ -556,7 +556,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         elif all([url.lower().endswith('ri1') or url.lower().endswith('ri2') or url.lower().endswith(
                 'ri3') for url in urls]):
             ri_files = True
-        elif all([url.lower().endswith('inf') for url in urls]):
+        elif all([url.lower().endswith('inf') or url.lower().endswith('log') for url in urls]):
             inf_files = True
         elif all([url.lower().endswith('gpx') for url in urls]):
             gpx_files = True
@@ -645,7 +645,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                          'seg') or file.lower().endswith('xyz')]
         ri_files = [file for file in files if
                     file.lower().endswith('ri1') or file.lower().endswith('ri2') or file.lower().endswith('ri3')]
-        inf_files = [file for file in files if file.lower().endswith('inf')]
+        inf_files = [file for file in files if file.lower().endswith('inf') or file.lower().endswith('log')]
         gpx_files = [file for file in files if file.lower().endswith('gpx')]
 
         start_time = time.time()
@@ -3148,6 +3148,7 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         self.section_plotter = Section3D(self.ax, self.pem_file, parent=self)
         self.section_plotter.plot_2d_magnetic_field()
         self.section_plotter.format_ax()
+        self.figure.subplots_adjust(left=-0.1, bottom=-0.1, right=1.1, top=1.1)
         self.update_canvas()
 
     """
@@ -3463,8 +3464,7 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
-    mw.calc_mag_declination(pem_files[0])
-
+    # mw.calc_mag_declination(pem_files[0])
     # mw.save_as_xyz(selected_files=False)
     # mw.show_contour_map_viewer()
     # mw.auto_merge_pem_files()
@@ -3476,8 +3476,8 @@ def main():
 
     # mw.auto_merge_pem_files()
     # mw.sort_files()
-    # section = Section3DViewer(pem_files)
-    # section.show()
+    section = Section3DViewer(pem_files)
+    section.show()
     # mw.share_loop_cbox.setChecked(False)
     # mw.output_lin_cbox.setChecked(False)
     # mw.output_log_cbox.setChecked(False)

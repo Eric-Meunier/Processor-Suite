@@ -2004,7 +2004,7 @@ class Section3D(Map3D, MagneticFieldCalculator):
             pem_file = pem_file[0]
         self.pem_file = pem_file
         self.ax = ax
-        Map3D.__init__(self, self.ax, self.pem_file, set_z=False)
+        Map3D.__init__(self, self.ax, self.pem_file, set_z=True)
         MagneticFieldCalculator.__init__(self, self.pem_file)
 
         self.mag_field_artists = []
