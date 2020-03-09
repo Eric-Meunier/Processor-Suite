@@ -16,8 +16,9 @@ from itertools import chain, groupby
 from collections import defaultdict
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
-                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QProgressBar, QCheckBox,
-                             QInputDialog, QHeaderView, QTableWidget, QErrorMessage, QDialogButtonBox, QVBoxLayout)
+                             QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QProgressBar, QGridLayout,
+                             QInputDialog, QHeaderView, QTableWidget, QErrorMessage, QDialogButtonBox, QVBoxLayout,
+                             QLabel, QLineEdit, QPushButton)
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 # from pyqtspinner.spinner import WaitingSpinner
@@ -25,6 +26,7 @@ import colorcet as cc
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
 from matplotlib.figure import Figure
+from geomag import geomag
 from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
@@ -394,6 +396,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.extract_stations_action = QAction("&Extract Stations", self)
                 self.table.extract_stations_action.triggered.connect(self.extract_stations)
 
+                self.table.calc_mag_dec = QAction("&Magnetic Declination", self)
+                self.table.calc_mag_dec.triggered.connect(lambda: self.calc_mag_declination(selected_pems[0]))
+
                 self.table.view_3d_section_action = QAction("&View 3D Section", self)
                 self.table.view_3d_section_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
                 self.table.view_3d_section_action.triggered.connect(self.show_section_3d_viewer)
@@ -434,6 +439,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.table.menu.addAction(self.table.save_file_as_action)
                     self.table.menu.addAction(self.table.save_as_xyz_action)
                     self.table.menu.addAction(self.table.extract_stations_action)
+                    self.table.menu.addAction(self.table.calc_mag_dec)
                 else:
                     self.table.menu.addAction(self.table.save_as_xyz_action)
                     self.table.menu.addAction(self.table.export_pem_action)
@@ -990,7 +996,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.pg.setText(f"Averaging {os.path.basename(pem_file.filepath)}")
                 # Save a backup of the un-averaged file first
                 if self.auto_create_backup_files_cbox.isChecked():
-                    self.save_pem_file_to_file(copy.deepcopy(pem_file), backup=True, tag='[-A]')
+                    self.save_pem_file_to_file(copy.deepcopy(pem_file), backup=True, tag='[-A]', remove_old=False)
                 pem_file = self.file_editor.average(pem_file)
                 self.pem_info_widgets[row].open_file(pem_file, parent=self)
                 self.refresh_table_row(pem_file, row)
@@ -1025,7 +1031,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
                 self.pg.setText(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
                 if self.auto_create_backup_files_cbox.isChecked():
-                    self.save_pem_file_to_file(copy.deepcopy(pem_file), backup=True, tag='[-S]')
+                    self.save_pem_file_to_file(copy.deepcopy(pem_file), backup=True, tag='[-S]', remove_old=False)
                 pem_file = self.file_editor.split_channels(pem_file)
                 self.pem_info_widgets[row].open_file(pem_file, parent=self)
                 self.refresh_table_row(pem_file, row)
@@ -1157,7 +1163,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                                                    remove_old=self.delete_merged_files_cbox.isChecked())
                     if self.delete_merged_files_cbox.isChecked():
                         self.remove_file(row)
-                self.save_pem_file_to_file(merged_pem, tag='[M]')
+                self.save_pem_file_to_file(merged_pem, tag='[M]', remove_old=False)
                 self.open_pem_files(merged_pem)
         else:
             self.message.information(None, 'Error', 'Must select multiple PEM Files')
@@ -1256,7 +1262,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.open_pem_files(files_to_open)
             # self.spinner.stop()
 
-    def save_pem_file_to_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=True):
+    def save_pem_file_to_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
         """
         Action of saving a PEM file to a .PEM file.
         :param pem_file: PEMFile object to be saved.
@@ -1360,6 +1366,86 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 'Save Complete. PEM file saved as {}'.format(os.path.basename(file_path)), 2000)
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
+
+    def calc_mag_declination(self, pem_file):
+
+        def copy_text(str_value):
+            cb = QtGui.QApplication.clipboard()
+            cb.clear(mode=cb.Clipboard)
+            cb.setText(str_value, mode=cb.Clipboard)
+            self.mag_win.statusBar().showMessage(f"{str_value} copied to clipboard", 1000)
+
+        if len(self.pem_files) == 0:
+            return
+
+        if self.datumCBox.currentText() == 'NAD 1927':
+            self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
+            return
+
+        if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() == '',
+                self.datumCBox.currentText() == '']):
+            self.message.information(self, 'Error', 'GPS system information is incomplete')
+            return
+
+        zone = self.zoneCBox.currentText()
+        zone_num = int(re.search('\d+', zone).group())
+        north = True if 'n' in zone.lower() else False
+
+        if pem_file.has_collar_gps():
+            coords = pem_file.get_collar_coords()
+        elif pem_file.has_loop_gps():
+            coords = pem_file.get_loop_coords()
+        elif pem_file.has_line_coords():
+            coords = pem_file.get_line_coords()
+        else:
+            self.message.information(self, 'Error', 'No GPS')
+            return
+
+        easting, northing, elevation = int(float(coords[0][0])), int(float(coords[0][1])), int(float(coords[0][2]))
+        lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+
+        try:
+            gm = geomag.GeoMag()
+            mag = gm.GeoMag(lat, lon, elevation)
+
+        except Exception as e:
+            self.error.showMessage(f"The following error occured whilst calculating the magnetic delcination: {str(e)}")
+
+        else:
+            self.mag_win = QMainWindow()
+            mag_widget = QWidget()
+            self.mag_win.setWindowTitle('Magnetic Declination')
+            layout = QGridLayout()
+            layout.setColumnStretch(1, 4)
+            layout.setColumnStretch(2, 4)
+            mag_widget.setLayout(layout)
+            self.mag_win.setCentralWidget(mag_widget)
+            layout.addWidget(QLabel(f'Latitude (°)'), 0, 0)
+            layout.addWidget(QLabel(f'Longitude (°)'), 1, 0)
+            layout.addWidget(QLabel('Declination (°)'), 2, 0)
+            layout.addWidget(QLabel('Inclination (°)'), 3, 0)
+            layout.addWidget(QLabel('Total Field (nT)'), 4, 0)
+
+            lat_edit = QPushButton(f"{lat:.4f}")
+            lat_edit.clicked.connect(lambda: copy_text(lat_edit.text()))
+            lon_edit = QPushButton(f"{lon:.4f}")
+            lon_edit.clicked.connect(lambda: copy_text(lon_edit.text()))
+            dec_edit = QPushButton(f"{mag.dec:.2f}")
+            dec_edit.clicked.connect(lambda: copy_text(dec_edit.text()))
+            inc_edit = QPushButton(f"{mag.dip:.2f}")
+            inc_edit.clicked.connect(lambda: copy_text(inc_edit.text()))
+            tf_edit = QPushButton(f"{mag.ti:.2f}")
+            tf_edit.clicked.connect(lambda: copy_text(tf_edit.text()))
+
+            layout.addWidget(lat_edit, 0, 2)
+            layout.addWidget(lon_edit, 1, 2)
+            layout.addWidget(dec_edit, 2, 2)
+            layout.addWidget(inc_edit, 3, 2)
+            layout.addWidget(tf_edit, 4, 2)
+
+            self.mag_win.show()
+
+            return mag.dec
 
     def save_as_kmz(self):
         """
@@ -3377,8 +3463,10 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
+    mw.calc_mag_declination(pem_files[0])
+
     # mw.save_as_xyz(selected_files=False)
-    mw.show_contour_map_viewer()
+    # mw.show_contour_map_viewer()
     # mw.auto_merge_pem_files()
     # mw.show_contour_map_viewer()
     # mw.save_as_kmz()

@@ -25,7 +25,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import numpy as np
 import pyqtgraph as pg
 from numpy import linspace, meshgrid
-from PyQt5.QtWidgets import (QProgressBar, QErrorMessage, QApplication, QWidget, QGridLayout)
+from PyQt5.QtWidgets import (QProgressBar, QErrorMessage, QApplication, QWidget)
 from PyQt5 import QtGui, QtCore, uic
 from matplotlib import patches
 from matplotlib import patheffects
@@ -2857,18 +2857,73 @@ class PEMDecayCleaner:
                 self.deselect_line(line)
 
 
+class LoopPlanner:
+
+    def __init__(self):
+        # Enable antialiasing for prettier plots
+        pg.setConfigOptions(antialias=True)
+        pg.setConfigOption('background', 'w')
+        pg.setConfigOption('foreground', 'k')
+        pg.setConfigOption('crashWarning', True)
+
+        self.win = pg.GraphicsWindow(title="Basic plotting examples")
+        self.win.resize(1000, 600)
+        self.win.setWindowTitle('pyqtgraph example: Plotting')
+
+        self.w1 = self.win.addLayout(row=0, col=0)
+        self.vb = self.w1.addViewBox(row=1, col=0, lockAspect=True)
+        self.vb.disableAutoRange('xy')
+
+        self.loop_roi = LoopROI([0, 0], [10, 10], pen=pg.mkPen('m', width=1.5))
+        self.vb.addItem(self.loop_roi)
+        self.loop_roi.setZValue(10)
+        self.loop_roi.addScaleHandle([1, 0.5], [0.5, 0.5])
+        self.loop_roi.addScaleHandle([0.5, 0], [0.5, 0.5])
+        self.loop_roi.addScaleHandle([0.5, 1], [0.5, 0.5])
+        self.loop_roi.addScaleHandle([0, 0.5], [0.5, 0.5])
+        self.loop_roi.addRotateHandle([1, 1], [0.5, 0.5])
+        self.loop_roi.addRotateHandle([0, 0], [0.5, 0.5])
+        self.loop_roi.addRotateHandle([1, 0], [0.5, 0.5])
+        self.loop_roi.addRotateHandle([0, 1], [0.5, 0.5])
+        self.vb.autoRange()
+        self.loop_roi.sigRegionChangeFinished.connect(self.region_changed)
+
+    def region_changed(self, e):
+        x, y = self.loop_roi.pos()
+        h, w = self.loop_roi.size()
+        print(f"Lower left corner: {x}, {y}")
+        print(f"Upper left corner: {x}, {y + h}")
+        print(f"Upper Right corner: {x + w}, {y + h}")
+        print(f"Lower left corner: {x + w}, {y}")
+
+
+class LoopROI(pg.ROI):
+    """
+    Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _makePen(self):
+        # Generate the pen color for this ROI based on its current state.
+        if self.mouseHovering:
+            # style=QtCore.Qt.DashLine,
+            return pg.mkPen(self.pen.color(), width=3)
+        else:
+            return self.pen
+
+
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
-
-    pg.setConfigOption('background', 'w')
-    pg.setConfigOption('foreground', 'k')
-    pg.setConfigOption('crashWarning', True)
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems()
-    editor = PEMPlotEditor(pem_files[0])
-    editor.show()
+    # editor = PEMPlotEditor(pem_files[0])
+    # editor.show()
+    planner = LoopPlanner()
+
     app.exec_()
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
     # fig = plt.figure(figsize=(11, 8.5), dpi=100)
