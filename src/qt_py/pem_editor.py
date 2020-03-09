@@ -26,7 +26,7 @@ import colorcet as cc
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
 from matplotlib.figure import Figure
-from geomag import geomag
+from src.geomag import geomag
 from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
@@ -318,6 +318,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.MapMenu = self.menubar.addMenu('&Map')
         self.MapMenu.addAction(self.show3DMap)
         self.MapMenu.addAction(self.showContourMap)
+
+        # Tools menu
+        self.timebase_freqency_calculator_action = QAction("&Convert Timebase/Frequency", self)
+        self.timebase_freqency_calculator_action.setStatusTip("Two way conversion between timebase and frequency")
+        self.timebase_freqency_calculator_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
+        self.timebase_freqency_calculator_action.triggered.connect(self.timebase_freqency_calculator)
+
+        self.ToolsMenu = self.menubar.addMenu('&Tools')
+        self.ToolsMenu.addAction(self.timebase_freqency_calculator_action)
 
     def initSignals(self):
         """
@@ -1367,7 +1376,75 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
+    def timebase_freqency_calculator(self):
+        """
+        Converts timebase to frequency and vise-versa.
+        :return: None
+        """
+
+        def convert_freq_to_timebase():
+            freq_edit.blockSignals(True)
+            timebase_edit.blockSignals(True)
+            timebase_edit.setText('')
+
+            try:
+                freq = float(freq_edit.text())
+                print(f"Frequency {freq}")
+            except ValueError:
+                print('Not a number')
+                pass
+            else:
+                timebase = (1 / freq) * (1000 / 4)
+                print(f"Timebase = {timebase}")
+                timebase_edit.setText(f"{timebase:.2f}")
+
+            freq_edit.blockSignals(False)
+            timebase_edit.blockSignals(False)
+
+        def convert_timebase_to_freq():
+            freq_edit.blockSignals(True)
+            timebase_edit.blockSignals(True)
+            freq_edit.setText('')
+
+            try:
+                timebase = float(timebase_edit.text())
+            except ValueError:
+                print('Not a number')
+                pass
+            else:
+                freq = (1 / (4 * timebase / 1000))
+                freq_edit.setText(f"{freq:.2f}")
+
+            freq_edit.blockSignals(False)
+            timebase_edit.blockSignals(False)
+
+        self.freq_win = QWidget()
+        self.freq_win.setWindowTitle('Timebase / Frequency Converter')
+        self.freq_win.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
+        layout = QGridLayout()
+        self.freq_win.setLayout(layout)
+
+        timebase_label = QLabel('Timebase (ms)')
+        freq_label = QLabel('Freqency (Hz)')
+        timebase_edit = QLineEdit()
+        timebase_edit.textEdited.connect(convert_timebase_to_freq)
+        freq_edit = QLineEdit()
+        freq_edit.textEdited.connect(convert_freq_to_timebase)
+
+        layout.addWidget(timebase_label, 0, 0)
+        layout.addWidget(timebase_edit, 0, 1)
+        layout.addWidget(freq_label, 2, 0)
+        layout.addWidget(freq_edit, 2, 1)
+
+        self.freq_win.show()
+
     def calc_mag_declination(self, pem_file):
+        """
+        Pop-up window with the magnetic declination information for a coordinate found in a given PEM File. Converts
+        the first coordinates found into lat lon. Must have GPS information in order to conver to lat lon.
+        :param pem_file: PEMFile object
+        :return: None
+        """
 
         def copy_text(str_value):
             cb = QtGui.QApplication.clipboard()
@@ -1409,12 +1486,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             mag = gm.GeoMag(lat, lon, elevation)
 
         except Exception as e:
-            self.error.showMessage(f"The following error occured whilst calculating the magnetic delcination: {str(e)}")
+            self.error.showMessage(f"The following error occured whilst calculating the magnetic declination: {str(e)}")
 
         else:
             self.mag_win = QMainWindow()
             mag_widget = QWidget()
             self.mag_win.setWindowTitle('Magnetic Declination')
+            self.mag_win.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
+            self.mag_win.setGeometry(600, 300, 300, 200)
+            self.mag_win.statusBar().showMessage('', 10)
             layout = QGridLayout()
             layout.setColumnStretch(1, 4)
             layout.setColumnStretch(2, 4)
@@ -3464,6 +3544,7 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
+    mw.timebase_freqency_calculator()
     # mw.calc_mag_declination(pem_files[0])
     # mw.save_as_xyz(selected_files=False)
     # mw.show_contour_map_viewer()
@@ -3476,8 +3557,8 @@ def main():
 
     # mw.auto_merge_pem_files()
     # mw.sort_files()
-    section = Section3DViewer(pem_files)
-    section.show()
+    # section = Section3DViewer(pem_files)
+    # section.show()
     # mw.share_loop_cbox.setChecked(False)
     # mw.output_lin_cbox.setChecked(False)
     # mw.output_log_cbox.setChecked(False)
