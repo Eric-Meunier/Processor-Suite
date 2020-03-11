@@ -1329,8 +1329,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def export_all_gps(self):
         """
-        Exports all GPS from all opened PEM files to separate CSV files. Doesn't repeat if a line/hole/loop has
-        been done already.
+        Exports all GPS from all opened PEM files to separate CSV files. Creates folders for each loop.
+        Doesn't repeat if a line/hole/loop has been done already.
         :return: None
         """
         if len(self.pem_files) > 0:
@@ -1343,54 +1343,61 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             collars = []
 
             default_path = os.path.dirname(self.pem_files[0].filepath)
-            folder = self.dialog.getExistingDirectory(self, 'Select Destination Folder', default_path, QFileDialog.DontUseNativeDialog)
-            if folder != '':
-                for pem_file in self.pem_files:
+            export_folder = self.dialog.getExistingDirectory(self, 'Select Destination Folder', default_path, QFileDialog.DontUseNativeDialog)
+            if export_folder != '':
+                for loop, pem_files in groupby(self.pem_files, key=lambda x: x.header.get('Loop')):
+                    pem_files = list(pem_files)
+                    try:
+                        # Creates a new folder for each loop, where each CSV will be saved for that loop.
+                        os.mkdir(os.path.join(export_folder, loop))
+                    except FileExistsError:
+                        pass
+                    folder = os.path.join(export_folder, loop)
+                    for pem_file in pem_files:
+                        if pem_file.has_loop_gps():
+                            loop = pem_file.get_loop_coords()
+                            if loop not in loops:
+                                loop_name = pem_file.header.get('Loop')
+                                print(f"Creating CSV file for loop {loop_name}")
+                                loops.append(loop)
+                                csv_filepath = os.path.join(folder, loop_name + '.csv')
+                                with open(csv_filepath, 'w') as csvfile:
+                                    filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
+                                                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                                    filewriter.writerow([f"Loop {loop_name} - {system} {zone} {datum}"])
+                                    filewriter.writerow(['Easting', 'Northing', 'Elevation'])
+                                    for row in loop:
+                                        filewriter.writerow([row[0], row[1], row[2]])
 
-                    if pem_file.has_loop_gps():
-                        loop = pem_file.get_loop_coords()
-                        if loop not in loops:
-                            loop_name = pem_file.header.get('Loop')
-                            print(f"Creating CSV file for loop {loop_name}")
-                            loops.append(loop)
-                            csv_filepath = os.path.join(folder, loop_name + '.csv')
-                            with open(csv_filepath, 'w') as csvfile:
-                                filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
-                                                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                                filewriter.writerow([f"Loop {loop_name} - {system} {zone} {datum}"])
-                                filewriter.writerow(['Easting', 'Northing', 'Elevation'])
-                                for row in loop:
-                                    filewriter.writerow([row[0], row[1], row[2]])
+                        if pem_file.has_station_gps():
+                            line = pem_file.get_station_coords()
+                            if line not in lines:
+                                line_name = pem_file.header.get('LineHole')
+                                print(f"Creating CSV file for line {line_name}")
+                                lines.append(line)
+                                csv_filepath = os.path.join(folder, f"{line_name}.csv")
+                                with open(csv_filepath, 'w') as csvfile:
+                                    filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
+                                                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                                    filewriter.writerow([f"Line {line_name} - {system} {zone} {datum}"])
+                                    filewriter.writerow(['Easting', 'Northing', 'Elevation', 'Station Number'])
+                                    for row in line:
+                                        filewriter.writerow([row[0], row[1], row[2], row[-1]])
 
-                    if pem_file.has_station_gps():
-                        line = pem_file.get_station_coords()
-                        if line not in lines:
-                            line_name = pem_file.header.get('LineHole')
-                            print(f"Creating CSV file for line {line_name}")
-                            lines.append(line)
-                            csv_filepath = os.path.join(folder, line_name + '.csv')
-                            with open(csv_filepath, 'w') as csvfile:
-                                filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
-                                                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                                filewriter.writerow([f"Line {line_name} - {system} {zone} {datum}"])
-                                filewriter.writerow(['Easting', 'Northing', 'Elevation', 'Station Number'])
-                                for row in line:
-                                    filewriter.writerow([row[0], row[1], row[2], row[-1]])
-
-                    if pem_file.has_collar_gps():
-                        collar_coords = pem_file.get_collar_coords()
-                        if collar_coords not in collars:
-                            hole_name = pem_file.header.get('LineHole')
-                            print(f"Creating CSV file for hole {hole_name}")
-                            collars.append(collar_coords)
-                            csv_filepath = os.path.join(folder, hole_name + '.csv')
-                            with open(csv_filepath, 'w') as csvfile:
-                                filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
-                                                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                                filewriter.writerow([f"Hole {hole_name} - {system} {zone} {datum}"])
-                                filewriter.writerow(['Easting', 'Northing', 'Elevation'])
-                                for row in collar_coords:
-                                    filewriter.writerow([row[0], row[1], row[2]])
+                        if pem_file.has_collar_gps():
+                            collar_coords = pem_file.get_collar_coords()
+                            if collar_coords not in collars:
+                                hole_name = pem_file.header.get('LineHole')
+                                print(f"Creating CSV file for hole {hole_name}")
+                                collars.append(collar_coords)
+                                csv_filepath = os.path.join(folder, hole_name + '.csv')
+                                with open(csv_filepath, 'w') as csvfile:
+                                    filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
+                                                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                                    filewriter.writerow([f"Hole {hole_name} - {system} {zone} {datum}"])
+                                    filewriter.writerow(['Easting', 'Northing', 'Elevation'])
+                                    for row in collar_coords:
+                                        filewriter.writerow([row[0], row[1], row[2]])
                 self.window().statusBar().showMessage("Export complete.", 2000)
             else:
                 self.window().statusBar().showMessage("No files to export.", 2000)
