@@ -168,30 +168,25 @@ class GPSEditor:
         return loop_gps
 
     def get_station_gps(self, gps):
-        # logging.info('GPSEditor - Retrieving station GPS')
+        # lDoesn't check if it's actually surface line GPS. Can return hole collar inadvertently
         return self.format_gps(self.parser.parse_station_gps(gps))
 
     def get_loop_gps(self, gps):
-        # logging.info('GPSEditor - Retrieving loop GPS')
         return self.format_gps(self.parser.parse_loop_gps(gps))
 
     def get_sorted_station_gps(self, gps):
-        # logging.info('GPSEditor - Retrieving sorted station GPS')
         return self.sort_line(gps)
 
     def get_sorted_loop_gps(self, gps):
-        # logging.info('GPSEditor - Retrieving sorted loop GPS')
         return self.sort_loop(gps)
 
     def get_geometry(self, file):
-        # logging.info('GPSEditor - Retrieving segments')
         segments = self.parser.parse_segments(file)
         if not segments:
             return []
         return segments
 
     def get_collar_gps(self, file):
-        # logging.info('GPSEditor - Retrieving collar GPS')
         gps = self.parser.parse_collar_gps(file)
         if not gps:
             return []

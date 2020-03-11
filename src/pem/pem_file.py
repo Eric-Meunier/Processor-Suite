@@ -45,9 +45,12 @@ class PEMFile:
             return False
 
     def has_collar_gps(self):
-        collar = self.get_collar_coords()
-        if collar and all(collar):
-            return True
+        if 'surface' not in self.survey_type.lower():
+            collar = self.get_collar_coords()
+            if collar and all(collar):
+                return True
+            else:
+                return False
         else:
             return False
 
@@ -66,9 +69,12 @@ class PEMFile:
             return False
 
     def has_station_gps(self):
-        line = self.get_station_coords()
-        if line and all(line):
-            return True
+        if 'surface' in self.survey_type.lower():
+            line = self.get_station_coords()
+            if line and all(line):
+                return True
+            else:
+                return False
         else:
             return False
 

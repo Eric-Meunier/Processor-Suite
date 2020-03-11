@@ -4,6 +4,7 @@ import datetime
 import logging
 import os
 import re
+import csv
 import pstats
 import sys
 import time
@@ -138,7 +139,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.gps_zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
         self.gps_datums = ['', 'NAD 1927', 'NAD 1983', 'WGS 1984']
 
-        self.create_table()
+        self.create_main_table()
         self.populate_gps_boxes()
 
     def initUi(self):
@@ -289,6 +290,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.saveAsKMZFile.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
         self.saveAsKMZFile.triggered.connect(self.save_as_kmz)
 
+        self.export_all_gps_action = QAction("&Export All GPS", self)
+        self.export_all_gps_action.setStatusTip("Export all GPS in the opened PEM file(s) to separate CSV files")
+        # self.export_all_gps_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
+        self.export_all_gps_action.triggered.connect(self.export_all_gps)
+
         self.sortAllStationGps = QAction("&Sort All Station GPS", self)
         self.sortAllStationGps.setStatusTip("Sort the station GPS for every file")
         self.sortAllStationGps.triggered.connect(self.sort_all_station_gps)
@@ -299,6 +305,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.GPSMenu = self.menubar.addMenu('&GPS')
         self.GPSMenu.addAction(self.saveAsKMZFile)
+        self.GPSMenu.addAction(self.export_all_gps_action)
         self.GPSMenu.addSeparator()
         self.GPSMenu.addAction(self.sortAllStationGps)
         self.GPSMenu.addAction(self.sortAllLoopGps)
@@ -323,7 +330,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.timebase_freqency_calculator_action = QAction("&Convert Timebase/Frequency", self)
         self.timebase_freqency_calculator_action.setStatusTip("Two way conversion between timebase and frequency")
         self.timebase_freqency_calculator_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
-        self.timebase_freqency_calculator_action.triggered.connect(self.timebase_freqency_calculator)
+        self.timebase_freqency_calculator_action.triggered.connect(self.timebase_freqency_converter)
 
         self.ToolsMenu = self.menubar.addMenu('&Tools')
         self.ToolsMenu.addAction(self.timebase_freqency_calculator_action)
@@ -400,12 +407,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.save_as_xyz_action.triggered.connect(lambda: self.save_as_xyz(selected_files=True))
 
                 self.table.print_plots_action = QAction("&Print Plots", self)
+                self.table.print_plots_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'pdf.png')))
                 self.table.print_plots_action.triggered.connect(lambda: self.print_plots(selected_files=True))
 
                 self.table.extract_stations_action = QAction("&Extract Stations", self)
                 self.table.extract_stations_action.triggered.connect(self.extract_stations)
 
                 self.table.calc_mag_dec = QAction("&Magnetic Declination", self)
+                self.table.calc_mag_dec.setIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
                 self.table.calc_mag_dec.triggered.connect(lambda: self.calc_mag_declination(selected_pems[0]))
 
                 self.table.view_3d_section_action = QAction("&View 3D Section", self)
@@ -736,7 +745,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     files_to_add.append(pem_file)
                     pemInfoWidget.blockSignals(False)
 
-                    # Fill in the GPS System information based on the existing GEN tag if it's not yet filled.
+                    # Fill in the GPS coordinate system information based on the existing GEN tag if it's not yet filled.
                     for note in pem_file.notes:
                         if '<GEN> CRS:' in note:
                             if self.systemCBox.currentText() == '' and self.datumCBox.currentText() == '':
@@ -945,6 +954,33 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.save_pem_file_to_file(pem_file, backup=True, tag='[B]', remove_old=False)
             self.window().statusBar().showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
 
+    def remove_file(self, table_row):
+        """
+        Removes PEM files from the main table, along with any associated widgets.
+        :param table_row: Table row of the PEM file.
+        :return: None
+        """
+        self.table.removeRow(table_row)
+        self.stackedWidget.removeWidget(self.stackedWidget.widget(table_row))
+        del self.pem_files[table_row]
+        del self.pem_info_widgets[table_row]
+
+        if len(self.pem_files) == 0:
+            self.stackedWidget.hide()
+            self.pemInfoDockWidget.hide()
+            self.client_edit.setText('')
+            self.grid_edit.setText('')
+            self.loop_edit.setText('')
+            self.min_range_edit.setText('')
+            self.max_range_edit.setText('')
+            self.reset_crs()
+
+    def remove_file_selection(self):
+        pem_files, rows = self.get_selected_pem_files()
+        for row in rows:
+            self.remove_file(row)
+        self.window().statusBar().showMessage(f"{len(rows)} files removed.", 2000)
+
     def get_selected_pem_files(self):
         """
         Return the corresponding pem_files and rows which are currently selected in the table
@@ -974,14 +1010,501 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             for widget in self.pem_info_widgets:
                 widget.tabs.setCurrentIndex(self.tab_num)
 
-    def extract_stations(self):
+    def save_pem_file_to_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
         """
-        Opens the PEMFileSplitter window, which will allow selected stations to be saved as a new PEM file.
+        Action of saving a PEM file to a .PEM file.
+        :param pem_file: PEMFile object to be saved.
+        :param dir: Save file location. If None, is uses the file directory of the first PEM file as the default.
+        :param tag: str: Tag to append to the file name ('[A]', '[S]', '[M]'...)
+        :param backup: Bool: If true, will save file to a '[Backup]' folder.
+        :param remove_old: Bool: If true, will delete the old file.
         :return: None
         """
-        logging.info('PEMEditor - Extract stations')
-        pem_file, row = self.get_selected_pem_files()
-        self.pem_file_splitter = PEMFileSplitter(pem_file[0], parent=self)
+        if dir is None:
+            file_dir = os.path.split(pem_file.filepath)[0]
+        else:
+            file_dir = dir
+        file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
+        extension = os.path.splitext(pem_file.filepath)[-1]
+
+        # Create a backup folder if it doesn't exist, and use it as the new file dir.
+        if backup is True:
+            pem_file.old_filepath = os.path.join(file_dir, file_name + extension)
+            if not os.path.exists(os.path.join(file_dir, '[Backup]')):
+                print('Creating back up folder')
+                os.mkdir(os.path.join(file_dir, '[Backup]'))
+            file_dir = os.path.join(file_dir, '[Backup]')
+            extension += '.bak'
+
+        if tag and tag not in file_name:
+            file_name += tag
+
+        pem_file.filepath = os.path.join(file_dir, file_name + extension)
+        print(f"Saving file {file_name}")
+        save_file = self.serializer.serialize(pem_file)
+        print(save_file, file=open(pem_file.filepath, 'w+'))
+
+        # Remove the old filepath if the filename was changed.
+        if pem_file.old_filepath and remove_old is True:
+            print(f'Removing old file {os.path.basename(pem_file.old_filepath)}')
+            try:
+                os.remove(pem_file.old_filepath)
+            except FileNotFoundError:
+                print(f'File not found, assuming it was already removed')
+            finally:
+                pem_file.old_filepath = None
+
+    def save_pem_files(self, all=False):
+        """
+        Save all selected PEM files.
+        :param all: Bool: if True, saves all opened PEM files instead of only the selected ones.
+        :return: None
+        """
+        if len(self.pem_files) > 0:
+            if all is False:
+                pem_files, rows = self.get_selected_pem_files()
+            else:
+                pem_files, rows = self.pem_files, range(self.table.rowCount())
+
+            self.pg.setMaximum(len(pem_files))
+            self.pg.show()
+            self.window().statusBar().addPermanentWidget(self.pg)
+
+            # Update all the PEM files in memory first.
+            for row, pem_file in zip(rows, pem_files):
+                pem_file = self.update_pem_file_from_table(pem_file, row)
+
+            # This is split from the above for loop because the table is refreshed when pem_info_widget opens a file, /
+            # and it would cause changes in the table to be ignored.
+            count = 0
+            for row, pem_file in zip(rows, pem_files):
+                self.pg.setText(f"Saving {os.path.basename(pem_file.filepath)}")
+                self.save_pem_file_to_file(pem_file)
+                # Block the signals because it only updates the row corresponding to the current stackedWidget.
+                self.pem_info_widgets[row].blockSignals(True)
+                self.pem_info_widgets[row].open_file(pem_file, parent=self)  # Updates the PEMInfoWidget tables
+                self.pem_info_widgets[row].blockSignals(False)
+                count += 1
+                self.pg.setValue(count)
+
+            self.refresh_table()
+            self.pg.hide()
+            self.window().statusBar().showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
+
+    def save_pem_file_as(self):
+        """
+        Saves a single PEM file to a selected location.
+        :return: None
+        """
+        row = self.table.currentRow()
+        default_path = os.path.split(self.pem_files[-1].filepath)[0]
+        self.dialog.setFileMode(QFileDialog.ExistingFiles)
+        self.dialog.setAcceptMode(QFileDialog.AcceptSave)
+        self.dialog.setDirectory(default_path)
+        self.window().statusBar().showMessage('Saving PEM files...')
+        file_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM)')[0]  # Returns full filepath
+
+        if file_path:
+            pem_file = copy.deepcopy(self.pem_files[row])
+            pem_file.filepath = file_path
+            updated_file = self.update_pem_file_from_table(pem_file, row, filepath=file_path)
+
+            self.save_pem_file_to_file(updated_file)
+            self.window().statusBar().showMessage(
+                'Save Complete. PEM file saved as {}'.format(os.path.basename(file_path)), 2000)
+        else:
+            self.window().statusBar().showMessage('Cancelled.', 2000)
+
+    def save_as_kmz(self):
+        """
+        Saves all GPS from the opened PEM files as a KMZ file. Utilizes 'simplekml' module. Only works with NAD 83
+        or WGS 84.
+        :return: None
+        """
+
+        if len(self.pem_files) == 0:
+            return
+
+        if not any([pem_file.has_any_gps() for pem_file in self.pem_files]):
+            self.message.information(self, 'Error', 'No GPS to show')
+            return
+
+        if self.datumCBox.currentText() == 'NAD 1927':
+            self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
+            return
+
+        if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() == '',
+                self.datumCBox.currentText() == '']):
+            self.message.information(self, 'Error', 'GPS coordinate system information is incomplete')
+            return
+
+        kml = simplekml.Kml()
+        pem_files = [pem_file for pem_file in self.pem_files if pem_file.has_any_gps()]
+
+        zone = self.zoneCBox.currentText()
+        zone_num = int(re.search('\d+', zone).group())
+        north = True if 'n' in zone.lower() else False
+
+        line_style = simplekml.Style()
+        line_style.linestyle.width = 4
+        line_style.linestyle.color = simplekml.Color.magenta
+
+        loop_style = simplekml.Style()
+        loop_style.linestyle.width = 4
+        loop_style.linestyle.color = simplekml.Color.yellow
+
+        station_style = simplekml.Style()
+        station_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png'
+        station_style.iconstyle.color = simplekml.Color.magenta
+
+        trace_style = simplekml.Style()
+        trace_style.linestyle.width = 2
+        trace_style.linestyle.color = simplekml.Color.magenta
+
+        collar_style = simplekml.Style()
+        collar_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/paddle/wht-stars.png'
+        collar_style.iconstyle.color = simplekml.Color.magenta
+
+        loops = []
+        loop_names = []
+        lines = []
+        line_names = []
+        traces = []
+        hole_names = []
+
+        # Grouping up the loops, lines and boreholes into lists.
+        for pem_file in pem_files:
+            loop_gps = pem_file.get_loop_coords()
+            loop_gps.append(loop_gps[0])
+            loop_name = pem_file.header.get('Loop')
+            if loop_gps and loop_gps not in loops:
+                loops.append(loop_gps)
+                loop_names.append(loop_name)
+            if 'surface' in pem_file.survey_type.lower():
+                line_gps = pem_file.get_line_coords()
+                line_name = pem_file.header.get('LineHole')
+                if line_gps and line_gps not in lines:
+                    lines.append(line_gps)
+                    line_names.append(line_name)
+            else:
+                borehole_projection = self.mpm.get_3D_borehole_projection(pem_file.get_collar_coords()[0], pem_file.get_hole_geometry(), 100)
+                trace_gps = list(zip(borehole_projection[0], borehole_projection[1]))
+                hole_name = pem_file.header.get('LineHole')
+                if trace_gps and trace_gps not in traces:
+                    traces.append(trace_gps)
+                    hole_names.append(hole_name)
+
+        # Creates KMZ objects for the loops.
+        for loop_gps, name in zip(loops, loop_names):
+            loop_coords = []
+            for row in loop_gps:
+                easting = int(float(row[0]))
+                northing = int(float(row[1]))
+                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+                loop_coords.append((lon, lat))
+
+            ls = kml.newlinestring(name=name)
+            ls.coords = loop_coords
+            ls.extrude = 1
+            ls.style = loop_style
+
+        # Creates KMZ objects for the lines.
+        for line_gps, name in zip(lines, line_names):
+            line_coords = []
+            folder = kml.newfolder(name=name)
+            for row in line_gps:
+                easting = int(float(row[0]))
+                northing = int(float(row[1]))
+                station = row[-1]
+                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+                line_coords.append((lon, lat))
+                new_point = folder.newpoint(name=f"{station}", coords=[(lon, lat)])
+                new_point.style = station_style
+
+            ls = folder.newlinestring(name=name)
+            ls.coords = line_coords
+            ls.extrude = 1
+            ls.style = trace_style
+
+        # Creates KMZ objects for the boreholes.
+        for trace_gps, name in zip(traces, hole_names):
+            trace_coords = []
+            folder = kml.newfolder(name=name)
+            for row in trace_gps:
+                easting = int(float(row[0]))
+                northing = int(float(row[1]))
+                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+                trace_coords.append((lon, lat))
+
+            collar = folder.newpoint(name=name, coords=[trace_coords[0]])
+            collar.style = collar_style
+            ls = folder.newlinestring(name=name)
+            ls.coords = trace_coords
+            ls.extrude = 1
+            ls.style = trace_style
+
+        default_path = os.path.split(self.pem_files[-1].filepath)[0]
+        self.dialog.setDirectory(default_path)
+        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', default_path, 'KMZ Files (*.KMZ)')[0]
+        if save_dir:
+            kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
+            kml.savekmz(kmz_save_dir, format=False)
+            os.startfile(kmz_save_dir)
+        else:
+            self.window().statusBar().showMessage('Cancelled.', 2000)
+
+    def save_as_xyz(self, selected_files=False):
+        """
+        Save the selected PEM files as XYZ files. Only for surface PEM files.
+        :param selected_files: bool: Save selected files. False means all opened files will be saved.
+        :return: None
+        """
+        xyz_serializer = XYZSerializer()
+        if selected_files:
+            pem_files, rows = self.get_selected_pem_files()
+        else:
+            pem_files, rows = self.pem_files, range(0, len(self.pem_files))
+
+        if pem_files:
+            default_path = os.path.split(self.pem_files[-1].filepath)[0]
+            if __name__ == '__main__':
+                file_dir = default_path
+            else:
+                file_dir = self.dialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
+
+            if file_dir:
+                for pem_file in pem_files:
+                    if 'surface' in pem_file.survey_type.lower():
+                        file_name = os.path.splitext(pem_file.filepath)[0] + '.xyz'
+                        xyz_file = xyz_serializer.serialize_pem(pem_file)
+                        with open(file_name, 'w+') as file:
+                            file.write(xyz_file)
+                        os.startfile(file_name)
+
+    def export_pem_files(self, export_final=False, all=True):
+        """
+        Saves all PEM files to a desired location (keeps them opened) and removes any tags.
+        :return: None
+        """
+        if all is False:
+            pem_files, rows = self.get_selected_pem_files()
+        else:
+            pem_files, rows = self.pem_files, range(self.table.rowCount())
+
+        self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
+        if any([self.systemCBox.currentText()=='', self.zoneCBox.currentText()=='', self.datumCBox.currentText()=='']):
+            response = self.message.question(self, 'No CRS',
+                                                     'No CRS has been selected. '
+                                                     'Do you wish to proceed with no CRS information?',
+                                                     self.message.Yes | self.message.No)
+            if response == self.message.No:
+                return
+
+        default_path = os.path.split(self.pem_files[-1].filepath)[0]
+        self.dialog.setDirectory(default_path)
+        file_dir = self.dialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
+
+        if file_dir:
+            for pem_file, row in zip(pem_files, rows):
+                updated_file = self.update_pem_file_from_table(pem_file, row)
+                file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
+                extension = os.path.splitext(pem_file.filepath)[-1]
+                if export_final is True:
+                    file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))  # Removes underscore-dates and tags
+                    if 'surface' in pem_file.survey_type.lower():
+                        file_name = file_name.upper()
+                        if file_name[0] == 'C':
+                            file_name = file_name[1:]
+                        if pem_file.is_averaged() and 'AV' not in file_name:
+                            file_name = file_name + 'Av'
+
+                updated_file.filepath = os.path.join(file_dir, file_name + extension)
+                self.save_pem_file_to_file(updated_file, dir=file_dir, remove_old=False)
+            self.refresh_table()
+            self.window().statusBar().showMessage(
+                f"Save complete. {len(pem_files)} PEM {'file' if len(pem_files) == 1 else 'files'} exported", 2000)
+        else:
+            self.window().statusBar().showMessage('Cancelled.', 2000)
+            pass
+
+    def export_all_gps(self):
+        """
+        Exports all GPS from all opened PEM files to separate CSV files. Doesn't repeat if a line/hole/loop has
+        been done already.
+        :return: None
+        """
+        if len(self.pem_files) > 0:
+            system = self.systemCBox.currentText()
+            zone = ' Zone ' + self.zoneCBox.currentText() if self.zoneCBox.isEnabled() else ''
+            datum = self.datumCBox.currentText()
+
+            loops = []
+            lines = []
+            collars = []
+
+            default_path = os.path.dirname(self.pem_files[0].filepath)
+            folder = self.dialog.getExistingDirectory(self, 'Select Destination Folder', default_path, QFileDialog.DontUseNativeDialog)
+            if folder != '':
+                for pem_file in self.pem_files:
+
+                    if pem_file.has_loop_gps():
+                        loop = pem_file.get_loop_coords()
+                        if loop not in loops:
+                            loop_name = pem_file.header.get('Loop')
+                            print(f"Creating CSV file for loop {loop_name}")
+                            loops.append(loop)
+                            csv_filepath = os.path.join(folder, loop_name + '.csv')
+                            with open(csv_filepath, 'w') as csvfile:
+                                filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
+                                                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                                filewriter.writerow([f"Loop {loop_name} - {system} {zone} {datum}"])
+                                filewriter.writerow(['Easting', 'Northing', 'Elevation'])
+                                for row in loop:
+                                    filewriter.writerow([row[0], row[1], row[2]])
+
+                    if pem_file.has_station_gps():
+                        line = pem_file.get_station_coords()
+                        if line not in lines:
+                            line_name = pem_file.header.get('LineHole')
+                            print(f"Creating CSV file for line {line_name}")
+                            lines.append(line)
+                            csv_filepath = os.path.join(folder, line_name + '.csv')
+                            with open(csv_filepath, 'w') as csvfile:
+                                filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
+                                                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                                filewriter.writerow([f"Line {line_name} - {system} {zone} {datum}"])
+                                filewriter.writerow(['Easting', 'Northing', 'Elevation', 'Station Number'])
+                                for row in line:
+                                    filewriter.writerow([row[0], row[1], row[2], row[-1]])
+
+                    if pem_file.has_collar_gps():
+                        collar_coords = pem_file.get_collar_coords()
+                        if collar_coords not in collars:
+                            hole_name = pem_file.header.get('LineHole')
+                            print(f"Creating CSV file for hole {hole_name}")
+                            collars.append(collar_coords)
+                            csv_filepath = os.path.join(folder, hole_name + '.csv')
+                            with open(csv_filepath, 'w') as csvfile:
+                                filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
+                                                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                                filewriter.writerow([f"Hole {hole_name} - {system} {zone} {datum}"])
+                                filewriter.writerow(['Easting', 'Northing', 'Elevation'])
+                                for row in collar_coords:
+                                    filewriter.writerow([row[0], row[1], row[2]])
+                self.window().statusBar().showMessage("Export complete.", 2000)
+            else:
+                self.window().statusBar().showMessage("No files to export.", 2000)
+
+    def print_plots(self, selected_files=False):
+        """
+        Save the final plots as PDFs for the selected PEM files. If no PEM files are selected, it saves it for all open
+        PEM files
+        :param pem_files: List of PEMFile objects
+        :param rows: Corresponding rows of the selected PEM files in order to link the RI file to the correct PEM file
+        :return: None
+        """
+
+        # logging.info('PEMEditor - Printing plots')
+
+        def get_crs():
+            crs = {'Coordinate System': self.systemCBox.currentText(),
+                   'Zone': self.zoneCBox.currentText(),
+                   'Datum': self.datumCBox.currentText()}
+            return crs
+
+        def get_save_file():
+            default_path = os.path.split(self.pem_files[-1].filepath)[0]
+            self.dialog.setDirectory(default_path)
+            if __name__ == '__main__':
+                save_dir = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\test'  # For testing purposes
+            else:
+                save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]
+                # Returns full filepath. For single PDF file
+            return save_dir
+
+        if len(self.pem_files) > 0:
+
+            if selected_files is True:
+                input_pem_files, rows = self.get_selected_pem_files()
+            else:
+                input_pem_files = self.pem_files
+                rows = range(0, len(input_pem_files))
+
+            # Needs to be deepcopied or else it changes the pem files in self.pem_files
+            pem_files = copy.deepcopy(input_pem_files)
+            self.window().statusBar().showMessage('Saving plots...', 2000)
+
+            plot_kwargs = {'ShareRange': self.share_range_checkbox.isChecked(),
+                           'HideGaps': self.hide_gaps_checkbox.isChecked(),
+                           'LoopAnnotations': self.show_loop_anno_checkbox.isChecked(),
+                           'MovingLoop': self.movingLoopCBox.isChecked(),
+                           'TitleBox': self.plan_map_options.title_box_cbox.isChecked(),
+                           'Grid': self.plan_map_options.grid_cbox.isChecked(),
+                           'ScaleBar': self.plan_map_options.scale_bar_cbox.isChecked(),
+                           'NorthArrow': self.plan_map_options.north_arrow_cbox.isChecked(),
+                           'Legend': self.plan_map_options.legend_cbox.isChecked(),
+                           'DrawLoops': self.plan_map_options.draw_loops_cbox.isChecked(),
+                           'DrawLines': self.plan_map_options.draw_lines_cbox.isChecked(),
+                           'DrawHoleCollars': self.plan_map_options.draw_hole_collars_cbox.isChecked(),
+                           'DrawHoleTraces': self.plan_map_options.draw_hole_traces_cbox.isChecked(),
+                           'LoopLabels': self.plan_map_options.loop_labels_cbox.isChecked(),
+                           'LineLabels': self.plan_map_options.line_labels_cbox.isChecked(),
+                           'HoleCollarLabels': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
+                           'HoleDepthLabels': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
+                           'CRS': get_crs(),
+                           'LINPlots': self.output_lin_cbox.isChecked(),
+                           'LOGPlots': self.output_log_cbox.isChecked(),
+                           'STEPPlots': self.output_step_cbox.isChecked(),
+                           'PlanMap': self.output_plan_map_cbox.isChecked(),
+                           'SectionPlot': self.output_section_cbox.isChecked(),
+                           'LabelSectionTicks': self.label_section_depths_cbox.isChecked(),
+                           'SectionDepth': self.section_depth_edit.text()}
+
+            if self.share_range_checkbox.isChecked():
+                try:
+                    plot_kwargs['XMin'] = int(self.min_range_edit.text())
+                except ValueError:
+                    plot_kwargs['XMin'] = None
+                try:
+                    plot_kwargs['XMax'] = int(self.max_range_edit.text())
+                except ValueError:
+                    plot_kwargs['XMax'] = None
+            else:
+                plot_kwargs['XMin'] = None
+                plot_kwargs['XMax'] = None
+
+            ri_files = []
+            for row, pem_file in zip(rows, pem_files):
+                ri_files.append(self.pem_info_widgets[row].ri_file)
+                self.update_pem_file_from_table(pem_file, row)
+                if not pem_file.is_averaged():
+                    self.file_editor.average(pem_file)
+                if not pem_file.is_split():
+                    self.file_editor.split_channels(pem_file)
+
+            if self.output_plan_map_cbox.isChecked():
+                if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
+                    response = self.message.question(self, 'No CRS',
+                                                     'No CRS has been selected. '
+                                                     'Do you wish to proceed without a plan map?',
+                                                     self.message.Yes | self.message.No)
+                    if response == self.message.No:
+                        return
+
+            save_dir = get_save_file()
+            if save_dir:
+                # PEM Files and RI files zipped together for when they get sorted
+                try:
+                    printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
+                    self.window().statusBar().addPermanentWidget(printer.pb)
+                    printer.print_files()
+                    printer.pb.hide()
+                    self.window().statusBar().showMessage('Plots saved', 2000)
+                except IOError:
+                    self.message.information(self, 'Error', 'File is currently opened')
+                    printer.pb.hide()
+            else:
+                self.window().statusBar().showMessage('Cancelled', 2000)
 
     def average_pem_data(self, all=False):
         """
@@ -1271,653 +1794,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.open_pem_files(files_to_open)
             # self.spinner.stop()
 
-    def save_pem_file_to_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
-        """
-        Action of saving a PEM file to a .PEM file.
-        :param pem_file: PEMFile object to be saved.
-        :param dir: Save file location. If None, is uses the file directory of the first PEM file as the default.
-        :param tag: str: Tag to append to the file name ('[A]', '[S]', '[M]'...)
-        :param backup: Bool: If true, will save file to a '[Backup]' folder.
-        :param remove_old: Bool: If true, will delete the old file.
-        :return: None
-        """
-        if dir is None:
-            file_dir = os.path.split(pem_file.filepath)[0]
-        else:
-            file_dir = dir
-        file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
-        extension = os.path.splitext(pem_file.filepath)[-1]
-
-        # Create a backup folder if it doesn't exist, and use it as the new file dir.
-        if backup is True:
-            pem_file.old_filepath = os.path.join(file_dir, file_name + extension)
-            if not os.path.exists(os.path.join(file_dir, '[Backup]')):
-                print('Creating back up folder')
-                os.mkdir(os.path.join(file_dir, '[Backup]'))
-            file_dir = os.path.join(file_dir, '[Backup]')
-            extension += '.bak'
-
-        if tag and tag not in file_name:
-            file_name += tag
-
-        pem_file.filepath = os.path.join(file_dir, file_name + extension)
-        print(f"Saving file {file_name}")
-        save_file = self.serializer.serialize(pem_file)
-        print(save_file, file=open(pem_file.filepath, 'w+'))
-
-        # Remove the old filepath if the filename was changed.
-        if pem_file.old_filepath and remove_old is True:
-            print(f'Removing old file {os.path.basename(pem_file.old_filepath)}')
-            try:
-                os.remove(pem_file.old_filepath)
-            except FileNotFoundError:
-                print(f'File not found, assuming it was already removed')
-            finally:
-                pem_file.old_filepath = None
-
-    def save_pem_files(self, all=False):
-        """
-        Save all selected PEM files.
-        :param all: Bool: if True, saves all opened PEM files instead of only the selected ones.
-        :return: None
-        """
-        if len(self.pem_files) > 0:
-            if all is False:
-                pem_files, rows = self.get_selected_pem_files()
-            else:
-                pem_files, rows = self.pem_files, range(self.table.rowCount())
-
-            self.pg.setMaximum(len(pem_files))
-            self.pg.show()
-            self.window().statusBar().addPermanentWidget(self.pg)
-
-            # Update all the PEM files in memory first.
-            for row, pem_file in zip(rows, pem_files):
-                pem_file = self.update_pem_file_from_table(pem_file, row)
-
-            # This is split from the above for loop because the table is refreshed when pem_info_widget opens a file, /
-            # and it would cause changes in the table to be ignored.
-            count = 0
-            for row, pem_file in zip(rows, pem_files):
-                self.pg.setText(f"Saving {os.path.basename(pem_file.filepath)}")
-                self.save_pem_file_to_file(pem_file)
-                # Block the signals because it only updates the row corresponding to the current stackedWidget.
-                self.pem_info_widgets[row].blockSignals(True)
-                self.pem_info_widgets[row].open_file(pem_file, parent=self)  # Updates the PEMInfoWidget tables
-                self.pem_info_widgets[row].blockSignals(False)
-                count += 1
-                self.pg.setValue(count)
-
-            self.refresh_table()
-            self.pg.hide()
-            self.window().statusBar().showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
-
-    def save_pem_file_as(self):
-        """
-        Saves a single PEM file to a selected location.
-        :return: None
-        """
-        row = self.table.currentRow()
-        default_path = os.path.split(self.pem_files[-1].filepath)[0]
-        self.dialog.setFileMode(QFileDialog.ExistingFiles)
-        self.dialog.setAcceptMode(QFileDialog.AcceptSave)
-        self.dialog.setDirectory(default_path)
-        self.window().statusBar().showMessage('Saving PEM files...')
-        file_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM)')[0]  # Returns full filepath
-
-        if file_path:
-            pem_file = copy.deepcopy(self.pem_files[row])
-            pem_file.filepath = file_path
-            updated_file = self.update_pem_file_from_table(pem_file, row, filepath=file_path)
-
-            self.save_pem_file_to_file(updated_file)
-            self.window().statusBar().showMessage(
-                'Save Complete. PEM file saved as {}'.format(os.path.basename(file_path)), 2000)
-        else:
-            self.window().statusBar().showMessage('Cancelled.', 2000)
-
-    def timebase_freqency_calculator(self):
-        """
-        Converts timebase to frequency and vise-versa.
-        :return: None
-        """
-
-        def convert_freq_to_timebase():
-            freq_edit.blockSignals(True)
-            timebase_edit.blockSignals(True)
-            timebase_edit.setText('')
-
-            try:
-                freq = float(freq_edit.text())
-                print(f"Frequency {freq}")
-            except ValueError:
-                print('Not a number')
-                pass
-            else:
-                timebase = (1 / freq) * (1000 / 4)
-                print(f"Timebase = {timebase}")
-                timebase_edit.setText(f"{timebase:.2f}")
-
-            freq_edit.blockSignals(False)
-            timebase_edit.blockSignals(False)
-
-        def convert_timebase_to_freq():
-            freq_edit.blockSignals(True)
-            timebase_edit.blockSignals(True)
-            freq_edit.setText('')
-
-            try:
-                timebase = float(timebase_edit.text())
-            except ValueError:
-                print('Not a number')
-                pass
-            else:
-                freq = (1 / (4 * timebase / 1000))
-                freq_edit.setText(f"{freq:.2f}")
-
-            freq_edit.blockSignals(False)
-            timebase_edit.blockSignals(False)
-
-        self.freq_win = QWidget()
-        self.freq_win.setWindowTitle('Timebase / Frequency Converter')
-        self.freq_win.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
-        layout = QGridLayout()
-        self.freq_win.setLayout(layout)
-
-        timebase_label = QLabel('Timebase (ms)')
-        freq_label = QLabel('Freqency (Hz)')
-        timebase_edit = QLineEdit()
-        timebase_edit.textEdited.connect(convert_timebase_to_freq)
-        freq_edit = QLineEdit()
-        freq_edit.textEdited.connect(convert_freq_to_timebase)
-
-        layout.addWidget(timebase_label, 0, 0)
-        layout.addWidget(timebase_edit, 0, 1)
-        layout.addWidget(freq_label, 2, 0)
-        layout.addWidget(freq_edit, 2, 1)
-
-        self.freq_win.show()
-
-    def calc_mag_declination(self, pem_file):
-        """
-        Pop-up window with the magnetic declination information for a coordinate found in a given PEM File. Converts
-        the first coordinates found into lat lon. Must have GPS information in order to conver to lat lon.
-        :param pem_file: PEMFile object
-        :return: None
-        """
-
-        def copy_text(str_value):
-            cb = QtGui.QApplication.clipboard()
-            cb.clear(mode=cb.Clipboard)
-            cb.setText(str_value, mode=cb.Clipboard)
-            self.mag_win.statusBar().showMessage(f"{str_value} copied to clipboard", 1000)
-
-        if len(self.pem_files) == 0:
-            return
-
-        if self.datumCBox.currentText() == 'NAD 1927':
-            self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
-            return
-
-        if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() == '',
-                self.datumCBox.currentText() == '']):
-            self.message.information(self, 'Error', 'GPS system information is incomplete')
-            return
-
-        zone = self.zoneCBox.currentText()
-        zone_num = int(re.search('\d+', zone).group())
-        north = True if 'n' in zone.lower() else False
-
-        if pem_file.has_collar_gps():
-            coords = pem_file.get_collar_coords()
-        elif pem_file.has_loop_gps():
-            coords = pem_file.get_loop_coords()
-        elif pem_file.has_line_coords():
-            coords = pem_file.get_line_coords()
-        else:
-            self.message.information(self, 'Error', 'No GPS')
-            return
-
-        easting, northing, elevation = int(float(coords[0][0])), int(float(coords[0][1])), int(float(coords[0][2]))
-        lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-
-        try:
-            gm = geomag.GeoMag()
-            mag = gm.GeoMag(lat, lon, elevation)
-
-        except Exception as e:
-            self.error.showMessage(f"The following error occured whilst calculating the magnetic declination: {str(e)}")
-
-        else:
-            self.mag_win = QMainWindow()
-            mag_widget = QWidget()
-            self.mag_win.setWindowTitle('Magnetic Declination')
-            self.mag_win.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
-            self.mag_win.setGeometry(600, 300, 300, 200)
-            self.mag_win.statusBar().showMessage('', 10)
-            layout = QGridLayout()
-            layout.setColumnStretch(1, 4)
-            layout.setColumnStretch(2, 4)
-            mag_widget.setLayout(layout)
-            self.mag_win.setCentralWidget(mag_widget)
-            layout.addWidget(QLabel(f'Latitude (°)'), 0, 0)
-            layout.addWidget(QLabel(f'Longitude (°)'), 1, 0)
-            layout.addWidget(QLabel('Declination (°)'), 2, 0)
-            layout.addWidget(QLabel('Inclination (°)'), 3, 0)
-            layout.addWidget(QLabel('Total Field (nT)'), 4, 0)
-
-            lat_edit = QPushButton(f"{lat:.4f}")
-            lat_edit.clicked.connect(lambda: copy_text(lat_edit.text()))
-            lon_edit = QPushButton(f"{lon:.4f}")
-            lon_edit.clicked.connect(lambda: copy_text(lon_edit.text()))
-            dec_edit = QPushButton(f"{mag.dec:.2f}")
-            dec_edit.clicked.connect(lambda: copy_text(dec_edit.text()))
-            inc_edit = QPushButton(f"{mag.dip:.2f}")
-            inc_edit.clicked.connect(lambda: copy_text(inc_edit.text()))
-            tf_edit = QPushButton(f"{mag.ti:.2f}")
-            tf_edit.clicked.connect(lambda: copy_text(tf_edit.text()))
-
-            layout.addWidget(lat_edit, 0, 2)
-            layout.addWidget(lon_edit, 1, 2)
-            layout.addWidget(dec_edit, 2, 2)
-            layout.addWidget(inc_edit, 3, 2)
-            layout.addWidget(tf_edit, 4, 2)
-
-            self.mag_win.show()
-
-            return mag.dec
-
-    def save_as_kmz(self):
-        """
-        Saves all GPS from the opened PEM files as a KMZ file. Utilizes 'simplekml' module. Only works with NAD 83
-        or WGS 84.
-        :return: None
-        """
-
-        if len(self.pem_files) == 0:
-            return
-
-        if not any([pem_file.has_any_gps() for pem_file in self.pem_files]):
-            self.message.information(self, 'Error', 'No GPS to show')
-            return
-
-        if self.datumCBox.currentText() == 'NAD 1927':
-            self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
-            return
-
-        if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() == '',
-                self.datumCBox.currentText() == '']):
-            self.message.information(self, 'Error', 'GPS system information is incomplete')
-            return
-
-        kml = simplekml.Kml()
-        pem_files = [pem_file for pem_file in self.pem_files if pem_file.has_any_gps()]
-
-        zone = self.zoneCBox.currentText()
-        zone_num = int(re.search('\d+', zone).group())
-        north = True if 'n' in zone.lower() else False
-
-        line_style = simplekml.Style()
-        line_style.linestyle.width = 4
-        line_style.linestyle.color = simplekml.Color.magenta
-
-        loop_style = simplekml.Style()
-        loop_style.linestyle.width = 4
-        loop_style.linestyle.color = simplekml.Color.yellow
-
-        station_style = simplekml.Style()
-        station_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png'
-        station_style.iconstyle.color = simplekml.Color.magenta
-
-        trace_style = simplekml.Style()
-        trace_style.linestyle.width = 2
-        trace_style.linestyle.color = simplekml.Color.magenta
-
-        collar_style = simplekml.Style()
-        collar_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/paddle/wht-stars.png'
-        collar_style.iconstyle.color = simplekml.Color.magenta
-
-        loops = []
-        loop_names = []
-        lines = []
-        line_names = []
-        traces = []
-        hole_names = []
-
-        # Grouping up the loops, lines and boreholes into lists.
-        for pem_file in pem_files:
-            loop_gps = pem_file.get_loop_coords()
-            loop_gps.append(loop_gps[0])
-            loop_name = pem_file.header.get('Loop')
-            if loop_gps and loop_gps not in loops:
-                loops.append(loop_gps)
-                loop_names.append(loop_name)
-            if 'surface' in pem_file.survey_type.lower():
-                line_gps = pem_file.get_line_coords()
-                line_name = pem_file.header.get('LineHole')
-                if line_gps and line_gps not in lines:
-                    lines.append(line_gps)
-                    line_names.append(line_name)
-            else:
-                borehole_projection = self.mpm.get_3D_borehole_projection(pem_file.get_collar_coords()[0], pem_file.get_hole_geometry(), 100)
-                trace_gps = list(zip(borehole_projection[0], borehole_projection[1]))
-                hole_name = pem_file.header.get('LineHole')
-                if trace_gps and trace_gps not in traces:
-                    traces.append(trace_gps)
-                    hole_names.append(hole_name)
-
-        # Creates KMZ objects for the loops.
-        for loop_gps, name in zip(loops, loop_names):
-            loop_coords = []
-            for row in loop_gps:
-                easting = int(float(row[0]))
-                northing = int(float(row[1]))
-                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-                loop_coords.append((lon, lat))
-
-            ls = kml.newlinestring(name=name)
-            ls.coords = loop_coords
-            ls.extrude = 1
-            ls.style = loop_style
-
-        # Creates KMZ objects for the lines.
-        for line_gps, name in zip(lines, line_names):
-            line_coords = []
-            folder = kml.newfolder(name=name)
-            for row in line_gps:
-                easting = int(float(row[0]))
-                northing = int(float(row[1]))
-                station = row[-1]
-                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-                line_coords.append((lon, lat))
-                new_point = folder.newpoint(name=f"{station}", coords=[(lon, lat)])
-                new_point.style = station_style
-
-            ls = folder.newlinestring(name=name)
-            ls.coords = line_coords
-            ls.extrude = 1
-            ls.style = trace_style
-
-        # Creates KMZ objects for the boreholes.
-        for trace_gps, name in zip(traces, hole_names):
-            trace_coords = []
-            folder = kml.newfolder(name=name)
-            for row in trace_gps:
-                easting = int(float(row[0]))
-                northing = int(float(row[1]))
-                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-                trace_coords.append((lon, lat))
-
-            collar = folder.newpoint(name=name, coords=[trace_coords[0]])
-            collar.style = collar_style
-            ls = folder.newlinestring(name=name)
-            ls.coords = trace_coords
-            ls.extrude = 1
-            ls.style = trace_style
-
-        default_path = os.path.split(self.pem_files[-1].filepath)[0]
-        self.dialog.setDirectory(default_path)
-        save_dir = QFileDialog.getSaveFileName(self, 'Save KMZ File', default_path, 'KMZ Files (*.KMZ)')[0]
-        if save_dir:
-            kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
-            kml.savekmz(kmz_save_dir, format=False)
-            os.startfile(kmz_save_dir)
-        else:
-            self.window().statusBar().showMessage('Cancelled.', 2000)
-
-    def save_as_xyz(self, selected_files=False):
-        """
-        Save the selected PEM files as XYZ files. Only for surface PEM files.
-        :param selected_files: bool: Save selected files. False means all opened files will be saved.
-        :return: None
-        """
-        xyz_serializer = XYZSerializer()
-        if selected_files:
-            pem_files, rows = self.get_selected_pem_files()
-        else:
-            pem_files, rows = self.pem_files, range(0, len(self.pem_files))
-
-        if pem_files:
-            default_path = os.path.split(self.pem_files[-1].filepath)[0]
-            if __name__ == '__main__':
-                file_dir = default_path
-            else:
-                file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
-
-            if file_dir:
-                for pem_file in pem_files:
-                    if 'surface' in pem_file.survey_type.lower():
-                        file_name = os.path.splitext(pem_file.filepath)[0] + '.xyz'
-                        xyz_file = xyz_serializer.serialize_pem(pem_file)
-                        with open(file_name, 'w+') as file:
-                            file.write(xyz_file)
-                        os.startfile(file_name)
-
-    def export_pem_files(self, export_final=False, all=True):
-        """
-        Saves all PEM files to a desired location (keeps them opened) and removes any tags.
-        :return: None
-        """
-        if all is False:
-            pem_files, rows = self.get_selected_pem_files()
-        else:
-            pem_files, rows = self.pem_files, range(self.table.rowCount())
-
-        self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
-        if any([self.systemCBox.currentText()=='', self.zoneCBox.currentText()=='', self.datumCBox.currentText()=='']):
-            response = self.message.question(self, 'No CRS',
-                                                     'No CRS has been selected. '
-                                                     'Do you wish to proceed with no CRS information?',
-                                                     self.message.Yes | self.message.No)
-            if response == self.message.No:
-                return
-
-        default_path = os.path.split(self.pem_files[-1].filepath)[0]
-        self.dialog.setDirectory(default_path)
-        file_dir = QFileDialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
-
-        if file_dir:
-            for pem_file, row in zip(pem_files, rows):
-                updated_file = self.update_pem_file_from_table(pem_file, row)
-                file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
-                extension = os.path.splitext(pem_file.filepath)[-1]
-                if export_final is True:
-                    file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))  # Removes underscore-dates and tags
-                    if 'surface' in pem_file.survey_type.lower():
-                        file_name = file_name.upper()
-                        if file_name[0] == 'C':
-                            file_name = file_name[1:]
-                        if pem_file.is_averaged() and 'AV' not in file_name:
-                            file_name = file_name + 'Av'
-
-                updated_file.filepath = os.path.join(file_dir, file_name + extension)
-                self.save_pem_file_to_file(updated_file, dir=file_dir, remove_old=False)
-            self.refresh_table()
-            self.window().statusBar().showMessage(
-                f"Save complete. {len(pem_files)} PEM {'file' if len(pem_files) == 1 else 'files'} exported", 2000)
-        else:
-            self.window().statusBar().showMessage('Cancelled.', 2000)
-            pass
-
-    def show_map_3d_viewer(self):
-        """
-        Opens the 3D Map Viewer window
-        :return: None
-        """
-        self.map_viewer_3d = Map3DViewer(self.pem_files, parent=self)
-        self.map_viewer_3d.show()
-
-    def show_section_3d_viewer(self):
-        """
-        Opens the 3D Borehole Section Viewer window
-        :return: None
-        """
-        pem_file, row = self.get_selected_pem_files()
-        if 'borehole' in pem_file[0].survey_type.lower():
-            self.section_3d_viewer = Section3DViewer(pem_file[0], parent=self)
-            self.section_3d_viewer.show()
-        else:
-            self.statusBar().showMessage('Invalid survey type', 2000)
-
-    def show_contour_map_viewer(self):
-        """
-        Opens the Contour Map Viewer window
-        :return: None
-        """
-        if len(self.pem_files) > 1:
-            pem_files = copy.deepcopy(self.pem_files)
-            try:
-                self.contour_map_viewer = ContourMapViewer(pem_files, parent=self)
-            except TypeError as e:
-                self.error.setWindowTitle('Error')
-                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
-                return
-            except ValueError as e:
-                self.error.setWindowTitle('Error')
-                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
-            else:
-                self.contour_map_viewer.show()
-        else:
-            self.window().statusBar().showMessage("Must have more than 1 surface PEM file open", 2000)
-
-    def print_plots(self, selected_files=False):
-        """
-        Save the final plots as PDFs for the selected PEM files. If no PEM files are selected, it saves it for all open
-        PEM files
-        :param pem_files: List of PEMFile objects
-        :param rows: Corresponding rows of the selected PEM files in order to link the RI file to the correct PEM file
-        :return: None
-        """
-
-        # logging.info('PEMEditor - Printing plots')
-
-        def get_crs():
-            crs = {'Coordinate System': self.systemCBox.currentText(),
-                   'Zone': self.zoneCBox.currentText(),
-                   'Datum': self.datumCBox.currentText()}
-            return crs
-
-        def get_save_file():
-            default_path = os.path.split(self.pem_files[-1].filepath)[0]
-            self.dialog.setDirectory(default_path)
-            if __name__ == '__main__':
-                save_dir = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\test'  # For testing purposes
-            else:
-                save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]
-                # Returns full filepath. For single PDF file
-            return save_dir
-
-        if len(self.pem_files) > 0:
-
-            if selected_files is True:
-                input_pem_files, rows = self.get_selected_pem_files()
-            else:
-                input_pem_files = self.pem_files
-                rows = range(0, len(input_pem_files))
-
-            # Needs to be deepcopied or else it changes the pem files in self.pem_files
-            pem_files = copy.deepcopy(input_pem_files)
-            self.window().statusBar().showMessage('Saving plots...', 2000)
-
-            plot_kwargs = {'ShareRange': self.share_range_checkbox.isChecked(),
-                           'HideGaps': self.hide_gaps_checkbox.isChecked(),
-                           'LoopAnnotations': self.show_loop_anno_checkbox.isChecked(),
-                           'MovingLoop': self.movingLoopCBox.isChecked(),
-                           'TitleBox': self.plan_map_options.title_box_cbox.isChecked(),
-                           'Grid': self.plan_map_options.grid_cbox.isChecked(),
-                           'ScaleBar': self.plan_map_options.scale_bar_cbox.isChecked(),
-                           'NorthArrow': self.plan_map_options.north_arrow_cbox.isChecked(),
-                           'Legend': self.plan_map_options.legend_cbox.isChecked(),
-                           'DrawLoops': self.plan_map_options.draw_loops_cbox.isChecked(),
-                           'DrawLines': self.plan_map_options.draw_lines_cbox.isChecked(),
-                           'DrawHoleCollars': self.plan_map_options.draw_hole_collars_cbox.isChecked(),
-                           'DrawHoleTraces': self.plan_map_options.draw_hole_traces_cbox.isChecked(),
-                           'LoopLabels': self.plan_map_options.loop_labels_cbox.isChecked(),
-                           'LineLabels': self.plan_map_options.line_labels_cbox.isChecked(),
-                           'HoleCollarLabels': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
-                           'HoleDepthLabels': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
-                           'CRS': get_crs(),
-                           'LINPlots': self.output_lin_cbox.isChecked(),
-                           'LOGPlots': self.output_log_cbox.isChecked(),
-                           'STEPPlots': self.output_step_cbox.isChecked(),
-                           'PlanMap': self.output_plan_map_cbox.isChecked(),
-                           'SectionPlot': self.output_section_cbox.isChecked(),
-                           'LabelSectionTicks': self.label_section_depths_cbox.isChecked(),
-                           'SectionDepth': self.section_depth_edit.text()}
-
-            if self.share_range_checkbox.isChecked():
-                try:
-                    plot_kwargs['XMin'] = int(self.min_range_edit.text())
-                except ValueError:
-                    plot_kwargs['XMin'] = None
-                try:
-                    plot_kwargs['XMax'] = int(self.max_range_edit.text())
-                except ValueError:
-                    plot_kwargs['XMax'] = None
-            else:
-                plot_kwargs['XMin'] = None
-                plot_kwargs['XMax'] = None
-
-            ri_files = []
-            for row, pem_file in zip(rows, pem_files):
-                ri_files.append(self.pem_info_widgets[row].ri_file)
-                self.update_pem_file_from_table(pem_file, row)
-                if not pem_file.is_averaged():
-                    self.file_editor.average(pem_file)
-                if not pem_file.is_split():
-                    self.file_editor.split_channels(pem_file)
-
-            if self.output_plan_map_cbox.isChecked():
-                if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
-                    response = self.message.question(self, 'No CRS',
-                                                     'No CRS has been selected. '
-                                                     'Do you wish to proceed without a plan map?',
-                                                     self.message.Yes | self.message.No)
-                    if response == self.message.No:
-                        return
-
-            save_dir = get_save_file()
-            if save_dir:
-                # PEM Files and RI files zipped together for when they get sorted
-                try:
-                    printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
-                    self.window().statusBar().addPermanentWidget(printer.pb)
-                    printer.print_files()
-                    printer.pb.hide()
-                    self.window().statusBar().showMessage('Plots saved', 2000)
-                except IOError:
-                    self.message.information(self, 'Error', 'File is currently opened')
-                    printer.pb.hide()
-            else:
-                self.window().statusBar().showMessage('Cancelled', 2000)
-
-    def remove_file(self, table_row):
-        """
-        Removes PEM files from the main table, along with any associated widgets.
-        :param table_row: Table row of the PEM file.
-        :return: None
-        """
-        self.table.removeRow(table_row)
-        self.stackedWidget.removeWidget(self.stackedWidget.widget(table_row))
-        del self.pem_files[table_row]
-        del self.pem_info_widgets[table_row]
-
-        if len(self.pem_files) == 0:
-            self.stackedWidget.hide()
-            self.pemInfoDockWidget.hide()
-            self.client_edit.setText('')
-            self.grid_edit.setText('')
-            self.loop_edit.setText('')
-            self.min_range_edit.setText('')
-            self.max_range_edit.setText('')
-            self.reset_crs()
-
-    def remove_file_selection(self):
-        pem_files, rows = self.get_selected_pem_files()
-        for row in rows:
-            self.remove_file(row)
-        self.window().statusBar().showMessage(f"{len(rows)} files removed.", 2000)
-
     def reset_crs(self):
         """
         Reset all CRS drop-down menus.
@@ -1941,7 +1817,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         for datum in self.gps_datums:
             self.datumCBox.addItem(datum)
 
-    def create_table(self):
+    def create_main_table(self):
         """
         Creates the table (self.table) when the editor is first opened
         :return: None
@@ -2010,50 +1886,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, i, item)
         self.fill_pem_row(pem_file, row)
-        if self.allow_signals:
-            self.table.blockSignals(False)
-
-    def color_table_row_text(self, row):
-        """
-        Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
-        :param row: Row of the main table to check and color
-        :return: None
-        """
-        self.table.blockSignals(True)
-        average_col = self.table_columns.index('Averaged')
-        split_col = self.table_columns.index('Split')
-        suffix_col = self.table_columns.index('Suffix\nWarnings')
-        repeat_col = self.table_columns.index('Repeat\nStations')
-        pem_has_gps = self.pem_files[row].has_all_gps()
-
-        for i, column in enumerate(self.table_columns):
-            item = self.table.item(row, i)
-            if item:
-                value = item.text()
-                if i == average_col:
-                    if value.lower() == 'no':
-                        item.setForeground(QtGui.QColor('red'))
-                    else:
-                        item.setForeground(QtGui.QColor('black'))
-                elif i == split_col:
-                    if value.lower() == 'no':
-                        item.setForeground(QtGui.QColor('red'))
-                    else:
-                        item.setForeground(QtGui.QColor('black'))
-                elif i == suffix_col:
-                    if int(value) > 0:
-                        item.setForeground(QtGui.QColor('red'))
-                    else:
-                        item.setForeground(QtGui.QColor('black'))
-                elif i == repeat_col:
-                    if int(value) > 0:
-                        item.setForeground(QtGui.QColor('red'))
-                    else:
-                        item.setForeground(QtGui.QColor('black'))
-
-        if not pem_has_gps:
-            self.color_row(self.table, row, 'magenta')
-
         if self.allow_signals:
             self.table.blockSignals(False)
 
@@ -2307,73 +2139,49 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if self.allow_signals:
             table.blockSignals(False)
 
-    #
-    # def update_table_row_colors(self):
-    #     """
-    #     Signal slot: Colors the row of the table whose PEM file doesn't have all the GPS it should
-    #     :return: None
-    #     """
-    #     self.table.blockSignals(True)
-    #     for row in range(self.table.rowCount()):
-    #         pem_file = self.pem_files[row]
-    #         if not all([pem_file.has_collar_gps(), pem_file.has_geometry(), pem_file.has_loop_gps()]) or not all(
-    #             [pem_file.has_station_gps(), pem_file.has_loop_gps()]):
-    #             print(f'Coloring row {row} magenta')
-    #             self.color_table_row(self.table, row, 'magenta', alpha=50)
-    #         else:
-    #             print(f'Coloring row {row} white')
-    #             self.color_table_row(self.table, row, 'white', alpha=50)
-    #     self.table.blockSignals(False)
+    def color_table_row_text(self, row):
+        """
+        Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
+        :param row: Row of the main table to check and color
+        :return: None
+        """
+        self.table.blockSignals(True)
+        average_col = self.table_columns.index('Averaged')
+        split_col = self.table_columns.index('Split')
+        suffix_col = self.table_columns.index('Suffix\nWarnings')
+        repeat_col = self.table_columns.index('Repeat\nStations')
+        pem_has_gps = self.pem_files[row].has_all_gps()
 
-    # def update_repeat_stations_cells(self):
-    #     """
-    #     Adds the number of potential repeat stations in the PEM file in the Repeat Stations column of the table.
-    #     :return: None
-    #     """
-    #     print('Updating repeat stations column')
-    #     self.table.blockSignals(True)
-    #     boldFont = QtGui.QFont()
-    #     boldFont.setBold(True)
-    #     normalFont = QtGui.QFont()
-    #     normalFont.setBold(False)
-    #     column = self.table_columns.index('Repeat\nStations')
-    #     for row in range(self.table.rowCount()):
-    #         num_repeat_stations = self.pem_info_widgets[row].num_repeat_stations
-    #         item = QTableWidgetItem(str(num_repeat_stations))
-    #         item.setTextAlignment(QtCore.Qt.AlignCenter)
-    #         if num_repeat_stations > 0:
-    #             item.setForeground(QtGui.QColor('red'))
-    #             item.setFont(boldFont)
-    #         else:
-    #             item.setForeground(QtGui.QColor('black'))
-    #             item.setFont(normalFont)
-    #         self.table.setItem(row, column, item)
-    #     self.table.blockSignals(False)
+        for i, column in enumerate(self.table_columns):
+            item = self.table.item(row, i)
+            if item:
+                value = item.text()
+                if i == average_col:
+                    if value.lower() == 'no':
+                        item.setForeground(QtGui.QColor('red'))
+                    else:
+                        item.setForeground(QtGui.QColor('black'))
+                elif i == split_col:
+                    if value.lower() == 'no':
+                        item.setForeground(QtGui.QColor('red'))
+                    else:
+                        item.setForeground(QtGui.QColor('black'))
+                elif i == suffix_col:
+                    if int(value) > 0:
+                        item.setForeground(QtGui.QColor('red'))
+                    else:
+                        item.setForeground(QtGui.QColor('black'))
+                elif i == repeat_col:
+                    if int(value) > 0:
+                        item.setForeground(QtGui.QColor('red'))
+                    else:
+                        item.setForeground(QtGui.QColor('black'))
 
-    # def update_suffix_warnings_cells(self):
-    #     """
-    #     Adds the number of potential suffix errors in the data of the PEM file in the Suffix Warnings column of the table.
-    #     :return: None
-    #     """
-    #     print('Updating suffix warnings column')
-    #     self.table.blockSignals(True)
-    #     boldFont = QtGui.QFont()
-    #     boldFont.setBold(True)
-    #     normalFont = QtGui.QFont()
-    #     normalFont.setBold(False)
-    #     column = self.table_columns.index('Suffix\nWarnings')
-    #     for row in range(self.table.rowCount()):
-    #         num_suffix_warnings = self.pem_info_widgets[row].suffix_warnings
-    #         item = QTableWidgetItem(str(num_suffix_warnings))
-    #         item.setTextAlignment(QtCore.Qt.AlignCenter)
-    #         if num_suffix_warnings > 0:
-    #             item.setForeground(QtGui.QColor('red'))
-    #             item.setFont(boldFont)
-    #         else:
-    #             item.setForeground(QtGui.QColor('black'))
-    #             item.setFont(normalFont)
-    #         self.table.setItem(row, column, item)
-    #     self.table.blockSignals(False)
+        if not pem_has_gps:
+            self.color_row(self.table, row, 'magenta')
+
+        if self.allow_signals:
+            self.table.blockSignals(False)
 
     def sort_all_station_gps(self):
         """
@@ -2595,6 +2403,145 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.zoneCBox.setEnabled(False)
 
+    def calc_mag_declination(self, pem_file):
+        """
+        Pop-up window with the magnetic declination information for a coordinate found in a given PEM File. Converts
+        the first coordinates found into lat lon. Must have GPS information in order to conver to lat lon.
+        :param pem_file: PEMFile object
+        :return: None
+        """
+
+        def copy_text(str_value):
+            cb = QtGui.QApplication.clipboard()
+            cb.clear(mode=cb.Clipboard)
+            cb.setText(str_value, mode=cb.Clipboard)
+            self.mag_win.statusBar().showMessage(f"{str_value} copied to clipboard", 1000)
+
+        if len(self.pem_files) == 0:
+            return
+
+        if self.datumCBox.currentText() == 'NAD 1927':
+            self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
+            return
+
+        if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() == '',
+                self.datumCBox.currentText() == '']):
+            self.message.information(self, 'Error', 'GPS coordinate system information is incomplete')
+            return
+
+        zone = self.zoneCBox.currentText()
+        zone_num = int(re.search('\d+', zone).group())
+        north = True if 'n' in zone.lower() else False
+
+        if pem_file.has_collar_gps():
+            coords = pem_file.get_collar_coords()
+        elif pem_file.has_loop_gps():
+            coords = pem_file.get_loop_coords()
+        elif pem_file.has_line_coords():
+            coords = pem_file.get_line_coords()
+        else:
+            self.message.information(self, 'Error', 'No GPS')
+            return
+
+        easting, northing, elevation = int(float(coords[0][0])), int(float(coords[0][1])), int(float(coords[0][2]))
+        lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+
+        try:
+            gm = geomag.GeoMag()
+            mag = gm.GeoMag(lat, lon, elevation)
+
+        except Exception as e:
+            self.error.showMessage(f"The following error occured whilst calculating the magnetic declination: {str(e)}")
+
+        else:
+            self.mag_win = QMainWindow()
+            mag_widget = QWidget()
+            self.mag_win.setWindowTitle('Magnetic Declination')
+            self.mag_win.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
+            self.mag_win.setGeometry(600, 300, 300, 200)
+            self.mag_win.statusBar().showMessage('', 10)
+            layout = QGridLayout()
+            layout.setColumnStretch(1, 4)
+            layout.setColumnStretch(2, 4)
+            mag_widget.setLayout(layout)
+            self.mag_win.setCentralWidget(mag_widget)
+            layout.addWidget(QLabel(f'Latitude (°)'), 0, 0)
+            layout.addWidget(QLabel(f'Longitude (°)'), 1, 0)
+            layout.addWidget(QLabel('Declination (°)'), 2, 0)
+            layout.addWidget(QLabel('Inclination (°)'), 3, 0)
+            layout.addWidget(QLabel('Total Field (nT)'), 4, 0)
+
+            lat_edit = QPushButton(f"{lat:.4f}")
+            lat_edit.clicked.connect(lambda: copy_text(lat_edit.text()))
+            lon_edit = QPushButton(f"{lon:.4f}")
+            lon_edit.clicked.connect(lambda: copy_text(lon_edit.text()))
+            dec_edit = QPushButton(f"{mag.dec:.2f}")
+            dec_edit.clicked.connect(lambda: copy_text(dec_edit.text()))
+            inc_edit = QPushButton(f"{mag.dip:.2f}")
+            inc_edit.clicked.connect(lambda: copy_text(inc_edit.text()))
+            tf_edit = QPushButton(f"{mag.ti:.2f}")
+            tf_edit.clicked.connect(lambda: copy_text(tf_edit.text()))
+
+            layout.addWidget(lat_edit, 0, 2)
+            layout.addWidget(lon_edit, 1, 2)
+            layout.addWidget(dec_edit, 2, 2)
+            layout.addWidget(inc_edit, 3, 2)
+            layout.addWidget(tf_edit, 4, 2)
+
+            self.mag_win.show()
+
+            return mag.dec
+
+    def extract_stations(self):
+        """
+        Opens the PEMFileSplitter window, which will allow selected stations to be saved as a new PEM file.
+        :return: None
+        """
+        logging.info('PEMEditor - Extract stations')
+        pem_file, row = self.get_selected_pem_files()
+        self.pem_file_splitter = PEMFileSplitter(pem_file[0], parent=self)
+
+    def show_map_3d_viewer(self):
+        """
+        Opens the 3D Map Viewer window
+        :return: None
+        """
+        self.map_viewer_3d = Map3DViewer(self.pem_files, parent=self)
+        self.map_viewer_3d.show()
+
+    def show_section_3d_viewer(self):
+        """
+        Opens the 3D Borehole Section Viewer window
+        :return: None
+        """
+        pem_file, row = self.get_selected_pem_files()
+        if 'borehole' in pem_file[0].survey_type.lower():
+            self.section_3d_viewer = Section3DViewer(pem_file[0], parent=self)
+            self.section_3d_viewer.show()
+        else:
+            self.statusBar().showMessage('Invalid survey type', 2000)
+
+    def show_contour_map_viewer(self):
+        """
+        Opens the Contour Map Viewer window
+        :return: None
+        """
+        if len(self.pem_files) > 1:
+            pem_files = copy.deepcopy(self.pem_files)
+            try:
+                self.contour_map_viewer = ContourMapViewer(pem_files, parent=self)
+            except TypeError as e:
+                self.error.setWindowTitle('Error')
+                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
+                return
+            except ValueError as e:
+                self.error.setWindowTitle('Error')
+                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
+            else:
+                self.contour_map_viewer.show()
+        else:
+            self.window().statusBar().showMessage("Must have more than 1 surface PEM file open", 2000)
+
     def batch_rename(self, type):
         """
         Opens the BatchNameEditor for renaming multiple file names and/or line/hole names.
@@ -2652,6 +2599,67 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.ri_importer.show()
         self.ri_importer.acceptImportSignal.connect(open_ri_files)
 
+    def timebase_freqency_converter(self):
+        """
+        Converts timebase to frequency and vise-versa.
+        :return: None
+        """
+
+        def convert_freq_to_timebase():
+            freq_edit.blockSignals(True)
+            timebase_edit.blockSignals(True)
+            timebase_edit.setText('')
+
+            try:
+                freq = float(freq_edit.text())
+            except ValueError:
+                print('Not a number')
+            else:
+                timebase = (1 / freq) * (1000 / 4)
+                timebase_edit.setText(f"{timebase:.2f}")
+
+            freq_edit.blockSignals(False)
+            timebase_edit.blockSignals(False)
+
+        def convert_timebase_to_freq():
+            freq_edit.blockSignals(True)
+            timebase_edit.blockSignals(True)
+            freq_edit.setText('')
+
+            try:
+                timebase = float(timebase_edit.text())
+            except ValueError:
+                print('Not a number')
+            else:
+                freq = (1 / (4 * timebase / 1000))
+                freq_edit.setText(f"{freq:.2f}")
+
+            freq_edit.blockSignals(False)
+            timebase_edit.blockSignals(False)
+
+        self.freq_win = QWidget()
+        self.freq_win.setWindowTitle('Timebase / Frequency Converter')
+        self.freq_win.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
+        layout = QGridLayout()
+        self.freq_win.setLayout(layout)
+
+        # def keyPressEvent(self, e):
+        #     if e.key() == QtCore.Qt.Key_Escape:
+        #         self.close()
+
+        timebase_label = QLabel('Timebase (ms)')
+        freq_label = QLabel('Freqency (Hz)')
+        timebase_edit = QLineEdit()
+        timebase_edit.textEdited.connect(convert_timebase_to_freq)
+        freq_edit = QLineEdit()
+        freq_edit.textEdited.connect(convert_freq_to_timebase)
+
+        layout.addWidget(timebase_label, 0, 0)
+        layout.addWidget(timebase_edit, 0, 1)
+        layout.addWidget(freq_label, 2, 0)
+        layout.addWidget(freq_edit, 2, 1)
+
+        self.freq_win.show()
 
 class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
     """
@@ -3544,7 +3552,8 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
-    mw.timebase_freqency_calculator()
+    # mw.timebase_freqency_converter()
+    mw.export_all_gps()
     # mw.calc_mag_declination(pem_files[0])
     # mw.save_as_xyz(selected_files=False)
     # mw.show_contour_map_viewer()
