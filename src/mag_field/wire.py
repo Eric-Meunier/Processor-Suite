@@ -12,6 +12,7 @@ __author__ = 'wack'
 
 from copy import deepcopy
 import numpy as np
+from matplotlib import pyplot as plt
 
 try:
     import visvis as vv
@@ -43,7 +44,7 @@ class Wire:
     def discretized_path(self):
         '''
         calculate end points of segments of discretized path
-        approximate discretization lenghth is given by self.discretization_length
+        approximate discretization length is given by self.discretization_length
         elements will never be combined
         elements longer that self.dicretization_length will be divided into pieces
         :return: discretized path as m x 3 numpy array

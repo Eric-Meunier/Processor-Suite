@@ -1640,6 +1640,8 @@ class ContourMap(MapPlotMethods):
                                  transform=cbar_ax.transAxes, color='k', fontname='Century Gothic', fontsize=9,
                                  va='bottom', ha='center', zorder=10)
 
+        return fig
+
 
 class Map3D(MapPlotMethods):
     """

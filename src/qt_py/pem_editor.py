@@ -27,6 +27,7 @@ import colorcet as cc
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
 from matplotlib.figure import Figure
+from matplotlib.backends.backend_pdf import PdfPages
 from src.geomag import geomag
 from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
@@ -174,10 +175,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.openFile = QAction("&Open...", self)
         self.openFile.setShortcut("Ctrl+O")
         self.openFile.setStatusTip('Open file')
+        self.openFile.setIcon(QtGui.QIcon(os.path.join(icons_path, 'open.png')))
         self.openFile.triggered.connect(self.open_file_dialog)
 
         self.saveFiles = QAction("&Save Files", self)
         self.saveFiles.setShortcut("Ctrl+S")
+        self.saveFiles.setIcon(QtGui.QIcon(os.path.join(icons_path, 'save.png')))
         self.saveFiles.setStatusTip("Save all files")
         self.saveFiles.triggered.connect(lambda: self.save_pem_files(all=True))
 
@@ -242,11 +245,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # PEM menu
         self.averageAllPems = QAction("&Average All PEM Files", self)
         self.averageAllPems.setStatusTip("Average all PEM files")
+        self.averageAllPems.setIcon(QtGui.QIcon(os.path.join(icons_path, 'average.png')))
         self.averageAllPems.setShortcut("F5")
         self.averageAllPems.triggered.connect(lambda: self.average_pem_data(all=True))
 
         self.splitAllPems = QAction("&Split All PEM Files", self)
         self.splitAllPems.setStatusTip("Remove on-time channels for all PEM files")
+        self.splitAllPems.setIcon(QtGui.QIcon(os.path.join(icons_path, 'split.png')))
         self.splitAllPems.setShortcut("F6")
         self.splitAllPems.triggered.connect(lambda: self.split_pem_channels(all=True))
 
@@ -256,11 +261,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.scaleAllCurrents = QAction("&Scale All Current", self)
         self.scaleAllCurrents.setStatusTip("Scale the current of all PEM Files to the same value")
+        self.scaleAllCurrents.setIcon(QtGui.QIcon(os.path.join(icons_path, 'current.png')))
         self.scaleAllCurrents.setShortcut("F7")
         self.scaleAllCurrents.triggered.connect(lambda: self.scale_pem_current(all=True))
 
         self.scaleAllCoilAreas = QAction("&Change All Coil Areas", self)
         self.scaleAllCoilAreas.setStatusTip("Scale all coil areas to the same value")
+        self.scaleAllCoilAreas.setIcon(QtGui.QIcon(os.path.join(icons_path, 'coil.png')))
         self.scaleAllCoilAreas.setShortcut("F8")
         self.scaleAllCoilAreas.triggered.connect(lambda: self.scale_coil_area_selection(all=True))
 
@@ -292,7 +299,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.export_all_gps_action = QAction("&Export All GPS", self)
         self.export_all_gps_action.setStatusTip("Export all GPS in the opened PEM file(s) to separate CSV files")
-        # self.export_all_gps_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
+        self.export_all_gps_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'csv.png')))
         self.export_all_gps_action.triggered.connect(self.export_all_gps)
 
         self.sortAllStationGps = QAction("&Sort All Station GPS", self)
@@ -390,11 +397,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu = QMenu(self.table)
                 self.table.remove_file_action = QAction("&Remove", self)
                 self.table.remove_file_action.triggered.connect(self.remove_file_selection)
+                self.table.remove_file_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'remove.png')))
 
                 self.table.open_file_action = QAction("&Open", self)
                 self.table.open_file_action.triggered.connect(self.open_in_text_editor)
+                self.table.open_file_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'txt_file.png')))
 
                 self.table.save_file_action = QAction("&Save", self)
+                self.table.save_file_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'save.png')))
                 self.table.save_file_action.triggered.connect(self.save_pem_files)
 
                 self.table.export_pem_action = QAction("&Export...", self)
@@ -423,15 +433,19 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
                 self.table.average_action = QAction("&Average", self)
                 self.table.average_action.triggered.connect(self.average_pem_data)
+                self.table.average_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'average.png')))
 
                 self.table.split_action = QAction("&Split Channels", self)
                 self.table.split_action.triggered.connect(self.split_pem_channels)
+                self.table.split_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'split.png')))
 
                 self.table.scale_current_action = QAction("&Scale Current", self)
                 self.table.scale_current_action.triggered.connect(self.scale_pem_current)
+                self.table.scale_current_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'current.png')))
 
                 self.table.scale_ca_action = QAction("&Scale Coil Area", self)
                 self.table.scale_ca_action.triggered.connect(self.scale_coil_area_selection)
+                self.table.scale_ca_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'coil.png')))
 
                 self.table.share_loop_action = QAction("&Share Loop", self)
                 self.table.share_loop_action.triggered.connect(self.share_loop)
@@ -3450,6 +3464,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                     print(f"Removing channel {i} from the channel pairs")
                     self.channel_pairs.pop(i)
 
+        # Signals
         self.channel_spinbox.valueChanged.connect(self.draw_map)
         self.z_rbtn.clicked.connect(self.draw_map)
         self.x_rbtn.clicked.connect(self.draw_map)
@@ -3464,6 +3479,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.plot_elevation_cbox.toggled.connect(self.draw_map)
         self.grid_cbox.toggled.connect(self.draw_map)
         self.title_box_cbox.toggled.connect(self.draw_map)
+        self.channel_list_rbtn.toggled.connect(
+            lambda: self.channel_list_edit.setEnabled(self.channel_list_rbtn.isChecked()))
         self.save_figure_btn.clicked.connect(self.save_figure)
 
         self.figure = Figure(figsize=(11, 8.5))
@@ -3474,25 +3491,27 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.map_layout.addWidget(self.canvas)
         self.draw_map()
 
-    def draw_map(self):
+        self.channel_list_edit.setEnabled(False)
 
-        def get_channel_time(channel):
-            """
-            Retrieve the gate-center time of a channel based on the channel times table.
-            :param channel: int: channel number
-            :return: float: channel center time.
-            """
-            current_pair = self.channel_pairs[channel]
-            channel_center = (float(current_pair[1]) - float(current_pair[0])) / 2 + float(current_pair[0])
-            channel_time = channel_center
-            return channel_time
+    def get_channel_time(self, channel):
+        """
+        Retrieve the gate-center time of a channel based on the channel times table.
+        :param channel: int: channel number
+        :return: float: channel center time.
+        """
+        current_pair = self.channel_pairs[channel]
+        channel_center = (float(current_pair[1]) - float(current_pair[0])) / 2 + float(current_pair[0])
+        channel_time = channel_center
+        return channel_time
+
+    def draw_map(self):
 
         component = self.get_selected_component().upper()
         if component not in self.components:
             return
 
         channel = self.channel_spinbox.value()
-        channel_time = get_channel_time(channel)
+        channel_time = self.get_channel_time(channel)
         self.time_label.setText(f"{channel_time * 1000:.3f}ms")
 
         try:
@@ -3528,16 +3547,49 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
     def save_figure(self):
         if len(self.pem_files) > 0:
-            default_path = os.path.abspath(self.pem_files[0].filepath)
-            path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', default_path,
-                                                    'PDF Files (*.PDF);;PNG Files (*.PNG);;JPG Files (*.JPG')
+            if __name__ == '__main__':
+                path = r"C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\test.pdf"
+            else:
+                default_path = os.path.abspath(self.pem_files[0].filepath)
+                path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', default_path,
+                                                        'PDF Files (*.PDF);;PNG Files (*.PNG);;JPG Files (*.JPG')
             if path:
-                # resize the figure to 8.5 x 11, then back to the original size after it's been printed
-                size = self.figure.get_size_inches()
-                self.figure.set_size_inches(11, 8.5)
-                self.figure.savefig(path, orientation='landscape')
-                self.figure.set_size_inches(size)
-                self.canvas.draw()
+                print(f"Saving PDF to {path}")
+                with PdfPages(path) as pdf:
+                    save_fig = plt.figure(figsize=(11, 8.5))
+
+                    if self.channel_list_edit.isEnabled():
+                        text = self.channel_list_edit.text()
+                        try:
+                            channels = [int(re.findall('\d+', text)[0]) for text in text.split()]
+                        except IndexError:
+                            self.error.showMessage(f"No numbers found in the list of channels")
+                            return
+                    else:
+                        channels = [self.channel_spinbox.value()]
+
+                    for channel in channels:
+                        channel_time = self.get_channel_time(channel)
+                        fig = self.cmap.plot_contour(save_fig, self.pem_files, self.get_selected_component(),
+                                                     channel,
+                                                     draw_grid=self.grid_cbox.isChecked(),
+                                                     channel_time=channel_time,
+                                                     plot_loops=self.plot_loops_cbox.isChecked(),
+                                                     plot_lines=self.plot_lines_cbox.isChecked(),
+                                                     plot_stations=bool(
+                                                         self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
+                                                     label_lines=bool(
+                                                         self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
+                                                     label_loops=bool(
+                                                         self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
+                                                     label_stations=bool(
+                                                         self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
+                                                     elevation_contours=self.plot_elevation_cbox.isChecked(),
+                                                     title_box=self.title_box_cbox.isChecked())
+
+                        pdf.savefig(fig, orientation='landscape')
+                        save_fig.clear()
+                    plt.close(save_fig)
                 os.startfile(path)
 
 
@@ -3560,10 +3612,9 @@ def main():
     mw.open_pem_files(pem_files)
 
     # mw.timebase_freqency_converter()
-    mw.export_all_gps()
     # mw.calc_mag_declination(pem_files[0])
     # mw.save_as_xyz(selected_files=False)
-    # mw.show_contour_map_viewer()
+    mw.show_contour_map_viewer()
     # mw.auto_merge_pem_files()
     # mw.show_contour_map_viewer()
     # mw.save_as_kmz()
