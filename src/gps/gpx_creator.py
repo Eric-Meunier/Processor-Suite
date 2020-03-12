@@ -185,32 +185,32 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
 
         savepath = file[0]
         gpx = gpxpy.gpx.GPX()
-        # datum = self.datum_box.currentText()
+
         if not self.system_box.currentText():
             self.message.information(self, 'Error', 'Coordinate system cannot be empty.')
             return
 
         if self.system_box.currentText() == 'UTM':
-            zone = self.zone_number_box.currentText()
-            zone_letter = self.zone_letter_box.currentText()
+            zone_text = self.zone_number_box.currentText()
 
-            if not zone or not zone_letter:
-                self.message.information(self, 'Error', 'Zone number and zone letter cannot be empty.')
+            if not zone_text:
+                self.message.information(self, 'Error', 'Zone number cannot be empty.')
                 return
 
-            zone_number = int(re.findall('\d+', zone)[0])
+            zone_number = int(re.findall('\d+', zone_text)[0])
+            north = True if 'n' in zone_text.lower() else False
 
             for row in range(self.table.rowCount()):
                 name = self.table.item(row, 0).text()
                 desc = self.table.item(row, 1).text()
                 try:
-                    east = int(float(self.table.item(row, 2).text()))
-                    north = int(float(self.table.item(row, 3).text()))
+                    easting = int(float(self.table.item(row, 2).text()))
+                    northing = int(float(self.table.item(row, 3).text()))
                 except ValueError:
                     pass
                 else:
                     # UTM converted to lat lon
-                    lat, lon = utm.to_latlon(east, north, zone_number=zone_number, zone_letter=zone_letter)
+                    lat, lon = utm.to_latlon(easting, northing, zone_number=zone_number, northern=north)
                     waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=name, comment=desc)
                     gpx.waypoints.append(waypoint)
 
@@ -237,21 +237,16 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
     def toggle_utm_boxes(self):
         if self.system_box.currentText() == 'UTM':
             self.zone_number_box.setEnabled(True)
-            self.zone_letter_box.setEnabled(True)
             self.zone_number_label.setEnabled(True)
-            self.zone_letter_label.setEnabled(True)
         else:
             self.zone_number_box.setEnabled(False)
-            self.zone_letter_box.setEnabled(False)
             self.zone_number_label.setEnabled(False)
-            self.zone_letter_label.setEnabled(False)
 
     def reset(self):
         while self.table.rowCount() > 0:
             self.table.removeRow(0)
         self.system_box.setCurrentText('')
         self.zone_number_box.setCurrentText('')
-        self.zone_letter_box.setCurrentText('')
 
 
 def main():
@@ -264,7 +259,6 @@ def main():
     gpx_creator.system_box.setCurrentText('UTM')
     # gpx_creator.datum_box.setCurrentText('WGS 1983')
     gpx_creator.zone_number_box.setCurrentText('37 North')
-    gpx_creator.zone_letter_box.setCurrentText('P')
     # gpx_creator.export_gpx('sdfs')
 
     sys.exit(app.exec())

@@ -3546,6 +3546,10 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             return 'TF'
 
     def save_figure(self):
+        """
+        Create a PDF with the current selected channel or a list of channels.
+        :return: None
+        """
         if len(self.pem_files) > 0:
             if __name__ == '__main__':
                 path = r"C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\test.pdf"
@@ -3556,8 +3560,10 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             if path:
                 print(f"Saving PDF to {path}")
                 with PdfPages(path) as pdf:
+                    # Create a figure just for saving, which is cleared after every save and closed at the end
                     save_fig = plt.figure(figsize=(11, 8.5))
 
+                    # Print plots from the list of channels if it's enabled
                     if self.channel_list_edit.isEnabled():
                         text = self.channel_list_edit.text()
                         try:
