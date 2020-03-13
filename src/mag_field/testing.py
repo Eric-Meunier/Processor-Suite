@@ -85,8 +85,7 @@ for ba in B:
 
 fig = plt.figure()
 ax = fig.gca()
-ax.plot(path[:,0], path[:,1])
-ax.quiver(points[:, 0], points[:, 1], B[:, 0], B[:, 1], scale=.15)
+ax.quiver(points[:, 0], points[:, 1], B[:, 0], B[:, 1])
 X = np.unique(points[:, 0])
 Y = np.unique(points[:, 1])
 cs = ax.contour(X, Y, Babs.reshape([len(X), len(Y)]).T, 10)
