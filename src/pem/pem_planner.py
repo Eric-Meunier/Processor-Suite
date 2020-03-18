@@ -6,12 +6,14 @@ import numpy as np
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib.ticker as ticker
 import pyqtgraph as pg
-from PyQt5 import QtGui, uic
+from PyQt5 import QtGui, QtCore, uic
 from PyQt5.QtWidgets import (QApplication, QMainWindow)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
+import matplotlib.transforms as mtransforms
 from src.mag_field import wire, biotsavart
+from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 
 sys._excepthook = sys.excepthook
 
@@ -31,9 +33,11 @@ if getattr(sys, 'frozen', False):
     # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
     loopPlannerCreatorFile = 'qt_ui\\loop_planner.ui'
+    icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     loopPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\loop_planner.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
 Ui_LoopPlannerWindow, QtBaseClass = uic.loadUiType(loopPlannerCreatorFile)
@@ -52,9 +56,19 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.setWindowTitle('Loop Planner')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
+        self.setGeometry(200, 200, 1400, 700)
         self.setup_plan_view()
         self.setup_section_view()
         self.setup_gps_boxes()
+
+        self.hole_easting = int(self.hole_easting_edit.text())
+        self.hole_northing = int(self.hole_northing_edit.text())
+        self.hole_az = int(self.hole_az_edit.text())
+        self.hole_dip = -int(self.hole_dip_edit.text())
+        self.hole_length = int(self.hole_length_edit.text())
+        self.hole_elevation = 0
 
         self.loop_height_edit.returnPressed.connect(self.change_loop_height)
         self.loop_width_edit.returnPressed.connect(self.change_loop_width)
@@ -83,118 +97,129 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.hole_dip_edit.setValidator(dip_validator)
         self.hole_length_edit.setValidator(size_validator)
 
-        self.hole_trace = pg.PlotDataItem()
-        self.hole_collar = pg.ScatterPlotItem()
+        self.hole_trace_plot = pg.PlotDataItem()
+        self.hole_collar_plot = pg.ScatterPlotItem()
+        self.section_center = pg.ScatterPlotItem()
+        self.section_line = pg.PlotDataItem()
         self.cs = None
 
         self.plot_hole()
-        self.plot_mag()
+        self.plan_view_vb.autoRange()
 
     def plot_hole(self):
 
-        def get_hole_trace():
-            delta_surf = length * math.cos(math.radians(dip))
-            dx = delta_surf * math.sin(math.radians(az))
-            dy = delta_surf * math.cos(math.radians(az))
-            x = [0, dx]
-            y = [0, dy]
-            return x, y
+        def get_hole_projection():
+            x, y, z = self.hole_easting, self.hole_northing, self.hole_elevation
+            delta_surf = self.hole_length * math.cos(math.radians(self.hole_dip))
+            dx = delta_surf * math.sin(math.radians(self.hole_az))
+            dy = delta_surf * math.cos(math.radians(self.hole_az))
+            dz = self.hole_length * math.sin(math.radians(self.hole_dip))
+            x = [x, dx]
+            y = [y, dy]
+            z = [z, dz]
+            return x, y, z
 
-        def get_hole_section():
-            x, y = 0, 0
-            dx = length * math.cos(math.radians(-dip))
-            dy = length * math.sin(math.radians(-dip))
-            x = [x, x + dx]
-            y = [y, y + dy]
-            return x, y
+        def get_section_extents():
+            # Remove the previously plotted center and section line
+            self.section_center.clear()
+            self.section_line.clear()
 
-        self.hole_trace.clear()
-        self.hole_collar.clear()
+            x, y, z = get_hole_projection()
+            # Line center is based on the 80th percentile down the hole
+            line_center_x = np.percentile(x, 80)
+            line_center_y = np.percentile(y, 80)
+
+            # Calculate the length of the cross-section
+            line_len = math.ceil(self.hole_length / 400) * 400
+            dx = math.sin(math.radians(self.hole_az)) * (line_len / 2)
+            dy = math.cos(math.radians(self.hole_az)) * (line_len / 2)
+
+            p1 = (line_center_x - dx, line_center_y - dy)
+            p2 = (line_center_x + dx, line_center_y + dy)
+
+            # Plot the center point and section line
+            self.section_center = pg.ScatterPlotItem([line_center_x], [line_center_y], width=3, pen='r')
+            self.section_line = pg.PlotDataItem([line_center_x - dx, line_center_x + dx],
+                                                [line_center_y - dy, line_center_y + dy], width=1,
+                                                pen=pg.mkPen(color=0.5, style=QtCore.Qt.DashLine))
+            self.plan_view_vb.addItem(self.section_center)
+            self.plan_view_vb.addItem(self.section_line)
+            return p1, p2
+
+        def plot_hole_section(p1, p2, hole_projection):
+
+            def get_magnitude(vector):
+                return math.sqrt(sum(i ** 2 for i in vector))
+
+            # hole_projection as [(x0, y0, z0), (x1, y1, z1)...]
+            p = np.array([p1[0], p1[1], 0])
+            vec = [p2[0] - p1[0], p2[1] - p1[1], 0]
+            planeNormal = np.cross(vec, [0, 0, -1])
+            planeNormal = planeNormal / get_magnitude(planeNormal)
+
+            plotx = []
+            plotz = []
+
+            # Projecting the 3D trace to a 2D plane
+            for coordinate in hole_projection:
+                q = np.array(coordinate)
+                q_proj = q - np.dot(q - p, planeNormal) * planeNormal
+                distvec = np.array([q_proj[0] - p[0], q_proj[1] - p[1]])
+                dist = np.sqrt(distvec.dot(distvec))
+
+                plotx.append(dist)
+                plotz.append(q_proj[2])
+                # print(f"Azimuth = {self.hole_az}")
+                # print(f"p1, p2 = {p1}, {p2}")
+                # print(f"p ([p1[0], p1[1], 0]) = {p}")
+                # print(f"vec ([p2[0] - p1[0], p2[1] - p1[1], 0]) = {vec}")
+                # print(f"planeNormal (np.cross(vec, [0, 0, -1])) = {planeNormal}")
+                # print(f"coords = {q}")
+                # print(f"q_proj (q - np.dot(q - p, planeNormal) * planeNormal) = {q_proj}")
+                # print(f"distvec (np.array([q_proj[0] - p[0], q_proj[1] - p[1]])) = {distvec}")
+                # print(f"x (np.sqrt(distvec.dot(distvec))) = {dist}")
+                # print(f"z (q_proj[2]) = {q_proj[2]}\n")
+
+            # Plot the collar
+            self.ax.plot(plotx[0], plotz[0], 'o', markerfacecolor='w', markeredgecolor='k')
+            # Plot the hole section line
+            self.ax.plot(plotx, plotz, color='dimgray', lw=1)
+
+        def plot_mag(c1, c2):
+
+            wire_coords = self.get_loop_coords()
+            mag_calculator = MagneticFieldCalculator(wire_coords)
+            xx, yy, zz, uproj, vproj, wproj,  plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)
+            self.ax.quiver(xx, zz, plotx, plotz, color='dimgray', label='Field', pivot='middle', zorder=0,
+                       units='dots', scale=.050, width=.8, headlength=11, headwidth=6)
+
+        self.hole_easting = 0
+        # self.hole_easting = int(self.hole_easting_edit.text())
+        self.hole_northing = 0
+        # self.hole_northing = int(self.hole_northing_edit.text())
+        self.hole_az = int(self.hole_az_edit.text())
+        self.hole_dip = -int(self.hole_dip_edit.text())
+        self.hole_length = int(self.hole_length_edit.text())
+
+        self.hole_trace_plot.clear()
+        self.hole_collar_plot.clear()
         self.ax.clear()
 
-        # For plotting purposes, easting and northing are always 0 and 0.
-        az = int(self.hole_az_edit.text())
-        dip = int(self.hole_dip_edit.text())
-        length = int(self.hole_length_edit.text())
-        tx, ty = get_hole_trace()
+        xs, ys, zs = get_hole_projection()
 
-        self.hole_trace = pg.PlotDataItem(tx, ty, pen=pg.mkPen(width=2, color=0.5))
-        self.hole_collar = pg.ScatterPlotItem([0], [0], pen=pg.mkPen(width=3, color=0.5))
-        self.plan_view_vb.addItem(self.hole_trace)
-        self.plan_view_vb.addItem(self.hole_collar)
+        self.hole_trace_plot = pg.PlotDataItem(xs, ys, pen=pg.mkPen(width=2, color=0.5))
+        self.hole_collar_plot = pg.ScatterPlotItem([0], [0], pen=pg.mkPen(width=3, color=0.5))
+        self.plan_view_vb.addItem(self.hole_trace_plot)
+        self.plan_view_vb.addItem(self.hole_collar_plot)
 
-        sx, sy = get_hole_section()
-        self.ax.plot(sx, sy, '-')
-        self.ax.plot(0, 0, 'o')
+        p1, p2 = get_section_extents()
+        plot_hole_section(p1, p2, list(zip(xs, ys, zs)))
+        c1, c2 = list(p1), list(p2)
+        c1.append(self.ax.get_ylim()[1])
+        c2.append(self.ax.get_ylim()[0])
+        plot_mag(c1, c2)
 
-        x_lim = self.ax.get_xlim()
-        mid_point = (abs(x_lim[1] - x_lim[0]) / 2) + x_lim[0]
-        # self.ax.set_xlim(right=, left = )
-        self.ax.set_xlim(right=mid_point + length * 1.5, left = mid_point - length * 1.5)
-        self.ax.set_ylim(top=0,  bottom=-length * 1.2)
-        # self.plot_mag()
-
-    def plot_mag(self):
-        xmin, xmax = self.ax.get_xlim()
-        ymin, ymax = self.ax.get_ylim()
-        x, y = self.loop_roi.pos()
-        w, h = self.loop_roi.size()
-        loop_coords = np.array([(x, y, 0), (x + w, y, 0), (x + w, y + h, 0), (x, y + h, 0), (x, y, 0)])
-        loop_wire = wire.Wire(path=loop_coords, discretization_length=1)
-        sol = biotsavart.BiotSavart(wire=loop_wire)
-
-        dip = int(self.hole_dip_edit.text())
-        length = int(self.hole_length_edit.text())
-        x, y = 0, 0
-        dx = length * math.cos(math.radians(-dip))
-        dy = length * math.sin(math.radians(-dip))
-        xs = np.linspace(x, x + dx, 50)
-        ys = np.linspace(y, y + dy, 50)
-        zs = np.linspace(0, -length, 50)
-        xys = list(zip(xs, ys))
-        # xx, yy, zz = np.meshgrid(xs, ys, zs)
-        # points = [[(xy, z) for xy in xys] for z in zs]
-        points = []
-        for z in zs:
-            for (x, y) in zip(xs, ys):
-                points.append([x, y, z])
-        # points = [[[item in tuple for tuple in xy] for xy in xys] for z in zs]
-        points = np.array(points)
-
-        # resolution = 50
-        # volume_corner1 = (xmin, ymin, 0)
-        # volume_corner2 = (xmax, ymax, 0)
-        #
-        # # matplotlib plot 2D
-        # # create list of xy coordinates
-        # grid = np.mgrid[volume_corner1[0]:volume_corner2[0]:resolution, volume_corner1[1]:volume_corner2[1]:resolution]
-        #
-        # # create list of grid points
-        # points = np.vstack(map(np.ravel, grid)).T
-        # points = np.hstack([points, np.zeros([len(points), 1])])  # Adds a third column with 0 as its entry
-        #
-        # # calculate B field at given points
-        B = sol.CalculateB(points=points)
-        #
-        Babs = np.linalg.norm(B, axis=1)
-
-        # remove big values close to the wire
-        cutoff = 0.005
-
-        B[Babs > cutoff] = [np.nan, np.nan, np.nan]
-        # Babs[Babs > cutoff] = np.nan
-
-        for ba in B:
-            print(ba)
-
-        self.ax.clear()
-        self.plot_hole()
-        # self.ax.quiver(points[:, 0], points[:, 1], B[:, 0], B[:, 1], scale=0.01)
-        X = np.unique(points[:, 0])
-        Y = np.unique(points[:, 2])
-        self.ax.contour(X, Y, Babs.reshape([len(X), len(Y)]).T, 10)
         self.section_canvas.draw()
-        # ax.clabel(cs)
 
     def setup_gps_boxes(self):
         self.gps_systems = ['', 'UTM']
@@ -224,9 +249,8 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.loop_roi.addRotateHandle([0, 0], [0.5, 0.5])
         self.loop_roi.addRotateHandle([1, 0], [0.5, 0.5])
         self.loop_roi.addRotateHandle([0, 1], [0.5, 0.5])
-        self.plan_view_vb.autoRange()
+        # self.plan_view_vb.autoRange()
         self.loop_roi.sigRegionChangeFinished.connect(self.plan_region_changed)
-        # self.plan_region_changed()
 
     def setup_section_view(self):
         self.section_figure = Figure()
@@ -237,8 +261,12 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         # self.ax.set_xlim(right=0, left=10)
         self.ax.set_aspect('equal')
         self.ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
-        # self.ax.yaxis.tick_left()
-        # self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}'))
+        self.ax.spines['top'].set_visible(False)
+        self.ax.spines['left'].set_visible(False)
+        self.ax.spines['right'].set_visible(False)
+        self.ax.spines['bottom'].set_visible(False)
+        self.ax.get_xaxis().set_visible(False)
+        self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}'))
         self.ax.figure.subplots_adjust(left=0.1, bottom=0.1, right=1., top=1.)
 
     def change_loop_width(self):
@@ -279,7 +307,16 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.loop_height_edit.blockSignals(False)
         self.loop_angle_edit.blockSignals(False)
 
-        self.plot_mag()
+        self.plot_hole()
+
+    def get_loop_coords(self):
+        """
+        Return the coordinates of the loop corners
+        :return: list of (x, y, z)
+        """
+        x, y = self.loop_roi.pos()
+        w, h = self.loop_roi.size()
+        return [(x, y, self.hole_elevation), (x + w, y, self.hole_elevation), (x + w, y + h, self.hole_elevation), (x, y+h, self.hole_elevation)]
 
 
 class LoopROI(pg.ROI):
