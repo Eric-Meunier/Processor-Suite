@@ -450,8 +450,26 @@
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionSave_as_KMZ"/>
+    <addaction name="actionSave_as_GPX"/>
+   </widget>
+   <addaction name="menuFile"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionSave_as_KMZ">
+   <property name="text">
+    <string>Save as KMZ...</string>
+   </property>
+  </action>
+  <action name="actionSave_as_GPX">
+   <property name="text">
+    <string>Save as GPX...</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
