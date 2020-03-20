@@ -34,6 +34,7 @@ from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods, ContourMap
+from src.pem.pem_planner import LoopPlanner
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.xyz_serializer import XYZSerializer
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
@@ -118,6 +119,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.serializer = PEMSerializer()
         self.mpm = MapPlotMethods()
         self.pg = CustomProgressBar()
+
         # self.spinner = WaitingSpinner(self.table)
         self.ri_importer = BatchRIImporter(parent=self)
         self.plan_map_options = PlanMapOptions(parent=self)
@@ -125,6 +127,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.section_viewer_3d = None
         self.pem_file_splitter = None
         self.contour_viewer = None
+        self.loop_planner = None
 
         self.initMenus()
         self.initSignals()
@@ -334,12 +337,19 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.MapMenu.addAction(self.showContourMap)
 
         # Tools menu
+        self.loop_planner_action = QAction("&Loop Planner", self)
+        self.loop_planner_action.setStatusTip("Loop planner")
+        self.loop_planner_action.setIcon(
+            QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
+        self.loop_planner_action.triggered.connect(self.show_loop_planner)
+
         self.timebase_freqency_calculator_action = QAction("&Convert Timebase/Frequency", self)
         self.timebase_freqency_calculator_action.setStatusTip("Two way conversion between timebase and frequency")
         self.timebase_freqency_calculator_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
         self.timebase_freqency_calculator_action.triggered.connect(self.timebase_freqency_converter)
 
         self.ToolsMenu = self.menubar.addMenu('&Tools')
+        self.ToolsMenu.addAction(self.loop_planner_action)
         self.ToolsMenu.addAction(self.timebase_freqency_calculator_action)
 
     def initSignals(self):
@@ -2563,6 +2573,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.window().statusBar().showMessage("Must have more than 1 surface PEM file open", 2000)
 
+    def show_loop_planner(self):
+        """
+        Opens the Loop Planner window.
+        :return: None
+        """
+        self.loop_planner = LoopPlanner()
+        self.loop_planner.show()
+
     def batch_rename(self, type):
         """
         Opens the BatchNameEditor for renaming multiple file names and/or line/hole names.
@@ -3633,12 +3651,12 @@ def main():
     # section = Section3DViewer(pem_files)
     # section.show()
     # mw.share_loop_cbox.setChecked(False)
-    mw.output_lin_cbox.setChecked(False)
-    mw.output_log_cbox.setChecked(False)
-    mw.output_step_cbox.setChecked(False)
+    # mw.output_lin_cbox.setChecked(False)
+    # mw.output_log_cbox.setChecked(False)
+    # mw.output_step_cbox.setChecked(False)
     # mw.output_section_cbox.setChecked(False)
-    mw.output_plan_map_cbox.setChecked(False)
-    mw.print_plots()
+    # mw.output_plan_map_cbox.setChecked(False)
+    # mw.print_plots()
     # map = Map3DViewer(pem_files)
     # map.show()
 

@@ -94,7 +94,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         # Validators
         int_validator = QtGui.QIntValidator()
         size_validator = QtGui.QIntValidator()
-        size_validator.setBottom(0)
+        size_validator.setBottom(1)
         loop_angle_validator = QtGui.QIntValidator()
         loop_angle_validator.setRange(0, 360)
         az_validator = QtGui.QIntValidator()
@@ -309,10 +309,10 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.loop_roi = LoopROI([self.hole_easting-250, self.hole_northing-250], [500, 500], scaleSnap=True, pen=pg.mkPen('m', width=1.5))
         self.plan_view_plot.addItem(self.loop_roi)
         self.loop_roi.setZValue(10)
-        self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], name='loop corner 1', lockAspect=True)
-        self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], name='loop corner 2', lockAspect=True)
-        self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], name='loop corner 3', lockAspect=True)
-        self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], name='loop corner 4', lockAspect=True)
+        self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
+        self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
+        self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
+        self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
         self.loop_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
         self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
         self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
@@ -409,22 +409,22 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
 
         return corners
 
-    def get_loop_latlon(self):
+    def get_loop_lonlat(self):
         zone = self.zoneCBox.currentText()
         zone_num = int(re.search('\d+', zone).group())
         north = True if 'n' in zone.lower() else False
 
         loop_gps = self.get_loop_coords()
-        loop_latlon = []
+        loop_lonlat = []
         for row in loop_gps:
             easting = int(float(row[0]))
             northing = int(float(row[1]))
             lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-            loop_latlon.append((lon, lat))
+            loop_lonlat.append((lon, lat))
 
-        return loop_latlon
+        return loop_lonlat
 
-    def get_collar_latlon(self):
+    def get_collar_lonlat(self):
         zone = self.zoneCBox.currentText()
         zone_num = int(re.search('\d+', zone).group())
         north = True if 'n' in zone.lower() else False
@@ -432,7 +432,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         easting = self.hole_easting
         northing = self.hole_northing
         lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-        return lat, lon
+        return lon, lat
 
     def save_kmz(self):
         """
@@ -462,18 +462,19 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
             loop_name = 'Loop'
 
         # Creates KMZ objects for the loop.
-        loop_latlon = self.get_loop_latlon()
+        loop_lonlat = self.get_loop_lonlat()
+        loop_lonlat.append(loop_lonlat[0])
         ls = folder.newlinestring(name=loop_name)
-        ls.coords = loop_latlon
+        ls.coords = loop_lonlat
         ls.extrude = 1
         ls.style = loop_style
 
         # Creates KMZ object for the collar
-        lat, lon = self.get_collar_latlon()
-        collar = folder.newpoint(name=hole_name, coords=[(lat, lon)])
+        lon, lat = self.get_collar_lonlat()
+        collar = folder.newpoint(name=hole_name, coords=[(lon, lat)])
         collar.style = collar_style
 
-        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', None, 'KMZ Files (*.KMZ)')[0]
+        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', None, 'KMZ Files (*.KMZ);; All files(*.*)')[0]
         if save_dir:
             kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
             kml.savekmz(kmz_save_dir, format=False)
@@ -495,20 +496,24 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         if not loop_name:
             loop_name = 'Loop'
 
-        # Add the loop coordinates to the GPX
-        loop_latlon = self.get_loop_latlon()
-        for i, coord in enumerate(loop_latlon):
-            lat = coord[0]
-            lon = coord[1]
+        # Add the loop coordinates to the GPX. Creates a route for the loop and adds the corners as waypoints.
+        loop_lonlat = self.get_loop_lonlat()
+        loop_lonlat.append(loop_lonlat[0])
+        route = gpxpy.gpx.GPXRoute()
+        for i, coord in enumerate(loop_lonlat):
+            lon = coord[0]
+            lat = coord[1]
             waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
             gpx.waypoints.append(waypoint)
+            route.points.append(waypoint)
+        gpx.routes.append(route)
 
-        # Add the collar coordinates to the GPX
-        hole_latlon = self.get_collar_latlon()
-        waypoint = gpxpy.gpx.GPXWaypoint(latitude=hole_latlon[0], longitude=hole_latlon[1], name=hole_name, description=hole_name)
+        # Add the collar coordinates to the GPX as a waypoint.
+        hole_lonlat= self.get_collar_lonlat()
+        waypoint = gpxpy.gpx.GPXWaypoint(latitude=hole_lonlat[1], longitude=hole_lonlat[0], name=hole_name, description=hole_name)
         gpx.waypoints.append(waypoint)
 
-        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', None, 'GPX Files (*.GPX)')[0]
+        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', None, 'GPX Files (*.GPX);; All files(*.*)')[0]
         if save_path:
             with open(save_path, 'w') as f:
                 f.write(gpx.to_xml())
