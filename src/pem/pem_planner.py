@@ -34,14 +34,17 @@ if getattr(sys, 'frozen', False):
     # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
     loopPlannerCreatorFile = 'qt_ui\\loop_planner.ui'
+    gridPlannerCreatorFile = 'qt_ui\\grid_planner.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     loopPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\loop_planner.ui')
+    gridPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\grid_planner.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
 Ui_LoopPlannerWindow, QtBaseClass = uic.loadUiType(loopPlannerCreatorFile)
+Ui_GridPlannerWindow, QtBaseClass = uic.loadUiType(gridPlannerCreatorFile)
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -523,6 +526,335 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
 
+class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
+
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
+        self.setWindowTitle('Loop Planner')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
+        self.setGeometry(200, 200, 1400, 700)
+        self.dialog = QFileDialog()
+
+        self.grid_easting = int(self.grid_easting_edit.text())
+        self.grid_northing = int(self.grid_northing_edit.text())
+        self.grid_az = int(self.grid_az_edit.text())
+        self.line_number = int(self.line_number_edit.text())
+        self.line_length = int(self.line_length_edit.text())
+        self.station_spacing = int(self.station_spacing_edit.text())
+        self.line_spacing = int(self.line_spacing_edit.text())
+
+        # Signals
+        self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
+        self.actionSave_as_GPX.triggered.connect(self.save_gpx)
+
+        self.loop_height_edit.returnPressed.connect(self.change_loop_height)
+        self.loop_width_edit.returnPressed.connect(self.change_loop_width)
+        self.loop_angle_edit.returnPressed.connect(self.change_loop_angle)
+
+        self.grid_easting_edit.returnPressed.connect(self.plot_grid)
+        self.grid_northing_edit.returnPressed.connect(self.plot_grid)
+        self.grid_az_edit.returnPressed.connect(self.plot_grid)
+        self.line_number_edit.returnPressed.connect(self.plot_grid)
+        self.line_length_edit.returnPressed.connect(self.plot_grid)
+        self.station_spacing_edit.returnPressed.connect(self.plot_grid)
+        self.line_spacing_edit.returnPressed.connect(self.plot_grid)
+
+        # Validators
+        int_validator = QtGui.QIntValidator()
+        size_validator = QtGui.QIntValidator()
+        size_validator.setBottom(1)
+        loop_angle_validator = QtGui.QIntValidator()
+        loop_angle_validator.setRange(0, 360)
+        az_validator = QtGui.QIntValidator()
+        az_validator.setRange(0, 360)
+        dip_validator = QtGui.QIntValidator()
+        dip_validator.setRange(0, 90)
+
+        self.loop_height_edit.setValidator(size_validator)
+        self.loop_width_edit.setValidator(size_validator)
+        self.loop_angle_edit.setValidator(int_validator)
+
+        self.grid_easting_edit.setValidator(size_validator)
+        self.grid_northing_edit.setValidator(size_validator)
+        self.grid_az_edit.setValidator(az_validator)
+        self.line_number_edit.setValidator(size_validator)
+        self.line_length_edit.setValidator(size_validator)
+        self.station_spacing_edit.setValidator(size_validator)
+        self.line_spacing_edit.setValidator(size_validator)
+
+        # Plots
+        self.grid_plot = pg.PlotDataItem()
+
+        self.setup_plan_view()
+        self.setup_gps_boxes()
+
+        self.plot_grid()
+        self.plan_view_plot.autoRange()
+
+    def plot_grid(self):
+
+        if int(self.grid_easting_edit.text()) != self.grid_easting:
+            shift_amt = int(self.hole_easting_edit.text()) - self.grid_easting
+            self.shift_loop(shift_amt, 0)
+            self.grid_easting = int(self.grid_easting_edit.text())
+        if int(self.grid_northing_edit.text()) != self.grid_northing:
+            shift_amt = int(self.grid_northing_edit.text()) - self.grid_northing
+            self.shift_loop(0, shift_amt)
+            self.grid_northing = int(self.grid_northing_edit.text())
+        self.grid_az = int(self.grid_az_edit.text())
+        self.line_length = int(self.line_length_edit.text())
+        self.station_spacing = int(self.station_spacing_edit.text())
+        self.line_spacin = int(self.line_spacing_edit.text())
+
+        self.grid_plot.clear()
+
+    def setup_gps_boxes(self):
+        """
+        Adds the items in the drop down menus for the GPS information.
+        :return: None
+        """
+        self.gps_systems = ['UTM']
+        self.gps_zones = [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
+        self.gps_datums = ['NAD 1983', 'WGS 1984']
+
+        for system in self.gps_systems:
+            self.systemCBox.addItem(system)
+        for zone in self.gps_zones:
+            self.zoneCBox.addItem(zone)
+        for datum in self.gps_datums:
+            self.datumCBox.addItem(datum)
+
+        self.systemCBox.setCurrentIndex(0)
+        self.zoneCBox.setCurrentIndex(16)
+        self.datumCBox.setCurrentIndex(1)
+
+    def setup_plan_view(self):
+        """
+        Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
+        :return: None
+        """
+
+        def set_loop():
+            self.loop_roi = LoopROI([self.grid_easting - 250, self.grid_northing - 250], [500, 500], scaleSnap=True,
+                                    pen=pg.mkPen('m', width=1.5))
+            self.plan_view_plot.addItem(self.loop_roi)
+            self.loop_roi.setZValue(10)
+            self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
+            self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
+            self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
+            self.loop_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
+            self.loop_roi.sigRegionChangeFinished.connect(self.plan_region_changed)
+
+        def set_grid():
+            self.grid_roi = LoopROI([self.grid_easting, self.grid_northing], [500, 500], scaleSnap=True,
+                                    pen=pg.mkPen('b', width=1.5))
+            self.plan_view_plot.addItem(self.grid_roi)
+            self.grid_roi.setZValue(10)
+            self.grid_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
+            self.grid_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
+            self.grid_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
+            self.grid_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
+            self.grid_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
+            self.grid_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
+            self.grid_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
+            self.grid_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
+            self.grid_roi.sigRegionChangeFinished.connect(self.plan_region_changed)
+
+        yaxis = CustomAxis(orientation='left')
+        xaxis = CustomAxis(orientation='bottom')
+        self.plan_view_plot = self.plan_view_widget.addPlot(row=1, col=0, axisItems={'bottom': xaxis, 'left': yaxis})
+        self.plan_view_plot.showGrid(x=True, y=True, alpha=0.2)
+        self.plan_view_plot.setAspectLocked()
+        set_loop()
+        set_grid()
+
+    def change_loop_width(self):
+        height = self.loop_roi.size()[1]
+        width = self.loop_width_edit.text()
+        width = float(width)
+        print(f"Loop width changed to {width}")
+        self.loop_roi.setSize((width, height))
+
+    def change_loop_height(self):
+        height = self.loop_height_edit.text()
+        width = self.loop_roi.size()[0]
+        height = float(height)
+        print(f"Loop height changed to {height}")
+        self.loop_roi.setSize((width, height))
+
+    def change_loop_angle(self):
+        angle = self.loop_angle_edit.text()
+        angle = float(angle)
+        print(f"Loop angle changed to {angle}")
+        self.loop_roi.setAngle(angle)
+
+    def plan_region_changed(self):
+        """
+        Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
+        replots the section plot.
+        :return: None
+        """
+        self.loop_width_edit.blockSignals(True)
+        self.loop_height_edit.blockSignals(True)
+        self.loop_angle_edit.blockSignals(True)
+        x, y = self.loop_roi.pos()
+        w, h = self.loop_roi.size()
+        angle = self.loop_roi.angle()
+        self.loop_width_edit.setText(f"{w:.0f}")
+        self.loop_height_edit.setText(f"{h:.0f}")
+        self.loop_angle_edit.setText(f"{angle:.0f}")
+        self.loop_width_edit.blockSignals(False)
+        self.loop_height_edit.blockSignals(False)
+        self.loop_angle_edit.blockSignals(False)
+
+        self.plot_grid()
+
+    def shift_loop(self, dx, dy):
+        """
+        Moves the loop ROI so it is in the same position relative to the hole.
+        :param dx: Shift amount in x axis
+        :param dy: Shift amount in y axis
+        :return: None
+        """
+        self.loop_roi.blockSignals(True)
+        x, y = self.loop_roi.pos()
+        self.loop_roi.setPos(x + dx, y + dy)
+        self.plan_view_plot.autoRange(items=[self.loop_roi])
+        self.loop_roi.blockSignals(False)
+
+    def get_loop_coords(self):
+        """
+        Return the coordinates of the loop corners
+        :return: list of (x, y, z)
+        """
+        x, y = self.loop_roi.pos()
+        w, h = self.loop_roi.size()
+        angle = self.loop_roi.angle()
+        c1 = (x, y, self.hole_elevation)
+        c2 = (
+        c1[0] + w * (math.cos(math.radians(angle))), c1[1] + w * (math.sin(math.radians(angle))), self.hole_elevation)
+        c3 = (c2[0] - h * (math.sin(math.radians(angle))), c2[1] + h * (math.sin(math.radians(90 - angle))),
+              self.hole_elevation)
+        c4 = (c3[0] + w * (math.cos(math.radians(180 - angle))), c3[1] - w * (math.sin(math.radians(180 - angle))),
+              self.hole_elevation)
+        corners = [c1, c2, c3, c4]
+
+        # self.loop_plot.clear()
+        # self.loop_plot.setData([coord[0] for coord in corners],
+        #                        [coord[1] for coord in corners], pen=pg.mkPen(width=3, color='r'))
+        # self.plan_view_vb.addItem(self.loop_plot)
+
+        return corners
+
+    def get_loop_lonlat(self):
+        zone = self.zoneCBox.currentText()
+        zone_num = int(re.search('\d+', zone).group())
+        north = True if 'n' in zone.lower() else False
+
+        loop_gps = self.get_loop_coords()
+        loop_lonlat = []
+        for row in loop_gps:
+            easting = int(float(row[0]))
+            northing = int(float(row[1]))
+            lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+            loop_lonlat.append((lon, lat))
+
+        return loop_lonlat
+
+    def save_kmz(self):
+        """
+        Save the loop and hole collar to a KMZ file.
+        :return: None
+        """
+        kml = simplekml.Kml()
+
+        loop_style = simplekml.Style()
+        loop_style.linestyle.width = 4
+        loop_style.linestyle.color = simplekml.Color.yellow
+
+        trace_style = simplekml.Style()
+        trace_style.linestyle.width = 2
+        trace_style.linestyle.color = simplekml.Color.magenta
+
+        collar_style = simplekml.Style()
+        collar_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/paddle/wht-stars.png'
+        collar_style.iconstyle.color = simplekml.Color.magenta
+
+        hole_name = self.hole_name_edit.text()
+        if not hole_name:
+            hole_name = 'Hole'
+        folder = kml.newfolder(name=hole_name)
+        loop_name = self.loop_name_edit.text()
+        if not loop_name:
+            loop_name = 'Loop'
+
+        # Creates KMZ objects for the loop.
+        loop_lonlat = self.get_loop_lonlat()
+        loop_lonlat.append(loop_lonlat[0])
+        ls = folder.newlinestring(name=loop_name)
+        ls.coords = loop_lonlat
+        ls.extrude = 1
+        ls.style = loop_style
+
+        # Creates KMZ object for the collar
+        lon, lat = self.get_collar_lonlat()
+        collar = folder.newpoint(name=hole_name, coords=[(lon, lat)])
+        collar.style = collar_style
+
+        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', None, 'KMZ Files (*.KMZ);; All files(*.*)')[0]
+        if save_dir:
+            kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
+            kml.savekmz(kmz_save_dir, format=False)
+            os.startfile(kmz_save_dir)
+        else:
+            self.window().statusBar().showMessage('Cancelled.', 2000)
+
+    def save_gpx(self):
+        """
+        Save the loop and collar coordinates to a GPX file.
+        :return: None
+        """
+        gpx = gpxpy.gpx.GPX()
+
+        hole_name = self.hole_name_edit.text()
+        if not hole_name:
+            hole_name = 'Hole'
+        loop_name = self.loop_name_edit.text()
+        if not loop_name:
+            loop_name = 'Loop'
+
+        # Add the loop coordinates to the GPX. Creates a route for the loop and adds the corners as waypoints.
+        loop_lonlat = self.get_loop_lonlat()
+        loop_lonlat.append(loop_lonlat[0])
+        route = gpxpy.gpx.GPXRoute()
+        for i, coord in enumerate(loop_lonlat):
+            lon = coord[0]
+            lat = coord[1]
+            waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
+            gpx.waypoints.append(waypoint)
+            route.points.append(waypoint)
+        gpx.routes.append(route)
+
+        # Add the collar coordinates to the GPX as a waypoint.
+        hole_lonlat= self.get_collar_lonlat()
+        waypoint = gpxpy.gpx.GPXWaypoint(latitude=hole_lonlat[1], longitude=hole_lonlat[0], name=hole_name, description=hole_name)
+        gpx.waypoints.append(waypoint)
+
+        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', None, 'GPX Files (*.GPX);; All files(*.*)')[0]
+        if save_path:
+            with open(save_path, 'w') as f:
+                f.write(gpx.to_xml())
+            self.statusBar().showMessage('Save complete.', 2000)
+            os.startfile(save_path)
+        else:
+            self.window().statusBar().showMessage('Cancelled.', 2000)
+
+
 class LoopROI(pg.ROI):
     """
     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
@@ -579,7 +911,8 @@ class CustomAxis(pg.AxisItem):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    planner = LoopPlanner()
+    # planner = LoopPlanner()
+    planner = GridPlanner()
     planner.show()
 
     app.exec_()
