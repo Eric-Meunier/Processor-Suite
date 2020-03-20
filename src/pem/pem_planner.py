@@ -125,9 +125,9 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
             dx = delta_surf * math.sin(math.radians(self.hole_az))
             dy = delta_surf * math.cos(math.radians(self.hole_az))
             dz = self.hole_length * math.sin(math.radians(self.hole_dip))
-            x = [x, dx]
-            y = [y, dy]
-            z = [z, dz]
+            x = [x, self.hole_easting + dx]
+            y = [y, self.hole_northing + dy]
+            z = [z, self.hole_elevation + dz]
             return x, y, z
 
         def get_section_extents():
@@ -254,12 +254,13 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
 
         # loop_roi is the loop.
         self.loop_roi = LoopROI([self.hole_easting-250, self.hole_northing-250], [500, 500], scaleSnap=True, pen=pg.mkPen('m', width=1.5))
+        print(f"Original loop origin: {self.hole_easting-250}, {self.hole_northing-250}")
         self.plan_view_vb.addItem(self.loop_roi)
         self.loop_roi.setZValue(10)
-        self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
+        self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], name='loop corner 1', lockAspect=True)
+        self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], name='loop corner 2', lockAspect=True)
+        self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], name='loop corner 3', lockAspect=True)
+        self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], name='loop corner 4', lockAspect=True)
         self.loop_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
         self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
         self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
@@ -307,10 +308,10 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.loop_width_edit.setText(f"{w:.0f}")
         self.loop_height_edit.setText(f"{h:.0f}")
         self.loop_angle_edit.setText(f"{angle:.0f}")
-        print(f"Lower left corner: {x}, {y}")
-        print(f"Lower right corner: {x + w}, {y}")
-        print(f"Upper Right corner: {x + w}, {y + h}")
-        print(f"Upper left corner: {x}, {y + h}")
+        # print(f"Lower left corner: {x}, {y}")
+        # print(f"Lower right corner: {x + w}, {y}")
+        # print(f"Upper Right corner: {x + w}, {y + h}")
+        # print(f"Upper left corner: {x}, {y + h}")
         self.loop_width_edit.blockSignals(False)
         self.loop_height_edit.blockSignals(False)
         self.loop_angle_edit.blockSignals(False)
@@ -328,8 +329,20 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         """
         x, y = self.loop_roi.pos()
         w, h = self.loop_roi.size()
-        return [(x, y, self.hole_elevation), (x + w, y, self.hole_elevation), (x + w, y + h, self.hole_elevation),
-                (x, y + h, self.hole_elevation)]
+        loop_handles = [(handle[1].x(), handle[1].y()) for handle in self.loop_roi.getSceneHandlePositions()[0:4]]
+        """
+        Looks like roi.getSceneHandlePositions returns coordinates tied to the graphics scene and not the plot 
+        coordinates so they are transformed into plot coordinates using the first corner (which is what is returned 
+        by roi.pos())
+        """
+        x_transform = x - loop_handles[0][0]
+        y_transform = y - loop_handles[0][1]
+        print(f"handle 1: {loop_handles[0][0] + x_transform, loop_handles[0][1] + y_transform}")
+        transformed_loop_corners = [(handle[0] + x_transform, handle[1] + y_transform, self.hole_elevation) for handle in loop_handles]
+        # transformed_loop_corners.append((loop_handles[0][0] + x_transform, loop_handles[0][1] + y_transform, self.hole_elevation))
+        return transformed_loop_corners
+        # return [(x, y, self.hole_elevation), (x + w, y, self.hole_elevation), (x + w, y + h, self.hole_elevation),
+        #         (x, y + h, self.hole_elevation)]
 
 
 class LoopROI(pg.ROI):
