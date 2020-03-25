@@ -527,14 +527,21 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
 
 
 class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
+    """
+    Program to plan a surface grid.
+    """
 
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.setWindowTitle('Loop Planner')
+        self.setWindowTitle('Grid Planner')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
-        self.setGeometry(200, 200, 1400, 700)
+        self.setGeometry(200, 200, 1100, 700)
         self.dialog = QFileDialog()
+
+        self.loop_height = int(self.loop_height_edit.text())
+        self.loop_width = int(self.loop_width_edit.text())
+        self.loop_angle = int(self.loop_angle_edit.text())
 
         self.grid_easting = int(self.grid_easting_edit.text())
         self.grid_northing = int(self.grid_northing_edit.text())
@@ -544,6 +551,9 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.station_spacing = int(self.station_spacing_edit.text())
         self.line_spacing = int(self.line_spacing_edit.text())
 
+        self.grid_east_center, self.grid_north_center = 0, 0
+        self.lines =[]
+
         # Signals
         self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
         self.actionSave_as_GPX.triggered.connect(self.save_gpx)
@@ -551,14 +561,20 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.loop_height_edit.returnPressed.connect(self.change_loop_height)
         self.loop_width_edit.returnPressed.connect(self.change_loop_width)
         self.loop_angle_edit.returnPressed.connect(self.change_loop_angle)
+        self.grid_az_edit.returnPressed.connect(self.change_grid_angle)
 
         self.grid_easting_edit.returnPressed.connect(self.plot_grid)
+        self.grid_easting_edit.returnPressed.connect(self.change_grid_pos)
         self.grid_northing_edit.returnPressed.connect(self.plot_grid)
+        self.grid_northing_edit.returnPressed.connect(self.change_grid_pos)
         self.grid_az_edit.returnPressed.connect(self.plot_grid)
         self.line_number_edit.returnPressed.connect(self.plot_grid)
+        self.line_number_edit.returnPressed.connect(self.change_grid_size)
         self.line_length_edit.returnPressed.connect(self.plot_grid)
+        self.line_length_edit.returnPressed.connect(self.change_grid_size)
         self.station_spacing_edit.returnPressed.connect(self.plot_grid)
         self.line_spacing_edit.returnPressed.connect(self.plot_grid)
+        self.line_spacing_edit.returnPressed.connect(self.change_grid_size)
 
         # Validators
         int_validator = QtGui.QIntValidator()
@@ -575,8 +591,8 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.loop_width_edit.setValidator(size_validator)
         self.loop_angle_edit.setValidator(int_validator)
 
-        self.grid_easting_edit.setValidator(size_validator)
-        self.grid_northing_edit.setValidator(size_validator)
+        self.grid_easting_edit.setValidator(int_validator)
+        self.grid_northing_edit.setValidator(int_validator)
         self.grid_az_edit.setValidator(az_validator)
         self.line_number_edit.setValidator(size_validator)
         self.line_length_edit.setValidator(size_validator)
@@ -584,7 +600,8 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.line_spacing_edit.setValidator(size_validator)
 
         # Plots
-        self.grid_plot = pg.PlotDataItem()
+        self.grid_lines_plot = pg.MultiPlotItem()
+        self.grid_lines_plot.setZValue(1)
 
         self.setup_plan_view()
         self.setup_gps_boxes()
@@ -593,21 +610,116 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.plan_view_plot.autoRange()
 
     def plot_grid(self):
+        """
+        Plots the stations and lines on the plan map.
+        :return: None
+        """
 
-        if int(self.grid_easting_edit.text()) != self.grid_easting:
-            shift_amt = int(self.hole_easting_edit.text()) - self.grid_easting
-            self.shift_loop(shift_amt, 0)
-            self.grid_easting = int(self.grid_easting_edit.text())
-        if int(self.grid_northing_edit.text()) != self.grid_northing:
-            shift_amt = int(self.grid_northing_edit.text()) - self.grid_northing
-            self.shift_loop(0, shift_amt)
-            self.grid_northing = int(self.grid_northing_edit.text())
+        def transform_station(x, y, l):
+            """
+            Calculate the position of a station based on the distance away from the start station for that line.
+            :param x: X coordinate of the starting station
+            :param y: Y coordinate of the starting station
+            :param l: distance away from the starting station
+            :return: X, Y coordinate of the station
+            """
+            angle = 90 - self.grid_roi.angle()
+            dx = l * math.sin(math.radians(angle))
+            dy = l * math.cos(math.radians(angle))
+
+            return x + dx, y + dy
+
+        def transform_line_start(x, y, l):
+            """
+            Calculate the position of the starting station of a line based on the distance away from the corner of the
+            grid.
+            :param x: X coordinate of the grid corner
+            :param y: Y coordinate of the grid corner
+            :param l: Distance from the grid corner
+            :return: X, Y coordinate of the starting station
+            """
+            angle = 90 - self.grid_roi.angle()
+            dx = l * math.cos(math.radians(angle))
+            dy = l * math.sin(math.radians(angle))
+
+            return x - dx, y + dy
+
+        def clear_plots():
+            for item in reversed(self.plan_view_plot.items):
+                if not isinstance(item, LoopROI):
+                    self.plan_view_plot.removeItem(item)
+
+        clear_plots()
+
+        x, y = self.grid_roi.pos()
+        center_x, center_y = self.get_grid_center(x, y)
+        self.get_grid_coords()
+
         self.grid_az = int(self.grid_az_edit.text())
         self.line_length = int(self.line_length_edit.text())
         self.station_spacing = int(self.station_spacing_edit.text())
-        self.line_spacin = int(self.line_spacing_edit.text())
+        self.line_spacing = int(self.line_spacing_edit.text())
+        self.line_number = int(self.line_number_edit.text())
 
-        self.grid_plot.clear()
+        self.lines = []
+        # Plotting the stations and lines
+        for i, line in enumerate(range(self.line_number)):
+            a = 90 - self.grid_roi.angle()
+            if 45 <= a < 135:
+                line_number = i + 1
+                line_suffix = 'N'
+                station_suffix = 'E'
+                text_angle = self.grid_roi.angle() - 90
+                text_anchor = (1, 0.5)
+            elif 135 <= a < 225:
+                line_number = i + 1
+                line_suffix = 'E'
+                station_suffix = 'S'
+                text_angle = self.grid_roi.angle()
+                text_anchor = (0.5, 1)
+            elif 225 <= a < 315:
+                line_number = self.line_number - i
+                line_suffix = 'N'
+                station_suffix = 'W'
+                text_angle = self.grid_roi.angle() +90
+                text_anchor = (0, 0.5)
+            else:
+                line_number = self.line_number - i
+                line_suffix = 'E'
+                station_suffix = 'N'
+                text_angle = self.grid_roi.angle() - 180
+                text_anchor = (0.5, 0)
+
+            line_name = f" {line_number}{line_suffix} "
+            self.lines.append({'line_name': line_name})
+            station_xs, station_ys, station_names = [], [], []
+
+            x_start, y_start = transform_line_start(x, y, i * self.line_spacing)
+            station_text = pg.TextItem(text=line_name, color='b', angle=text_angle,
+                                       rotateAxis=(0, 1),
+                                       anchor=text_anchor)
+            station_text.setPos(x_start, y_start)
+            self.plan_view_plot.addItem(station_text)
+
+            for j, station in enumerate(range(int(self.line_length / self.station_spacing) + 1)):
+                station_x, station_y = transform_station(x_start, y_start, j * self.station_spacing)
+                station_name = f"{self.station_spacing*(j+1)}{station_suffix}"
+                station_names.append(station_name)
+                station_xs.append(station_x)
+                station_ys.append(station_y)
+            self.lines[i]['station_coords'] = list(zip(station_xs, station_ys, station_names))
+
+            line_plot = pg.PlotDataItem(station_xs, station_ys, pen='b')
+            line_plot.setZValue(1)
+            stations_plot = pg.ScatterPlotItem(station_xs, station_ys, pen='b', brush='w')
+            stations_plot.setZValue(2)
+
+            self.plan_view_plot.addItem(line_plot)
+            self.plan_view_plot.addItem(stations_plot)
+
+        grid_center = pg.ScatterPlotItem([center_x],[center_y], pen='b', symbol='+')
+        grid_center.setZValue(1)
+        self.plan_view_plot.addItem(grid_center)
 
     def setup_gps_boxes(self):
         """
@@ -636,10 +748,13 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         """
 
         def set_loop():
-            self.loop_roi = LoopROI([self.grid_easting - 250, self.grid_northing - 250], [500, 500], scaleSnap=True,
+            center_x, center_y = self.get_grid_center(self.grid_easting, self.grid_northing)
+            self.loop_roi = LoopROI([center_x - (self.loop_width / 2),
+                                     center_y - (self.loop_height / 2)],
+                                    [self.loop_width, self.loop_height], scaleSnap=True,
                                     pen=pg.mkPen('m', width=1.5))
             self.plan_view_plot.addItem(self.loop_roi)
-            self.loop_roi.setZValue(10)
+            self.loop_roi.setZValue(0)
             self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
             self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
             self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
@@ -648,30 +763,25 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
             self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
             self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
             self.loop_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
-            self.loop_roi.sigRegionChangeFinished.connect(self.plan_region_changed)
+            self.loop_roi.sigRegionChangeFinished.connect(self.loop_moved)
 
         def set_grid():
-            self.grid_roi = LoopROI([self.grid_easting, self.grid_northing], [500, 500], scaleSnap=True,
-                                    pen=pg.mkPen('b', width=1.5))
+            self.grid_roi = LoopROI([self.grid_easting, self.grid_northing],
+                                    [self.line_length, (self.line_number - 1) * self.line_spacing], scaleSnap=True,
+                                    pen=pg.mkPen(None, width=1.5))
+            self.grid_roi.setAngle(90)
             self.plan_view_plot.addItem(self.grid_roi)
-            self.grid_roi.setZValue(10)
-            self.grid_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
-            self.grid_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
-            self.grid_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
-            self.grid_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
-            self.grid_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
-            self.grid_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
-            self.grid_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
-            self.grid_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
-            self.grid_roi.sigRegionChangeFinished.connect(self.plan_region_changed)
+            self.grid_roi.sigRegionChangeStarted.connect(lambda: self.grid_roi.setPen('b'))
+            self.grid_roi.sigRegionChangeFinished.connect(lambda: self.grid_roi.setPen(None))
+            self.grid_roi.sigRegionChangeFinished.connect(self.grid_moved)
 
         yaxis = CustomAxis(orientation='left')
         xaxis = CustomAxis(orientation='bottom')
         self.plan_view_plot = self.plan_view_widget.addPlot(row=1, col=0, axisItems={'bottom': xaxis, 'left': yaxis})
         self.plan_view_plot.showGrid(x=True, y=True, alpha=0.2)
         self.plan_view_plot.setAspectLocked()
-        set_loop()
         set_grid()
+        set_loop()
 
     def change_loop_width(self):
         height = self.loop_roi.size()[1]
@@ -693,7 +803,78 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         print(f"Loop angle changed to {angle}")
         self.loop_roi.setAngle(angle)
 
-    def plan_region_changed(self):
+    def change_grid_angle(self):
+        az = int(self.grid_az_edit.text())
+        angle = 90 - az
+        print(f"Grid angle changed to {az}")
+        self.grid_roi.setAngle(angle)
+
+    def change_grid_size(self):
+        self.line_length = int(self.line_length_edit.text())
+        self.line_number = int(self.line_number_edit.text())
+        self.line_spacing = int(self.line_spacing_edit.text())
+        self.grid_roi.setSize((self.line_length, (self.line_number - 1) * self.line_spacing))
+        print(f"Grid size changed to {self.line_length} x {(self.line_number - 1) * self.line_spacing}")
+
+    def change_grid_pos(self):
+        """
+        Change the position of the grid ROI based on the input from the grid easting and northing text edits.
+        :return: None
+        """
+        def get_corner(x, y):
+            """
+            Find the bottom-right corner given the center of the grid.
+            :param x: X coordinate of the center point
+            :param y: Y coordinate of the center point
+            :return: X, Y coordinate of the bottom-right corner.
+            """
+            a = 90 - self.grid_roi.angle()
+            w = (self.line_number - 1) * self.line_spacing
+            h = self.line_length
+
+            hypo = math.sqrt(w ** 2 + h ** 2)
+            angle = math.degrees(math.atan(h / w)) + a
+            theta = math.radians(angle)
+            dx = (hypo / 2) * math.cos(theta)
+            dy = (hypo / 2) * math.sin(theta)
+            center = pg.ScatterPlotItem([x + dx], [y - dy], pen='y')
+            self.plan_view_plot.addItem(center)
+            print(f"Corner is at {x + dx}, {y - dy}")
+            return x + dx, y - dy
+
+        x, y = get_corner(int(self.grid_easting_edit.text()), int(self.grid_northing_edit.text()))
+        easting_shift = x - self.grid_easting
+        northing_shift = y - self.grid_northing
+        self.shift_loop(easting_shift, northing_shift)
+        self.grid_easting, self.grid_northing = x, y
+        self.grid_roi.setPos(x, y)
+
+        self.grid_east_center, self.grid_north_center = int(self.grid_easting_edit.text()), int(self.grid_northing_edit.text())
+        print(f"Grid position changed to {self.grid_east_center, self.grid_north_center}")
+
+        self.plot_grid()
+        self.plan_view_plot.autoRange(items=[self.loop_roi, self.grid_roi])
+
+    def grid_moved(self):
+        """
+        Signal slot: Update the grid easting and northing text based on the new position of the grid when the ROI
+        is moved.
+        :return: None
+        """
+        self.grid_easting_edit.blockSignals(True)
+        self.grid_northing_edit.blockSignals(True)
+
+        x, y = self.grid_roi.pos()
+        self.grid_easting, self.grid_northing = x, y
+        self.grid_east_center, self.grid_north_center = self.get_grid_center(x, y)
+        self.grid_easting_edit.setText(f"{self.grid_east_center:.0f}")
+        self.grid_northing_edit.setText(f"{self.grid_north_center:.0f}")
+
+        self.grid_easting_edit.blockSignals(False)
+        self.grid_northing_edit.blockSignals(False)
+        self.plot_grid()
+
+    def loop_moved(self):
         """
         Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
         replots the section plot.
@@ -711,12 +892,11 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.loop_width_edit.blockSignals(False)
         self.loop_height_edit.blockSignals(False)
         self.loop_angle_edit.blockSignals(False)
-
         self.plot_grid()
 
     def shift_loop(self, dx, dy):
         """
-        Moves the loop ROI so it is in the same position relative to the hole.
+        Moves the loop ROI so it is in the same position relative to the grid.
         :param dx: Shift amount in x axis
         :param dy: Shift amount in y axis
         :return: None
@@ -724,30 +904,58 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.loop_roi.blockSignals(True)
         x, y = self.loop_roi.pos()
         self.loop_roi.setPos(x + dx, y + dy)
-        self.plan_view_plot.autoRange(items=[self.loop_roi])
         self.loop_roi.blockSignals(False)
+
+    def get_grid_coords(self):
+        """
+        Return the coordinates of the grid corners.
+        :return: list of (x, y)
+        """
+        x, y = self.grid_roi.pos()
+        w, h = self.grid_roi.size()
+        angle = self.grid_roi.angle()
+        c1 = (x, y)
+        c2 = (c1[0] + w * (math.cos(math.radians(angle))), c1[1] + w * (math.sin(math.radians(angle))))
+        c3 = (c2[0] - h * (math.sin(math.radians(angle))), c2[1] + h * (math.sin(math.radians(90 - angle))))
+        c4 = (c3[0] + w * (math.cos(math.radians(180 - angle))), c3[1] - w * (math.sin(math.radians(180 - angle))))
+        corners = [c1, c2, c3, c4]
+
+        # self.grid_stations_plot.addPoints([coord[0] for coord in corners],
+        #                        [coord[1] for coord in corners], pen=pg.mkPen(width=3, color='r'))
+        return corners
+
+    def get_grid_center(self, x, y):
+        """
+        Find the center of the grid given the bottom-right coordinate of the grid.
+        :param x: X coordinate of the bottom-right corner
+        :param y: Y coordinate of the bottom-right corner
+        :return: X, Y coordinate of the center of the grid.
+        """
+        a = 90 - self.grid_roi.angle()
+        w = (self.line_number - 1) * self.line_spacing
+        h = self.line_length
+
+        hypo = math.sqrt(w ** 2 + h ** 2)
+        angle = math.degrees(math.atan(h / w)) + a
+        theta = math.radians(angle)
+        dx = (hypo / 2) * math.cos(theta)
+        dy = (hypo / 2) * math.sin(theta)
+        # print(f"Center is at {x - dx}, {y + dy}")
+        return x - dx, y + dy
 
     def get_loop_coords(self):
         """
         Return the coordinates of the loop corners
-        :return: list of (x, y, z)
+        :return: list of (x, y)
         """
         x, y = self.loop_roi.pos()
         w, h = self.loop_roi.size()
         angle = self.loop_roi.angle()
-        c1 = (x, y, self.hole_elevation)
-        c2 = (
-        c1[0] + w * (math.cos(math.radians(angle))), c1[1] + w * (math.sin(math.radians(angle))), self.hole_elevation)
-        c3 = (c2[0] - h * (math.sin(math.radians(angle))), c2[1] + h * (math.sin(math.radians(90 - angle))),
-              self.hole_elevation)
-        c4 = (c3[0] + w * (math.cos(math.radians(180 - angle))), c3[1] - w * (math.sin(math.radians(180 - angle))),
-              self.hole_elevation)
+        c1 = (x, y)
+        c2 = (c1[0] + w * (math.cos(math.radians(angle))), c1[1] + w * (math.sin(math.radians(angle))))
+        c3 = (c2[0] - h * (math.sin(math.radians(angle))), c2[1] + h * (math.sin(math.radians(90-angle))))
+        c4 = (c3[0] + w * (math.cos(math.radians(180-angle))), c3[1] - w * (math.sin(math.radians(180-angle))))
         corners = [c1, c2, c3, c4]
-
-        # self.loop_plot.clear()
-        # self.loop_plot.setData([coord[0] for coord in corners],
-        #                        [coord[1] for coord in corners], pen=pg.mkPen(width=3, color='r'))
-        # self.plan_view_vb.addItem(self.loop_plot)
 
         return corners
 
@@ -766,9 +974,33 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
 
         return loop_lonlat
 
+    def get_grid_lonlat(self):
+        """
+        Convert the coordinates of all stations in the grid to lon lat.
+        :return: List of dicts with lonlat coordinates.
+        """
+        zone = self.zoneCBox.currentText()
+        zone_num = int(re.search('\d+', zone).group())
+        north = True if 'n' in zone.lower() else False
+
+        lonlat_lines = []
+
+        for line in self.lines:
+            line_name = line['line_name']
+            coords = line['station_coords']
+            lonlat_coords = []
+
+            for easting, northing, station_name in coords:
+                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+                lonlat_coords.append((lon, lat, station_name))
+
+            lonlat_lines.append({'line_name': line_name, 'station_coords': lonlat_coords})
+
+        return lonlat_lines
+
     def save_kmz(self):
         """
-        Save the loop and hole collar to a KMZ file.
+        Save the loop and grid lines/stations to a KMZ file.
         :return: None
         """
         kml = simplekml.Kml()
@@ -781,14 +1013,14 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         trace_style.linestyle.width = 2
         trace_style.linestyle.color = simplekml.Color.magenta
 
-        collar_style = simplekml.Style()
-        collar_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/paddle/wht-stars.png'
-        collar_style.iconstyle.color = simplekml.Color.magenta
+        station_style = simplekml.Style()
+        station_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png'
+        station_style.iconstyle.color = simplekml.Color.magenta
 
-        hole_name = self.hole_name_edit.text()
-        if not hole_name:
-            hole_name = 'Hole'
-        folder = kml.newfolder(name=hole_name)
+        grid_name = self.grid_name_edit.text()
+        if not grid_name:
+            grid_name = 'Grid'
+        grid_folder = kml.newfolder(name=grid_name)
         loop_name = self.loop_name_edit.text()
         if not loop_name:
             loop_name = 'Loop'
@@ -796,15 +1028,26 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         # Creates KMZ objects for the loop.
         loop_lonlat = self.get_loop_lonlat()
         loop_lonlat.append(loop_lonlat[0])
-        ls = folder.newlinestring(name=loop_name)
+        ls = grid_folder.newlinestring(name=loop_name)
         ls.coords = loop_lonlat
         ls.extrude = 1
         ls.style = loop_style
 
-        # Creates KMZ object for the collar
-        lon, lat = self.get_collar_lonlat()
-        collar = folder.newpoint(name=hole_name, coords=[(lon, lat)])
-        collar.style = collar_style
+        # Creates KMZ object for the lines and stations
+        for line in self.get_grid_lonlat():
+            line_coords = line['station_coords']
+            line_name = line['line_name']
+            kmz_line_coords = []
+            line_folder = grid_folder.newfolder(name=line_name)
+            for lon, lat, station_name in line_coords:
+                new_point = line_folder.newpoint(name=f"{station_name}", coords=[(lon, lat)])
+                new_point.style = station_style
+                kmz_line_coords.append((lon, lat))
+
+            ls = line_folder.newlinestring(name=line_name)
+            ls.coords = line_coords
+            ls.extrude = 1
+            ls.style = trace_style
 
         save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', None, 'KMZ Files (*.KMZ);; All files(*.*)')[0]
         if save_dir:
@@ -821,9 +1064,9 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         """
         gpx = gpxpy.gpx.GPX()
 
-        hole_name = self.hole_name_edit.text()
-        if not hole_name:
-            hole_name = 'Hole'
+        grid_name = self.grid_name_edit.text()
+        if not grid_name:
+            grid_name = 'Grid'
         loop_name = self.loop_name_edit.text()
         if not loop_name:
             loop_name = 'Loop'
@@ -841,11 +1084,17 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         gpx.routes.append(route)
 
         # Add the collar coordinates to the GPX as a waypoint.
-        hole_lonlat= self.get_collar_lonlat()
-        waypoint = gpxpy.gpx.GPXWaypoint(latitude=hole_lonlat[1], longitude=hole_lonlat[0], name=hole_name, description=hole_name)
-        gpx.waypoints.append(waypoint)
+        grid_lonlat = self.get_grid_lonlat()
+        for line in grid_lonlat:
+            line_name = line['line_name']
+            coords = line['station_coords']
 
-        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', None, 'GPX Files (*.GPX);; All files(*.*)')[0]
+            for coord in coords:
+                station = coord[2]
+                waypoint = gpxpy.gpx.GPXWaypoint(latitude=coords[0], longitude=coords[1], name=line_name, description=station)
+                gpx.waypoints.append(waypoint)
+
+        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', grid_name, 'GPX Files (*.GPX);; All files(*.*)')[0]
         if save_path:
             with open(save_path, 'w') as f:
                 f.write(gpx.to_xml())
@@ -914,5 +1163,6 @@ if __name__ == '__main__':
     # planner = LoopPlanner()
     planner = GridPlanner()
     planner.show()
+    planner.save_gpx()
 
     app.exec_()
