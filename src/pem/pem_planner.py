@@ -535,7 +535,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('Grid Planner')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.setGeometry(200, 200, 1100, 700)
         self.dialog = QFileDialog()
 
