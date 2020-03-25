@@ -34,7 +34,7 @@ from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
 from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods, ContourMap
-from src.pem.pem_planner import LoopPlanner
+from src.pem.pem_planner import LoopPlanner, GridPlanner
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.xyz_serializer import XYZSerializer
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
@@ -343,6 +343,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.loop_planner_action.triggered.connect(self.show_loop_planner)
 
+        self.grid_planner_action = QAction("&Grid Planner", self)
+        self.grid_planner_action.setStatusTip("Grid planner")
+        self.grid_planner_action.setIcon(
+            QtGui.QIcon(os.path.join(icons_path, 'grid_planner.png')))
+        self.grid_planner_action.triggered.connect(self.show_grid_planner)
+
         self.timebase_freqency_calculator_action = QAction("&Convert Timebase/Frequency", self)
         self.timebase_freqency_calculator_action.setStatusTip("Two way conversion between timebase and frequency")
         self.timebase_freqency_calculator_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
@@ -350,6 +356,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.ToolsMenu = self.menubar.addMenu('&Tools')
         self.ToolsMenu.addAction(self.loop_planner_action)
+        self.ToolsMenu.addAction(self.grid_planner_action)
         self.ToolsMenu.addAction(self.timebase_freqency_calculator_action)
 
     def initSignals(self):
@@ -2580,6 +2587,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         """
         self.loop_planner = LoopPlanner()
         self.loop_planner.show()
+
+    def show_grid_planner(self):
+        """
+        Opens the Loop Planner window.
+        :return: None
+        """
+        self.grid_planner = GridPlanner()
+        self.grid_planner.show()
 
     def batch_rename(self, type):
         """
