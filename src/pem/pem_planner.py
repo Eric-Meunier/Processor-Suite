@@ -70,6 +70,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
 
         self.hole_easting = int(self.hole_easting_edit.text())
         self.hole_northing = int(self.hole_northing_edit.text())
+        self.hole_elevation = int(self.hole_elevation_edit.text())
         self.hole_az = int(self.hole_az_edit.text())
         self.hole_dip = -int(self.hole_dip_edit.text())
         self.hole_length = int(self.hole_length_edit.text())
@@ -90,6 +91,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
 
         self.hole_easting_edit.returnPressed.connect(self.plot_hole)
         self.hole_northing_edit.returnPressed.connect(self.plot_hole)
+        self.hole_elevation_edit.returnPressed.connect(self.plot_hole)
         self.hole_az_edit.returnPressed.connect(self.plot_hole)
         self.hole_dip_edit.returnPressed.connect(self.plot_hole)
         self.hole_length_edit.returnPressed.connect(self.plot_hole)
@@ -111,6 +113,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
 
         self.hole_easting_edit.setValidator(size_validator)
         self.hole_northing_edit.setValidator(size_validator)
+        self.hole_elevation_edit.setValidator(int_validator)
         self.hole_az_edit.setValidator(az_validator)
         self.hole_dip_edit.setValidator(dip_validator)
         self.hole_length_edit.setValidator(size_validator)
@@ -254,6 +257,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
             shift_amt = int(self.hole_northing_edit.text()) - self.hole_northing
             self.shift_loop(0, shift_amt)
             self.hole_northing = int(self.hole_northing_edit.text())
+        self.hole_elevation = int(self.hole_elevation_edit.text())
         self.hole_az = int(self.hole_az_edit.text())
         self.hole_dip = -int(self.hole_dip_edit.text())
         self.hole_length = int(self.hole_length_edit.text())
@@ -270,7 +274,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
 
         # Get the corners of the 2D section to plot the mag on
         c1, c2 = list(p1), list(p2)
-        c1.append(self.ax.get_ylim()[1])  # Add the max Z
+        c1.append(max(self.ax.get_ylim()[1], 0))  # Add the max Z
         c2.append(self.ax.get_ylim()[0])  # Add the min Z
         plot_mag(c1, c2)
 
@@ -399,10 +403,10 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         x, y = self.loop_roi.pos()
         w, h = self.loop_roi.size()
         angle = self.loop_roi.angle()
-        c1 = (x, y, self.hole_elevation)
-        c2 = (c1[0] + w * (math.cos(math.radians(angle))), c1[1] + w * (math.sin(math.radians(angle))), self.hole_elevation)
-        c3 = (c2[0] - h * (math.sin(math.radians(angle))), c2[1] + h * (math.sin(math.radians(90-angle))), self.hole_elevation)
-        c4 = (c3[0] + w * (math.cos(math.radians(180-angle))), c3[1] - w * (math.sin(math.radians(180-angle))), self.hole_elevation)
+        c1 = (x, y, 0)
+        c2 = (c1[0] + w * (math.cos(math.radians(angle))), c1[1] + w * (math.sin(math.radians(angle))), 0)
+        c3 = (c2[0] - h * (math.sin(math.radians(angle))), c2[1] + h * (math.sin(math.radians(90-angle))), 0)
+        c4 = (c3[0] + w * (math.cos(math.radians(180-angle))), c3[1] - w * (math.sin(math.radians(180-angle))), 0)
         corners = [c1, c2, c3, c4]
 
         # self.loop_plot.clear()
@@ -1161,9 +1165,9 @@ class CustomAxis(pg.AxisItem):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    # planner = LoopPlanner()
-    planner = GridPlanner()
+    planner = LoopPlanner()
+    # planner = GridPlanner()
     planner.show()
-    planner.save_gpx()
+    # planner.save_gpx()
 
     app.exec_()

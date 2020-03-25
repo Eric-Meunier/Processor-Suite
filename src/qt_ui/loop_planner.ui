@@ -212,13 +212,6 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
-           <widget class="QLabel" name="label_10">
-            <property name="text">
-             <string>Dip</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="2">
            <widget class="QLineEdit" name="hole_easting_edit">
             <property name="sizePolicy">
@@ -241,13 +234,6 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
-           <widget class="QLabel" name="label_11">
-            <property name="text">
-             <string>Length</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="1">
            <widget class="QLabel" name="label">
             <property name="sizePolicy">
@@ -261,14 +247,35 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="4" column="1">
+           <widget class="QLabel" name="label_10">
+            <property name="text">
+             <string>Dip</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
            <widget class="QLabel" name="label_9">
             <property name="text">
              <string>Azimuth</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="2">
+          <item row="5" column="1">
+           <widget class="QLabel" name="label_11">
+            <property name="text">
+             <string>Length</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1" colspan="2">
+           <widget class="Line" name="line_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2">
            <widget class="QLineEdit" name="hole_dip_edit">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -284,23 +291,7 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="2">
-           <widget class="QLineEdit" name="hole_length_edit">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>400</string>
-            </property>
-            <property name="placeholderText">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
+          <item row="3" column="2">
            <widget class="QLineEdit" name="hole_az_edit">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -316,24 +307,58 @@
             </property>
            </widget>
           </item>
-          <item row="6" column="2">
+          <item row="5" column="2">
+           <widget class="QLineEdit" name="hole_length_edit">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>400</string>
+            </property>
+            <property name="placeholderText">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="2">
            <widget class="QLineEdit" name="hole_name_edit">
             <property name="placeholderText">
              <string>(Optional)</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="1">
+          <item row="7" column="1">
            <widget class="QLabel" name="label_13">
             <property name="text">
              <string>Name</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1" colspan="2">
-           <widget class="Line" name="line_2">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+          <item row="2" column="1">
+           <widget class="QLabel" name="label_14">
+            <property name="toolTip">
+             <string>Hole elevation relative to loop elevation.
+Mostly used for underground holes.</string>
+            </property>
+            <property name="text">
+             <string>Elevation</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QLineEdit" name="hole_elevation_edit">
+            <property name="toolTip">
+             <string>Hole elevation relative to loop elevation.
+Mostly used for underground holes.</string>
+            </property>
+            <property name="statusTip">
+             <string/>
+            </property>
+            <property name="text">
+             <string>0</string>
             </property>
            </widget>
           </item>

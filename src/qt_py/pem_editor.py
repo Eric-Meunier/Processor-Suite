@@ -2590,7 +2590,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
     def show_grid_planner(self):
         """
-        Opens the Loop Planner window.
+        Opens the Grid Planner window.
         :return: None
         """
         self.grid_planner = GridPlanner()
