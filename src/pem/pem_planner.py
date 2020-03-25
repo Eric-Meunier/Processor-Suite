@@ -1091,7 +1091,8 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
 
             for coord in coords:
                 station = coord[2]
-                waypoint = gpxpy.gpx.GPXWaypoint(latitude=coords[0], longitude=coords[1], name=line_name, description=station)
+                waypoint = gpxpy.gpx.GPXWaypoint(latitude=coord[1], longitude=coord[0],
+                                                 name=f"L{line_name.strip()}-{station}", description=station)
                 gpx.waypoints.append(waypoint)
 
         save_path = self.dialog.getSaveFileName(self, 'Save GPX File', grid_name, 'GPX Files (*.GPX);; All files(*.*)')[0]
