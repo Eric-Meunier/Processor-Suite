@@ -344,7 +344,8 @@
 Mostly used for underground holes.</string>
             </property>
             <property name="text">
-             <string>Elevation</string>
+             <string>Elevation
+from Loop</string>
             </property>
            </widget>
           </item>
