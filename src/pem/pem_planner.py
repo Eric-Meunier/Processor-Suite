@@ -15,6 +15,7 @@ from folium import FeatureGroup
 from folium.plugins import MeasureControl, MiniMap
 from PyQt5 import QtGui, QtCore, uic, QtWebEngineWidgets
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut)
+from PyQt5.QtWebEngineWidgets import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
@@ -469,7 +470,9 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         m = folium.Map(location=[collar_lat, collar_lon],
                        zoom_start=15,
                        zoom_control=False,
-                       control_scale=True
+                       control_scale=True,
+                       tiles='OpenStreetMap',
+                       attr='testing attr'
                        )
 
         mini_map = MiniMap(toggle_display=True)
@@ -1108,7 +1111,9 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         m = folium.Map(location=[grid_lat, grid_lon],
                        zoom_start=15,
                        zoom_control=False,
-                       control_scale=True
+                       control_scale=True,
+                       tiles='OpenStreetMap',
+                       attr='testing attr'
                        )
 
         mini_map = MiniMap(toggle_display=True)

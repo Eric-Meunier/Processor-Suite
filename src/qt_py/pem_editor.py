@@ -3600,7 +3600,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                     if self.channel_list_edit.isEnabled():
                         text = self.channel_list_edit.text()
                         try:
-                            channels = [int(re.findall('\d+', text)[0]) for text in text.split()]
+                            channels = [int(re.match('\d+', text)[0]) for text in re.split(',| ', text)]
+                            print(f"Saving contour map plots for channels {channels}")
                         except IndexError:
                             self.error.showMessage(f"No numbers found in the list of channels")
                             return
@@ -3654,8 +3655,8 @@ def main():
     # mw.calc_mag_declination(pem_files[0])
     # mw.save_as_xyz(selected_files=False)
     # mw.show_contour_map_viewer()
+    # mw.contour_map_viewer.save_figure()
     # mw.auto_merge_pem_files()
-    # mw.show_contour_map_viewer()
     # mw.save_as_kmz()
     # spinner = WaitingSpinner(mw.table)
     # spinner.start()
