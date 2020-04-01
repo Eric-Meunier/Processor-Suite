@@ -178,6 +178,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.openFile = QAction("&Open...", self)
         self.openFile.setShortcut("Ctrl+O")
         self.openFile.setStatusTip('Open file')
+        self.openFile.setToolTip('Open file')
         self.openFile.setIcon(QtGui.QIcon(os.path.join(icons_path, 'open.png')))
         self.openFile.triggered.connect(self.open_file_dialog)
 
@@ -185,6 +186,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.saveFiles.setShortcut("Ctrl+S")
         self.saveFiles.setIcon(QtGui.QIcon(os.path.join(icons_path, 'save.png')))
         self.saveFiles.setStatusTip("Save all files")
+        self.saveFiles.setToolTip("Save all files")
         self.saveFiles.triggered.connect(lambda: self.save_pem_files(all=True))
 
         self.save_files_as_xyz_action = QAction("&Save Files As XYZ", self)
@@ -194,16 +196,19 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.export_pems_action = QAction("&Export Files...", self)
         self.export_pems_action.setShortcut("F11")
         self.export_pems_action.setStatusTip("Export all files to a specified location.")
+        self.export_pems_action.setToolTip("Export all files to a specified location.")
         self.export_pems_action.triggered.connect(lambda: self.export_pem_files(all=True))
 
         self.export_pem_files_action = QAction("&Export Final PEM Files...", self)
         self.export_pem_files_action.setShortcut("F9")
         self.export_pem_files_action.setStatusTip("Export the final PEM files")
+        self.export_pem_files_action.setToolTip("Export the final PEM files")
         self.export_pem_files_action.triggered.connect(lambda: self.export_pem_files(export_final=True))
 
         self.print_plots_action = QAction("&Print Plots to PDF...", self)
         self.print_plots_action.setShortcut("F12")
         self.print_plots_action.setStatusTip("Print plots to a PDF file")
+        self.print_plots_action.setToolTip("Print plots to a PDF file")
         self.print_plots_action.triggered.connect(self.print_plots)
 
         self.del_file = QAction("&Remove File", self)
@@ -215,6 +220,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.clearFiles = QAction("&Clear All Files", self)
         self.clearFiles.setShortcut("Shift+Del")
         self.clearFiles.setStatusTip("Clear all files")
+        self.clearFiles.setToolTip("Clear all files")
         self.clearFiles.triggered.connect(self.clear_files)
 
         # self.sort_files_action = QAction("&Sort Table", self)
@@ -224,11 +230,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.backup_files_action = QAction("&Backup Files", self)
         # self.sortFiles.setShortcut("Shift+Del")
         self.backup_files_action.setStatusTip("Backup all files in the table.")
+        self.backup_files_action.setToolTip("Backup all files in the table.")
         self.backup_files_action.triggered.connect(self.backup_files)
 
         self.import_ri_files_action = QAction("&Import RI Files", self)
         self.import_ri_files_action.setShortcut("Ctrl+I")
         self.import_ri_files_action.setStatusTip("Import multiple RI files")
+        self.import_ri_files_action.setToolTip("Import multiple RI files")
         self.import_ri_files_action.triggered.connect(self.import_ri_files)
 
         self.fileMenu = self.menubar.addMenu('&File')
@@ -248,12 +256,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # PEM menu
         self.averageAllPems = QAction("&Average All PEM Files", self)
         self.averageAllPems.setStatusTip("Average all PEM files")
+        self.averageAllPems.setToolTip("Average all PEM files")
         self.averageAllPems.setIcon(QtGui.QIcon(os.path.join(icons_path, 'average.png')))
         self.averageAllPems.setShortcut("F5")
         self.averageAllPems.triggered.connect(lambda: self.average_pem_data(all=True))
 
         self.splitAllPems = QAction("&Split All PEM Files", self)
         self.splitAllPems.setStatusTip("Remove on-time channels for all PEM files")
+        self.splitAllPems.setToolTip("Remove on-time channels for all PEM files")
         self.splitAllPems.setIcon(QtGui.QIcon(os.path.join(icons_path, 'split.png')))
         self.splitAllPems.setShortcut("F6")
         self.splitAllPems.triggered.connect(lambda: self.split_pem_channels(all=True))
@@ -264,23 +274,27 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.scaleAllCurrents = QAction("&Scale All Current", self)
         self.scaleAllCurrents.setStatusTip("Scale the current of all PEM Files to the same value")
+        self.scaleAllCurrents.setToolTip("Scale the current of all PEM Files to the same value")
         self.scaleAllCurrents.setIcon(QtGui.QIcon(os.path.join(icons_path, 'current.png')))
         self.scaleAllCurrents.setShortcut("F7")
         self.scaleAllCurrents.triggered.connect(lambda: self.scale_pem_current(all=True))
 
         self.scaleAllCoilAreas = QAction("&Change All Coil Areas", self)
         self.scaleAllCoilAreas.setStatusTip("Scale all coil areas to the same value")
+        self.scaleAllCoilAreas.setToolTip("Scale all coil areas to the same value")
         self.scaleAllCoilAreas.setIcon(QtGui.QIcon(os.path.join(icons_path, 'coil.png')))
         self.scaleAllCoilAreas.setShortcut("F8")
         self.scaleAllCoilAreas.triggered.connect(lambda: self.scale_coil_area_selection(all=True))
 
         self.editLineNames = QAction("&Rename All Lines/Holes", self)
         self.editLineNames.setStatusTip("Rename all line/hole names")
+        self.editLineNames.setToolTip("Rename all line/hole names")
         # self.editLineNames.setShortcut("F2")
         self.editLineNames.triggered.connect(lambda: self.batch_rename(type='Line'))
 
         self.editFileNames = QAction("&Rename All Files", self)
         self.editFileNames.setStatusTip("Rename all file names")
+        self.editFileNames.setToolTip("Rename all file names")
         # self.editFileNames.setShortcut("F3")
         self.editFileNames.triggered.connect(lambda: self.batch_rename(type='File'))
 
@@ -297,20 +311,24 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # GPS menu
         self.saveAsKMZFile = QAction("&Save as KMZ", self)
         self.saveAsKMZFile.setStatusTip("Create a KMZ file using all GPS in the opened PEM file(s)")
+        self.saveAsKMZFile.setToolTip("Create a KMZ file using all GPS in the opened PEM file(s)")
         self.saveAsKMZFile.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
         self.saveAsKMZFile.triggered.connect(self.save_as_kmz)
 
         self.export_all_gps_action = QAction("&Export All GPS", self)
         self.export_all_gps_action.setStatusTip("Export all GPS in the opened PEM file(s) to separate CSV files")
+        self.export_all_gps_action.setToolTip("Export all GPS in the opened PEM file(s) to separate CSV files")
         self.export_all_gps_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'csv.png')))
         self.export_all_gps_action.triggered.connect(self.export_all_gps)
 
         self.sortAllStationGps = QAction("&Sort All Station GPS", self)
         self.sortAllStationGps.setStatusTip("Sort the station GPS for every file")
+        self.sortAllStationGps.setToolTip("Sort the station GPS for every file")
         self.sortAllStationGps.triggered.connect(self.sort_all_station_gps)
 
         self.sortAllLoopGps = QAction("&Sort All Loop GPS", self)
         self.sortAllLoopGps.setStatusTip("Sort the loop GPS for every file")
+        self.sortAllLoopGps.setToolTip("Sort the loop GPS for every file")
         self.sortAllLoopGps.triggered.connect(self.sort_all_loop_gps)
 
         self.GPSMenu = self.menubar.addMenu('&GPS')
@@ -323,6 +341,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # Map menu
         self.show3DMap = QAction("&3D Map", self)
         self.show3DMap.setStatusTip("Show 3D map of all PEM files")
+        self.show3DMap.setToolTip("Show 3D map of all PEM files")
         self.show3DMap.setShortcut('Ctrl+M')
         self.show3DMap.setIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map2.png')))
         self.show3DMap.triggered.connect(self.show_map_3d_viewer)
@@ -330,6 +349,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.showContourMap = QAction("&Contour Map", self)
         self.showContourMap.setIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map3.png')))
         self.showContourMap.setStatusTip("Show a contour map of surface PEM files")
+        self.showContourMap.setToolTip("Show a contour map of surface PEM files")
         self.showContourMap.triggered.connect(self.show_contour_map_viewer)
 
         self.MapMenu = self.menubar.addMenu('&Map')
@@ -339,18 +359,21 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # Tools menu
         self.loop_planner_action = QAction("&Loop Planner", self)
         self.loop_planner_action.setStatusTip("Loop planner")
+        self.loop_planner_action.setToolTip("Loop planner")
         self.loop_planner_action.setIcon(
             QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.loop_planner_action.triggered.connect(self.show_loop_planner)
 
         self.grid_planner_action = QAction("&Grid Planner", self)
         self.grid_planner_action.setStatusTip("Grid planner")
+        self.grid_planner_action.setToolTip("Grid planner")
         self.grid_planner_action.setIcon(
             QtGui.QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.grid_planner_action.triggered.connect(self.show_grid_planner)
 
         self.timebase_freqency_calculator_action = QAction("&Convert Timebase/Frequency", self)
         self.timebase_freqency_calculator_action.setStatusTip("Two way conversion between timebase and frequency")
+        self.timebase_freqency_calculator_action.setToolTip("Two way conversion between timebase and frequency")
         self.timebase_freqency_calculator_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
         self.timebase_freqency_calculator_action.triggered.connect(self.timebase_freqency_converter)
 

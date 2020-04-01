@@ -21,6 +21,7 @@ from matplotlib.figure import Figure
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.gps.gpx_module import gpxpy
 from src.gps.gpx_module.gpxpy import gpx
+from shutil import copyfile
 
 sys._excepthook = sys.excepthook
 
@@ -41,6 +42,26 @@ if getattr(sys, 'frozen', False):
     loopPlannerCreatorFile = 'qt_ui\\loop_planner.ui'
     gridPlannerCreatorFile = 'qt_ui\\grid_planner.ui'
     icons_path = 'icons'
+
+    # Copy required files to root folder if they are not present. Needed for QtWebEngineView. Possibly won't be
+    # needed when bundling in 64 bit windows.
+    resources_dir, exe_dir, root = r'PyQt5\Qt\resources', r'PyQt5\Qt\bin', os.curdir
+    resources_files, exe_file, root_files = os.listdir(resources_dir), 'QtWebEngineProcess.exe', os.listdir(root)
+
+    for file in resources_files:
+        if file not in root_files:
+            source = os.path.join(resources_dir, file)
+            print(f"Copying file {source} to {file}")
+            copyfile(source, file)
+        else:
+            print(f"File {file} already in folder")
+    if exe_file not in root_files:
+        source = os.path.join(exe_dir, exe_file)
+        print(f"Copying {source} to {exe_file}")
+        copyfile(source, exe_file)
+    else:
+        print(f"File {exe_file} already in folder")
+
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     loopPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\loop_planner.ui')
