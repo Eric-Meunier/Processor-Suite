@@ -2562,6 +2562,14 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         pem_file, row = self.get_selected_pem_files()
         self.pem_file_splitter = PEMFileSplitter(pem_file[0], parent=self)
 
+    def show_map(self):
+        """
+        Opens the interactive plan Map window
+        :return: None
+        """
+        self.map_viewer_3d = Map3DViewer(self.pem_files, parent=self)
+        self.map_viewer_3d.show()
+
     def show_map_3d_viewer(self):
         """
         Opens the 3D Map Viewer window

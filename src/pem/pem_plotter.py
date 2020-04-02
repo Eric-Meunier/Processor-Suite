@@ -4,6 +4,7 @@ import math
 import os
 import re
 import sys
+import utm
 from datetime import datetime
 from timeit import default_timer as timer
 from collections import defaultdict
@@ -38,6 +39,7 @@ from statistics import mean
 import itertools
 
 from src.gps.gps_editor import GPSEditor
+from src.pem.pem_planner import FoliumWindow
 
 
 if getattr(sys, 'frozen', False):
@@ -1806,6 +1808,33 @@ class Map3D(MapPlotMethods):
         self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
         self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
         self.ax.zaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
+
+
+class FoliumMap:
+
+    def __init__(self, pem_files, utm_zone):
+        self.pem_files = pem_files
+        self.zone = utm_zone
+        self.w = FoliumWindow()
+
+    def plot_pems(self):
+        pass
+
+    def convert_to_latlon(self, easting, northing):
+        """
+        Convert a UTM easting and northing to lat lon
+        """
+        zone = self.zone
+        zone_num = int(re.search('\d+', zone).group())
+        north = True if 'n' in zone.lower() else False
+
+        easting = int(float(easting))
+        northing = int(float(northing))
+        lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+        return lat, lon
+
+    def get_map(self):
+        pass
 
 
 class MagneticFieldCalculator(MapPlotMethods):
