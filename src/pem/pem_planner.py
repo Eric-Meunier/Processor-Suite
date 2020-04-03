@@ -15,7 +15,6 @@ from folium import FeatureGroup
 from folium.plugins import MeasureControl, MiniMap
 from PyQt5 import QtGui, QtCore, uic, QtWebEngineWidgets
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut)
-from PyQt5.QtWebEngineWidgets import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator

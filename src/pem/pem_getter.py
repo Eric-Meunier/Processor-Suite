@@ -11,7 +11,7 @@ class PEMGetter:
 
     def get_pems(self):
         # # sample_files = os.path.join(os.path.dirname(os.path.dirname(application_path)), "sample_files")
-        sample_files_dir = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files'
+        sample_files_dir = r'../../sample_files/PEMGetter files'
         file_names = [f for f in os.listdir(sample_files_dir) if
                   os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
         pem_files = []
