@@ -33,7 +33,7 @@ from src.pem.pem_file import PEMFile
 from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_parser import PEMParser
-from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods, ContourMap
+from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods, ContourMap, FoliumMap
 from src.pem.pem_planner import LoopPlanner, GridPlanner
 from src.pem.pem_serializer import PEMSerializer
 from src.pem.xyz_serializer import XYZSerializer
@@ -339,6 +339,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.GPSMenu.addAction(self.sortAllLoopGps)
 
         # Map menu
+        self.showMap = QAction("&Plan Map", self)
+        self.showMap.setStatusTip("Plot all PEM files on an interactive plan map")
+        self.showMap.setToolTip("Plot all PEM files on an interactive plan map")
+        self.showMap.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+        self.showMap.triggered.connect(self.show_plan_map)
+
         self.show3DMap = QAction("&3D Map", self)
         self.show3DMap.setStatusTip("Show 3D map of all PEM files")
         self.show3DMap.setToolTip("Show 3D map of all PEM files")
@@ -353,6 +359,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.showContourMap.triggered.connect(self.show_contour_map_viewer)
 
         self.MapMenu = self.menubar.addMenu('&Map')
+        self.MapMenu.addAction(self.showMap)
         self.MapMenu.addAction(self.show3DMap)
         self.MapMenu.addAction(self.showContourMap)
 
@@ -2562,13 +2569,22 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         pem_file, row = self.get_selected_pem_files()
         self.pem_file_splitter = PEMFileSplitter(pem_file[0], parent=self)
 
-    def show_map(self):
+    def show_plan_map(self):
         """
         Opens the interactive plan Map window
         :return: None
         """
-        self.map_viewer_3d = Map3DViewer(self.pem_files, parent=self)
-        self.map_viewer_3d.show()
+        zone = self.zoneCBox.currentText()
+        datum = self.datumCBox.currentText()
+        if not zone:
+            self.message.information(self, 'UTM Zone Error', f"UTM zone cannot be empty.")
+        elif not datum:
+            self.message.information(self, 'Datum Error', f"Datum cannot be empty.")
+        elif datum == 'NAD 1927':
+            self.message.information(self, 'Datum Error', f"Datum cannot be NAD 1927.")
+        else:
+            self.map = FoliumMap(self.pem_files, zone).get_map()
+            self.map.show()
 
     def show_map_3d_viewer(self):
         """
@@ -3682,6 +3698,7 @@ def main():
     pem_files = pg.get_pems()
     mw.open_pem_files(pem_files)
 
+    # mw.show_map()
     # mw.timebase_freqency_converter()
     # mw.calc_mag_declination(pem_files[0])
     # mw.save_as_xyz(selected_files=False)

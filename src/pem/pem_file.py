@@ -25,6 +25,12 @@ class PEMFile:
         self.old_filepath = None
         self.is_merged = False
 
+    def is_borehole(self):
+        if 'borehole' in self.survey_type.lower():
+            return True
+        else:
+            return False
+
     def is_averaged(self):
         unique_identifiers = []
         for reading in self.data:

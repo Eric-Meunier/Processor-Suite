@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import utm
+import io
 from datetime import datetime
 from timeit import default_timer as timer
 from collections import defaultdict
@@ -37,6 +38,7 @@ from scipy import interpolate as interp
 from scipy import stats
 from statistics import mean
 import itertools
+import folium
 
 from src.gps.gps_editor import GPSEditor
 from src.pem.pem_planner import FoliumWindow
@@ -1815,10 +1817,110 @@ class FoliumMap:
     def __init__(self, pem_files, utm_zone):
         self.pem_files = pem_files
         self.zone = utm_zone
-        self.w = FoliumWindow()
+        self.error = QErrorMessage()
+        self.plot_pems()
 
     def plot_pems(self):
-        pass
+        station_group = folium.FeatureGroup(name='Stations')
+        line_group = folium.FeatureGroup(name='Lines')
+        loop_group = folium.FeatureGroup(name='Loop')
+        collar_group = folium.FeatureGroup(name='Collars')
+        loops = []
+        collars = []
+        lines = []
+        start_location = None
+
+        for pem_file in self.pem_files:
+
+            if pem_file.is_borehole():
+                if pem_file.has_collar_gps():
+                    coords, hole_name = pem_file.get_collar_coords()[0], pem_file.header.get('LineHole')
+                    if coords not in collars:
+                        collars.append(coords)
+                        try:
+                            collar_lat, collar_lon = self.convert_to_latlon(int(float(coords[0])), int(float(coords[1])))
+                        except ValueError as e:
+                            self.error.showMessage(
+                                f"The following error occured when converting UTM to Lat Lon: {str(e)}")
+                            print(f"The following error occured when converting UTM to Lat Lon: {str(e)}")
+                        else:
+                            if start_location is None:
+                                start_location = (collar_lat, collar_lon)
+                            # Plot collar
+                            folium.Marker((collar_lat, collar_lon),
+                                          popup=hole_name,
+                                          tooltip=hole_name
+                                          ).add_to(collar_group)
+            else:
+                if pem_file.has_station_gps():
+                    coords, line_name = pem_file.get_line_coords(), pem_file.header.get('LineHole')
+                    if coords not in lines:
+                        lines.append(coords)
+                        stations = [row[-1] for row in coords]
+                        coords = [(int(float(row[0])), int(float(row[1]))) for row in coords]
+                        try:
+                            coords = [self.convert_to_latlon(e, n) for (e, n) in coords]
+                        except ValueError as e:
+                            self.error.showMessage(
+                                f"The following error occured when converting UTM to Lat Lon: {str(e)}")
+                            print(f"The following error occured when converting UTM to Lat Lon: {str(e)}")
+                        else:
+                            if start_location is None:
+                                start_location = coords[0]
+                            # Plot line
+                            folium.PolyLine(locations=coords,
+                                            popup=line_name,
+                                            tooltip=line_name,
+                                            line_opacity=0.5,
+                                            color='blue'
+                                            ).add_to(line_group)
+                            # Plot stations
+                            for coords, station in zip(coords, stations):
+                                folium.Marker(coords,
+                                              popup=station,
+                                              tooltip=station,
+                                              size=10
+                                              ).add_to(station_group)
+
+            if pem_file.has_loop_gps():
+                coords, loop_name = pem_file.get_loop_coords(), pem_file.header.get('Loop')
+                if coords not in loops:
+                    loops.append(coords)
+                    coords = [(int(float(row[0])), int(float(row[1]))) for row in coords]
+                    try:
+                        coords = [self.convert_to_latlon(e, n) for (e, n) in coords]
+                        coords.append(coords[0])  # Close-up the loop
+                    except ValueError as e:
+                        self.error.showMessage(
+                            f"The following error occured when converting UTM to Lat Lon: {str(e)}")
+                        print(f"The following error occured when converting UTM to Lat Lon: {str(e)}")
+                    else:
+                        if start_location is None:
+                            start_location = coords[0]
+                        # Plot loop
+                        folium.PolyLine(locations=coords,
+                                        popup=loop_name,
+                                        tooltip=loop_name,
+                                        line_opacity=0.5,
+                                        color='magenta'
+                                        ).add_to(loop_group)
+
+        self.m = folium.Map(location=start_location,
+                       zoom_start=15,
+                       zoom_control=False,
+                       control_scale=True,
+                       tiles='OpenStreetMap',
+                       attr='testing attr'
+                       )
+        folium.raster_layers.TileLayer('OpenStreetMap').add_to(self.m)
+        folium.raster_layers.TileLayer('Stamen Toner').add_to(self.m)
+        folium.raster_layers.TileLayer('Stamen Terrain').add_to(self.m)
+        folium.raster_layers.TileLayer('Cartodb positron').add_to(self.m)
+        station_group.add_to(self.m)
+        line_group.add_to(self.m)
+        loop_group.add_to(self.m)
+        collar_group.add_to(self.m)
+        folium.LayerControl().add_to(self.m)
 
     def convert_to_latlon(self, easting, northing):
         """
@@ -1834,7 +1936,13 @@ class FoliumMap:
         return lat, lon
 
     def get_map(self):
-        pass
+        # So the HTML can be opened in PyQt
+        data = io.BytesIO()
+        self.m.save(data, close_file=False)
+
+        self.w = FoliumWindow()
+        self.w.setHtml(data.getvalue().decode())
+        return self.w
 
 
 class MagneticFieldCalculator(MapPlotMethods):
@@ -2884,6 +2992,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems()
+    map = FoliumMap(pem_files, '17N')
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()
