@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="gpx.py -- https://github.com/tkrajina/gpxpy">
+  <wpt lat="11.307324581432313" lon="38.54183164416479">
+    <name>121</name>
+    <cmt>1212</cmt>
+  </wpt>
+  <wpt lat="11.308681252723055" lon="38.541921121020636">
+    <name>122</name>
+    <cmt>1212</cmt>
+  </wpt>
+  <wpt lat="11.310037923895857" lon="38.54201059846436">
+    <name>123</name>
+    <cmt>1212</cmt>
+  </wpt>
+  <wpt lat="11.31139459495069" lon="38.5421000764961">
+    <name>124</name>
+    <cmt>1212</cmt>
+  </wpt>
+  <wpt lat="11.312751265887531" lon="38.542189555116025">
+    <name>125</name>
+    <cmt>1212</cmt>
+  </wpt>
+  <wpt lat="11.314107936706352" lon="38.54227903432429">
+    <name>126</name>
+    <cmt>1212</cmt>
+  </wpt>
+  <wpt lat="11.315464607407138" lon="38.54236851412106">
+    <name>127</name>
+    <cmt>1212</cmt>
+  </wpt>
+  <wpt lat="11.316821277989852" lon="38.542457994506485">
+    <name>128</name>
+    <cmt>1212</cmt>
+  </wpt>
+</gpx>
