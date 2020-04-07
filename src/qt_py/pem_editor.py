@@ -2574,17 +2574,20 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Opens the interactive plan Map window
         :return: None
         """
-        zone = self.zoneCBox.currentText()
-        datum = self.datumCBox.currentText()
-        if not zone:
-            self.message.information(self, 'UTM Zone Error', f"UTM zone cannot be empty.")
-        elif not datum:
-            self.message.information(self, 'Datum Error', f"Datum cannot be empty.")
-        elif datum == 'NAD 1927':
-            self.message.information(self, 'Datum Error', f"Datum cannot be NAD 1927.")
+        if self.pem_files:
+            zone = self.zoneCBox.currentText()
+            datum = self.datumCBox.currentText()
+            if not zone:
+                self.message.information(self, 'UTM Zone Error', f"UTM zone cannot be empty.")
+            elif not datum:
+                self.message.information(self, 'Datum Error', f"Datum cannot be empty.")
+            elif datum == 'NAD 1927':
+                self.message.information(self, 'Datum Error', f"Datum cannot be NAD 1927.")
+            else:
+                self.map = FoliumMap(self.pem_files, zone).get_map()
+                self.map.show()
         else:
-            self.map = FoliumMap(self.pem_files, zone).get_map()
-            self.map.show()
+            self.window().statusBar().showMessage('No PEM files are opened.', 2000)
 
     def show_map_3d_viewer(self):
         """
