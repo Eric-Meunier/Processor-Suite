@@ -9,19 +9,20 @@ class PEMGetter:
     def __init__(self):
         self.parser = PEMParser
 
-    def get_pems(self):
+    def get_pems(self, client='', number=None):
         sample_files_dir = os.path.join(
             os.path.dirname(
                 os.path.dirname(
                     os.path.dirname(
                         os.path.abspath(__file__)))),
             'sample_files/PEMGetter files')
+        if client:
+            sample_files_dir = os.path.join(sample_files_dir, client)
         file_names = [f for f in os.listdir(sample_files_dir) if
                       os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
         pem_files = []
 
-        # file = os.path.join(sample_files, file_names[0])
-        for file in file_names:
+        for file in file_names[:number]:
             filepath = os.path.join(sample_files_dir, file)
             pem_file = self.parser().parse(filepath)
             print(f'PEMGetter: Getting File {filepath}')

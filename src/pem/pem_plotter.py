@@ -1,48 +1,48 @@
 import copy
+import io
+import itertools
 import logging
-import math
 import os
 import re
 import sys
-import utm
-import io
-from datetime import datetime
-from timeit import default_timer as timer
 from collections import defaultdict
+from datetime import datetime
+from statistics import mean
+from timeit import default_timer as timer
+
 import cartopy
-import colorcet as cc
 import cartopy.crs as ccrs  # import projections
-import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
-import matplotlib.tri as tri
+import cartopy.io.img_tiles as cimgt
+import folium
+import math
+# import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib as mpl
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import matplotlib.text as mtext
 import matplotlib.ticker as ticker
 import matplotlib.transforms as mtransforms
-# from matplotlib.figure import Figure
-from matplotlib.widgets import RectangleSelector
-from matplotlib.transforms import Bbox
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 import numpy as np
-import pyqtgraph as pg
-from numpy import linspace, meshgrid
+import six
+import utm
+from PIL import Image
+from PyQt5 import QtCore, uic
 from PyQt5.QtWidgets import (QProgressBar, QErrorMessage, QApplication, QWidget)
-from PyQt5 import QtGui, QtCore, uic
+from cartopy.feature import NaturalEarthFeature
 from matplotlib import patches
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
-from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
-import mpl_toolkits.mplot3d.art3d as art3d
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
+    NavigationToolbar2QT as NavigationToolbar
+from matplotlib.transforms import Bbox
+# from matplotlib.figure import Figure
+from matplotlib.widgets import RectangleSelector
 from scipy import interpolate as interp
 from scipy import stats
-from statistics import mean
-import itertools
-import folium
 
+from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.gps.gps_editor import GPSEditor
 from src.pem.pem_planner import FoliumWindow
-
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller
@@ -683,6 +683,21 @@ class MapPlotMethods:
             [float(row[2]) for row in loop_coords] + [float(collar[2])] + [float(collar[2]) - float(segments[-1][4])])
         return min_x, max_x, min_y, max_y, min_z, max_z
 
+    def get_crs(self, crs):
+        self.system = crs.get('Coordinate System')
+        self.zone = crs.get('Zone')
+        self.datum = crs.get('Datum')
+        if not all([self.system, self.zone, self.datum]):
+            raise ValueError('CRS information is invalid.')
+        else:
+            if self.system == 'UTM':
+                zone_num = int(re.findall('\d+', self.zone)[0])
+                south_hemis = True if 'South' in self.zone else False
+                globe = ccrs.Globe(datum=re.sub(' 19', '', self.datum))
+                return ccrs.UTM(zone_num, southern_hemisphere=south_hemis, globe=globe)
+            elif self.system == 'Latitude/Longitude':
+                return ccrs.Geodetic()
+
     def get_3D_borehole_projection(self, collar_gps, segments, interp_segments=None):
         """
         Uses the segments to create a 3D projection of a borehole trace. Can be broken up into segments and interpolated.
@@ -691,7 +706,6 @@ class MapPlotMethods:
         :param interp_segments: Desired number of segments to be output
         :return: list of hole trace tuples (easting, northing, elevation)
         """
-        logging.info('MapPlotMethods - Retrieving 3D borehole projection')
         if not collar_gps:
             return None
         else:
@@ -717,6 +731,7 @@ class MapPlotMethods:
             eastings = [float(collar_x)]
             northings = [float(collar_y)]
             depths = [float(collar_z)]
+            relative_depth = [0.0]
             azimuth = None
 
             for segment in segments:
@@ -731,8 +746,97 @@ class MapPlotMethods:
                 eastings.append(float(eastings[-1] + dx))
                 northings.append(float(northings[-1] + dy))
                 depths.append(float(depths[-1] - dz))
+                relative_depth.append(relative_depth[-1] + seg_l)
 
-            return eastings, northings, depths
+            return eastings, northings, depths, relative_depth
+
+    # def get_section_extents(self, pem_file, hole_depth=None, section_plot=False, plot_width=None):
+    #     """
+    #     Find the 50th percentile down the hole, use that as the center of the section, and find the
+    #     X and Y extents of that section line. Default azimuth used is from the 80th percentile if no hole_depth is given.
+    #     :param pem_file: PEMFile object
+    #     :param hole_depth: Desired hole depth to use to find the azimuth of the section
+    #     :param section_plot: Bool: If True, will scale the plot such that the scale is of an acceptable value. Used
+    #     for 2D section plots.
+    #     :param plot_width: Physical width of the plot in meters.
+    #     :return: XY coordinates of each end of the section line, and the azimuth of that line.
+    #     """
+    #     def calc_scale_factor(p1, p2, plot_width):
+    #         """
+    #         Modifies the two cross-section points so they will create a map with an appropriate scale
+    #         :param p1: xy tuple of one of the current extent points
+    #         :param p2: xy tuple of the other extent point
+    #         :return: A factor by which to multiply the change in X and change in Y
+    #         """
+    #
+    #         def get_scale_factor():
+    #             # num_digit = len(str(int(current_scale)))  # number of digits in number
+    #             num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
+    #             scale_nums = [1., 1.25, 1.5, 2., 5.]
+    #             possible_scales = [num * 10 ** num_digit for num in
+    #                                scale_nums + list(map(lambda x: x * 10, scale_nums))]
+    #             new_scale = min(filter(lambda x: x > current_scale, possible_scales),
+    #                             key=lambda x: x - current_scale)
+    #             self.map_scale = new_scale
+    #             scale_factor = new_scale / current_scale
+    #             return scale_factor
+    #
+    #         xmin, xmax, ymin, ymax = min([p1[0], p2[0]]), max([p1[0], p2[0]]), min([p1[1], p2[1]]), max([p1[1], p2[1]])
+    #         dist = math.sqrt((xmax - xmin) ** 2 + (ymax - ymin) ** 2)
+    #         bbox_width = plot_width  # Section plot width in m (after subplot adjustment)
+    #         current_scale = dist / bbox_width
+    #         scale_factor = get_scale_factor()
+    #         return scale_factor
+    #
+    #     collar = pem_file.get_collar_coords()[0]
+    #     segments = pem_file.get_hole_geometry()
+    #     azimuths = [float(row[0]) for row in segments]
+    #     dips = [float(row[1]) for row in segments]
+    #     depths = [float(row[-1]) for row in segments]
+    #     units = segments[0][-2]
+    #
+    #     # Splitting the segments into 1000 pieces
+    #     interp_depths = np.linspace(depths[0], depths[-1], 1000)
+    #     interp_az = np.interp(interp_depths, depths, azimuths)
+    #     interp_dip = np.interp(interp_depths, depths, dips)
+    #     interp_lens = [float(segments[0][-1])]
+    #     for depth, next_depth in zip(interp_depths[:-1], interp_depths[1:]):
+    #         interp_lens.append(next_depth - depth)
+    #
+    #     # Recreating the segments with the interpreted data
+    #     interp_segments = list(zip(interp_az, interp_dip, interp_lens, [units] * len(interp_depths), interp_depths))
+    #
+    #     interp_x, interp_y, interp_z, interp_dist = self.get_3D_borehole_projection(collar, interp_segments)
+    #
+    #     # Find the depths that are 50% and var percentile% down the hole
+    #     perc_50_depth = np.percentile(interp_depths, 50)
+    #     if not hole_depth:
+    #         hole_depth = np.percentile(interp_depths, 80)
+    #
+    #     # Nearest index of the 50th and var percentile% depths
+    #     i_perc_50_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - perc_50_depth))
+    #     i_perc_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - hole_depth))
+    #
+    #     line_center_x, line_center_y = interp_x[i_perc_50_depth], interp_y[i_perc_50_depth]
+    #     line_az = interp_az[i_perc_depth]
+    #     print(f"Line azimuth: {line_az:.0f}°")
+    #     line_len = math.ceil(depths[-1] / 400) * 300  # Calculating the length of the cross-section
+    #     dx = math.cos(math.radians(90 - line_az)) * (line_len / 2)
+    #     dy = math.sin(math.radians(90 - line_az)) * (line_len / 2)
+    #
+    #     line_xy_1 = (line_center_x - dx, line_center_y - dy)
+    #     line_xy_2 = (line_center_x + dx, line_center_y + dy)
+    #
+    #     if section_plot:
+    #         plot_width = plot_width
+    #         scale_factor = calc_scale_factor(line_xy_1, line_xy_2, plot_width)
+    #         dx = dx * scale_factor
+    #         dy = dy * scale_factor
+    #
+    #         line_xy_1 = (line_center_x - dx, line_center_y - dy)
+    #         line_xy_2 = (line_center_x + dx, line_center_y + dy)
+    #
+    #     return line_xy_1, line_xy_2, line_az
 
     def get_section_extents(self, pem_file, hole_depth=None, section_plot=False, plot_width=None):
         """
@@ -743,7 +847,7 @@ class MapPlotMethods:
         :param section_plot: Bool: If True, will scale the plot such that the scale is of an acceptable value. Used
         for 2D section plots.
         :param plot_width: Physical width of the plot in meters.
-        :return: XY coordinates of each end of the section line, and the azimuth of that line.
+        :return: tuple: XY coordinates of each corner of the section area, and the azimuth of the section.
         """
         def calc_scale_factor(p1, p2, plot_width):
             """
@@ -790,7 +894,7 @@ class MapPlotMethods:
         # Recreating the segments with the interpreted data
         interp_segments = list(zip(interp_az, interp_dip, interp_lens, [units] * len(interp_depths), interp_depths))
 
-        interp_x, interp_y, interp_z = self.get_3D_borehole_projection(collar, interp_segments)
+        interp_x, interp_y, interp_z, interp_dist = self.get_3D_borehole_projection(collar, interp_segments)
 
         # Find the depths that are 50% and var percentile% down the hole
         perc_50_depth = np.percentile(interp_depths, 50)
@@ -821,543 +925,6 @@ class MapPlotMethods:
             line_xy_2 = (line_center_x + dx, line_center_y + dy)
 
         return line_xy_1, line_xy_2, line_az
-
-#
-# class PlanMap(MapPlotMethods):
-#     """
-#     Draws a plan map on a given Matplotlib figure object. Only makes a plan map for one survey type and timebase.
-#     :param: pem_files: list of pem_files
-#     :param: figure: Matplotlib landscape-oriented figure object
-#     """
-#
-#     def __init__(self, pem_files, figure, **kwargs):
-#         super().__init__()
-#         self.color = 'black'
-#         self.fig = figure
-#         self.pem_files = []
-#
-#         if not isinstance(pem_files, list):
-#             pem_files = [pem_files]
-#
-#         self.survey_type = pem_files[0].survey_type.lower()
-#         self.timebase = [pem_files[0].header.get('Timebase')]
-#
-#         for pem_file in pem_files:  # Only allow one kind of survey type per map
-#             if pem_file.survey_type.lower() == self.survey_type:
-#                 self.pem_files.append(pem_file)
-#                 if pem_file.header.get('Timebase') not in self.timebase:
-#                     self.timebase.append(pem_file.header.get('Timebase'))
-#
-#         self.loops = []
-#         self.loop_names = []
-#         self.lines = []
-#         self.collars = []
-#         self.holes = []
-#         self.labels = []
-#
-#         self.loop_handle = None
-#         self.station_handle = None
-#         self.collar_handle = None
-#         self.trace_handle = None
-#         self.map_scale = None
-#         self.system = None
-#         self.zone = None
-#         self.datum = None
-#
-#         self.draw_loop_annotations = kwargs.get('LoopAnnotations') if kwargs else False
-#         self.moving_loop = kwargs.get('MovingLoop') if kwargs else True
-#         self.title_box = kwargs.get('TitleBox') if kwargs else True
-#         self.map_grid = kwargs.get('Grid') if kwargs else True
-#         self.scale_bar = kwargs.get('ScaleBar') if kwargs else True
-#         self.north_arrow = kwargs.get('NorthArrow') if kwargs else True
-#         self.show_legend = kwargs.get('Legend') if kwargs else True
-#         self.draw_loops = kwargs.get('DrawLoops') if kwargs else True
-#         self.draw_lines = kwargs.get('DrawLines') if kwargs else True
-#         self.draw_hole_collars = kwargs.get('DrawHoleCollars') if kwargs else True
-#         self.draw_hole_traces = kwargs.get('DrawHoleTraces') if kwargs else True
-#         self.loop_labels = kwargs.get('LoopLabels') if kwargs else True
-#         self.line_labels = kwargs.get('LineLabels') if kwargs else True
-#         self.hole_collar_labels = kwargs.get('HoleCollarLabels') if kwargs else True
-#         self.hole_depth_labels = kwargs.get('HoleDepthLabels') if kwargs else True
-#         self.crs = self.get_crs(kwargs.get(
-#             'CRS')) if kwargs else None  # self.get_crs({'Coordinate System': 'UTM', 'Zone': '10 North', 'Datum': 'WGS 1984'})
-#
-#         self.gps_editor = GPSEditor
-#         if self.crs:
-#             self.ax = self.fig.add_subplot(projection=self.crs)
-#             # self.inset_ax = self.fig.add_axes([0.1, 0.5, 0.5, 0.3], projection=self.crs)
-#             self.plot_pems()
-#
-#     def get_crs(self, crs):
-#         if crs is None:
-#             return None
-#         else:
-#             self.system = crs.get('Coordinate System')
-#             self.zone = crs.get('Zone')
-#             self.datum = crs.get('Datum')
-#
-#             if self.system == 'UTM':
-#                 zone_num = int(re.findall('\d+', self.zone)[0])
-#                 south_hemis = True if 'South' in self.zone else False
-#                 globe = ccrs.Globe(datum=re.sub(' 19', '', self.datum))
-#                 return ccrs.UTM(zone_num, southern_hemisphere=south_hemis, globe=globe)
-#             elif self.system == 'Latitude/Longitude':
-#                 return ccrs.Geodetic()
-#
-#     def plot_pems(self):
-#
-#         def add_loop_to_map(pem_file):
-#             loop_gps = pem_file.get_loop_coords()
-#             if loop_gps and loop_gps not in self.loops:
-#                 self.loops.append(loop_gps)
-#                 self.loop_names.append(pem_file.header.get('Loop'))
-#                 loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
-#                 eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
-#                 eastings.insert(0, eastings[-1])  # To close up the loop
-#                 northings.insert(0, northings[-1])
-#                 zorder = 4 if not self.moving_loop else 6
-#                 if self.loop_labels:
-#                     loop_label = self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}",
-#                                               ha='center',
-#                                               color=self.color, zorder=zorder,
-#                                               path_effects=label_buffer)  # Add the loop name
-#
-#                 self.loop_handle, = self.ax.plot(eastings, northings, color=self.color, label='Transmitter Loop',
-#                                                  transform=self.crs, zorder=2)  # Plot the loop
-#
-#                 # Moves the loop label away from other labels
-#                 # adjust_text([loop_label], add_objects=self.labels, ax=self.ax, avoid_text=True, avoid_points=False,
-#                 #             autoalign=True)
-#
-#                 if self.draw_loop_annotations:
-#                     for i, (x, y) in enumerate(list(zip(eastings, northings))):
-#                         self.fig.annotate(i, xy=(x, y), va='center', ha='center', fontsize=7, path_effects=label_buffer,
-#                                      zorder=3, color=self.color, transform=self.ax.transData)
-#
-#         def add_line_to_map(pem_file):
-#
-#             line_gps = pem_file.get_station_coords()
-#             # Plotting the line and adding the line label
-#             if line_gps and line_gps not in self.lines:
-#                 self.lines.append(line_gps)
-#                 eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
-#                 angle = math.degrees(math.atan2(northings[-1]-northings[0], eastings[-1] - eastings[0]))
-#
-#                 if abs(angle) > 90:
-#                     x, y = eastings[-1], northings[-1]
-#                     # Flip the label if it's upside-down
-#                     angle = angle - 180
-#                 else:
-#                     x, y = eastings[0], northings[0]
-#
-#                 line_label = self.ax.text(x, y, f" {pem_file.header.get('LineHole')} ",
-#                                           rotation=angle, rotation_mode='anchor', ha='right', va='center', zorder=5, color=self.color,
-#                                           path_effects=label_buffer)
-#                 self.labels.append(line_label)
-#                 self.station_handle, = self.ax.plot(eastings, northings, '-o', markersize=3, color=self.color,
-#                                                     markerfacecolor='w', markeredgewidth=0.3,
-#                                                     label='Surface Line', transform=self.crs, zorder=2)  # Plot the line
-#
-#         def add_hole_to_map(pem_file):
-#
-#             if self.draw_hole_collars is True:
-#                 try:
-#                     collar = pem_file.get_collar_coords()[0]
-#                 except IndexError:
-#                     return
-#                 else:
-#                     collar_x, collar_y, collar_z = float(collar[0]), float(collar[1]), float(collar[2])
-#                 segments = pem_file.get_hole_geometry()
-#                 if segments and collar:
-#                     seg_x, seg_y, seg_z = self.get_3D_borehole_projection(collar, segments, interp_segments=1000)
-#                 else:
-#                     seg_x, seg_y = None, None
-#
-#                 if collar and collar not in self.collars:
-#                     self.collars.append(collar)
-#                     marker_style = dict(marker='o', color='white', markeredgecolor=self.color, markersize=8)
-#                     self.collar_handle, = self.ax.plot(collar_x, collar_y, fillstyle='full',
-#                                                        label='Borehole Collar', zorder=4, **marker_style)
-#                     # Add the hole label at the collar
-#                     if self.hole_collar_labels:
-#                         angle = math.degrees(math.atan2(seg_y[-1] - seg_y[0], seg_x[-1] - seg_x[0]))
-#                         align = 'left' if angle > 90 or angle < -90 else 'right'
-#                         collar_label = self.ax.text(collar_x, collar_y, f"  {pem_file.header.get('LineHole')}  ",
-#                                                     va='center', ha=align, color=self.color, zorder=5,
-#                                                     path_effects=label_buffer)
-#                         self.labels.append(collar_label)
-#
-#                     if seg_x and seg_y and self.draw_hole_traces is True:
-#
-#                         # Calculating tick indexes. Ticks are placed at evenly spaced depths.
-#                         # depths = np.linspace(min(seg_z), collar_z, 10)  # Spaced such that there are 10 segments
-#                         depths = np.arange(collar_z, min(seg_z)-51, -50)  # Spaced every 50m, starting from the top
-#
-#                         # Find the index of the seg_z depth nearest each depths value.
-#                         indexes = [min(range(len(seg_z)), key=lambda i: abs(seg_z[i] - depth)) for depth in depths]
-#
-#                         # Hole trace is plotted using marker positions so that they match perfectly.
-#                         index_x = [seg_x[index] for index in indexes]  # Marker positions
-#                         index_y = [seg_y[index] for index in indexes]
-#
-#                         # Plotting the hole trace
-#                         self.trace_handle, = self.ax.plot(index_x, index_y, '--', color=self.color)
-#
-#                         # Plotting the markers
-#                         for index in indexes[1:]:
-#                             if index != indexes[-1]:
-#                                 angle = math.degrees(math.atan2(seg_y[index+1] - seg_y[index], seg_x[index+1] - seg_x[index]))
-#                                 self.ax.plot(seg_x[index], seg_y[index], markersize=5, marker=(2, 0, angle),
-#                                              mew=.5, color=self.color)
-#
-#                         # Add the end tick for the borehole trace and the label
-#                         angle = math.degrees(math.atan2(seg_y[-1] - seg_y[-2], seg_x[-1] - seg_x[-2]))
-#                         self.ax.text(seg_x[-1], seg_y[-1], '|', rotation=angle, color=self.color, va='center',
-#                                      ha='center', fontsize=9)
-#
-#                         if self.hole_depth_labels:
-#                             bh_depth = self.ax.text(seg_x[-1], seg_y[-1], f"  {float(segments[-1][-1]):.0f} m",
-#                                                     rotation=angle+90, fontsize=8, color=self.color,
-#                                                     path_effects=label_buffer, zorder=3, rotation_mode='anchor')
-#                 else:
-#                     pass
-#
-#         for pem_file in self.pem_files:
-#             label_buffer = [patheffects.Stroke(linewidth=1.5, foreground='white'), patheffects.Normal()]
-#
-#             if 'surface' in pem_file.survey_type.lower() and self.draw_lines is True:
-#                 add_line_to_map(pem_file)
-#
-#             if 'borehole' in pem_file.survey_type.lower() and self.draw_hole_collars is True:
-#                 add_hole_to_map(pem_file)
-#
-#             if self.draw_loops is True:
-#                 if len(self.loops) == 0:
-#                     add_loop_to_map(pem_file)
-#
-#     def format_figure(self):
-#
-#         def add_scale_bar():
-#             """
-#             Adds scale bar to the axes.
-#             Gets the width of the map in meters, find the best bar length number, and converts the bar length to
-#             equivalent axes percentage, then plots using axes transform so it is static on the axes.
-#             :return: None
-#             """
-#
-#             def myround(x, base=5):
-#                 return base * math.ceil(x / base)
-#
-#             def add_rectangles(left_bar_pos, bar_center, right_bar_pos, y):
-#                 rect_height = 0.005
-#                 line_width = 0.4
-#                 sm_rect_width = (bar_center - left_bar_pos) / 5
-#                 sm_rect_xs = np.arange(left_bar_pos, bar_center, sm_rect_width)
-#                 big_rect_x = bar_center
-#                 big_rect_width = right_bar_pos - bar_center
-#
-#                 # Adding the small rectangles
-#                 for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
-#                     fill = 'w' if i % 2 == 0 else 'k'
-#                     patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height, ec='k', linewidth=line_width,
-#                                               facecolor=fill, transform=self.ax.transAxes, zorder=9)
-#                     self.ax.add_patch(patch)
-#                 for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
-#                     fill = 'k' if i % 2 == 0 else 'w'
-#                     patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height, ec='k', zorder=9,
-#                                               linewidth=line_width, facecolor=fill, transform=self.ax.transAxes)
-#                     self.ax.add_patch(patch)
-#
-#                 # Adding the big rectangles
-#                 patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height, ec='k', facecolor='k',
-#                                            linewidth=line_width, transform=self.ax.transAxes, zorder=9)
-#                 patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height, ec='k',
-#                                            facecolor='w', linewidth=line_width, transform=self.ax.transAxes, zorder=9)
-#                 self.ax.add_patch(patch1)
-#                 self.ax.add_patch(patch2)
-#
-#             bar_center = 0.5  # Half way across the axes
-#             bar_height_pos = 0.05
-#             map_width = self.ax.get_extent()[1] - self.ax.get_extent()[0]
-#             num_digit = int(np.floor(np.log10(map_width)))  # number of digits in number
-#             bar_map_length = round(map_width, -num_digit)  # round to 1sf
-#             bar_map_length = myround(bar_map_length / 8, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
-#             if bar_map_length > 10000:
-#                 units = 'kilometers'
-#                 bar_map_length = bar_map_length / 1000
-#             else:
-#                 units = 'meters'
-#             buffer = [patheffects.Stroke(linewidth=1, foreground='white'), patheffects.Normal()]
-#             bar_ax_length = bar_map_length / map_width
-#             left_bar_pos = bar_center - (bar_ax_length / 2)
-#             right_bar_pos = bar_center + (bar_ax_length / 2)
-#
-#             # Simple tick scale
-#             # self.ax.plot([left_bar_pos, bar_center, right_bar_pos], [bar_height_pos]*3, color='k',
-#             #              linewidth=1, transform=self.ax.transAxes, path_effects=buffer)
-#             # self.ax.plot([left_bar_pos], [bar_height_pos], marker=3, color='k', lw=5,transform=self.ax.transAxes,
-#             #              path_effects=buffer)
-#             # self.ax.plot([right_bar_pos], [bar_height_pos], marker=3, color='k', transform=self.ax.transAxes,
-#             #              path_effects=buffer)
-#             # self.ax.text(bar_center, bar_height_pos+.005, f"{bar_map_length:.0f} {units}", ha='center',
-#             #              transform=self.ax.transAxes, path_effects=buffer)
-#
-#             add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
-#             self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
-#                          transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-#             self.ax.text(bar_center, bar_height_pos + .009, f"0", ha='center',
-#                          transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-#             self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
-#                          transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-#             self.ax.text(bar_center, bar_height_pos - .018, f"({units})", ha='center',
-#                          transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-#
-#         def set_size():
-#             """
-#             Re-size the extents to make the axes 11" by 8.5"
-#             :param ax: GeoAxes object
-#             :return: None
-#             """
-#             bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
-#             xmin, xmax, ymin, ymax = self.ax.get_extent()
-#             map_width, map_height = xmax - xmin, ymax - ymin
-#
-#             current_ratio = map_width / map_height
-#
-#             if current_ratio < (bbox.width / bbox.height):
-#                 new_height = map_height
-#                 new_width = new_height * (
-#                         bbox.width / bbox.height)  # Set the new width to be the correct ratio larger than height
-#
-#             else:
-#                 new_width = map_width
-#                 new_height = new_width * (bbox.height / bbox.width)
-#             x_offset = 0
-#             y_offset = 0.06 * new_height
-#             new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
-#             new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
-#             new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
-#             new_ymax = (ymax + y_offset) + ((new_height - map_height) / 2)
-#
-#             self.ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
-#
-#         def set_scale():
-#             """
-#             Changes the extent of the plot such that the scale is an acceptable value.
-#             :return: None
-#             """
-#
-#             def get_scale_factor():
-#                 # num_digit = len(str(int(current_scale)))  # number of digits in number
-#                 num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
-#                 scale_nums = [1., 1.25, 1.5, 2., 2.5, 5.]
-#                 possible_scales = [num * 10 ** num_digit for num in
-#                                    scale_nums + list(map(lambda x: x * 10, scale_nums))]
-#                 new_scale = min(filter(lambda x: x > current_scale * 1.30, possible_scales),
-#                                 key=lambda x: x - current_scale * 1.30)
-#                 if new_scale == 1500:
-#                     new_scale = 2000
-#                 self.map_scale = new_scale
-#                 scale_factor = new_scale / current_scale
-#                 return scale_factor
-#
-#             xmin, xmax, ymin, ymax = self.ax.get_extent()
-#             map_width, map_height = xmax - xmin, ymax - ymin
-#             bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
-#             current_scale = map_width / (bbox.width * .0254)
-#             scale_factor = get_scale_factor()
-#             new_map_height = map_height * scale_factor
-#             new_map_width = map_width * scale_factor
-#
-#             new_xmin = xmin - ((new_map_width - map_width) / 2)
-#             new_xmax = xmax + ((new_map_width - map_width) / 2)
-#             new_ymin = ymin - ((new_map_height - map_height) / 2)
-#             new_ymax = ymax + ((new_map_height - map_height) / 2)
-#
-#             self.ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
-#
-#         def add_title():
-#             """
-#             Adds the title box to the plot.
-#             :return: None
-#             """
-#
-#             def get_survey_dates():
-#                 survey_dates = [pem_file.header.get('Date') for pem_file in self.pem_files]
-#                 min_date = min([datetime.strptime(date, '%B %d, %Y') for date in survey_dates])
-#                 max_date = max([datetime.strptime(date, '%B %d, %Y') for date in survey_dates])
-#                 min_date_text = datetime.strftime(min_date, '%B %d')
-#                 max_date_text = datetime.strftime(max_date, '%B %d, %Y')
-#                 survey_date_text = f"Survey Date: {min_date_text} - {max_date_text}" if min_date != max_date else f"Survey Date: {max_date_text}"
-#                 return survey_date_text
-#
-#             b_xmin = 0.015  # Title box
-#             b_width = 0.30
-#             b_ymin = 0.784
-#             b_height = 0.200
-#             center_pos = b_xmin + (b_width / 2)
-#             right_pos = b_xmin + b_width - .01
-#             left_pos = b_xmin + .01
-#             top_pos = b_ymin + b_height - 0.020
-#
-#             # Separating lines
-#             line_1 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
-#                                    linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
-#
-#             line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
-#                                    linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
-#
-#             line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
-#                                    linewidth=.5, color='gray', transform=self.ax.transAxes, zorder=10)
-#
-#             # Title box rectangle
-#             rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='k',
-#                                           boxstyle="round,pad=0.005", facecolor='white', zorder=9,
-#                                           transform=self.ax.transAxes)
-#
-#             client = self.pem_files[0].header.get("Client")
-#             grid = self.pem_files[0].header.get("Grid")
-#             loops = natural_sort(self.loop_names)
-#             hole = self.pem_files[0].header.get('LineHole')
-#
-#             if 'surface' in self.survey_type:
-#                 if self.moving_loop and len(loops) > 1:
-#                     survey_text = f"Loop: {loops[0]} to {loops[-1]}"
-#                 else:
-#                     survey_text = f"Loop: {', '.join(loops)}"
-#             else:
-#                 survey_text = f"Hole: {hole}    Loop: {', '.join(loops)}"
-#
-#             coord_sys = f"{self.system}{' Zone ' + self.zone.title() if self.zone else ''}, {self.datum.upper()}"
-#             scale = f"1:{self.map_scale:,.0f}"
-#
-#             self.ax.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
-#                          fontname='Century Gothic', fontsize=11, ha='center', zorder=10, transform=self.ax.transAxes)
-#
-#             self.ax.text(center_pos, top_pos - 0.020, f"{'Line' if 'surface' in self.survey_type else 'Hole'}"
-#             f" and Loop Location Map", family='cursive',
-#                          fontname='Century Gothic', fontsize=10, ha='center', zorder=10, transform=self.ax.transAxes)
-#
-#             self.ax.text(center_pos, top_pos - 0.040, f"{self.survey_type.title()} Pulse EM Survey", family='cursive',
-#                          style='italic',
-#                          fontname='Century Gothic', fontsize=9, ha='center', zorder=10, transform=self.ax.transAxes)
-#
-#             self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
-#                          f"{survey_text}", fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
-#                          transform=self.ax.transAxes)
-#
-#             self.ax.text(center_pos, top_pos - 0.124, f"Timebase: {', '.join(self.timebase)} ms\n{get_survey_dates()}",
-#                          fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=10,
-#                          transform=self.ax.transAxes)
-#
-#             self.ax.text(left_pos, top_pos - 0.167, f"{coord_sys}", family='cursive', style='italic', color='dimgray',
-#                          fontname='Century Gothic', fontsize=8, va='top', ha='left', zorder=10,
-#                          transform=self.ax.transAxes)
-#
-#             self.ax.text(right_pos, top_pos - 0.167, f"Scale {scale}", family='cursive', style='italic',
-#                          color='dimgray',
-#                          fontname='Century Gothic', fontsize=8, va='top', ha='right', zorder=10,
-#                          transform=self.ax.transAxes)
-#
-#             self.ax.add_patch(rect)
-#             shadow = patches.Shadow(rect, 0.002, -0.002)
-#             self.ax.add_patch(shadow)
-#             self.ax.add_line(line_1)
-#             self.ax.add_line(line_2)
-#             self.ax.add_line(line_3)
-#
-#         def add_north_arrow():
-#             """
-#             Adds the north arrow to the plot. The arrow is manually drawn, and is always fixed in position and size.
-#             :return: None
-#             """
-#
-#             def ax_len(pixel_length):  # Calculate the equivalent axes size for a given pixel length
-#                 return shaft_len * (pixel_length / 300)  # 267 is pixel length of old north arrow
-#
-#             l_width = .5
-#             top = 0.97
-#             bot = 0.81
-#             mid = bot + (top - bot) / 2  # Mid point position of the arrow
-#             shaft_len = top - bot
-#             ca = 0.94  # Alignment of the arrow
-#
-#             # Drawing full arrow polygon using ax.plot
-#             xs = [ca, ca, ca + ax_len(11), ca, ca, ca - ax_len(6), ca - ax_len(6), ca]
-#             ys = [top - ax_len(45) + ax_len(8), top, top - ax_len(45), top - ax_len(45) + ax_len(8), bot,
-#                   bot - ax_len(12), bot + ax_len((41 - 12)), bot + ax_len(41)]
-#             self.ax.plot(xs, ys, color='k', lw=l_width, transform=self.ax.transAxes)
-#
-#             # Drawing the N
-#             xs = [ca - ax_len(12), ca - ax_len(12), ca + ax_len(12), ca + ax_len(12)]  # First N
-#             ys = [mid - ax_len(21), mid + ax_len(21), mid - ax_len(30) + ax_len(21), mid + ax_len(21)]  # First N
-#             x2s = [ca - ax_len(12), ca + ax_len(12), ca + ax_len(12)]  # Second diagonal line
-#             y2s = [mid + ax_len(30) - ax_len(21), mid - ax_len(21),
-#                    mid - ax_len(30) + ax_len(21)]  # Second diagonal line
-#             self.ax.plot(xs, ys, color='k', lw=l_width, transform=self.ax.transAxes)
-#             self.ax.plot(x2s, y2s, color='k', lw=l_width, transform=self.ax.transAxes)
-#
-#             # Drawing the two side-lines
-#             x1 = [ca - ax_len(31) - ax_len(36), ca - ax_len(31)]
-#             x2 = [ca + ax_len(31) + ax_len(36), ca + ax_len(31)]
-#             y = [mid] * 2
-#             tick_line1 = mlines.Line2D(x1, y, color='k', lw=l_width, transform=self.ax.transAxes)
-#             tick_line2 = mlines.Line2D(x2, y, color='k', lw=l_width, transform=self.ax.transAxes)
-#
-#             self.ax.add_line(tick_line1)
-#             self.ax.add_line(tick_line2)
-#
-#         self.fig.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.95)
-#         set_size()
-#         set_scale()
-#
-#         if self.map_grid:
-#             self.ax.grid(linestyle='dotted', zorder=0)
-#         else:
-#             self.ax.grid(False)
-#         self.ax.xaxis.set_visible(True)  # Required to actually get the labels to show in UTM
-#         self.ax.yaxis.set_visible(True)
-#         self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
-#         if self.system == 'UTM':
-#             self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
-#             self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
-#         self.ax.xaxis.set_ticks_position('top')
-#         plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
-#         plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
-#
-#         # self.ax.add_wms(wms='http://vmap0.tiles.osgeo.org/wms/vmap0',
-#         #                 layers=['basic'])
-#
-#         if self.scale_bar:
-#             add_scale_bar()
-#         if self.north_arrow:
-#             add_north_arrow()
-#         if self.title_box:
-#             add_title()
-#
-#         if self.show_legend:
-#             legend_handles = [handle for handle in
-#                               [self.loop_handle, self.station_handle, self.collar_handle] if
-#                               handle is not None]
-#             # Manually add the hole trace legend handle
-#             if self.draw_hole_traces and 'borehole' in self.survey_type:
-#                 legend_handles.append(
-#                     mlines.Line2D([], [], linestyle='--', color=self.color, marker='|', label='Borehole Trace'))
-#
-#             self.ax.legend(handles=legend_handles, title='Legend', loc='lower right', framealpha=1, shadow=True,
-#                            edgecolor='k')
-#
-#     def get_map(self):
-#         """
-#         Retuns the figure if anything is plotted in it.
-#         :return: Matplotlib Figure object.
-#         """
-#         if any([self.loops, self.lines, self.collars, self.holes]):
-#             self.format_figure()
-#             return self.fig
-#         else:
-#             return None
-
 
 class PlanMap(MapPlotMethods):
     """
@@ -1416,27 +983,13 @@ class PlanMap(MapPlotMethods):
         self.hole_collar_labels = kwargs.get('HoleCollarLabels') if kwargs else True
         self.hole_depth_labels = kwargs.get('HoleDepthLabels') if kwargs else True
         self.crs = self.get_crs(kwargs.get(
-            'CRS')) if kwargs else None
-        if __name__ == '__main__':
-            self.crs = self.get_crs({'Coordinate System': 'UTM', 'Zone': '18 North', 'Datum': 'WGS 1984'})
+            'CRS')) if kwargs else None  # self.get_crs({'Coordinate System': 'UTM', 'Zone': '10 North', 'Datum': 'WGS 1984'})
 
         self.gps_editor = GPSEditor
         if self.crs:
             self.ax = self.fig.add_subplot(projection=self.crs)
             # self.inset_ax = self.fig.add_axes([0.1, 0.5, 0.5, 0.3], projection=self.crs)
             self.plot_pems()
-
-    def get_crs(self, crs):
-        self.system = crs.get('Coordinate System')
-        self.zone = crs.get('Zone')
-        self.datum = crs.get('Datum')
-        if not all([self.system, self.zone, self.datum]):
-            raise ValueError('CRS information is invalid.')
-        else:
-            zone_num = int(re.findall('\d+', self.zone)[0])
-            south_hemis = True if 'South' in self.zone else False
-            globe = ccrs.Globe(datum=re.sub(' 19', '', self.datum))
-            return ccrs.UTM(zone_num, southern_hemisphere=south_hemis, globe=globe)
 
     def plot_pems(self):
 
@@ -1451,13 +1004,18 @@ class PlanMap(MapPlotMethods):
                 northings.insert(0, northings[-1])
                 zorder = 4 if not self.moving_loop else 6
                 if self.loop_labels:
-                    loop_label = self.ax.text(loop_center[0], loop_center[1], f"Tx Loop {pem_file.header.get('Loop')}",
+                    loop_label = self.ax.text(loop_center[0], loop_center[1],
+                                              f"Tx Loop {pem_file.header.get('Loop')}",
                                               ha='center',
-                                              color=self.color, zorder=zorder,
+                                              color=self.color,
+                                              zorder=zorder,
                                               path_effects=label_buffer)  # Add the loop name
 
-                self.loop_handle, = self.ax.plot(eastings, northings, color=self.color, label='Transmitter Loop',
-                                                 transform=self.crs, zorder=2)  # Plot the loop
+                self.loop_handle, = self.ax.plot(eastings, northings,
+                                                 color=self.color,
+                                                 label='Transmitter Loop',
+                                                 transform=self.crs,
+                                                 zorder=2)  # Plot the loop
 
                 # Moves the loop label away from other labels
                 # adjust_text([loop_label], add_objects=self.labels, ax=self.ax, avoid_text=True, avoid_points=False,
@@ -1465,8 +1023,14 @@ class PlanMap(MapPlotMethods):
 
                 if self.draw_loop_annotations:
                     for i, (x, y) in enumerate(list(zip(eastings, northings))):
-                        self.fig.annotate(i, xy=(x, y), va='center', ha='center', fontsize=7, path_effects=label_buffer,
-                                     zorder=3, color=self.color, transform=self.ax.transData)
+                        self.fig.annotate(i, xy=(x, y),
+                                          va='center',
+                                          ha='center',
+                                          fontsize=7,
+                                          path_effects=label_buffer,
+                                          zorder=3,
+                                          color=self.color,
+                                          transform=self.ax.transData)
 
         def add_line_to_map(pem_file):
 
@@ -1484,26 +1048,34 @@ class PlanMap(MapPlotMethods):
                 else:
                     x, y = eastings[0], northings[0]
 
-                line_label = self.ax.text(x, y, f" {pem_file.header.get('LineHole')} ",
-                                          rotation=angle, rotation_mode='anchor', ha='right', va='center', zorder=5, color=self.color,
+                line_label = self.ax.text(x, y,
+                                          f" {pem_file.header.get('LineHole')} ",
+                                          rotation=angle,
+                                          rotation_mode='anchor',
+                                          ha='right',
+                                          va='center',
+                                          zorder=5,
+                                          color=self.color,
                                           path_effects=label_buffer)
                 self.labels.append(line_label)
-                self.station_handle, = self.ax.plot(eastings, northings, '-o', markersize=3, color=self.color,
-                                                    markerfacecolor='w', markeredgewidth=0.3,
-                                                    label='Surface Line', transform=self.crs, zorder=2)  # Plot the line
+                self.station_handle, = self.ax.plot(eastings, northings,
+                                                    '-o',
+                                                    markersize=3,
+                                                    color=self.color,
+                                                    markerfacecolor='w',
+                                                    markeredgewidth=0.3,
+                                                    label='Surface Line',
+                                                    transform=self.crs,
+                                                    zorder=2)  # Plot the line
 
         def add_hole_to_map(pem_file):
 
             if self.draw_hole_collars is True:
-                try:
-                    collar = pem_file.get_collar_coords()[0]
-                except IndexError:
-                    return
-                else:
-                    collar_x, collar_y, collar_z = float(collar[0]), float(collar[1]), float(collar[2])
+                collar = pem_file.get_collar_coords()[0]
+                collar_x, collar_y, collar_z = float(collar[0]), float(collar[1]), float(collar[2])
                 segments = pem_file.get_hole_geometry()
                 if segments and collar:
-                    seg_x, seg_y, seg_z = self.get_3D_borehole_projection(collar, segments, interp_segments=1000)
+                    seg_x, seg_y, seg_z, seg_dist = self.get_3D_borehole_projection(collar, segments, interp_segments=1000)
                 else:
                     seg_x, seg_y = None, None
 
@@ -1525,10 +1097,13 @@ class PlanMap(MapPlotMethods):
 
                         # Calculating tick indexes. Ticks are placed at evenly spaced depths.
                         # depths = np.linspace(min(seg_z), collar_z, 10)  # Spaced such that there are 10 segments
-                        depths = np.arange(collar_z, min(seg_z)-51, -50)  # Spaced every 50m, starting from the top
+                        depths = np.arange(min(seg_dist), max(seg_dist) + 51,
+                                           50)  # Spaced every 50m, starting from the top
 
                         # Find the index of the seg_z depth nearest each depths value.
-                        indexes = [min(range(len(seg_z)), key=lambda i: abs(seg_z[i] - depth)) for depth in depths]
+                        # indexes = [min(range(len(seg_z)), key=lambda i: abs(seg_z[i] - depth)) for depth in depths]
+                        indexes = [min(range(len(seg_dist)), key=lambda i: abs(seg_dist[i] - depth)) for depth in
+                                   depths]
 
                         # Hole trace is plotted using marker positions so that they match perfectly.
                         index_x = [seg_x[index] for index in indexes]  # Marker positions
@@ -1559,15 +1134,569 @@ class PlanMap(MapPlotMethods):
         for pem_file in self.pem_files:
             label_buffer = [patheffects.Stroke(linewidth=1.5, foreground='white'), patheffects.Normal()]
 
-            if not pem_file.is_borehole() and self.draw_lines is True:
+            if not pem_file.is_borehole() and self.draw_lines is True and pem_file.has_station_gps():
                 add_line_to_map(pem_file)
 
-            if pem_file.is_borehole() and self.draw_hole_collars is True:
+            if pem_file.is_borehole() and self.draw_hole_collars is True and pem_file.has_collar_gps():
                 add_hole_to_map(pem_file)
 
-            if self.draw_loops is True:
+            if self.draw_loops is True and pem_file.has_loop_gps():
                 if len(self.loops) == 0:
                     add_loop_to_map(pem_file)
+
+    def format_figure(self):
+
+        def add_scale_bar():
+            """
+            Adds scale bar to the axes.
+            Gets the width of the map in meters, find the best bar length number, and converts the bar length to
+            equivalent axes percentage, then plots using axes transform so it is static on the axes.
+            :return: None
+            """
+
+            def myround(x, base=5):
+                return base * math.ceil(x / base)
+
+            def add_rectangles(left_bar_pos, bar_center, right_bar_pos, y):
+                rect_height = 0.005
+                line_width = 0.4
+                sm_rect_width = (bar_center - left_bar_pos) / 5
+                sm_rect_xs = np.arange(left_bar_pos, bar_center, sm_rect_width)
+                big_rect_x = bar_center
+                big_rect_width = right_bar_pos - bar_center
+
+                # Adding the small rectangles
+                for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
+                    fill = 'w' if i % 2 == 0 else 'k'
+                    patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height, ec='k', linewidth=line_width,
+                                              facecolor=fill, transform=self.ax.transAxes, zorder=9)
+                    self.ax.add_patch(patch)
+                for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
+                    fill = 'k' if i % 2 == 0 else 'w'
+                    patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height, ec='k', zorder=9,
+                                              linewidth=line_width, facecolor=fill, transform=self.ax.transAxes)
+                    self.ax.add_patch(patch)
+
+                # Adding the big rectangles
+                patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height, ec='k', facecolor='k',
+                                           linewidth=line_width, transform=self.ax.transAxes, zorder=9)
+                patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height, ec='k',
+                                           facecolor='w', linewidth=line_width, transform=self.ax.transAxes, zorder=9)
+                self.ax.add_patch(patch1)
+                self.ax.add_patch(patch2)
+
+            bar_center = 0.5  # Half way across the axes
+            bar_height_pos = 0.05
+            map_width = self.ax.get_extent()[1] - self.ax.get_extent()[0]
+            num_digit = int(np.floor(np.log10(map_width)))  # number of digits in number
+            bar_map_length = round(map_width, -num_digit)  # round to 1sf
+            bar_map_length = myround(bar_map_length / 8, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
+            if bar_map_length > 10000:
+                units = 'kilometers'
+                bar_map_length = bar_map_length / 1000
+            else:
+                units = 'meters'
+            buffer = [patheffects.Stroke(linewidth=1, foreground='white'), patheffects.Normal()]
+            bar_ax_length = bar_map_length / map_width
+            left_bar_pos = bar_center - (bar_ax_length / 2)
+            right_bar_pos = bar_center + (bar_ax_length / 2)
+
+            # Simple tick scale
+            # self.ax.plot([left_bar_pos, bar_center, right_bar_pos], [bar_height_pos]*3, color='k',
+            #              linewidth=1, transform=self.ax.transAxes, path_effects=buffer)
+            # self.ax.plot([left_bar_pos], [bar_height_pos], marker=3, color='k', lw=5,transform=self.ax.transAxes,
+            #              path_effects=buffer)
+            # self.ax.plot([right_bar_pos], [bar_height_pos], marker=3, color='k', transform=self.ax.transAxes,
+            #              path_effects=buffer)
+            # self.ax.text(bar_center, bar_height_pos+.005, f"{bar_map_length:.0f} {units}", ha='center',
+            #              transform=self.ax.transAxes, path_effects=buffer)
+
+            add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
+            self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
+            self.ax.text(bar_center, bar_height_pos + .009, f"0", ha='center',
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
+            self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
+            self.ax.text(bar_center, bar_height_pos - .018, f"({units})", ha='center',
+                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
+
+        def set_size():
+            """
+            Re-size the extents to make the axes 11" by 8.5"
+            :param ax: GeoAxes object
+            :return: None
+            """
+            bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
+            xmin, xmax, ymin, ymax = self.ax.get_extent()
+            map_width, map_height = xmax - xmin, ymax - ymin
+
+            current_ratio = map_width / map_height
+
+            if current_ratio < (bbox.width / bbox.height):
+                new_height = map_height
+                new_width = new_height * (
+                        bbox.width / bbox.height)  # Set the new width to be the correct ratio larger than height
+
+            else:
+                new_width = map_width
+                new_height = new_width * (bbox.height / bbox.width)
+            x_offset = 0
+            y_offset = 0.06 * new_height
+            new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
+            new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
+            new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
+            new_ymax = (ymax + y_offset) + ((new_height - map_height) / 2)
+
+            self.ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
+
+        def set_scale():
+            """
+            Changes the extent of the plot such that the scale is an acceptable value.
+            :return: None
+            """
+
+            def get_scale_factor():
+                # num_digit = len(str(int(current_scale)))  # number of digits in number
+                num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
+                scale_nums = [1., 1.25, 1.5, 2., 2.5, 5.]
+                possible_scales = [num * 10 ** num_digit for num in
+                                   scale_nums + list(map(lambda x: x * 10, scale_nums))]
+                new_scale = min(filter(lambda x: x > current_scale * 1.30, possible_scales),
+                                key=lambda x: x - current_scale * 1.30)
+                if new_scale == 1500:
+                    new_scale = 2000
+                self.map_scale = new_scale
+                scale_factor = new_scale / current_scale
+                return scale_factor
+
+            xmin, xmax, ymin, ymax = self.ax.get_extent()
+            map_width, map_height = xmax - xmin, ymax - ymin
+            bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
+            current_scale = map_width / (bbox.width * .0254)
+            scale_factor = get_scale_factor()
+            new_map_height = map_height * scale_factor
+            new_map_width = map_width * scale_factor
+
+            new_xmin = xmin - ((new_map_width - map_width) / 2)
+            new_xmax = xmax + ((new_map_width - map_width) / 2)
+            new_ymin = ymin - ((new_map_height - map_height) / 2)
+            new_ymax = ymax + ((new_map_height - map_height) / 2)
+
+            self.ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=self.crs)
+
+        def add_title():
+            """
+            Adds the title box to the plot.
+            :return: None
+            """
+
+            def get_survey_dates():
+                survey_dates = [pem_file.header.get('Date') for pem_file in self.pem_files]
+                min_date = min([datetime.strptime(date, '%B %d, %Y') for date in survey_dates])
+                max_date = max([datetime.strptime(date, '%B %d, %Y') for date in survey_dates])
+                min_date_text = datetime.strftime(min_date, '%B %d')
+                max_date_text = datetime.strftime(max_date, '%B %d, %Y')
+                survey_date_text = f"Survey Date: {min_date_text} - {max_date_text}" if min_date != max_date else f"Survey Date: {max_date_text}"
+                return survey_date_text
+
+            b_xmin = 0.015  # Title box
+            b_width = 0.30
+            b_ymin = 0.784
+            b_height = 0.200
+            center_pos = b_xmin + (b_width / 2)
+            right_pos = b_xmin + b_width - .01
+            left_pos = b_xmin + .01
+            top_pos = b_ymin + b_height - 0.020
+
+            # Separating lines
+            line_1 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
+                                   linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
+
+            line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
+                                   linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
+
+            line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
+                                   linewidth=.5, color='gray', transform=self.ax.transAxes, zorder=10)
+
+            # Title box rectangle
+            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='k',
+                                          boxstyle="round,pad=0.005", facecolor='white', zorder=9,
+                                          transform=self.ax.transAxes)
+
+            client = self.pem_files[0].header.get("Client")
+            grid = self.pem_files[0].header.get("Grid")
+            loops = natural_sort(self.loop_names)
+            hole = self.pem_files[0].header.get('LineHole')
+
+            if 'surface' in self.survey_type:
+                if self.moving_loop and len(loops) > 1:
+                    survey_text = f"Loop: {loops[0]} to {loops[-1]}"
+                else:
+                    survey_text = f"Loop: {', '.join(loops)}"
+            else:
+                survey_text = f"Hole: {hole}    Loop: {', '.join(loops)}"
+
+            coord_sys = f"{self.system}{' Zone ' + self.zone.title() if self.zone else ''}, {self.datum.upper()}"
+            scale = f"1:{self.map_scale:,.0f}"
+
+            self.ax.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
+                         fontname='Century Gothic', fontsize=11, ha='center', zorder=10, transform=self.ax.transAxes)
+
+            self.ax.text(center_pos, top_pos - 0.020, f"{'Line' if 'surface' in self.survey_type else 'Hole'}"
+            f" and Loop Location Map", family='cursive',
+                         fontname='Century Gothic', fontsize=10, ha='center', zorder=10, transform=self.ax.transAxes)
+
+            self.ax.text(center_pos, top_pos - 0.040, f"{self.survey_type.title()} Pulse EM Survey", family='cursive',
+                         style='italic',
+                         fontname='Century Gothic', fontsize=9, ha='center', zorder=10, transform=self.ax.transAxes)
+
+            self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
+                         f"{survey_text}", fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
+                         transform=self.ax.transAxes)
+
+            self.ax.text(center_pos, top_pos - 0.124, f"Timebase: {', '.join(self.timebase)} ms\n{get_survey_dates()}",
+                         fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=10,
+                         transform=self.ax.transAxes)
+
+            self.ax.text(left_pos, top_pos - 0.167, f"{coord_sys}", family='cursive', style='italic', color='dimgray',
+                         fontname='Century Gothic', fontsize=8, va='top', ha='left', zorder=10,
+                         transform=self.ax.transAxes)
+
+            self.ax.text(right_pos, top_pos - 0.167, f"Scale {scale}", family='cursive', style='italic',
+                         color='dimgray',
+                         fontname='Century Gothic', fontsize=8, va='top', ha='right', zorder=10,
+                         transform=self.ax.transAxes)
+
+            self.ax.add_patch(rect)
+            shadow = patches.Shadow(rect, 0.002, -0.002)
+            self.ax.add_patch(shadow)
+            self.ax.add_line(line_1)
+            self.ax.add_line(line_2)
+            self.ax.add_line(line_3)
+
+        def add_north_arrow():
+            """
+            Adds the north arrow to the plot. The arrow is manually drawn, and is always fixed in position and size.
+            :return: None
+            """
+
+            def ax_len(pixel_length):  # Calculate the equivalent axes size for a given pixel length
+                return shaft_len * (pixel_length / 300)  # 267 is pixel length of old north arrow
+
+            l_width = .5
+            top = 0.97
+            bot = 0.81
+            mid = bot + (top - bot) / 2  # Mid point position of the arrow
+            shaft_len = top - bot
+            ca = 0.94  # Alignment of the arrow
+
+            # Drawing full arrow polygon using ax.plot
+            xs = [ca, ca, ca + ax_len(11), ca, ca, ca - ax_len(6), ca - ax_len(6), ca]
+            ys = [top - ax_len(45) + ax_len(8), top, top - ax_len(45), top - ax_len(45) + ax_len(8), bot,
+                  bot - ax_len(12), bot + ax_len((41 - 12)), bot + ax_len(41)]
+            self.ax.plot(xs, ys, color='k', lw=l_width, transform=self.ax.transAxes)
+
+            # Drawing the N
+            xs = [ca - ax_len(12), ca - ax_len(12), ca + ax_len(12), ca + ax_len(12)]  # First N
+            ys = [mid - ax_len(21), mid + ax_len(21), mid - ax_len(30) + ax_len(21), mid + ax_len(21)]  # First N
+            x2s = [ca - ax_len(12), ca + ax_len(12), ca + ax_len(12)]  # Second diagonal line
+            y2s = [mid + ax_len(30) - ax_len(21), mid - ax_len(21),
+                   mid - ax_len(30) + ax_len(21)]  # Second diagonal line
+            self.ax.plot(xs, ys, color='k', lw=l_width, transform=self.ax.transAxes)
+            self.ax.plot(x2s, y2s, color='k', lw=l_width, transform=self.ax.transAxes)
+
+            # Drawing the two side-lines
+            x1 = [ca - ax_len(31) - ax_len(36), ca - ax_len(31)]
+            x2 = [ca + ax_len(31) + ax_len(36), ca + ax_len(31)]
+            y = [mid] * 2
+            tick_line1 = mlines.Line2D(x1, y, color='k', lw=l_width, transform=self.ax.transAxes)
+            tick_line2 = mlines.Line2D(x2, y, color='k', lw=l_width, transform=self.ax.transAxes)
+
+            self.ax.add_line(tick_line1)
+            self.ax.add_line(tick_line2)
+
+        self.fig.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.95)
+        set_size()
+        set_scale()
+
+        if self.map_grid:
+            self.ax.grid(linestyle='dotted', zorder=0)
+        else:
+            self.ax.grid(False)
+        self.ax.xaxis.set_visible(True)  # Required to actually get the labels to show in UTM
+        self.ax.yaxis.set_visible(True)
+        self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
+        if self.system == 'UTM':
+            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
+            self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
+        self.ax.xaxis.set_ticks_position('top')
+        plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
+        plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
+
+        # self.ax.add_wms(wms='http://vmap0.tiles.osgeo.org/wms/vmap0',
+        #                 layers=['basic'])
+
+        if self.scale_bar:
+            add_scale_bar()
+        if self.north_arrow:
+            add_north_arrow()
+        if self.title_box:
+            add_title()
+
+        if self.show_legend:
+            legend_handles = [handle for handle in
+                              [self.loop_handle, self.station_handle, self.collar_handle] if
+                              handle is not None]
+            # Manually add the hole trace legend handle
+            if self.draw_hole_traces and 'borehole' in self.survey_type:
+                legend_handles.append(
+                    mlines.Line2D([], [], linestyle='--', color=self.color, marker='|', label='Borehole Trace'))
+
+            self.ax.legend(handles=legend_handles, title='Legend', loc='lower right', framealpha=1, shadow=True,
+                           edgecolor='k')
+
+    def get_map(self):
+        """
+        Retuns the figure if anything is plotted in it.
+        :return: Matplotlib Figure object.
+        """
+        if any([self.loops, self.lines, self.collars, self.holes]):
+            self.format_figure()
+            return self.fig
+        else:
+            return None
+
+
+class GeneralMap(MapPlotMethods):
+    """
+    Draws a general map for reports on a given Matplotlib figure object. Accepts all holes and surface lines.
+    :param: pem_files: list of pem_files
+    :param: figure: Matplotlib landscape-oriented figure object
+    """
+
+    def __init__(self, pem_files, figure, **kwargs):
+        super().__init__()
+        self.color = 'black'
+        self.fig = figure
+        self.pem_files = pem_files
+
+        if not isinstance(self.pem_files, list):
+            self.pem_files = [self.pem_files]
+
+        self.loops = []
+        self.lines = []
+        self.holes = []
+        self.labels = []
+
+        self.loop_handle = None
+        self.station_handle = None
+        self.collar_handle = None
+        self.trace_handle = None
+        self.map_scale = None
+        self.system = None
+        self.zone = None
+        self.datum = None
+
+        self.draw_loop_annotations = kwargs.get('LoopAnnotations') if kwargs else False
+        self.moving_loop = kwargs.get('MovingLoop') if kwargs else True
+        self.title_box = kwargs.get('TitleBox') if kwargs else True
+        self.map_grid = kwargs.get('Grid') if kwargs else True
+        self.scale_bar = kwargs.get('ScaleBar') if kwargs else True
+        self.north_arrow = kwargs.get('NorthArrow') if kwargs else True
+        self.show_legend = kwargs.get('Legend') if kwargs else True
+        self.draw_loops = kwargs.get('DrawLoops') if kwargs else True
+        self.draw_lines = kwargs.get('DrawLines') if kwargs else True
+        self.draw_hole_collars = kwargs.get('DrawHoleCollars') if kwargs else True
+        self.draw_hole_traces = kwargs.get('DrawHoleTraces') if kwargs else True
+        self.loop_labels = kwargs.get('LoopLabels') if kwargs else True
+        self.line_labels = kwargs.get('LineLabels') if kwargs else True
+        self.hole_collar_labels = kwargs.get('HoleCollarLabels') if kwargs else True
+        self.hole_depth_labels = kwargs.get('HoleDepthLabels') if kwargs else True
+        self.crs = self.get_crs(kwargs.get(
+            'CRS')) if kwargs else None
+        if __name__ == '__main__':
+            self.crs = self.get_crs(self.pem_files[0].get_crs())
+
+        self.gps_editor = GPSEditor
+        if self.crs:
+            self.ax = self.fig.add_subplot(projection=self.crs)
+            self.plot_pems()
+
+    def plot_pems(self):
+
+        def add_loop_to_map(pem_file):
+            loop_gps, loop_name = pem_file.get_loop_coords(), pem_file.header.get('Loop')
+            if (loop_gps, loop_name) not in self.loops:
+                self.loops.append((loop_gps, loop_name))
+                loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
+                eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
+                eastings.insert(0, eastings[-1])  # To close up the loop
+                northings.insert(0, northings[-1])
+                zorder = 4 if not self.moving_loop else 6
+                if self.loop_labels:
+                    loop_label = self.ax.text(loop_center[0], loop_center[1],
+                                              f"Tx Loop {pem_file.header.get('Loop')}",
+                                              ha='center',
+                                              color=self.color,
+                                              zorder=zorder,
+                                              path_effects=label_buffer)  # Add the loop name
+
+                self.loop_handle, = self.ax.plot(eastings, northings,
+                                                 color=self.color,
+                                                 label='Transmitter Loop',
+                                                 transform=self.crs,
+                                                 zorder=2)  # Plot the loop
+
+                # Moves the loop label away from other labels
+                # adjust_text([loop_label], add_objects=self.labels, ax=self.ax, avoid_text=True, avoid_points=False,
+                #             autoalign=True)
+
+                if self.draw_loop_annotations:
+                    for i, (x, y) in enumerate(list(zip(eastings, northings))):
+                        self.fig.annotate(i,
+                                          xy=(x, y),
+                                          va='center',
+                                          ha='center',
+                                          fontsize=7,
+                                          path_effects=label_buffer,
+                                          zorder=3,
+                                          color=self.color,
+                                          transform=self.ax.transData)
+
+        def add_line_to_map(pem_file):
+
+            line_gps, line_name = pem_file.get_station_coords(), pem_file.header.get('LineHole')
+            # Plotting the line and adding the line label
+            if (line_gps, line_name) not in self.lines:
+                self.lines.append((line_gps, line_name))
+                eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
+                angle = math.degrees(math.atan2(northings[-1]-northings[0], eastings[-1] - eastings[0]))
+
+                if abs(angle) > 90:
+                    x, y = eastings[-1], northings[-1]
+                    # Flip the label if it's upside-down
+                    angle = angle - 180
+                else:
+                    x, y = eastings[0], northings[0]
+
+                # Should there be line labels for such a map?
+                if self.line_labels:
+                    line_label = self.ax.text(x, y,
+                                              f" {pem_file.header.get('LineHole')} ",
+                                              rotation=angle,
+                                              rotation_mode='anchor',
+                                              ha='right',
+                                              va='center',
+                                              zorder=5,
+                                              color=self.color,
+                                              path_effects=label_buffer)
+                self.labels.append(line_label)
+                # For legend
+                self.station_handle, = self.ax.plot(eastings, northings,
+                                                    '-o',
+                                                    markersize=3,
+                                                    color=self.color,
+                                                    markerfacecolor='w',
+                                                    markeredgewidth=0.3,
+                                                    label='Surface Line',
+                                                    transform=self.crs,
+                                                    zorder=2)  # Plot the line
+
+        def add_hole_to_map(pem_file):
+
+            hole_gps, hole_name = pem_file.get_collar_coords()[0], pem_file.header.get('LineHole')
+            collar_x, collar_y, collar_z = float(hole_gps[0]), float(hole_gps[1]), float(hole_gps[2])
+            segments = pem_file.get_hole_geometry()
+            if segments and hole_gps:
+                seg_x, seg_y, seg_z, seg_dist = self.get_3D_borehole_projection(hole_gps, segments, interp_segments=1000)
+            else:
+                seg_x, seg_y = None, None
+
+            if (hole_gps, hole_name) not in self.holes:
+                self.holes.append((hole_gps, hole_name))
+                marker_style = dict(marker='o', color='white', markeredgecolor=self.color, markersize=8)
+                self.collar_handle, = self.ax.plot(collar_x, collar_y,
+                                                   fillstyle='full',
+                                                   label='Borehole Collar',
+                                                   zorder=4,
+                                                   **marker_style)
+                # Add the hole label at the collar
+                if self.hole_collar_labels:
+                    angle = math.degrees(math.atan2(seg_y[-1] - seg_y[0], seg_x[-1] - seg_x[0]))
+                    align = 'left' if angle > 90 or angle < -90 else 'right'
+                    if self.hole_collar_labels:
+                        collar_label = self.ax.text(collar_x, collar_y,
+                                                    f"  {pem_file.header.get('LineHole')}  ",
+                                                    va='center',
+                                                    ha=align,
+                                                    color=self.color,
+                                                    zorder=5,
+                                                    path_effects=label_buffer)
+                        self.labels.append(collar_label)
+
+                if seg_x and seg_y and self.draw_hole_traces is True:
+
+                    # Calculating tick indexes. Ticks are placed at evenly spaced depths.
+                    # depths = np.linspace(min(seg_z), collar_z, 10)  # Spaced such that there are 10 segments
+                    # depths = np.arange(collar_z, min(seg_z)-51, -50)  # Spaced every 50m, starting from the top
+                    depths = np.arange(min(seg_dist), max(seg_dist) + 51, 50)  # Spaced every 50m, starting from the top
+
+                    # Find the index of the seg_z depth nearest each depths value.
+                    # indexes = [min(range(len(seg_z)), key=lambda i: abs(seg_z[i] - depth)) for depth in depths]
+                    indexes = [min(range(len(seg_dist)), key=lambda i: abs(seg_dist[i] - depth)) for depth in depths]
+
+                    # Hole trace is plotted using marker positions so that they match perfectly.
+                    index_x = [seg_x[index] for index in indexes]  # Marker positions
+                    index_y = [seg_y[index] for index in indexes]
+
+                    if self.draw_hole_traces:
+                        # Plotting the hole trace
+                        self.trace_handle, = self.ax.plot(index_x, index_y,
+                                                          '--',
+                                                          label='Hole Trace',
+                                                          color=self.color)
+
+                    # Plotting the markers
+                    for index in indexes[1:]:
+                        if index != indexes[-1]:
+                            angle = math.degrees(
+                                math.atan2(seg_y[index + 1] - seg_y[index], seg_x[index + 1] - seg_x[index]))
+                            self.ax.plot(seg_x[index], seg_y[index],
+                                         markersize=5,
+                                         marker=(2, 0, angle),
+                                         mew=.5,
+                                         color=self.color)
+
+                    # Add the end tick for the borehole trace and the label
+                    angle = math.degrees(math.atan2(seg_y[-1] - seg_y[-2], seg_x[-1] - seg_x[-2]))
+                    # self.ax.text(seg_x[-1], seg_y[-1], '|', rotation=angle, color=self.color, va='center',
+                    #              ha='center', fontsize=9)
+                    self.ax.scatter(seg_x[-1], seg_y[-1],
+                                    marker=(2, 0, angle),
+                                    color=self.color)
+
+                    if self.hole_depth_labels:
+                        bh_depth = self.ax.text(seg_x[-1], seg_y[-1],
+                                                f"  {float(segments[-1][-1]):.0f} m",
+                                                rotation=angle+90,
+                                                fontsize=8,
+                                                color=self.color,
+                                                path_effects=label_buffer,
+                                                zorder=3,
+                                                rotation_mode='anchor')
+
+        for pem_file in self.pem_files:
+            label_buffer = [patheffects.Stroke(linewidth=1.5, foreground='white'), patheffects.Normal()]
+
+            if not pem_file.is_borehole() and self.draw_lines is True and pem_file.has_station_gps():
+                add_line_to_map(pem_file)
+
+            if pem_file.is_borehole() and self.draw_hole_collars is True and pem_file.has_collar_gps():
+                add_hole_to_map(pem_file)
+
+            if self.draw_loops is True and pem_file.has_loop_gps():
+                add_loop_to_map(pem_file)
 
     def format_figure(self):
 
@@ -1838,16 +1967,60 @@ class PlanMap(MapPlotMethods):
             xmin, xmax, ymin, ymax = self.ax.get_extent()
             center_x, center_y = ((xmax - xmin) / 2) + xmin, ((ymax - ymin) / 2) + ymin
             lat, lon = utm.to_latlon(center_x, center_y, zone_num, northern=north)
-            print(f'Lat: {lat}, Lon: {lon}')
-            self.ax_sub = self.fig.add_axes([0.04, 0.03, 0.25, 0.20],
-                                  projection=ccrs.PlateCarree(central_longitude=lon))
+            print(f'Center Easting: {center_x:.0f}, Center Northing: {center_y:.0f}')
+            print(f'Center Lat: {lat:.2f}, Center Lon: {lon:.2f}')
+
+            # self.ax_sub = self.fig.add_axes([0.04, 0.03, 0.25, 0.20],
+            #                       projection=ccrs.PlateCarree(central_longitude=lon))
+            self.ax_sub = self.fig.add_axes([0.03, 0.04, 0.25, 0.20],
+                                  projection=ccrs.Orthographic(central_longitude=lon, central_latitude=lat))
+            # self.ax_sub = self.fig.add_axes([0.04, 0.03, 0.25, 0.20],
+            #                       projection=ccrs.Mollweide(central_longitude=lon))
+
             print(f"Setting inset map extents to : {lat - 30, lat + 30, lon - 20, lon + 20}")
-            self.ax_sub.set_extent([lon - 35, lon + 35, lat - 20, lat + 20], crs=ccrs.PlateCarree())
+            self.ax_sub.set_extent([lon - 35, lon + 35, lat - 20, lat + 20],
+                                   crs=ccrs.PlateCarree())
             self.ax_sub.coastlines()
+            # request = cimgt.Stamen('terrain-background')
+            # request = cimgt.OSM()
+            # self.ax_sub.add_image(request, 6)
             # self.ax_sub.set_global()
+            self.ax_sub.gridlines(color='black',
+                                  zorder=1,
+                                  linewidth=0.1,
+                                  crs=ccrs.PlateCarree())
+            self.ax_sub.scatter(lon, lat, s=100,
+                                marker='X',
+                                color='pink',
+                                edgecolors='black',
+                                zorder=2,
+                                transform=ccrs.PlateCarree())
             self.ax_sub.stock_img()
-            # self.ax_sub.gridlines()
-            self.ax_sub.plot(lat, 'o', markeredgecolor='black', color='pink')
+            self.ax_sub.add_feature(cartopy.feature.BORDERS)
+            other_borders = NaturalEarthFeature(category='cultural',
+                                                name='admin_1_states_provinces_lines',
+                                                scale='50m',
+                                                facecolor='none',
+                                                linewidth=0.5)
+            self.ax_sub.add_feature(other_borders, edgecolors='black')
+
+        def new_get_image(self, tile):
+            if six.PY3:
+                from urllib.request import urlopen, Request
+            else:
+                from urllib.request import urlopen
+            url = self._image_url(tile)  # added by H.C. Winsemius
+            req = Request(url)  # added by H.C. Winsemius
+            req.add_header('User-agent', 'your bot 0.1')
+            # fh = urlopen(url)  # removed by H.C. Winsemius
+            fh = urlopen(req)
+            im_data = six.BytesIO(fh.read())
+            fh.close()
+            img = Image.open(im_data)
+
+            img = img.convert(self.desired_tile_form)
+
+            return img, self.tileextent(tile), 'lower'
 
         self.fig.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.95)
         set_size()
@@ -1871,16 +2044,30 @@ class PlanMap(MapPlotMethods):
             add_scale_bar()
         if self.north_arrow:
             add_north_arrow()
-        if self.title_box:
-            add_title()
+        # if self.title_box:
+        #     add_title()
         add_inset()
+
+        cimgt.OSM.get_image = new_get_image
+        cimgt.Stamen.get_image = new_get_image
+        cimgt.MapQuestOpenAerial.get_image = new_get_image
+        cimgt.GoogleWTS.get_image = new_get_image
+
+        # request = cimgt.Stamen('terrain-background')
+        # request = cimgt.MapQuestOpenAerial()
+        # request = cimgt.OSM()
+        # request = cimgt.MapQuestOpenAerial()
+        # self.ax.add_image(request, 8, interpolation='spline36')
+
+        lakes = NaturalEarthFeature(category='physical', name='rivers_lake_centerlines', scale='10m', facecolor='blue')
+        self.ax.add_feature(lakes, edgecolor='blue', color='blue', transform=ccrs.Geodetic())
 
         if self.show_legend:
             legend_handles = [handle for handle in
                               [self.loop_handle, self.station_handle, self.collar_handle] if
                               handle is not None]
-            # Manually add the hole trace legend handle
-            if self.draw_hole_traces and 'borehole' in self.survey_type:
+            # Manually add the hole trace legend handle because of the marker angle
+            if self.draw_hole_traces:
                 legend_handles.append(
                     mlines.Line2D([], [], linestyle='--', color=self.color, marker='|', label='Borehole Trace'))
 
@@ -1892,7 +2079,7 @@ class PlanMap(MapPlotMethods):
         Retuns the figure if anything is plotted in it.
         :return: Matplotlib Figure object.
         """
-        if any([self.loops, self.lines, self.collars, self.holes]):
+        if any([self.loops, self.lines, self.holes]):
             self.format_figure()
             return self.fig
         else:
@@ -2309,7 +2496,7 @@ class Map3D(MapPlotMethods):
             self.collars.append(collar_gps)
             segments = [[float(num) for num in row] for row in segments]
 
-            xx, yy, zz = self.get_3D_borehole_projection(collar_gps[0], segments)
+            xx, yy, zz, = self.get_3D_borehole_projection(collar_gps[0], segments)
             hole_artist, = self.ax.plot(xx, yy, zz, '--', lw=1, color='darkred')
             self.hole_artists.append(hole_artist)
 
@@ -2665,33 +2852,33 @@ class MagneticFieldCalculator(MapPlotMethods):
 
         return xx, yy, zz, uproj, vproj, wproj, arrow_len
 
-
-class Section3D(Map3D, MagneticFieldCalculator):
-    def __init__(self, ax, pem_file, **kwargs):
-        logging.info('Section3D')
-        if isinstance(pem_file, list):
-            pem_file = pem_file[0]
-        self.pem_file = pem_file
-        self.ax = ax
-        Map3D.__init__(self, self.ax, self.pem_file, set_z=True)
-        MagneticFieldCalculator.__init__(self, self.pem_file)
-
-        self.mag_field_artists = []
-        self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
-
-        self.plot_hole(self.pem_file)
-        self.plot_loop(self.pem_file)
-
-    def plot_2d_magnetic_field(self):
-        logging.info('Section3D - Plotting magnetic field')
-
-        p1, p2, line_az = self.get_section_extents(self.pem_file)
-        xx, yy, zz, u, v, w, arrow_len = self.get_2d_magnetic_field(p1, p2)
-        mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
-                                          color='black', label='Field', linewidth=.5, alpha=1.,
-                                          arrow_length_ratio=.3, pivot='middle', zorder=0)
-        self.mag_field_artists.append(mag_field_artist)
-
+# TODO Redo section 3D with new Mag field calculator module.
+# class Section3D(Map3D, MagneticFieldCalculator):
+#     def __init__(self, ax, pem_file, **kwargs):
+#         logging.info('Section3D')
+#         if isinstance(pem_file, list):
+#             pem_file = pem_file[0]
+#         self.pem_file = pem_file
+#         self.ax = ax
+#         Map3D.__init__(self, self.ax, self.pem_file, set_z=True)
+#         MagneticFieldCalculator.__init__(self, self.pem_file)
+#
+#         self.mag_field_artists = []
+#         self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
+#
+#         self.plot_hole(self.pem_file)
+#         self.plot_loop(self.pem_file)
+#
+#     def plot_2d_magnetic_field(self):
+#         logging.info('Section3D - Plotting magnetic field')
+#
+#         p1, p2, line_az = self.get_section_extents(self.pem_file)
+#         xx, yy, zz, u, v, w, arrow_len = self.get_2d_magnetic_field(p1, p2)
+#         mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
+#                                           color='black', label='Field', linewidth=.5, alpha=1.,
+#                                           arrow_length_ratio=.3, pivot='middle', zorder=0)
+#         self.mag_field_artists.append(mag_field_artist)
+#
     # Not used
     # def plot_3d_magnetic_field(self, num_rows=8):
     #     logging.info('Section3D - Plotting magnetic field')
@@ -2703,10 +2890,15 @@ class Section3D(Map3D, MagneticFieldCalculator):
     #     self.mag_field_artists.append(mag_field_artist)
 
 
-class SectionPlot(MagneticFieldCalculator):
+class SectionPlot(MapPlotMethods):
     """
     Plots the section plot (magnetic field vector plot) of a single borehole on a given figure object.
     By default the azimuth selected is the 80th percentile down the hole, but this is selected by the user.
+    :param pem_files: list: Plots a single PEMFile but accepts a list.
+    :param fig: Matplotlib figure object to plot on
+    :param stations: list: List of stations for tick markers
+    :param hole_depth: str or int: Depth of the hole
+    :param kwargs: dict: keyword arguments that controls what is plotted.
     """
 
     def __init__(self, pem_files, fig, stations=None, hole_depth=None, **kwargs):
@@ -2719,24 +2911,33 @@ class SectionPlot(MagneticFieldCalculator):
             self.hole_depth = int(hole_depth)
         except ValueError:
             self.hole_depth = None
-        MagneticFieldCalculator.__init__(self, self.pem_file)
+        except TypeError:
+            self.hole_depth = None
+        # MagneticFieldCalculator.__init__(self, self.pem_file)
+        MapPlotMethods.__init__(self)
         self.buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
 
+        # Adjust the bounding box of the axes within the figure
         self.fig.subplots_adjust(left=0.055, bottom=0.03, right=0.97, top=0.955)
+
+        # Calculate the end-points to be used to plot the cross section on
         bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
-        plot_width = bbox.width * .0254
-        self.p1, self.p2, self.line_az = self.get_section_extents(self.pem_file, hole_depth=self.hole_depth,
-                                                                  section_plot=True, plot_width=plot_width)
+        plot_width = bbox.width * .0254  # Convert to meters
+        self.p1, self.p2, self.line_az = self.get_section_extents(self.pem_file,
+                                                                  hole_depth=self.hole_depth,
+                                                                  section_plot=True,
+                                                                  plot_width=plot_width)
+        # Calculate the length of the cross-section (c = sqrt(a² + b²))
         self.line_len = math.sqrt((self.p1[0] - self.p2[0]) ** 2 + (self.p1[1] - self.p2[1]) ** 2)
         self.section_depth = self.line_len * (bbox.height / bbox.width)
         self.units = 'm' if self.segments[0][3] == 2 else 'ft'
         self.label_ticks = kwargs.get('LabelSectionTicks')
 
         self.plot_hole_section()
-        self.plot_mag_section()
+        self.plot_mag()
+        # self.plot_mag_section()
         self.format_figure()
         # plt.show()
-        # filename = r'C:\Users\Eric\Desktop\Section.PDF'
         # plt.savefig(filename, dpi='figure', orientation='portrait')
         # os.startfile(filename)
 
@@ -2800,23 +3001,43 @@ class SectionPlot(MagneticFieldCalculator):
                 # Adding the small rectangles
                 for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
                     fill = 'w' if i % 2 == 0 else 'k'
-                    patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height, ec='k', linewidth=line_width,
-                                              facecolor=fill, transform=self.ax.transAxes, zorder=9)
+                    patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
+                                              ec='k',
+                                              linewidth=line_width,
+                                              facecolor=fill,
+                                              transform=self.ax.transAxes,
+                                              zorder=9)
                     self.ax.add_patch(patch)
                 for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
                     fill = 'k' if i % 2 == 0 else 'w'
-                    patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height, ec='k', zorder=9,
-                                              linewidth=line_width, facecolor=fill, transform=self.ax.transAxes)
+                    patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
+                                              ec='k',
+                                              zorder=9,
+                                              linewidth=line_width,
+                                              facecolor=fill,
+                                              transform=self.ax.transAxes)
                     self.ax.add_patch(patch)
 
                 # Adding the big rectangles
-                patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height, ec='k', facecolor='k',
-                                           linewidth=line_width, transform=self.ax.transAxes, zorder=9)
-                patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height, ec='k',
-                                           facecolor='w', linewidth=line_width, transform=self.ax.transAxes, zorder=9)
+                patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
+                                           ec='k',
+                                           facecolor='k',
+                                           linewidth=line_width,
+                                           transform=self.ax.transAxes,
+                                           zorder=9)
+                patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
+                                           ec='k',
+                                           facecolor='w',
+                                           linewidth=line_width,
+                                           transform=self.ax.transAxes,
+                                           zorder=9)
                 # Background rectangle
-                patch3 = patches.Rectangle((left_bar_pos, y - rect_height), big_rect_width * 2, rect_height * 2, ec='k',
-                                           facecolor='w', linewidth=line_width, transform=self.ax.transAxes, zorder=5,
+                patch3 = patches.Rectangle((left_bar_pos, y - rect_height), big_rect_width * 2, rect_height * 2,
+                                           ec='k',
+                                           facecolor='w',
+                                           linewidth=line_width,
+                                           transform=self.ax.transAxes,
+                                           zorder=5,
                                            path_effects=buffer)
                 self.ax.add_patch(patch1)
                 self.ax.add_patch(patch2)
@@ -2837,14 +3058,30 @@ class SectionPlot(MagneticFieldCalculator):
             right_bar_pos = bar_center + (bar_ax_length / 2)
 
             add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
-            self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-            self.ax.text(bar_center, bar_height_pos + .009, f"0", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-            self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-            self.ax.text(bar_center, bar_height_pos - .018, f"({units})", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
+            self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
+                         ha='center',
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
+            self.ax.text(bar_center, bar_height_pos + .009, f"0",
+                         ha='center',
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
+            self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
+                         ha='center',
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
+            self.ax.text(bar_center, bar_height_pos - .018, f"({units})",
+                         ha='center',
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
 
         def add_title():
 
@@ -2867,17 +3104,31 @@ class SectionPlot(MagneticFieldCalculator):
 
             # Separating lines
             line_1 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
-                                   linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
+                                   linewidth=1,
+                                   color='gray',
+                                   transform=self.ax.transAxes,
+                                   zorder=10)
 
             line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .098, top_pos - .098],
-                                   linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
+                                   linewidth=1,
+                                   color='gray',
+                                   transform=self.ax.transAxes,
+                                   zorder=10)
 
             line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .135, top_pos - .135],
-                                   linewidth=.5, color='gray', transform=self.ax.transAxes, zorder=10)
+                                   linewidth=.5,
+                                   color='gray',
+                                   transform=self.ax.transAxes,
+                                   zorder=10)
 
             # Title box rectangle
-            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='k',
-                                          boxstyle="round,pad=0.005", facecolor='white', zorder=9,
+            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
+                                          width=b_width,
+                                          height=b_height,
+                                          edgecolor='k',
+                                          boxstyle="round,pad=0.005",
+                                          facecolor='white',
+                                          zorder=9,
                                           transform=self.ax.transAxes)
 
             client = self.pem_file.header.get("Client")
@@ -2888,34 +3139,66 @@ class SectionPlot(MagneticFieldCalculator):
             scale = f"1:{calc_scale():,.0f}"
 
             self.ax.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
-                         fontname='Century Gothic', fontsize=11, ha='center', zorder=10, transform=self.ax.transAxes)
+                         fontname='Century Gothic',
+                         fontsize=11,
+                         ha='center',
+                         zorder=10,
+                         transform=self.ax.transAxes)
 
-            self.ax.text(center_pos, top_pos - 0.02, f"Hole Cross-Section with Primary Field", family='cursive',
-                         fontname='Century Gothic', fontsize=10, ha='center', zorder=10, transform=self.ax.transAxes)
+            self.ax.text(center_pos, top_pos - 0.02, f"Hole Cross-Section with Primary Field",
+                         family='cursive',
+                         fontname='Century Gothic',
+                         fontsize=10,
+                         ha='center',
+                         zorder=10,
+                         transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.037, f"{self.pem_file.survey_type.title()} Pulse EM Survey",
                          family='cursive',
                          style='italic',
-                         fontname='Century Gothic', fontsize=9, ha='center', zorder=10, transform=self.ax.transAxes)
+                         fontname='Century Gothic',
+                         fontsize=9,
+                         ha='center',
+                         zorder=10,
+                         transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.051, f"{client}\n" + f"{grid}\n"
             f"Hole: {hole}    Loop: {loop}",
-                         fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
+                         fontname='Century Gothic',
+                         fontsize=10,
+                         va='top',
+                         ha='center',
+                         zorder=10,
                          transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.105,
                          f"Timebase: {self.pem_file.header.get('Timebase')} ms\n{get_survey_date()}",
-                         fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=10,
+                         fontname='Century Gothic',
+                         fontsize=9,
+                         va='top',
+                         ha='center',
+                         zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(left_pos, top_pos - 0.140, f"Section Azimuth: {self.line_az:.0f}°", family='cursive',
+            self.ax.text(left_pos, top_pos - 0.140, f"Section Azimuth: {self.line_az:.0f}°",
+                         family='cursive',
                          style='italic', color='dimgray',
-                         fontname='Century Gothic', fontsize=8, va='top', ha='left', zorder=10,
+                         fontname='Century Gothic',
+                         fontsize=8,
+                         va='top',
+                         ha='left',
+                         zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(right_pos, top_pos - 0.140, f"Scale {scale}", family='cursive', style='italic',
+            self.ax.text(right_pos, top_pos - 0.140, f"Scale {scale}",
+                         family='cursive',
+                         style='italic',
                          color='dimgray',
-                         fontname='Century Gothic', fontsize=8, va='top', ha='right', zorder=10,
+                         fontname='Century Gothic',
+                         fontsize=8,
+                         va='top',
+                         ha='right',
+                         zorder=10,
                          transform=self.ax.transAxes)
 
             self.ax.add_patch(rect)
@@ -2925,9 +3208,14 @@ class SectionPlot(MagneticFieldCalculator):
             self.ax.add_line(line_2)
             self.ax.add_line(line_3)
 
+        # Add extra space at the top (mostly for horizontal holes)
+        # ymin, ymax = self.ax.get_ylim()
+        # self.ax.set_ylim(ymin, ymax * 1.02)
         self.ax.xaxis.set_visible(False)
         self.ax.yaxis.set_visible(True)
-        self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, va='center')
+        self.ax.set_yticklabels(self.ax.get_yticklabels(),
+                                rotation=90,
+                                va='center')
 
         if self.units == 'm':
             self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} m'))
@@ -2967,15 +3255,10 @@ class SectionPlot(MagneticFieldCalculator):
         hole_elevation = self.collar[2]
         min_z = hole_elevation - self.section_depth
 
-        try:
-            length = np.arange(0, self.line_len + 30, self.line_len // 25)
-            y = np.zeros(1)
-            z = np.arange(min_z, hole_elevation + 50, (hole_elevation - min_z) // 30)
-        except ZeroDivisionError:
-            print('SectionLength ZeroDivisionError, expected > 0')
-            return
-        except:
-            raise
+        length = np.arange(0, self.line_len + 30, self.line_len // 25)
+        y = np.zeros(1)
+        z = np.arange(min_z, hole_elevation + 50, (hole_elevation - min_z) // 30)
+
         xx, yy, zz = np.meshgrid(length, y, z)
         x_rot = xx * math.cos(theta) - yy * math.sin(theta)
         y_rot = xx * math.sin(theta) + yy * math.cos(theta)
@@ -3006,18 +3289,43 @@ class SectionPlot(MagneticFieldCalculator):
         self.ax.set_ylim(min_z, hole_elevation)
 
         # Plot the vector arrows
-        self.ax.quiver(xx, zz, plotx, plotz, color='dimgray', label='Field', pivot='middle', zorder=0,
-                       units='dots', scale=.045, width=.6, headlength=9, headwidth=5)
+        self.ax.quiver(xx, zz, plotx, plotz,
+                       color='dimgray',
+                       label='Field',
+                       pivot='middle',
+                       zorder=0,
+                       units='dots',
+                       scale=.045,
+                       width=.6,
+                       headlength=9,
+                       headwidth=5)
 
         # Plot Labelling
         lefttext = f'{self.p1[0]:,.0f}m E\n{self.p1[1]:,.0f}m N'
         righttext = f'{self.p2[0]:,.0f}m E\n{self.p2[1]:,.0f}m N'
-        self.ax.text(0, 1.01, lefttext, color='k', ha='left', size='small', path_effects=self.buffer,
-                     zorder=9, transform=self.ax.transAxes)
-        self.ax.text(1, 1.01, righttext, color='k', ha='right', size='small',
-                     path_effects=self.buffer, zorder=9, transform=self.ax.transAxes)
+        self.ax.text(0, 1.01, lefttext,
+                     color='k',
+                     ha='left',
+                     size='small',
+                     path_effects=self.buffer,
+                     zorder=9,
+                     transform=self.ax.transAxes)
+        self.ax.text(1, 1.01, righttext,
+                     color='k',
+                     ha='right',
+                     size='small',
+                     path_effects=self.buffer,
+                     zorder=9,
+                     transform=self.ax.transAxes)
         # plt.draw()
         # plt.pause(0.0001)
+
+    def plot_mag(self):
+        wire_coords = self.get_loop_coords()
+        mag_calculator = MagneticFieldCalculator(wire_coords)
+        xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)
+        self.ax.quiver(xx, zz, plotx, plotz, color='dimgray', label='Field', pivot='middle', zorder=0,
+                       units='dots', scale=.050, width=.8, headlength=11, headwidth=6)
 
     def plot_hole_section(self):
         p = np.array([self.p1[0], self.p1[1], 0])
@@ -3025,8 +3333,11 @@ class SectionPlot(MagneticFieldCalculator):
         planeNormal = np.cross(vec, [0, 0, -1])
         planeNormal = planeNormal / self.get_magnitude(planeNormal)
 
-        interp_x, interp_y, interp_z = np.array(self.get_3D_borehole_projection(
-            self.collar, self.segments, interp_segments=1000), dtype='float64')
+        interp_x, interp_y, interp_z, interp_dist = np.array(self.get_3D_borehole_projection(
+            self.collar,
+            self.segments,
+            interp_segments=1000),
+            dtype='float64')
 
         # Plotting station ticks on the projected hole
         if self.stations is None:
@@ -3052,21 +3363,39 @@ class SectionPlot(MagneticFieldCalculator):
 
             if i == 0:
                 # Circle at top of hole
-                self.ax.plot([dist], [q_proj[2]], 'o', markerfacecolor='w', markeredgecolor='k',
-                             path_effects=self.buffer, zorder=11)
+                self.ax.plot([dist], self.collar[2], 'o',
+                             markerfacecolor='w',
+                             markeredgecolor='k',
+                             path_effects=self.buffer,
+                             zorder=11)
                 # Hole name label
                 hole_name = self.pem_file.header.get('LineHole')
                 trans = mtransforms.blended_transform_factory(self.ax.transData, self.ax.transAxes)
-                self.ax.text(dist, 1.01, hole_name, color='k', ha='center', size=10, transform=trans, zorder=10)
+                self.ax.text(dist, .975, f"{hole_name}",
+                             color='k',
+                             ha='center',
+                             size=10,
+                             path_effects=self.buffer,
+                             transform=trans,
+                             zorder=10)
             elif i == len(hole_trace) - 1:
                 # Label end-of-hole depth
                 hole_len = self.segments[-1][-1]
                 angle = math.degrees(math.atan2(plotz[-1]-plotz[-100], plotx[-1]-plotx[-100])) + 90
-                self.ax.text(dist + self.line_len * .01, q_proj[2], f"{hole_len:.0f} m", color='k', ha='left',
-                             rotation=angle, path_effects=self.buffer, zorder=10, rotation_mode='anchor')
+                self.ax.text(dist + self.line_len * .01, q_proj[2], f" {hole_len:.0f} m ",
+                             color='k',
+                             ha='left',
+                             rotation=angle,
+                             path_effects=self.buffer,
+                             zorder=10,
+                             rotation_mode='anchor')
 
         # Plot the hole section line
-        self.ax.plot(plotx, plotz, color='k', lw=1, path_effects=self.buffer, zorder=10)
+        self.ax.plot(plotx, plotz,
+                     color='k',
+                     lw=1,
+                     path_effects=self.buffer,
+                     zorder=10)
 
         # Plotting the ticks
         for i, (x, z) in enumerate(zip(plotx, plotz)):
@@ -3076,12 +3405,19 @@ class SectionPlot(MagneticFieldCalculator):
                 pa = (plotx[index - 1], plotz[index - 1])
                 angle = math.degrees(math.atan2(pa[1] - p[1], pa[0] - p[0])) - 90
 
-                self.ax.text(x, z, '|', rotation=angle+90, ha='center', va='center', zorder=12, rotation_mode='anchor')
+                self.ax.text(x, z, '|',
+                             rotation=angle+90,
+                             ha='center',
+                             va='center',
+                             zorder=12,
+                             rotation_mode='anchor')
 
                 # Label the station ticks
                 if self.label_ticks:
-                    self.ax.text(x, z, f"{self.stations[station_indexes.index(i)]} {self.units}", rotation=angle,
-                             color='dimgray', size=8)
+                    self.ax.text(x, z, f"{self.stations[station_indexes.index(i)]} {self.units}",
+                                 rotation=angle,
+                                 color='dimgray',
+                                 size=8)
 
         # # Markers are plotted separately so they don't have a buffer around them like the line does
         # self.ax.plot(plotx, plotz, 'o', color='k', lw=1, zorder=11,
@@ -3149,15 +3485,17 @@ class PEMPrinter:
                         print('No PEM file has any GPS to plot on the plan map.')
 
                 # Save the Section plot as long as it is a borehole survey. Must have loop, collar GPS and segments.
-                if self.print_section_plot is True and 'borehole' in pem_files[0].survey_type.lower():
+                if self.print_section_plot is True and pem_files[0].is_borehole():
                     if pem_files[0].has_collar_gps() and pem_files[0].has_loop_gps() and pem_files[0].has_geometry():
                         self.pb.setText(f"Saving section plot for {pem_files[0].header.get('LineHole')}")
                         section_depth = self.kwargs.get('SectionDepth')
                         stations = sorted(set(itertools.chain.from_iterable(
                             [pem_file.get_converted_unique_stations() for pem_file in pem_files])))
 
-                        section_plotter = SectionPlot(pem_files, self.portrait_fig, stations=stations,
-                                                      hole_depth=section_depth, **self.kwargs)
+                        section_plotter = SectionPlot(pem_files, self.portrait_fig,
+                                                      stations=stations,
+                                                      hole_depth=section_depth,
+                                                      **self.kwargs)
                         section_fig = section_plotter.get_section_plot()
                         pdf.savefig(section_fig)
                         self.pb_count += 1
@@ -3538,9 +3876,9 @@ if __name__ == '__main__':
     # planner = LoopPlanner()
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
-    fig = plt.figure(figsize=(11, 8.5), dpi=100)
-    plan_map = PlanMap(pem_files, fig)
-    map = plan_map.get_map()
+    fig = plt.figure(figsize=(8.5, 11), dpi=100)
+    # map = GeneralMap(pem_files, fig).get_map()
+    map = SectionPlot(pem_files, fig).get_section_plot()
     map.show()
     # ax = fig.add_subplot()
     # component = 'z'

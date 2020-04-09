@@ -13,7 +13,7 @@ class PEMSerializer:
 
     # Constructor
     def __init__(self):
-        logging.info('PEMSerializer')
+        pass
 
     def serialize_tags(self, tags):
         def tag(id, content):

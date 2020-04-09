@@ -3,7 +3,6 @@ import re
 import logging
 from src.gps.gps_editor import GPSEditor
 
-logging.info('PEMFile')
 
 class PEMFile:
     """
@@ -101,6 +100,19 @@ class PEMFile:
                 return False
             else:
                 return True
+
+    def get_crs(self):
+        notes = self.get_notes()
+        for note in notes:
+            if 'CRS:' in note:
+                crs = re.split('CRS: ', note)[-1]
+                s = crs.split()
+                system = s[0]
+                zone = f"{s[2]} {s[3]}"[:-1]
+                # north = True if s[3] == 'North,' else False
+                datum = f"{s[4]} {s[5]}"
+                print(f"CRS is {system} Zone {zone}, {datum}")
+                return {'Coordinate System': system, 'Zone': zone, 'Datum': datum}
 
     def get_tags(self):
         return self.tags
