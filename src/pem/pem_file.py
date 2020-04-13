@@ -101,6 +101,23 @@ class PEMFile:
             else:
                 return True
 
+    def get_units(self):
+        if self.has_loop_gps():
+            unit = self.get_loop_coords()[0][-1]
+        elif self.has_collar_gps():
+            unit = self.get_collar_coords()[0][-1]
+        elif self.has_station_gps():
+            unit = self.get_line_coords()[0][-2]
+        else:
+            return None
+
+        if unit == '0':
+            return 'm'
+        elif unit == '1':
+            return 'ft'
+        else:
+            raise ValueError(f"{unit} is not 0 or 1")
+
     def get_crs(self):
         notes = self.get_notes()
         for note in notes:

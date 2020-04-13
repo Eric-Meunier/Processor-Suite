@@ -57,16 +57,16 @@ else:
 # Load Qt ui file into a class
 Ui_PlotEditorWindow, QtBaseClass = uic.loadUiType(plotEditorCreatorFile)
 
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
+# sys._excepthook = sys.excepthook
+#
+#
+# def exception_hook(exctype, value, traceback):
+#     print(exctype, value, traceback)
+#     sys._excepthook(exctype, value, traceback)
+#     sys.exit(1)
+#
+#
+# sys.excepthook = exception_hook
 
 mpl.rcParams['path.simplify'] = True
 mpl.rcParams['path.simplify_threshold'] = 1.0
@@ -706,15 +706,19 @@ class MapPlotMethods:
         :param interp_segments: Desired number of segments to be output
         :return: list of hole trace tuples (easting, northing, elevation)
         """
-        if not collar_gps:
-            return None
+        collar_gps = np.array(collar_gps, dtype='float')
+        segments = np.array(segments, dtype='float')
+        if not collar_gps.any():
+            raise ValueError('Collar GPS is invalid.')
+        elif not segments.any():
+            raise ValueError('Segments are invalid.')
         else:
             collar_x, collar_y, collar_z = collar_gps[0], collar_gps[1], collar_gps[2]
 
             if interp_segments:
-                azimuths = [float(row[0]) for row in segments]
-                dips = [float(row[1]) for row in segments]
-                depths = [float(row[-1]) for row in segments]
+                azimuths = [row[0] for row in segments]
+                dips = [row[1] for row in segments]
+                depths = [row[-1] for row in segments]
                 units = segments[0][-2]
 
                 interp_depths = np.linspace(depths[0], depths[-1], interp_segments)
@@ -728,24 +732,24 @@ class MapPlotMethods:
                 segments = list(
                     zip(interp_az, interp_dip, interp_lens, [units] * len(interp_depths), interp_depths))
 
-            eastings = [float(collar_x)]
-            northings = [float(collar_y)]
-            depths = [float(collar_z)]
+            eastings = [collar_x]
+            northings = [collar_y]
+            depths = [collar_z]
             relative_depth = [0.0]
             azimuth = None
 
             for segment in segments:
-                azimuth = math.radians(float(segment[0]))
-                dip = math.radians(float(segment[1]))
-                seg_l = float(segment[2])
+                azimuth = math.radians(segment[0])
+                dip = math.radians(segment[1])
+                seg_l = segment[2]
                 delta_seg_l = seg_l * math.cos(dip)
                 dz = seg_l * math.sin(dip)
                 dx = delta_seg_l * math.sin(azimuth)
                 dy = delta_seg_l * math.cos(azimuth)
 
-                eastings.append(float(eastings[-1] + dx))
-                northings.append(float(northings[-1] + dy))
-                depths.append(float(depths[-1] - dz))
+                eastings.append(eastings[-1] + dx)
+                northings.append(northings[-1] + dy)
+                depths.append(depths[-1] - dz)
                 relative_depth.append(relative_depth[-1] + seg_l)
 
             return eastings, northings, depths, relative_depth
@@ -838,7 +842,7 @@ class MapPlotMethods:
     #
     #     return line_xy_1, line_xy_2, line_az
 
-    def get_section_extents(self, pem_file, hole_depth=None, section_plot=False, plot_width=None):
+    def get_section_extent(self, pem_file, hole_depth=None, section_plot=False, plot_width=None):
         """
         Find the 50th percentile down the hole, use that as the center of the section, and find the
         X and Y extents of that section line. Default azimuth used is from the 80th percentile if no hole_depth is given.
@@ -876,6 +880,8 @@ class MapPlotMethods:
             scale_factor = get_scale_factor()
             return scale_factor
 
+        if not all([pem_file.has_geometry(), pem_file.has_collar_gps()]):
+            raise ValueError('The PEM file does not have hole geometry and/or collar GPS')
         collar = pem_file.get_collar_coords()[0]
         segments = pem_file.get_hole_geometry()
         azimuths = [float(row[0]) for row in segments]
@@ -896,7 +902,7 @@ class MapPlotMethods:
 
         interp_x, interp_y, interp_z, interp_dist = self.get_3D_borehole_projection(collar, interp_segments)
 
-        # Find the depths that are 50% and var percentile% down the hole
+        # Find the depths that are 50% and var percentile% down the holeas
         perc_50_depth = np.percentile(interp_depths, 50)
         if not hole_depth:
             hole_depth = np.percentile(interp_depths, 80)
@@ -925,6 +931,7 @@ class MapPlotMethods:
             line_xy_2 = (line_center_x + dx, line_center_y + dy)
 
         return line_xy_1, line_xy_2, line_az
+
 
 class PlanMap(MapPlotMethods):
     """
@@ -2672,212 +2679,212 @@ class FoliumMap:
         return self.w
 
 
-class MagneticFieldCalculator(MapPlotMethods):
-    """
-    Class that makes the magnetic field calculations for section vector plots.
-    :param: pem_file: PEMFile object
-    """
-
-    def __init__(self, pem_file):
-        logging.info('MagneticFieldCalculator')
-        self.pem_file = pem_file
-        MapPlotMethods.__init__(self)
-        self.loop_coords = [[float(num) for num in row] for row in self.pem_file.get_loop_coords()]
-        self.collar = [float(num) for num in self.pem_file.get_collar_coords()[0]]
-        self.segments = [[float(num) for num in row] for row in self.pem_file.get_hole_geometry()]
-        self.current = float(self.pem_file.tags.get('Current'))
-
-    def get_magnitude(self, vector):
-        return math.sqrt(sum(i ** 2 for i in vector))
-
-    def calc_total_field(self, Px, Py, Pz, I):
-        """
-        Calculate the magnetic field at position P with current I using Biot-Savart Law. Geometry used is the loop.
-        :param P: Position at which the magnetic field is calculated
-        :param I: Current used
-        :return: Magnetic field strength for each component
-        """
-
-        def loop_difference(loop_listorarray):
-            loop_array = np.array(loop_listorarray)
-            loop_diff = np.append(np.diff(loop_array, axis=0),
-                                  [loop_array[0] - loop_array[-1]], axis=0)
-            return loop_diff
-
-        def array_shift(arr, shift_num):
-            result = np.empty_like(arr)
-            if shift_num > 0:
-                result[:shift_num] = arr[-shift_num:]
-                result[shift_num:] = arr[:-shift_num]
-            elif shift_num < 0:
-                result[shift_num:] = arr[:-shift_num]
-                result[:shift_num] = arr[-shift_num:]
-            else:
-                result[:] = arr
-            return result
-
-        u0 = 1.25663706e-6
-        loop_array = np.array(self.loop_coords)
-        loop_array = np.delete(loop_array, 3, 1)  # Delete the units column
-        point = np.array([Px, Py, Pz])
-        loop_diff = loop_difference(loop_array)
-
-        AP = point - loop_array
-        BP = array_shift(AP, -1)
-
-        r1 = np.sqrt((AP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
-        r2 = np.sqrt((BP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
-        Dot1 = np.multiply(AP, loop_diff).sum(1)
-        Dot2 = np.multiply(BP, loop_diff).sum(1)
-        cross = np.cross(loop_diff, AP)
-
-        CrossSqrd = (np.sqrt((cross ** 2).sum(-1))[..., np.newaxis]).squeeze() ** 2
-        top = (Dot1 / r1 - Dot2 / r2) * u0 * I
-        bottom = (CrossSqrd * 4 * np.pi)
-        factor = (top / bottom)
-        factor = factor[..., np.newaxis]
-
-        field = cross * factor
-        field = np.sum(field, axis=0)
-
-        unit = 'nT' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
-        if unit == 'pT':
-            field *= 1e12
-        elif unit == 'nT':
-            field *= 1e9
-        else:
-            raise NotImplemented('Invalid Units')
-
-        return field[0], field[1], field[2]
-
-    def project(self, normal_plane, vector):
-        length = np.linalg.norm(normal_plane)
-        calc = np.dot(normal_plane, vector) / length ** 2
-        scaled = normal_plane * calc
-        newvector = vector - scaled
-        return newvector[0], newvector[1], newvector[2]
-
-    def get_3d_magnetic_field(self, num_rows, buffer=0):
-        logging.info('MagneticFieldCalculator - Creating mesh grid and creating vector field')
-        # Create a mesh grid
-        min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents(self.pem_file)
-        arrow_len = (max_z - min_z) // 16
-        rows = float(num_rows)
-        x = np.arange(min_x - buffer, max_x + buffer, (max_x - min_x) * 1 / rows)
-        y = np.arange(min_y - buffer, max_y + buffer, (max_y - min_y) * 1 / rows)
-        z = np.arange(min_z - buffer, max_z + buffer, (max_z - min_z) * 1 / rows)
-
-        xx, yy, zz = np.meshgrid(x, y, z)
-
-        # Vector function that will calculate the magnetic field for each point passed
-        vField = np.vectorize(self.calc_total_field)
-
-        print('Computing Field at {} points.....'.format(xx.size))
-        start = timer()
-
-        # Calculate the magnetic field at each mesh grid point
-        u, v, w = vField(xx, yy, zz, self.current)
-
-        end = timer()
-        time = round(end - start, 2)
-        print('Calculated in {} seconds'.format(str(time)))
-
-        return xx, yy, zz, u, v, w, arrow_len
-
-    def get_angle_2V(self, v1, v2):
-        len1 = math.sqrt(sum(i ** 2 for i in v1))
-        len2 = math.sqrt(sum(i ** 2 for i in v2))
-        angle = math.acos(np.dot(v1, v2) / (len1 * len2))
-        return angle
-
-    def get_2d_magnetic_field(self, p1, p2, spacing=None, arrow_len=None, num_rows=12):
-
-        def wrapper_proj(i, j, k, normal_plane):
-            return self.project(normal_plane, [i, j, k])
-
-        v_proj = np.vectorize(wrapper_proj, excluded=[3])
-        v_field = np.vectorize(self.calc_total_field)
-
-        # Vector to point and normal of cross section
-        vec = [p2[0] - p1[0], p2[1] - p1[1], 0]
-        planeNormal = np.cross(vec, [0, 0, -1])
-
-        # Angle between the plane and j_hat
-        theta = self.get_angle_2V(planeNormal, [0, 1, 0])
-
-        # Fixes angles where p2.y is less than p1.y
-        if p2[1] < p1[1]:
-            theta = -theta
-
-        # Creating the grid
-        min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents(self.pem_file)
-        max_z = float(self.pem_file.get_collar_coords()[0][2]) + 10
-        min_z = max_z - abs(float(self.pem_file.get_hole_geometry()[-1][4]))
-
-        # Calculate the Z so that it is like a section plot
-        # Wasn't working very well, replaced with the above.
-        # min_z = max_z - abs((float(math.floor(min_z / 400) + 1) * 400))
-
-        line_len = round(math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2))
-        if arrow_len is None:
-            arrow_len = float(line_len // 30)
-        # Spacing between the arrows
-        if spacing is None:
-            # spacing = (abs(min_x - max_x) + abs(min_y - max_y)) // 30
-            spacing = line_len // 20
-
-        a = np.arange(-10, line_len, spacing)
-        b = np.zeros(1)
-        c = np.arange(min_z, max_z, line_len // 20)
-
-        xx, yy, zz = np.meshgrid(a, b, c)
-
-        xx_rot = xx * math.cos(theta) - yy * math.sin(theta)
-        yy_rot = xx * math.sin(theta) + yy * math.cos(theta)
-
-        xx = xx_rot + p1[0]
-        yy = yy_rot + p1[1]
-
-        print('Computing Field at {} points.....'.format(xx.size))
-        start = timer()
-
-        # Calculate the magnetic field at each grid point
-        u, v, w = v_field(xx, yy, zz, self.current)
-        # Project the arrows
-        uproj, vproj, wproj = v_proj(u, v, w, planeNormal)
-
-        end = timer()
-        time = round(end - start, 2)
-        print('Calculated in {} seconds'.format(str(time)))
-
-        return xx, yy, zz, uproj, vproj, wproj, arrow_len
+# class MagneticFieldCalculator(MapPlotMethods):
+#     """
+#     Class that makes the magnetic field calculations for section vector plots.
+#     :param: pem_file: PEMFile object
+#     """
+#
+#     def __init__(self, pem_file):
+#         logging.info('MagneticFieldCalculator')
+#         self.pem_file = pem_file
+#         MapPlotMethods.__init__(self)
+#         self.loop_coords = [[float(num) for num in row] for row in self.pem_file.get_loop_coords()]
+#         self.collar = [float(num) for num in self.pem_file.get_collar_coords()[0]]
+#         self.segments = [[float(num) for num in row] for row in self.pem_file.get_hole_geometry()]
+#         self.current = float(self.pem_file.tags.get('Current'))
+#
+#     def get_magnitude(self, vector):
+#         return math.sqrt(sum(i ** 2 for i in vector))
+#
+#     def calc_total_field(self, Px, Py, Pz, I):
+#         """
+#         Calculate the magnetic field at position P with current I using Biot-Savart Law. Geometry used is the loop.
+#         :param P: Position at which the magnetic field is calculated
+#         :param I: Current used
+#         :return: Magnetic field strength for each component
+#         """
+#
+#         def loop_difference(loop_listorarray):
+#             loop_array = np.array(loop_listorarray)
+#             loop_diff = np.append(np.diff(loop_array, axis=0),
+#                                   [loop_array[0] - loop_array[-1]], axis=0)
+#             return loop_diff
+#
+#         def array_shift(arr, shift_num):
+#             result = np.empty_like(arr)
+#             if shift_num > 0:
+#                 result[:shift_num] = arr[-shift_num:]
+#                 result[shift_num:] = arr[:-shift_num]
+#             elif shift_num < 0:
+#                 result[shift_num:] = arr[:-shift_num]
+#                 result[:shift_num] = arr[-shift_num:]
+#             else:
+#                 result[:] = arr
+#             return result
+#
+#         u0 = 1.25663706e-6
+#         loop_array = np.array(self.loop_coords)
+#         loop_array = np.delete(loop_array, 3, 1)  # Delete the units column
+#         point = np.array([Px, Py, Pz])
+#         loop_diff = loop_difference(loop_array)
+#
+#         AP = point - loop_array
+#         BP = array_shift(AP, -1)
+#
+#         r1 = np.sqrt((AP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
+#         r2 = np.sqrt((BP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
+#         Dot1 = np.multiply(AP, loop_diff).sum(1)
+#         Dot2 = np.multiply(BP, loop_diff).sum(1)
+#         cross = np.cross(loop_diff, AP)
+#
+#         CrossSqrd = (np.sqrt((cross ** 2).sum(-1))[..., np.newaxis]).squeeze() ** 2
+#         top = (Dot1 / r1 - Dot2 / r2) * u0 * I
+#         bottom = (CrossSqrd * 4 * np.pi)
+#         factor = (top / bottom)
+#         factor = factor[..., np.newaxis]
+#
+#         field = cross * factor
+#         field = np.sum(field, axis=0)
+#
+#         unit = 'nT' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
+#         if unit == 'pT':
+#             field *= 1e12
+#         elif unit == 'nT':
+#             field *= 1e9
+#         else:
+#             raise NotImplemented('Invalid Units')
+#
+#         return field[0], field[1], field[2]
+#
+#     def project(self, normal_plane, vector):
+#         length = np.linalg.norm(normal_plane)
+#         calc = np.dot(normal_plane, vector) / length ** 2
+#         scaled = normal_plane * calc
+#         newvector = vector - scaled
+#         return newvector[0], newvector[1], newvector[2]
+#
+#     def get_3d_magnetic_field(self, num_rows, buffer=0):
+#         logging.info('MagneticFieldCalculator - Creating mesh grid and creating vector field')
+#         # Create a mesh grid
+#         min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents(self.pem_file)
+#         arrow_len = (max_z - min_z) // 16
+#         rows = float(num_rows)
+#         x = np.arange(min_x - buffer, max_x + buffer, (max_x - min_x) * 1 / rows)
+#         y = np.arange(min_y - buffer, max_y + buffer, (max_y - min_y) * 1 / rows)
+#         z = np.arange(min_z - buffer, max_z + buffer, (max_z - min_z) * 1 / rows)
+#
+#         xx, yy, zz = np.meshgrid(x, y, z)
+#
+#         # Vector function that will calculate the magnetic field for each point passed
+#         vField = np.vectorize(self.calc_total_field)
+#
+#         print('Computing Field at {} points.....'.format(xx.size))
+#         start = timer()
+#
+#         # Calculate the magnetic field at each mesh grid point
+#         u, v, w = vField(xx, yy, zz, self.current)
+#
+#         end = timer()
+#         time = round(end - start, 2)
+#         print('Calculated in {} seconds'.format(str(time)))
+#
+#         return xx, yy, zz, u, v, w, arrow_len
+#
+#     def get_angle_2V(self, v1, v2):
+#         len1 = math.sqrt(sum(i ** 2 for i in v1))
+#         len2 = math.sqrt(sum(i ** 2 for i in v2))
+#         angle = math.acos(np.dot(v1, v2) / (len1 * len2))
+#         return angle
+#
+#     def get_2d_magnetic_field(self, p1, p2, spacing=None, arrow_len=None, num_rows=12):
+#
+#         def wrapper_proj(i, j, k, normal_plane):
+#             return self.project(normal_plane, [i, j, k])
+#
+#         v_proj = np.vectorize(wrapper_proj, excluded=[3])
+#         v_field = np.vectorize(self.calc_total_field)
+#
+#         # Vector to point and normal of cross section
+#         vec = [p2[0] - p1[0], p2[1] - p1[1], 0]
+#         planeNormal = np.cross(vec, [0, 0, -1])
+#
+#         # Angle between the plane and j_hat
+#         theta = self.get_angle_2V(planeNormal, [0, 1, 0])
+#
+#         # Fixes angles where p2.y is less than p1.y
+#         if p2[1] < p1[1]:
+#             theta = -theta
+#
+#         # Creating the grid
+#         min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents(self.pem_file)
+#         max_z = float(self.pem_file.get_collar_coords()[0][2]) + 10
+#         min_z = max_z - abs(float(self.pem_file.get_hole_geometry()[-1][4]))
+#
+#         # Calculate the Z so that it is like a section plot
+#         # Wasn't working very well, replaced with the above.
+#         # min_z = max_z - abs((float(math.floor(min_z / 400) + 1) * 400))
+#
+#         line_len = round(math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2))
+#         if arrow_len is None:
+#             arrow_len = float(line_len // 30)
+#         # Spacing between the arrows
+#         if spacing is None:
+#             # spacing = (abs(min_x - max_x) + abs(min_y - max_y)) // 30
+#             spacing = line_len // 20
+#
+#         a = np.arange(-10, line_len, spacing)
+#         b = np.zeros(1)
+#         c = np.arange(min_z, max_z, line_len // 20)
+#
+#         xx, yy, zz = np.meshgrid(a, b, c)
+#
+#         xx_rot = xx * math.cos(theta) - yy * math.sin(theta)
+#         yy_rot = xx * math.sin(theta) + yy * math.cos(theta)
+#
+#         xx = xx_rot + p1[0]
+#         yy = yy_rot + p1[1]
+#
+#         print('Computing Field at {} points.....'.format(xx.size))
+#         start = timer()
+#
+#         # Calculate the magnetic field at each grid point
+#         u, v, w = v_field(xx, yy, zz, self.current)
+#         # Project the arrows
+#         uproj, vproj, wproj = v_proj(u, v, w, planeNormal)
+#
+#         end = timer()
+#         time = round(end - start, 2)
+#         print('Calculated in {} seconds'.format(str(time)))
+#
+#         return xx, yy, zz, uproj, vproj, wproj, arrow_len
 
 # TODO Redo section 3D with new Mag field calculator module.
-# class Section3D(Map3D, MagneticFieldCalculator):
-#     def __init__(self, ax, pem_file, **kwargs):
-#         logging.info('Section3D')
-#         if isinstance(pem_file, list):
-#             pem_file = pem_file[0]
-#         self.pem_file = pem_file
-#         self.ax = ax
-#         Map3D.__init__(self, self.ax, self.pem_file, set_z=True)
-#         MagneticFieldCalculator.__init__(self, self.pem_file)
-#
-#         self.mag_field_artists = []
-#         self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
-#
-#         self.plot_hole(self.pem_file)
-#         self.plot_loop(self.pem_file)
-#
-#     def plot_2d_magnetic_field(self):
-#         logging.info('Section3D - Plotting magnetic field')
-#
-#         p1, p2, line_az = self.get_section_extents(self.pem_file)
-#         xx, yy, zz, u, v, w, arrow_len = self.get_2d_magnetic_field(p1, p2)
-#         mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
-#                                           color='black', label='Field', linewidth=.5, alpha=1.,
-#                                           arrow_length_ratio=.3, pivot='middle', zorder=0)
-#         self.mag_field_artists.append(mag_field_artist)
+class Section3D(Map3D, MagneticFieldCalculator):
+    def __init__(self, ax, pem_file, **kwargs):
+        logging.info('Section3D')
+        if isinstance(pem_file, list):
+            pem_file = pem_file[0]
+        self.pem_file = pem_file
+        self.ax = ax
+        Map3D.__init__(self, self.ax, self.pem_file, set_z=True)
+        MagneticFieldCalculator.__init__(self, self.pem_file)
+
+        self.mag_field_artists = []
+        self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
+
+        self.plot_hole(self.pem_file)
+        self.plot_loop(self.pem_file)
+
+    def plot_2d_magnetic_field(self):
+        logging.info('Section3D - Plotting magnetic field')
+
+        p1, p2, line_az = self.get_section_extents(self.pem_file)
+        xx, yy, zz, u, v, w, arrow_len = self.get_2d_magnetic_field(p1, p2)
+        mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
+                                          color='black', label='Field', linewidth=.5, alpha=1.,
+                                          arrow_length_ratio=.3, pivot='middle', zorder=0)
+        self.mag_field_artists.append(mag_field_artist)
 #
     # Not used
     # def plot_3d_magnetic_field(self, num_rows=8):
@@ -2915,52 +2922,30 @@ class SectionPlot(MapPlotMethods):
             self.hole_depth = None
         # MagneticFieldCalculator.__init__(self, self.pem_file)
         MapPlotMethods.__init__(self)
-        self.buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
+        self.buffer = [patheffects.Stroke(linewidth=5, foreground='white'), patheffects.Normal()]
+        self.label_ticks = kwargs.get('LabelSectionTicks')
 
         # Adjust the bounding box of the axes within the figure
         self.fig.subplots_adjust(left=0.055, bottom=0.03, right=0.97, top=0.955)
 
+        self.collar = np.array(self.pem_file.get_collar_coords()[0], dtype='float')
+        self.segments = np.array(self.pem_file.get_hole_geometry(), dtype='float')
+        self.units = self.pem_file.get_units()
+
         # Calculate the end-points to be used to plot the cross section on
-        bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
-        plot_width = bbox.width * .0254  # Convert to meters
-        self.p1, self.p2, self.line_az = self.get_section_extents(self.pem_file,
-                                                                  hole_depth=self.hole_depth,
-                                                                  section_plot=True,
-                                                                  plot_width=plot_width)
+        self.bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
+        plot_width = self.bbox.width * .0254  # Convert to meters
+        self.p1, self.p2, self.line_az = self.get_section_extent(self.pem_file,
+                                                                 hole_depth=self.hole_depth,
+                                                                 section_plot=True,
+                                                                 plot_width=plot_width)
         # Calculate the length of the cross-section (c = sqrt(a² + b²))
         self.line_len = math.sqrt((self.p1[0] - self.p2[0]) ** 2 + (self.p1[1] - self.p2[1]) ** 2)
-        self.section_depth = self.line_len * (bbox.height / bbox.width)
-        self.units = 'm' if self.segments[0][3] == 2 else 'ft'
-        self.label_ticks = kwargs.get('LabelSectionTicks')
+        self.section_depth = self.line_len * (self.bbox.height / self.bbox.width)
 
         self.plot_hole_section()
         self.plot_mag()
-        # self.plot_mag_section()
         self.format_figure()
-        # plt.show()
-        # plt.savefig(filename, dpi='figure', orientation='portrait')
-        # os.startfile(filename)
-
-    def get_hole_projection(self):
-        """
-        :returns list[X as Float, Y as Float, Azi as Float, SectionLength as Float, Z(Elevation) as Float]
-        """
-
-        trace_list = [self.collar[:2]]
-        for counter, segment in enumerate(self.segments):
-            azimuth = math.radians(float(segment[0]))
-            dip = math.radians(float(segment[1]))
-            delta_L = float(segment[2])
-            delta_surf = delta_L * math.cos(dip)
-            delta_elev = delta_L * math.sin(dip)
-
-            dx = delta_surf * math.sin(azimuth)
-            dy = delta_surf * math.cos(azimuth)
-
-            trace_list.append(list(map(lambda x: round(x, 2), [trace_list[counter][0] + dx,
-                                                               trace_list[counter][1] + dy])))
-
-        return trace_list
 
     def format_figure(self):
 
@@ -3208,9 +3193,25 @@ class SectionPlot(MapPlotMethods):
             self.ax.add_line(line_2)
             self.ax.add_line(line_3)
 
-        # Add extra space at the top (mostly for horizontal holes)
-        # ymin, ymax = self.ax.get_ylim()
-        # self.ax.set_ylim(ymin, ymax * 1.02)
+        def add_coord_labels():
+            # Plot Labelling
+            lefttext = f'{self.p1[0]:,.0f}m E\n{self.p1[1]:,.0f}m N'
+            righttext = f'{self.p2[0]:,.0f}m E\n{self.p2[1]:,.0f}m N'
+            self.ax.text(0, 1.01, lefttext,
+                         color='k',
+                         ha='left',
+                         size='small',
+                         path_effects=self.buffer,
+                         zorder=9,
+                         transform=self.ax.transAxes)
+            self.ax.text(1, 1.01, righttext,
+                         color='k',
+                         ha='right',
+                         size='small',
+                         path_effects=self.buffer,
+                         zorder=9,
+                         transform=self.ax.transAxes)
+
         self.ax.xaxis.set_visible(False)
         self.ax.yaxis.set_visible(True)
         self.ax.set_yticklabels(self.ax.get_yticklabels(),
@@ -3222,71 +3223,18 @@ class SectionPlot(MapPlotMethods):
         else:
             self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} ft'))
 
+        add_coord_labels()
         add_title()
         add_scale_bar()
 
-    def plot_mag_section(self):
-        """
-        Plots the vector field cross section. The end-points of the section are automatically calculated.
-        :param plt_ax: matplotlib.figure.ax
-            Constraints: must be 2D
-        :return: None
-        """
+    def plot_mag(self):
+        # Corners used to calculate the mag field
+        c1, c2 = (self.p1[0], self.p1[1], self.ax.get_ylim()[1]), (self.p2[0], self.p2[1], self.ax.get_ylim()[1] - self.section_depth)
 
-        def wrapper_proj(i, j, k, normal_plane):
-            return self.project(normal_plane, [i, j, k])
+        wire_coords = self.pem_file.get_loop_coords()
+        mag_calculator = MagneticFieldCalculator(wire_coords)
 
-        vProj = np.vectorize(wrapper_proj, excluded=[3])
-        vField = np.vectorize(self.calc_total_field)
-
-        current = float(self.pem_file.tags.get('Current'))
-        vec = [self.p2[0] - self.p1[0],
-               self.p2[1] - self.p1[1],
-               0]
-        planeNormal = np.cross(vec, [0, 0, -1])
-
-        # Angle between the plane and j_hat
-        theta = self.get_angle_2V(planeNormal, [0, 1, 0])
-
-        # Fixes angles where p2.y is less than p1.y
-        if self.p2[1] < self.p1[1]:
-            theta = -theta
-
-        hole_elevation = self.collar[2]
-        min_z = hole_elevation - self.section_depth
-
-        length = np.arange(0, self.line_len + 30, self.line_len // 25)
-        y = np.zeros(1)
-        z = np.arange(min_z, hole_elevation + 50, (hole_elevation - min_z) // 30)
-
-        xx, yy, zz = np.meshgrid(length, y, z)
-        x_rot = xx * math.cos(theta) - yy * math.sin(theta)
-        y_rot = xx * math.sin(theta) + yy * math.cos(theta)
-
-        xx = x_rot + self.p1[0]
-        yy = y_rot + self.p1[1]
-
-        print('Computing Field at {} points.....'.format(xx.size))
-        start = timer()
-
-        u, v, w = vField(xx, yy, zz, current)  # Calculate the field
-        uproj, vproj, wproj = vProj(u, v, w, planeNormal)  # Project it to the plane
-        mag = np.sqrt(u * u + v * v + w * w)  # Magnitude for colormap
-        uprot = np.cos(theta) * uproj + np.sin(theta) * vproj  # Rotate the vectors back to the X-Z Plane
-
-        uprot2d = np.squeeze(uprot).T  # Get rid of the extra dimension, transpose to fudge the arrangement
-        wproj2d = np.squeeze(wproj).T
-        magsqueeze = np.squeeze(mag).T
-
-        plotx = uprot2d / np.sqrt(uprot2d ** 2 + wproj2d ** 2) * 0.7  # Normalize vector lengths
-        plotz = wproj2d / np.sqrt(uprot2d ** 2 + wproj2d ** 2) * 0.7
-
-        xx, zz = np.meshgrid(length, z)
-        end = timer()
-        time = round(end - start, 2)
-        print('Calculated in {} seconds'.format(str(time)))
-        self.ax.set_xlim(0, self.line_len)
-        self.ax.set_ylim(min_z, hole_elevation)
+        xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)
 
         # Plot the vector arrows
         self.ax.quiver(xx, zz, plotx, plotz,
@@ -3295,43 +3243,20 @@ class SectionPlot(MapPlotMethods):
                        pivot='middle',
                        zorder=0,
                        units='dots',
-                       scale=.045,
-                       width=.6,
-                       headlength=9,
-                       headwidth=5)
-
-        # Plot Labelling
-        lefttext = f'{self.p1[0]:,.0f}m E\n{self.p1[1]:,.0f}m N'
-        righttext = f'{self.p2[0]:,.0f}m E\n{self.p2[1]:,.0f}m N'
-        self.ax.text(0, 1.01, lefttext,
-                     color='k',
-                     ha='left',
-                     size='small',
-                     path_effects=self.buffer,
-                     zorder=9,
-                     transform=self.ax.transAxes)
-        self.ax.text(1, 1.01, righttext,
-                     color='k',
-                     ha='right',
-                     size='small',
-                     path_effects=self.buffer,
-                     zorder=9,
-                     transform=self.ax.transAxes)
-        # plt.draw()
-        # plt.pause(0.0001)
-
-    def plot_mag(self):
-        wire_coords = self.get_loop_coords()
-        mag_calculator = MagneticFieldCalculator(wire_coords)
-        xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)
-        self.ax.quiver(xx, zz, plotx, plotz, color='dimgray', label='Field', pivot='middle', zorder=0,
-                       units='dots', scale=.050, width=.8, headlength=11, headwidth=6)
+                       scale=0.036,
+                       width=1.0,
+                       headlength=10,
+                       headwidth=6)
 
     def plot_hole_section(self):
+
+        def get_magnitude(vector):
+            return math.sqrt(sum(i ** 2 for i in vector))
+
         p = np.array([self.p1[0], self.p1[1], 0])
         vec = [self.p2[0] - self.p1[0], self.p2[1] - self.p1[1], 0]
         planeNormal = np.cross(vec, [0, 0, -1])
-        planeNormal = planeNormal / self.get_magnitude(planeNormal)
+        planeNormal = planeNormal / get_magnitude(planeNormal)
 
         interp_x, interp_y, interp_z, interp_dist = np.array(self.get_3D_borehole_projection(
             self.collar,
@@ -3344,7 +3269,7 @@ class SectionPlot(MapPlotMethods):
             self.stations = self.pem_file.get_converted_unique_stations()
 
         # Marker indexes are the station depth as a percentage of the max station depth
-        station_indexes = [int(station / self.segments[-1][-1] * 1000) for station in self.stations]
+        station_indexes = [int(station / float(self.segments[-1][-1]) * 1000) for station in self.stations]
 
         plotx = []
         plotz = []
@@ -3366,25 +3291,26 @@ class SectionPlot(MapPlotMethods):
                 self.ax.plot([dist], self.collar[2], 'o',
                              markerfacecolor='w',
                              markeredgecolor='k',
-                             path_effects=self.buffer,
                              zorder=11)
                 # Hole name label
                 hole_name = self.pem_file.header.get('LineHole')
                 trans = mtransforms.blended_transform_factory(self.ax.transData, self.ax.transAxes)
-                self.ax.text(dist, .975, f"{hole_name}",
-                             color='k',
-                             ha='center',
-                             size=10,
-                             path_effects=self.buffer,
-                             transform=trans,
-                             zorder=10)
+                self.ax.annotate(f"{hole_name}", (dist, self.collar[2]),
+                                 xytext=(0, 15),
+                                 textcoords='offset pixels',
+                                 color='k',
+                                 ha='center',
+                                 size=10,
+                                 path_effects=self.buffer,
+                                 transform=trans,
+                                 zorder=10)
             elif i == len(hole_trace) - 1:
                 # Label end-of-hole depth
                 hole_len = self.segments[-1][-1]
                 angle = math.degrees(math.atan2(plotz[-1]-plotz[-100], plotx[-1]-plotx[-100])) + 90
-                self.ax.text(dist + self.line_len * .01, q_proj[2], f" {hole_len:.0f} m ",
+                self.ax.text(dist + self.line_len * .01, q_proj[2], f"  {hole_len:.0f} m  ",
                              color='k',
-                             ha='left',
+                             ha='right',
                              rotation=angle,
                              path_effects=self.buffer,
                              zorder=10,
@@ -3405,12 +3331,17 @@ class SectionPlot(MapPlotMethods):
                 pa = (plotx[index - 1], plotz[index - 1])
                 angle = math.degrees(math.atan2(pa[1] - p[1], pa[0] - p[0])) - 90
 
-                self.ax.text(x, z, '|',
-                             rotation=angle+90,
-                             ha='center',
-                             va='center',
-                             zorder=12,
-                             rotation_mode='anchor')
+                # self.ax.text(x, z, '|',
+                #              rotation=angle+90,
+                #              ha='center',
+                #              va='center',
+                #              zorder=12,
+                #              rotation_mode='anchor')
+
+                self.ax.scatter(x, z,
+                                marker=(2, 0, angle + 90),
+                                color='k',
+                                zorder=12)
 
                 # Label the station ticks
                 if self.label_ticks:
@@ -3419,9 +3350,12 @@ class SectionPlot(MapPlotMethods):
                                  color='dimgray',
                                  size=8)
 
-        # # Markers are plotted separately so they don't have a buffer around them like the line does
-        # self.ax.plot(plotx, plotz, 'o', color='k', lw=1, zorder=11,
-        #              markevery=station_indexes, markersize=4, markerfacecolor='w')
+        self.ax.use_sticky_edges = False
+        ylim = self.ax.get_ylim()
+        self.ax.set_xlim(0, self.line_len)
+        self.ax.set_ylim(ylim[1] - self.section_depth, ylim[1])
+        self.ax.margins(x=0, y=10)
+        # self.ax.set_ylim(max(zs) - self.section_depth, max(zs))
 
     def get_section_plot(self):
         return self.fig

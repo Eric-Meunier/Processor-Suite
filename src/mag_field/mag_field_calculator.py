@@ -10,7 +10,11 @@ class MagneticFieldCalculator:
     """
 
     def __init__(self, wire_coordinates):
-        self.wire = wire_coordinates
+        self.wire = np.array(wire_coordinates, dtype='float')
+        # Remove any unwanted columns. Only easting, northing, elevation is required.
+        while self.wire.shape[1] > 3:
+            print(f"Loop has {self.wire.shape[1]} columns in row. Removing the last column...")
+            self.wire = np.delete(self.wire, 3, axis=1)
 
     def get_magnitude(self, vector):
         return math.sqrt(sum(i ** 2 for i in vector))
@@ -115,7 +119,7 @@ class MagneticFieldCalculator:
         :param spacing:
         :param arrow_len:
         :param num_rows:
-        :return:
+        :return: tuple: mesh X, Y, Z coordinates, projected X, Y, Z of the arrows, X and Z normalized vectors, arrow length
         """
 
         def wrapper_proj(i, j, k, normal_plane):
