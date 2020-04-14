@@ -958,6 +958,47 @@ All Repeat Stations</string>
    </widget>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>share_client_cbox</tabstop>
+  <tabstop>client_edit</tabstop>
+  <tabstop>share_grid_cbox</tabstop>
+  <tabstop>grid_edit</tabstop>
+  <tabstop>share_loop_cbox</tabstop>
+  <tabstop>loop_edit</tabstop>
+  <tabstop>main_frame_tab</tabstop>
+  <tabstop>autoSortLoopsCheckbox</tabstop>
+  <tabstop>autoSortStationsCheckbox</tabstop>
+  <tabstop>systemCBox</tabstop>
+  <tabstop>zoneCBox</tabstop>
+  <tabstop>datumCBox</tabstop>
+  <tabstop>reset_crs_btn</tabstop>
+  <tabstop>auto_create_backup_files_cbox</tabstop>
+  <tabstop>delete_merged_files_cbox</tabstop>
+  <tabstop>auto_name_line_btn</tabstop>
+  <tabstop>auto_merge_files_btn</tabstop>
+  <tabstop>reverseAllZButton</tabstop>
+  <tabstop>reverseAllXButton</tabstop>
+  <tabstop>reverseAllYButton</tabstop>
+  <tabstop>rename_all_repeat_stations_btn</tabstop>
+  <tabstop>share_range_checkbox</tabstop>
+  <tabstop>max_range_edit</tabstop>
+  <tabstop>min_range_edit</tabstop>
+  <tabstop>reset_range_btn</tabstop>
+  <tabstop>hide_gaps_checkbox</tabstop>
+  <tabstop>movingLoopCBox</tabstop>
+  <tabstop>show_loop_anno_checkbox</tabstop>
+  <tabstop>plan_map_options_btn</tabstop>
+  <tabstop>label_section_depths_cbox</tabstop>
+  <tabstop>section_depth_edit</tabstop>
+  <tabstop>output_lin_cbox</tabstop>
+  <tabstop>output_plan_map_cbox</tabstop>
+  <tabstop>output_log_cbox</tabstop>
+  <tabstop>output_section_cbox</tabstop>
+  <tabstop>output_step_cbox</tabstop>
+  <tabstop>print_plots_btn</tabstop>
+  <tabstop>table</tabstop>
+  <tabstop>tabWidget</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

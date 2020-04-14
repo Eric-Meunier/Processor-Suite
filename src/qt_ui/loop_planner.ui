@@ -142,6 +142,9 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="cursor">
+             <cursorShape>ArrowCursor</cursorShape>
+            </property>
             <property name="text">
              <string>500</string>
             </property>
@@ -561,6 +564,23 @@ Mostly used for underground holes.</string>
    <header>pyqtgraph</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>loop_height_edit</tabstop>
+  <tabstop>loop_width_edit</tabstop>
+  <tabstop>loop_angle_edit</tabstop>
+  <tabstop>loop_name_edit</tabstop>
+  <tabstop>hole_easting_edit</tabstop>
+  <tabstop>hole_northing_edit</tabstop>
+  <tabstop>hole_elevation_edit</tabstop>
+  <tabstop>hole_az_edit</tabstop>
+  <tabstop>hole_dip_edit</tabstop>
+  <tabstop>hole_length_edit</tabstop>
+  <tabstop>hole_name_edit</tabstop>
+  <tabstop>systemCBox</tabstop>
+  <tabstop>zoneCBox</tabstop>
+  <tabstop>datumCBox</tabstop>
+  <tabstop>plan_view_widget</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

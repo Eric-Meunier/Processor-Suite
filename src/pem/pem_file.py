@@ -1,5 +1,6 @@
 from src.pem.pem_serializer import PEMSerializer
 import re
+import os
 import logging
 from src.gps.gps_editor import GPSEditor
 
@@ -130,6 +131,7 @@ class PEMFile:
                 datum = f"{s[4]} {s[5]}"
                 print(f"CRS is {system} Zone {zone}, {datum}")
                 return {'Coordinate System': system, 'Zone': zone, 'Datum': datum}
+        raise ValueError(f'No CRS found in {os.path.basename(self.filepath)}')
 
     def get_tags(self):
         return self.tags
@@ -147,7 +149,7 @@ class PEMFile:
         return GPSEditor().get_geometry(self.line_coords)
 
     def get_line_coords(self):  # All P tags
-        if 'borehole' in self.get_survey_type().lower():
+        if self.is_borehole():
             return self.get_collar_coords()+self.get_hole_geometry()
         else:
             return self.get_station_coords()
@@ -191,29 +193,6 @@ class PEMFile:
             station = (int(re.sub(r"\D", "", station)))
 
         return station
-
-    # def get_profile_data(self, component_data):
-    #     """
-    #     Transforms the data so it is ready to be plotted for LIN and LOG plots
-    #     :param component_data: Data (dict) for a single component (i.e. Z, X, or Y)
-    #     :return: Dictionary where each key is a channel, and the values of those keys are a list of
-    #     dictionaries which contain the stations and readings of all readings of that channel
-    #     """
-    #     profile_data = {}
-    #     num_channels = len(component_data[0]['Data'])
-    #
-    #     for channel in range(0, num_channels):
-    #         # profile_data[channel] = {}
-    #         channel_data = []
-    #
-    #         for i, station in enumerate(component_data):
-    #             reading = station['Data'][channel]
-    #             station_number = int(self.convert_station(station['Station']))
-    #             channel_data.append({'Station': station_number, 'Reading': reading})
-    #
-    #         profile_data[channel] = channel_data
-    #
-    #     return profile_data
 
     def get_profile_data(self):
         """

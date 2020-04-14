@@ -85,31 +85,68 @@ class MagneticFieldCalculator:
 
         return field[0], field[1], field[2]
 
-    def get_3d_magnetic_field(self, num_rows, buffer=0):
-        # Create a mesh grid
-        min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents(self.pem_file)
-        arrow_len = (max_z - min_z) // 16
-        rows = float(num_rows)
-        x = np.arange(min_x - buffer, max_x + buffer, (max_x - min_x) * 1 / rows)
-        y = np.arange(min_y - buffer, max_y + buffer, (max_y - min_y) * 1 / rows)
-        z = np.arange(min_z - buffer, max_z + buffer, (max_z - min_z) * 1 / rows)
+    def get_3d_magnetic_field(self, c1, c2, spacing=None, arrow_len=None, num_rows=12):
+        """
 
-        xx, yy, zz = np.meshgrid(x, y, z)
+        :param c1: corner 1: [x, y, z] coordinate
+        :param c2: corner 2: [x, y, z] coordinate
+        :param spacing: int: Spacing of arrows along the section-line.
+        :param arrow_len: float: Length of arrows
+        :param num_rows:
+        :return: tuple: mesh X, Y, Z coordinates, projected X, Y, Z of the arrows, X and Z normalized vectors, arrow length
+        """
 
-        # Vector function that will calculate the magnetic field for each point passed
-        vField = np.vectorize(self.calc_total_field)
+        def wrapper_proj(i, j, k, normal_plane):
+            return self.project(normal_plane, [i, j, k])
+
+        v_proj = np.vectorize(wrapper_proj, excluded=[3])
+        v_field = np.vectorize(self.calc_total_field)
+
+        # Vector to point and normal of cross section
+        vec = [c2[0] - c1[0], c2[1] - c1[1], 0]
+        planeNormal = np.cross(vec, [0, 0, -1])
+
+        # Angle between the plane and j_hat
+        theta = self.get_angle_2V(planeNormal, [0, 1, 0])
+
+        # Fixes angles where p2.y is less than p1.y
+        if c2[1] < c1[1]:
+            theta = -theta
+
+        # Creating the grid
+        # min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents(self.pem_file)
+        max_z = max([c1[2], c2[2]]) + 10
+        min_z = min([c1[2], c2[2]]) - 10
+
+        line_len = round(math.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2))
+        if arrow_len is None:
+            arrow_len = float(line_len // 30)
+        # Spacing between the arrows
+        if spacing is None:
+            # spacing = (abs(min_x - max_x) + abs(min_y - max_y)) // 30
+            spacing = line_len // 20
+
+        a = np.arange(-10, line_len, spacing)
+        b = np.zeros(1)
+        c = np.arange(min_z, max_z, line_len // 20)
+
+        xx, yy, zz = np.meshgrid(a, b, c)
+
+        xx_rot = xx * math.cos(theta) - yy * math.sin(theta)
+        yy_rot = xx * math.sin(theta) + yy * math.cos(theta)
+
+        xx = xx_rot + c1[0]
+        yy = yy_rot + c1[1]
 
         print('Computing Field at {} points.....'.format(xx.size))
         start = timer()
 
-        # Calculate the magnetic field at each mesh grid point
-        u, v, w = vField(xx, yy, zz, self.current)
+        # Calculate the magnetic field at each grid point
+        u, v, w = v_field(xx, yy, zz)
+        # Project the arrows
+        uproj, vproj, wproj = v_proj(u, v, w, planeNormal)
 
-        end = timer()
-        time = round(end - start, 2)
-        print('Calculated in {} seconds'.format(str(time)))
-
-        return xx, yy, zz, u, v, w, arrow_len
+        return xx, yy, zz, uproj, vproj, wproj, arrow_len
 
     def get_2d_magnetic_field(self, c1, c2, spacing=None, arrow_len=None, num_rows=12):
         """

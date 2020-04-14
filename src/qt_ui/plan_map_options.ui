@@ -231,6 +231,23 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>title_box_cbox</tabstop>
+  <tabstop>grid_cbox</tabstop>
+  <tabstop>scale_bar_cbox</tabstop>
+  <tabstop>north_arrow_cbox</tabstop>
+  <tabstop>legend_cbox</tabstop>
+  <tabstop>draw_loops_cbox</tabstop>
+  <tabstop>draw_hole_collars_cbox</tabstop>
+  <tabstop>draw_lines_cbox</tabstop>
+  <tabstop>draw_hole_traces_cbox</tabstop>
+  <tabstop>loop_labels_cbox</tabstop>
+  <tabstop>hole_collar_labels_cbox</tabstop>
+  <tabstop>line_labels_cbox</tabstop>
+  <tabstop>hole_depth_labels_cbox</tabstop>
+  <tabstop>all_btn</tabstop>
+  <tabstop>none_btn</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

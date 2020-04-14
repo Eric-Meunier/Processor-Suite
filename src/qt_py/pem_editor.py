@@ -77,16 +77,16 @@ Ui_Map3DWidget, QtBaseClass = uic.loadUiType(map3DCreatorFile)
 Ui_Section3DWidget, QtBaseClass = uic.loadUiType(section3DCreatorFile)
 Ui_ContourMapCreatorFile, QtBaseClass = uic.loadUiType(contourMapCreatorFile)
 
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
+# sys._excepthook = sys.excepthook
+#
+#
+# def exception_hook(exctype, value, traceback):
+#     print(exctype, value, traceback)
+#     sys._excepthook(exctype, value, traceback)
+#     sys.exit(1)
+#
+#
+# sys.excepthook = exception_hook
 
 
 def alpha_num_sort(string):
@@ -2961,18 +2961,19 @@ class BatchRIImporter(QWidget):
                 ri_files = [self.ri_parser().open(filepath) for filepath in ri_filepaths]
 
                 for pem_file in self.pem_files:
-                    pem_components = pem_file.get_components()
+                    pem_components = sorted(pem_file.get_components())
                     pem_name = re.sub('[^0-9]', '', pem_file.header.get('LineHole'))[-4:]
 
                     for ri_file in ri_files:
-                        ri_components = ri_file.get_components()
+                        ri_components = sorted(ri_file.get_components())
                         ri_name = re.sub('[^0-9]', '', os.path.splitext(os.path.basename(ri_file.filepath))[0])[-4:]
 
                         if pem_components == ri_components and pem_name == ri_name:
                             self.ri_files.append(ri_file.filepath)
                             ri_files.pop(ri_files.index(ri_file))
+                            break
 
-            elif not all(['surface' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
+            elif not all([pem_file.is_borehole() for pem_file in self.pem_files]):
                 self.message.information(None, "Error", "PEM files must either be all borehole or all surface surveys")
 
             else:
@@ -3312,7 +3313,7 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         self.ax = self.figure.add_subplot(111, projection='3d')
 
         self.section_plotter = Section3D(self.ax, self.pem_file, parent=self)
-        self.section_plotter.plot_2d_magnetic_field()
+        self.section_plotter.plot_3d_magnetic_field()
         self.section_plotter.format_ax()
         self.figure.subplots_adjust(left=-0.1, bottom=-0.1, right=1.1, top=1.1)
         self.update_canvas()
@@ -3672,9 +3673,9 @@ def main():
     mw = PEMEditorWindow()
     mw.show()
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Raglan', number=10)
+    pem_files = pg.get_pems(client='Raglan', number=1)
     mw.open_pem_files(pem_files)
-
+    # mw.import_ri_files()
     # mw.show_map()
     # mw.timebase_freqency_converter()
     # mw.calc_mag_declination(pem_files[0])
@@ -3689,15 +3690,17 @@ def main():
 
     # mw.auto_merge_pem_files()
     # mw.sort_files()
-    # section = Section3DViewer(pem_files)
-    # section.show()
+    section = Section3DViewer(pem_files[0])
+    section.show()
+
     # mw.share_loop_cbox.setChecked(False)
-    mw.output_lin_cbox.setChecked(False)
-    mw.output_log_cbox.setChecked(False)
-    mw.output_step_cbox.setChecked(False)
+    # mw.output_lin_cbox.setChecked(False)
+    # mw.output_log_cbox.setChecked(False)
+    # mw.output_step_cbox.setChecked(False)
     # mw.output_section_cbox.setChecked(False)
     # mw.output_plan_map_cbox.setChecked(False)
-    mw.print_plots()
+    # mw.print_plots()
+
     # map = Map3DViewer(pem_files)
     # map.show()
 

@@ -332,6 +332,26 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>z_rbtn</tabstop>
+  <tabstop>x_rbtn</tabstop>
+  <tabstop>y_rbtn</tabstop>
+  <tabstop>tf_rbtn</tabstop>
+  <tabstop>plot_loops_cbox</tabstop>
+  <tabstop>label_loops_cbox</tabstop>
+  <tabstop>plot_lines_cbox</tabstop>
+  <tabstop>label_lines_cbox</tabstop>
+  <tabstop>label_stations_cbox</tabstop>
+  <tabstop>plot_stations_cbox</tabstop>
+  <tabstop>plot_elevation_cbox</tabstop>
+  <tabstop>grid_cbox</tabstop>
+  <tabstop>title_box_cbox</tabstop>
+  <tabstop>channel_spinbox</tabstop>
+  <tabstop>current_channel_rbtn</tabstop>
+  <tabstop>channel_list_rbtn</tabstop>
+  <tabstop>channel_list_edit</tabstop>
+  <tabstop>save_figure_btn</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

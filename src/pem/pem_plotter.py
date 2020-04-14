@@ -25,6 +25,7 @@ import matplotlib.transforms as mtransforms
 import numpy as np
 import six
 import utm
+from adjustText import adjust_text
 from PIL import Image
 from PyQt5 import QtCore, uic
 from PyQt5.QtWidgets import (QProgressBar, QErrorMessage, QApplication, QWidget)
@@ -754,94 +755,6 @@ class MapPlotMethods:
 
             return eastings, northings, depths, relative_depth
 
-    # def get_section_extents(self, pem_file, hole_depth=None, section_plot=False, plot_width=None):
-    #     """
-    #     Find the 50th percentile down the hole, use that as the center of the section, and find the
-    #     X and Y extents of that section line. Default azimuth used is from the 80th percentile if no hole_depth is given.
-    #     :param pem_file: PEMFile object
-    #     :param hole_depth: Desired hole depth to use to find the azimuth of the section
-    #     :param section_plot: Bool: If True, will scale the plot such that the scale is of an acceptable value. Used
-    #     for 2D section plots.
-    #     :param plot_width: Physical width of the plot in meters.
-    #     :return: XY coordinates of each end of the section line, and the azimuth of that line.
-    #     """
-    #     def calc_scale_factor(p1, p2, plot_width):
-    #         """
-    #         Modifies the two cross-section points so they will create a map with an appropriate scale
-    #         :param p1: xy tuple of one of the current extent points
-    #         :param p2: xy tuple of the other extent point
-    #         :return: A factor by which to multiply the change in X and change in Y
-    #         """
-    #
-    #         def get_scale_factor():
-    #             # num_digit = len(str(int(current_scale)))  # number of digits in number
-    #             num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
-    #             scale_nums = [1., 1.25, 1.5, 2., 5.]
-    #             possible_scales = [num * 10 ** num_digit for num in
-    #                                scale_nums + list(map(lambda x: x * 10, scale_nums))]
-    #             new_scale = min(filter(lambda x: x > current_scale, possible_scales),
-    #                             key=lambda x: x - current_scale)
-    #             self.map_scale = new_scale
-    #             scale_factor = new_scale / current_scale
-    #             return scale_factor
-    #
-    #         xmin, xmax, ymin, ymax = min([p1[0], p2[0]]), max([p1[0], p2[0]]), min([p1[1], p2[1]]), max([p1[1], p2[1]])
-    #         dist = math.sqrt((xmax - xmin) ** 2 + (ymax - ymin) ** 2)
-    #         bbox_width = plot_width  # Section plot width in m (after subplot adjustment)
-    #         current_scale = dist / bbox_width
-    #         scale_factor = get_scale_factor()
-    #         return scale_factor
-    #
-    #     collar = pem_file.get_collar_coords()[0]
-    #     segments = pem_file.get_hole_geometry()
-    #     azimuths = [float(row[0]) for row in segments]
-    #     dips = [float(row[1]) for row in segments]
-    #     depths = [float(row[-1]) for row in segments]
-    #     units = segments[0][-2]
-    #
-    #     # Splitting the segments into 1000 pieces
-    #     interp_depths = np.linspace(depths[0], depths[-1], 1000)
-    #     interp_az = np.interp(interp_depths, depths, azimuths)
-    #     interp_dip = np.interp(interp_depths, depths, dips)
-    #     interp_lens = [float(segments[0][-1])]
-    #     for depth, next_depth in zip(interp_depths[:-1], interp_depths[1:]):
-    #         interp_lens.append(next_depth - depth)
-    #
-    #     # Recreating the segments with the interpreted data
-    #     interp_segments = list(zip(interp_az, interp_dip, interp_lens, [units] * len(interp_depths), interp_depths))
-    #
-    #     interp_x, interp_y, interp_z, interp_dist = self.get_3D_borehole_projection(collar, interp_segments)
-    #
-    #     # Find the depths that are 50% and var percentile% down the hole
-    #     perc_50_depth = np.percentile(interp_depths, 50)
-    #     if not hole_depth:
-    #         hole_depth = np.percentile(interp_depths, 80)
-    #
-    #     # Nearest index of the 50th and var percentile% depths
-    #     i_perc_50_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - perc_50_depth))
-    #     i_perc_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - hole_depth))
-    #
-    #     line_center_x, line_center_y = interp_x[i_perc_50_depth], interp_y[i_perc_50_depth]
-    #     line_az = interp_az[i_perc_depth]
-    #     print(f"Line azimuth: {line_az:.0f}°")
-    #     line_len = math.ceil(depths[-1] / 400) * 300  # Calculating the length of the cross-section
-    #     dx = math.cos(math.radians(90 - line_az)) * (line_len / 2)
-    #     dy = math.sin(math.radians(90 - line_az)) * (line_len / 2)
-    #
-    #     line_xy_1 = (line_center_x - dx, line_center_y - dy)
-    #     line_xy_2 = (line_center_x + dx, line_center_y + dy)
-    #
-    #     if section_plot:
-    #         plot_width = plot_width
-    #         scale_factor = calc_scale_factor(line_xy_1, line_xy_2, plot_width)
-    #         dx = dx * scale_factor
-    #         dy = dy * scale_factor
-    #
-    #         line_xy_1 = (line_center_x - dx, line_center_y - dy)
-    #         line_xy_2 = (line_center_x + dx, line_center_y + dy)
-    #
-    #     return line_xy_1, line_xy_2, line_az
-
     def get_section_extent(self, pem_file, hole_depth=None, section_plot=False, plot_width=None):
         """
         Find the 50th percentile down the hole, use that as the center of the section, and find the
@@ -930,7 +843,7 @@ class MapPlotMethods:
             line_xy_1 = (line_center_x - dx, line_center_y - dy)
             line_xy_2 = (line_center_x + dx, line_center_y + dy)
 
-        return line_xy_1, line_xy_2, line_az
+        return line_xy_1, line_xy_2, line_az, line_len
 
 
 class PlanMap(MapPlotMethods):
@@ -945,6 +858,7 @@ class PlanMap(MapPlotMethods):
         self.color = 'black'
         self.fig = figure
         self.pem_files = []
+        self.gps_editor = GPSEditor
 
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
@@ -989,14 +903,17 @@ class PlanMap(MapPlotMethods):
         self.line_labels = kwargs.get('LineLabels') if kwargs else True
         self.hole_collar_labels = kwargs.get('HoleCollarLabels') if kwargs else True
         self.hole_depth_labels = kwargs.get('HoleDepthLabels') if kwargs else True
-        self.crs = self.get_crs(kwargs.get(
-            'CRS')) if kwargs else None  # self.get_crs({'Coordinate System': 'UTM', 'Zone': '10 North', 'Datum': 'WGS 1984'})
 
-        self.gps_editor = GPSEditor
+        if __name__ == '__main__':
+            self.crs = self.get_crs(self.pem_files[0].get_crs())
+        else:
+            self.get_crs(kwargs.get('CRS')) if kwargs else None
+
         if self.crs:
             self.ax = self.fig.add_subplot(projection=self.crs)
-            # self.inset_ax = self.fig.add_axes([0.1, 0.5, 0.5, 0.3], projection=self.crs)
             self.plot_pems()
+        else:
+            raise ValueError('Invalid CRS')
 
     def plot_pems(self):
 
@@ -1018,15 +935,15 @@ class PlanMap(MapPlotMethods):
                                               zorder=zorder,
                                               path_effects=label_buffer)  # Add the loop name
 
+                    # Moves the loop label away from other labels
+                    adjust_text([loop_label], add_objects=[self.labels, self.trace_handle], ax=self.ax, avoid_text=True, avoid_points=False,
+                                autoalign=True)
+
                 self.loop_handle, = self.ax.plot(eastings, northings,
                                                  color=self.color,
                                                  label='Transmitter Loop',
                                                  transform=self.crs,
                                                  zorder=2)  # Plot the loop
-
-                # Moves the loop label away from other labels
-                # adjust_text([loop_label], add_objects=self.labels, ax=self.ax, avoid_text=True, avoid_points=False,
-                #             autoalign=True)
 
                 if self.draw_loop_annotations:
                     for i, (x, y) in enumerate(list(zip(eastings, northings))):
@@ -1089,14 +1006,20 @@ class PlanMap(MapPlotMethods):
                 if collar and collar not in self.collars:
                     self.collars.append(collar)
                     marker_style = dict(marker='o', color='white', markeredgecolor=self.color, markersize=8)
-                    self.collar_handle, = self.ax.plot(collar_x, collar_y, fillstyle='full',
-                                                       label='Borehole Collar', zorder=4, **marker_style)
+                    self.collar_handle, = self.ax.plot(collar_x, collar_y,
+                                                       fillstyle='full',
+                                                       label='Borehole Collar',
+                                                       zorder=4,
+                                                       **marker_style)
                     # Add the hole label at the collar
                     if self.hole_collar_labels:
                         angle = math.degrees(math.atan2(seg_y[-1] - seg_y[0], seg_x[-1] - seg_x[0]))
                         align = 'left' if angle > 90 or angle < -90 else 'right'
                         collar_label = self.ax.text(collar_x, collar_y, f"  {pem_file.header.get('LineHole')}  ",
-                                                    va='center', ha=align, color=self.color, zorder=5,
+                                                    va='center',
+                                                    ha=align,
+                                                    color=self.color,
+                                                    zorder=5,
                                                     path_effects=label_buffer)
                         self.labels.append(collar_label)
 
@@ -1123,18 +1046,30 @@ class PlanMap(MapPlotMethods):
                         for index in indexes[1:]:
                             if index != indexes[-1]:
                                 angle = math.degrees(math.atan2(seg_y[index+1] - seg_y[index], seg_x[index+1] - seg_x[index]))
-                                self.ax.plot(seg_x[index], seg_y[index], markersize=5, marker=(2, 0, angle),
-                                             mew=.5, color=self.color)
+                                self.ax.plot(seg_x[index], seg_y[index],
+                                             markersize=5,
+                                             marker=(2, 0, angle),
+                                             mew=.5,
+                                             color=self.color)
 
                         # Add the end tick for the borehole trace and the label
                         angle = math.degrees(math.atan2(seg_y[-1] - seg_y[-2], seg_x[-1] - seg_x[-2]))
-                        self.ax.text(seg_x[-1], seg_y[-1], '|', rotation=angle, color=self.color, va='center',
-                                     ha='center', fontsize=9)
+                        self.ax.text(seg_x[-1], seg_y[-1], '|',
+                                     rotation=angle,
+                                     color=self.color,
+                                     va='center',
+                                     ha='center',
+                                     fontsize=9)
 
                         if self.hole_depth_labels:
                             bh_depth = self.ax.text(seg_x[-1], seg_y[-1], f"  {float(segments[-1][-1]):.0f} m",
-                                                    rotation=angle+90, fontsize=8, color=self.color,
-                                                    path_effects=label_buffer, zorder=3, rotation_mode='anchor')
+                                                    rotation=angle+90,
+                                                    fontsize=8,
+                                                    color=self.color,
+                                                    path_effects=label_buffer,
+                                                    zorder=3,
+                                                    rotation_mode='anchor')
+                            self.labels.append(bh_depth)
                 else:
                     pass
 
@@ -1677,8 +1612,6 @@ class GeneralMap(MapPlotMethods):
 
                     # Add the end tick for the borehole trace and the label
                     angle = math.degrees(math.atan2(seg_y[-1] - seg_y[-2], seg_x[-1] - seg_x[-2]))
-                    # self.ax.text(seg_x[-1], seg_y[-1], '|', rotation=angle, color=self.color, va='center',
-                    #              ha='center', fontsize=9)
                     self.ax.scatter(seg_x[-1], seg_y[-1],
                                     marker=(2, 0, angle),
                                     color=self.color)
@@ -2449,13 +2382,21 @@ class Map3D(MapPlotMethods):
                     loop_name = pem_file.header.get('Loop')
                     loop_center = self.gps_editor.get_loop_center(loop)
                     avg_z = mean(z)
-                    loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name, clip_on=True,
-                                                     path_effects=self.buffer, color='blue', ha='center', va='center')
+                    loop_label_artist = self.ax.text(loop_center[0], loop_center[1], avg_z, loop_name,
+                                                     clip_on=True,
+                                                     path_effects=self.buffer,
+                                                     color='blue',
+                                                     ha='center',
+                                                     va='center')
                     self.loop_label_artists.append(loop_label_artist)
 
                     for i, (x, y, z) in enumerate(zip(x, y, z)):
-                        loop_anno_artist = self.ax.text(x, y, z, str(i), color='blue', path_effects=self.buffer,
-                                                        va='bottom', ha='center', fontsize=7)
+                        loop_anno_artist = self.ax.text(x, y, z, str(i),
+                                                        color='blue',
+                                                        path_effects=self.buffer,
+                                                        va='bottom',
+                                                        ha='center',
+                                                        fontsize=7)
                         self.loop_anno_artists.append(loop_anno_artist)
 
     def plot_line(self, pem_file):
@@ -2476,19 +2417,31 @@ class Map3D(MapPlotMethods):
                     x, y, z = [r[0] for r in line], \
                               [r[1] for r in line], \
                               [r[2] for r in line]
-                    line_artist, = self.ax.plot(x, y, z, '-o', lw=1,
-                                                markersize=3, color='black', markerfacecolor='w', markeredgewidth=0.3)
+                    line_artist, = self.ax.plot(x, y, z, '-o',
+                                                lw=1,
+                                                markersize=3,
+                                                color='black',
+                                                markerfacecolor='w',
+                                                markeredgewidth=0.3)
                     self.line_artists.append(line_artist)
                     line_name = pem_file.header.get('LineHole')
                     line_end = line[-1]
-                    line_label_artist = self.ax.text(line_end[0], line_end[1], line_end[2], line_name, ha='center',
-                                                     va='bottom', path_effects=self.buffer, zorder=5, clip_on=True)
+                    line_label_artist = self.ax.text(line_end[0], line_end[1], line_end[2], line_name,
+                                                     ha='center',
+                                                     va='bottom',
+                                                     path_effects=self.buffer,
+                                                     zorder=5,
+                                                     clip_on=True)
                     self.line_label_artists.append(line_label_artist)
 
                     for station in line:
                         station_label_artist = self.ax.text(station[0], station[1], station[2], f"{station[-1]:.0f}",
-                                                            fontsize=7, path_effects=self.buffer, ha='center', va='bottom',
-                                                            color='black', clip_on=True)
+                                                            fontsize=7,
+                                                            path_effects=self.buffer,
+                                                            ha='center',
+                                                            va='bottom',
+                                                            color='black',
+                                                            clip_on=True)
                         self.station_label_artists.append(station_label_artist)
 
     def plot_hole(self, pem_file):
@@ -2503,18 +2456,28 @@ class Map3D(MapPlotMethods):
             self.collars.append(collar_gps)
             segments = [[float(num) for num in row] for row in segments]
 
-            xx, yy, zz, = self.get_3D_borehole_projection(collar_gps[0], segments)
-            hole_artist, = self.ax.plot(xx, yy, zz, '--', lw=1, color='darkred')
+            xx, yy, zz, dist = self.get_3D_borehole_projection(collar_gps[0], segments)
+            hole_artist, = self.ax.plot(xx, yy, zz, '--',
+                                        lw=1,
+                                        color='darkred')
             self.hole_artists.append(hole_artist)
 
             name = pem_file.header.get('LineHole')
-            hole_label_artist = self.ax.text(collar_gps[0][0], collar_gps[0][1], collar_gps[0][2], str(name), zorder=5,
-                                             path_effects=self.buffer, ha='center', va='bottom', color='darkred')
+            hole_label_artist = self.ax.text(collar_gps[0][0], collar_gps[0][1], collar_gps[0][2], str(name),
+                                             zorder=5,
+                                             path_effects=self.buffer,
+                                             ha='center',
+                                             va='bottom',
+                                             color='darkred')
             self.hole_label_artists.append(hole_label_artist)
 
             for i, (x, y, z) in enumerate(list(zip(xx, yy, zz))[1:]):
-                segment_label_artist = self.ax.text(x, y, z, f"{segments[i][-1]:.0f}", fontsize=7,
-                                                    path_effects=self.buffer, ha='center', va='bottom', color='darkred')
+                segment_label_artist = self.ax.text(x, y, z, f"{segments[i][-1]:.0f}",
+                                                    fontsize=7,
+                                                    path_effects=self.buffer,
+                                                    ha='center',
+                                                    va='bottom',
+                                                    color='darkred')
                 self.segment_label_artists.append(segment_label_artist)
 
     def format_ax(self):
@@ -2679,196 +2642,14 @@ class FoliumMap:
         return self.w
 
 
-# class MagneticFieldCalculator(MapPlotMethods):
-#     """
-#     Class that makes the magnetic field calculations for section vector plots.
-#     :param: pem_file: PEMFile object
-#     """
-#
-#     def __init__(self, pem_file):
-#         logging.info('MagneticFieldCalculator')
-#         self.pem_file = pem_file
-#         MapPlotMethods.__init__(self)
-#         self.loop_coords = [[float(num) for num in row] for row in self.pem_file.get_loop_coords()]
-#         self.collar = [float(num) for num in self.pem_file.get_collar_coords()[0]]
-#         self.segments = [[float(num) for num in row] for row in self.pem_file.get_hole_geometry()]
-#         self.current = float(self.pem_file.tags.get('Current'))
-#
-#     def get_magnitude(self, vector):
-#         return math.sqrt(sum(i ** 2 for i in vector))
-#
-#     def calc_total_field(self, Px, Py, Pz, I):
-#         """
-#         Calculate the magnetic field at position P with current I using Biot-Savart Law. Geometry used is the loop.
-#         :param P: Position at which the magnetic field is calculated
-#         :param I: Current used
-#         :return: Magnetic field strength for each component
-#         """
-#
-#         def loop_difference(loop_listorarray):
-#             loop_array = np.array(loop_listorarray)
-#             loop_diff = np.append(np.diff(loop_array, axis=0),
-#                                   [loop_array[0] - loop_array[-1]], axis=0)
-#             return loop_diff
-#
-#         def array_shift(arr, shift_num):
-#             result = np.empty_like(arr)
-#             if shift_num > 0:
-#                 result[:shift_num] = arr[-shift_num:]
-#                 result[shift_num:] = arr[:-shift_num]
-#             elif shift_num < 0:
-#                 result[shift_num:] = arr[:-shift_num]
-#                 result[:shift_num] = arr[-shift_num:]
-#             else:
-#                 result[:] = arr
-#             return result
-#
-#         u0 = 1.25663706e-6
-#         loop_array = np.array(self.loop_coords)
-#         loop_array = np.delete(loop_array, 3, 1)  # Delete the units column
-#         point = np.array([Px, Py, Pz])
-#         loop_diff = loop_difference(loop_array)
-#
-#         AP = point - loop_array
-#         BP = array_shift(AP, -1)
-#
-#         r1 = np.sqrt((AP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
-#         r2 = np.sqrt((BP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
-#         Dot1 = np.multiply(AP, loop_diff).sum(1)
-#         Dot2 = np.multiply(BP, loop_diff).sum(1)
-#         cross = np.cross(loop_diff, AP)
-#
-#         CrossSqrd = (np.sqrt((cross ** 2).sum(-1))[..., np.newaxis]).squeeze() ** 2
-#         top = (Dot1 / r1 - Dot2 / r2) * u0 * I
-#         bottom = (CrossSqrd * 4 * np.pi)
-#         factor = (top / bottom)
-#         factor = factor[..., np.newaxis]
-#
-#         field = cross * factor
-#         field = np.sum(field, axis=0)
-#
-#         unit = 'nT' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
-#         if unit == 'pT':
-#             field *= 1e12
-#         elif unit == 'nT':
-#             field *= 1e9
-#         else:
-#             raise NotImplemented('Invalid Units')
-#
-#         return field[0], field[1], field[2]
-#
-#     def project(self, normal_plane, vector):
-#         length = np.linalg.norm(normal_plane)
-#         calc = np.dot(normal_plane, vector) / length ** 2
-#         scaled = normal_plane * calc
-#         newvector = vector - scaled
-#         return newvector[0], newvector[1], newvector[2]
-#
-#     def get_3d_magnetic_field(self, num_rows, buffer=0):
-#         logging.info('MagneticFieldCalculator - Creating mesh grid and creating vector field')
-#         # Create a mesh grid
-#         min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents(self.pem_file)
-#         arrow_len = (max_z - min_z) // 16
-#         rows = float(num_rows)
-#         x = np.arange(min_x - buffer, max_x + buffer, (max_x - min_x) * 1 / rows)
-#         y = np.arange(min_y - buffer, max_y + buffer, (max_y - min_y) * 1 / rows)
-#         z = np.arange(min_z - buffer, max_z + buffer, (max_z - min_z) * 1 / rows)
-#
-#         xx, yy, zz = np.meshgrid(x, y, z)
-#
-#         # Vector function that will calculate the magnetic field for each point passed
-#         vField = np.vectorize(self.calc_total_field)
-#
-#         print('Computing Field at {} points.....'.format(xx.size))
-#         start = timer()
-#
-#         # Calculate the magnetic field at each mesh grid point
-#         u, v, w = vField(xx, yy, zz, self.current)
-#
-#         end = timer()
-#         time = round(end - start, 2)
-#         print('Calculated in {} seconds'.format(str(time)))
-#
-#         return xx, yy, zz, u, v, w, arrow_len
-#
-#     def get_angle_2V(self, v1, v2):
-#         len1 = math.sqrt(sum(i ** 2 for i in v1))
-#         len2 = math.sqrt(sum(i ** 2 for i in v2))
-#         angle = math.acos(np.dot(v1, v2) / (len1 * len2))
-#         return angle
-#
-#     def get_2d_magnetic_field(self, p1, p2, spacing=None, arrow_len=None, num_rows=12):
-#
-#         def wrapper_proj(i, j, k, normal_plane):
-#             return self.project(normal_plane, [i, j, k])
-#
-#         v_proj = np.vectorize(wrapper_proj, excluded=[3])
-#         v_field = np.vectorize(self.calc_total_field)
-#
-#         # Vector to point and normal of cross section
-#         vec = [p2[0] - p1[0], p2[1] - p1[1], 0]
-#         planeNormal = np.cross(vec, [0, 0, -1])
-#
-#         # Angle between the plane and j_hat
-#         theta = self.get_angle_2V(planeNormal, [0, 1, 0])
-#
-#         # Fixes angles where p2.y is less than p1.y
-#         if p2[1] < p1[1]:
-#             theta = -theta
-#
-#         # Creating the grid
-#         min_x, max_x, min_y, max_y, min_z, max_z = self.get_extents(self.pem_file)
-#         max_z = float(self.pem_file.get_collar_coords()[0][2]) + 10
-#         min_z = max_z - abs(float(self.pem_file.get_hole_geometry()[-1][4]))
-#
-#         # Calculate the Z so that it is like a section plot
-#         # Wasn't working very well, replaced with the above.
-#         # min_z = max_z - abs((float(math.floor(min_z / 400) + 1) * 400))
-#
-#         line_len = round(math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2))
-#         if arrow_len is None:
-#             arrow_len = float(line_len // 30)
-#         # Spacing between the arrows
-#         if spacing is None:
-#             # spacing = (abs(min_x - max_x) + abs(min_y - max_y)) // 30
-#             spacing = line_len // 20
-#
-#         a = np.arange(-10, line_len, spacing)
-#         b = np.zeros(1)
-#         c = np.arange(min_z, max_z, line_len // 20)
-#
-#         xx, yy, zz = np.meshgrid(a, b, c)
-#
-#         xx_rot = xx * math.cos(theta) - yy * math.sin(theta)
-#         yy_rot = xx * math.sin(theta) + yy * math.cos(theta)
-#
-#         xx = xx_rot + p1[0]
-#         yy = yy_rot + p1[1]
-#
-#         print('Computing Field at {} points.....'.format(xx.size))
-#         start = timer()
-#
-#         # Calculate the magnetic field at each grid point
-#         u, v, w = v_field(xx, yy, zz, self.current)
-#         # Project the arrows
-#         uproj, vproj, wproj = v_proj(u, v, w, planeNormal)
-#
-#         end = timer()
-#         time = round(end - start, 2)
-#         print('Calculated in {} seconds'.format(str(time)))
-#
-#         return xx, yy, zz, uproj, vproj, wproj, arrow_len
-
-# TODO Redo section 3D with new Mag field calculator module.
-class Section3D(Map3D, MagneticFieldCalculator):
+class Section3D(Map3D, MapPlotMethods):
     def __init__(self, ax, pem_file, **kwargs):
-        logging.info('Section3D')
         if isinstance(pem_file, list):
             pem_file = pem_file[0]
         self.pem_file = pem_file
         self.ax = ax
         Map3D.__init__(self, self.ax, self.pem_file, set_z=True)
-        MagneticFieldCalculator.__init__(self, self.pem_file)
+        MapPlotMethods.__init__(self)
 
         self.mag_field_artists = []
         self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
@@ -2876,14 +2657,28 @@ class Section3D(Map3D, MagneticFieldCalculator):
         self.plot_hole(self.pem_file)
         self.plot_loop(self.pem_file)
 
-    def plot_2d_magnetic_field(self):
-        logging.info('Section3D - Plotting magnetic field')
+    def plot_3d_magnetic_field(self):
+        p1, p2, line_az, line_len = self.get_section_extent(self.pem_file)
+        collar_gps = self.pem_file.get_collar_coords()[0]
+        elevation = float(collar_gps[-2])
+        # Corners used to calculate the mag field
+        c1, c2 = (p1[0], p1[1],elevation), (p2[0], p2[1], elevation - (line_len * 4/3))
 
-        p1, p2, line_az = self.get_section_extents(self.pem_file)
-        xx, yy, zz, u, v, w, arrow_len = self.get_2d_magnetic_field(p1, p2)
-        mag_field_artist = self.ax.quiver(xx, yy, zz, u, v, w, length=arrow_len, normalize=True,
-                                          color='black', label='Field', linewidth=.5, alpha=1.,
-                                          arrow_length_ratio=.3, pivot='middle', zorder=0)
+        wire_coords = self.pem_file.get_loop_coords()
+        mag_calculator = MagneticFieldCalculator(wire_coords)
+
+        xx, yy, zz, uproj, vproj, wproj, arrow_len = mag_calculator.get_3d_magnetic_field(c1, c2)
+
+        mag_field_artist = self.ax.quiver(xx, yy, zz, uproj, vproj, wproj,
+                                          length=arrow_len,
+                                          normalize=True,
+                                          color='black',
+                                          label='Field',
+                                          linewidth=.5,
+                                          alpha=1.,
+                                          arrow_length_ratio=.3,
+                                          pivot='middle',
+                                          zorder=0)
         self.mag_field_artists.append(mag_field_artist)
 #
     # Not used
@@ -2909,6 +2704,8 @@ class SectionPlot(MapPlotMethods):
     """
 
     def __init__(self, pem_files, fig, stations=None, hole_depth=None, **kwargs):
+        MapPlotMethods.__init__(self)
+
         self.color = 'black'
         self.fig = fig
         self.ax = self.fig.add_subplot()
@@ -2920,9 +2717,8 @@ class SectionPlot(MapPlotMethods):
             self.hole_depth = None
         except TypeError:
             self.hole_depth = None
-        # MagneticFieldCalculator.__init__(self, self.pem_file)
-        MapPlotMethods.__init__(self)
-        self.buffer = [patheffects.Stroke(linewidth=5, foreground='white'), patheffects.Normal()]
+
+        self.buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
         self.label_ticks = kwargs.get('LabelSectionTicks')
 
         # Adjust the bounding box of the axes within the figure
@@ -2935,7 +2731,7 @@ class SectionPlot(MapPlotMethods):
         # Calculate the end-points to be used to plot the cross section on
         self.bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
         plot_width = self.bbox.width * .0254  # Convert to meters
-        self.p1, self.p2, self.line_az = self.get_section_extent(self.pem_file,
+        self.p1, self.p2, self.line_az, line_len = self.get_section_extent(self.pem_file,
                                                                  hole_depth=self.hole_depth,
                                                                  section_plot=True,
                                                                  plot_width=plot_width)
@@ -3229,7 +3025,7 @@ class SectionPlot(MapPlotMethods):
 
     def plot_mag(self):
         # Corners used to calculate the mag field
-        c1, c2 = (self.p1[0], self.p1[1], self.ax.get_ylim()[1]), (self.p2[0], self.p2[1], self.ax.get_ylim()[1] - self.section_depth)
+        c1, c2 = (self.p1[0], self.p1[1], self.ax.get_ylim()[1]), (self.p2[0], self.p2[1], self.ax.get_ylim()[1] - (1.1 * self.section_depth))
 
         wire_coords = self.pem_file.get_loop_coords()
         mag_calculator = MagneticFieldCalculator(wire_coords)
@@ -3244,7 +3040,7 @@ class SectionPlot(MapPlotMethods):
                        zorder=0,
                        units='dots',
                        scale=0.036,
-                       width=1.0,
+                       width=0.6,
                        headlength=10,
                        headwidth=6)
 
@@ -3296,7 +3092,7 @@ class SectionPlot(MapPlotMethods):
                 hole_name = self.pem_file.header.get('LineHole')
                 trans = mtransforms.blended_transform_factory(self.ax.transData, self.ax.transAxes)
                 self.ax.annotate(f"{hole_name}", (dist, self.collar[2]),
-                                 xytext=(0, 15),
+                                 xytext=(0, 12),
                                  textcoords='offset pixels',
                                  color='k',
                                  ha='center',
@@ -3308,9 +3104,9 @@ class SectionPlot(MapPlotMethods):
                 # Label end-of-hole depth
                 hole_len = self.segments[-1][-1]
                 angle = math.degrees(math.atan2(plotz[-1]-plotz[-100], plotx[-1]-plotx[-100])) + 90
-                self.ax.text(dist + self.line_len * .01, q_proj[2], f"  {hole_len:.0f} m  ",
+                self.ax.text(dist + self.line_len * .01, q_proj[2], f" {hole_len:.0f} m ",
                              color='k',
-                             ha='right',
+                             ha='left',
                              rotation=angle,
                              path_effects=self.buffer,
                              zorder=10,
@@ -3331,13 +3127,6 @@ class SectionPlot(MapPlotMethods):
                 pa = (plotx[index - 1], plotz[index - 1])
                 angle = math.degrees(math.atan2(pa[1] - p[1], pa[0] - p[0])) - 90
 
-                # self.ax.text(x, z, '|',
-                #              rotation=angle+90,
-                #              ha='center',
-                #              va='center',
-                #              zorder=12,
-                #              rotation_mode='anchor')
-
                 self.ax.scatter(x, z,
                                 marker=(2, 0, angle + 90),
                                 color='k',
@@ -3350,12 +3139,9 @@ class SectionPlot(MapPlotMethods):
                                  color='dimgray',
                                  size=8)
 
-        self.ax.use_sticky_edges = False
         ylim = self.ax.get_ylim()
         self.ax.set_xlim(0, self.line_len)
-        self.ax.set_ylim(ylim[1] - self.section_depth, ylim[1])
-        self.ax.margins(x=0, y=10)
-        # self.ax.set_ylim(max(zs) - self.section_depth, max(zs))
+        self.ax.set_ylim(ylim[1] - self.section_depth, ylim[1] + (0.05 * self.section_depth))
 
     def get_section_plot(self):
         return self.fig
@@ -3803,16 +3589,17 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems()
+    pem_files = pem_getter.get_pems(client='Minera')
     # map = FoliumMap(pem_files, '17N')
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
-    fig = plt.figure(figsize=(8.5, 11), dpi=100)
+    fig = plt.figure(figsize=(11, 8.5), dpi=100)
     # map = GeneralMap(pem_files, fig).get_map()
-    map = SectionPlot(pem_files, fig).get_section_plot()
+    # map = SectionPlot(pem_files, fig).get_section_plot()
+    map = PlanMap(pem_files, fig).get_map()
     map.show()
     # ax = fig.add_subplot()
     # component = 'z'

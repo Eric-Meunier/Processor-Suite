@@ -114,16 +114,16 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.view_map_action.triggered.connect(self.view_map)
         self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
 
-        self.loop_height_edit.returnPressed.connect(self.change_loop_height)
-        self.loop_width_edit.returnPressed.connect(self.change_loop_width)
-        self.loop_angle_edit.returnPressed.connect(self.change_loop_angle)
+        self.loop_height_edit.editingFinished.connect(self.change_loop_height)
+        self.loop_width_edit.editingFinished.connect(self.change_loop_width)
+        self.loop_angle_edit.editingFinished.connect(self.change_loop_angle)
 
-        self.hole_easting_edit.returnPressed.connect(self.plot_hole)
-        self.hole_northing_edit.returnPressed.connect(self.plot_hole)
-        self.hole_elevation_edit.returnPressed.connect(self.plot_hole)
-        self.hole_az_edit.returnPressed.connect(self.plot_hole)
-        self.hole_dip_edit.returnPressed.connect(self.plot_hole)
-        self.hole_length_edit.returnPressed.connect(self.plot_hole)
+        self.hole_easting_edit.editingFinished.connect(self.plot_hole)
+        self.hole_northing_edit.editingFinished.connect(self.plot_hole)
+        self.hole_elevation_edit.editingFinished.connect(self.plot_hole)
+        self.hole_az_edit.editingFinished.connect(self.plot_hole)
+        self.hole_dip_edit.editingFinished.connect(self.plot_hole)
+        self.hole_length_edit.editingFinished.connect(self.plot_hole)
 
         # Validators
         int_validator = QtGui.QIntValidator()
@@ -211,8 +211,10 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
 
             # Plot the section line
             self.section_extent_line.setData([line_center_x - dx, line_center_x + dx],
-                                                       [line_center_y - dy, line_center_y + dy], width=1,
-                                                       pen=pg.mkPen(color=0.5, style=QtCore.Qt.DashLine))
+                                             [line_center_y - dy, line_center_y + dy],
+                                             width=1,
+                                             pen=pg.mkPen(color=0.5,
+                                                          style=QtCore.Qt.DashLine))
             self.plan_view_plot.addItem(self.section_extent_line)
             return p1, p2
 
@@ -278,6 +280,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
             self.plan_view_plot.addItem(self.hole_trace_plot)
             self.plan_view_plot.addItem(self.hole_collar_plot)
 
+        # Shift the loop position relative to the hole position when the hole is moved
         if int(self.hole_easting_edit.text()) != self.hole_easting:
             shift_amt = int(self.hole_easting_edit.text()) - self.hole_easting
             self.shift_loop(shift_amt, 0)
@@ -286,6 +289,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
             shift_amt = int(self.hole_northing_edit.text()) - self.hole_northing
             self.shift_loop(0, shift_amt)
             self.hole_northing = int(self.hole_northing_edit.text())
+
         self.hole_elevation = int(self.hole_elevation_edit.text())
         self.hole_az = int(self.hole_az_edit.text())
         self.hole_dip = -int(self.hole_dip_edit.text())
@@ -371,6 +375,10 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.ax.figure.subplots_adjust(left=0.1, bottom=0.1, right=1., top=1.)
 
     def change_loop_width(self):
+        """
+        Signal slot: Change the loop ROI dimensions from user input
+        :return: None
+        """
         height = self.loop_roi.size()[1]
         width = self.loop_width_edit.text()
         width = float(width)
@@ -378,6 +386,10 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.loop_roi.setSize((width, height))
 
     def change_loop_height(self):
+        """
+        Signal slot: Change the loop ROI dimensions from user input
+        :return: None
+        """
         height = self.loop_height_edit.text()
         width = self.loop_roi.size()[0]
         height = float(height)
@@ -385,6 +397,10 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.loop_roi.setSize((width, height))
 
     def change_loop_angle(self):
+        """
+        Signal slot: Change the loop ROI angle from user input
+        :return: None
+        """
         angle = self.loop_angle_edit.text()
         angle = float(angle)
         print(f"Loop angle changed to {angle}")
@@ -437,11 +453,6 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         c3 = (c2[0] - h * (math.sin(math.radians(angle))), c2[1] + h * (math.sin(math.radians(90-angle))), 0)
         c4 = (c3[0] + w * (math.cos(math.radians(180-angle))), c3[1] - w * (math.sin(math.radians(180-angle))), 0)
         corners = [c1, c2, c3, c4]
-
-        # self.loop_plot.clear()
-        # self.loop_plot.setData([coord[0] for coord in corners],
-        #                        [coord[1] for coord in corners], pen=pg.mkPen(width=3, color='r'))
-        # self.plan_view_vb.addItem(self.loop_plot)
 
         return corners
 
@@ -658,23 +669,23 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.view_map_action.triggered.connect(self.view_map)
         self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
 
-        self.loop_height_edit.returnPressed.connect(self.change_loop_height)
-        self.loop_width_edit.returnPressed.connect(self.change_loop_width)
-        self.loop_angle_edit.returnPressed.connect(self.change_loop_angle)
-        self.grid_az_edit.returnPressed.connect(self.change_grid_angle)
+        self.loop_height_edit.editingFinished.connect(self.change_loop_height)
+        self.loop_width_edit.editingFinished.connect(self.change_loop_width)
+        self.loop_angle_edit.editingFinished.connect(self.change_loop_angle)
+        self.grid_az_edit.editingFinished.connect(self.change_grid_angle)
 
-        self.grid_easting_edit.returnPressed.connect(self.plot_grid)
-        self.grid_easting_edit.returnPressed.connect(self.change_grid_pos)
-        self.grid_northing_edit.returnPressed.connect(self.plot_grid)
-        self.grid_northing_edit.returnPressed.connect(self.change_grid_pos)
-        self.grid_az_edit.returnPressed.connect(self.plot_grid)
-        self.line_number_edit.returnPressed.connect(self.plot_grid)
-        self.line_number_edit.returnPressed.connect(self.change_grid_size)
-        self.line_length_edit.returnPressed.connect(self.plot_grid)
-        self.line_length_edit.returnPressed.connect(self.change_grid_size)
-        self.station_spacing_edit.returnPressed.connect(self.plot_grid)
-        self.line_spacing_edit.returnPressed.connect(self.plot_grid)
-        self.line_spacing_edit.returnPressed.connect(self.change_grid_size)
+        self.grid_easting_edit.editingFinished.connect(self.plot_grid)
+        self.grid_easting_edit.editingFinished.connect(self.change_grid_pos)
+        self.grid_northing_edit.editingFinished.connect(self.plot_grid)
+        self.grid_northing_edit.editingFinished.connect(self.change_grid_pos)
+        self.grid_az_edit.editingFinished.connect(self.plot_grid)
+        self.line_number_edit.editingFinished.connect(self.plot_grid)
+        self.line_number_edit.editingFinished.connect(self.change_grid_size)
+        self.line_length_edit.editingFinished.connect(self.plot_grid)
+        self.line_length_edit.editingFinished.connect(self.change_grid_size)
+        self.station_spacing_edit.editingFinished.connect(self.plot_grid)
+        self.line_spacing_edit.editingFinished.connect(self.plot_grid)
+        self.line_spacing_edit.editingFinished.connect(self.change_grid_size)
 
         # Validators
         int_validator = QtGui.QIntValidator()
@@ -801,6 +812,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
             station_text.setPos(x_start, y_start)
             self.plan_view_plot.addItem(station_text)
 
+            # Add station labels
             for j, station in enumerate(range(int(self.line_length / self.station_spacing) + 1)):
                 station_x, station_y = transform_station(x_start, y_start, j * self.station_spacing)
                 station_name = f"{self.station_spacing*(j+1)}{station_suffix}"
@@ -817,6 +829,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
             self.plan_view_plot.addItem(line_plot)
             self.plan_view_plot.addItem(stations_plot)
 
+        # Plot a symbol at the center of the grid
         grid_center = pg.ScatterPlotItem([center_x],[center_y], pen='b', symbol='+')
         grid_center.setZValue(1)
         self.plan_view_plot.addItem(grid_center)
@@ -848,6 +861,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         """
 
         def set_loop():
+            # Create the loop ROI
             center_x, center_y = self.get_grid_center(self.grid_easting, self.grid_northing)
             self.loop_roi = LoopROI([center_x - (self.loop_width / 2),
                                      center_y - (self.loop_height / 2)],
@@ -866,6 +880,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
             self.loop_roi.sigRegionChangeFinished.connect(self.loop_moved)
 
         def set_grid():
+            # Create the grid
             self.grid_roi = LoopROI([self.grid_easting, self.grid_northing],
                                     [self.line_length, (self.line_number - 1) * self.line_spacing], scaleSnap=True,
                                     pen=pg.mkPen(None, width=1.5))
@@ -884,6 +899,10 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         set_loop()
 
     def change_loop_width(self):
+        """
+        Signal slot: Change the loop ROI dimensions from user input
+        :return: None
+        """
         height = self.loop_roi.size()[1]
         width = self.loop_width_edit.text()
         width = float(width)
@@ -891,6 +910,10 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.loop_roi.setSize((width, height))
 
     def change_loop_height(self):
+        """
+        Signal slot: Change the loop ROI dimensions from user input
+        :return: None
+        """
         height = self.loop_height_edit.text()
         width = self.loop_roi.size()[0]
         height = float(height)
@@ -898,18 +921,30 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.loop_roi.setSize((width, height))
 
     def change_loop_angle(self):
+        """
+        Signal slot: Change the loop ROI angle from user input
+        :return: None
+        """
         angle = self.loop_angle_edit.text()
         angle = float(angle)
         print(f"Loop angle changed to {angle}")
         self.loop_roi.setAngle(angle)
 
     def change_grid_angle(self):
+        """
+        Signal slot: Change the grid ROI angle from user input. Converts from azimuth to angle
+        :return: None
+        """
         az = int(self.grid_az_edit.text())
         angle = 90 - az
         print(f"Grid angle changed to {az}")
         self.grid_roi.setAngle(angle)
 
     def change_grid_size(self):
+        """
+        Signal slot: Change the grid ROI dimensions from user input
+        :return: None
+        """
         self.line_length = int(self.line_length_edit.text())
         self.line_number = int(self.line_number_edit.text())
         self.line_spacing = int(self.line_spacing_edit.text())
@@ -1392,7 +1427,7 @@ if __name__ == '__main__':
     planner = LoopPlanner()
     # planner = GridPlanner()
     planner.show()
-    planner.view_map()
+    # planner.view_map()
     # planner.save_gpx()
 
     app.exec_()

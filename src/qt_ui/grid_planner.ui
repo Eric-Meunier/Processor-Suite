@@ -525,6 +525,24 @@ of Lines</string>
    <header>pyqtgraph</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>loop_height_edit</tabstop>
+  <tabstop>loop_width_edit</tabstop>
+  <tabstop>loop_angle_edit</tabstop>
+  <tabstop>loop_name_edit</tabstop>
+  <tabstop>grid_easting_edit</tabstop>
+  <tabstop>grid_northing_edit</tabstop>
+  <tabstop>grid_az_edit</tabstop>
+  <tabstop>line_number_edit</tabstop>
+  <tabstop>line_length_edit</tabstop>
+  <tabstop>line_spacing_edit</tabstop>
+  <tabstop>station_spacing_edit</tabstop>
+  <tabstop>grid_name_edit</tabstop>
+  <tabstop>systemCBox</tabstop>
+  <tabstop>zoneCBox</tabstop>
+  <tabstop>datumCBox</tabstop>
+  <tabstop>plan_view_widget</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
