@@ -98,7 +98,6 @@ def alpha_num_sort(string):
 
 
 class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
-    # logging.info('PEMEditor')
 
     def __init__(self, parent=None):
         super().__init__()
@@ -151,7 +150,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Initializing the UI.
         :return: None
         """
-        # logging.info('PEMEditor - Initializing UI')
         def center_window(self):
             qtRectangle = self.frameGeometry()
             centerPoint = QDesktopWidget().availableGeometry().center()
@@ -171,7 +169,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Initializing all actions.
         :return: None
         """
-        # logging.info('PEMEditor - Initializing Actions')
         self.setAcceptDrops(True)
 
         # 'File' menu
@@ -394,7 +391,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Initializing all signals.
         :return: None
         """
-        # logging.info('PEMEditor - Initializing Signals')
         self.table.viewport().installEventFilter(self)
 
         self.table.installEventFilter(self)
@@ -592,7 +588,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         """
         Open the selected PEM File in a text editor
         """
-        # logging.info('Opening PEM File in text editor')
         pem_files, rows = self.get_selected_pem_files()
         for pem_file in pem_files:
             os.startfile(pem_file.filepath)
@@ -716,7 +711,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         First step of opening a PEM, GPS, RI, GPX, or INF file.
         :param files: Any filetype that the program can open.
         """
-        # logging.info('PEMEditor - Opening Files')
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
         pem_files = [file for file in files if file.lower().endswith('pem')]
@@ -870,7 +864,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Adds GPS information from the gps_files to the PEMFile object
         :param gps_files: Text or gpx file(s) with GPS information in them
         """
-        # logging.info('PEMEditor - Opening GPS Files')
         def read_gps_files(gps_files):  # Merges files together if there are multiple files
             if len(gps_files) > 1:
                 merged_file = ''
@@ -907,7 +900,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Adds RI file information to the associated PEMFile object. Only accepts 1 file.
         :param ri_file: Text file with step plot information in them
         """
-        # logging.info('PEMEditor - Opening RI Files')
         ri_file = ri_files[0]  # Filepath
         pem_info_widget = self.stackedWidget.currentWidget()
         pem_info_widget.open_ri_file(ri_file)
@@ -918,7 +910,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :param inf_files: List of .INF files. Will only use the first file.
         :return: None
         """
-        # logging.info('PEMEditor - Opening INF File')
         inf_file = inf_files[0]  # Filepath, only accept the first one
         inf_parser = INFParser()
         crs = inf_parser.get_crs(inf_file)
@@ -934,7 +925,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         self.datumCBox.setCurrentIndex(self.gps_datums.index(datum))
 
     def open_gpx_files(self, gpx_files):
-        # logging.info('PEMEditor - Opening GPX Files')
         if len(gpx_files) > 0:
             file = []
             zone, hemisphere = None, None
@@ -967,7 +957,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         """
         Remove all files
         """
-        # logging.info('PEMEditor - Clearing All Files')
         while self.table.rowCount() > 0:
             self.table.removeRow(0)
         for i in reversed(range(self.stackedWidget.count())):
@@ -1008,7 +997,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Create a backup (.bak) file for each opened PEM file, saved in a backup folder.
         :return: None
         """
-        logging.info('PEMEditor - Backing Up All Files')
         if len(self.pem_files) > 0:
             for pem_file in self.pem_files:
                 print(f"Backing up {os.path.basename(pem_file.filepath)}")
@@ -1060,7 +1048,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Slot: Change the tab for each pemInfoWidget to the same
         :param tab_num: tab index number to change to
         """
-        # logging.info(f"PEMEditor - Changing PEMInfo Tab to {tab_num}")
         self.tab_num = tab_num
         if len(self.pem_info_widgets) > 0:
             for widget in self.pem_info_widgets:
@@ -1685,7 +1672,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :param comp: Z, X, or Y component
         :return: None
         """
-        # logging.info(f'PEMEditor - Reversing data polarity for {comp} component')
         if len(self.pem_files) > 0:
             for pem_file, pem_info_widget in zip(self.pem_files, self.pem_info_widgets):
                 pem_info_widget.reverse_polarity(component=comp)
@@ -1869,7 +1855,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Reset all CRS drop-down menus.
         :return: None
         """
-        # logging.info('PEMEditor - Reset CRS')
         self.systemCBox.setCurrentIndex(0)
         self.zoneCBox.setCurrentIndex(0)
         self.datumCBox.setCurrentIndex(0)
@@ -1879,7 +1864,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Adds the drop-down options of each CRS drop-down menu.
         :return: None
         """
-        # logging.info('PEMEditor - Filling CRS information')
         for system in self.gps_systems:
             self.systemCBox.addItem(system)
         for zone in self.gps_zones:
@@ -1916,7 +1900,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Deletes and re-populates the table rows with the new information. Blocks table signals while doing so.
         :return: None
         """
-        # logging.info('PEMEditor - Refreshing PEMEditor table')
         if len(self.pem_files) > 0:
             self.table.blockSignals(True)
             if single_row:
@@ -2077,7 +2060,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         date might be wrong.
         :return: None
         """
-        # logging.info('PEMEditor - Checking for table anomalies')
         self.table.blockSignals(True)
         date_column = self.table_columns.index('Date')
         current_year = str(datetime.datetime.now().year)
@@ -2100,7 +2082,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :param row: Corresponding table row of the PEM file.
         :return: None
         """
-        # logging.info('PEMEditor - Checking for table changes')
         self.table.blockSignals(True)
         boldFont = QtGui.QFont()
         boldFont.setBold(True)
@@ -2539,7 +2520,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Opens the PEMFileSplitter window, which will allow selected stations to be saved as a new PEM file.
         :return: None
         """
-        logging.info('PEMEditor - Extract stations')
         pem_file, row = self.get_selected_pem_files()
         self.pem_file_splitter = PEMFileSplitter(pem_file[0], parent=self)
 
@@ -2661,9 +2641,6 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Opens BatchRIImporter for bulk importing RI files.
         :return: None
         """
-
-        # logging.info('PEMEditor - Importing RI Files')
-
         def open_ri_files():
             ri_filepaths = self.ri_importer.ri_files
             if len(ri_filepaths) > 0:
@@ -2743,7 +2720,6 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
     """
     Class to bulk rename PEM File line/hole names or file names.
     """
-    # logging.info('BatchNameEditor')
     acceptChangesSignal = QtCore.pyqtSignal()
 
     def __init__(self, pem_files, type=None, parent=None):
@@ -2865,7 +2841,6 @@ class BatchRIImporter(QWidget):
     GUI window that imports multiple RI files. There must be equal number of RI files to PEM Files
     and the line/file name numbers much match up.
     """
-    # logging.info('BatchRIImporter')
     acceptImportSignal = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
@@ -2998,7 +2973,6 @@ class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
     # acceptImportSignal = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
-        # logging.info('PlanMapOptions')
         super().__init__()
         self.parent = parent
         self.setupUi(self)
@@ -3057,7 +3031,6 @@ class PEMFileSplitter(QWidget, Ui_PEMFileSplitterWidget):
     """
 
     def __init__(self, pem_file, parent=None):
-        # logging.info('PEMFileSplitter')
         super().__init__()
         self.pem_file = pem_file
         self.parent = parent
@@ -3128,7 +3101,6 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
     """
 
     def __init__(self, pem_files, parent=None):
-        # logging.info('Map3DViewer')
         super().__init__()
         self.setupUi(self)
         self.pem_files = pem_files
@@ -3281,6 +3253,8 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
         super().__init__()
         self.setupUi(self)
         self.pem_file = pem_file
+        if not self.pem_file.is_borehole():
+            raise TypeError(f'{os.path.basename(self.pem_file.filepath)} is not a borehole file.')
         self.parent = parent
         self.list_points = []
 
@@ -3671,10 +3645,11 @@ def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMEditorWindow()
-    mw.show()
+
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Raglan', number=1)
+    pem_files = pg.get_pems(client='Raglan', number=15)
     mw.open_pem_files(pem_files)
+    mw.show()
     # mw.import_ri_files()
     # mw.show_map()
     # mw.timebase_freqency_converter()
@@ -3690,8 +3665,8 @@ def main():
 
     # mw.auto_merge_pem_files()
     # mw.sort_files()
-    section = Section3DViewer(pem_files[0])
-    section.show()
+    # section = Section3DViewer(pem_files[0])
+    # section.show()
 
     # mw.share_loop_cbox.setChecked(False)
     # mw.output_lin_cbox.setChecked(False)

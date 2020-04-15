@@ -33,12 +33,10 @@ class GPSEditor:
     """
 
     def __init__(self):
-        # # logging.info('GPSEditor')
         self.parser = GPSParser()
 
-    def sort_loop(self, gps_data):
-        # logging.info('GPSEditor - Sorting loop GPS')
-        loop_gps = self.parser.parse_loop_gps(gps_data)
+    def sort_loop(self, gps):
+        loop_gps = self.format_gps(self.parser.parse_loop_gps(gps))
         if not loop_gps:
             return None
         loop_coords_tuples = []  # Used to find the center point
@@ -46,12 +44,12 @@ class GPSEditor:
 
         # Splitting up the coordinates from a string to something usable
         for coord in loop_gps:
-            coord_tuple = (float(coord[0]), float(coord[1]))
-            coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), coord[3]]
+            coord_tuple = coord[0], coord[1]
+            # coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), coord[3]]
             if coord_tuple not in loop_coords_tuples:
                 loop_coords_tuples.append(coord_tuple)
-            if coord_item not in loop_coords:
-                loop_coords.append(coord_item)
+            if coord not in loop_coords:
+                loop_coords.append(coord)
 
         # Finds the center point using the tuples.
         center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples), [len(loop_coords_tuples)] * 2))
@@ -64,19 +62,17 @@ class GPSEditor:
         sorted_coords = sorted(loop_coords, key=lambda_func)
         if len(sorted_coords) > 100:
             sorted_coords = self.cull_loop(sorted_coords)
-        formatted_gps = self.format_gps(sorted_coords)
-        return formatted_gps
+        return sorted_coords
 
     def get_loop_center(self, gps):
-        loop_gps = self.parser.parse_loop_gps(gps)
+        loop_gps = self.format_gps(self.parser.parse_loop_gps(gps))
         if not loop_gps:
             return None
-        # logging.info('GPSEditor - Retrieving loop GPS center point')
         loop_coords_tuples = []  # Easting and Northing
 
         # Splitting up the coordinates from a string to something usable
         for coord in loop_gps:
-            coord_tuple = (float(coord[0]), float(coord[1]))
+            coord_tuple = coord[0], coord[1]
             if coord_tuple not in loop_coords_tuples:
                 loop_coords_tuples.append(coord_tuple)
 
@@ -86,23 +82,18 @@ class GPSEditor:
         return center
 
     def sort_line(self, gps):
-        # logging.info('GPSEditor - Sorting line GPS')
-        station_gps = self.parser.parse_station_gps(gps)
+        station_gps = self.format_gps(self.parser.parse_station_gps(gps))
         if not station_gps:
             return None
         line_coords = []
         line_coords_tuples = []
-        duplicates = []
 
         # Splitting up the coordinates from a string to something usable
         for coord in station_gps:
-            coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), str(coord[3]), str(coord[4])]
             coord_tuple = [float(coord[0]), float(coord[1])]
-            if coord_item not in line_coords:
-                line_coords.append(coord_item)
+            if coord not in line_coords:
+                line_coords.append(coord)
                 line_coords_tuples.append(coord_tuple)
-            else:
-                duplicates.append(coord_item)
 
         distances = spatial.distance.cdist(line_coords_tuples, line_coords_tuples, 'euclidean')
         index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
@@ -114,22 +105,7 @@ class GPSEditor:
             return hypot(p[0] - q[0], p[1] - q[1])
 
         sorted_coords = sorted(line_coords, key=distance, reverse=True)
-        formatted_gps = self.format_gps(sorted_coords)
-        return formatted_gps
-
-    # def sort_stations(self, gps):
-    #     stations = [int(point[-1]) for point in gps]
-    #     order = 'asc' if stations[-1] > stations[0] else 'desc'
-    #     if order is 'asc':
-    #         stations.sort()
-    #     else:
-    #         stations.sort(reverse=True)
-    #
-    #     sorted_stations_gps = []
-    #     for i, number in enumerate(stations):
-    #         gps[i][:-1].append(str(number))
-    #         sorted_stations_gps.append(gps[i])
-    #     return sorted_stations_gps
+        return sorted_coords
 
     def format_gps(self, gps):
         """
@@ -137,14 +113,12 @@ class GPSEditor:
         :param gps_data: List without tags
         :return: List of strings
         """
-        # logging.info('GPSEditor - Formatting GPS')
-
         def format_row(row):
             for i, item in enumerate(row):
                 if i <= 2:
-                    row[i] = '{:0.2f}'.format(float(item))
+                    row[i] = float(item)
                 else:
-                    row[i] = str(int(item))
+                    row[i] = int(item)
             return row
 
         if not gps:
@@ -156,8 +130,11 @@ class GPSEditor:
         return formatted_gps
 
     def cull_loop(self, gps):
-        # logging.info('GPSEditor - Culling loop GPS')
-
+        """
+        Delete evenly-spaced entries to reduce the number to less than 100.
+        :param gps: list: rows of loop GPS
+        :return: list: Loop GPS with less than 100 items.
+        """
         loop_gps = self.parser.parse_loop_gps(gps)
         if loop_gps:
             # Cutting down the loop size to being no more than 100 points
@@ -167,18 +144,20 @@ class GPSEditor:
             del loop_gps[n-1::n]
         return loop_gps
 
-    def get_station_gps(self, gps):
-        # lDoesn't check if it's actually surface line GPS. Can return hole collar inadvertently
-        return self.format_gps(self.parser.parse_station_gps(gps))
+    def get_station_gps(self, gps, sorted=True):
+        # Doesn't check if it's actually surface line GPS. Can return hole collar inadvertently
+        gps = self.format_gps(self.parser.parse_station_gps(gps))
+        if sorted:
+            return self.sort_line(gps)
+        else:
+            return gps
 
-    def get_loop_gps(self, gps):
-        return self.format_gps(self.parser.parse_loop_gps(gps))
-
-    def get_sorted_station_gps(self, gps):
-        return self.sort_line(gps)
-
-    def get_sorted_loop_gps(self, gps):
-        return self.sort_loop(gps)
+    def get_loop_gps(self, gps, sorted=True):
+        gps = self.format_gps(self.parser.parse_loop_gps(gps))
+        if sorted:
+            return self.sort_loop(gps)
+        else:
+            return self.format_gps(gps)
 
     def get_geometry(self, file):
         segments = self.parser.parse_segments(file)
@@ -199,7 +178,6 @@ class GPSParser:
     """
 
     def __init__(self):
-        # # logging.info('GPSParser')
         # self.re_station_gps = re.compile(
         #     r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
         self.re_station_gps = re.compile(
@@ -289,7 +267,6 @@ class GPSParser:
 class INFParser:
 
     def get_crs(self, filepath):
-        # logging.info('INFParser')
         crs = {}
         with open(filepath, 'r') as in_file:
             file = in_file.read()
@@ -304,7 +281,6 @@ class INFParser:
 class GPXEditor:
 
     def parse_gpx(self, filepath):
-        # logging.info('GPXEditor')
         gpx_file = open(filepath, 'r')
         gpx = gpxpy.parse(gpx_file)
         gps = []
@@ -318,7 +294,6 @@ class GPXEditor:
         :param gpx_filepath: filepath of a GPX file
         :return: List of rows of UTM gps with elevation, units (0 or 1) and comment/name from the GPX waypoint
         """
-        # logging.info('GPXEditor - Converting GPX file coordinates to UTM')
         gps = self.parse_gpx(gpx_filepath)
         zone = None
         hemisphere = None
@@ -335,9 +310,6 @@ class GPXEditor:
             zone = u[2]
             letter = u[3]
             hemisphere = 'north' if lat >= 0 else 'south'  # Used in PEMEditor
-            # zone = math.floor((lon+180)/6) + 1  # Calculate the zone number
-            # myProj = Proj(f"+proj=utm +zone={zone},\+{hemisphere} +ellps=WGS84 +datum=WGS84 +units=m +no_defs")  # north for north hemisphere
-            # UTMx, UTMy = myProj(lon, lat)
             utm_gps.append([u[0], u[1], elevation, units, stn])
         return utm_gps, zone, hemisphere
 

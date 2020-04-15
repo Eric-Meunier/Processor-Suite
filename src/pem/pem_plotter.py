@@ -663,14 +663,12 @@ class MapPlotMethods:
     """
     Collection of methods for plotting maps.
     """
-
     def get_extents(self, pem_file):
         """
         Calculate the GPS extents of each dimension of the PEM file.
         :param pem_file: PEMFile object
         :return: Range of GPS in all 3 components
         """
-        logging.info('MapPlotMethods - Retrieving extents')
         loop_coords = pem_file.get_loop_coords()
         collar = pem_file.get_collar_coords()[0]
         segments = pem_file.get_hole_geometry()
@@ -917,27 +915,54 @@ class PlanMap(MapPlotMethods):
 
     def plot_pems(self):
 
+        def find_best_text_pos(collar, loop, loop_center):
+            """
+            Find the best text position to avoid overlap with other artists.
+            :param xy: tuple: x-y coordinates of the text to be plotted
+            :return: tuple: x-y coordinates of the text to be plotted
+            """
+            collar_gps = np.array([collar[0], collar[1]], dtype='float')
+            loop_gps = np.array([], dtype='float')
+            [np.append(loop_gps, np.array(row, dtype='float')) for row in loop]
+
         def add_loop_to_map(pem_file):
             loop_gps = pem_file.get_loop_coords()
             if loop_gps and loop_gps not in self.loops:
                 self.loops.append(loop_gps)
                 self.loop_names.append(pem_file.header.get('Loop'))
-                loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
-                eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
+                loop_center = self.gps_editor().get_loop_center(loop_gps)
+                eastings, northings = [coord[0] for coord in loop_gps], [coord[1] for coord in loop_gps]
                 eastings.insert(0, eastings[-1])  # To close up the loop
                 northings.insert(0, northings[-1])
                 zorder = 4 if not self.moving_loop else 6
                 if self.loop_labels:
-                    loop_label = self.ax.text(loop_center[0], loop_center[1],
+                    loop_label_xy = find_best_text_pos(self.collars[0], loop_gps, loop_center)
+
+                    loop_label = self.ax.text(loop_label_xy,
                                               f"Tx Loop {pem_file.header.get('Loop')}",
                                               ha='center',
                                               color=self.color,
                                               zorder=zorder,
                                               path_effects=label_buffer)  # Add the loop name
 
+                    # loop_label = adjust_text([loop_label],
+                    #                          ax=self.ax)
+                    #
+                    # objects = np.append(np.array(self.labels), self.trace_handle)
                     # Moves the loop label away from other labels
-                    adjust_text([loop_label], add_objects=[self.labels, self.trace_handle], ax=self.ax, avoid_text=True, avoid_points=False,
-                                autoalign=True)
+                    # adjust_text([loop_label],
+                    #             add_objects=objects,
+                    #             ax=self.ax,
+                    #             avoid_text=True,
+                    #             avoid_points=True,
+                    #             autoalign=True,
+                    #             only_move={'text': 'y'})
+                    # adjust_text([loop_label],
+                    #             add_objects=objects,
+                    #             arrowprops=dict(arrowstyle='->', color='red'),
+                    #             only_move={'text': 'x', 'points': 'y'},
+                    #             force_text=10.,
+                    #             lim=1000)
 
                 self.loop_handle, = self.ax.plot(eastings, northings,
                                                  color=self.color,
@@ -2324,7 +2349,6 @@ class Map3D(MapPlotMethods):
     """
 
     def __init__(self, ax, pem_files, parent=None, set_z=True):
-        logging.info('Map3D')
         MapPlotMethods.__init__(self)
         self.parent = parent
         self.error = QErrorMessage()
@@ -2349,7 +2373,6 @@ class Map3D(MapPlotMethods):
         self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
 
     def plot_pems(self):
-        logging.info('Map3D - Plotting all PEM files')
         for pem_file in self.pem_files:
             survey_type = pem_file.survey_type.lower()
 
@@ -2360,7 +2383,6 @@ class Map3D(MapPlotMethods):
                 self.plot_hole(pem_file)
 
     def plot_loop(self, pem_file):
-        logging.info('Map3D - Plotting loop')
         loop_coords = pem_file.get_loop_coords()
         if loop_coords:
             try:
@@ -2400,7 +2422,6 @@ class Map3D(MapPlotMethods):
                         self.loop_anno_artists.append(loop_anno_artist)
 
     def plot_line(self, pem_file):
-        logging.info('Map3D - Plotting surface line')
         line_coords = pem_file.get_line_coords()
         if line_coords:
             try:
@@ -2445,8 +2466,6 @@ class Map3D(MapPlotMethods):
                         self.station_label_artists.append(station_label_artist)
 
     def plot_hole(self, pem_file):
-        logging.info('Map3D - Plotting borehole')
-
         collar_gps = pem_file.get_collar_coords()
         segments = pem_file.get_hole_geometry()
         if collar_gps and segments and segments not in self.geometries:
@@ -2481,7 +2500,6 @@ class Map3D(MapPlotMethods):
                 self.segment_label_artists.append(segment_label_artist)
 
     def format_ax(self):
-        logging.info('Map3D - Formatting axes')
 
         def set_limits():
             min_x, max_x = self.ax.get_xlim()

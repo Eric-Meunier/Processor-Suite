@@ -368,7 +368,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Adds the columns and formats each table.
         :return: None
         """
-        if 'surface' in self.survey_type.lower() or 'squid' in self.survey_type.lower():
+        if not self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
             self.station_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
             self.stationGPSTable.setColumnCount(len(self.station_columns))
@@ -381,7 +381,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.missing_gps_table.setColumnCount(len(self.missing_gps_column))
             self.missing_gps_table.setHorizontalHeaderLabels(self.missing_gps_column)
 
-        elif 'borehole' in self.survey_type.lower():
+        elif self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
             self.geometry_columns = ['Tag', 'Azimuth', 'Dip', 'Segment\nLength', 'Units', 'Depth']
             self.geometryTable.setColumnCount(len(self.geometry_columns))
@@ -423,7 +423,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable.resizeColumnsToContents()
         self.dataTable.blockSignals(False)
 
-    def fill_station_table(self, gps):  # GPS in list form
+    def fill_station_table(self, gps):
         """
         Fill the stationGPSTable with given gps data
         :param gps: station gps as a list
@@ -434,13 +434,28 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
             for i, row in enumerate(gps):
                 row_pos = self.stationGPSTable.rowCount()
+                # Add a new row to the table
                 self.stationGPSTable.insertRow(row_pos)
-                if re.match('<P.*>', row[0]):
+                # Remove any existing P tags
+                if re.match('<P.*>', str(row[0])):
                     row.pop(0)
-                tag_item = QTableWidgetItem("<P" + '{num:02d}'.format(num=i) + ">")
-                items = [QTableWidgetItem(row[j]) for j in range(len(row))]
-                items.insert(0, tag_item)
 
+                # Create a new P tag
+                tag_item = QTableWidgetItem(f"<P{i:02d}>")
+                items = [tag_item]
+
+                # Add the rest of the row items to the table
+                for j in range(len(row)):
+                    if not isinstance(row[j], str):
+                        if j < 3:
+                            item = QTableWidgetItem(f"{row[j]:.2f}")
+                        else:
+                            item = QTableWidgetItem(f"{row[j]:.0f}")
+                    else:
+                        item = QTableWidgetItem(row[j])
+                    items.append(item)
+
+                # Format each item of the table to be centered
                 for m, item in enumerate(items):
                     item.setTextAlignment(QtCore.Qt.AlignCenter)
                     self.stationGPSTable.setItem(row_pos, m, item)
@@ -449,26 +464,36 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.check_station_duplicates()
             self.check_station_order()
             self.check_missing_gps()
-            # self.gps_changed_signal.emit()
             self.stationGPSTable.blockSignals(False)
         else:
             pass
 
-    def fill_collar_gps_table(self, gps):  # GPS in list form
+    def fill_collar_gps_table(self, gps):
         """
         Fill the collarGPSTable with given collar gps data
-        :param gps: collar gps as a list
+        :param gps: list: collar gps
         """
         if gps:
             gps = gps[0]
             self.clear_table(self.collarGPSTable)
-
             self.collarGPSTable.insertRow(0)
-            if '<P' in gps[0]:
+            # Remove any existing P tags
+            if '<P' in str(gps[0]):
                 gps.pop(0)
+            # Create a new P tag
             tag_item = QTableWidgetItem("<P00>")
-            items = [QTableWidgetItem(gps[j]) for j in range(len(gps))]
-            items.insert(0, tag_item)
+            items = [tag_item]
+
+            # Add the rest of the row items to the table
+            for j in range(len(gps)):
+                if not isinstance(gps[j], str):
+                    if j < 3:
+                        item = QTableWidgetItem(f"{gps[j]:.2f}")
+                    else:
+                        item = QTableWidgetItem(f"{gps[j]:.0f}")
+                else:
+                    item = QTableWidgetItem(gps[j])
+                items.append(item)
 
             for m, item in enumerate(items):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
@@ -478,7 +503,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
-    def fill_geometry_table(self, segments):  # GPS in list form
+    def fill_geometry_table(self, segments):
         """
         Fill the geometryTable with given segments data
         :param segments: hole segments (as a list)
@@ -489,11 +514,24 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             for i, row in enumerate(segments):
                 row_pos = self.geometryTable.rowCount()
                 self.geometryTable.insertRow(row_pos)
-                if re.match('<P.*>', row[0]):
+                # Remove any existing P tags
+                if re.match('<P.*>', str(row[0])):
                     row.pop(0)
-                tag_item = QTableWidgetItem("<P" + '{num:02d}'.format(num=i + 1) + ">")
-                items = [QTableWidgetItem(row[j]) for j in range(len(row))]
-                items.insert(0, tag_item)
+
+                # Create a new P tag
+                tag_item = QTableWidgetItem(f"<P{i:02d}>")
+                items = [tag_item]
+
+                # Add the rest of the row items to the table
+                for j in range(len(row)):
+                    if not isinstance(row[j], str):
+                        if j < 3:
+                            item = QTableWidgetItem(f"{row[j]:.2f}")
+                        else:
+                            item = QTableWidgetItem(f"{row[j]:.0f}")
+                    else:
+                        item = QTableWidgetItem(row[j])
+                    items.append(item)
 
                 for m, item in enumerate(items):
                     item.setTextAlignment(QtCore.Qt.AlignCenter)
@@ -513,11 +551,24 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             for i, row in enumerate(gps):
                 row_pos = self.loopGPSTable.rowCount()
                 self.loopGPSTable.insertRow(row_pos)
-                if re.match('<L.*>', row[0]):
+                # Remove any existing P tags
+                if re.match('<L.*>', str(row[0])):
                     row.pop(0)
-                tag_item = QTableWidgetItem("<L" + '{num:02d}'.format(num=i) + ">")
-                items = [QTableWidgetItem(row[j]) for j in range(len(row))]
-                items.insert(0, tag_item)
+
+                # Create a new P tag
+                tag_item = QTableWidgetItem(f"<L{i:02d}>")
+                items = [tag_item]
+
+                # Add the rest of the row items to the table
+                for j in range(len(row)):
+                    if not isinstance(row[j], str):
+                        if j < 3:
+                            item = QTableWidgetItem(f"{row[j]:.2f}")
+                        else:
+                            item = QTableWidgetItem(f"{row[j]:.0f}")
+                    else:
+                        item = QTableWidgetItem(row[j])
+                    items.append(item)
 
                 for m, item in enumerate(items):
                     item.setTextAlignment(QtCore.Qt.AlignCenter)
@@ -764,57 +815,32 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         def init_station_text():
             # Fill station GPS
-            pem_station_gps = self.pem_file.line_coords
-            self.add_station_gps(pem_station_gps)
+            station_gps = self.pem_file.get_line_coords()
+            self.fill_station_table(
+                self.gps_editor.get_station_gps(station_gps, sorted=self.parent.autoSortStationsCheckbox.isChecked()))
 
         def init_geometry_text():
             # Fill hole geometry collar GPS segments
-            pem_geometry_text = self.pem_file.line_coords
-            self.add_geometry(pem_geometry_text)
+            collar = self.pem_file.get_collar_coords()
+            geometry = self.pem_file.get_hole_geometry()
+            if any(collar):
+                self.fill_collar_gps_table(collar)
+            if geometry:
+                self.fill_geometry_table(geometry)
 
         def init_loop_text():
             # Fill loop GPS
-            pem_loop_gps = self.pem_file.loop_coords
-            self.add_loop_gps(pem_loop_gps)
+            loop_gps = self.pem_file.get_loop_coords()
+            self.fill_loop_table(self.gps_editor.get_loop_gps(loop_gps, sorted=self.parent.autoSortLoopsCheckbox.isChecked()))
 
         init_info_tab()
-        if 'surface' in self.survey_type.lower():
-            init_station_text()
+        if self.pem_file.is_borehole():
+            init_geometry_text()
         else:
             # init_collar_gps_text()
-            init_geometry_text()
+            init_station_text()
         init_loop_text()
         self.fill_data_table()
-
-    def add_loop_gps(self, file):
-        """
-        Add the loop GPS from a PEM file to the LoopGPSTable.
-        :param file: PEMFile object
-        :return: None
-        """
-        if self.parent.autoSortLoopsCheckbox.isChecked():
-            self.fill_loop_table(self.gps_editor.get_sorted_loop_gps(file))
-        else:
-            self.fill_loop_table(self.gps_editor.get_loop_gps(file))
-
-    def add_station_gps(self, file):
-        """
-        Add the station GPS from a PEM file to the StationGPSTable.
-        :param file: PEMFile object
-        :return: None
-        """
-        if self.parent.autoSortStationsCheckbox.isChecked():
-            self.fill_station_table(self.gps_editor.get_sorted_station_gps(file))
-        else:
-            self.fill_station_table(self.gps_editor.get_station_gps(file))
-
-    def add_geometry(self, file):
-        gps = self.gps_parser.parse_collar_gps(file)
-        segments = self.gps_parser.parse_segments(file)
-        if gps:
-            self.fill_collar_gps_table(self.gps_editor.get_collar_gps(file))
-        if segments:
-            self.fill_geometry_table(self.gps_editor.get_geometry(file))
 
     def clear_table(self, table):
         """
@@ -875,7 +901,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def check_missing_gps(self):
         """
-        Find stations that are in the Data but aren't in the GPS
+        Find stations that are in the Data but aren't in the GPS. Missing GPS are added to the missing_gps_table.
         :return: None
         """
         self.clear_table(self.missing_gps_table)
@@ -896,10 +922,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def remove_table_row_selection(self, table):
         """
         Remove a selected row from a given table
-        :param table: QTableWidget table
+        :param table: QTableWidget table. Either the loop, station, or geometry tables. Not dataTable and not collarGPS table.
         :return: None
         """
-        # Table (QWidgetTable) is either the loop, station, collar GPS, or geometry tables. Not dataTable.
         def add_tags():  # tag is either 'P' or 'L'
             if table == self.loopGPSTable:
                 tag = 'L'
@@ -910,6 +935,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 tag_item = QTableWidgetItem("<" + tag + '{num:02d}'.format(num=row + offset) + ">")
                 tag_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 table.setItem(row, 0, tag_item)
+
+        if table == self.dataTable or table == self.collarGPSTable:
+            return
 
         selected_rows = self.get_selected_rows(table)
         for row in reversed(selected_rows):
@@ -967,14 +995,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def sort_station_gps(self):
         station_gps = self.get_station_gps()
         if station_gps:
-            self.fill_station_table(self.gps_editor.get_sorted_station_gps(station_gps))
+            self.fill_station_table(self.gps_editor.get_station_gps(station_gps, sorted=True))
         else:
             pass
 
     def sort_loop_gps(self):
         loop = self.get_loop_gps()
         if loop:
-            self.fill_loop_table(self.gps_editor.get_sorted_loop_gps(loop))
+            self.fill_loop_table(self.gps_editor.get_loop_gps(loop, sorted=True))
         else:
             pass
 
@@ -1408,7 +1436,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def get_station_gps(self):
         """
         Collect the GPS in the StationGPS table.
-        :return: List of station GPS values from the StationGPS table.
+        :return: list of lists: List of station GPS values from the StationGPS table. All entries are str.
         """
         table_gps = []
         for row in range(self.stationGPSTable.rowCount()):
