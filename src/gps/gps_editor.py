@@ -4,6 +4,7 @@ import operator
 import os
 import re
 import sys
+import copy
 from functools import reduce
 from math import hypot
 from os.path import isfile, join
@@ -36,7 +37,7 @@ class GPSEditor:
         self.parser = GPSParser()
 
     def sort_loop(self, gps):
-        loop_gps = self.format_gps(self.parser.parse_loop_gps(gps))
+        loop_gps = self.format_gps(self.parser.parse_loop_gps(copy.copy(gps)))
         if not loop_gps:
             return None
         loop_coords_tuples = []  # Used to find the center point
@@ -65,7 +66,7 @@ class GPSEditor:
         return sorted_coords
 
     def get_loop_center(self, gps):
-        loop_gps = self.format_gps(self.parser.parse_loop_gps(gps))
+        loop_gps = self.format_gps(self.parser.parse_loop_gps(copy.copy(gps)))
         if not loop_gps:
             return None
         loop_coords_tuples = []  # Easting and Northing
@@ -79,10 +80,10 @@ class GPSEditor:
         # Finds the center point using the tuples.
         center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples),
                           [len(loop_coords_tuples)] * 2))
-        return center
+        return tuple(center)
 
     def sort_line(self, gps):
-        station_gps = self.format_gps(self.parser.parse_station_gps(gps))
+        station_gps = self.format_gps(self.parser.parse_station_gps(copy.copy(gps)))
         if not station_gps:
             return None
         line_coords = []
@@ -135,7 +136,7 @@ class GPSEditor:
         :param gps: list: rows of loop GPS
         :return: list: Loop GPS with less than 100 items.
         """
-        loop_gps = self.parser.parse_loop_gps(gps)
+        loop_gps = self.parser.parse_loop_gps(copy.copy(gps))
         if loop_gps:
             # Cutting down the loop size to being no more than 100 points
             num_to_cull = len(loop_gps) - 99

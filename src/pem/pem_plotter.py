@@ -793,6 +793,7 @@ class MapPlotMethods:
 
         if not all([pem_file.has_geometry(), pem_file.has_collar_gps()]):
             raise ValueError('The PEM file does not have hole geometry and/or collar GPS')
+
         collar = pem_file.get_collar_coords()[0]
         segments = pem_file.get_hole_geometry()
         azimuths = [float(row[0]) for row in segments]
@@ -905,7 +906,7 @@ class PlanMap(MapPlotMethods):
         if __name__ == '__main__':
             self.crs = self.get_crs(self.pem_files[0].get_crs())
         else:
-            self.get_crs(kwargs.get('CRS')) if kwargs else None
+            self.crs = self.get_crs(kwargs.get('CRS')) if kwargs else None
 
         if self.crs:
             self.ax = self.fig.add_subplot(projection=self.crs)
@@ -915,17 +916,48 @@ class PlanMap(MapPlotMethods):
 
     def plot_pems(self):
 
-        def find_best_text_pos(collar, loop, loop_center):
-            """
-            Find the best text position to avoid overlap with other artists.
-            :param xy: tuple: x-y coordinates of the text to be plotted
-            :return: tuple: x-y coordinates of the text to be plotted
-            """
-            collar_gps = np.array([collar[0], collar[1]], dtype='float')
-            loop_gps = np.array([], dtype='float')
-            [np.append(loop_gps, np.array(row, dtype='float')) for row in loop]
-
         def add_loop_to_map(pem_file):
+
+            def get_label_pos(collar, loop_eastings, loop_northings, loop_center):
+                """
+                Find the best quadrant to place the loop label to avoid the hole labels.
+                :param collar: tuple: x and y coordinates of the hole collar GPS
+                :param loop_eastings: list: loop GPS eastings
+                :param loop_northings: list: loop GPS northings
+                :param loop_center: tuple: x and y coordinate of the loop's center
+                :return: tuple: x-y coordinates of where the label should be plotted
+                """
+
+                def find_quadrant(x, y):
+                    """
+                    Return which quadrant coordinates to place the loop label in.
+                    :param x: float: collar easting
+                    :param y: float: collar northing
+                    :return: tuple: x and y coordinate to plot the loop label
+                    """
+                    q1 = (xmax - xcenter) * 0.2 + xcenter, (ymax - ycenter) * 0.2 + ycenter
+                    q2 = (xcenter - xmin) * 0.8 + xmin, (ymax - ycenter) * 0.2 + ycenter
+                    q3 = (xcenter - xmin) * 0.8 + xmin, (ycenter - ymin) * 0.8 + ymin
+                    q4 = (xmax - xcenter) * 0.2 + xcenter, (ycenter - ymin) * 0.8 + ymin
+
+                    if x > xcenter and y > ycenter:
+                        return q3
+                    elif x > xcenter and y < ycenter:
+                        return q2
+                    elif x < xcenter and y > ycenter:
+                        return q4
+                    else:
+                        return q1
+
+                # Loop extents
+                xmin, xmax, ymin, ymax = min(loop_eastings), max(loop_eastings), min(loop_northings), max(
+                    loop_northings)
+                # Loop center
+                xcenter, ycenter = loop_center[0], loop_center[1]
+
+                loop_label_quandrant = find_quadrant(collar[0], collar[1])
+                return loop_label_quandrant
+
             loop_gps = pem_file.get_loop_coords()
             if loop_gps and loop_gps not in self.loops:
                 self.loops.append(loop_gps)
@@ -936,39 +968,23 @@ class PlanMap(MapPlotMethods):
                 northings.insert(0, northings[-1])
                 zorder = 4 if not self.moving_loop else 6
                 if self.loop_labels:
-                    loop_label_xy = find_best_text_pos(self.collars[0], loop_gps, loop_center)
+                    if pem_file.is_borehole():
+                        label_x, label_y = get_label_pos(self.collars[0], eastings, northings, loop_center)
+                    else:
+                        label_x, label_y = loop_center
 
-                    loop_label = self.ax.text(loop_label_xy,
+                    loop_label = self.ax.text(label_x, label_y,
                                               f"Tx Loop {pem_file.header.get('Loop')}",
                                               ha='center',
                                               color=self.color,
                                               zorder=zorder,
-                                              path_effects=label_buffer)  # Add the loop name
-
-                    # loop_label = adjust_text([loop_label],
-                    #                          ax=self.ax)
-                    #
-                    # objects = np.append(np.array(self.labels), self.trace_handle)
-                    # Moves the loop label away from other labels
-                    # adjust_text([loop_label],
-                    #             add_objects=objects,
-                    #             ax=self.ax,
-                    #             avoid_text=True,
-                    #             avoid_points=True,
-                    #             autoalign=True,
-                    #             only_move={'text': 'y'})
-                    # adjust_text([loop_label],
-                    #             add_objects=objects,
-                    #             arrowprops=dict(arrowstyle='->', color='red'),
-                    #             only_move={'text': 'x', 'points': 'y'},
-                    #             force_text=10.,
-                    #             lim=1000)
-
+                                              path_effects=label_buffer)
+                # Plot the loop
                 self.loop_handle, = self.ax.plot(eastings, northings,
                                                  color=self.color,
                                                  label='Transmitter Loop',
                                                  transform=self.crs,
-                                                 zorder=2)  # Plot the loop
+                                                 zorder=2)
 
                 if self.draw_loop_annotations:
                     for i, (x, y) in enumerate(list(zip(eastings, northings))):
@@ -1135,20 +1151,36 @@ class PlanMap(MapPlotMethods):
                 # Adding the small rectangles
                 for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
                     fill = 'w' if i % 2 == 0 else 'k'
-                    patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height, ec='k', linewidth=line_width,
-                                              facecolor=fill, transform=self.ax.transAxes, zorder=9)
+                    patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
+                                              ec='k',
+                                              linewidth=line_width,
+                                              facecolor=fill,
+                                              transform=self.ax.transAxes,
+                                              zorder=9)
                     self.ax.add_patch(patch)
                 for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
                     fill = 'k' if i % 2 == 0 else 'w'
-                    patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height, ec='k', zorder=9,
-                                              linewidth=line_width, facecolor=fill, transform=self.ax.transAxes)
+                    patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
+                                              ec='k',
+                                              zorder=9,
+                                              linewidth=line_width,
+                                              facecolor=fill,
+                                              transform=self.ax.transAxes)
                     self.ax.add_patch(patch)
 
                 # Adding the big rectangles
-                patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height, ec='k', facecolor='k',
-                                           linewidth=line_width, transform=self.ax.transAxes, zorder=9)
-                patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height, ec='k',
-                                           facecolor='w', linewidth=line_width, transform=self.ax.transAxes, zorder=9)
+                patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
+                                           ec='k',
+                                           facecolor='k',
+                                           linewidth=line_width,
+                                           transform=self.ax.transAxes,
+                                           zorder=9)
+                patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
+                                           ec='k',
+                                           facecolor='w',
+                                           linewidth=line_width,
+                                           transform=self.ax.transAxes,
+                                           zorder=9)
                 self.ax.add_patch(patch1)
                 self.ax.add_patch(patch2)
 
@@ -1179,14 +1211,30 @@ class PlanMap(MapPlotMethods):
             #              transform=self.ax.transAxes, path_effects=buffer)
 
             add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
-            self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-            self.ax.text(bar_center, bar_height_pos + .009, f"0", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-            self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-            self.ax.text(bar_center, bar_height_pos - .018, f"({units})", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
+            self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
+                         ha='center',
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
+            self.ax.text(bar_center, bar_height_pos + .009, f"0",
+                         ha='center',
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
+            self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
+                         ha='center',
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
+            self.ax.text(bar_center, bar_height_pos - .018, f"({units})",
+                         ha='center',
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
 
         def set_size():
             """
@@ -1447,6 +1495,7 @@ class GeneralMap(MapPlotMethods):
         self.color = 'black'
         self.fig = figure
         self.pem_files = pem_files
+        self.gps_editor = GPSEditor
 
         if not isinstance(self.pem_files, list):
             self.pem_files = [self.pem_files]
@@ -1480,12 +1529,12 @@ class GeneralMap(MapPlotMethods):
         self.line_labels = kwargs.get('LineLabels') if kwargs else True
         self.hole_collar_labels = kwargs.get('HoleCollarLabels') if kwargs else True
         self.hole_depth_labels = kwargs.get('HoleDepthLabels') if kwargs else True
-        self.crs = self.get_crs(kwargs.get(
-            'CRS')) if kwargs else None
+
         if __name__ == '__main__':
             self.crs = self.get_crs(self.pem_files[0].get_crs())
+        else:
+            self.crs = self.get_crs(kwargs.get('CRS')) if kwargs else None
 
-        self.gps_editor = GPSEditor
         if self.crs:
             self.ax = self.fig.add_subplot(projection=self.crs)
             self.plot_pems()
@@ -1497,11 +1546,12 @@ class GeneralMap(MapPlotMethods):
             if (loop_gps, loop_name) not in self.loops:
                 self.loops.append((loop_gps, loop_name))
                 loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
-                eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
+                eastings, northings = [coord[0] for coord in loop_gps], [coord[1] for coord in loop_gps]
                 eastings.insert(0, eastings[-1])  # To close up the loop
                 northings.insert(0, northings[-1])
                 zorder = 4 if not self.moving_loop else 6
                 if self.loop_labels:
+                    # TODO Probably don't label the loops, but have them all in the legend
                     loop_label = self.ax.text(loop_center[0], loop_center[1],
                                               f"Tx Loop {pem_file.header.get('Loop')}",
                                               ha='center',
@@ -1514,10 +1564,6 @@ class GeneralMap(MapPlotMethods):
                                                  label='Transmitter Loop',
                                                  transform=self.crs,
                                                  zorder=2)  # Plot the loop
-
-                # Moves the loop label away from other labels
-                # adjust_text([loop_label], add_objects=self.labels, ax=self.ax, avoid_text=True, avoid_points=False,
-                #             autoalign=True)
 
                 if self.draw_loop_annotations:
                     for i, (x, y) in enumerate(list(zip(eastings, northings))):

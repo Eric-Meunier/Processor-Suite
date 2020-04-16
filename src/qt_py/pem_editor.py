@@ -3669,12 +3669,12 @@ def main():
     # section.show()
 
     # mw.share_loop_cbox.setChecked(False)
-    # mw.output_lin_cbox.setChecked(False)
-    # mw.output_log_cbox.setChecked(False)
-    # mw.output_step_cbox.setChecked(False)
-    # mw.output_section_cbox.setChecked(False)
+    mw.output_lin_cbox.setChecked(False)
+    mw.output_log_cbox.setChecked(False)
+    mw.output_step_cbox.setChecked(False)
+    mw.output_section_cbox.setChecked(False)
     # mw.output_plan_map_cbox.setChecked(False)
-    # mw.print_plots()
+    mw.print_plots()
 
     # map = Map3DViewer(pem_files)
     # map.show()
