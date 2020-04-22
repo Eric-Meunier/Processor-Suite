@@ -43,6 +43,8 @@ class PEMSerializer:
         else:
             for i, position in enumerate(coords):
                 tag = f"<L{i:02d}> "
+                position[:3] = [f"{pos:.2f}" for pos in position[:3]]
+                position[3:] = [str(pos) for pos in position[3:]]
                 row = ' '.join(position)
                 result += tag + row + '\n'
         return result
@@ -57,6 +59,8 @@ class PEMSerializer:
             else:
                 for i, position in enumerate(coords):
                     tag = f"<P{i:02d}> "
+                    position[:3] = [f"{pos:.2f}" for pos in position[:3]]
+                    position[3:] = [str(pos) for pos in position[3:]]
                     row = ' '.join(position)
                     result += tag + row + '\n'
             return result
@@ -69,6 +73,8 @@ class PEMSerializer:
             else:
                 for i, position in enumerate(coords):
                     tag = f"<P00> "
+                    position[:3] = [f"{pos:.2f}" for pos in position[:3]]
+                    position[3:] = [str(pos) for pos in position[3:]]
                     row = ' '.join(position)
                     result += tag + row + '\n'
             return result

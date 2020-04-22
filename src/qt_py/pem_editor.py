@@ -3647,7 +3647,7 @@ def main():
     mw = PEMEditorWindow()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Raglan', number=15)
+    pem_files = pg.get_pems(client='Trevali Peru', number=15)
     mw.open_pem_files(pem_files)
     mw.show()
     # mw.import_ri_files()
@@ -3669,10 +3669,10 @@ def main():
     # section.show()
 
     # mw.share_loop_cbox.setChecked(False)
-    mw.output_lin_cbox.setChecked(False)
-    mw.output_log_cbox.setChecked(False)
-    mw.output_step_cbox.setChecked(False)
-    mw.output_section_cbox.setChecked(False)
+    # mw.output_lin_cbox.setChecked(False)
+    # mw.output_log_cbox.setChecked(False)
+    # mw.output_step_cbox.setChecked(False)
+    # mw.output_section_cbox.setChecked(False)
     # mw.output_plan_map_cbox.setChecked(False)
     mw.print_plots()
 

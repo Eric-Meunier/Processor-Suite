@@ -112,9 +112,9 @@ class PEMFile:
         else:
             return None
 
-        if unit == '0':
+        if unit == 0:
             return 'm'
-        elif unit == '1':
+        elif unit == 1:
             return 'ft'
         else:
             raise ValueError(f"{unit} is not 0 or 1")

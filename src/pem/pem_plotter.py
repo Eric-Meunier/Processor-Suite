@@ -25,7 +25,6 @@ import matplotlib.transforms as mtransforms
 import numpy as np
 import six
 import utm
-from adjustText import adjust_text
 from PIL import Image
 from PyQt5 import QtCore, uic
 from PyQt5.QtWidgets import (QProgressBar, QErrorMessage, QApplication, QWidget)
@@ -3653,7 +3652,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Minera')
+    pem_files = pem_getter.get_pems(client='Raglan')
     # map = FoliumMap(pem_files, '17N')
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
