@@ -12,7 +12,9 @@ from timeit import default_timer as timer
 
 import cartopy
 import cartopy.crs as ccrs  # import projections
+import cartopy.io.shapereader as shpreader
 import cartopy.io.img_tiles as cimgt
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import folium
 import math
 # import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
@@ -39,6 +41,7 @@ from matplotlib.transforms import Bbox
 from matplotlib.widgets import RectangleSelector
 from scipy import interpolate as interp
 from scipy import stats
+from shapely.geometry import Point
 
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.gps.gps_editor import GPSEditor
@@ -366,9 +369,9 @@ class PlotMethods:
         survey_type = pem_file.survey_type
         timebase = float(header['Timebase'])
         timebase_freq = ((1 / (timebase / 1000)) / 4)
-        step_flux_timebase = f"({timebase * 2:.2f} ms Step)" if step is True and 'fluxgate' in survey_type.lower() else ''
+        # step_flux_timebase = f"({timebase * 2:.2f} ms Step)" if step is True and 'fluxgate' in survey_type.lower() else ''
 
-        if 'borehole' in survey_type.casefold():
+        if pem_file.is_borehole():
             s_title = 'Hole'
         else:
             s_title = 'Line'
@@ -379,7 +382,7 @@ class PlotMethods:
         plt.figtext(0.550, 0.945, f"{survey_type} Pulse EM Survey", family='cursive', style='italic',
                     fontname='Century Gothic', fontsize=10, ha='center')
 
-        plt.figtext(0.145, 0.935, f"Timebase: {timebase:.2f} ms {step_flux_timebase}\n" +
+        plt.figtext(0.145, 0.935, f"Timebase: {timebase:.2f} ms\n" +
                     f"Base Frequency: {str(round(timebase_freq, 2))} Hz\n" +
                     f"Current: {float(pem_file.tags.get('Current')):.1f} A",
                     fontname='Century Gothic', fontsize=10, va='top')
@@ -682,17 +685,16 @@ class MapPlotMethods:
         return min_x, max_x, min_y, max_y, min_z, max_z
 
     def get_crs(self, crs):
-        self.system = crs.get('Coordinate System')
+        self.system = crs.get('System')
         self.zone = crs.get('Zone')
+        self.north = crs.get('North')
         self.datum = crs.get('Datum')
         if not all([self.system, self.zone, self.datum]):
             raise ValueError('CRS information is invalid.')
         else:
             if self.system == 'UTM':
-                zone_num = int(re.findall('\d+', self.zone)[0])
-                south_hemis = True if 'South' in self.zone else False
                 globe = ccrs.Globe(datum=re.sub(' 19', '', self.datum))
-                return ccrs.UTM(zone_num, southern_hemisphere=south_hemis, globe=globe)
+                return ccrs.UTM(self.zone, southern_hemisphere=not self.north, globe=globe)
             elif self.system == 'Latitude/Longitude':
                 return ccrs.Geodetic()
 
@@ -1039,13 +1041,17 @@ class PlanMap(MapPlotMethods):
                 collar_x, collar_y, collar_z = float(collar[0]), float(collar[1]), float(collar[2])
                 segments = pem_file.get_hole_geometry()
                 if segments and collar:
-                    seg_x, seg_y, seg_z, seg_dist = self.get_3D_borehole_projection(collar, segments, interp_segments=1000)
+                    seg_x, seg_y, seg_z, seg_dist = self.get_3D_borehole_projection(collar, segments,
+                                                                                    interp_segments=1000)
                 else:
                     seg_x, seg_y = None, None
 
                 if collar and collar not in self.collars:
                     self.collars.append(collar)
-                    marker_style = dict(marker='o', color='white', markeredgecolor=self.color, markersize=8)
+                    marker_style = dict(marker='o',
+                                        color='white',
+                                        markeredgecolor=self.color,
+                                        markersize=8)
                     self.collar_handle, = self.ax.plot(collar_x, collar_y,
                                                        fillstyle='full',
                                                        label='Borehole Collar',
@@ -1325,17 +1331,31 @@ class PlanMap(MapPlotMethods):
 
             # Separating lines
             line_1 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
-                                   linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
+                                   linewidth=1,
+                                   color='gray',
+                                   transform=self.ax.transAxes,
+                                   zorder=10)
 
             line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
-                                   linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
+                                   linewidth=1,
+                                   color='gray',
+                                   transform=self.ax.transAxes,
+                                   zorder=10)
 
             line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
-                                   linewidth=.5, color='gray', transform=self.ax.transAxes, zorder=10)
+                                   linewidth=.5,
+                                   color='gray',
+                                   transform=self.ax.transAxes,
+                                   zorder=10)
 
             # Title box rectangle
-            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='k',
-                                          boxstyle="round,pad=0.005", facecolor='white', zorder=9,
+            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
+                                          width=b_width,
+                                          height=b_height,
+                                          edgecolor='k',
+                                          boxstyle="round,pad=0.005",
+                                          facecolor='white',
+                                          zorder=9,
                                           transform=self.ax.transAxes)
 
             client = self.pem_files[0].header.get("Client")
@@ -1351,35 +1371,75 @@ class PlanMap(MapPlotMethods):
             else:
                 survey_text = f"Hole: {hole}    Loop: {', '.join(loops)}"
 
-            coord_sys = f"{self.system}{' Zone ' + self.zone.title() if self.zone else ''}, {self.datum.upper()}"
+            if self.system == 'UTM':
+                north = 'North' if self.north else 'South'
+                coord_sys = f"{self.system} {self.zone} {north}, {self.datum.upper()}"
+            else:
+                coord_sys = f"{self.system}, {self.datum.upper()}"
             scale = f"1:{self.map_scale:,.0f}"
 
             self.ax.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
-                         fontname='Century Gothic', fontsize=11, ha='center', zorder=10, transform=self.ax.transAxes)
+                         fontname='Century Gothic',
+                         fontsize=11,
+                         ha='center',
+                         zorder=10,
+                         transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.020, f"{'Line' if 'surface' in self.survey_type else 'Hole'}"
-            f" and Loop Location Map", family='cursive',
-                         fontname='Century Gothic', fontsize=10, ha='center', zorder=10, transform=self.ax.transAxes)
+            f" and Loop Location Map",
+                         family='cursive',
+                         fontname='Century Gothic',
+                         fontsize=10,
+                         ha='center',
+                         zorder=10,
+                         transform=self.ax.transAxes)
 
-            self.ax.text(center_pos, top_pos - 0.040, f"{self.survey_type.title()} Pulse EM Survey", family='cursive',
+            self.ax.text(center_pos, top_pos - 0.040, f"{self.survey_type.title()} Pulse EM Survey",
+                         family='cursive',
                          style='italic',
-                         fontname='Century Gothic', fontsize=9, ha='center', zorder=10, transform=self.ax.transAxes)
+                         fontname='Century Gothic',
+                         fontsize=9,
+                         ha='center',
+                         zorder=10,
+                         transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
-                         f"{survey_text}", fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
+                         f"{survey_text}",
+                         fontname='Century Gothic',
+                         fontsize=10,
+                         va='top',
+                         ha='center',
+                         zorder=10,
                          transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.124, f"Timebase: {', '.join(self.timebase)} ms\n{get_survey_dates()}",
-                         fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=10,
+                         fontname='Century Gothic',
+                         fontsize=9,
+                         va='top',
+                         ha='center',
+                         zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(left_pos, top_pos - 0.167, f"{coord_sys}", family='cursive', style='italic', color='dimgray',
-                         fontname='Century Gothic', fontsize=8, va='top', ha='left', zorder=10,
-                         transform=self.ax.transAxes)
-
-            self.ax.text(right_pos, top_pos - 0.167, f"Scale {scale}", family='cursive', style='italic',
+            self.ax.text(left_pos, top_pos - 0.167, f"{coord_sys}",
+                         family='cursive',
+                         style='italic',
                          color='dimgray',
-                         fontname='Century Gothic', fontsize=8, va='top', ha='right', zorder=10,
+                         fontname='Century Gothic',
+                         fontsize=8,
+                         va='top',
+                         ha='left',
+                         zorder=10,
+                         transform=self.ax.transAxes)
+
+            self.ax.text(right_pos, top_pos - 0.167, f"Scale {scale}",
+                         family='cursive',
+                         style='italic',
+                         color='dimgray',
+                         fontname='Century Gothic',
+                         fontsize=8,
+                         va='top',
+                         ha='right',
+                         zorder=10,
                          transform=self.ax.transAxes)
 
             self.ax.add_patch(rect)
@@ -1528,9 +1588,15 @@ class GeneralMap(MapPlotMethods):
         self.line_labels = kwargs.get('LineLabels') if kwargs else True
         self.hole_collar_labels = kwargs.get('HoleCollarLabels') if kwargs else True
         self.hole_depth_labels = kwargs.get('HoleDepthLabels') if kwargs else True
-
+        self.crs = None
         if __name__ == '__main__':
-            self.crs = self.get_crs(self.pem_files[0].get_crs())
+            for file in self.pem_files:
+                try:
+                    self.crs = self.get_crs(file.get_crs())
+                    break
+                except ValueError:
+                    print(f"{os.path.basename(file.filepath)} has no valid CRS, moving to the next file...")
+                    pass
         else:
             self.crs = self.get_crs(kwargs.get('CRS')) if kwargs else None
 
@@ -1549,6 +1615,7 @@ class GeneralMap(MapPlotMethods):
                 eastings.insert(0, eastings[-1])  # To close up the loop
                 northings.insert(0, northings[-1])
                 zorder = 4 if not self.moving_loop else 6
+
                 if self.loop_labels:
                     # TODO Probably don't label the loops, but have them all in the legend
                     loop_label = self.ax.text(loop_center[0], loop_center[1],
@@ -1603,7 +1670,7 @@ class GeneralMap(MapPlotMethods):
                                               zorder=5,
                                               color=self.color,
                                               path_effects=label_buffer)
-                self.labels.append(line_label)
+                    self.labels.append(line_label)
                 # For legend
                 self.station_handle, = self.ax.plot(eastings, northings,
                                                     '-o',
@@ -1637,6 +1704,7 @@ class GeneralMap(MapPlotMethods):
                 if self.hole_collar_labels:
                     angle = math.degrees(math.atan2(seg_y[-1] - seg_y[0], seg_x[-1] - seg_x[0]))
                     align = 'left' if angle > 90 or angle < -90 else 'right'
+
                     if self.hole_collar_labels:
                         collar_label = self.ax.text(collar_x, collar_y,
                                                     f"  {pem_file.header.get('LineHole')}  ",
@@ -1686,15 +1754,15 @@ class GeneralMap(MapPlotMethods):
                                     marker=(2, 0, angle),
                                     color=self.color)
 
-                    if self.hole_depth_labels:
-                        bh_depth = self.ax.text(seg_x[-1], seg_y[-1],
-                                                f"  {float(segments[-1][-1]):.0f} m",
-                                                rotation=angle+90,
-                                                fontsize=8,
-                                                color=self.color,
-                                                path_effects=label_buffer,
-                                                zorder=3,
-                                                rotation_mode='anchor')
+                    # if self.hole_depth_labels:
+                    #     bh_depth = self.ax.text(seg_x[-1], seg_y[-1],
+                    #                             f"  {float(segments[-1][-1]):.0f} m",
+                    #                             rotation=angle+90,
+                    #                             fontsize=8,
+                    #                             color=self.color,
+                    #                             path_effects=label_buffer,
+                    #                             zorder=3,
+                    #                             rotation_mode='anchor')
 
         for pem_file in self.pem_files:
             label_buffer = [patheffects.Stroke(linewidth=1.5, foreground='white'), patheffects.Normal()]
@@ -1732,20 +1800,35 @@ class GeneralMap(MapPlotMethods):
                 # Adding the small rectangles
                 for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
                     fill = 'w' if i % 2 == 0 else 'k'
-                    patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height, ec='k', linewidth=line_width,
-                                              facecolor=fill, transform=self.ax.transAxes, zorder=9)
+                    patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
+                                              ec='k',
+                                              linewidth=line_width,
+                                              facecolor=fill,
+                                              transform=self.ax.transAxes,
+                                              zorder=9)
                     self.ax.add_patch(patch)
                 for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
                     fill = 'k' if i % 2 == 0 else 'w'
-                    patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height, ec='k', zorder=9,
-                                              linewidth=line_width, facecolor=fill, transform=self.ax.transAxes)
+                    patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
+                                              ec='k',
+                                              zorder=9,
+                                              linewidth=line_width,
+                                              facecolor=fill,
+                                              transform=self.ax.transAxes)
                     self.ax.add_patch(patch)
 
                 # Adding the big rectangles
-                patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height, ec='k', facecolor='k',
-                                           linewidth=line_width, transform=self.ax.transAxes, zorder=9)
-                patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height, ec='k',
-                                           facecolor='w', linewidth=line_width, transform=self.ax.transAxes, zorder=9)
+                patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
+                                           ec='k',
+                                           facecolor='k',
+                                           linewidth=line_width,
+                                           transform=self.ax.transAxes,
+                                           zorder=9)
+                patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
+                                           ec='k',
+                                           facecolor='w', linewidth=line_width,
+                                           transform=self.ax.transAxes,
+                                           zorder=9)
                 self.ax.add_patch(patch1)
                 self.ax.add_patch(patch2)
 
@@ -1766,14 +1849,28 @@ class GeneralMap(MapPlotMethods):
             right_bar_pos = bar_center + (bar_ax_length / 2)
 
             add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
-            self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
+            self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
+                         ha='center',
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
             self.ax.text(bar_center, bar_height_pos + .009, f"0", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
-            self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
+            self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
+                         ha='center',
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
             self.ax.text(bar_center, bar_height_pos - .018, f"({units})", ha='center',
-                         transform=self.ax.transAxes, path_effects=buffer, fontsize=7, zorder=9)
+                         transform=self.ax.transAxes,
+                         path_effects=buffer,
+                         fontsize=7,
+                         zorder=9)
 
         def set_size():
             """
@@ -1865,17 +1962,31 @@ class GeneralMap(MapPlotMethods):
 
             # Separating lines
             line_1 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
-                                   linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
+                                   linewidth=1,
+                                   color='gray',
+                                   transform=self.ax.transAxes,
+                                   zorder=10)
 
             line_2 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
-                                   linewidth=1, color='gray', transform=self.ax.transAxes, zorder=10)
+                                   linewidth=1,
+                                   color='gray',
+                                   transform=self.ax.transAxes,
+                                   zorder=10)
 
             line_3 = mlines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
-                                   linewidth=.5, color='gray', transform=self.ax.transAxes, zorder=10)
+                                   linewidth=.5,
+                                   color='gray',
+                                   transform=self.ax.transAxes,
+                                   zorder=10)
 
             # Title box rectangle
-            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin), width=b_width, height=b_height, edgecolor='k',
-                                          boxstyle="round,pad=0.005", facecolor='white', zorder=9,
+            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
+                                          width=b_width,
+                                          height=b_height,
+                                          edgecolor='k',
+                                          boxstyle="round,pad=0.005",
+                                          facecolor='white',
+                                          zorder=9,
                                           transform=self.ax.transAxes)
 
             client = self.pem_files[0].header.get("Client")
@@ -1895,31 +2006,67 @@ class GeneralMap(MapPlotMethods):
             scale = f"1:{self.map_scale:,.0f}"
 
             self.ax.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
-                         fontname='Century Gothic', fontsize=11, ha='center', zorder=10, transform=self.ax.transAxes)
+                         fontname='Century Gothic',
+                         fontsize=11,
+                         ha='center',
+                         zorder=10,
+                         transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.020, f"{'Line' if 'surface' in self.survey_type else 'Hole'}"
-            f" and Loop Location Map", family='cursive',
-                         fontname='Century Gothic', fontsize=10, ha='center', zorder=10, transform=self.ax.transAxes)
+            f" and Loop Location Map",
+                         family='cursive',
+                         fontname='Century Gothic',
+                         fontsize=10,
+                         ha='center',
+                         zorder=10,
+                         transform=self.ax.transAxes)
 
-            self.ax.text(center_pos, top_pos - 0.040, f"{self.survey_type.title()} Pulse EM Survey", family='cursive',
+            self.ax.text(center_pos, top_pos - 0.040, f"{self.survey_type.title()} Pulse EM Survey",
+                         family='cursive',
                          style='italic',
-                         fontname='Century Gothic', fontsize=9, ha='center', zorder=10, transform=self.ax.transAxes)
+                         fontname='Century Gothic',
+                         fontsize=9,
+                         ha='center',
+                         zorder=10,
+                         transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
-                         f"{survey_text}", fontname='Century Gothic', fontsize=10, va='top', ha='center', zorder=10,
+                         f"{survey_text}",
+                         fontname='Century Gothic',
+                         fontsize=10,
+                         va='top',
+                         ha='center',
+                         zorder=10,
                          transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.124, f"Timebase: {', '.join(self.timebase)} ms\n{get_survey_dates()}",
-                         fontname='Century Gothic', fontsize=9, va='top', ha='center', zorder=10,
+                         fontname='Century Gothic',
+                         fontsize=9,
+                         va='top',
+                         ha='center',
+                         zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(left_pos, top_pos - 0.167, f"{coord_sys}", family='cursive', style='italic', color='dimgray',
-                         fontname='Century Gothic', fontsize=8, va='top', ha='left', zorder=10,
-                         transform=self.ax.transAxes)
-
-            self.ax.text(right_pos, top_pos - 0.167, f"Scale {scale}", family='cursive', style='italic',
+            self.ax.text(left_pos, top_pos - 0.167, f"{coord_sys}",
+                         family='cursive',
+                         style='italic',
                          color='dimgray',
-                         fontname='Century Gothic', fontsize=8, va='top', ha='right', zorder=10,
+                         fontname='Century Gothic',
+                         fontsize=8,
+                         va='top',
+                         ha='left',
+                         zorder=10,
+                         transform=self.ax.transAxes)
+
+            self.ax.text(right_pos, top_pos - 0.167, f"Scale {scale}",
+                         family='cursive',
+                         style='italic',
+                         color='dimgray',
+                         fontname='Century Gothic',
+                         fontsize=8,
+                         va='top',
+                         ha='right',
+                         zorder=10,
                          transform=self.ax.transAxes)
 
             self.ax.add_patch(rect)
@@ -1971,50 +2118,102 @@ class GeneralMap(MapPlotMethods):
             self.ax.add_line(tick_line2)
 
         def add_inset():
-            zone = self.zone
-            zone_num = int(re.search('\d+', zone).group())
-            north = True if 'n' in zone.lower() else False
+
+            def add_labels():
+                shpfilename = shpreader.natural_earth(resolution='110m',
+                                                      category='cultural',
+                                                      name='admin_0_countries')
+                reader = shpreader.Reader(shpfilename)
+                countries = reader.records()
+
+                xmin, xmax, ymin, ymax = self.ax_sub.get_extent(crs=ccrs.PlateCarree())
+                # Try to constrain the text so it doesn't plot outside of ax_sub
+                xmin = xmin * 1.10 if xmin > 0 else xmin * 0.90
+                xmax = xmax * 0.90 if xmax > 0 else xmax * 1.10
+                ymin = ymin * 1.10 if ymin > 0 else ymin * 0.90
+                ymax = ymax * 0.90 if ymax > 0 else ymax * 1.10
+                center_x, center_y = ((xmax - xmin) / 2) + xmin, ((ymax - ymin) / 2) + ymin
+                point = Point(center_x, center_y)
+                for country in countries:
+                    x = country.geometry.centroid.x
+                    y = country.geometry.centroid.y
+                    if xmin < x < xmax and ymin < y < ymax:
+                    # if country.geometry.contains(point):
+                        name = country.attributes['ABBREV']
+                        # name = country.attributes['POSTAL']
+                        self.ax_sub.text(x, y, name,
+                                         color='k',
+                                         size=7,
+                                         ha='center',
+                                         va='center',
+                                         transform=ccrs.PlateCarree(),
+                                         zorder=2,
+                                         path_effects=[patheffects.withStroke(linewidth=2, foreground="w", alpha=.8)])
+
             xmin, xmax, ymin, ymax = self.ax.get_extent()
             center_x, center_y = ((xmax - xmin) / 2) + xmin, ((ymax - ymin) / 2) + ymin
-            lat, lon = utm.to_latlon(center_x, center_y, zone_num, northern=north)
+            lat, lon = utm.to_latlon(center_x, center_y, self.zone, northern=self.north)
             print(f'Center Easting: {center_x:.0f}, Center Northing: {center_y:.0f}')
             print(f'Center Lat: {lat:.2f}, Center Lon: {lon:.2f}')
 
-            # self.ax_sub = self.fig.add_axes([0.04, 0.03, 0.25, 0.20],
-            #                       projection=ccrs.PlateCarree(central_longitude=lon))
-            self.ax_sub = self.fig.add_axes([0.03, 0.04, 0.25, 0.20],
+            # self.ax_sub = self.fig.add_axes([0.04, 0.03, 0.24, 0.20],
+            #                                 projection=ccrs.PlateCarree(central_longitude=lon))
+            self.ax_sub = self.fig.add_axes([0.012, 0.04, 0.25, 0.25],
                                   projection=ccrs.Orthographic(central_longitude=lon, central_latitude=lat))
             # self.ax_sub = self.fig.add_axes([0.04, 0.03, 0.25, 0.20],
             #                       projection=ccrs.Mollweide(central_longitude=lon))
 
-            print(f"Setting inset map extents to : {lat - 30, lat + 30, lon - 20, lon + 20}")
-            self.ax_sub.set_extent([lon - 35, lon + 35, lat - 20, lat + 20],
-                                   crs=ccrs.PlateCarree())
+            # print(f"Setting inset map extents to : {lat - 30, lat + 30, lon - 20, lon + 20}")
+            # self.ax_sub.set_extent([lon - 35, lon + 35, lat - 20, lat + 20],
+            #                        crs=ccrs.PlateCarree())
+            # self.ax_sub.set_extent([lon - 25, lon + 25, lat - 15, lat + 15],
+            #                        crs=ccrs.PlateCarree())
+
+            self.ax_sub.set_global()
+            self.ax_sub.stock_img()
             self.ax_sub.coastlines()
-            # request = cimgt.Stamen('terrain-background')
-            # request = cimgt.OSM()
-            # self.ax_sub.add_image(request, 6)
-            # self.ax_sub.set_global()
-            self.ax_sub.gridlines(color='black',
-                                  zorder=1,
-                                  linewidth=0.1,
-                                  crs=ccrs.PlateCarree())
-            self.ax_sub.scatter(lon, lat, s=100,
+            # self.ax_sub.add_feature(cartopy.feature.OCEAN, zorder=0)
+            # self.ax_sub.add_feature(cartopy.feature.LAND,
+            #                         zorder=0,
+            #                         edgecolor='black',
+            #                         facecolor='gray',
+            #                         alpha=0.2)
+            self.ax_sub.add_feature(cartopy.feature.BORDERS,
+                                    linewidth=0.4)
+            # other_borders = NaturalEarthFeature(category='cultural',
+            #                                     name='admin_1_states_provinces_lines',
+            #                                     scale='50m',
+            #                                     edgecolors='black',
+            #                                     facecolor='none',
+            #                                     linewidth=0.25)
+            # self.ax_sub.add_feature(other_borders)
+
+            # Plot the X showing the location on the globe
+            self.ax_sub.scatter(lon, lat, s=70,
                                 marker='X',
                                 color='pink',
                                 edgecolors='black',
-                                zorder=2,
+                                zorder=3,
                                 transform=ccrs.PlateCarree())
-            self.ax_sub.stock_img()
-            self.ax_sub.add_feature(cartopy.feature.BORDERS)
-            other_borders = NaturalEarthFeature(category='cultural',
-                                                name='admin_1_states_provinces_lines',
-                                                scale='50m',
-                                                facecolor='none',
-                                                linewidth=0.5)
-            self.ax_sub.add_feature(other_borders, edgecolors='black')
+
+            gl = self.ax_sub.gridlines(color='black',
+                                  zorder=1,
+                                  linewidth=0.1,
+                                  draw_labels=False,
+                                  crs=ccrs.PlateCarree())
+            gl.xformatter = LONGITUDE_FORMATTER
+            gl.yformatter = LATITUDE_FORMATTER
+            gl.xlabels_bottom = False
+            gl.ylabels_left = False
+            gl.xlabel_style = {'size': 7, 'color': 'gray'}
+            gl.ylabel_style = {'size': 7, 'color': 'gray'}
+
+            # add_labels()
 
         def new_get_image(self, tile):
+            """
+            Reimplementation of method in cimgt
+            """
             if six.PY3:
                 from urllib.request import urlopen, Request
             else:
@@ -2065,12 +2264,33 @@ class GeneralMap(MapPlotMethods):
 
         # request = cimgt.Stamen('terrain-background')
         # request = cimgt.MapQuestOpenAerial()
-        # request = cimgt.OSM()
-        # request = cimgt.MapQuestOpenAerial()
-        # self.ax.add_image(request, 8, interpolation='spline36')
+        request = cimgt.OSM()
 
-        lakes = NaturalEarthFeature(category='physical', name='rivers_lake_centerlines', scale='10m', facecolor='blue')
-        self.ax.add_feature(lakes, edgecolor='blue', color='blue', transform=ccrs.Geodetic())
+        coastline = NaturalEarthFeature(category='physical',
+                                        name='coastline',
+                                        scale='10m',
+                                        edgecolor='blue',
+                                        facecolor='none')
+        water = NaturalEarthFeature(category='physical',
+                                    name='rivers_lake_centerlines',
+                                    scale='10m',
+                                    edgecolor=cartopy.feature.COLORS['water'],
+                                    facecolor='none')
+        borders = NaturalEarthFeature(category='cultural',
+                                      name='admin_1_states_provinces_shp',
+                                      scale='10m',
+                                      edgecolor='gray',
+                                      facecolor='none',
+                                      alpha=0.2)
+        # url = 'http://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi'
+        # layer = 'MODIS_Terra_SurfaceReflectance_Bands143'
+        # self.ax.add_feature(cartopy.feature.RIVERS)
+        self.ax.add_feature(coastline)
+        self.ax.add_feature(water)
+        self.ax.add_feature(borders)
+
+        # self.ax.add_image(request, 11, interpolation='spline36')
+        # self.ax.add_wmts(url, layer)
 
         if self.show_legend:
             legend_handles = [handle for handle in
@@ -2079,9 +2299,17 @@ class GeneralMap(MapPlotMethods):
             # Manually add the hole trace legend handle because of the marker angle
             if self.draw_hole_traces:
                 legend_handles.append(
-                    mlines.Line2D([], [], linestyle='--', color=self.color, marker='|', label='Borehole Trace'))
+                    mlines.Line2D([], [],
+                                  linestyle='--',
+                                  color=self.color,
+                                  marker='|',
+                                  label='Borehole Trace'))
 
-            self.ax.legend(handles=legend_handles, title='Legend', loc='lower right', framealpha=1, shadow=True,
+            self.ax.legend(handles=legend_handles,
+                           title='Legend',
+                           loc='lower right',
+                           framealpha=1,
+                           shadow=True,
                            edgecolor='k')
 
     def get_map(self):
@@ -3652,7 +3880,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Raglan')
+    pem_files = pem_getter.get_pems(client='Raglan', number=5)
     # map = FoliumMap(pem_files, '17N')
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
@@ -3660,9 +3888,9 @@ if __name__ == '__main__':
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
     fig = plt.figure(figsize=(11, 8.5), dpi=100)
-    # map = GeneralMap(pem_files, fig).get_map()
+    map = GeneralMap(pem_files, fig).get_map()
     # map = SectionPlot(pem_files, fig).get_section_plot()
-    map = PlanMap(pem_files, fig).get_map()
+    # map = PlanMap(pem_files, fig).get_map()
     map.show()
     # ax = fig.add_subplot()
     # component = 'z'

@@ -249,10 +249,18 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
                 plotz.append(q_proj[2])
 
             # Plot the collar
-            self.ax.plot(plotx[0], plotz[0], 'o', mfc='w', markeredgecolor='dimgray', zorder=10)
+            self.ax.plot(plotx[0], plotz[0], 'o',
+                         mfc='w',
+                         markeredgecolor='dimgray',
+                         zorder=10)
             # Plot the hole section line
-            self.ax.plot(plotx, plotz, color='dimgray', lw=1, zorder=1)
-            self.ax.axhline(y=0, color='dimgray', lw=0.6, zorder=9)
+            self.ax.plot(plotx, plotz,
+                         color='dimgray',
+                         lw=1,
+                         zorder=1)
+            self.ax.axhline(y=0,
+                            color='dimgray', lw=0.6,
+                            zorder=9)
 
         def plot_mag(c1, c2):
             """
@@ -264,8 +272,16 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
             wire_coords = self.get_loop_coords()
             mag_calculator = MagneticFieldCalculator(wire_coords)
             xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)
-            self.ax.quiver(xx, zz, plotx, plotz, color='dimgray', label='Field', pivot='middle', zorder=0,
-                           units='dots', scale=.050, width=.8, headlength=11, headwidth=6)
+            self.ax.quiver(xx, zz, plotx, plotz,
+                           color='dimgray',
+                           label='Field',
+                           pivot='middle',
+                           zorder=0,
+                           units='dots',
+                           scale=.050,
+                           width=.8,
+                           headlength=11,
+                           headwidth=6)
 
         def plot_trace(xs, ys):
             """

@@ -913,8 +913,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         inf_file = inf_files[0]  # Filepath, only accept the first one
         inf_parser = INFParser()
         crs = inf_parser.get_crs(inf_file)
-        coord_sys = crs.get('Coordinate System')
-        coord_zone = crs.get('Coordinate Zone')
+        coord_sys = crs.get('System')
+        coord_zone = crs.get('Zone')
         datum = crs.get('Datum')
         if 'NAD 1983' in datum:
             datum = 'NAD 1983'
@@ -1455,7 +1455,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         """
 
         def get_crs():
-            crs = {'Coordinate System': self.systemCBox.currentText(),
+            crs = {'System': self.systemCBox.currentText(),
                    'Zone': self.zoneCBox.currentText(),
                    'Datum': self.datumCBox.currentText()}
             return crs
@@ -1537,7 +1537,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     self.file_editor.split_channels(pem_file)
 
             if self.output_plan_map_cbox.isChecked():
-                if not all([plot_kwargs['CRS'].get('Coordinate System'), plot_kwargs['CRS'].get('Datum')]):
+                if not all([plot_kwargs['CRS'].get('System'), plot_kwargs['CRS'].get('Datum')]):
                     response = self.message.question(self, 'No CRS',
                                                      'No CRS has been selected. '
                                                      'Do you wish to proceed without a plan map?',

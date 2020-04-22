@@ -126,11 +126,11 @@ class PEMFile:
                 crs = re.split('CRS: ', note)[-1]
                 s = crs.split()
                 system = s[0]
-                zone = f"{s[2]} {s[3]}"[:-1]
-                # north = True if s[3] == 'North,' else False
+                zone = int(s[2])
+                north = True if s[3][:-1] == 'North' else False
                 datum = f"{s[4]} {s[5]}"
-                print(f"CRS is {system} Zone {zone}, {datum}")
-                return {'Coordinate System': system, 'Zone': zone, 'Datum': datum}
+                print(f"CRS is {system} Zone {zone} {'North' if north else 'South'}, {datum}")
+                return {'System': system, 'Zone': zone, 'North': north, 'Datum': datum}
         raise ValueError(f'No CRS found in {os.path.basename(self.filepath)}')
 
     def get_tags(self):
