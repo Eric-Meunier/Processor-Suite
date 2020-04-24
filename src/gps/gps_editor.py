@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import copy
+import pandas as pd
 from functools import reduce
 from math import hypot
 from os.path import isfile, join
@@ -190,13 +191,15 @@ class GPSParser:
         self.re_segment = re.compile(
             r'(?P<Azimuth>-?\d{0,3}\.?\d*)[\s\t,]+(?P<Dip>-?\d{1,3}\.?\d*)[\s\t,]+(?P<SegLength>\d{1,3}\.?\d*)[\s\t,]+(?P<Units>0|1|2)[\s\t,]+(?P<Depth>-?\d{1,4}\.?\d*)')
 
-    def open(self, filepath):  # Not needed, done in PEMEditor.
-        self.filepath = filepath
-
-        with open(self.filepath, 'rt') as in_file:
-            self.file = in_file.read()
-
-        return self.file
+    def open(self, filepath):
+        """
+        Read and return the contents of a text file
+        :param filepath: str: filepath of the file to be read
+        :return: str: contents of the text file
+        """
+        with open(filepath, 'rt') as in_file:
+            file = in_file.read()
+        return file
 
     def convert_to_str(self, file):
         if isinstance(file, list):
@@ -214,39 +217,72 @@ class GPSParser:
             gps_str = file
         return gps_str
 
-    def parse_station_gps(self, gps):
-        gps_str = self.convert_to_str(gps)
-        raw_gps = re.findall(self.re_station_gps, gps_str)
-        raw_gps = list(map(lambda x: list(x), raw_gps))
+    def parse_station_gps(self, filepath):
+        """
+        Parse a text file for station GPS. Station is returned as 0 if no station is found.
+        :param filepath: str: filepath of the text file containing GPS data
+        :return: Pandas DataFrame of the GPS.
+        """
 
-        if raw_gps:
-            for i, row in enumerate(raw_gps):
-                station = row.pop(4)
-                if station:
-                    station = re.findall('-?\d+[NSEWnsew]?', station)[0]
-                    if re.search('[swSW]', station):
-                        raw_gps[i].append('-' + str(re.sub('[swSW]', '', station)))
-                    elif re.search('[neNE]', station):
-                        raw_gps[i].append(str(re.sub('[neNE]', '', station)))
-                    else:
-                        raw_gps[i].append(station)
+        def convert_station(station):
+            """
+            Convert station to integer (-ve for S, W, +ve for E, N)
+            :param station: str: station str
+            :return: str: converted station str
+            """
+            if station:
+                station = re.findall('-?\d+[NSEWnsew]?', station)[0]
+                if re.search('[swSW]', station):
+                    return int(re.sub('[swSW]', '', station)) * -1
+                elif re.search('[neNE]', station):
+                    return int(re.sub('[neNE]', '', station))
                 else:
-                    raw_gps[i].append(9999)
-            return raw_gps
-        else:
-            return []
+                    return int(station)
+            else:
+                return 0
 
-    def parse_loop_gps(self, gps):
-        gps_str = self.convert_to_str(gps)
+        cols = [
+            'Easting',
+            'Northing',
+            'Elevation',
+            'Unit',
+            'Station'
+        ]
+        contents = self.open(filepath)
+        gps_str = self.convert_to_str(contents)
+        raw_gps = re.findall(self.re_station_gps, gps_str)
+        gps = pd.DataFrame(raw_gps, columns=cols)
+        gps.loc[:, 'Easting':'Elevation'] = gps.loc[:, 'Easting':'Elevation'].astype(float)
+        gps['Station'] = gps['Station'].map(convert_station)
+        return gps
+
+    def parse_loop_gps(self, filepath):
+        """
+        Parse a text file for loop GPS.
+        :param filepath: str: filepath of the text file containing GPS data
+        :return: Pandas DataFrame of the GPS.
+        """
+        cols = [
+            'Easting',
+            'Northing',
+            'Elevation',
+            'Unit'
+        ]
+        contents = self.open(filepath)
+        gps_str = self.convert_to_str(contents)
         raw_gps = re.findall(self.re_loop_gps, gps_str)
-        raw_gps = list(map(lambda x: list(x), raw_gps))
-
-        if raw_gps:
-            return raw_gps
-        else:
-            return []
+        gps = pd.DataFrame(raw_gps, columns=cols)
+        gps.loc[:, 'Easting':'Elevation'] = gps.loc[:, 'Easting':'Elevation'].astype(float)
+        return gps
 
     def parse_segments(self, file):
+        cols = [
+            'Azimuth',
+            'Dip',
+            'Unit',
+            'Segment Length',
+            'Depth'
+        ]
         seg_file_str = self.convert_to_str(file)
         raw_seg_file = re.findall(self.re_segment, seg_file_str)
         raw_seg_file = list(map(lambda x: list(x), raw_seg_file))
@@ -256,6 +292,12 @@ class GPSParser:
             return []
 
     def parse_collar_gps(self, file):
+        cols = [
+            'Easting',
+            'Northing',
+            'Elevation',
+            'Unit'
+        ]
         collar_str = self.convert_to_str(file)
         raw_collar_gps = re.findall(self.re_collar_gps, collar_str)
         raw_collar_gps = list(map(lambda x: list(x), raw_collar_gps))
@@ -322,15 +364,13 @@ class GPXEditor:
         pass
 
 
-def main():
+if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     pg = PEMGetter()
     pem_files = pg.get_pems()
     gps_editor = GPSEditor()
     gps_parser = GPSParser()
     gpx_editor = GPXEditor()
-
-    gpx_editor.get_utm(pem_files[0].filepath)
-
-if __name__ == '__main__':
-    main()
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\src\gps\sample_files\45-1.csv'
+    # gpx_editor.get_utm(pem_files[0].filepath)
+    gps_parser.parse_station_gps(file)

@@ -1,57 +1,77 @@
 from src.pem.pem_serializer import PEMSerializer
 import re
 import os
-import logging
+import pandas as pd
 from src.gps.gps_editor import GPSEditor
 
 
 class PEMFile:
     """
-    Class for storing PEM file data for easy access
+    PEM file class
     """
-    # Constructor
-    def __init__(self, tags, loop_coords, line_coords, notes, header, data, components, survey_type, filepath=None):
-        self.tags = tags
+    def __init__(self, tags, loop_coords, line_coords, notes, header, data, filepath=None):
+        self.format = tags.get('Format')
+        self.units = tags.get('Units')
+        self.operator = tags.get('Operator')
+        self.probes = tags.get('Probes')
+        self.current = tags.get('Current')
+        self.loop_dimensions = tags.get('Loop dimensions')
+
+        self.client = header.get('Client')
+        self.grid = header.get('Grid')
+        self.line = header.get('Line')
+        self.loop = header.get('Loop')
+        self.date = header.get('Date')
+        self.survey_type = header.get('Survey type')
+        self.convention = header.get('Convention')
+        self.sync = header.get('Sync')
+        self.timebase = header.get('Timebase')
+        self.ramp = header.get('Ramp')
+        self.number_of_channels = header.get('Number of channels')
+        self.number_of_readings = header.get('Number of readings')
+        self.receiver_number = header.get('Receiver number')
+        self.rx_software_version = header.get('Rx software version')
+        self.rx_software_version_date = header.get('Rx software version date')
+        self.rx_file_name = header.get('Rx file name')
+        self.normalized = header.get('Normalized')
+        self.primary_field_value = header.get('Primary field value')
+        self.coil_area = header.get('Coil area')
+        self.loop_polarity = header.get('Loop polarity')
+        self.channel_times_table = header.get('Channel times table')
+
         self.loop_coords = loop_coords
         self.line_coords = line_coords
         self.notes = notes
-        self.header = header
         self.data = data
-        self.components = components
-        self.survey_type = survey_type
         self.filepath = filepath
+        self.filename = os.path.basename(filepath)
+
         self.unsplit_data = None
         self.unaveraged_data = None
         self.old_filepath = None
-        self.is_merged = False
 
     def is_borehole(self):
-        if 'borehole' in self.survey_type.lower():
+        if 'borehole' in self.get_survey_type().lower():
             return True
         else:
             return False
 
     def is_averaged(self):
-        unique_identifiers = []
-        for reading in self.data:
-            identifier = ''.join([reading['Station'], reading['Component']])
-            if identifier in unique_identifiers:
-                return False
-            else:
-                unique_identifiers.append(identifier)
-        return True
+        data = self.data[['Station', 'Component']]
+        if any(data.duplicated()):
+            return False
+        else:
+            return True
 
     def is_split(self):
-        channel_times = self.header.get('ChannelTimes')
-        num_ontime_channels = len(list(filter(lambda x: x < 0, channel_times)))-1
-
-        if num_ontime_channels == 1:
+        ct = self.channel_times_table
+        if len(ct[ct < 0]) == 2:
             return True
         else:
             return False
 
     def has_collar_gps(self):
-        if 'surface' not in self.survey_type.lower():
+        if self.is_borehole():
             collar = self.get_collar_coords()
             if collar and all(collar):
                 return True
@@ -91,18 +111,18 @@ class PEMFile:
             return False
 
     def has_all_gps(self):
-        if 'borehole' in self.survey_type.lower():
+        if self.is_borehole():
             if not all([self.has_loop_gps(), self.has_collar_gps(), self.has_geometry()]):
                 return False
             else:
                 return True
-        if 'surface' in self.survey_type.lower() or 'squid' in self.survey_type.lower():
+        else:
             if not all([self.has_loop_gps(), self.has_station_gps()]):
                 return False
             else:
                 return True
 
-    def get_units(self):
+    def get_gps_units(self):
         if self.has_loop_gps():
             unit = self.get_loop_coords()[0][-1]
         elif self.has_collar_gps():
@@ -120,8 +140,7 @@ class PEMFile:
             raise ValueError(f"{unit} is not 0 or 1")
 
     def get_crs(self):
-        notes = self.get_notes()
-        for note in notes:
+        for note in self.notes:
             if 'CRS:' in note:
                 crs = re.split('CRS: ', note)[-1]
                 s = crs.split()
@@ -131,10 +150,7 @@ class PEMFile:
                 datum = f"{s[4]} {s[5]}"
                 print(f"CRS is {system} Zone {zone} {'North' if north else 'South'}, {datum}")
                 return {'System': system, 'Zone': zone, 'North': north, 'Datum': datum}
-        raise ValueError(f'No CRS found in {os.path.basename(self.filepath)}')
-
-    def get_tags(self):
-        return self.tags
+        raise ValueError(f'No CRS found in {self.filename}')
 
     def get_loop_coords(self):
         return GPSEditor().get_loop_gps(self.loop_coords)
@@ -157,26 +173,17 @@ class PEMFile:
     def get_notes(self):
         return self.notes
 
-    def get_header(self):
-        return self.header
-
     def get_data(self):
         return self.data
 
     def get_components(self):
-        components = {reading['Component'] for reading in self.data}
-        sorted_components = (sorted(components, reverse=False))
-        if 'Z' in sorted_components:
-            sorted_components.insert(0, sorted_components.pop(sorted_components.index('Z')))
-        return sorted_components
+        components = list(self.data['Component'].unique())
+        if 'Z' in components:
+            components.insert(0, components.pop(components.index('Z')))
+        return components
 
     def get_unique_stations(self):
-        unique_stations = []
-        for reading in self.data:
-            if reading['Station'] not in unique_stations:
-                unique_stations.append(reading['Station'])
-        # unique_stations_list = [station for station in unique_stations]
-        return unique_stations
+        return self.data['Station'].unique()
 
     def get_converted_unique_stations(self):
         return [self.convert_station(station) for station in self.get_unique_stations()]
@@ -225,9 +232,28 @@ class PEMFile:
         return profile_data
 
     def get_survey_type(self):
-        return self.survey_type
 
-    def save_file(self):
+        if self.survey_type.casefold() == 's-coil' or self.survey_type.casefold() == 'surface':
+            survey_type = 'Surface Induction'
+        elif self.survey_type.casefold() == 'borehole':
+            survey_type = 'Borehole Induction'
+        elif self.survey_type.casefold() == 'b-rad':
+            survey_type = 'Borehole Induction'
+        elif self.survey_type.casefold() == 'b-otool':
+            survey_type = 'Borehole Induction'
+        elif self.survey_type.casefold() == 's-flux':
+            survey_type = 'Surface Fluxgate'
+        elif self.survey_type.casefold() == 'bh-flux':
+            survey_type = 'Borehole Fluxgate'
+        elif self.survey_type.casefold() == 's-squid':
+            survey_type = 'SQUID'
+        else:
+            raise ValueError(f"Invalid survey type: {self.survey_type}")
+
+        return survey_type
+
+    def get_serialized_file(self):
         ps = PEMSerializer()
         pem_file = ps.serialize(self)
         return pem_file
+

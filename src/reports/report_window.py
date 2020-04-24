@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QProgressBar, QGridLayout,
                              QInputDialog, QHeaderView, QTableWidget, QErrorMessage, QDialogButtonBox, QVBoxLayout,
                              QLabel, QLineEdit, QPushButton)
-
+from src.pem.pem_plotter import GeneralMap
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -31,12 +31,12 @@ class ReportGenerator(QMainWindow, Ui_ReportGenerator):
 
 
 if __name__ == '__main__':
-    # from src.pem.pem_getter import PEMGetter
+    from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
-    #
-    # pg = PEMGetter()
-    # pem_files = pg.get_pems(client='Raglan', number=15)
-    w = ReportGenerator()
-    w.show()
+
+    pg = PEMGetter()
+    pem_files = pg.get_pems()
+    # w = ReportGenerator()
+    # w.show()
 
     app.exec_()

@@ -316,7 +316,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
 if __name__ == "__main__":
-    # Code to test MainWindow if running main_window.py
+    # Code to test MainWindow if running report_window.py
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
