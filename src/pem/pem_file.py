@@ -1,8 +1,7 @@
 from src.pem.pem_serializer import PEMSerializer
 import re
 import os
-import pandas as pd
-from src.gps.gps_editor import GPSEditor
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeGeometry
 
 
 class PEMFile:
@@ -39,8 +38,12 @@ class PEMFile:
         self.loop_polarity = header.get('Loop polarity')
         self.channel_times_table = header.get('Channel times table')
 
-        self.loop_coords = loop_coords
-        self.line_coords = line_coords
+        self.loop = TransmitterLoop(loop_coords)
+        if self.is_borehole():
+            self.collar = BoreholeCollar(line_coords)
+            self.geometry = BoreholeGeometry(line_coords)
+        else:
+            self.line = SurveyLine(line_coords)
         self.notes = notes
         self.data = data
         self.filepath = filepath
@@ -72,8 +75,7 @@ class PEMFile:
 
     def has_collar_gps(self):
         if self.is_borehole():
-            collar = self.get_collar_coords()
-            if collar and all(collar):
+            if not self.collar.df.empty and all(self.collar.df):
                 return True
             else:
                 return False
@@ -81,23 +83,23 @@ class PEMFile:
             return False
 
     def has_geometry(self):
-        geometry = self.get_hole_geometry()
-        if geometry and all(geometry):
-            return True
+        if self.is_borehole():
+            if not self.geometry.df.empty and all(self.geometry.df):
+                return True
+            else:
+                return False
         else:
             return False
 
     def has_loop_gps(self):
-        loop = self.get_loop_coords()
-        if loop and all(loop):
+        if not self.loop.df.empty and all(self.loop.df):
             return True
         else:
             return False
 
     def has_station_gps(self):
-        if 'surface' in self.survey_type.lower():
-            line = self.get_station_coords()
-            if line and all(line):
+        if not self.is_borehole():
+            if not self.line.df.empty and all(self.line.df):
                 return True
             else:
                 return False
@@ -124,17 +126,17 @@ class PEMFile:
 
     def get_gps_units(self):
         if self.has_loop_gps():
-            unit = self.get_loop_coords()[0][-1]
+            unit = self.loop.df.get('Unit').all()
         elif self.has_collar_gps():
-            unit = self.get_collar_coords()[0][-1]
+            unit = self.collar.df.get('Unit').all()
         elif self.has_station_gps():
-            unit = self.get_line_coords()[0][-2]
+            unit = self.line.df.get('Unit').all()
         else:
             return None
 
-        if unit == 0:
+        if unit == '0':
             return 'm'
-        elif unit == 1:
+        elif unit == '1':
             return 'ft'
         else:
             raise ValueError(f"{unit} is not 0 or 1")
@@ -152,23 +154,29 @@ class PEMFile:
                 return {'System': system, 'Zone': zone, 'North': north, 'Datum': datum}
         raise ValueError(f'No CRS found in {self.filename}')
 
-    def get_loop_coords(self):
-        return GPSEditor().get_loop_gps(self.loop_coords)
+    def get_loop_coords(self, sorted=True):
+        if sorted:
+            return self.loop.get_sorted_loop()
+        else:
+            return self.loop.get_loop()
 
-    def get_station_coords(self):
-        return GPSEditor().get_station_gps(self.line_coords)
+    def get_station_coords(self, sorted=True):
+        if sorted:
+            return self.line.get_sorted_line()
+        else:
+            return self.line.get_line()
 
     def get_collar_coords(self):
-        return GPSEditor().get_collar_gps(self.line_coords)
+        return self.collar.get_collar()
 
     def get_hole_geometry(self):
-        return GPSEditor().get_geometry(self.line_coords)
+        return self.geometry.get_segments()
 
-    def get_line_coords(self):  # All P tags
-        if self.is_borehole():
-            return self.get_collar_coords()+self.get_hole_geometry()
-        else:
-            return self.get_station_coords()
+    # def get_line_coords(self):  # All P tags
+    #     if self.is_borehole():
+    #         return self.get_collar_coords()+self.get_hole_geometry()
+    #     else:
+    #         return self.get_station_coords()
 
     def get_notes(self):
         return self.notes
@@ -178,15 +186,13 @@ class PEMFile:
 
     def get_components(self):
         components = list(self.data['Component'].unique())
-        if 'Z' in components:
-            components.insert(0, components.pop(components.index('Z')))
         return components
 
-    def get_unique_stations(self):
-        return self.data['Station'].unique()
-
-    def get_converted_unique_stations(self):
-        return [self.convert_station(station) for station in self.get_unique_stations()]
+    def get_unique_stations(self, converted=False):
+        if converted:
+            [self.convert_station(station) for station in self.data['Station'].unique()]
+        else:
+            return self.data['Station'].unique()
 
     def convert_station(self, station):
         """

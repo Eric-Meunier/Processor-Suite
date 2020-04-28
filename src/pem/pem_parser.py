@@ -98,34 +98,23 @@ class PEMParser:
             return tags
 
         def parse_loop(file):
-            # Columns for the data frame
-            cols = ['Easting', 'Northing', 'Elevation', 'Unit']
             # Find all re matches
             matches = re.findall(self.re_loop_coords, file)
             # Split the matches up into individual items of a list, ignoring the tags.
-            loop_gps = [match.split()[1:5] for match in matches]
-            # Create a pandas data frame from the split matches if any are found. Otherwise return None
+            loop_gps = '\n'.join([' '.join(match.split()[1:5]) for match in matches])
             if any(loop_gps):
-                loop_df = pd.DataFrame(loop_gps, columns=cols, dtype=float)
-                loop_df = loop_df.astype({'Unit': str})
-                return loop_df
+                return loop_gps
             else:
                 print(f"No loop coordinates found in {os.path.basename(filepath)}")
                 return None
 
         def parse_line(file):
-            # Columns for the data frame
-            cols = ['Easting', 'Northing', 'Elevation', 'Unit', 'Station']
             # Find all re matches
             matches = re.findall(self.re_line_coords, file)
             # Split the matches up into individual items of a list
-            line_gps = [match.split()[1:6] for match in matches]
+            line_gps = '\n'.join([' '.join(match.split()[1:6]) for match in matches])
             if any(line_gps):
-                # Create a pandas data frame from the split matches
-                line_df = pd.DataFrame(line_gps, columns=cols)
-                line_df.loc[:, 'Easting':'Northing'] = line_df.loc[:, 'Easting':'Northing'].astype(float)
-                line_df[['Unit', 'Station']] = line_df[['Unit', 'Station']].astype(str)
-                return line_df
+                return line_gps
             else:
                 print(f"No line coordinates found in {os.path.basename(filepath)}")
                 return None
@@ -187,7 +176,24 @@ class PEMParser:
 
             return header
 
-        def parse_data(file):
+        def parse_data(file, channel_times):
+
+            def rad_to_series(match):
+                index = [
+                    'D',
+                    'Hx',
+                    'gx',
+                    'Hy',
+                    'gy',
+                    'Hz',
+                    'gz',
+                    'T'
+                ]
+                return pd.Series(match.split(), index=index)
+
+            def reading_to_series(match):
+                times = channel_times
+
             cols = [
                 'Station',
                 'Component',
@@ -208,17 +214,19 @@ class PEMParser:
             if not matches:
                 raise ValueError('Error parsing header. No matches were found.')
 
-            # Split the values in the RAD tool and Reading columns to lists
-            for i, match in enumerate(matches):
-                match = list(match)
-                rad_tool = match[-2].split()
-                reading = match[-1].split()
-                match[-2] = np.array(rad_tool)
-                # match[-1] = np.array(reading, dtype=float)
-                match[-1] = pd.DataFrame(reading, columns=['Value'], dtype=float)
-                matches[i] = match
+            # # Split the values in the RAD tool and Reading columns to lists
+            # for i, match in enumerate(matches):
+            #     match = list(match)
+            #     rad_tool = match[-2].split()
+            #     reading = match[-1].split()
+            #     match[-2] = np.array(rad_tool)
+            #     # match[-1] = np.array(reading, dtype=float)
+            #     match[-1] = pd.DataFrame(reading, columns=['Value'], dtype=float)
+            #     matches[i] = match
 
             df = pd.DataFrame(matches, columns=cols)
+            df['RAD tool'] = df['RAD tool'].apply(rad_to_series)
+            df['Reading'] = df['Reading'].apply(reading_to_series)
             df[['Reading index',
                 'Gain',
                 'Coil delay',
@@ -243,13 +251,14 @@ class PEMParser:
         line_coords = parse_line(file)
         notes = parse_notes(file)
         header = parse_header(file)
-        data = parse_data(file)
+        data = parse_data(file, header.get('Channel times table'))
 
         return PEMFile(tags, loop_coords, line_coords, notes, header, data, filepath)
 
 
 if __name__ == '__main__':
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Nantou\PUX-021 ZAv.PEM'
     p = PEMParser()
     file = p.parse(file)
-    print(file.get_crs())
+    print(file.get_serialized_file())
