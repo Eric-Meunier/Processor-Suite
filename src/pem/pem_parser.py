@@ -89,6 +89,11 @@ class PEMParser:
                 if cols[i] == 'Operator':
                     # Remove ~ from the operator name if it exists
                     match.split('~')[0].split()[0]
+                elif cols[i] == 'Units':
+                    if match == 'nanoTesla/sec':
+                        match = 'nT/s'
+                    elif match == 'picoTesla':
+                        match = 'pT'
                 elif cols[i] == 'Probes':
                     probe_cols = ['XY probe number', 'SOA', 'Tool number', 'Tool ID']
                     match = dict(zip(probe_cols, match.split()))
@@ -127,7 +132,81 @@ class PEMParser:
 
             return notes
 
-        def parse_header(file):
+        def parse_header(file, units=None):
+
+            def channel_table(channel_times):
+                """
+                Channel times table data frame with channel start, end, center, width, and whether the channel is
+                to be removed when the file is split
+                :param channel_times: pandas Series: float of each channel time read from a PEM file header.
+                :return: pandas DataFrame
+                """
+
+                def check_removable(row):
+                    """
+                    Return True if the passed channel times is a channel that should be removed when the file is split.
+                    :param row: pandas row from the channel table
+                    :return: bool: True if the channel should be removed, else False.
+                    """
+                    if units == 'nT/s':
+                        if row.Start == -0.0002:
+                            return False
+                        elif row.Start > 0:
+                            return False
+                        else:
+                            return True
+
+                    elif units == 'pT':
+                        if row.Start == -0.002:
+                            return False
+                        elif row.Start > 0:
+                            return False
+                        else:
+                            return True
+                    else:
+                        raise ValueError('Units parsed from tags is invalid')
+
+                def find_last_off_time():
+                    """
+                    Find where the next channel width is less than half the previous channel width, which indicates
+                    the start of the next on-time.
+                    :return: int: Row index of the last off-time channel
+                    """
+                    filt = table['Remove'] == False
+                    for index, row in table[filt][1:-1].iterrows():
+                        next_row = table.loc[index + 1]
+                        if row.Width > (next_row.Width * 2):
+                            print(f"Row {index}")
+                            print(f"Row width: {row.Width}")
+                            print(f"Next row width: {next_row.Width}")
+                            return index + 1
+
+                # Create the channel times table
+                table = pd.DataFrame(columns=['Start', 'End', 'Center', 'Width', 'Remove'])
+                # Convert the times to miliseconds
+                times = channel_times
+
+                # The first number to the second last number are the start times
+                table['Start'] = list(times[:-1])
+                # The second number to the last number are the end times
+                table['End'] = list(times[1:])
+                table['Width'] = table['End'] - table['Start']
+                table['Center'] = (table['Width'] / 2) + table['Start']
+
+                # PEM files seem to always have a repeating channel time as the third number, so the second row
+                # must be removed.
+                table.drop(1, inplace=True)
+                table.reset_index(drop=True, inplace=True)
+
+                # Configure which channels to remove for the first on-time
+                table['Remove'] = table.apply(check_removable, axis=1)
+
+                # Configure each channel after the last off-time channel (only for full waveform)
+                last_off_time_channel = find_last_off_time()
+                if last_off_time_channel:
+                    table.loc[last_off_time_channel:, 'Remove'] = table.loc[52:, 'Remove'].map(lambda x: True)
+                return table
+
             cols = [
                 'Client',
                 'Grid',
@@ -149,10 +228,9 @@ class PEMParser:
                 'Primary field value',
                 'Coil area',
                 'Loop polarity',
-                'Channel times table'
+                'Channel times'
             ]
             header = {}
-
             matches = self.re_header.findall(file)
 
             if not matches:
@@ -169,16 +247,21 @@ class PEMParser:
                     match = float(match)
                 elif cols[i] in ['Number of channels', 'Number of readings', 'Primary field value', 'Coil area']:
                     match = int(match)
-                elif cols[i] == 'Channel times table':
-                    match = pd.Series(match.split(), dtype=float)
+                elif cols[i] == 'Channel times':
+                    match = channel_table(pd.Series(match.split(), dtype=float))
 
                 header[cols[i]] = match
 
             return header
 
-        def parse_data(file, channel_times):
+        def parse_data(file):
 
             def rad_to_series(match):
+                """
+                Create a pandas Series from the RAD tool data
+                :param match: str: re match of the rad tool section
+                :return: pandas Series
+                """
                 index = [
                     'D',
                     'Hx',
@@ -190,9 +273,6 @@ class PEMParser:
                     'T'
                 ]
                 return pd.Series(match.split(), index=index)
-
-            def reading_to_series(match):
-                times = channel_times
 
             cols = [
                 'Station',
@@ -214,19 +294,9 @@ class PEMParser:
             if not matches:
                 raise ValueError('Error parsing header. No matches were found.')
 
-            # # Split the values in the RAD tool and Reading columns to lists
-            # for i, match in enumerate(matches):
-            #     match = list(match)
-            #     rad_tool = match[-2].split()
-            #     reading = match[-1].split()
-            #     match[-2] = np.array(rad_tool)
-            #     # match[-1] = np.array(reading, dtype=float)
-            #     match[-1] = pd.DataFrame(reading, columns=['Value'], dtype=float)
-            #     matches[i] = match
-
             df = pd.DataFrame(matches, columns=cols)
-            df['RAD tool'] = df['RAD tool'].apply(rad_to_series)
-            df['Reading'] = df['Reading'].apply(reading_to_series)
+            df['RAD tool'] = df['RAD tool'].map(rad_to_series)
+            df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float))
             df[['Reading index',
                 'Gain',
                 'Coil delay',
@@ -250,15 +320,16 @@ class PEMParser:
         loop_coords = parse_loop(file)
         line_coords = parse_line(file)
         notes = parse_notes(file)
-        header = parse_header(file)
-        data = parse_data(file, header.get('Channel times table'))
+        header = parse_header(file, units=tags.get('Units'))
+        data = parse_data(file)
 
         return PEMFile(tags, loop_coords, line_coords, notes, header, data, filepath)
 
 
 if __name__ == '__main__':
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Nantou\PUX-021 ZAv.PEM'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Nantou\PUX-021 ZAv.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\L1000N_29.PEM'
     p = PEMParser()
     file = p.parse(file)
     print(file.get_serialized_file())

@@ -104,10 +104,21 @@ class PEMSerializer:
         return '\n'.join(results) + '\n'
 
     def serialize_header(self, pem_file):
+
+        def get_channel_times(table):
+            times = []
+            # Add all the start times
+            table.Start.map(times.append)
+            # Add the repeat of the first end-time (don't know why this is done in PEM files)
+            times.insert(2, table.iloc[1].Start)
+            # Add the last end-time
+            times.append(table.iloc[-1].End)
+            return times
+
         result_list = [str(pem_file.client),
                        str(pem_file.grid),
-                       str(pem_file.line),
-                       str(pem_file.loop),
+                       str(pem_file.line.name),
+                       str(pem_file.loop.name),
                        str(pem_file.date),
                        ' '.join([str(pem_file.survey_type),
                                  str(pem_file.convention),
@@ -132,9 +143,8 @@ class PEMSerializer:
         times_per_line = 7
         cnt = 0
 
-        channel_times = [f'{time:.6f}' for time in pem_file.channel_times_table]
-        # Add the space in front of non-negative numbers
-        channel_times = list(map(lambda x: ' ' + x if not x.startswith('-') else x, channel_times))
+        times = get_channel_times(pem_file.channel_times)
+        channel_times = [f'{time:10.6f}' for time in times]
 
         for i in range(0, len(channel_times), times_per_line):
             line_times = channel_times[i:i+times_per_line]
@@ -142,7 +152,6 @@ class PEMSerializer:
             cnt += 1
 
         result += '$\n'
-
         return result
 
     def serialize_data(self, pem_file):

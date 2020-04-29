@@ -18,8 +18,8 @@ class PEMFile:
 
         self.client = header.get('Client')
         self.grid = header.get('Grid')
-        self.line = header.get('Line')
-        self.loop = header.get('Loop')
+        self.line_name = header.get('Line')
+        self.loop_name = header.get('Loop')
         self.date = header.get('Date')
         self.survey_type = header.get('Survey type')
         self.convention = header.get('Convention')
@@ -36,14 +36,14 @@ class PEMFile:
         self.primary_field_value = header.get('Primary field value')
         self.coil_area = header.get('Coil area')
         self.loop_polarity = header.get('Loop polarity')
-        self.channel_times_table = header.get('Channel times table')
+        self.channel_times = header.get('Channel times')
 
-        self.loop = TransmitterLoop(loop_coords)
+        self.loop = TransmitterLoop(loop_coords, name=self.loop_name)
         if self.is_borehole():
-            self.collar = BoreholeCollar(line_coords)
+            self.collar = BoreholeCollar(line_coords, name=self.line_name)
             self.geometry = BoreholeGeometry(line_coords)
         else:
-            self.line = SurveyLine(line_coords)
+            self.line = SurveyLine(line_coords, name=self.line_name)
         self.notes = notes
         self.data = data
         self.filepath = filepath
@@ -67,7 +67,7 @@ class PEMFile:
             return True
 
     def is_split(self):
-        ct = self.channel_times_table
+        ct = self.channel_times
         if len(ct[ct < 0]) == 2:
             return True
         else:
