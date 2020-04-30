@@ -359,7 +359,7 @@ class GPSParser:
                 else:
                     return int(station)
             else:
-                return 0
+                return np.nan
 
         cols = [
             'Easting',

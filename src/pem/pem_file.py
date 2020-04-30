@@ -1,6 +1,9 @@
 from src.pem.pem_serializer import PEMSerializer
 import re
 import os
+import numpy as np
+import pandas as pd
+import natsort
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeGeometry
 
 
@@ -263,3 +266,64 @@ class PEMFile:
         pem_file = ps.serialize(self)
         return pem_file
 
+    def average(self):
+        """
+        Averages the data of the PEM file object. Uses a weighted average.
+        :return: PEM file object
+        """
+        if self.is_averaged():
+            print(f"{self.filename} is already averaged")
+            return
+
+        def weighted_average(group):
+            """
+            Function to calculate the weighted average reading of a station-component group.
+            :param group: pandas DataFrame of PEM data for a station-component
+            :return: pandas DataFrame of the averaged station-component.
+            """
+            # Create a new data frame
+            new_data_df = pd.DataFrame(columns=group.columns)
+            # Fill the new data frame with the last row of the group
+            new_data_df = new_data_df.append(group.iloc[-1])
+            # Sum the number of stacks column
+            new_data_df['Number of stacks'] = group['Number of stacks'].sum()
+            # Add the weighted average of the readings to the reading column
+            new_data_df['Reading'] = [np.average(group.Reading.to_list(),
+                                                 axis=0,
+                                                 weights=group['Number of stacks'].to_list())]
+            return new_data_df
+
+        # Create a data frame with all data averaged
+        df = self.data.groupby(['Station', 'Component']).apply(weighted_average)
+        # Sort the data frame
+        df = df.reindex(index=natsort.order_by_index(
+                df.index, natsort.index_natsorted(zip(df.Component, df.Station, df['Reading number']))))
+        # Reset the index
+        df.reset_index(drop=True, inplace=True)
+        self.data = df
+        return self
+
+    def split(self):
+        """
+        Remove the on-time channels of the PEM file object
+        :return: PEM file object with split data
+        """
+        def remove_on_time(readings, channel_times):
+            """
+            Remove the on-time channels using the channel times table from the PEM file
+            :param readings: np.array of values for a given reading
+            :param channel_times: pandas DataFrame from the PEM file
+            :return: np.array with only select channels remaining
+            """
+            mask = channel_times.Remove.to_list()
+            mask = [not i for i in mask]  # Invert the bool values to work with the mask correctly
+            return readings[mask]  # Only keep the "True" values from the mask
+
+        # Only keep the select channels from each reading
+        self.data = self.data.Reading.map(lambda x: remove_on_time(x, self.channel_times))
+        # Create a filter and update the channels table
+        filt = self.channel_times.Remove == False
+        self.channel_times = self.channel_times[filt]
+        # Update the PEM file's number of channels attribute
+        self.number_of_channels = len(self.channel_times.index)
+        return self

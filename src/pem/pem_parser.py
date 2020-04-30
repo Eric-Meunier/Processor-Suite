@@ -176,9 +176,6 @@ class PEMParser:
                     for index, row in table[filt][1:-1].iterrows():
                         next_row = table.loc[index + 1]
                         if row.Width > (next_row.Width * 2):
-                            print(f"Row {index}")
-                            print(f"Row width: {row.Width}")
-                            print(f"Next row width: {next_row.Width}")
                             return index + 1
 
                 # Create the channel times table
@@ -254,7 +251,7 @@ class PEMParser:
 
             return header
 
-        def parse_data(file):
+        def parse_data(file, channel_times):
 
             def rad_to_series(match):
                 """
@@ -274,6 +271,10 @@ class PEMParser:
                 ]
                 return pd.Series(match.split(), index=index)
 
+            # def reading_to_df(match, channel_times):
+            #     data_df = channel_times.assign(Reading=match.split())
+            #     return data_df
+
             cols = [
                 'Station',
                 'Component',
@@ -290,12 +291,12 @@ class PEMParser:
             ]
 
             matches = self.re_data.findall(file)
-
             if not matches:
                 raise ValueError('Error parsing header. No matches were found.')
 
             df = pd.DataFrame(matches, columns=cols)
             df['RAD tool'] = df['RAD tool'].map(rad_to_series)
+            # df['Reading'] = df['Reading'].map(lambda x: reading_to_df(x, channel_times))
             df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float))
             df[['Reading index',
                 'Gain',
@@ -320,15 +321,15 @@ class PEMParser:
         line_coords = parse_line(file)
         notes = parse_notes(file)
         header = parse_header(file, units=tags.get('Units'))
-        data = parse_data(file)
+        data = parse_data(file, header.get('Channel times'))
 
         return PEMFile(tags, loop_coords, line_coords, notes, header, data, filepath)
 
 
 if __name__ == '__main__':
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Nantou\PUX-021 ZAv.PEM'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\L1000N_29.PEM'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\L1000N_29.PEM'
     p = PEMParser()
     file = p.parse(file)
-    print(file.get_serialized_file())
+    print(file.split())
