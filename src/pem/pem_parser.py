@@ -309,7 +309,6 @@ class PEMParser:
                                          'Readings per set',
                                          'Reading number']].astype(int)
             df['ZTS'] = df['ZTS'].astype(float)
-            df = pd.DataFrame(matches, columns=cols)
             return df
 
         file = None

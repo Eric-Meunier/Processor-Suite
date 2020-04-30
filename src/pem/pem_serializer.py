@@ -2,6 +2,7 @@
 # logger = Logger(__name__)
 import logging
 import re
+import natsort
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
@@ -16,20 +17,17 @@ class PEMSerializer:
         pass
 
     def serialize_tags(self, pem_file):
-        def tag(id, content):
-            return '<' + id + '> ' + str(content) + '\n'
-
         result = ""
-
-        result += tag('FMT', pem_file.format)
-        result += tag('UNI', pem_file.units)
-        result += tag('OPR', pem_file.operator)
-        result += tag('XYP', ' '.join([pem_file.probes.get('XY probe number'),
-                                       pem_file.probes.get('SOA'),
-                                       pem_file.probes.get('Tool number'),
-                                       pem_file.probes.get('Tool ID')]))
-        result += tag('CUR', pem_file.current)
-        result += tag('TXS', pem_file.loop_dimensions)
+        xyp = ' '.join([pem_file.probes.get('XY probe number'),
+                        pem_file.probes.get('SOA'),
+                        pem_file.probes.get('Tool number'),
+                        pem_file.probes.get('Tool ID')])
+        result += f"<FMT> {pem_file.format}\n"
+        result += f"<UNI> {pem_file.units}\n"
+        result += f"<OPR> {pem_file.operator}\n"
+        result += f"<XYP> {xyp}\n"
+        result += f"<CUR> {pem_file.current}\n"
+        result += f"<TXS> {pem_file.loop_dimensions}"
 
         return result
 
@@ -155,53 +153,43 @@ class PEMSerializer:
         return result
 
     def serialize_data(self, pem_file):
-
-        def atoi(text):
-            return int(text) if text.isdigit() else text
-
-        def natural_keys(text):
-            '''
-            alist.sort(key=natural_keys) sorts in human order
-            http://nedbatchelder.com/blog/200712/human_sorting.html
-            '''
-            return [atoi(c) for c in re.split(r'(\d+)', text)]
-
-        pem_file.data.sort(key=lambda i: (i['Component'], natural_keys(i['Station']), i['ReadingNumber']))
+        df = pem_file.data
+        df = df.reindex(index=natsort.order_by_index(
+                df.index, natsort.index_natsorted(zip(df.Component, df.Station, df['Reading number']))))
 
         def serialize_reading(reading):
             result = ' '.join([reading['Station'],
-                               reading['Component'] + 'R' + reading['ReadingIndex'],
-                               reading['Gain'],
-                               reading['RxType'],
-                               reading['ZTS'],
-                               reading['CoilDelay'],
-                               reading['NumStacks'],
-                               reading['ReadingsPerSet'],
-                               reading['ReadingNumber']]) + '\n'
-            result += reading['RADTool'] + '\n'
+                               reading['Component'] + 'R' + str(reading['Reading index']),
+                               str(reading['Gain']),
+                               reading['Rx type'],
+                               str(reading['ZTS']),
+                               str(reading['Coil delay']),
+                               str(reading['Number of stacks']),
+                               str(reading['Readings per set']),
+                               str(reading['Reading number'])]) + '\n'
+            result += ' '.join(reading['RAD tool']) + '\n'
 
             readings_per_line = 7
             reading_spacing = 15
-            cnt = 0
+            count = 0
 
-            channel_readings = [f'{r:0.6g}' for r in reading['Data']]
-            channel_readings = list(map(lambda x: ' ' + x if not x.startswith('-') else x, channel_readings))
+            channel_readings = [f'{r:8}' for r in reading['Reading']]
 
             for i in range(0, len(channel_readings), readings_per_line):
                 readings = channel_readings[i:i + readings_per_line]
                 result += ' '.join([str(r) + max(0, reading_spacing - len(r))*' ' for r in readings]) + '\n'
-                cnt += 1
+                count += 1
 
             return result + '\n'
 
-        return ''.join([serialize_reading(reading) for reading in data])
+        return ''.join(df.apply(serialize_reading, axis=1))
 
     def serialize(self, pem_file):
         """
+        Create a string of a PEM file to be printed to a text file.
         :param pem_file: PEM_File object
         :return: A string in PEM file format containing the data found inside of pem_file
         """
-
         result = self.serialize_tags(pem_file) + \
                  self.serialize_loop_coords(pem_file) + \
                  self.serialize_line_coords(pem_file) + \
