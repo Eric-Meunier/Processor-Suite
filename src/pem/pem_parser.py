@@ -259,21 +259,59 @@ class PEMParser:
                 :param match: str: re match of the rad tool section
                 :return: pandas Series
                 """
-                index = [
-                    'D',
-                    'Hx',
-                    'gx',
-                    'Hy',
-                    'gy',
-                    'Hz',
-                    'gz',
-                    'T'
-                ]
-                return pd.Series(match.split(), index=index)
+                match = match.split()
+                if match[0] == 'D7':
+                    index = [
+                        'D',
+                        'Hx',
+                        'gx',
+                        'Hy',
+                        'gy',
+                        'Hz',
+                        'gz',
+                        'T'
+                    ]
+                    series = pd.Series(match, index=index)
+                    series[1:] = series[1:].astype(float)
+                    series['Rotated'] = False
+                    return series
 
-            # def reading_to_df(match, channel_times):
-            #     data_df = channel_times.assign(Reading=match.split())
-            #     return data_df
+                elif match[0] == 'D5':
+                    if len(match) == 6:
+                        index = [
+                            'D',
+                            'x',
+                            'y',
+                            'z',
+                            'roll angle',
+                            'dip',
+                        ]
+                        series = pd.Series(match, index=index)
+                        series[1:] = series[1:].astype(float)
+                        series['Rotated'] = False
+                        return series
+
+                    elif len(match) == 8:
+                        index = [
+                            'D',
+                            'x',
+                            'y',
+                            'z',
+                            'roll angle',
+                            'dip',
+                            'R',
+                            'roll angle used'
+                        ]
+                        series = pd.Series(match, index=index)
+                        series[1:5] = series[1:5].astype(float)
+                        series[-1:] = series[-1:].astype(float)
+                        series['Rotated'] = True
+                        return series
+
+                    else:
+                        raise ValueError('Error in the number of the RAD tool values')
+                else:
+                    raise ValueError('Error in D value of RAD tool line. D value is neither D5 nor D7.')
 
             cols = [
                 'Station',
@@ -296,7 +334,6 @@ class PEMParser:
 
             df = pd.DataFrame(matches, columns=cols)
             df['RAD tool'] = df['RAD tool'].map(rad_to_series)
-            # df['Reading'] = df['Reading'].map(lambda x: reading_to_df(x, channel_times))
             df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float))
             df[['Reading index',
                 'Gain',
@@ -329,7 +366,13 @@ class PEMParser:
 if __name__ == '__main__':
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Nantou\PUX-021 ZAv.PEM'
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\L1000N_29.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\L1000N_29.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\BX-081 XY.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\MRC-067 XY.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\BX-081 XYT.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-225G-18 CXYZ (flux).PEM'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-237-19 XYZ (flux).PEM'
     p = PEMParser()
     file = p.parse(file)
-    print(file.split())
+    file.rotate()
+    # print(file.get_serialized_file())

@@ -1,10 +1,4 @@
-# from log import Logger
-# logger = Logger(__name__)
-import logging
-import re
 import natsort
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 
 class PEMSerializer:
@@ -115,8 +109,8 @@ class PEMSerializer:
 
         result_list = [str(pem_file.client),
                        str(pem_file.grid),
-                       str(pem_file.line.name),
-                       str(pem_file.loop.name),
+                       str(pem_file.line_name),
+                       str(pem_file.loop_name),
                        str(pem_file.date),
                        ' '.join([str(pem_file.survey_type),
                                  str(pem_file.convention),
@@ -167,7 +161,7 @@ class PEMSerializer:
                                str(reading['Number of stacks']),
                                str(reading['Readings per set']),
                                str(reading['Reading number'])]) + '\n'
-            result += ' '.join(reading['RAD tool']) + '\n'
+            result += ' '.join(reading['RAD tool'].astype(str).to_list()[:-1]) + '\n'
 
             readings_per_line = 7
             reading_spacing = 15

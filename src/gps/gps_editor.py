@@ -446,8 +446,11 @@ class GPSParser:
             contents = self.open(file)
         else:
             contents = file
-        matched_gps = re.search(self.re_collar_gps, contents).group(0).split()
-        gps = pd.DataFrame([matched_gps], columns=cols)
+        matched_gps = re.findall(self.re_collar_gps, contents)
+        gps = pd.DataFrame(matched_gps, columns=cols)
+        if not gps.empty and len(gps.index) > 1:
+            # Only keep the first match
+            gps = gps.head(1)
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
         return gps
