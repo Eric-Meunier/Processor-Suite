@@ -460,6 +460,7 @@ class PEMFile:
             self.data[filt] = rotated_data
             # Sort the data and remove unrotated readings
             self.data = self.sort_data(self.data.dropna(axis=0))
+            self.probes['SOA'] = str(soa)
             return self
 
     def sort_data(self, data):

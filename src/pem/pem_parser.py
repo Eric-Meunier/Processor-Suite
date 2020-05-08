@@ -383,7 +383,7 @@ if __name__ == '__main__':
     p = PEMParser()
     file = p.parse(file)
     file.split()
-    file.rotate(type='mag', soa=0)
+    file.rotate(type='mag', soa=-5)
     file.average()
     out = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\test.PEM'
     print(file.get_serialized_file(), file=open(out, 'w'))
