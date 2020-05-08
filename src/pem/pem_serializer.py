@@ -101,8 +101,8 @@ class PEMSerializer:
             times = []
             # Add all the start times
             table.Start.map(times.append)
-            # Add the repeat of the first end-time (don't know why this is done in PEM files)
-            times.insert(2, table.iloc[1].Start)
+            # Add the first 'End' since it's the only value not repeated as a start
+            times.insert(1, table.iloc[0].End)
             # Add the last end-time
             times.append(table.iloc[-1].End)
             return times
@@ -136,7 +136,7 @@ class PEMSerializer:
         cnt = 0
 
         times = get_channel_times(pem_file.channel_times)
-        channel_times = [f'{time:10.6f}' for time in times]
+        channel_times = [f'{time:9.6f}' for time in times]
 
         for i in range(0, len(channel_times), times_per_line):
             line_times = channel_times[i:i+times_per_line]
@@ -147,9 +147,7 @@ class PEMSerializer:
         return result
 
     def serialize_data(self, pem_file):
-        df = pem_file.data
-        df = df.reindex(index=natsort.order_by_index(
-                df.index, natsort.index_natsorted(zip(df.Component, df.Station, df['Reading number']))))
+        df = pem_file.sort_data(pem_file.data)
 
         def serialize_reading(reading):
             result = ' '.join([reading['Station'],
@@ -161,13 +159,19 @@ class PEMSerializer:
                                str(reading['Number of stacks']),
                                str(reading['Readings per set']),
                                str(reading['Reading number'])]) + '\n'
-            result += ' '.join(reading['RAD tool'].astype(str).to_list()[:-1]) + '\n'
+            rad = []
+            for r in reading['RAD tool'].to_list()[:-1]:
+                if isinstance(r, float):
+                    rad.append(f"{r:g}")
+                else:
+                    rad.append(r)
+            result += ' '.join(rad) + '\n'
 
             readings_per_line = 7
-            reading_spacing = 15
+            reading_spacing = 12
             count = 0
 
-            channel_readings = [f'{r:8}' for r in reading['Reading']]
+            channel_readings = [f'{r:<8g}' for r in reading['Reading']]
 
             for i in range(0, len(channel_readings), readings_per_line):
                 readings = channel_readings[i:i + readings_per_line]

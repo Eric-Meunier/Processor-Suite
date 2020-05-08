@@ -251,7 +251,7 @@ class PEMParser:
 
             return header
 
-        def parse_data(file, channel_times):
+        def parse_data(file):
 
             def rad_to_series(match):
                 """
@@ -313,6 +313,9 @@ class PEMParser:
                 else:
                     raise ValueError('Error in D value of RAD tool line. D value is neither D5 nor D7.')
 
+            def get_rad_id(match):
+                return ''.join(match.split())
+
             cols = [
                 'Station',
                 'Component',
@@ -333,6 +336,9 @@ class PEMParser:
                 raise ValueError('Error parsing header. No matches were found.')
 
             df = pd.DataFrame(matches, columns=cols)
+            # Create a RAD tool ID number to be used for grouping up readings for probe rotation, since the CDR2
+            # and CDR3 don't count reading numbers the same way.
+            df['RAD ID'] = df['RAD tool'].map(get_rad_id)
             df['RAD tool'] = df['RAD tool'].map(rad_to_series)
             df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float))
             df[['Reading index',
@@ -358,7 +364,7 @@ class PEMParser:
         line_coords = parse_line(file)
         notes = parse_notes(file)
         header = parse_header(file, units=tags.get('Units'))
-        data = parse_data(file, header.get('Channel times'))
+        data = parse_data(file)
 
         return PEMFile(tags, loop_coords, line_coords, notes, header, data, filepath)
 
@@ -370,9 +376,14 @@ if __name__ == '__main__':
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\BX-081 XY.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\MRC-067 XY.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\BX-081 XYT.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\MX-198 XY.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-225G-18 CXYZ (flux).PEM'
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-237-19 XYZ (flux).PEM'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\PU-340 XY.PEM'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-237-19 XYZ (flux).PEM'
     p = PEMParser()
     file = p.parse(file)
-    file.rotate()
-    # print(file.get_serialized_file())
+    file.split()
+    file.rotate(type='mag', soa=0)
+    file.average()
+    out = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\test.PEM'
+    print(file.get_serialized_file(), file=open(out, 'w'))

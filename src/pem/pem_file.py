@@ -6,6 +6,7 @@ import pandas as pd
 import natsort
 import math
 import time
+import copy
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeGeometry
 
 
@@ -326,7 +327,7 @@ class PEMFile:
             return readings[mask]  # Only keep the "True" values from the mask
 
         # Only keep the select channels from each reading
-        self.data = self.data.Reading.map(lambda x: remove_on_time(x, self.channel_times))
+        self.data.Reading = self.data.Reading.map(lambda x: remove_on_time(x, self.channel_times))
         # Create a filter and update the channels table
         filt = self.channel_times.Remove == False
         self.channel_times = self.channel_times[filt]
@@ -363,57 +364,54 @@ class PEMFile:
                 if row.Component.nunique() < 2:
                     r = row.iloc[0]
                     print(f"Removing {r.Station} - {r.Component}, reading {r['Reading number']}, index {r['Reading index']} since it has no pairing X/Y reading")
-                    return
+                    # Set the station name as NaN so it can be easily removed later.
+                    row['Station'] = np.nan
+                    return row
 
-                # assert row.iloc[0]['RAD tool'].equals(row.iloc[1]['RAD tool']), 'The two RAD tool arrays are not the same'
                 assert len(np.unique(row['RAD tool'].map(lambda x: x.to_list()))) == 1, 'More than 1 unique RAD tool set'
                 print(f"Number of unique RAD tool sets: {len(np.unique(row['RAD tool'].map(lambda x: x.to_list())))}")
 
-                def rotate_x(x, y_pair, roll_angle, new_rad_tool):
+                def rotate_x(x_values, y_pair, roll_angle):
                     """
                     Rotate the X data of a reading
-                    :param x: pandas DataFrame: data frame of the x reading to rotate
-                    :param y_pair: pandas DataFrame: data of the pair y reading
+                    Formula: X' = Xcos(roll) - Ysin(roll)
+                    :param x: list: list of x readings to rotated
+                    :param y_pair: list: list of paired y reading
                     :param roll_angle: float: calculated roll angle
-                    :param new_rad_tool: pandas Series: new rad tool series for the reading
-                    :return: pandas DataFrame: x data frame with rotated reading and new rad tool
+                    :return: list: rotated x values
                     """
-                    x_values = x.Reading
-                    y_values = y_pair.Reading
-                    rotated_x = [x * math.cos(roll_angle) - y * math.sin(roll_angle) for (x, y) in zip(x_values, y_values)]
-                    x.Reading = rotated_x
-                    x['RAD tool'] = new_rad_tool
-                    return x
+                    rotated_x = [x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)) for (x, y) in zip(x_values, y_pair)]
+                    return np.array(rotated_x, dtype=float)
 
-                def rotate_y(y, x_pair, roll_angle, new_rad_tool):
+                def rotate_y(y_values, x_pair, roll_angle):
                     """
                     Rotate the Y data of a reading
-                    :param y: pandas DataFrame: data frame of the x reading to rotate
-                    :param x_pair: pandas DataFrame: data of the pair y reading
+                    Y' = Xsin(roll) + Ycos(roll)
+                    :param y: list: list of y readings to rotated
+                    :param x_pair: list: list of paired x reading
                     :param roll_angle: float: calculated roll angle
-                    :param new_rad_tool: pandas Series: new rad tool series for the reading
-                    :return: pandas DataFrame: x data frame with rotated reading and new rad tool
+                    :return: list: rotated y values
                     """
-                    x_values = x_pair.Reading
-                    y_values = y.Reading
-                    rotated_y = [x * math.sin(roll_angle) - y * math.sin(roll_angle) for (x, y) in zip(x_values, y_values)]
-                    y.Reading = rotated_y
-                    y['RAD tool'] = new_rad_tool
-                    return y
+                    rotated_y = [x * math.sin(math.radians(roll_angle)) + y * math.cos(math.radians(roll_angle)) for (x, y) in zip(x_pair, y_values)]
+                    return np.array(rotated_y, dtype=float)
 
-                x_filt = row['Component'] == 'X'
-                y_filt = row['Component'] == 'Y'
+                x_data = row[row['Component'] == 'X']
+                y_data = row[row['Component'] == 'Y']
                 # Save the first reading of each component to be used a the 'pair' reading for rotation
-                x_reading = row[x_filt].iloc[0]
-                y_reading = row[y_filt].iloc[0]
+                x_pair = x_data.iloc[0].Reading
+                y_pair = y_data.iloc[0].Reading
 
                 rad = row.iloc[0]['RAD tool']
                 # Accelerometer rotation
                 if type == 'acc':
-                    theta = math.atan2(rad.gz, rad.gy)
+                    theta = math.atan2(rad.gy, rad.gz)
                     cc_roll_angle = 360 - math.degrees(theta) if rad.gy < 0 else math.degrees(theta)
                     roll_angle = 360 - cc_roll_angle if rad.gy > 0 else cc_roll_angle
+                    if roll_angle >= 360:
+                        roll_angle = roll_angle - 360
+                    # Calculate the dip
                     dip = math.degrees(math.acos(rad.gx/math.sqrt((rad.gx ** 2) + (rad.gy ** 2) + (rad.gz ** 2)))) - 90
+                    # Create the new rad tool series
                     new_rad_tool = pd.Series({'D': 'D5',
                                               'gz': rad.gz,
                                               'gx': rad.gx,
@@ -423,11 +421,15 @@ class PEMFile:
                                               'R': 'R3',
                                               'Roll angle SOA': roll_angle - soa,
                                               'Rotated': True})
+                    print(f"Station {row.iloc[0].Station} roll angle: {roll_angle:.2f}")
 
+                # Magnetometer rotation
                 elif type == 'mag':
-                    theta = math.atan2(-rad.Hz, -rad.Hy)
+                    theta = math.atan2(-rad.Hy, -rad.Hz)
                     cc_roll_angle = math.degrees(theta)
                     roll_angle = 360 - cc_roll_angle if rad.Hy < 0 else cc_roll_angle
+                    if roll_angle > 360:
+                        roll_angle = roll_angle - 360
                     dip = -90.  # The dip is assumed to be 90°
                     new_rad_tool = pd.Series({'D': 'D5',
                                               'Hz': rad.Hz,
@@ -441,18 +443,23 @@ class PEMFile:
                 else:
                     raise ValueError(f'"{type}" is an invalid rotation method')
 
-                row[x_filt] = row[x_filt].apply(lambda i: rotate_x(i, y_reading, roll_angle, new_rad_tool), axis=1)
-                row[y_filt] = row[y_filt].apply(lambda i: rotate_y(i, x_reading, roll_angle, new_rad_tool), axis=1)
+                x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle + soa))
+                y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle + soa))
+                row = x_data.append(y_data)
+                # Add the new rad tool series to the row
+                row['RAD tool'] = row['RAD tool'].map(lambda p: new_rad_tool)
                 return row
 
             # Create a filter for X and Y data only
             filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
             st = time.time()
-            rotated_data = self.data[filt].groupby(['Station', 'Reading index']).apply(lambda i: rotate_data(i, type))
+            rotated_data = self.data[filt].groupby(['Station', 'RAD ID'],
+                                                   as_index=False,
+                                                   group_keys=False).apply(lambda i: rotate_data(i, type))
             print(time.time() - st)
-            rotated_data = self.sort_data(rotated_data)
             self.data[filt] = rotated_data
-            self.data.dropna()
+            # Sort the data and remove unrotated readings
+            self.data = self.sort_data(self.data.dropna(axis=0))
             return self
 
     def sort_data(self, data):
