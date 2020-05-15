@@ -1,28 +1,16 @@
-from src.pem.pem_parser import PEMParser, PEMFile
+from src.pem.legacy.pem_parser import PEMParser
 import matplotlib as mpl
-import matplotlib.style as mplstyle
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib import patches
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QVBoxLayout, QSizePolicy, QMessageBox, QWidget, QPushButton
-from matplotlib.dates import date2num, DateConverter, num2date
-from matplotlib.container import ErrorbarContainer
-from collections import OrderedDict
 import numpy as np
 import math
 import re
 import os
-import sys
 from scipy import interpolate
 from scipy import stats
 import logging
-import warnings
 import cProfile
-import time
-from datetime import datetime
 
 # plt.style.use('seaborn-white')
 # plt.style.use('bmh')

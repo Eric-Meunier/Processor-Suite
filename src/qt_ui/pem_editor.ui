@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1029</width>
+    <width>1102</width>
     <height>907</height>
    </rect>
   </property>
@@ -39,7 +39,7 @@
        <enum>QTabWidget::West</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="main_frame_file_tab">
        <attribute name="title">
@@ -69,6 +69,17 @@
            <set>Qt::AlignCenter</set>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_8">
+           <item>
+            <widget class="QCheckBox" name="auto_sort_files_cbox">
+             <property name="text">
+              <string>Automatically Sort
+PEM Files on Import</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
            <item>
             <widget class="QCheckBox" name="auto_create_backup_files_cbox">
              <property name="text">
@@ -472,7 +483,7 @@ All Repeat Stations</string>
             </widget>
            </item>
            <item row="0" column="0" colspan="2">
-            <widget class="QCheckBox" name="share_range_checkbox">
+            <widget class="QCheckBox" name="share_range_cbox">
              <property name="text">
               <string>Share Range</string>
              </property>
@@ -489,7 +500,7 @@ All Repeat Stations</string>
             </widget>
            </item>
            <item row="5" column="0" colspan="2">
-            <widget class="QCheckBox" name="hide_gaps_checkbox">
+            <widget class="QCheckBox" name="hide_gaps_cbox">
              <property name="text">
               <string>Hide Data Gaps</string>
              </property>
@@ -868,6 +879,84 @@ All Repeat Stations</string>
       <attribute name="horizontalHeaderHighlightSections">
        <bool>false</bool>
       </attribute>
+      <attribute name="horizontalHeaderStretchLastSection">
+       <bool>false</bool>
+      </attribute>
+      <column>
+       <property name="text">
+        <string>File</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Date</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Client</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Grid</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Line/Hole</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Loop</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Current</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Coil
+Area</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>First
+Station</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Last
+Station</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Averaged</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Split</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Suffix
+Warnings</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Repeat
+Stations</string>
+       </property>
+      </column>
      </widget>
     </item>
    </layout>
@@ -877,10 +966,66 @@ All Repeat Stations</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1029</width>
+     <width>1102</width>
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionOpenFile"/>
+    <addaction name="separator"/>
+    <addaction name="actionSaveFiles"/>
+    <addaction name="actionSave_Files_as_XYZ"/>
+    <addaction name="actionExport_Files"/>
+    <addaction name="actionExport_Final_PEM_Files"/>
+    <addaction name="separator"/>
+    <addaction name="actionBackup_Files"/>
+    <addaction name="actionImport_RI_Files"/>
+    <addaction name="actionPrint_Plots_to_PDF"/>
+   </widget>
+   <widget class="QMenu" name="menuPEM">
+    <property name="title">
+     <string>PEM</string>
+    </property>
+    <addaction name="actionRename_All_Files"/>
+    <addaction name="actionRename_All_Lines_Holes"/>
+    <addaction name="separator"/>
+    <addaction name="actionAverage_All_PEM_Files"/>
+    <addaction name="actionSplit_All_PEM_Files"/>
+    <addaction name="separator"/>
+    <addaction name="actionScale_All_Currents"/>
+    <addaction name="actionChange_All_Coil_Areas"/>
+   </widget>
+   <widget class="QMenu" name="menuGPS">
+    <property name="title">
+     <string>GPS</string>
+    </property>
+    <addaction name="actionSave_as_KMZ"/>
+    <addaction name="actionExport_All_GPS"/>
+   </widget>
+   <widget class="QMenu" name="menuMap">
+    <property name="title">
+     <string>Map</string>
+    </property>
+    <addaction name="actionPlan_Map"/>
+    <addaction name="action3D_Map"/>
+    <addaction name="actionContour_Map"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionLoop_Planner"/>
+    <addaction name="actionGrid_Planner"/>
+    <addaction name="actionConvert_Timebase_Frequency"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuPEM"/>
+   <addaction name="menuGPS"/>
+   <addaction name="menuMap"/>
+   <addaction name="menuTools"/>
   </widget>
   <widget class="QDockWidget" name="plotsDockWidget">
    <property name="sizePolicy">
@@ -957,6 +1102,126 @@ All Repeat Stations</string>
     </layout>
    </widget>
   </widget>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open...</string>
+   </property>
+  </action>
+  <action name="actionSave_Files">
+   <property name="text">
+    <string>Save Files</string>
+   </property>
+  </action>
+  <action name="actionOpenFile">
+   <property name="text">
+    <string>Open PEM Files...</string>
+   </property>
+  </action>
+  <action name="actionSaveFiles">
+   <property name="text">
+    <string>Save Files</string>
+   </property>
+  </action>
+  <action name="actionSave_Files_as_XYZ">
+   <property name="text">
+    <string>Save Files as XYZ</string>
+   </property>
+  </action>
+  <action name="actionExport_Files">
+   <property name="text">
+    <string>Export Files...</string>
+   </property>
+  </action>
+  <action name="actionExport_Final_PEM_Files">
+   <property name="text">
+    <string>Export Final PEM Files...</string>
+   </property>
+  </action>
+  <action name="actionBackup_Files">
+   <property name="text">
+    <string>Backup Files</string>
+   </property>
+  </action>
+  <action name="actionImport_RI_Files">
+   <property name="text">
+    <string>Import RI Files</string>
+   </property>
+  </action>
+  <action name="actionPrint_Plots_to_PDF">
+   <property name="text">
+    <string>Print Plots to PDF</string>
+   </property>
+  </action>
+  <action name="actionRename_All_Files">
+   <property name="text">
+    <string>Rename All Files</string>
+   </property>
+  </action>
+  <action name="actionRename_All_Lines_Holes">
+   <property name="text">
+    <string>Rename All Lines/Holes</string>
+   </property>
+  </action>
+  <action name="actionAverage_All_PEM_Files">
+   <property name="text">
+    <string>Average All PEM Files</string>
+   </property>
+  </action>
+  <action name="actionSplit_All_PEM_Files">
+   <property name="text">
+    <string>Split All PEM Files</string>
+   </property>
+  </action>
+  <action name="actionScale_All_Currents">
+   <property name="text">
+    <string>Scale All Currents</string>
+   </property>
+  </action>
+  <action name="actionChange_All_Coil_Areas">
+   <property name="text">
+    <string>Change All Coil Areas</string>
+   </property>
+  </action>
+  <action name="actionSave_as_KMZ">
+   <property name="text">
+    <string>Save as KMZ</string>
+   </property>
+  </action>
+  <action name="actionExport_All_GPS">
+   <property name="text">
+    <string>Export All GPS</string>
+   </property>
+  </action>
+  <action name="actionPlan_Map">
+   <property name="text">
+    <string>Plan Map</string>
+   </property>
+  </action>
+  <action name="action3D_Map">
+   <property name="text">
+    <string>3D Map</string>
+   </property>
+  </action>
+  <action name="actionContour_Map">
+   <property name="text">
+    <string>Contour Map</string>
+   </property>
+  </action>
+  <action name="actionLoop_Planner">
+   <property name="text">
+    <string>Loop Planner</string>
+   </property>
+  </action>
+  <action name="actionGrid_Planner">
+   <property name="text">
+    <string>Grid Planner</string>
+   </property>
+  </action>
+  <action name="actionConvert_Timebase_Frequency">
+   <property name="text">
+    <string>Convert Timebase/Frequency</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>share_client_cbox</tabstop>
@@ -980,11 +1245,11 @@ All Repeat Stations</string>
   <tabstop>reverseAllXButton</tabstop>
   <tabstop>reverseAllYButton</tabstop>
   <tabstop>rename_all_repeat_stations_btn</tabstop>
-  <tabstop>share_range_checkbox</tabstop>
+  <tabstop>share_range_cbox</tabstop>
   <tabstop>max_range_edit</tabstop>
   <tabstop>min_range_edit</tabstop>
   <tabstop>reset_range_btn</tabstop>
-  <tabstop>hide_gaps_checkbox</tabstop>
+  <tabstop>hide_gaps_cbox</tabstop>
   <tabstop>movingLoopCBox</tabstop>
   <tabstop>show_loop_anno_checkbox</tabstop>
   <tabstop>plan_map_options_btn</tabstop>

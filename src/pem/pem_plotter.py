@@ -44,7 +44,7 @@ from scipy import stats
 from shapely.geometry import Point
 
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.gps.gps_editor import GPSEditor
+# from src.gps.gps_editor import GPSEditor
 from src.pem.pem_planner import FoliumWindow
 
 if getattr(sys, 'frozen', False):

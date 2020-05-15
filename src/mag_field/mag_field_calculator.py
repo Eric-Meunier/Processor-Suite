@@ -5,7 +5,7 @@ from timeit import default_timer as timer
 
 class MagneticFieldCalculator:
     """
-    Class that makes the magnetic field calculations for section vector plots.
+    Class that calculates magnetic field for a given transmitter loop.
     :param: pem_file: PEMFile object
     """
 
@@ -34,7 +34,7 @@ class MagneticFieldCalculator:
 
     def calc_total_field(self, x, y, z, I=1):
         """
-        Calculate the magnetic field at position pos with current I using Biot-Savart Law. Uses the geometry of
+        Calculate the magnetic field at position (x, y, z) with current I using Biot-Savart Law. Uses the geometry of
         wire_coords for the wire.
         :param x, y, z: Position at which the magnetic field is calculated
         :param I: float: Current (Amps)

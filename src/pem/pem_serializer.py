@@ -119,7 +119,7 @@ class PEMSerializer:
                                  str(pem_file.ramp),
                                  str(pem_file.number_of_channels),
                                  str(pem_file.number_of_readings)]),
-                       ' '.join([str(pem_file.receiver_number),
+                       ' '.join([str(pem_file.rx_number),
                                  str(pem_file.rx_software_version),
                                  str(pem_file.rx_software_version_date),
                                  str(pem_file.rx_file_name),

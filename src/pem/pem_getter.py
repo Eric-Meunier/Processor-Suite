@@ -1,4 +1,4 @@
-from src.pem.pem_parser import PEMParser
+from src.pem.legacy.pem_parser import PEMParser
 import os
 
 

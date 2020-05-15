@@ -68,8 +68,11 @@ class TransmitterLoop:
         """
         return self.df['Easting'].sum() / self.df.shape[0], self.df['Northing'].sum() / self.df.shape[0]
 
-    def get_loop(self):
-        return self.df
+    def get_loop(self, sorted=True):
+        if sorted:
+            return self.get_sorted_loop()
+        else:
+            return self.df
 
 
 class SurveyLine:
@@ -103,25 +106,29 @@ class SurveyLine:
 
         df = copy.deepcopy(self.df)
 
-        # Create a 2D grid of calculated distances between each point
-        distances = spatial.distance.cdist(df.loc[:, 'Easting':'Northing'], df.loc[:, 'Easting':'Northing'],
-                                           metric='euclidean')
-        # Take the index of the largest distance
-        index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
-        end_point = df.iloc[index_of_max]
+        if not df.empty:
+            # Create a 2D grid of calculated distances between each point
+            distances = spatial.distance.cdist(df.loc[:, 'Easting':'Northing'], df.loc[:, 'Easting':'Northing'],
+                                               metric='euclidean')
+            # Take the index of the largest distance
+            index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
+            end_point = df.iloc[index_of_max]
 
-        # Calculate the distance from each point to the chosen end_point and add it as a column
-        df['Distance'] = df.apply(
-            lambda x: calc_distance((x.Easting, x.Northing), end_point),
-            axis=1).astype(float)
+            # Calculate the distance from each point to the chosen end_point and add it as a column
+            df['Distance'] = df.apply(
+                lambda x: calc_distance((x.Easting, x.Northing), end_point),
+                axis=1).astype(float)
 
-        # Sort by the distance column, then remove it
-        df.sort_values(by='Distance', inplace=True, ascending=False)
-        df.drop('Distance', axis=1, inplace=True)
+            # Sort by the distance column, then remove it
+            df.sort_values(by='Distance', inplace=True, ascending=False)
+            df.drop('Distance', axis=1, inplace=True)
         return df
 
-    def get_line(self):
-        return self.df
+    def get_line(self, sorted=True):
+        if sorted:
+            return self.get_sorted_line()
+        else:
+            return self.df
 
 
 class BoreholeCollar:

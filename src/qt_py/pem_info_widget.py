@@ -1,20 +1,20 @@
-import logging
 import math
 import os
 import re
-import statistics
 import sys
-import numpy as np
+import natsort
+import pandas as pd
+from copy import deepcopy
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
-                             QFileDialog, QErrorMessage)
-from collections import Counter
-from src.gps.gps_editor import GPSParser, GPSEditor
+from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
+                             QFileDialog, QErrorMessage, QHeaderView, QTableView)
+from PyQt5.QtCore import QAbstractTableModel, Qt
+from collections import Counter, OrderedDict
+from src.gps.gps_editor import GPSParser
 from src.pem.pem_file_editor import PEMFileEditor
 from src.ri.ri_file import RIFile
 from src.qt_py.custom_tables import CustomTableWidgetItem
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -32,14 +32,6 @@ else:
 Ui_PEMInfoWidget, QtBaseClass = uic.loadUiType(pemInfoWidgetCreatorFile)
 
 
-def alpha_num_sort(string):
-    """ Returns all numbers on 5 digits to let sort the string with numeric order.
-    Ex: alphaNumOrder("a6b12.125")  ==> "a00006b00012.00125"
-    """
-    return ''.join([format(int(x), '05d') if x.isdigit()
-                    else x for x in re.split(r'(\d+)', string)])
-
-
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     refresh_tables_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to refresh its main table.
 
@@ -47,9 +39,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         super().__init__()
         self.parent = None
         self.pem_file = None
-        self.survey_type = None
         self.ri_file = None
-        self.gps_editor = GPSEditor()
         self.gps_parser = GPSParser()
         self.file_editor = PEMFileEditor()
         self.ri_editor = RIFile()
@@ -57,12 +47,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.error = QErrorMessage()
         self.message = QMessageBox()
         self.message.setIcon(QMessageBox.Information)
+
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
-
         self.num_repeat_stations = 0
         self.suffix_warnings = 0
+
+        self.station_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
+        self.loop_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units']
+        self.dataTable_columns = ['Station', 'Component', 'Reading index', 'Reading number', 'Number of stacks', 'ZTS']
 
         self.setupUi(self)
         self.initActions()
@@ -134,9 +128,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.riTable.remove_ri_file_action.setShortcut('Shift+Del')
         self.riTable.remove_ri_file_action.setEnabled(False)
 
-        # self.stationGPSTable.cull_gps_action = QAction("&Cull GPS", self)
-        # self.stationGPSTable.cull_gps_action.triggered.connect(self.cull_station_gps)
-
     def initSignals(self):
         # Buttons
         self.sortStationsButton.clicked.connect(self.sort_station_gps)
@@ -178,9 +169,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.shiftStationGPSSpinbox.valueChanged.connect(self.shift_gps_station_numbers)
         self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elev)
         self.shiftStationSpinbox.valueChanged.connect(self.shift_station_numbers)
-
-        # self.format_station_gps_button.clicked.connect(self.format_station_gps_text)
-        # self.format_loop_gps_button.clicked.connect(self.format_loop_gps_text)
 
     def contextMenuEvent(self, event):
         if self.stationGPSTable.underMouse():
@@ -313,18 +301,23 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Action of opening a PEM file.
         :param pem_file: PEMFile object.
         :param parent: parent widget (PEMEditor)
-        :return: None
+        :return: PEMFileInfoWidget object
         """
         print(f'PEMFileInfoWidget - Opening PEM File {os.path.basename(pem_file.filepath)}')
         self.pem_file = pem_file
         self.parent = parent
-        self.survey_type = self.pem_file.survey_type
-        if self.survey_type == 'UNDEF_SURV':
-            raise ValueError('Invalid survey type')
+        self.initTables()
+        if self.pem_file.is_borehole():
+            self.fill_gps_table(self.pem_file.collar.get_collar(), self.collarGPSTable)
+            self.fill_gps_table(self.pem_file.geometry.get_segments(), self.geometryTable)
         else:
-            self.initTables()
-            self.fill_info()
-            return self
+            self.fill_gps_table(self.pem_file.line.get_line(sorted=self.parent.autoSortStationsCheckbox.isChecked()),
+                                self.stationGPSTable)
+        self.fill_info_tab()
+        self.fill_gps_table(self.pem_file.loop.get_loop(sorted=self.parent.autoSortLoopsCheckbox.isChecked()),
+                            self.loopGPSTable)
+        self.fill_data_table()
+        return self
 
     def open_ri_file(self, filepath):
         """
@@ -332,8 +325,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param filepath: Filepath of the RI file.
         :return: None
         """
-        logging.info(f'PEMFileInfoWidget - Opening RI file {os.path.basename(filepath)}')
-
         def make_ri_table():
             columns = self.ri_file.columns
             self.riTable.setColumnCount(len(columns))
@@ -352,11 +343,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     self.riTable.setItem(row_pos, m, item)
 
         def add_header_from_pem():
-            header_keys = ['Client', 'Grid', 'Loop', 'Timebase', 'Date']
-            for key in header_keys:
-                self.ri_file.header[key] = self.pem_file.header[key]
-            self.ri_file.header['Current'] = self.pem_file.tags.get('Current')
-            self.ri_file.survey = self.survey_type
+            # header_keys = ['Client', 'Grid', 'Loop', 'Timebase', 'Date']
+            # for key in header_keys:
+            #     self.ri_file.header[key] = self.pem_file.header[key]
+            self.ri_file.header['Client'] = self.pem_file.client
+            self.ri_file.header['Grid'] = self.pem_file.grid
+            self.ri_file.header['Loop'] = self.pem_file.loop_name
+            self.ri_file.header['Timebase'] = self.pem_file.timebase
+            self.ri_file.header['Date'] = self.pem_file.date
+            self.ri_file.header['Current'] = self.pem_file.current
+            self.ri_file.survey = self.pem_file.get_survey_type()
 
         self.ri_file = self.ri_editor.open(filepath)
         make_ri_table()
@@ -370,213 +366,149 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         if not self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
-            self.station_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
-            self.stationGPSTable.setColumnCount(len(self.station_columns))
-            self.stationGPSTable.setHorizontalHeaderLabels(self.station_columns)
-            self.stationGPSTable.setSizeAdjustPolicy(
-                QAbstractScrollArea.AdjustToContents)
-            self.stationGPSTable.resizeColumnsToContents()
-
-            self.missing_gps_column = ['Missing GPS']
-            self.missing_gps_table.setColumnCount(len(self.missing_gps_column))
-            self.missing_gps_table.setHorizontalHeaderLabels(self.missing_gps_column)
+            # self.stationGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            # self.stationGPSTable.setSizeAdjustPolicy(
+            #     QAbstractScrollArea.AdjustToContents)
+            # self.stationGPSTable.resizeColumnsToContents()
 
         elif self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
-            self.geometry_columns = ['Tag', 'Azimuth', 'Dip', 'Segment\nLength', 'Units', 'Depth']
-            self.geometryTable.setColumnCount(len(self.geometry_columns))
-            self.geometryTable.setHorizontalHeaderLabels(self.geometry_columns)
-            self.geometryTable.setSizeAdjustPolicy(
-                QAbstractScrollArea.AdjustToContents)
-            self.geometryTable.resizeColumnsToContents()
+            # self.geometryTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            # self.collarGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            # self.geometryTable.setSizeAdjustPolicy(
+            #     QAbstractScrollArea.AdjustToContents)
+            # self.geometryTable.resizeColumnsToContents()
 
-            self.collar_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units']
-            self.collarGPSTable.setColumnCount(len(self.collar_columns))
-            self.collarGPSTable.setHorizontalHeaderLabels(self.collar_columns)
-            self.collarGPSTable.setSizeAdjustPolicy(
-                QAbstractScrollArea.AdjustToContents)
-            tag_item = QTableWidgetItem('<P00>')
-            units_item = QTableWidgetItem('0')
-            tag_item.setTextAlignment(QtCore.Qt.AlignCenter)
-            units_item.setTextAlignment(QtCore.Qt.AlignCenter)
-            self.collarGPSTable.setItem(0, 0, tag_item)
-            self.collarGPSTable.setItem(0, 4, units_item)
-            self.collarGPSTable.resizeColumnsToContents()
+            # self.collarGPSTable.setSizeAdjustPolicy(
+            #     QAbstractScrollArea.AdjustToContents)
+            # tag_item = QTableWidgetItem('<P00>')
+            # units_item = QTableWidgetItem('0')
+            # tag_item.setTextAlignment(QtCore.Qt.AlignCenter)
+            # units_item.setTextAlignment(QtCore.Qt.AlignCenter)
+            # self.collarGPSTable.setItem(0, 0, tag_item)
+            # self.collarGPSTable.setItem(0, 4, units_item)
+            # self.collarGPSTable.resizeColumnsToContents()
 
-            self.changeStationSuffixButton.setEnabled(False)
+        # self.loopGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.dataTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.loopGPSTable.setSizeAdjustPolicy(
+        #     QAbstractScrollArea.AdjustToContents)
+        # self.loopGPSTable.resizeColumnsToContents()
 
-        self.loop_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units']
-        self.loopGPSTable.setColumnCount(len(self.loop_columns))
-        self.loopGPSTable.setHorizontalHeaderLabels(self.loop_columns)
-        self.loopGPSTable.setSizeAdjustPolicy(
-            QAbstractScrollArea.AdjustToContents)
+        # self.dataTable.blockSignals(True)
+        # self.dataTable.setColumnCount(len(self.data_columns))
+        # self.dataTable.setHorizontalHeaderLabels(self.data_columns)
+        # self.dataTable.setSizeAdjustPolicy(
+        #     QAbstractScrollArea.AdjustToContents)
+        # self.dataTable.resizeColumnsToContents()
+        # self.dataTable.blockSignals(False)
 
-        self.loopGPSTable.resizeColumnsToContents()
-
-        self.data_columns = ['Station', 'Comp.', 'Reading\nIndex', 'Reading\nNumber', 'Stacks', 'ZTS']
-        self.dataTable.blockSignals(True)
-        self.dataTable.setColumnCount(len(self.data_columns))
-        self.dataTable.setHorizontalHeaderLabels(self.data_columns)
-        self.dataTable.setSizeAdjustPolicy(
-            QAbstractScrollArea.AdjustToContents)
-
-        self.dataTable.resizeColumnsToContents()
-        self.dataTable.blockSignals(False)
-
-    def fill_station_table(self, gps):
+    def clear_table(self, table):
         """
-        Fill the stationGPSTable with given gps data
-        :param gps: station gps as a list
+        Clear a given table
         """
-        if gps:
-            self.clear_table(self.stationGPSTable)
-            self.stationGPSTable.blockSignals(True)
+        table.blockSignals(True)
+        while table.rowCount() > 0:
+            table.removeRow(0)
+        table.blockSignals(False)
 
-            for i, row in enumerate(gps):
-                row_pos = self.stationGPSTable.rowCount()
-                # Add a new row to the table
-                self.stationGPSTable.insertRow(row_pos)
-                # Remove any existing P tags
-                if re.match('<P.*>', str(row[0])):
-                    row.pop(0)
+    def make_qt_row(self, df_row, table):
+        """
+        Add items from a pandas data frame row to a QTableWidget row
+        :param df_row: pandas Series object
+        :param table: QTableWidget table
+        :return: None
+        """
+        row_pos = table.rowCount()
+        # Add a new row to the table
+        table.insertRow(row_pos)
 
-                # Create a new P tag
-                tag_item = QTableWidgetItem(f"<P{i:02d}>")
-                items = [tag_item]
+        items = df_row.map(lambda x: QTableWidgetItem(str(x))).to_list()
+        # Format each item of the table to be centered
+        for m, item in enumerate(items):
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            table.setItem(row_pos, m, item)
 
-                # Add the rest of the row items to the table
-                for j in range(len(row)):
-                    if not isinstance(row[j], str):
-                        if j < 3:
-                            item = QTableWidgetItem(f"{row[j]:.2f}")
-                        else:
-                            item = QTableWidgetItem(f"{row[j]:.0f}")
-                    else:
-                        item = QTableWidgetItem(row[j])
-                    items.append(item)
+    def fill_info_tab(self):
+        """
+        Adds all information from the header, tags, and notes into the info_table.
+        :return: None
+        """
+        self.clear_table(self.info_table)
+        bold_font = QtGui.QFont()
+        bold_font.setBold(True)
+        f = self.pem_file
+        info = OrderedDict({
+            'Operator': f.operator,
+            'Format': f.format,
+            'Units': f.units,
+            'Timebase': f.timebase,
+            'Number of Channels': f.number_of_channels,
+            'Number of Readings': f.number_of_readings,
+            'Primary Field Value': f.primary_field_value,
+            'Loop Dimensions': ' x '.join(f.loop_dimensions.split()[:-1]),
+            'Loop Polairty': f.loop_polarity,
+            'Normalized': f.normalized,
+            'Rx Number': f.rx_number,
+            'Rx File Name': f.rx_file_name,
+            'Rx Software Ver.': f.rx_software_version,
+            'Rx Software Ver. Date': f.rx_software_version_date,
+            'Survey Type': f.survey_type,
+            'Sync': f.sync,
+            'Convention': f.convention
+        })
+        for i, (key, value) in enumerate(info.items()):
+            row = self.info_table.rowCount()
+            self.info_table.insertRow(row)
 
-                # Format each item of the table to be centered
-                for m, item in enumerate(items):
-                    item.setTextAlignment(QtCore.Qt.AlignCenter)
-                    self.stationGPSTable.setItem(row_pos, m, item)
+            key_item = QTableWidgetItem(key)
+            key_item.setFont(bold_font)
+            value_item = QTableWidgetItem(str(value))
 
-            self.stationGPSTable.resizeColumnsToContents()
-            self.check_station_duplicates()
-            self.check_station_order()
-            self.check_missing_gps()
-            self.stationGPSTable.blockSignals(False)
+            self.info_table.setItem(row, 0, key_item)
+            self.info_table.setItem(row, 1, value_item)
+
+        span_start = self.info_table.rowCount()
+        for note in f.notes:
+            row = self.info_table.rowCount()
+            self.info_table.insertRow(row)
+
+            note_item = QTableWidgetItem(note)
+            self.info_table.setItem(row, 1, note_item)
+
+        notes_key_item = QTableWidgetItem('Notes')
+        notes_key_item.setFont(bold_font)
+        self.info_table.setSpan(span_start, 0, len(f.notes), 1)
+        self.info_table.setItem(span_start, 0, notes_key_item)
+
+    def fill_gps_table(self, data, table):
+        """
+        Fill a given GPS table using the information from a data frame
+        :param data: pandas DataFrame for one of the GPS data frames only (not for PEM data)
+        :param table: QTableWidget to fill
+        :return: None
+        """
+
+        data = deepcopy(data)
+        if data.empty:
+            return
+
+        self.clear_table(table)
+        table.blockSignals(True)
+
+        if table == self.loopGPSTable:
+            tags = pd.Series([f"<L{n:02}>" for n in range(len(data.index))])
         else:
-            pass
+            tags = pd.Series([f"<P{n:02}>" for n in range(len(data.index))])
+        data.insert(0, 'Tag', tags)
+        data.apply(lambda x: self.make_qt_row(x, table), axis=1)
 
-    def fill_collar_gps_table(self, gps):
-        """
-        Fill the collarGPSTable with given collar gps data
-        :param gps: list: collar gps
-        """
-        if gps:
-            gps = gps[0]
-            self.clear_table(self.collarGPSTable)
-            self.collarGPSTable.insertRow(0)
-            # Remove any existing P tags
-            if '<P' in str(gps[0]):
-                gps.pop(0)
-            # Create a new P tag
-            tag_item = QTableWidgetItem("<P00>")
-            items = [tag_item]
-
-            # Add the rest of the row items to the table
-            for j in range(len(gps)):
-                if not isinstance(gps[j], str):
-                    if j < 3:
-                        item = QTableWidgetItem(f"{gps[j]:.2f}")
-                    else:
-                        item = QTableWidgetItem(f"{gps[j]:.0f}")
-                else:
-                    item = QTableWidgetItem(gps[j])
-                items.append(item)
-
-            for m, item in enumerate(items):
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.collarGPSTable.setItem(0, m, item)
-
-            self.collarGPSTable.resizeColumnsToContents()
-        else:
-            pass
-
-    def fill_geometry_table(self, segments):
-        """
-        Fill the geometryTable with given segments data
-        :param segments: hole segments (as a list)
-        """
-        if segments:
-            self.clear_table(self.geometryTable)
-
-            for i, row in enumerate(segments):
-                row_pos = self.geometryTable.rowCount()
-                self.geometryTable.insertRow(row_pos)
-                # Remove any existing P tags
-                if re.match('<P.*>', str(row[0])):
-                    row.pop(0)
-
-                # Create a new P tag
-                tag_item = QTableWidgetItem(f"<P{i:02d}>")
-                items = [tag_item]
-
-                # Add the rest of the row items to the table
-                for j in range(len(row)):
-                    if not isinstance(row[j], str):
-                        if j < 3:
-                            item = QTableWidgetItem(f"{row[j]:.2f}")
-                        else:
-                            item = QTableWidgetItem(f"{row[j]:.0f}")
-                    else:
-                        item = QTableWidgetItem(row[j])
-                    items.append(item)
-
-                for m, item in enumerate(items):
-                    item.setTextAlignment(QtCore.Qt.AlignCenter)
-                    self.geometryTable.setItem(row_pos, m, item)
-
-            self.geometryTable.resizeColumnsToContents()
-        else:
-            pass
-
-    def fill_loop_table(self, gps):
-        """
-        Fill the loopGPSTable with given gps data
-        :param gps: loop gps as a list
-        """
-        if gps:
-            self.clear_table(self.loopGPSTable)
-            for i, row in enumerate(gps):
-                row_pos = self.loopGPSTable.rowCount()
-                self.loopGPSTable.insertRow(row_pos)
-                # Remove any existing P tags
-                if re.match('<L.*>', str(row[0])):
-                    row.pop(0)
-
-                # Create a new P tag
-                tag_item = QTableWidgetItem(f"<L{i:02d}>")
-                items = [tag_item]
-
-                # Add the rest of the row items to the table
-                for j in range(len(row)):
-                    if not isinstance(row[j], str):
-                        if j < 3:
-                            item = QTableWidgetItem(f"{row[j]:.2f}")
-                        else:
-                            item = QTableWidgetItem(f"{row[j]:.0f}")
-                    else:
-                        item = QTableWidgetItem(row[j])
-                    items.append(item)
-
-                for m, item in enumerate(items):
-                    item.setTextAlignment(QtCore.Qt.AlignCenter)
-                    self.loopGPSTable.setItem(row_pos, m, item)
-
-            self.loopGPSTable.resizeColumnsToContents()
-        else:
-            pass
+        # if table == self.stationGPSTable:
+        #     self.check_station_duplicates()
+        #     self.check_station_order()
+        #     self.check_missing_gps()
+        table.resizeColumnsToContents()
+        table.blockSignals(False)
 
     def fill_data_table(self):
         """
@@ -584,41 +516,46 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param data: PEMFile data
         """
         data = self.get_sorted_data()
-        if data:
+        if data.empty:
+            return
+        else:
             self.clear_table(self.dataTable)
             self.dataTable.blockSignals(True)
-            column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
-            for i, station in enumerate(data):
-                row_pos = self.dataTable.rowCount()
-                self.dataTable.insertRow(row_pos)
-                for j, column in enumerate(column_keys):
-                    # if column in ['ReadingIndex', 'ReadingNumber', 'NumStacks']:
-                    #     item = CustomTableWidgetItem(station[column], int(station[column]))
-                    # else:
-                    #     item = CustomTableWidgetItem(station[column], station[column])
-                    item = CustomTableWidgetItem(station[column], station[column])
-                    item.setTextAlignment(QtCore.Qt.AlignCenter)
-                    self.dataTable.setItem(row_pos, j, item)
-
+            data.apply(lambda x: self.make_qt_row(pd.Series([x.Station,
+                                                             x.Component,
+                                                             x['Reading index'],
+                                                             x['Reading number'],
+                                                             x['Number of stacks'],
+                                                             x.ZTS]), self.dataTable), axis=1)
             self.color_data_table()
             self.dataTable.resizeColumnsToContents()
             self.dataTable.blockSignals(False)
-        else:
-            pass
 
     def get_sorted_data(self):
         data = self.pem_file.data
 
         if self.station_sort_rbtn.isChecked():
-            data.sort(key=lambda data: alpha_num_sort(data['Component']), reverse=False)
-            data.sort(key=lambda data: alpha_num_sort(data['Station']), reverse=False)
+            data = data.reindex(index=natsort.order_by_index(
+                data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading number']))))
+            # Reset the index
+            data.reset_index(drop=True, inplace=True)
+            # data.sort(key=lambda data: natsort.natsorted(data['Component']), reverse=False)
+            # data.sort(key=lambda data: natsort.natsorted(data['Station']), reverse=False)
 
         elif self.component_sort_rbtn.isChecked():
-            data.sort(key=lambda data: alpha_num_sort(data['Station']), reverse=False)
-            data.sort(key=lambda data: alpha_num_sort(data['Component']), reverse=False)
+            data = data.reindex(index=natsort.order_by_index(
+                data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading number']))))
+            # Reset the index
+            data.reset_index(drop=True, inplace=True)
+            # data.sort(key=lambda data: natsort.natsorted(data['Station']), reverse=False)
+            # data.sort(key=lambda data: natsort.natsorted(data['Component']), reverse=False)
 
         elif self.reading_num_sort_rbtn.isChecked():
-            data.sort(key=lambda data: alpha_num_sort(data['ReadingNumber']), reverse=False)
+            data = data.reindex(index=natsort.order_by_index(
+                data.index, natsort.index_natsorted(zip(data['Reading number'], data['Reading index']))))
+            # Reset the index
+            data.reset_index(drop=True, inplace=True)
+            # data.sort(key=lambda data: natsort.natsorted(data['ReadingNumber']), reverse=False)
 
         return data
 
@@ -627,9 +564,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Updates the table based on the values in the PEM File object (self.pem_file)
         """
         self.dataTable.blockSignals(True)
-        column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
         for station, row in zip(self.pem_file.data, range(self.dataTable.rowCount())):
-            items = [QTableWidgetItem(station[j]) for j in column_keys]
+            items = [QTableWidgetItem(station[j]) for j in self.dataTable_columns]
 
             for m, item in enumerate(items):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
@@ -678,7 +614,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             y_color.setAlpha(50)
             white_color = QtGui.QColor('white')
             for row in range(self.dataTable.rowCount()):
-                item = self.dataTable.item(row, self.data_columns.index('Comp.'))
+                item = self.dataTable.item(row, self.dataTable_columns.index('Component'))
                 if item:
                     component = item.text()
                     if component == 'Z':
@@ -695,21 +631,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             Color the dataTable rows where the station suffix is different from the mode
             """
 
-            def most_common_suffix():
-                suffixes = []
-                for reading in self.pem_file.data:
-                    station = reading['Station'].upper()
-                    suffix = re.findall('[NSEW]', station)
-                    if suffix:
-                        suffixes.append(suffix[0])
-                count = Counter(suffixes)
-                return count.most_common()[0][0]
-
-            if 'surface' in self.survey_type.lower():
-                correct_suffix = most_common_suffix()
+            if not self.pem_file.is_borehole():
+                correct_suffix = self.pem_file.data.Station.map(lambda x: re.findall('[NSEW]', x.upper())).mode().to_list()
+                while not isinstance(correct_suffix, str):
+                    correct_suffix = correct_suffix[0]
                 count = 0
                 for row in range(self.dataTable.rowCount()):
-                    item = self.dataTable.item(row, self.data_columns.index('Station'))
+                    item = self.dataTable.item(row, self.dataTable_columns.index('Station'))
                     if item:
                         station_suffix = re.findall('[NSEW]', item.text().upper())
                         if not station_suffix or station_suffix[0] != correct_suffix:
@@ -729,7 +657,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             normalFont = QtGui.QFont()
             normalFont.setBold(False)
             for row in range(self.dataTable.rowCount()):
-                item = self.dataTable.item(row, self.data_columns.index('Station'))
+                item = self.dataTable.item(row, self.dataTable_columns.index('Station'))
                 if item:
                     station_num = re.findall('\d+', item.text())[0]
                     if station_num[-1] == '1' or station_num[-1] == '4' or station_num[-1] == '6' or station_num[-1] == '9':
@@ -744,112 +672,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.num_repeat_stations = bolden_repeat_stations()
         self.refresh_tables_signal.emit()
         self.lcdRepeats.display(self.num_repeat_stations)
-
-    def fill_info(self):
-        """
-        Fills the tabs with the PEM file information when a PEM file is first opened.
-        :return: None
-        """
-
-        def init_info_tab():
-            """
-            Adds all information from the header, tags, and notes into the info_table.
-            :return: None
-            """
-            self.clear_table(self.info_table)
-            bold_font = QtGui.QFont()
-            bold_font.setBold(True)
-
-            header = self.pem_file.header
-            tags = self.pem_file.tags
-            notes = self.pem_file.notes
-            loop_size = ' x '.join(self.pem_file.tags.get('LoopSize').split(' ')[0:2])
-
-            for i, (key, value) in enumerate(tags.items()):
-                row = self.info_table.rowCount()
-                self.info_table.insertRow(row)
-
-                key_item = QTableWidgetItem(key)
-                key_item.setFont(bold_font)
-                value_item = QTableWidgetItem(str(value))
-
-                self.info_table.setItem(row, 0, key_item)
-                self.info_table.setItem(row, 1, value_item)
-
-            for i, (key, value) in enumerate(header.items()):
-                if key != 'ChannelTimes':
-                    row = self.info_table.rowCount()
-                    self.info_table.insertRow(row)
-
-                    key_item = QTableWidgetItem(key)
-                    key_item.setFont(bold_font)
-                    self.info_table.setItem(row, 0, key_item)
-
-                    # if isinstance(value, list):
-                    #     span_start = row
-                    #     value_list = [f"{i:.6f}" for i in value]
-                    #     value_item = QTableWidgetItem(str(value_list[0]))
-                    #     self.info_table.setItem(row, 1, value_item)
-                    #     for value in value_list[1:]:
-                    #         row = self.info_table.rowCount()
-                    #         self.info_table.insertRow(row)
-                    #         value_item = QTableWidgetItem(str(value))
-                    #         self.info_table.setItem(row, 1, value_item)
-                    #     self.info_table.setSpan(span_start, 0, len(value_list), 1)
-
-                    value_item = QTableWidgetItem(str(value))
-                    self.info_table.setItem(row, 1, value_item)
-
-            span_start = self.info_table.rowCount()
-            for note in notes:
-                row = self.info_table.rowCount()
-                self.info_table.insertRow(row)
-
-                note_item = QTableWidgetItem(note)
-                self.info_table.setItem(row, 1, note_item)
-
-            notes_key_item = QTableWidgetItem('Notes')
-            notes_key_item.setFont(bold_font)
-            self.info_table.setSpan(span_start, 0, len(notes), 1)
-            self.info_table.setItem(span_start, 0, notes_key_item)
-
-        def init_station_text():
-            # Fill station GPS
-            station_gps = self.pem_file.get_line_coords()
-            self.fill_station_table(
-                self.gps_editor.get_station_gps(station_gps, sorted=self.parent.autoSortStationsCheckbox.isChecked()))
-
-        def init_geometry_text():
-            # Fill hole geometry collar GPS segments
-            collar = self.pem_file.get_collar_coords()
-            geometry = self.pem_file.get_hole_geometry()
-            if any(collar):
-                self.fill_collar_gps_table(collar)
-            if geometry:
-                self.fill_geometry_table(geometry)
-
-        def init_loop_text():
-            # Fill loop GPS
-            loop_gps = self.pem_file.get_loop_coords()
-            self.fill_loop_table(self.gps_editor.get_loop_gps(loop_gps, sorted=self.parent.autoSortLoopsCheckbox.isChecked()))
-
-        init_info_tab()
-        if self.pem_file.is_borehole():
-            init_geometry_text()
-        else:
-            # init_collar_gps_text()
-            init_station_text()
-        init_loop_text()
-        self.fill_data_table()
-
-    def clear_table(self, table):
-        """
-        Clear a given table
-        """
-        table.blockSignals(True)
-        while table.rowCount() > 0:
-            table.removeRow(0)
-        table.blockSignals(False)
 
     def check_station_duplicates(self):
         """
@@ -883,20 +705,18 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         order = 'asc' if stations[-1] > stations[0] else 'desc'
         sorted_stations = sorted(stations) if order == 'asc' else sorted(stations, reverse=True)
 
-        blue_color = QtGui.QColor('blue')
+        blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
         blue_color.setAlpha(50)
-        red_color = QtGui.QColor('red')
         red_color.setAlpha(50)
+        station_col = self.station_columns.index('Station')
+
         for row in range(self.stationGPSTable.rowCount()):
-            if self.stationGPSTable.item(row, self.station_columns.index('Station')) and stations[row] > \
-                    sorted_stations[row]:
-                self.stationGPSTable.item(row, self.station_columns.index('Station')).setBackground(blue_color)
-            elif self.stationGPSTable.item(row, self.station_columns.index('Station')) and stations[row] < \
-                    sorted_stations[row]:
-                self.stationGPSTable.item(row, self.station_columns.index('Station')).setBackground(red_color)
+            if self.stationGPSTable.item(row, station_col) and stations[row] > sorted_stations[row]:
+                self.stationGPSTable.item(row, station_col).setBackground(blue_color)
+            elif self.stationGPSTable.item(row, station_col) and stations[row] < sorted_stations[row]:
+                self.stationGPSTable.item(row, station_col).setBackground(red_color)
             else:
-                self.stationGPSTable.item(row, self.station_columns.index('Station')).setBackground(
-                    QtGui.QColor('white'))
+                self.stationGPSTable.item(row, station_col).setBackground(QtGui.QColor('white'))
         self.stationGPSTable.blockSignals(False)
 
     def check_missing_gps(self):
@@ -1353,7 +1173,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Input suffix must be either N, S, E, or W, case doesn't matter.
         :return: None
         """
-        if 'borehole' in self.survey_type.lower():  # Shouldn't be needed since the button is disabled for boreholes
+        if self.pem_file.is_borehole():  # Shouldn't be needed since the button is disabled for boreholes
             return
 
         suffix, okPressed = QInputDialog.getText(self, "Change Station Suffix", "New Suffix:")
@@ -1496,3 +1316,26 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             else:
                 self.window().statusBar().showMessage('Cancelled.', 2000)
 
+
+class pandasTable(QAbstractTableModel):
+
+    def __init__(self, data):
+        QAbstractTableModel.__init__(self)
+        self._data = data
+
+    def rowCount(self, parent=None):
+        return self._data.shape[0]
+
+    def columnCount(self, parnet=None):
+        return self._data.shape[1]
+
+    def data(self, index, role=Qt.DisplayRole):
+        if index.isValid():
+            if role == Qt.DisplayRole:
+                return str(self._data.iloc[index.row(), index.column()])
+        return None
+
+    def headerData(self, col, orientation, role):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return self._data.columns[col]
+        return None
