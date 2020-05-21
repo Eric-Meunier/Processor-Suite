@@ -7,6 +7,7 @@ import csv
 import sys
 import time
 import utm
+import pandas as pd
 import numpy as np
 import simplekml
 import natsort
@@ -16,7 +17,7 @@ from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QGridLayout,
                              QInputDialog, QHeaderView, QTableWidget, QErrorMessage, QDialogButtonBox, QVBoxLayout,
-                             QLabel, QLineEdit, QPushButton)
+                             QLabel, QLineEdit, QPushButton, QAbstractItemView)
 import matplotlib.pyplot as plt
 # from pyqtspinner.spinner import WaitingSpinner
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
@@ -24,7 +25,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_pdf import PdfPages
 from src.geomag import geomag
 from src.pem.pem_file import PEMFile, PEMParser
-from src.gps.gps_editor import GPSParser, INFParser, GPXEditor
+from src.gps.gps_editor import SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeGeometry, INFParser, GPXEditor
 from src.pem.pem_file_editor import PEMFileEditor
 from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods, ContourMap, FoliumMap
 from src.pem.pem_planner import LoopPlanner, GridPlanner
@@ -106,11 +107,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         self.dialog = QFileDialog()
         self.pem_parser = PEMParser()
+        self.gps_adder = GPSAdder()
         self.file_editor = PEMFileEditor()
         self.message = QMessageBox()
         self.error = QErrorMessage()
-        self.gps_parser = GPSParser()
         self.gpx_editor = GPXEditor()
+        self.gps_adder = GPSAdder()
         self.serializer = PEMSerializer()
         self.mpm = MapPlotMethods()
         self.pg = CustomProgressBar()
@@ -570,7 +572,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pem_files,
         ]))
 
-        if self.pem_files:
+        # When no PEM files are open, only open PEM files and not any other kind of file
+        if not self.pem_files:
             if pem_conditions is True:
                 e.acceptProposedAction()
             else:
@@ -579,8 +582,8 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         else:
             eligible_tabs = [self.stackedWidget.currentWidget().Station_GPS_Tab,
                              self.stackedWidget.currentWidget().Loop_GPS_Tab,
-                             self.stackedWidget.currentWidget().Geometry_Tab,
-                             ]
+                             self.stackedWidget.currentWidget().Geometry_Tab]
+
             gps_conditions = bool(all([
                 e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
                 text_files is True or gpx_files is True,
@@ -791,18 +794,23 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         if len(gps_files) > 0:
             file = read_gps_files(gps_files)
             pem_info_widget = self.stackedWidget.currentWidget()
-            station_gps_tab = pem_info_widget.Station_GPS_Tab
-            geometry_tab = pem_info_widget.Geometry_Tab
-            loop_gps_tab = pem_info_widget.Loop_GPS_Tab
             current_tab = pem_info_widget.tabs.currentWidget()
 
-            if station_gps_tab == current_tab:
-                pem_info_widget.add_station_gps(file)
-            elif geometry_tab == current_tab:
-                # pem_info_widget.add_collar_gps(file)
-                pem_info_widget.add_geometry(file)
-            elif loop_gps_tab == current_tab:
-                pem_info_widget.add_loop_gps(file)
+            if current_tab == pem_info_widget.Station_GPS_Tab:
+                line = SurveyLine(file)
+                self.gps_adder.add_df(line.df)
+                self.gps_adder.write_widget = pem_info_widget
+                self.gps_adder.write_table = pem_info_widget.stationGPSTable
+            elif current_tab == pem_info_widget.Geometry_Tab:
+                collar = BoreholeCollar(file)
+                geom = BoreholeGeometry(file)
+                if not collar.df.empty:
+                    pem_info_widget.fill_gps_table(collar.df, pem_info_widget.collarGPSTable)
+                if not geom.df.empty:
+                    pem_info_widget.fill_gps_table(geom.df, pem_info_widget.geometryTable)
+            elif current_tab == pem_info_widget.Loop_GPS_Tab:
+                loop = TransmitterLoop(file)
+                pem_info_widget.fill_gps_table(loop.df, pem_info_widget.loopGPSTable)
             else:
                 pass
 
@@ -998,7 +1006,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                         f"Coil area changed from {old_value} to {new_value}", 2000)
 
         # Changing the name of a file
-        if col == self.table_columns.index('File') + 1:
+        if col == self.table_columns.index('File'):
             pem_file = self.pem_files[row]
             old_path = copy.deepcopy(pem_file.filepath)
             new_value = self.table.item(row, col).text()
@@ -1011,6 +1019,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 # Create a copy and delete the old one.
                 copyfile(old_path, new_path)
                 pem_file.filepath = new_path
+                pem_file.filename = os.path.basename(new_path)
                 os.remove(old_path)
 
                 self.window().statusBar().showMessage(f"File renamed to {str(new_value)}", 2000)
@@ -3547,15 +3556,200 @@ class ContourMapToolbar(NavigationToolbar):
                  t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
 
 
+class GPSAdder(QWidget):
+    """
+    Class to help add station GPS to a PEM file. Helps with files that have missing stations numbers or other
+    formatting errors.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.resize(1000, 600)
+        self.setWindowTitle('GPS Adder')
+
+        self.df = None
+        self.write_table = None
+        self.write_widget = None
+        self.highlight = None
+        self.lx = None
+        self.ly = None
+
+        self.layout = QGridLayout()
+        self.table = QTableWidget()
+        self.table.setFixedWidth(400)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+
+        self.message = QMessageBox()
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.setCenterButtons(True)
+
+        self.figure = plt.figure()
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_aspect('equal')
+        self.canvas = FigureCanvas(self.figure)
+
+        self.setLayout(self.layout)
+        self.layout.addWidget(self.table, 0, 0)
+        self.layout.addWidget(self.button_box, 1, 0, 3, 1)
+        self.layout.addWidget(self.canvas, 0, 1)
+
+        self.button_box.rejected.connect(self.close)
+        self.button_box.accepted.connect(self.accept)
+        self.table.cellChanged.connect(self.plot_df)
+        self.table.cellClicked.connect(self.highlight_point)
+
+    def close(self):
+        self.write_widget = None
+        self.write_table = None
+        self.clear_table()
+        self.hide()
+
+    def clear_table(self):
+        self.table.clear()
+        while self.table.rowCount() > 0:
+            self.table.removeRow(0)
+
+    def accept(self):
+        """
+        Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) station gps table.
+        :return: None
+        """
+        self.write_widget.fill_gps_table(self.df, self.write_table)
+        self.close()
+
+    def add_df(self, df):
+        """
+        Add the data frame to GPSAdder. Adds the data to the table and plots it.
+        :param df: pandas DataFrame
+        :return: None
+        """
+        self.show()
+        self.clear_table()
+        self.df = df
+        self.df_to_table(self.df)
+        self.plot_df()
+
+    def df_to_table(self, df):
+        """
+        Add the contents of the data frame to the table
+        :param df: pandas DataFrame of the GPS
+        :return: None
+        """
+        self.table.blockSignals(True)
+
+        def write_row(series):
+            """
+             Add items from a pandas data frame row to a QTableWidget row
+             :param series: pandas Series object
+             :return: None
+             """
+            row_pos = self.table.rowCount()
+            # Add a new row to the table
+            self.table.insertRow(row_pos)
+
+            items = series.map(lambda x: QTableWidgetItem(str(x))).to_list()
+            # Format each item of the table to be centered
+            for m, item in enumerate(items):
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.table.setItem(row_pos, m, item)
+
+        if df.empty:
+            self.message.warning(self, 'Warning', 'No GPS was found')
+        else:
+            columns = df.columns.to_list()
+            self.table.setColumnCount(len(columns))
+            self.table.setHorizontalHeaderLabels(columns)
+            df.apply(write_row, axis=1)
+        self.table.blockSignals(False)
+
+    def table_to_df(self):
+        """
+        Return a data frame from the information in the table
+        :return: pandas DataFrame
+        """
+        df = pd.DataFrame(columns=self.df.columns)
+        for col in range(len(df.columns)):
+            l = []
+            for row in range(self.table.rowCount()):
+                l.append(self.table.item(row, col).text())
+            df.iloc[:, col] = pd.Series(l, dtype=self.df.dtypes.iloc[col])
+        return df
+
+    def plot_df(self):
+        """
+        Plot the data from the table to the axes. Ignores any rows that have NaN somewhere in the row.
+        :return: None
+        """
+        self.ax.clear()
+        # Filter the data to remove any rows that have NaN
+        df = self.table_to_df().dropna()
+        # Plot the line
+        df.plot(x='Easting', y='Northing',
+                ax=self.ax,
+                color='dimgray',
+                zorder=0,
+                legend=False)
+        # Plot the stations
+        df.plot.scatter(x='Easting', y='Northing',
+                        ax=self.ax,
+                        color='w',
+                        edgecolors='dimgray',
+                        zorder=1,
+                        legend=False)
+        plt.yticks(rotation=60, va='center')
+        self.canvas.draw()
+
+    def highlight_point(self, row, col):
+        """
+        Highlight a scatter point when it's row is selected in the table
+        :param row: Int: table row to highlight
+        :return: None
+        """
+        print(f"Row {row} selected")
+        # Remove previously plotted selection
+        if self.highlight:
+            self.highlight.remove()
+            self.lx.remove()
+            self.ly.remove()
+            self.highlight = None
+            self.lx = None
+            self.ly = None
+
+        # Filter the data to remove any rows that have NaN
+        df = self.table_to_df().dropna()
+        # Only plot if the row is in the filtered data
+        if row in df.index:
+            x, y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
+            self.highlight = self.ax.scatter([x], [y],
+                                             color='lightsteelblue',
+                                             edgecolors='blue',
+                                             zorder=3)
+            self.lx = self.ax.axhline(y, color='blue')
+            self.ly = self.ax.axvline(x, color='blue')
+        else:
+            print(f"Row {row} is not in the filtered data frame.")
+        self.canvas.draw()
+
+    def check_data(self):
+        """
+        Look for any incorrect data types and create an error if found
+        :return: None
+        """
+        pass
+
+
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMEditorWindow()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Kazzinc', number=15)
+    pem_files = pg.get_pems(client='Kazzinc', number=1)
     mw.open_pem_files(pem_files)
     mw.show()
+    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
+    mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'])
     # mw.import_ri_files()
     # mw.show_map()
     # mw.timebase_freqency_converter()

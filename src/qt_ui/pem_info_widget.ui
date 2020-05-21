@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -509,12 +509,12 @@ Not In Data</string>
          </column>
          <column>
           <property name="text">
-           <string>Station</string>
+           <string>Units</string>
           </property>
          </column>
          <column>
           <property name="text">
-           <string>Units</string>
+           <string>Station</string>
           </property>
          </column>
         </widget>
@@ -529,22 +529,28 @@ Not In Data</string>
        <item row="0" column="0">
         <widget class="QTableWidget" name="collarGPSTable">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
          <property name="minimumSize">
           <size>
-           <width>0</width>
-           <height>70</height>
+           <width>400</width>
+           <height>60</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>16777215</width>
-           <height>100</height>
+           <width>400</width>
+           <height>60</height>
           </size>
+         </property>
+         <property name="verticalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
          </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
@@ -552,11 +558,23 @@ Not In Data</string>
          <property name="showGrid">
           <bool>false</bool>
          </property>
+         <property name="cornerButtonEnabled">
+          <bool>true</bool>
+         </property>
          <property name="rowCount">
           <number>1</number>
          </property>
          <attribute name="horizontalHeaderHighlightSections">
           <bool>false</bool>
+         </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="verticalHeaderCascadingSectionResizes">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="verticalHeaderDefaultSectionSize">
+          <number>30</number>
          </attribute>
          <row/>
          <column>
@@ -628,6 +646,12 @@ Not In Data</string>
        </item>
        <item row="1" column="0">
         <widget class="QTableWidget" name="geometryTable">
+         <property name="maximumSize">
+          <size>
+           <width>400</width>
+           <height>16777215</height>
+          </size>
+         </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
          </property>

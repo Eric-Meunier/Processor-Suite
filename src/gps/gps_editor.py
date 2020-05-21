@@ -89,6 +89,8 @@ class SurveyLine:
             line = self.parser.parse_station_gps(line)
 
         self.df = line.drop_duplicates()
+        # if self.df.Station.hasnans:
+        #     raise ValueError('File is missing station numbers.')
         self.name = name
 
     def get_sorted_line(self):

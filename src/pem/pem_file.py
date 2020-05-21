@@ -361,8 +361,7 @@ class PEMFile:
         print(f"{self.filename} coil area scaled to {new_coil_area} from {old_coil_area}")
 
         self.coil_area = new_coil_area
-        self.notes.append(
-            f'<HE3> Data scaled by coil area change of {old_coil_area}/{new_coil_area}')
+        self.notes.append(f'<HE3> Data scaled by coil area change of {old_coil_area}/{new_coil_area}')
         return self
 
     def scale_current(self, current):
@@ -380,8 +379,7 @@ class PEMFile:
         print(f"{self.filename} current scaled to {new_current}A from {old_current}A")
 
         self.current = new_current
-        self.notes.append(
-            f'<HE3> Data scaled by current change of {new_current}A/{old_current}A')
+        self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{old_current}A')
         return self
 
     def rotate(self, type='acc', soa=0):
