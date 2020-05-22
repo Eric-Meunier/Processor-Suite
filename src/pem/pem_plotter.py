@@ -82,6 +82,17 @@ mpl.rcParams['font.size'] = 9
 line_color = 'black'
 
 
+def convert_station(station):
+    """
+    Converts a single station name into a number, negative if the stations was S or W
+    :return: Integer station number
+    """
+    if re.match(r"\d+(S|W)", station):
+        station = (-int(re.sub(r"\D", "", station)))
+    else:
+        station = (int(re.sub(r"\D", "", station)))
+    return station
+
 def natural_sort(list):
     convert = lambda text: int(text) if text.isdigit() else text.lower()
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
@@ -2370,19 +2381,6 @@ class ContourMap(MapPlotMethods):
         :return: None
         """
 
-        def convert_station(station):
-            """
-            Converts a single station name into a number, negative if the stations was S or W
-            :return: Integer station number
-            """
-            if re.match(r"\d+(S|W)", station):
-                station = (-int(re.sub(r"\D", "", station)))
-
-            else:
-                station = (int(re.sub(r"\D", "", station)))
-
-            return station
-
         def plot_pem_gps(pem_file):
             """
             Plots the GPS information (lines, stations, loops) from the PEM file
@@ -3641,20 +3639,20 @@ class PEMPrinter:
 
         with PdfPages(self.save_path + '.PDF') as pdf:
             for survey, files in unique_bhs.items():
-                 pem_files = [pair[0] for pair in files]
-                 ri_files = [pair[1] for pair in files]
-                 if self.x_min is None and self.share_range is True:
-                     x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
-                                                                pem_file in pem_files]))
-                 else:
-                     x_min = self.x_min
-                 if self.x_max is None and self.share_range is True:
-                     x_max = max(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
-                                                                pem_file in pem_files]))
-                 else:
-                     x_max = self.x_max
-                 save_plots(pem_files, ri_files, x_min, x_max)
-                 self.pb.setText('Complete')
+                pem_files = [pair[0] for pair in files]
+                ri_files = [pair[1] for pair in files]
+                if self.x_min is None and self.share_range is True:
+                    x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
+                                                               pem_file in pem_files]))
+                else:
+                    x_min = self.x_min
+                if self.x_max is None and self.share_range is True:
+                    x_max = max(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
+                                                               pem_file in pem_files]))
+                else:
+                    x_max = self.x_max
+                save_plots(pem_files, ri_files, x_min, x_max)
+                self.pb.setText('Complete')
 
             for loop, files in unique_grids.items():
                 pem_files = [pair[0] for pair in files]

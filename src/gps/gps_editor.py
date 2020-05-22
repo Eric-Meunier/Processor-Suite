@@ -328,13 +328,16 @@ class GPSParser:
         # self.re_station_gps = re.compile(
         #     r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
         self.re_station_gps = re.compile(
-            r'(?P<Easting>-?\d{4,}\.?\d*)\W{1,3}(?P<Northing>-?\d{4,}\.?\d*)\W{1,3}(?P<Elevation>-?\d{1,4}\.?\d*)\W+(?P<Units>0|1)[\s\t,]*(?P<Station>-?\w+)?')
+            r'^(?P<Easting>-?\d{4,}\.?\d*)\W{1,3}(?P<Northing>-?\d{4,}\.?\d*)\W{1,3}(?P<Elevation>-?\d{1,4}\.?\d*)\W+(?P<Units>0|1)[\s\t,]*(?P<Station>-?\w+)?$',
+            re.MULTILINE)
         self.re_loop_gps = re.compile(
-            r'(?P<Easting>-?\d{4,}\.?\d*)\W+(?P<Northing>-?\d{4,}\.?\d*)\W+(?P<Elevation>-?\d{1,4}\.?\d*)\W*(?P<Units>0|1)?.*')
+            r'^(?P<Easting>-?\d{4,}\.?\d*)\W+(?P<Northing>-?\d{4,}\.?\d*)\W+(?P<Elevation>-?\d{1,4}\.?\d*)\W*(?P<Units>0|1)?$',
+            re.MULTILINE)
         self.re_collar_gps = re.compile(
-            r'(?P<Easting>-?\d{4,}\.?\d*)[\s\t,]+(?P<Northing>-?\d{4,}\.?\d*)[\s\t,]+(?P<Elevation>-?\d{1,4}\.?\d*)[\s\t,]+(?P<Units>0|1)?\s*?')
+            r'^(?P<Easting>-?\d{4,}\.?\d*)[\s\t,]+(?P<Northing>-?\d{4,}\.?\d*)[\s\t,]+(?P<Elevation>-?\d{1,4}\.?\d*)[\s\t,]+(?P<Units>0|1)?\s*?$')
         self.re_segment = re.compile(
-            r'(?P<Azimuth>-?\d{0,3}\.?\d*)[\s\t,]+(?P<Dip>-?\d{1,3}\.?\d*)[\s\t,]+(?P<SegLength>\d{1,3}\.?\d*)[\s\t,]+(?P<Units>0|1|2)[\s\t,]+(?P<Depth>-?\d{1,4}\.?\d*)')
+            r'^(?P<Azimuth>-?\d{0,3}\.?\d*)[\s\t,]+(?P<Dip>-?\d{1,3}\.?\d*)[\s\t,]+(?P<SegLength>\d{1,3}\.?\d*)[\s\t,]+(?P<Units>0|1|2)[\s\t,]+(?P<Depth>-?\d{1,4}\.?\d*)$',
+            re.MULTILINE)
 
     def open(self, filepath):
         """
@@ -343,7 +346,7 @@ class GPSParser:
         :return: str: contents of the text file
         """
         with open(filepath, 'rt') as in_file:
-            file = in_file.read()
+            file = in_file.readlines()
         return file
 
     def parse_station_gps(self, file):

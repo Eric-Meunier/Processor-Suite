@@ -20,9 +20,11 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QLabel, QLineEdit, QPushButton, QAbstractItemView)
 import matplotlib.pyplot as plt
 # from pyqtspinner.spinner import WaitingSpinner
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
+    NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.ticker import FixedLocator
 from src.geomag import geomag
 from src.pem.pem_file import PEMFile, PEMParser
 from src.gps.gps_editor import SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeGeometry, INFParser, GPXEditor
@@ -780,15 +782,15 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         """
         def read_gps_files(gps_files):  # Merges files together if there are multiple files
             if len(gps_files) > 1:
-                merged_file = ''
+                merged_file = []
                 for file in gps_files:
                     with open(file, mode='rt') as in_file:
-                        contents = in_file.read()
-                        merged_file += contents
+                        contents = in_file.readlines()
+                        merged_file.append(contents)
                 return merged_file
             else:
                 with open(gps_files[0], mode='rt') as in_file:
-                    file = in_file.read()
+                    file = in_file.readlines()
                 return file
 
         if len(gps_files) > 0:
@@ -3564,36 +3566,44 @@ class GPSAdder(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.resize(1000, 600)
+        self.resize(1000, 800)
         self.setWindowTitle('GPS Adder')
 
         self.df = None
         self.write_table = None
         self.write_widget = None
-        self.highlight = None
-        self.lx = None
-        self.ly = None
+        self.plan_highlight = None
+        self.plan_lx = None
+        self.plan_ly = None
+        self.section_highlight = None
+        self.section_lx = None
+        self.section_ly = None
 
         self.layout = QGridLayout()
         self.table = QTableWidget()
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
 
         self.message = QMessageBox()
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.setCenterButtons(True)
 
         self.figure = plt.figure()
-        self.ax = self.figure.add_subplot(111)
-        self.ax.set_aspect('equal')
+        self.figure.subplots_adjust(left=0.15, bottom=0.05, right=0.97, top=0.95)
+        self.plan_ax = plt.subplot2grid((30, 1), (0, 0), rowspan=19, colspan=1, fig=self.figure)
+        self.plan_ax.set_aspect('equal')
+        self.section_ax = plt.subplot2grid((30, 1), (22, 0), rowspan=7, colspan=1, fig=self.figure)
+        # self.section_ax.set_aspect('equal')
         self.canvas = FigureCanvas(self.figure)
 
         self.setLayout(self.layout)
         self.layout.addWidget(self.table, 0, 0)
-        self.layout.addWidget(self.button_box, 1, 0, 3, 1)
+        self.layout.addWidget(self.button_box, 1, 0, 1, 2)
         self.layout.addWidget(self.canvas, 0, 1)
 
+        self.canvas.mpl_connect('pick_event', self.onpick)
         self.button_box.rejected.connect(self.close)
         self.button_box.accepted.connect(self.accept)
         self.table.cellChanged.connect(self.plot_df)
@@ -3681,52 +3691,108 @@ class GPSAdder(QWidget):
         Plot the data from the table to the axes. Ignores any rows that have NaN somewhere in the row.
         :return: None
         """
-        self.ax.clear()
+
+        self.plan_ax.clear()
+        self.section_ax.clear()
         # Filter the data to remove any rows that have NaN
         df = self.table_to_df().dropna()
-        # Plot the line
+        # Plot the plan map
         df.plot(x='Easting', y='Northing',
-                ax=self.ax,
+                ax=self.plan_ax,
                 color='dimgray',
                 zorder=0,
-                legend=False)
-        # Plot the stations
+                legend=False
+                )
+        # Plot the stations on the plan map
         df.plot.scatter(x='Easting', y='Northing',
-                        ax=self.ax,
+                        ax=self.plan_ax,
                         color='w',
                         edgecolors='dimgray',
                         zorder=1,
-                        legend=False)
-        plt.yticks(rotation=60, va='center')
+                        legend=False,
+                        picker=True
+                        )
+        # Plot the sections
+        df.plot(x='Station', y='Elevation',
+                ax=self.section_ax,
+                color='dimgray',
+                zorder=0,
+                legend=False
+                )
+        # self.section_ax.xaxis.grid(True, which='minor')
+        self.section_ax.xaxis.set_minor_locator(FixedLocator(df.Station.to_list()))
+
+        # Plot the stations on the section map
+        df.plot.scatter(x='Station', y='Elevation',
+                        ax=self.section_ax,
+                        color='w',
+                        edgecolors='dimgray',
+                        zorder=1,
+                        legend=False,
+                        picker=True
+                        )
+
+        # Add flat elevation for the section plot limits
+        self.section_ax.set_ylim(self.section_ax.get_ylim()[0] - 5,
+                                 self.section_ax.get_ylim()[1] + 5)
+        # self.plan_ax.set_yticklabels(self.plan_ax.get_yticklabels(), rotation=0, ha='center')
         self.canvas.draw()
 
-    def highlight_point(self, row, col):
+    def onpick(self, event):
+        ind = event.ind[0]
+        print(f"Point {ind} clicked")
+        self.table.selectRow(ind)
+        self.highlight_point(ind)
+
+    def highlight_point(self, row):
         """
         Highlight a scatter point when it's row is selected in the table
         :param row: Int: table row to highlight
         :return: None
         """
+        def reset_highlight():
+            self.plan_highlight.remove()
+            self.plan_lx.remove()
+            self.plan_ly.remove()
+            self.section_highlight.remove()
+            self.section_lx.remove()
+            self.section_ly.remove()
+
+            self.plan_highlight = None
+            self.plan_lx = None
+            self.plan_ly = None
+            self.section_highlight = None
+            self.section_lx = None
+            self.section_ly = None
+
         print(f"Row {row} selected")
         # Remove previously plotted selection
-        if self.highlight:
-            self.highlight.remove()
-            self.lx.remove()
-            self.ly.remove()
-            self.highlight = None
-            self.lx = None
-            self.ly = None
+        if self.plan_highlight:
+            reset_highlight()
 
         # Filter the data to remove any rows that have NaN
         df = self.table_to_df().dropna()
         # Only plot if the row is in the filtered data
         if row in df.index:
-            x, y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
-            self.highlight = self.ax.scatter([x], [y],
-                                             color='lightsteelblue',
-                                             edgecolors='blue',
-                                             zorder=3)
-            self.lx = self.ax.axhline(y, color='blue')
-            self.ly = self.ax.axvline(x, color='blue')
+            # Plot on the plan map
+            plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
+            self.plan_highlight = self.plan_ax.scatter([plan_x], [plan_y],
+                                                       color='lightsteelblue',
+                                                       edgecolors='blue',
+                                                       zorder=3
+                                                       )
+            self.plan_lx = self.plan_ax.axhline(plan_y, color='blue')
+            self.plan_ly = self.plan_ax.axvline(plan_x, color='blue')
+
+            # Plot on the section map
+            section_x, section_y = df.loc[row, 'Station'], df.loc[row, 'Elevation']
+            self.section_highlight = self.section_ax.scatter([section_x], [section_y],
+                                                             color='lightsteelblue',
+                                                             edgecolors='blue',
+                                                             zorder=3
+                                                             )
+            self.section_lx = self.section_ax.axhline(section_y, color='blue')
+            self.section_ly = self.section_ax.axvline(section_x, color='blue')
         else:
             print(f"Row {row} is not in the filtered data frame.")
         self.canvas.draw()
@@ -3749,7 +3815,7 @@ def main():
     mw.open_pem_files(pem_files)
     mw.show()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
-    mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'])
+    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'])
     # mw.import_ri_files()
     # mw.show_map()
     # mw.timebase_freqency_converter()
