@@ -527,8 +527,7 @@ class PEMParser:
             r'<XYP>\s(?P<Probes>[\d\w\s-]*).*[\r\n]'
             r'<CUR>\s(?P<Current>\d+\.?\d?)\s*~?.*[\r\n]'
             r'<TXS>\s(?P<LoopSize>[\d\.\s]*).*[\r\n]',
-            re.MULTILINE
-        )
+            re.MULTILINE)
 
         # Tx loop coordinates section
         self.re_loop_coords = re.compile(
@@ -541,8 +540,7 @@ class PEMParser:
         # Notes i.e. GEN and HE tags
         self.re_notes = re.compile(  # Parsing the notes i.e. GEN tags and HE tags
             r'^(?P<Notes><GEN>.*|<HE\d>.*)',
-            re.MULTILINE
-        )
+            re.MULTILINE)
 
         # Header starting from 'Client' to the channel start-end times
         self.re_header = re.compile(  # Parsing the header
@@ -610,24 +608,33 @@ class PEMParser:
         def parse_loop(file):
             # Find all re matches
             matches = re.findall(self.re_loop_coords, file)
-            # Split the matches up into individual items of a list, ignoring the tags.
-            loop_gps = '\n'.join([' '.join(match.split()[1:5]) for match in matches])
-            if any(loop_gps):
-                return loop_gps
+            if matches:
+                return matches
             else:
                 print(f"No loop coordinates found in {os.path.basename(filepath)}")
-                return None
+            # Split the matches up into individual items of a list, ignoring the tags.
+            # loop_gps = '\n'.join([' '.join(match.split()[1:5]) for match in matches])
+            # loop = TransmitterLoop(matches)
+            # if loop.df.empty:
+            #     print(f"No loop coordinates found in {os.path.basename(filepath)}")
+            #     return None
+            # else:
+            #     return loop
 
         def parse_line(file):
             # Find all re matches
             matches = re.findall(self.re_line_coords, file)
-            # Split the matches up into individual items of a list
-            line_gps = '\n'.join([' '.join(match.split()[1:6]) for match in matches])
-            if any(line_gps):
-                return line_gps
+            if matches:
+                return matches
             else:
                 print(f"No line coordinates found in {os.path.basename(filepath)}")
-                return None
+            # # Split the matches up into individual items of a list
+            # line_gps = '\n'.join([' '.join(match.split()[1:6]) for match in matches])
+            # if any(line_gps):
+            #     return line_gps
+            # else:
+            #     print(f"No line coordinates found in {os.path.basename(filepath)}")
+            #     return None
 
         def parse_notes(file):
             notes = []

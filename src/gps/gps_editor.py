@@ -20,7 +20,7 @@ class TransmitterLoop:
         :param loop: either a str filepath of a text file or a pandas data frame containing loop GPS
         """
         self.parser = GPSParser()
-        if isinstance(loop, str):
+        if isinstance(loop, list):
             loop = self.parser.parse_loop_gps(loop)
 
         self.df = loop.drop_duplicates()
@@ -85,7 +85,7 @@ class SurveyLine:
         :param line: str filepath of a text file OR a pandas data frame containing line GPS
         """
         self.parser = GPSParser()
-        if isinstance(line, str):
+        if isinstance(line, list):
             line = self.parser.parse_station_gps(line)
 
         self.df = line.drop_duplicates()
@@ -143,7 +143,7 @@ class BoreholeCollar:
         :param line: str filepath of a text file OR a pandas data frame containing collar GPS
         """
         self.parser = GPSParser()
-        if isinstance(hole, str):
+        if isinstance(hole, list):
             hole = self.parser.parse_collar_gps(hole)
 
         self.df = hole.drop_duplicates()
@@ -163,7 +163,7 @@ class BoreholeGeometry:
         :param line: str filepath of a text file OR a pandas data frame containing hole geometry
         """
         self.parser = GPSParser()
-        if isinstance(hole, str):
+        if isinstance(hole, list):
             hole = self.parser.parse_segments(hole)
 
         self.df = hole.drop_duplicates()
@@ -328,16 +328,13 @@ class GPSParser:
         # self.re_station_gps = re.compile(
         #     r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
         self.re_station_gps = re.compile(
-            r'^(?P<Easting>-?\d{4,}\.?\d*)\W{1,3}(?P<Northing>-?\d{4,}\.?\d*)\W{1,3}(?P<Elevation>-?\d{1,4}\.?\d*)\W+(?P<Units>0|1)[\s\t,]*(?P<Station>-?\w+)?$',
-            re.MULTILINE)
+            r'(?P<Easting>-?\d{4,}\.?\d*)[\s,]{1,3}(?P<Northing>-?\d{4,}\.?\d*)[\s,]{1,3}(?P<Elevation>-?\d{1,4}\.?\d*)[\s,]+(?P<Units>0|1)[\s,]*(?P<Station>-?\d+)?')
         self.re_loop_gps = re.compile(
-            r'^(?P<Easting>-?\d{4,}\.?\d*)\W+(?P<Northing>-?\d{4,}\.?\d*)\W+(?P<Elevation>-?\d{1,4}\.?\d*)\W*(?P<Units>0|1)?$',
-            re.MULTILINE)
+            r'(?P<Easting>-?\d{4,}\.?\d*)[\s,]+(?P<Northing>-?\d{4,}\.?\d*)[\s,]+(?P<Elevation>-?\d{1,4}\.?\d*)[\s,]*(?P<Units>0|1)?')
         self.re_collar_gps = re.compile(
-            r'^(?P<Easting>-?\d{4,}\.?\d*)[\s\t,]+(?P<Northing>-?\d{4,}\.?\d*)[\s\t,]+(?P<Elevation>-?\d{1,4}\.?\d*)[\s\t,]+(?P<Units>0|1)?\s*?$')
+            r'(?P<Easting>-?\d{4,}\.?\d*)[\s,]+(?P<Northing>-?\d{4,}\.?\d*)[\s,]+(?P<Elevation>-?\d{1,4}\.?\d*)[\s,]+(?P<Units>0|1)?\s*?')
         self.re_segment = re.compile(
-            r'^(?P<Azimuth>-?\d{0,3}\.?\d*)[\s\t,]+(?P<Dip>-?\d{1,3}\.?\d*)[\s\t,]+(?P<SegLength>\d{1,3}\.?\d*)[\s\t,]+(?P<Units>0|1|2)[\s\t,]+(?P<Depth>-?\d{1,4}\.?\d*)$',
-            re.MULTILINE)
+            r'(?P<Azimuth>-?\d{0,3}\.?\d*)[\s,]+(?P<Dip>-?\d{1,3}\.?\d*)[\s,]+(?P<SegLength>\d{1,3}\.?\d*)[\s,]+(?P<Units>0|1|2)[\s,]+(?P<Depth>-?\d{1,4}\.?\d*)')
 
     def open(self, filepath):
         """
@@ -360,7 +357,7 @@ class GPSParser:
             """
             Convert station to integer (-ve for S, W, +ve for E, N)
             :param station: str: station str
-            :return: str: converted station str
+            :return: int: converted station as integer number
             """
             if station:
                 station = re.findall('-?\d+[NSEWnsew]?', station)[0]
@@ -380,11 +377,18 @@ class GPSParser:
             'Unit',
             'Station'
         ]
-        if os.path.isfile(file):
+        if os.path.isfile(str(file)):
             contents = self.open(file)
         else:
             contents = file
-        matched_gps = re.findall(self.re_station_gps, contents)
+
+        matched_gps = []
+        for row in contents:
+            match = re.search(self.re_station_gps, row)
+            if match:
+                match = re.split("[\s,]+", match.group(0))
+                matched_gps.append(match)
+
         gps = pd.DataFrame(matched_gps, columns=cols)
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
@@ -403,11 +407,18 @@ class GPSParser:
             'Elevation',
             'Unit'
         ]
-        if os.path.isfile(file):
+        if os.path.isfile(str(file)):
             contents = self.open(file)
         else:
             contents = file
-        matched_gps = re.findall(self.re_loop_gps, contents)
+
+        matched_gps = []
+        for row in contents:
+            match = re.search(self.re_loop_gps, row)
+            if match:
+                match = re.split("[\s,]+", match.group(0))
+                matched_gps.append(match)
+
         gps = pd.DataFrame(matched_gps, columns=cols)
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
@@ -426,11 +437,18 @@ class GPSParser:
             'Unit',
             'Depth'
         ]
-        if os.path.isfile(file):
+        if os.path.isfile(str(file)):
             contents = self.open(file)
         else:
             contents = file
-        matched_seg = re.findall(self.re_segment, contents)
+
+        matched_seg = []
+        for row in contents:
+            match = re.search(self.re_segment, row)
+            if match:
+                match = re.split("[\s,]+", match.group(0))
+                matched_seg.append(match)
+
         seg = pd.DataFrame(matched_seg, columns=cols)
         seg[['Azimuth',
                  'Dip',
@@ -454,15 +472,20 @@ class GPSParser:
             'Elevation',
             'Unit'
         ]
-        if os.path.isfile(file):
+        if os.path.isfile(str(file)):
             contents = self.open(file)
         else:
             contents = file
-        matched_gps = re.findall(self.re_collar_gps, contents)
+
+        matched_gps = []
+        for row in contents:
+            match = re.search(self.re_segment, row)
+            if match:
+                match = re.split("[\s,]+", match.group(0))
+                matched_gps.append(match)
+                break
+
         gps = pd.DataFrame(matched_gps, columns=cols)
-        if not gps.empty and len(gps.index) > 1:
-            # Only keep the first match
-            gps = gps.head(1)
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
         return gps
@@ -478,7 +501,6 @@ class INFParser:
         crs['Coordinate System'] = re.findall('Coordinate System:\W+(?P<System>.*)', file)[0]
         crs['Coordinate Zone'] = re.findall('Coordinate Zone:\W+(?P<Zone>.*)', file)[0]
         crs['Datum'] = re.findall('Datum:\W+(?P<Datum>.*)', file)[0]
-
         return crs
 
 
