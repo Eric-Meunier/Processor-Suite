@@ -7,7 +7,7 @@ import natsort
 import math
 import time
 import copy
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeGeometry
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 
 
 def sort_data(data):
@@ -55,8 +55,9 @@ class PEMFile:
 
         self.loop = TransmitterLoop(loop_coords, name=self.loop_name)
         if self.is_borehole():
-            self.collar = BoreholeCollar(line_coords, name=self.line_name)
-            self.geometry = BoreholeGeometry(line_coords)
+            collar = BoreholeCollar(line_coords, name=self.line_name)
+            segments = BoreholeSegments(line_coords, name=self.line_name)
+            self.geometry = BoreholeGeometry(collar, segments, name=self.line_name)
         else:
             self.line = SurveyLine(line_coords, name=self.line_name)
         self.notes = notes
@@ -93,7 +94,7 @@ class PEMFile:
 
     def has_collar_gps(self):
         if self.is_borehole():
-            if not self.collar.df.empty and all(self.collar.df):
+            if not self.geometry.collar.df.empty and all(self.geometry.collar.df):
                 return True
             else:
                 return False
@@ -102,7 +103,7 @@ class PEMFile:
 
     def has_geometry(self):
         if self.is_borehole():
-            if not self.geometry.df.empty and all(self.geometry.df):
+            if not self.geometry.segments.df.empty and all(self.geometry.segments.df):
                 return True
             else:
                 return False

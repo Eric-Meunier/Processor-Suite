@@ -29,7 +29,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import FixedLocator
 from src.geomag import geomag
 from src.pem.pem_file import PEMFile, PEMParser
-from src.gps.gps_editor import SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeGeometry, INFParser, GPXEditor
+from src.gps.gps_editor import SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeGeometry, GPXEditor, CRS
 from src.pem.pem_file_editor import PEMFileEditor
 from src.qt_py.custom_tables import UnpackerTable
 from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods, ContourMap, FoliumMap
@@ -98,7 +98,7 @@ def convert_station(station):
     return station
 
 
-class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
+class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
     def __init__(self, parent=None):
         super().__init__()
@@ -320,7 +320,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         # Actions
         self.actionDel_File = QAction("&Remove File", self)
         self.actionDel_File.setShortcut("Del")
-        self.actionDel_File.triggered.connect(self.remove_file_selection)
+        self.actionDel_File.triggered.connect(self.remove_file)
         self.addAction(self.actionDel_File)
         self.actionDel_File.setEnabled(False)
 
@@ -404,7 +404,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
                 self.table.menu = QMenu(self.table)
                 self.table.remove_file_action = QAction("&Remove", self)
-                self.table.remove_file_action.triggered.connect(self.remove_file_selection)
+                self.table.remove_file_action.triggered.connect(self.remove_file)
                 self.table.remove_file_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'remove.png')))
 
                 self.table.open_file_action = QAction("&Open", self)
@@ -804,7 +804,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
             if current_tab == pem_info_widget.Station_GPS_Tab:
                 line = SurveyLine(file)
-                self.line_adder.add_df(line.get_line(sorted=True))
+                self.line_adder.add_df(line.get_line(sorted=self.autoSortStationsCheckbox.isChecked()))
                 self.line_adder.write_widget = pem_info_widget
             elif current_tab == pem_info_widget.Geometry_Tab:
                 collar = BoreholeCollar(file)
@@ -815,7 +815,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     pem_info_widget.fill_gps_table(geom.df, pem_info_widget.geometryTable)
             elif current_tab == pem_info_widget.Loop_GPS_Tab:
                 loop = TransmitterLoop(file)
-                self.loop_adder.add_df(loop.get_loop(sorted=True))
+                self.loop_adder.add_df(loop.get_loop(sorted=self.autoSortLoopsCheckbox.isChecked()))
                 self.loop_adder.write_widget = pem_info_widget
             else:
                 pass
@@ -835,9 +835,18 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :param inf_files: List of .INF files. Will only use the first file.
         :return: None
         """
+        def get_crs(filepath):
+            crs = {}
+            with open(filepath, 'r') as in_file:
+                file = in_file.read()
+
+            crs['Coordinate System'] = re.findall('Coordinate System:\W+(?P<System>.*)', file)[0]
+            crs['Coordinate Zone'] = re.findall('Coordinate Zone:\W+(?P<Zone>.*)', file)[0]
+            crs['Datum'] = re.findall('Datum:\W+(?P<Datum>.*)', file)[0]
+            return crs
+
         inf_file = inf_files[0]  # Filepath, only accept the first one
-        inf_parser = INFParser()
-        crs = inf_parser.get_crs(inf_file)
+        crs = get_crs(inf_file)
         coord_sys = crs.get('System')
         coord_zone = crs.get('Zone')
         datum = crs.get('Datum')
@@ -863,17 +872,13 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 self.datumCBox.setCurrentIndex(self.gps_datums.index('WGS 1984'))
 
             pem_info_widget = self.stackedWidget.currentWidget()
-            station_gps_tab = pem_info_widget.Station_GPS_Tab
-            geometry_tab = pem_info_widget.Geometry_Tab
-            loop_gps_tab = pem_info_widget.Loop_GPS_Tab
             current_tab = pem_info_widget.tabs.currentWidget()
-
-            if station_gps_tab == current_tab:
+            # TODO this
+            if current_tab == pem_info_widget.Station_GPS_Tab:
                 pem_info_widget.add_station_gps(file)
-            elif geometry_tab == current_tab:
-                # pem_info_widget.add_collar_gps(file)
+            elif current_tab == pem_info_widget.Geometry_Tab:
                 pem_info_widget.add_geometry(file)
-            elif loop_gps_tab == current_tab:
+            elif current_tab == pem_info_widget.Loop_GPS_Tab:
                 pem_info_widget.add_loop_gps(file)
             else:
                 pass
@@ -1134,12 +1139,12 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             if item:
                 value = item.text()
                 if col == average_col:
-                    if value.lower() == 'false':
+                    if value == 'False':
                         item.setForeground(QtGui.QColor('red'))
                     else:
                         item.setForeground(QtGui.QColor('black'))
                 elif col == split_col:
-                    if value.lower() == 'false':
+                    if value == 'False':
                         item.setForeground(QtGui.QColor('red'))
                     else:
                         item.setForeground(QtGui.QColor('black'))
@@ -1209,6 +1214,10 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         """
 
         def add_crs_tag():
+            """
+            Add the CRS from the table as a note to the PEM file.
+            :return: None
+            """
             system = self.systemCBox.currentText()
             zone = ' Zone ' + self.zoneCBox.currentText() if self.zoneCBox.isEnabled() else ''
             datum = self.datumCBox.currentText()
@@ -1227,22 +1236,19 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             pem_file.filepath = filepath
 
         add_crs_tag()
-        pem_file.header['Date'] = self.table.item(table_row, self.table_columns.index('Date')).text()
-        pem_file.header['Client'] = self.table.item(table_row, self.table_columns.index('Client')).text()
-        pem_file.header['Grid'] = self.table.item(table_row, self.table_columns.index('Grid')).text()
-        pem_file.header['LineHole'] = self.table.item(table_row, self.table_columns.index('Line/Hole')).text()
-        pem_file.header['Loop'] = self.table.item(table_row, self.table_columns.index('Loop')).text()
-        pem_file.tags['Current'] = self.table.item(table_row, self.table_columns.index('Current')).text()
-        pem_file.loop_coords = self.stackedWidget.widget(table_row).get_loop_gps()
+        pem_file.filename = os.path.basename(pem_file.filepath)
+        pem_file.date = self.table.item(table_row, self.table_columns.index('Date')).text()
+        pem_file.client = self.table.item(table_row, self.table_columns.index('Client')).text()
+        pem_file.grid = self.table.item(table_row, self.table_columns.index('Grid')).text()
+        pem_file.line_name = self.table.item(table_row, self.table_columns.index('Line/Hole')).text()
+        pem_file.loop_name = self.table.item(table_row, self.table_columns.index('Loop')).text()
+        pem_file.current = self.table.item(table_row, self.table_columns.index('Current')).text()
+        pem_file.loop = self.stackedWidget.widget(table_row).get_loop()
 
-        if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower():
-            pem_file.line_coords = self.stackedWidget.widget(table_row).get_station_gps()
-        elif 'borehole' in pem_file.survey_type.lower():
-            collar_gps = self.stackedWidget.widget(table_row).get_collar_gps()
-            if not collar_gps:
-                collar_gps = ['<P00>']
-            segments = self.stackedWidget.widget(table_row).get_geometry_segments()
-            pem_file.line_coords = [collar_gps] + segments
+        if pem_file.is_borehole():
+            pem_file.geometry = self.stackedWidget.widget(table_row).get_geometry()
+        else:
+            pem_file.line = self.stackedWidget.widget(table_row).get_line()
 
         return pem_file
 
@@ -1268,23 +1274,29 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         Create a backup (.bak) file for each opened PEM file, saved in a backup folder.
         :return: None
         """
-        if len(self.pem_files) > 0:
-            for pem_file in self.pem_files:
-                print(f"Backing up {os.path.basename(pem_file.filepath)}")
-                pem_file = copy.deepcopy(pem_file)
-                self.write_pem_file(pem_file, backup=True, tag='[B]', remove_old=False)
-            self.window().statusBar().showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
+        for pem_file in self.pem_files:
+            print(f"Backing up {os.path.basename(pem_file.filepath)}")
+            pem_file = copy.deepcopy(pem_file)
+            self.write_pem_file(pem_file, backup=True, tag='[B]', remove_old=False)
+        self.window().statusBar().showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
 
-    def remove_file(self, table_row):
+    def remove_file(self, rows=None):
         """
         Removes PEM files from the main table, along with any associated widgets.
-        :param table_row: Table row of the PEM file.
+        :param rows: list: Table rows of the PEM files.
         :return: None
         """
-        self.table.removeRow(table_row)
-        self.stackedWidget.removeWidget(self.stackedWidget.widget(table_row))
-        del self.pem_files[table_row]
-        del self.pem_info_widgets[table_row]
+        if not rows:
+            pem_files, rows = self.get_selected_pem_files()
+
+        if not isinstance(rows, list):
+            rows = [rows]
+
+        for row in rows:
+            self.table.removeRow(row)
+            self.stackedWidget.removeWidget(self.stackedWidget.widget(row))
+            del self.pem_files[row]
+            del self.pem_info_widgets[row]
 
         if len(self.pem_files) == 0:
             self.stackedWidget.hide()
@@ -1296,11 +1308,11 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             self.max_range_edit.setText('')
             self.reset_crs()
 
-    def remove_file_selection(self):
-        pem_files, rows = self.get_selected_pem_files()
-        for row in rows:
-            self.remove_file(row)
-        self.window().statusBar().showMessage(f"{len(rows)} files removed.", 2000)
+    # def remove_file_selection(self):
+    #     pem_files, rows = self.get_selected_pem_files()
+    #     for row in rows:
+    #         self.remove_file(row)
+    #     self.window().statusBar().showMessage(f"{len(rows)} files removed.", 2000)
 
     def get_selected_pem_files(self):
         """
@@ -1374,7 +1386,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :param all: Bool: if True, saves all opened PEM files instead of only the selected ones.
         :return: None
         """
-        if len(self.pem_files) > 0:
+        if self.pem_files:
             if all is False:
                 pem_files, rows = self.get_selected_pem_files()
             else:
@@ -1435,29 +1447,27 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         or WGS 84.
         :return: None
         """
+        crs = self.get_crs()
 
-        if len(self.pem_files) == 0:
+        if not self.pem_files:
             return
 
         if not any([pem_file.has_any_gps() for pem_file in self.pem_files]):
-            self.message.information(self, 'Error', 'No GPS to show')
+            self.message.information(self, 'Missing GPS', 'A file is missing required GPS')
             return
 
-        if self.datumCBox.currentText() == 'NAD 1927':
-            self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
+        if crs['Datum'] == 'NAD 1927':
+            self.message.information(self, 'Invalid Datum', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
             return
 
-        if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() == '',
-                self.datumCBox.currentText() == '']):
-            self.message.information(self, 'Error', 'GPS coordinate system information is incomplete')
+        if any([value is None for value in crs.values()]):
+            self.message.information(self, 'Incomplete CRS', 'GPS coordinate system information is incomplete')
             return
 
         kml = simplekml.Kml()
         pem_files = [pem_file for pem_file in self.pem_files if pem_file.has_any_gps()]
 
-        zone = self.zoneCBox.currentText()
-        zone_num = int(re.search('\d+', zone).group())
-        north = True if 'n' in zone.lower() else False
+        zone, zone_num, north = crs['Zone'], crs['Zone Number'], crs['North']
 
         line_style = simplekml.Style()
         line_style.linestyle.width = 4
@@ -1488,55 +1498,57 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
 
         # Grouping up the loops, lines and boreholes into lists.
         for pem_file in pem_files:
-            loop_gps = pem_file.get_loop_coords()
-            loop_gps.append(loop_gps[0])
-            loop_name = pem_file.header.get('Loop')
-            if loop_gps and loop_gps not in loops:
+            loop_gps = pem_file.loop.get_loop(closed=True, crs=crs)
+            loop_gps.append(loop_gps)
+            loop_name = pem_file.loop_name
+            if not loop_gps.empty and loop_gps not in loops:
                 loops.append(loop_gps)
                 loop_names.append(loop_name)
-            if 'surface' in pem_file.survey_type.lower():
-                line_gps = pem_file.get_line_coords()
-                line_name = pem_file.header.get('LineHole')
-                if line_gps and line_gps not in lines:
+            if not pem_file.is_borehole():
+                line_gps = pem_file.line.get_line()
+                line_name = pem_file.line_name
+                if not line_gps.empty and line_gps not in lines:
                     lines.append(line_gps)
                     line_names.append(line_name)
             else:
-                borehole_projection = self.mpm.get_3D_borehole_projection(pem_file.get_collar_coords()[0], pem_file.get_hole_geometry(), 100)
-                trace_gps = list(zip(borehole_projection[0], borehole_projection[1]))
-                hole_name = pem_file.header.get('LineHole')
-                if trace_gps and trace_gps not in traces:
-                    traces.append(trace_gps)
+                bh_projection = pem_file.geometry.get_projection(num_segments=100, crs=crs)
+                hole_name = pem_file.line_name
+                if bh_projection and bh_projection not in traces:
+                    traces.append(bh_projection)
                     hole_names.append(hole_name)
 
         # Creates KMZ objects for the loops.
         for loop_gps, name in zip(loops, loop_names):
-            loop_coords = []
-            for row in loop_gps:
-                easting = int(float(row[0]))
-                northing = int(float(row[1]))
-                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-                loop_coords.append((lon, lat))
+            loop_coords = loop_gps.apply(lambda x: utm.to_latlon(x.Easting, x.Northing, zone_num, northern=north),
+                                         axis=1)
 
             ls = kml.newlinestring(name=name)
-            ls.coords = loop_coords
+            ls.coords = loop_coords.to_numpy()
             ls.extrude = 1
             ls.style = loop_style
 
         # Creates KMZ objects for the lines.
         for line_gps, name in zip(lines, line_names):
-            line_coords = []
+            line_coords = line_gps.apply(lambda x: utm.to_latlon(x.Easting, x.Northing, zone_num, northern=north),
+                                         axis=1)
+            lat, lon = line_coords.map(lambda x: x[0]), loop_coords.map(lambda x: x[1])
+            line_coords = pd.DataFrame(columns=['Latitude', 'Longitude', 'Station'])
+            line_coords.Latitude = lat
+            line_coords.Longitude = lon
+            line_coords.Station = line_gps.Station
+            new_point = line_coords.apply(lambda x: folder.newpoint(name=x.Station, coords=[(x)]))
             folder = kml.newfolder(name=name)
-            for row in line_gps:
-                easting = int(float(row[0]))
-                northing = int(float(row[1]))
-                station = row[-1]
-                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-                line_coords.append((lon, lat))
-                new_point = folder.newpoint(name=f"{station}", coords=[(lon, lat)])
-                new_point.style = station_style
+            # for row in line_gps:
+                # easting = int(float(row[0]))
+                # northing = int(float(row[1]))
+                # station = row[-1]
+                # lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+                # line_coords.append((lon, lat))
+            new_point = folder.newpoint(name=f"{station}", coords=[(lon, lat)])
+            new_point.style = station_style
 
             ls = folder.newlinestring(name=name)
-            ls.coords = line_coords
+            ls.coords = line_coords.to_numpy()
             ls.extrude = 1
             ls.style = trace_style
 
@@ -1595,22 +1607,32 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                             file.write(xyz_file)
                         os.startfile(file_name)
 
+    def get_crs(self):
+        system = self.systemCBox.currentText()
+        zone = self.zoneCBox.currentText()
+        datum = self.datumCBox.currentText()
+
+        crs_dict = {'System': system, 'Zone': zone, 'Datum': datum}
+        crs = CRS(crs_dict)
+        return crs
+
     def export_pem_files(self, export_final=False, all=True):
         """
         Saves all PEM files to a desired location (keeps them opened) and removes any tags.
         :return: None
         """
+        crs = self.get_crs()
         if all is False:
             pem_files, rows = self.get_selected_pem_files()
         else:
             pem_files, rows = self.pem_files, range(self.table.rowCount())
 
         self.window().statusBar().showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
-        if any([self.systemCBox.currentText()=='', self.zoneCBox.currentText()=='', self.datumCBox.currentText()=='']):
-            response = self.message.question(self, 'No CRS',
-                                                     'No CRS has been selected. '
-                                                     'Do you wish to proceed with no CRS information?',
-                                                     self.message.Yes | self.message.No)
+        if not crs.is_valid():
+            response = self.message.question(self, 'Invalid CRS',
+                                             'The CRS information is invalid.'
+                                             'Do you wish to proceed with no CRS information?',
+                                             self.message.Yes | self.message.No)
             if response == self.message.No:
                 return
 
@@ -1624,15 +1646,17 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
                 extension = os.path.splitext(pem_file.filepath)[-1]
                 if export_final is True:
-                    file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))  # Removes underscore-dates and tags
-                    if 'surface' in pem_file.survey_type.lower():
+                    # Remove underscore-dates and tags
+                    file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))
+                    if not pem_file.is_borehole():
                         file_name = file_name.upper()
-                        if file_name[0] == 'C':
+                        if file_name.lower()[0] == 'C':
                             file_name = file_name[1:]
-                        if pem_file.is_averaged() and 'AV' not in file_name:
+                        if pem_file.is_averaged() and 'av' not in file_name.lower():
                             file_name = file_name + 'Av'
 
                 updated_file.filepath = os.path.join(file_dir, file_name + extension)
+                updated_file.filename = os.path.basename(updated_file.filepath)
                 self.write_pem_file(updated_file, dir=file_dir, remove_old=False)
             self.refresh_table()
             self.window().statusBar().showMessage(
@@ -1648,18 +1672,26 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         if self.pem_files:
-            system = self.systemCBox.currentText()
-            zone = ' Zone ' + self.zoneCBox.currentText() if self.zoneCBox.isEnabled() else ''
-            datum = self.datumCBox.currentText()
+            crs = self.get_crs()
+
+            if not crs.is_valid():
+                self.message.information(self, 'Invalid CRS', 'CRS is incomplete and/or invalid.')
+                return
+
+            system = crs.system
+            # zone = ' Zone ' + self.zoneCBox.currentText() if self.zoneCBox.isEnabled() else ''
+            zone = ' Zone ' + crs.zone if self.zoneCBox.isEnabled() else ''
+            datum = crs.datum
 
             loops = []
             lines = []
             collars = []
 
             default_path = os.path.dirname(self.pem_files[0].filepath)
-            export_folder = self.dialog.getExistingDirectory(self, 'Select Destination Folder', default_path, QFileDialog.DontUseNativeDialog)
+            export_folder = self.dialog.getExistingDirectory(
+                self, 'Select Destination Folder', default_path, QFileDialog.DontUseNativeDialog)
             if export_folder != '':
-                for loop, pem_files in groupby(self.pem_files, key=lambda x: x.header.get('Loop')):
+                for loop, pem_files in groupby(self.pem_files, key=lambda x: x.loop_name):
                     pem_files = list(pem_files)
                     try:
                         # Creates a new folder for each loop, where each CSV will be saved for that loop.
@@ -1669,49 +1701,59 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                     folder = os.path.join(export_folder, loop)
                     for pem_file in pem_files:
                         if pem_file.has_loop_gps():
-                            loop = pem_file.get_loop_coords()
+                            loop = pem_file.loop.get_loop(sorted=self.autoSortLoopsCheckbox.isChecked(), closed=False)
                             if loop not in loops:
-                                loop_name = pem_file.header.get('Loop')
+                                loop_name = pem_file.loop_name
                                 print(f"Creating CSV file for loop {loop_name}")
                                 loops.append(loop)
                                 csv_filepath = os.path.join(folder, loop_name + '.csv')
                                 with open(csv_filepath, 'w') as csvfile:
-                                    filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
-                                                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                                    filewriter = csv.writer(csvfile,
+                                                            delimiter=',',
+                                                            lineterminator = '\n',
+                                                            quotechar='"',
+                                                            quoting=csv.QUOTE_MINIMAL)
                                     filewriter.writerow([f"Loop {loop_name} - {system} {zone} {datum}"])
                                     filewriter.writerow(['Easting', 'Northing', 'Elevation'])
-                                    for row in loop:
-                                        filewriter.writerow([row[0], row[1], row[2]])
+                                    loop.apply(lambda x: filewriter.writerow([x.Easting, x.Northing, x.Elevation]),
+                                               axis=1)
 
                         if pem_file.has_station_gps():
-                            line = pem_file.get_station_coords()
+                            line = pem_file.line.get_line()
                             if line not in lines:
-                                line_name = pem_file.header.get('LineHole')
+                                line_name = pem_file.line_name
                                 print(f"Creating CSV file for line {line_name}")
                                 lines.append(line)
                                 csv_filepath = os.path.join(folder, f"{line_name}.csv")
                                 with open(csv_filepath, 'w') as csvfile:
-                                    filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
-                                                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                                    filewriter = csv.writer(csvfile,
+                                                            delimiter=',',
+                                                            lineterminator = '\n',
+                                                            quotechar='"',
+                                                            quoting=csv.QUOTE_MINIMAL)
                                     filewriter.writerow([f"Line {line_name} - {system} {zone} {datum}"])
                                     filewriter.writerow(['Easting', 'Northing', 'Elevation', 'Station Number'])
-                                    for row in line:
-                                        filewriter.writerow([row[0], row[1], row[2], row[-1]])
+                                    line.apply(
+                                        lambda x: filewriter.writerow([x.Easting, x.Northing, x.Elevation, x.Station]),
+                                        axis=1)
 
                         if pem_file.has_collar_gps():
-                            collar_coords = pem_file.get_collar_coords()
-                            if collar_coords not in collars:
-                                hole_name = pem_file.header.get('LineHole')
+                            collar = pem_file.geometry.get_collar()
+                            if collar not in collars:
+                                hole_name = pem_file.line_name
                                 print(f"Creating CSV file for hole {hole_name}")
-                                collars.append(collar_coords)
+                                collars.append(collar)
                                 csv_filepath = os.path.join(folder, hole_name + '.csv')
                                 with open(csv_filepath, 'w') as csvfile:
-                                    filewriter = csv.writer(csvfile, delimiter=',', lineterminator = '\n',
-                                                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                                    filewriter = csv.writer(csvfile,
+                                                            delimiter=',',
+                                                            lineterminator='\n',
+                                                            quotechar='"',
+                                                            quoting=csv.QUOTE_MINIMAL)
                                     filewriter.writerow([f"Hole {hole_name} - {system} {zone} {datum}"])
                                     filewriter.writerow(['Easting', 'Northing', 'Elevation'])
-                                    for row in collar_coords:
-                                        filewriter.writerow([row[0], row[1], row[2]])
+                                    collar.apply(lambda x: filewriter.writerow([x.Easting, x.Northing, x.Elevation]),
+                                                 axis=1)
                 self.window().statusBar().showMessage("Export complete.", 2000)
             else:
                 self.window().statusBar().showMessage("No files to export.", 2000)
@@ -2167,7 +2209,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
                 if widget.station_gps:
-                    widget.fill_station_table(widget.station_gps.get_sorted_gps(widget.get_station_gps()))
+                    widget.fill_station_table(widget.station_gps.get_sorted_gps(widget.get_line()))
                 else:
                     pass
             self.window().statusBar().showMessage('All stations have been sorted', 2000)
@@ -2181,7 +2223,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
             for i in range(self.stackedWidget.count()):
                 widget = self.stackedWidget.widget(i)
                 if widget.loop_gps:
-                    widget.fill_loop_table(widget.loop_gps.get_sorted_gps(widget.get_loop_gps()))
+                    widget.fill_loop_table(widget.loop_gps.get_sorted_gps(widget.get_loop()))
                 else:
                     pass
             self.window().statusBar().showMessage('All loops have been sorted', 2000)
@@ -2224,7 +2266,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         selected_widget = self.pem_info_widgets[self.table.currentRow()]
-        selected_widget_loop = selected_widget.get_loop_gps()
+        selected_widget_loop = selected_widget.get_loop()
         if selected_widget_loop:
             for widget in self.pem_info_widgets:
                 widget.fill_loop_table(selected_widget_loop)
@@ -2235,7 +2277,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         selected_widget = self.pem_info_widgets[self.table.currentRow()]
-        selected_widget_collar = [selected_widget.get_collar_gps()]
+        selected_widget_collar = [selected_widget.get_collar()]
         if selected_widget_collar:
             for widget in list(filter(lambda x: 'borehole' in x.pem_file.survey_type.lower(), self.pem_info_widgets)):
                 widget.fill_collar_gps_table(selected_widget_collar)
@@ -2257,7 +2299,7 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         selected_widget = self.pem_info_widgets[self.table.currentRow()]
-        selected_widget_station_gps = selected_widget.get_station_gps()
+        selected_widget_station_gps = selected_widget.get_line()
         if selected_widget_station_gps:
             for widget in list(filter(lambda x: 'surface' in x.pem_file.survey_type.lower()
                                             or 'squid' in x.pem_file.survey_type.lower(), self.pem_info_widgets)):
@@ -3974,10 +4016,12 @@ class LoopAdder(GPSAdder):
 
     def onpick(self, event):
         """
-        Signal slot: When a point in the plots is clicked, highlights the associated row in the table.
+        Signal slot: When a point in the plots is clicked
         :param event: Mouse click event
         :return: None
         """
+        self.table.blockSignals(True)
+
         def swap_points():
             """
             Swaps the position of two points on either axes. Creates a data frame from the table, then swaps the
@@ -3993,36 +4037,34 @@ class LoopAdder(GPSAdder):
             df.iloc[points[0]], df.iloc[points[1]] = b, a
             self.df_to_table(df)
             self.plot_table(preserve_limits=True)
-            self.highlight_point(points[1])
 
         # Ignore mouse wheel events
         if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
             return
-        ind = event.ind[0]
-        print(f"Point {ind} clicked")
+        index = event.ind[0]
+        print(f"Point {index} clicked")
 
         # Swap two points when CTRL is pressed when selecting two points
         if keyboard.is_pressed('ctrl'):
+            print('CTRL is pressed')
             # Reset the selection if two were already selected
             if len(self.selection) == 2:
                 self.selection = []
-            self.selection.append(ind)
+            self.selection.append(index)
             print(f'Selected points: {self.selection}')
 
             if len(self.selection) == 2:
                 print(f"Two points are selected, swapping them...")
                 swap_points()
+                index = self.selection[0]
         else:
             # Reset the selection if CTRL isn't pressed
             self.selection = []
 
-        self.table.selectRow(ind)
-        self.highlight_point(row=ind)
+        self.table.selectRow(index)
+        self.highlight_point(row=index)
 
-        # # Open the context menu if the right mouse button was clicked
-        # if event.mouseevent.button == 3:
-        #     cursor = QtGui.QCursor()
-        #     self.popMenu.popup(cursor.pos())
+        self.table.blockSignals(False)
 
     def add_df(self, df):
         """
@@ -4047,7 +4089,7 @@ class LoopAdder(GPSAdder):
 
     def plot_table(self, preserve_limits=False):
         """
-        Plot the data from the table to the axes. Ignores any rows that have NaN somewhere in the row.
+        Plot the data from the table to the axes.
         :return: None
         """
         if preserve_limits is True:
@@ -4118,7 +4160,6 @@ class LoopAdder(GPSAdder):
         :param row: Int: table row to highlight
         :return: None
         """
-
         def reset_highlight():
             self.plan_highlight.remove()
             self.plan_lx.remove()
@@ -4137,6 +4178,7 @@ class LoopAdder(GPSAdder):
         if row is None:
             row = self.table.selectionModel().selectedRows()[0].row()
         print(f"Row {row} selected")
+
         # Remove previously plotted selection
         if self.plan_highlight:
             reset_highlight()
@@ -4260,13 +4302,15 @@ class ZoomPan:
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
-    mw = PEMEditorWindow()
+    mw = PEMEditor()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Kazzinc', number=1)
+    pem_files = pg.get_pems(client='Raglan', number=1)
     mw.open_pem_files(pem_files)
+    # mw.show()
+    mw.save_as_kmz()
     mw.show()
-    mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
+    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
     # import pyqtgraph.examples
     # pyqtgraph.examples.run()
 

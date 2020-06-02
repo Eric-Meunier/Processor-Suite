@@ -55,7 +55,8 @@ class PEMSerializer:
 
         def serialize_collar_coords():
             result = '~ Hole/Profile Co-ordinates:\n'
-            if pem_file.collar.df.empty:
+            collar = pem_file.geometry.get_collar()
+            if collar:
                 result += '<P00>\n'
             else:
                 for row in pem_file.collar.df.iterrows():

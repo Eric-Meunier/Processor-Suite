@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMenu, QInputDi
                              QFileDialog, QErrorMessage, QHeaderView, QTableView)
 from PyQt5.QtCore import QAbstractTableModel, Qt
 from collections import Counter, OrderedDict
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeGeometry
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 from src.pem.pem_file_editor import PEMFileEditor
 from src.ri.ri_file import RIFile
 from src.qt_py.custom_tables import CustomTableWidgetItem
@@ -320,7 +320,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.parent = parent
         self.initTables()
         if self.pem_file.is_borehole():
-            self.fill_gps_table(self.pem_file.collar.get_collar(), self.collarGPSTable)
+            self.fill_gps_table(self.pem_file.geometry.get_collar(), self.collarGPSTable)
             self.fill_gps_table(self.pem_file.geometry.get_segments(), self.geometryTable)
         else:
             self.fill_gps_table(self.pem_file.line.get_line(sorted=self.parent.autoSortStationsCheckbox.isChecked()),
@@ -712,7 +712,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         self.stationGPSTable.blockSignals(True)
-        stations = self.get_station_gps().df.Station.map(convert_station).to_list()
+        stations = self.get_line().df.Station.map(convert_station).to_list()
         sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
 
         blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
@@ -736,7 +736,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         self.clear_table(self.missing_gps_table)
         data_stations = self.pem_file.data.Station.map(convert_station).unique()
-        gps_stations = self.get_station_gps().df.Station.map(convert_station).unique()
+        gps_stations = self.get_line().df.Station.map(convert_station).unique()
         missing_gps = []
         for station in data_stations:
             if station not in gps_stations:
@@ -810,7 +810,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Remove all station GPS from the stationGPSTable where the station number isn't in the PEM data
         :return: None
         """
-        gps = self.get_station_gps()
+        gps = self.get_line()
         if gps:
             culled_gps = []
             gps_stations = list(map(lambda x: x[-1], gps))
@@ -823,16 +823,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             pass
 
     def sort_station_gps(self):
-        station_gps = self.get_station_gps()
+        station_gps = self.get_line()
         if station_gps:
-            self.fill_station_table(self.gps_editor.get_station_gps(station_gps, sorted=True))
+            self.fill_station_table(self.gps_editor.get_line(station_gps, sorted=True))
         else:
             pass
 
     def sort_loop_gps(self):
-        loop = self.get_loop_gps()
+        loop = self.get_loop()
         if loop:
-            self.fill_loop_table(self.gps_editor.get_loop_gps(loop, sorted=True))
+            self.fill_loop_table(self.gps_editor.get_loop(loop, sorted=True))
         else:
             pass
 
@@ -842,7 +842,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         rows = self.get_selected_rows(self.loopGPSTable)
-        loop_gps = self.get_loop_gps()
+        loop_gps = self.get_loop()
 
         for row in rows:
             removed_row = loop_gps.pop(row)
@@ -859,7 +859,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         rows = self.get_selected_rows(self.loopGPSTable)
-        loop_gps = self.get_loop_gps()
+        loop_gps = self.get_loop()
 
         for row in rows:
             removed_row = loop_gps.pop(row)
@@ -1067,7 +1067,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Flips the station numbers from the StationGPSTable head-over-heals.
         :return: None
         """
-        gps = self.get_station_gps()
+        gps = self.get_line()
         if gps:
             reversed_stations = list(reversed(list(map(lambda x: int(x[-1]), gps))))
             reversed_gps = []
@@ -1248,35 +1248,35 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         return [model.row() for model in table.selectionModel().selectedRows()]
 
-    def get_loop_gps(self):
+    def get_loop(self):
         """
         Create a TransmitterLoop object using the information in the loopGPSTable
         :return: TransmitterLoop object
         """
         gps = {
-        'Easting': [],
-        'Northing': [],
-        'Elevation': [],
-        'Unit': [],
+            'Easting': [],
+            'Northing': [],
+            'Elevation': [],
+            'Unit': [],
         }
-        for row in range(self.stationGPSTable.rowCount()):
-            gps['Easting'].append(float(self.stationGPSTable.item(row, 1).text()))
-            gps['Northing'].append(float(self.stationGPSTable.item(row, 2).text()))
-            gps['Elevation'].append(float(self.stationGPSTable.item(row, 3).text()))
-            gps['Unit'].append(self.stationGPSTable.item(row, 4).text())
+        for row in range(self.loopGPSTable.rowCount()):
+            gps['Easting'].append(float(self.loopGPSTable.item(row, 1).text()))
+            gps['Northing'].append(float(self.loopGPSTable.item(row, 2).text()))
+            gps['Elevation'].append(float(self.loopGPSTable.item(row, 3).text()))
+            gps['Unit'].append(self.loopGPSTable.item(row, 4).text())
         return TransmitterLoop(pd.DataFrame(gps))
 
-    def get_station_gps(self):
+    def get_line(self):
         """
         Create a SurveyLine object using the information in the stationGPSTable
         :return: SurveyLine object
         """
         gps = {
-        'Easting': [],
-        'Northing': [],
-        'Elevation': [],
-        'Unit': [],
-        'Station': []
+            'Easting': [],
+            'Northing': [],
+            'Elevation': [],
+            'Unit': [],
+            'Station': []
         }
         for row in range(self.stationGPSTable.rowCount()):
             gps['Easting'].append(float(self.stationGPSTable.item(row, 1).text()))
@@ -1286,43 +1286,51 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             gps['Station'].append(self.stationGPSTable.item(row, 5).text())
         return SurveyLine(pd.DataFrame(gps))
 
-    def get_collar_gps(self):
+    def get_collar(self):
         """
         Create a BoreholeCollar object from the information in the collarGPSTable
         :return: BoreholeCollar object
         """
         gps = {
-        'Easting': [],
-        'Northing': [],
-        'Elevation': [],
-        'Unit': []
+            'Easting': [],
+            'Northing': [],
+            'Elevation': [],
+            'Unit': []
         }
-        for row in range(self.stationGPSTable.rowCount()):
-            gps['Easting'].append(float(self.stationGPSTable.item(row, 1).text()))
-            gps['Northing'].append(float(self.stationGPSTable.item(row, 2).text()))
-            gps['Elevation'].append(float(self.stationGPSTable.item(row, 3).text()))
-            gps['Unit'].append(self.stationGPSTable.item(row, 4).text())
+        for row in range(self.collarGPSTable.rowCount()):
+            gps['Easting'].append(float(self.collarGPSTable.item(row, 1).text()))
+            gps['Northing'].append(float(self.collarGPSTable.item(row, 2).text()))
+            gps['Elevation'].append(float(self.collarGPSTable.item(row, 3).text()))
+            gps['Unit'].append(self.collarGPSTable.item(row, 4).text())
         return BoreholeCollar(pd.DataFrame(gps))
 
-    def get_geometry_segments(self):
+    def get_segments(self):
         """
-        Create a BoreholeGeometry object using the information in the geometryTable
-        :return: BoreholeGeometry object
+        Create a BoreholeSegments object using the information in the geometryTable
+        :return: BoreholeSegments object
         """
         gps = {
-        'Azimuth': [],
-        'Dip': [],
-        'Segment length': [],
-        'Unit': [],
-        'Depth': []
+            'Azimuth': [],
+            'Dip': [],
+            'Segment length': [],
+            'Unit': [],
+            'Depth': []
         }
-        for row in range(self.stationGPSTable.rowCount()):
-            gps['Azimuth'].append(float(self.stationGPSTable.item(row, 1).text()))
-            gps['Dip'].append(float(self.stationGPSTable.item(row, 2).text()))
-            gps['Segment length'].append(float(self.stationGPSTable.item(row, 3).text()))
-            gps['Unit'].append(self.stationGPSTable.item(row, 4).text())
-            gps['Depth'].append(self.stationGPSTable.item(row, 5).text())
-        return BoreholeGeometry(pd.DataFrame(gps))
+        for row in range(self.geometryTable.rowCount()):
+            gps['Azimuth'].append(float(self.geometryTable.item(row, 1).text()))
+            gps['Dip'].append(float(self.geometryTable.item(row, 2).text()))
+            gps['Segment length'].append(float(self.geometryTable.item(row, 3).text()))
+            gps['Unit'].append(self.geometryTable.item(row, 4).text())
+            gps['Depth'].append(self.geometryTable.item(row, 5).text())
+
+        return BoreholeSegments(pd.DataFrame(gps))
+
+    def get_geometry(self):
+        """
+        Create a BoreholeGeometry object from the information in the collarGPSTable and geometryTable
+        :return: BoreholeGeometry object
+        """
+        return BoreholeGeometry(self.get_collar(), self.get_segments())
 
     def export_gps(self, type):
         """
@@ -1331,9 +1339,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         if type == 'station':
-            gps = self.get_station_gps()
+            gps = self.get_line()
         else:
-            gps = self.get_loop_gps()
+            gps = self.get_loop()
 
         if gps:
             gps_str = ''
@@ -1350,26 +1358,3 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             else:
                 self.window().statusBar().showMessage('Cancelled.', 2000)
 
-
-class pandasTable(QAbstractTableModel):
-
-    def __init__(self, data):
-        QAbstractTableModel.__init__(self)
-        self._data = data
-
-    def rowCount(self, parent=None):
-        return self._data.shape[0]
-
-    def columnCount(self, parnet=None):
-        return self._data.shape[1]
-
-    def data(self, index, role=Qt.DisplayRole):
-        if index.isValid():
-            if role == Qt.DisplayRole:
-                return str(self._data.iloc[index.row(), index.column()])
-        return None
-
-    def headerData(self, col, orientation, role):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self._data.columns[col]
-        return None

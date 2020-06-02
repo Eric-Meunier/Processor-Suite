@@ -10,6 +10,25 @@ import numpy as np
 from scipy import spatial
 
 
+def get_latlon(df, crs):
+    """
+    Converts and adds latitude and longitude columns to a data frame
+    :param df: pandas DataFrame of one of the GPS objects
+    :param crs: dict: CRS dictionary
+    :return: pandas DataFrame
+    """
+    zone_num = crs['Zone Number']
+    north = crs['North']
+    latlon = df.apply(lambda x: utm.to_latlon(x.Easting, x.Northing, zone_num, northern=north),
+                   axis=1)
+    lat = latlon.map(lambda x: x[0])
+    lon = latlon.map(lambda x: x[1])
+    df["Latitude"] = lat
+    df["Longitude"] = lon
+
+    return df
+
+
 class TransmitterLoop:
     """
     Transmitter loop GPS class
@@ -20,7 +39,7 @@ class TransmitterLoop:
         :param loop: either a str filepath of a text file or a pandas data frame containing loop GPS
         """
         self.parser = GPSParser()
-        if isinstance(loop, list):
+        if isinstance(loop, list) or isinstance(loop, str):
             loop = self.parser.parse_loop_gps(loop)
 
         self.df = loop.drop_duplicates()
@@ -68,11 +87,18 @@ class TransmitterLoop:
         """
         return self.df['Easting'].sum() / self.df.shape[0], self.df['Northing'].sum() / self.df.shape[0]
 
-    def get_loop(self, sorted=True):
+    def get_loop(self, sorted=True, closed=False, crs=None):
         if sorted:
-            return self.get_sorted_loop()
+            df = self.get_sorted_loop()
         else:
-            return self.df
+            df = copy.deepcopy(self.df)
+
+        if closed and not df.duplicated().any():
+            df = df.append(self.df.iloc[0], ignore_index=True)
+        if crs:
+            df = get_latlon(df, crs)
+
+        return df
 
 
 class SurveyLine:
@@ -85,7 +111,7 @@ class SurveyLine:
         :param line: str filepath of a text file OR a pandas data frame containing line GPS
         """
         self.parser = GPSParser()
-        if isinstance(line, list):
+        if isinstance(line, list) or isinstance(line, str):
             line = self.parser.parse_station_gps(line)
 
         self.df = line.drop_duplicates()
@@ -126,16 +152,20 @@ class SurveyLine:
             df.drop('Distance', axis=1, inplace=True)
         return df
 
-    def get_line(self, sorted=True):
+    def get_line(self, sorted=True, crs=None):
         if sorted:
-            return self.get_sorted_line()
+            df = self.get_sorted_line()
         else:
-            return self.df
+            df = self.df
+
+        if crs:
+            df = get_latlon(df, crs)
+        return df
 
 
 class BoreholeCollar:
     """
-    Borehole collar class object representing the collar GPS
+    Class object representing the collar GPS
     """
 
     def __init__(self, hole, name=None):
@@ -143,34 +173,121 @@ class BoreholeCollar:
         :param line: str filepath of a text file OR a pandas data frame containing collar GPS
         """
         self.parser = GPSParser()
-        if isinstance(hole, list):
+        if isinstance(hole, list) or isinstance(hole, str):
             hole = self.parser.parse_collar_gps(hole)
 
         self.df = hole.drop_duplicates()
         self.name = name
 
-    def get_collar(self):
+    def get_collar(self, crs=None):
+        df = self.df
+        if crs:
+            df = get_latlon(df, crs)
+        return df
+
+
+class BoreholeSegments:
+    """
+    Class representing the segments section of a borehole in a PEM file
+    """
+
+    def __init__(self, segments, name=None):
+        """
+        :param hole: str filepath of a text file OR a pandas data frame containing hole geometry
+        """
+        self.parser = GPSParser()
+        if isinstance(segments, list) or isinstance(segments, str):
+            segments = self.parser.parse_segments(segments)
+
+        self.df = segments.drop_duplicates()
+        self.name = name
+
+    def get_segments(self):
         return self.df
 
 
 class BoreholeGeometry:
     """
-    Borehole geometry class object representing the segments section of a borehole in a PEM file
+    Class that represents the geometry of a hole, with collar and segments.
     """
-
-    def __init__(self, hole, name=None):
-        """
-        :param line: str filepath of a text file OR a pandas data frame containing hole geometry
-        """
-        self.parser = GPSParser()
-        if isinstance(hole, list):
-            hole = self.parser.parse_segments(hole)
-
-        self.df = hole.drop_duplicates()
+    def __init__(self, collar, segments, name=None):
+        self.collar = collar
+        self.segments = segments
         self.name = name
 
+    def get_projection(self, num_segments=None, crs=None):
+        """
+        Uses the segments to create a 3D projection of a borehole trace. Can be broken up into segments and interpolated.
+        :param num_segments: Desired number of segments to be output
+        :return: pandas DataFrame: Projected easting, northing, elevation, and relative depth from collar
+        """
+        collar = self.collar.get_collar().dropna()
+        segments = self.segments.get_segments().dropna()
+
+        if collar.empty or segments.empty:
+            return None
+            # raise ValueError('Collar GPS is invalid.')
+        else:
+            # Interpolate the segments
+            if num_segments:
+                azimuths = segments.Azimuth.to_list()
+                dips = segments.Dip.to_list()
+                depths = segments.Depth.to_list()
+
+                # Create the interpolated lists
+                interp_depths = np.linspace(depths[0], depths[-1], num_segments)
+                interp_az = np.interp(interp_depths, depths, azimuths)
+                interp_dip = np.interp(interp_depths, depths, dips)
+                interp_lens = np.subtract(interp_depths[1:], interp_depths[:-1])
+                interp_lens = np.insert(interp_lens, 0, segments.iloc[0]['Segment Length'])  # Add the first seg length
+                inter_units = np.full(num_segments, segments.Unit.unique()[0])
+
+                # Stack up the arrays and transpose it
+                segments = np.vstack(
+                    (interp_az,
+                     interp_dip,
+                     interp_lens,
+                     inter_units,
+                     interp_depths)
+                ).T
+            else:
+                segments = segments.to_numpy()
+
+            eastings = collar.Easting.values
+            northings = collar.Northing.values
+            depths = collar.Elevation.values
+            relative_depth = np.array([0.0])
+
+            for segment in segments:
+                azimuth = math.radians(float(segment[0]))
+                dip = math.radians(float(segment[1]))
+                seg_l = float(segment[2])
+                delta_seg_l = seg_l * math.cos(dip)
+                dz = seg_l * math.sin(dip)
+                dx = delta_seg_l * math.sin(azimuth)
+                dy = delta_seg_l * math.cos(azimuth)
+
+                eastings = np.append(eastings, eastings[-1] + dx)
+                northings = np.append(northings, northings[-1] + dy)
+                depths = np.append(depths, depths[-1] - dz)
+                relative_depth = np.append(relative_depth, relative_depth[-1] + seg_l)
+
+            # Create the data frame
+            projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative Depth'])
+            projection.Easting = pd.Series(eastings, dtype=float)
+            projection.Northing = pd.Series(northings, dtype=float)
+            projection.Elevation = pd.Series(depths, dtype=float)
+            projection['Relative Depth'] = pd.Series(relative_depth, dtype=float)
+
+            if crs:
+                projection = get_latlon(projection, crs)
+            return projection
+
+    def get_collar(self, crs=None):
+        return self.collar.get_collar(crs=crs)
+
     def get_segments(self):
-        return self.df
+        return self.segments.get_segments()
 
 
 # class GPSEditor:
@@ -479,7 +596,7 @@ class GPSParser:
 
         matched_gps = []
         for row in contents:
-            match = re.search(self.re_segment, row)
+            match = re.search(self.re_collar_gps, row)
             if match:
                 match = re.split("[\s,]+", match.group(0))
                 matched_gps.append(match)
@@ -491,17 +608,43 @@ class GPSParser:
         return gps
 
 
-class INFParser:
+class CRS:
+    """
+    Class to represent Coordinate Reference Systems (CRS) information
+    """
 
-    def get_crs(self, filepath):
-        crs = {}
-        with open(filepath, 'r') as in_file:
-            file = in_file.read()
+    def __init__(self, crs_dict):
+        self.system = crs_dict['System'] if crs_dict['System'] else None
+        self.zone = crs_dict['Zone'] if crs_dict['System'] else None
+        if self.zone:
+            self.zone_number = int(re.search('\d+', self.zone).group())
+            self.north = True if 'N' in self.zone else False
+        else:
+            self.zone_number = None
+            self.north = None
+        self.datum = crs_dict['Datum'] if crs_dict['System'] else None
 
-        crs['Coordinate System'] = re.findall('Coordinate System:\W+(?P<System>.*)', file)[0]
-        crs['Coordinate Zone'] = re.findall('Coordinate Zone:\W+(?P<Zone>.*)', file)[0]
-        crs['Datum'] = re.findall('Datum:\W+(?P<Datum>.*)', file)[0]
-        return crs
+    def is_valid(self):
+        """
+        If the CRS object has all information required for coordinate conversions
+        :return: bool
+        """
+        if self.system:
+            if self.system == 'Lat/Lon' and self.datum:
+                return True
+            elif self.system == 'UTM':
+                if all([self.system, self.zone, self.zone_number, self.north is not None, self.datum]):
+                    return True
+        return False
+
+    def is_nad27(self):
+        if self.datum:
+            if '27' in self.datum:
+                return True
+            else:
+                return False
+        else:
+            return None
 
 
 class GPXEditor:
@@ -554,11 +697,15 @@ if __name__ == '__main__':
     # gps_parser = GPSParser()
     # gpx_editor = GPXEditor()
 
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\src\gps\sample_files\45-1.csv'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\src\gps\sample_files\45-1.csv'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\AF19003 loop and collar.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt'
-    loop = TransmitterLoop(file, name=os.path.basename(file))
+    collar = BoreholeCollar(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt')
+    segments = BoreholeSegments(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\718-3759gyro.seg')
+    geometry = BoreholeGeometry(collar, segments)
+    geometry.get_projection(num_segments=1000)
+    # loop = TransmitterLoop(file, name=os.path.basename(file))
     # line = SurveyLine(file, name=os.path.basename(file))
     # print(loop.get_sorted_loop(), '\n', loop.get_loop())
     # gps_parser.parse_collar_gps(file)
