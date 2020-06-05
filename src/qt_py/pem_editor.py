@@ -35,7 +35,6 @@ from src.qt_py.custom_tables import UnpackerTable
 from src.pem.pem_plotter import PEMPrinter, Map3D, Section3D, CustomProgressBar, MapPlotMethods, ContourMap, FoliumMap
 from src.pem.pem_planner import LoopPlanner, GridPlanner
 from src.pem.pem_serializer import PEMSerializer
-from src.pem.xyz_serializer import XYZSerializer
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.ri.ri_file import RIFile
 
@@ -1585,7 +1584,51 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :param selected_files: bool: Save selected files. False means all opened files will be saved.
         :return: None
         """
-        xyz_serializer = XYZSerializer()
+
+        def serialize_pem(pem_file):
+            """
+            Create a str in XYZ format of the pem file's data
+            :param pem_file: PEMFile object
+            :return: str
+            """
+
+            def get_station_gps(row):
+                """
+                Add the GPS information for each station
+                :param row: pandas DataFrame row
+                :return: pandas DataFrame row
+                """
+                value = row.c_Station
+                filt = gps['Station'] == value
+
+                if filt.any() or filt.all():
+                    row['Easting'] = gps[filt]['Easting'].iloc[0]
+                    row['Northing'] = gps[filt]['Northing'].iloc[0]
+                    row['Elevation'] = gps[filt]['Elevation'].iloc[0]
+                return row
+
+            df = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Component', 'Station', 'c_Station'])
+            pem_data = pem_file.get_data(sorted=True).dropna()
+            gps = pem_file.line.get_line(sorted=True).drop_duplicates('Station')
+
+            assert not pem_file.is_borehole(), 'Can only create XYZ file with surface PEM files.'
+            assert not gps.empty, 'No GPS found.'
+
+            df['Component'] = pem_data.Component.copy()
+            df['Station'] = pem_data.Station.copy()
+            df['c_Station'] = df.Station.map(convert_station)
+            # Add the GPS
+            df = df.apply(get_station_gps, axis=1)
+
+            # Create a dataframe of the readings with channel number as columns
+            channel_data = pd.DataFrame(columns=range(int(pem_file.number_of_channels)))
+            channel_data = pem_data.apply(lambda x: pd.Series(x.Reading), axis=1)
+            # Merge the two data frames
+            df = pd.concat([df, channel_data], axis=1).drop('c_Station', axis=1)
+            str_df = df.apply(lambda x: x.astype(str).str.cat(sep=' '), axis=1)
+            str_df = '\n'.join(str_df.to_list())
+            return str_df
+
         if selected_files:
             pem_files, rows = self.get_selected_pem_files()
         else:
@@ -1600,14 +1643,18 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
             if file_dir:
                 for pem_file in pem_files:
-                    if 'surface' in pem_file.survey_type.lower():
+                    if not pem_file.is_borehole():
                         file_name = os.path.splitext(pem_file.filepath)[0] + '.xyz'
-                        xyz_file = xyz_serializer.serialize_pem(pem_file)
+                        xyz_file = serialize_pem(pem_file)
                         with open(file_name, 'w+') as file:
                             file.write(xyz_file)
                         os.startfile(file_name)
 
     def get_crs(self):
+        """
+        Return a CRS object based on the CRS information in the PEM Editor window
+        :return: CRS object
+        """
         system = self.systemCBox.currentText()
         zone = self.zoneCBox.currentText()
         datum = self.datumCBox.currentText()
@@ -1621,6 +1668,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Saves all PEM files to a desired location (keeps them opened) and removes any tags.
         :return: None
         """
+        # TODO test this
         crs = self.get_crs()
         if all is False:
             pem_files, rows = self.get_selected_pem_files()
@@ -1671,6 +1719,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Doesn't repeat if a line/hole/loop has been done already.
         :return: None
         """
+        # TODO test this
         if self.pem_files:
             crs = self.get_crs()
 

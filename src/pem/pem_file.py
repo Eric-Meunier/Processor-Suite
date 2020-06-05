@@ -144,6 +144,10 @@ class PEMFile:
                 return True
 
     def get_gps_units(self):
+        """
+        Return the type of units being used for GPS ('m' or 'ft')
+        :return: str
+        """
         if self.has_loop_gps():
             unit = self.loop.df.get('Unit').all()
         elif self.has_collar_gps():
@@ -173,20 +177,14 @@ class PEMFile:
                 return {'System': system, 'Zone': zone, 'North': north, 'Datum': datum}
         return None
 
-    def get_loop_coords(self, sorted=True):
-        if sorted:
-            return self.loop.get_sorted_loop()
-        else:
-            return self.loop.get_loop()
+    def get_loop_gps(self, sorted=True):
+        return self.loop.get_loop(sorted=sorted)
 
-    def get_station_coords(self, sorted=True):
-        if sorted:
-            return self.line.get_sorted_line()
-        else:
-            return self.line.get_line()
+    def get_line_gps(self, sorted=True):
+        return self.line.get_line(sorted=sorted)
 
-    def get_collar_coords(self):
-        return self.collar.get_collar()
+    def get_collar_gps(self):
+        return self.geometry.get_collar()
 
     def get_hole_geometry(self):
         return self.geometry.get_segments()
@@ -200,8 +198,12 @@ class PEMFile:
     def get_notes(self):
         return self.notes
 
-    def get_data(self):
-        return self.data
+    def get_data(self, sorted=True):
+        if sorted:
+            data = sort_data(self.data)
+        else:
+            data = self.data
+        return data
 
     def get_components(self):
         components = list(self.data['Component'].unique())
