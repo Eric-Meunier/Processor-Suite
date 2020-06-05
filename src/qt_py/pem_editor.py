@@ -1455,18 +1455,16 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.message.information(self, 'Missing GPS', 'A file is missing required GPS')
             return
 
-        if crs['Datum'] == 'NAD 1927':
+        if crs.Datum == 'NAD 1927':
             self.message.information(self, 'Invalid Datum', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
             return
 
-        if any([value is None for value in crs.values()]):
+        if not crs.is_valid():
             self.message.information(self, 'Incomplete CRS', 'GPS coordinate system information is incomplete')
             return
 
         kml = simplekml.Kml()
         pem_files = [pem_file for pem_file in self.pem_files if pem_file.has_any_gps()]
-
-        zone, zone_num, north = crs['Zone'], crs['Zone Number'], crs['North']
 
         line_style = simplekml.Style()
         line_style.linestyle.width = 4
@@ -1504,7 +1502,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 loops.append(loop_gps)
                 loop_names.append(loop_name)
             if not pem_file.is_borehole():
-                line_gps = pem_file.line.get_line()
+                line_gps = pem_file.line.get_line(crs=crs)
                 line_name = pem_file.line_name
                 if not line_gps.empty and line_gps not in lines:
                     lines.append(line_gps)
@@ -1512,59 +1510,36 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             else:
                 bh_projection = pem_file.geometry.get_projection(num_segments=100, crs=crs)
                 hole_name = pem_file.line_name
-                if bh_projection and bh_projection not in traces:
+                if not bh_projection.empty and bh_projection not in traces:
                     traces.append(bh_projection)
                     hole_names.append(hole_name)
 
         # Creates KMZ objects for the loops.
         for loop_gps, name in zip(loops, loop_names):
-            loop_coords = loop_gps.apply(lambda x: utm.to_latlon(x.Easting, x.Northing, zone_num, northern=north),
-                                         axis=1)
-
             ls = kml.newlinestring(name=name)
-            ls.coords = loop_coords.to_numpy()
+            ls.coords = loop_gps.loc[:, ['Longitude', 'Latitude']].to_numpy()
             ls.extrude = 1
             ls.style = loop_style
 
         # Creates KMZ objects for the lines.
         for line_gps, name in zip(lines, line_names):
-            line_coords = line_gps.apply(lambda x: utm.to_latlon(x.Easting, x.Northing, zone_num, northern=north),
-                                         axis=1)
-            lat, lon = line_coords.map(lambda x: x[0]), loop_coords.map(lambda x: x[1])
-            line_coords = pd.DataFrame(columns=['Latitude', 'Longitude', 'Station'])
-            line_coords.Latitude = lat
-            line_coords.Longitude = lon
-            line_coords.Station = line_gps.Station
-            new_point = line_coords.apply(lambda x: folder.newpoint(name=x.Station, coords=[(x)]))
             folder = kml.newfolder(name=name)
-            # for row in line_gps:
-                # easting = int(float(row[0]))
-                # northing = int(float(row[1]))
-                # station = row[-1]
-                # lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-                # line_coords.append((lon, lat))
-            new_point = folder.newpoint(name=f"{station}", coords=[(lon, lat)])
+            new_point = line_gps.apply(
+                lambda x: folder.newpoint(name=str(x.Station), coords=[(x.Longitude, x.Latitude)]), axis=1)
             new_point.style = station_style
 
             ls = folder.newlinestring(name=name)
-            ls.coords = line_coords.to_numpy()
+            ls.coords = line_gps.loc[:, ['Longitude', 'Latitude']].to_numpy()
             ls.extrude = 1
             ls.style = trace_style
 
         # Creates KMZ objects for the boreholes.
         for trace_gps, name in zip(traces, hole_names):
-            trace_coords = []
             folder = kml.newfolder(name=name)
-            for row in trace_gps:
-                easting = int(float(row[0]))
-                northing = int(float(row[1]))
-                lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-                trace_coords.append((lon, lat))
-
-            collar = folder.newpoint(name=name, coords=[trace_coords[0]])
+            collar = folder.newpoint(name=name, coords=[trace_gps.loc[0, ['Longitude', 'Latitude']].to_numpy()])
             collar.style = collar_style
             ls = folder.newlinestring(name=name)
-            ls.coords = trace_coords
+            ls.coords = trace_gps.loc[:, ['Longitude', 'Latitude']].to_numpy()
             ls.extrude = 1
             ls.style = trace_style
 
@@ -4354,7 +4329,7 @@ def main():
     mw = PEMEditor()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Raglan', number=1)
+    pem_files = pg.get_pems(client='Nantou', number=1)
     mw.open_pem_files(pem_files)
     # mw.show()
     mw.save_as_kmz()
