@@ -17,7 +17,7 @@ class PEMSerializer:
                         pem_file.probes.get('Tool number'),
                         pem_file.probes.get('Tool ID')])
         result += f"<FMT> {pem_file.format}\n"
-        result += f"<UNI> {pem_file.units}\n"
+        result += f"<UNI> {'nanoTesla/sec' if pem_file.units == 'nT/s' else 'picoTesla'}\n"
         result += f"<OPR> {pem_file.operator}\n"
         result += f"<XYP> {xyp}\n"
         result += f"<CUR> {pem_file.current}\n"
@@ -27,56 +27,53 @@ class PEMSerializer:
 
     def serialize_loop_coords(self, pem_file):
         result = '~ Transmitter Loop Co-ordinates:\n'
-        if pem_file.loop.df.empty:
+        loop = pem_file.get_loop()
+        if loop.empty:
             result += '<L00>\n''<L01>\n''<L02>\n''<L03>\n'
         else:
-            for row in pem_file.loop.df.iterrows():
-                tag = f"<L{row[0]:02d}>"
-                easting, northing, elevation, unit = row[1].Easting, row[1].Northing, row[1].Elevation, row[1].Unit
-                row = f"{tag} {easting:.2f} {northing:.2f} {elevation:.2f} {unit}"
+            loop.reset_index(inplace=True)
+            for row in loop.itertuples():
+                tag = f"<L{row.Index:02d}>"
+                row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {row.Unit}"
                 result += row + '\n'
         return result
 
     def serialize_line_coords(self, pem_file):
 
         def serialize_station_coords():
-            # Coords are a list of lists
             result = '~ Hole/Profile Co-ordinates:\n'
-            if pem_file.line.df.empty:
+            line = pem_file.get_line()
+            if line.empty:
                 result += '<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
             else:
-                for row in pem_file.line.df.iterrows():
-                    tag = f"<P{row[0]:02d}>"
-                    easting, northing, elevation, unit, station = \
-                        row[1].Easting, row[1].Northing, row[1].Elevation, row[1].Unit, row[1].Station
-                    row = f"{tag} {easting:.2f} {northing:.2f} {elevation:.2f} {unit} {station}"
+                line.reset_index(inplace=True)
+                for row in line.itertuples():
+                    tag = f"<P{row.Index:02d}>"
+                    row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {row.Unit} {row.Station}"
                     result += row + '\n'
             return result
 
         def serialize_collar_coords():
             result = '~ Hole/Profile Co-ordinates:\n'
-            collar = pem_file.geometry.get_collar()
-            if collar:
+            collar = pem_file.get_collar()
+            if collar.empty:
                 result += '<P00>\n'
             else:
-                for row in pem_file.collar.df.iterrows():
-                    tag = f"<P{row[0]:02d}>"
-                    easting, northing, elevation, unit = row[1].Easting, row[1].Northing, row[1].Elevation, row[1].Unit
-                    row = f"{tag} {easting:.2f} {northing:.2f} {elevation:.2f} {unit}"
+                for row in collar.itertuples():
+                    tag = f"<P{row.Index:02d}>"
+                    row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {row.Unit}"
                     result += row + '\n'
             return result
 
         def serialize_segments():
-            # segments are a list of lists
             result = ''
-            if pem_file.geometry.df.empty:
+            segs = pem_file.get_segments()
+            if segs.empty:
                 result += '<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>\n'
             else:
-                for row in pem_file.geometry.df.iterrows():
-                    tag = f"<P{row[0]:02d}>"
-                    azimuth, dip, seg_len, unit, depth = \
-                        row[1].Azimuth, row[1].Dip, row[1]['Segment Length'], row[1].Unit, row[1].Depth
-                    row = f"{tag} {azimuth:.2f} {dip:.2f} {seg_len:.2f} {unit} {depth:.2f}"
+                for row in segs.itertuples():
+                    tag = f"<P{row.Index:02d}>"
+                    row = f"{tag} {row.Azimuth:.2f} {row.Dip:.2f} {row[3]:.2f} {row.Unit} {row.Depth:.2f}"
                     result += row + '\n'
             return result
 
@@ -117,7 +114,7 @@ class PEMSerializer:
                                  str(pem_file.convention),
                                  str(pem_file.sync),
                                  str(pem_file.timebase),
-                                 str(pem_file.ramp),
+                                 str(int(pem_file.ramp)),
                                  str(pem_file.number_of_channels),
                                  str(pem_file.number_of_readings)]),
                        ' '.join([str(pem_file.rx_number),
@@ -148,7 +145,7 @@ class PEMSerializer:
         return result
 
     def serialize_data(self, pem_file):
-        df = pem_file.sort_data(pem_file.data)
+        df = pem_file.get_data(sorted=True)
 
         def serialize_reading(reading):
             result = ' '.join([reading['Station'],

@@ -177,16 +177,16 @@ class PEMFile:
                 return {'System': system, 'Zone': zone, 'North': north, 'Datum': datum}
         return None
 
-    def get_loop_gps(self, sorted=True):
-        return self.loop.get_loop(sorted=sorted)
+    def get_loop(self, sorted=True, closed=False):
+        return self.loop.get_loop(sorted=sorted, closed=closed)
 
-    def get_line_gps(self, sorted=True):
+    def get_line(self, sorted=True):
         return self.line.get_line(sorted=sorted)
 
-    def get_collar_gps(self):
+    def get_collar(self):
         return self.geometry.get_collar()
 
-    def get_hole_geometry(self):
+    def get_segments(self):
         return self.geometry.get_segments()
 
     # def get_line_coords(self):  # All P tags
@@ -525,7 +525,7 @@ class PEMParser:
         #  'Tags' section
         self.re_tags = re.compile(  # Parsing the 'Tags' i.e. the information above the loop coordinates
             r'<FMT>\s(?P<Format>\d+)\s*~?.*[\r\n]'
-            r'<UNI>\s(?P<Units>nanoTesla\/sec|picoTesla)\s*~?.*[\r\n]'
+            r'<UNI>\s(?P<Units>.*)\s*~?.*[\r\n]'
             r'<OPR>\s(?P<Operator>.*)~?.*[\r\n]'
             r'<XYP>\s(?P<Probes>[\d\w\s-]*).*[\r\n]'
             r'<CUR>\s(?P<Current>\d+\.?\d?)\s*~?.*[\r\n]'
@@ -615,14 +615,6 @@ class PEMParser:
                 return matches
             else:
                 print(f"No loop coordinates found in {os.path.basename(filepath)}")
-            # Split the matches up into individual items of a list, ignoring the tags.
-            # loop_gps = '\n'.join([' '.join(match.split()[1:5]) for match in matches])
-            # loop = TransmitterLoop(matches)
-            # if loop.df.empty:
-            #     print(f"No loop coordinates found in {os.path.basename(filepath)}")
-            #     return None
-            # else:
-            #     return loop
 
         def parse_line(file):
             # Find all re matches
@@ -631,13 +623,6 @@ class PEMParser:
                 return matches
             else:
                 print(f"No line coordinates found in {os.path.basename(filepath)}")
-            # # Split the matches up into individual items of a list
-            # line_gps = '\n'.join([' '.join(match.split()[1:6]) for match in matches])
-            # if any(line_gps):
-            #     return line_gps
-            # else:
-            #     print(f"No line coordinates found in {os.path.basename(filepath)}")
-            #     return None
 
         def parse_notes(file):
             notes = []

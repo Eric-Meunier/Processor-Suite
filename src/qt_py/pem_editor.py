@@ -139,7 +139,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             'Date',
             'Client',
             'Grid',
-            'Line/Hole'
+            'Line/Hole',
             'Loop',
             'Current',
             'Coil\nArea',
@@ -1285,6 +1285,11 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :param rows: list: Table rows of the PEM files.
         :return: None
         """
+        def reset_crs():
+            self.systemCBox.setCurrentIndex(0)
+            self.zoneCBox.setCurrentIndex(0)
+            self.datumCBox.setCurrentIndex(0)
+
         if not rows:
             pem_files, rows = self.get_selected_pem_files()
 
@@ -1305,7 +1310,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.loop_edit.setText('')
             self.min_range_edit.setText('')
             self.max_range_edit.setText('')
-            self.reset_crs()
+            reset_crs()
 
     # def remove_file_selection(self):
     #     pem_files, rows = self.get_selected_pem_files()
@@ -1427,7 +1432,11 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.dialog.setAcceptMode(QFileDialog.AcceptSave)
         self.dialog.setDirectory(default_path)
         self.window().statusBar().showMessage('Saving PEM files...')
-        file_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM)')[0]  # Returns full filepath
+        if __name__ == '__main__':
+            file_path = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\test.PEM'
+            row = 0
+        else:
+            file_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM)')[0]  # Returns full filepath
 
         if file_path:
             pem_file = copy.deepcopy(self.pem_files[row])
@@ -1588,6 +1597,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
             assert not pem_file.is_borehole(), 'Can only create XYZ file with surface PEM files.'
             assert not gps.empty, 'No GPS found.'
+            print(f'Saving XYZ file...')
 
             df['Component'] = pem_data.Component.copy()
             df['Station'] = pem_data.Station.copy()
@@ -1643,7 +1653,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Saves all PEM files to a desired location (keeps them opened) and removes any tags.
         :return: None
         """
-        # TODO test this
         crs = self.get_crs()
         if all is False:
             pem_files, rows = self.get_selected_pem_files()
@@ -1673,7 +1682,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))
                     if not pem_file.is_borehole():
                         file_name = file_name.upper()
-                        if file_name.lower()[0] == 'C':
+                        if file_name.lower()[0] == 'c':
                             file_name = file_name[1:]
                         if pem_file.is_averaged() and 'av' not in file_name.lower():
                             file_name = file_name + 'Av'
@@ -1694,7 +1703,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Doesn't repeat if a line/hole/loop has been done already.
         :return: None
         """
-        # TODO test this
         if self.pem_files:
             crs = self.get_crs()
 
@@ -1702,10 +1710,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.message.information(self, 'Invalid CRS', 'CRS is incomplete and/or invalid.')
                 return
 
-            system = crs.system
+            system = crs.System
             # zone = ' Zone ' + self.zoneCBox.currentText() if self.zoneCBox.isEnabled() else ''
-            zone = ' Zone ' + crs.zone if self.zoneCBox.isEnabled() else ''
-            datum = crs.datum
+            zone = ' Zone ' + crs.Zone if self.zoneCBox.isEnabled() else ''
+            datum = crs.Datum
 
             loops = []
             lines = []
@@ -1725,16 +1733,16 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     folder = os.path.join(export_folder, loop)
                     for pem_file in pem_files:
                         if pem_file.has_loop_gps():
-                            loop = pem_file.loop.get_loop(sorted=self.autoSortLoopsCheckbox.isChecked(), closed=False)
-                            if loop not in loops:
+                            loop = pem_file.get_loop(sorted=self.autoSortLoopsCheckbox.isChecked(), closed=False)
+                            if loop.to_string() not in loops:
                                 loop_name = pem_file.loop_name
                                 print(f"Creating CSV file for loop {loop_name}")
-                                loops.append(loop)
+                                loops.append(loop.to_string())
                                 csv_filepath = os.path.join(folder, loop_name + '.csv')
                                 with open(csv_filepath, 'w') as csvfile:
                                     filewriter = csv.writer(csvfile,
                                                             delimiter=',',
-                                                            lineterminator = '\n',
+                                                            lineterminator='\n',
                                                             quotechar='"',
                                                             quoting=csv.QUOTE_MINIMAL)
                                     filewriter.writerow([f"Loop {loop_name} - {system} {zone} {datum}"])
@@ -1744,15 +1752,15 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
                         if pem_file.has_station_gps():
                             line = pem_file.line.get_line()
-                            if line not in lines:
+                            if line.to_string() not in lines:
                                 line_name = pem_file.line_name
                                 print(f"Creating CSV file for line {line_name}")
-                                lines.append(line)
+                                lines.append(line.to_string())
                                 csv_filepath = os.path.join(folder, f"{line_name}.csv")
                                 with open(csv_filepath, 'w') as csvfile:
                                     filewriter = csv.writer(csvfile,
                                                             delimiter=',',
-                                                            lineterminator = '\n',
+                                                            lineterminator='\n',
                                                             quotechar='"',
                                                             quoting=csv.QUOTE_MINIMAL)
                                     filewriter.writerow([f"Line {line_name} - {system} {zone} {datum}"])
@@ -1763,10 +1771,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
                         if pem_file.has_collar_gps():
                             collar = pem_file.geometry.get_collar()
-                            if collar not in collars:
+                            if collar.to_string() not in collars:
                                 hole_name = pem_file.line_name
                                 print(f"Creating CSV file for hole {hole_name}")
-                                collars.append(collar)
+                                collars.append(collar.to_string())
                                 csv_filepath = os.path.join(folder, hole_name + '.csv')
                                 with open(csv_filepath, 'w') as csvfile:
                                     filewriter = csv.writer(csvfile,
@@ -1918,12 +1926,12 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         count = 0
         for pem_file, row in zip(pem_files, rows):
             if not pem_file.is_averaged():
-                print(f"Averaging {os.path.basename(pem_file.filepath)}")
-                self.pg.setText(f"Averaging {os.path.basename(pem_file.filepath)}")
+                print(f"Averaging {pem_file.filename}")
+                self.pg.setText(f"Averaging {pem_file.filename}")
                 # Save a backup of the un-averaged file first
                 if self.auto_create_backup_files_cbox.isChecked():
                     self.write_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]', remove_old=False)
-                pem_file = self.file_editor.average(pem_file)
+                pem_file = pem_file.average()
                 self.pem_info_widgets[row].open_file(pem_file, parent=self)
                 self.refresh_table_row(pem_file, row)
                 count += 1
@@ -4329,11 +4337,11 @@ def main():
     mw = PEMEditor()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Nantou', number=1)
+    pem_files = pg.get_pems(client='Trevali Peru', number=5)
     mw.open_pem_files(pem_files)
-    # mw.show()
-    mw.save_as_kmz()
     mw.show()
+    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])
+    # mw.save_as_xyz()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
     # import pyqtgraph.examples
     # pyqtgraph.examples.run()

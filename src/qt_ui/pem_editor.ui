@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1102</width>
-    <height>904</height>
+    <height>773</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -39,7 +39,7 @@
        <enum>QTabWidget::West</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="main_frame_file_tab">
        <attribute name="title">
@@ -73,7 +73,7 @@
             <widget class="QCheckBox" name="auto_sort_files_cbox">
              <property name="text">
               <string>Automatically Sort
-PEM Files on Import</string>
+Table on Import</string>
              </property>
              <property name="checked">
               <bool>true</bool>

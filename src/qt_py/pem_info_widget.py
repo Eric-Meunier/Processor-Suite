@@ -142,13 +142,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def initSignals(self):
         # Buttons
-        self.sortStationsButton.clicked.connect(self.sort_station_gps)
-        self.sortLoopButton.clicked.connect(self.sort_loop_gps)
+        # self.sortStationsButton.clicked.connect(self.sort_station_gps)
+        # self.sortLoopButton.clicked.connect(self.sort_loop_gps)
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
         self.changeStationSuffixButton.clicked.connect(self.change_station_suffix)
         self.changeComponentButton.clicked.connect(self.change_component)
-        self.moveUpButton.clicked.connect(self.move_table_row_up)
-        self.moveDownButton.clicked.connect(self.move_table_row_down)
+        # self.moveUpButton.clicked.connect(self.move_table_row_up)
+        # self.moveDownButton.clicked.connect(self.move_table_row_down)
 
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
         self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
@@ -171,7 +171,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.itemSelectionChanged.connect(self.calc_distance)
         self.stationGPSTable.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
 
-        self.loopGPSTable.itemSelectionChanged.connect(self.toggle_loop_move_buttons)
+        # self.loopGPSTable.itemSelectionChanged.connect(self.toggle_loop_move_buttons)
         self.loopGPSTable.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shift_elevation_spinbox))
 
         self.dataTable.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationSpinbox))
@@ -378,7 +378,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         if not self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
-            # self.stationGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.stationGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
             # self.stationGPSTable.setSizeAdjustPolicy(
             #     QAbstractScrollArea.AdjustToContents)
             # self.stationGPSTable.resizeColumnsToContents()
@@ -401,8 +401,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # self.collarGPSTable.setItem(0, 4, units_item)
             # self.collarGPSTable.resizeColumnsToContents()
 
-        # self.loopGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # self.dataTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.loopGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.dataTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # self.loopGPSTable.setSizeAdjustPolicy(
         #     QAbstractScrollArea.AdjustToContents)
         # self.loopGPSTable.resizeColumnsToContents()
@@ -504,13 +504,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if data.empty:
             return
 
+        # data.reset_index(inplace=True)
         self.clear_table(table)
         table.blockSignals(True)
 
         if table == self.loopGPSTable:
-            tags = pd.Series([f"<L{n:02}>" for n in range(len(data.index))])
+            tags = [f"<L{n:02}>" for n in range(len(data.index))]
         else:
-            tags = pd.Series([f"<P{n:02}>" for n in range(len(data.index))])
+            tags = [f"<P{n:02}>" for n in range(len(data.index))]
         data.insert(0, 'Tag', tags)
         data.apply(lambda x: self.make_qt_row(x, table), axis=1)
 
@@ -547,26 +548,18 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if self.station_sort_rbtn.isChecked():
             data = data.reindex(index=natsort.order_by_index(
-                data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading number']))))
-            # Reset the index
+                data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading number']))))
             data.reset_index(drop=True, inplace=True)
-            # data.sort(key=lambda data: natsort.natsorted(data['Component']), reverse=False)
-            # data.sort(key=lambda data: natsort.natsorted(data['Station']), reverse=False)
 
         elif self.component_sort_rbtn.isChecked():
             data = data.reindex(index=natsort.order_by_index(
-                data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading number']))))
-            # Reset the index
+                data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading number']))))
             data.reset_index(drop=True, inplace=True)
-            # data.sort(key=lambda data: natsort.natsorted(data['Station']), reverse=False)
-            # data.sort(key=lambda data: natsort.natsorted(data['Component']), reverse=False)
 
         elif self.reading_num_sort_rbtn.isChecked():
             data = data.reindex(index=natsort.order_by_index(
                 data.index, natsort.index_natsorted(zip(data['Reading number'], data['Reading index']))))
-            # Reset the index
             data.reset_index(drop=True, inplace=True)
-            # data.sort(key=lambda data: natsort.natsorted(data['ReadingNumber']), reverse=False)
 
         return data
 
@@ -811,76 +804,69 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         gps = self.get_line()
-        if gps:
-            culled_gps = []
-            gps_stations = list(map(lambda x: x[-1], gps))
-            em_stations = list(map(lambda x: str(x), self.pem_file.get_converted_unique_stations()))
-            for i, station in enumerate(gps_stations):
-                if station in em_stations:
-                    culled_gps.append(gps[i])
-            self.fill_station_table(culled_gps)
-        else:
-            pass
+        # Get unique stations in the data
+        em_stations = self.pem_file.data.Station.map(convert_station).unique()
+        # Create a filter for GPS stations that are in the data stations
+        filt = gps.df.Station.astype(int).isin(em_stations)
+        gps = gps.df.loc[filt]
 
-    def sort_station_gps(self):
-        station_gps = self.get_line()
-        if station_gps:
-            self.fill_station_table(self.gps_editor.get_line(station_gps, sorted=True))
-        else:
-            pass
+        self.fill_gps_table(gps, self.stationGPSTable)
 
-    def sort_loop_gps(self):
-        loop = self.get_loop()
-        if loop:
-            self.fill_loop_table(self.gps_editor.get_loop(loop, sorted=True))
-        else:
-            pass
+    # def sort_station_gps(self):
+    #     line = self.get_line()
+    #     sorted_line = line.get_line(sorted=True)
+    #     self.fill_station_table(sorted_line)
+    #
+    # def sort_loop_gps(self):
+    #     loop = self.get_loop()
+    #     sorted_loop = loop.get_loop(sorted=True)
+    #     self.fill_loop_table(sorted_loop)
 
-    def move_table_row_up(self):
-        """
-        Move selected rows of the LoopGPSTable up.
-        :return: None
-        """
-        rows = self.get_selected_rows(self.loopGPSTable)
-        loop_gps = self.get_loop()
-
-        for row in rows:
-            removed_row = loop_gps.pop(row)
-            loop_gps.insert(row-1, removed_row)
-
-        self.fill_loop_table(loop_gps)
-        self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
-        [self.loopGPSTable.selectRow(row-1) for row in rows]
-        self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-
-    def move_table_row_down(self):
-        """
-        Move selected rows of the LoopGPSTable down.
-        :return: None
-        """
-        rows = self.get_selected_rows(self.loopGPSTable)
-        loop_gps = self.get_loop()
-
-        for row in rows:
-            removed_row = loop_gps.pop(row)
-            loop_gps.insert(row + 1, removed_row)
-
-        self.fill_loop_table(loop_gps)
-        self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
-        [self.loopGPSTable.selectRow(row + 1) for row in rows]
-        self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-
-    def toggle_loop_move_buttons(self):
-        """
-        Slot: Enables or disables the loopGPS arrow buttons whenever a row in the table is selected or de-selected.
-        :return: None
-        """
-        if self.loopGPSTable.selectionModel().selectedRows():
-            self.moveUpButton.setEnabled(True)
-            self.moveDownButton.setEnabled(True)
-        else:
-            self.moveUpButton.setEnabled(False)
-            self.moveDownButton.setEnabled(False)
+    # def move_table_row_up(self):
+    #     """
+    #     Move selected rows of the LoopGPSTable up.
+    #     :return: None
+    #     """
+    #     rows = self.get_selected_rows(self.loopGPSTable)
+    #     loop_gps = self.get_loop()
+    #
+    #     for row in rows:
+    #         removed_row = loop_gps.pop(row)
+    #         loop_gps.insert(row-1, removed_row)
+    #
+    #     self.fill_loop_table(loop_gps)
+    #     self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
+    #     [self.loopGPSTable.selectRow(row-1) for row in rows]
+    #     self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+    #
+    # def move_table_row_down(self):
+    #     """
+    #     Move selected rows of the LoopGPSTable down.
+    #     :return: None
+    #     """
+    #     rows = self.get_selected_rows(self.loopGPSTable)
+    #     loop_gps = self.get_loop()
+    #
+    #     for row in rows:
+    #         removed_row = loop_gps.pop(row)
+    #         loop_gps.insert(row + 1, removed_row)
+    #
+    #     self.fill_loop_table(loop_gps)
+    #     self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
+    #     [self.loopGPSTable.selectRow(row + 1) for row in rows]
+    #     self.loopGPSTable.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+    #
+    # def toggle_loop_move_buttons(self):
+    #     """
+    #     Slot: Enables or disables the loopGPS arrow buttons whenever a row in the table is selected or de-selected.
+    #     :return: None
+    #     """
+    #     if self.loopGPSTable.selectionModel().selectedRows():
+    #         self.moveUpButton.setEnabled(True)
+    #         self.moveDownButton.setEnabled(True)
+    #     else:
+    #         self.moveUpButton.setEnabled(False)
+    #         self.moveDownButton.setEnabled(False)
 
     def shift_gps_station_numbers(self):
         """
@@ -1260,9 +1246,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             'Unit': [],
         }
         for row in range(self.loopGPSTable.rowCount()):
-            gps['Easting'].append(float(self.loopGPSTable.item(row, 1).text()))
-            gps['Northing'].append(float(self.loopGPSTable.item(row, 2).text()))
-            gps['Elevation'].append(float(self.loopGPSTable.item(row, 3).text()))
+            gps['Easting'].append(self.loopGPSTable.item(row, 1).text())
+            gps['Northing'].append(self.loopGPSTable.item(row, 2).text())
+            gps['Elevation'].append(self.loopGPSTable.item(row, 3).text())
             gps['Unit'].append(self.loopGPSTable.item(row, 4).text())
         return TransmitterLoop(pd.DataFrame(gps))
 
@@ -1279,9 +1265,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             'Station': []
         }
         for row in range(self.stationGPSTable.rowCount()):
-            gps['Easting'].append(float(self.stationGPSTable.item(row, 1).text()))
-            gps['Northing'].append(float(self.stationGPSTable.item(row, 2).text()))
-            gps['Elevation'].append(float(self.stationGPSTable.item(row, 3).text()))
+            gps['Easting'].append(self.stationGPSTable.item(row, 1).text())
+            gps['Northing'].append(self.stationGPSTable.item(row, 2).text())
+            gps['Elevation'].append(self.stationGPSTable.item(row, 3).text())
             gps['Unit'].append(self.stationGPSTable.item(row, 4).text())
             gps['Station'].append(self.stationGPSTable.item(row, 5).text())
         return SurveyLine(pd.DataFrame(gps))
@@ -1298,9 +1284,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             'Unit': []
         }
         for row in range(self.collarGPSTable.rowCount()):
-            gps['Easting'].append(float(self.collarGPSTable.item(row, 1).text()))
-            gps['Northing'].append(float(self.collarGPSTable.item(row, 2).text()))
-            gps['Elevation'].append(float(self.collarGPSTable.item(row, 3).text()))
+            gps['Easting'].append(self.collarGPSTable.item(row, 1).text())
+            gps['Northing'].append(self.collarGPSTable.item(row, 2).text())
+            gps['Elevation'].append(self.collarGPSTable.item(row, 3).text())
             gps['Unit'].append(self.collarGPSTable.item(row, 4).text())
         return BoreholeCollar(pd.DataFrame(gps))
 
@@ -1317,9 +1303,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             'Depth': []
         }
         for row in range(self.geometryTable.rowCount()):
-            gps['Azimuth'].append(float(self.geometryTable.item(row, 1).text()))
-            gps['Dip'].append(float(self.geometryTable.item(row, 2).text()))
-            gps['Segment length'].append(float(self.geometryTable.item(row, 3).text()))
+            gps['Azimuth'].append(self.geometryTable.item(row, 1).text())
+            gps['Dip'].append(self.geometryTable.item(row, 2).text())
+            gps['Segment length'].append(self.geometryTable.item(row, 3).text())
             gps['Unit'].append(self.geometryTable.item(row, 4).text())
             gps['Depth'].append(self.geometryTable.item(row, 5).text())
 

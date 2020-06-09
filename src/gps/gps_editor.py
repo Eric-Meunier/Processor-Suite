@@ -42,6 +42,12 @@ class TransmitterLoop:
             loop = self.parser.parse_loop_gps(loop)
 
         self.df = loop.drop_duplicates()
+        # self.df = self.df.replace(to_replace='', value=np.nan)  #.dropna()
+        self.df.Easting = self.df.Easting.astype(float)
+        self.df.Northing = self.df.Northing.astype(float)
+        self.df.Elevation = self.df.Elevation.astype(float)
+        self.df.Unit = self.df.Unit.astype(str)
+
         self.name = name
         if cull_loop:
             self.cull_loop()
@@ -69,6 +75,9 @@ class TransmitterLoop:
         """
         def get_angle(dx, dy):
             return (math.atan2(dy, dx) + 2.0 * math.pi) % (2.0 * math.pi)
+
+        if self.df.empty:
+            return self.df
 
         df = copy.deepcopy(self.df)
         cx, cy = self.get_center()
@@ -114,6 +123,11 @@ class SurveyLine:
             line = self.parser.parse_station_gps(line)
 
         self.df = line.drop_duplicates()
+        self.df.Easting = self.df.Easting.astype(float)
+        self.df.Northing = self.df.Northing.astype(float)
+        self.df.Elevation = self.df.Elevation.astype(float)
+        self.df.Unit = self.df.Unit.astype(str)
+        self.df.Station = self.df.Station.astype(str)
         # if self.df.Station.hasnans:
         #     raise ValueError('File is missing station numbers.')
         self.name = name
@@ -176,6 +190,13 @@ class BoreholeCollar:
             hole = self.parser.parse_collar_gps(hole)
 
         self.df = hole.drop_duplicates()
+        # Replace empty cells with NaN and then drop any rows with NaNs
+        self.df = self.df.replace(to_replace='', value=np.nan)  #.dropna()
+        self.df.Easting = self.df.Easting.astype(float)
+        self.df.Northing = self.df.Northing.astype(float)
+        self.df.Elevation = self.df.Elevation.astype(float)
+        self.df.Unit = self.df.Unit.astype(str)
+
         self.name = name
 
     def get_collar(self, crs=None):
@@ -199,6 +220,12 @@ class BoreholeSegments:
             segments = self.parser.parse_segments(segments)
 
         self.df = segments.drop_duplicates()
+        self.df.Azimuth = self.df.Azimuth.astype(float)
+        self.df.Dip = self.df.Dip.astype(float)
+        self.df['Segment length'] = self.df['Segment length'].astype(float)
+        self.df.Unit = self.df.Unit.astype(str)
+        self.df.Depth = self.df.Depth.astype(float)
+
         self.name = name
 
     def get_segments(self):
@@ -238,7 +265,7 @@ class BoreholeGeometry:
                 interp_az = np.interp(interp_depths, depths, azimuths)
                 interp_dip = np.interp(interp_depths, depths, dips)
                 interp_lens = np.subtract(interp_depths[1:], interp_depths[:-1])
-                interp_lens = np.insert(interp_lens, 0, segments.iloc[0]['Segment Length'])  # Add the first seg length
+                interp_lens = np.insert(interp_lens, 0, segments.iloc[0]['Segment length'])  # Add the first seg length
                 inter_units = np.full(num_segments, segments.Unit.unique()[0])
 
                 # Stack up the arrays and transpose it
@@ -549,7 +576,7 @@ class GPSParser:
         cols = [
             'Azimuth',
             'Dip',
-            'Segment Length',
+            'Segment length',
             'Unit',
             'Depth'
         ]
@@ -568,10 +595,10 @@ class GPSParser:
         seg = pd.DataFrame(matched_seg, columns=cols)
         seg[['Azimuth',
                  'Dip',
-                 'Segment Length',
+                 'Segment length',
                  'Depth']] = seg[['Azimuth',
                                       'Dip',
-                                      'Segment Length',
+                                      'Segment length',
                                       'Depth']].astype(float)
         seg['Unit'] = seg['Unit'].astype(str)
         return seg
