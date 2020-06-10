@@ -55,3 +55,5 @@ class CustomTableWidgetItem(QTableWidgetItem):
     #Qt uses a simple < check for sorting items, override this to use the sortKey
     def __lt__(self, other):
             return self.sortKey < other.sortKey
+
+

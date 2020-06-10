@@ -658,7 +658,7 @@
   <customwidget>
    <class>UnpackerTable</class>
    <extends>QTableWidget</extends>
-   <header>src.qt_py.custom_tables</header>
+   <header>src.qt_py.unpacker</header>
   </customwidget>
  </customwidgets>
  <resources/>

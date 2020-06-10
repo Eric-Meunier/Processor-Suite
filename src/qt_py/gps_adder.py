@@ -6,7 +6,6 @@ import pandas as pd
 from PyQt5 import (QtCore, QtGui)
 from PyQt5.QtWidgets import (QWidget, QApplication, QMessageBox, QTableWidgetItem, QGridLayout,
                              QHeaderView, QTableWidget, QDialogButtonBox, QAbstractItemView, QShortcut)
-# from pyqtspinner.spinner import WaitingSpinner
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FixedLocator
 

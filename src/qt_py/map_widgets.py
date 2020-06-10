@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (QWidget, QFileDialog,
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
+from mpl_toolkits.mplot3d import Axes3D  # Must be here for 3D projection to work.
 from matplotlib.figure import Figure
 
 from src.pem.pem_file_editor import PEMFileEditor
@@ -40,11 +41,12 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
     QWidget window that displays a 3D map (plotted from Map3D) of the PEM Files.
     """
 
-    def __init__(self, pem_files, parent=None):
+    def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
-        self.pem_files = pem_files
+        self.pem_files = None
         self.parent = parent
+
         self.setWindowTitle("3D Map Viewer")
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map2.png')))
 
@@ -74,13 +76,13 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
         self.figure.subplots_adjust(left=-0.1, bottom=-0.1, right=1.1, top=1.1)
         self.ax = self.figure.add_subplot(111, projection='3d')
 
-        # self.toolbar = ContourMapToolbar(self.canvas, self)
-        # self.toolbar_layout.addWidget(self.toolbar)
-        # self.toolbar.setFixedHeight(30)
+        self.map_plotter = Map3D(parent=self)
 
-        self.map_plotter = Map3D(self.ax, self.pem_files, parent=self)
-        self.map_plotter.plot_pems()
-        self.map_plotter.format_ax()
+    def open(self, pem_files):
+        self.pem_files = pem_files
+
+        self.map_plotter.plot_pems(self.pem_files, self.ax)
+        # self.map_plotter.format_ax()
 
         # Show/hide features based on the current state of the checkboxes
         self.update_canvas()

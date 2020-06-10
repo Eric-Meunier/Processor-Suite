@@ -2208,10 +2208,10 @@ class GeneralMap(MapPlotMethods):
                                 transform=ccrs.PlateCarree())
 
             gl = self.ax_sub.gridlines(color='black',
-                                  zorder=1,
-                                  linewidth=0.1,
-                                  draw_labels=False,
-                                  crs=ccrs.PlateCarree())
+                                       zorder=1,
+                                       linewidth=0.1,
+                                       draw_labels=False,
+                                       crs=ccrs.PlateCarree())
             gl.xformatter = LONGITUDE_FORMATTER
             gl.yformatter = LATITUDE_FORMATTER
             gl.xlabels_bottom = False
@@ -2344,7 +2344,6 @@ class ContourMap(MapPlotMethods):
         MapPlotMethods.__init__(self)
 
         self.parent = parent
-        self.gps_editor = GPSEditor
 
         self.label_buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
         self.color = 'k'
@@ -2403,20 +2402,38 @@ class ContourMap(MapPlotMethods):
                     x, y = eastings[0], northings[0]
 
                 if plot_lines:
-                    line_plot = ax.plot(eastings, northings, '-', color=self.color, label='Surface Line', zorder=2)  # Plot the line
+                    line_plot = ax.plot(eastings, northings, '-',
+                                        color=self.color,
+                                        label='Surface Line',
+                                        zorder=2)  # Plot the line
                 if plot_stations:
-                    station_marking = ax.plot(eastings, northings, 'o', markersize=3, color=self.color,
-                            markerfacecolor='w', markeredgewidth=0.3,
-                            label='Station', zorder=2, clip_on=True)  # Plot the line
+                    station_marking = ax.plot(eastings, northings, 'o',
+                                              markersize=3,
+                                              color=self.color,
+                                              markerfacecolor='w',
+                                              markeredgewidth=0.3,
+                                              label='Station',
+                                              zorder=2,
+                                              clip_on=True)  # Plot the line
                 if label_lines:
                     line_label = ax.text(x, y, f" {pem_file.header.get('LineHole')} ",
-                            rotation=angle, rotation_mode='anchor', ha='right', va='center',
-                            zorder=5, color=self.color, path_effects=self.label_buffer, clip_on=True)
+                                         rotation=angle,
+                                         rotation_mode='anchor',
+                                         ha='right',
+                                         va='center',
+                                         zorder=5,
+                                         color=self.color,
+                                         path_effects=self.label_buffer,
+                                         clip_on=True)
                 if label_stations:
                     for station in line_gps:
                         station_label = ax.text(float(station[0]), float(station[1]), f"{station[-1]}",
-                                fontsize=7, path_effects=self.label_buffer, ha='center',
-                                va='bottom', color='k', clip_on=True)
+                                                fontsize=7,
+                                                path_effects=self.label_buffer,
+                                                ha='center',
+                                                va='bottom',
+                                                color='k',
+                                                clip_on=True)
 
             # Plot the loop
             if plot_loops:
@@ -2427,13 +2444,21 @@ class ContourMap(MapPlotMethods):
                     eastings.insert(0, eastings[-1])  # To close up the loop
                     northings.insert(0, northings[-1])
 
-                    loop_plot = ax.plot(eastings, northings, '-', color='blue', label='Loop', zorder=2)  # Plot the line
+                    loop_plot = ax.plot(eastings, northings, '-',
+                                        color='blue',
+                                        label='Loop',
+                                        zorder=2)  # Plot the line
 
                     if label_loops:
                         loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
                         loop_label = ax.text(loop_center[0], loop_center[1], f" {pem_file.header.get('Loop')} ",
-                                                  ha='center', va='center', fontsize=7,
-                                                  zorder=5, color='blue', path_effects=self.label_buffer, clip_on=True)
+                                             ha='center',
+                                             va='center',
+                                             fontsize=7,
+                                             zorder=5,
+                                             color='blue',
+                                             path_effects=self.label_buffer,
+                                             clip_on=True)
 
         def format_figure():
             ax.cla()
@@ -2477,19 +2502,35 @@ class ContourMap(MapPlotMethods):
                 # scale = f"1:{map_scale:,.0f}"
 
                 crone_text = fig.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
-                                      fontname='Century Gothic', fontsize=11, ha='center', zorder=10)
+                                      fontname='Century Gothic',
+                                      fontsize=11,
+                                      ha='center',
+                                      zorder=10)
 
                 survey_text = fig.text(center_pos, top_pos - 0.036, f"Cubic-Interpolation Contour Map"
-                f"\n{pem_files[0].survey_type.title()} Pulse EM Survey",
-                                       family='cursive', style='italic', fontname='Century Gothic', fontsize=9,
-                                       ha='center', zorder=10)
+                                       f"\n{pem_files[0].survey_type.title()} Pulse EM Survey",
+                                       family='cursive',
+                                       style='italic',
+                                       fontname='Century Gothic',
+                                       fontsize=9,
+                                       ha='center',
+                                       zorder=10)
 
                 header_text = fig.text(center_pos, top_pos - 0.046, f"{client}\n{grid}\n{loop_text}",
-                                       fontname='Century Gothic', fontsize=9.5, va='top', ha='center', zorder=10)
+                                       fontname='Century Gothic',
+                                       fontsize=9.5,
+                                       va='top',
+                                       ha='center',
+                                       zorder=10)
 
         def add_rectangle():
-            rect = patches.Rectangle(xy=(0.02, 0.02), width=0.96, height=0.96, linewidth=0.7, edgecolor='black',
-                                     facecolor='none', transform=fig.transFigure)
+            rect = patches.Rectangle(xy=(0.02, 0.02),
+                                     width=0.96,
+                                     height=0.96,
+                                     linewidth=0.7,
+                                     edgecolor='black',
+                                     facecolor='none',
+                                     transform=fig.transFigure)
             fig.patches.append(rect)
 
         def get_arrays(component, channel):
@@ -2565,8 +2606,14 @@ class ContourMap(MapPlotMethods):
         labels = []
 
         # Create a large grid in order to specify the placement of the colorbar
-        ax = plt.subplot2grid((90, 110), (0, 0), rowspan=90, colspan=90, fig=fig)
-        cbar_ax = plt.subplot2grid((90, 110), (0, 108), rowspan=90, colspan=2, fig=fig)
+        ax = plt.subplot2grid((90, 110), (0, 0),
+                              rowspan=90,
+                              colspan=90,
+                              fig=fig)
+        cbar_ax = plt.subplot2grid((90, 110), (0, 108),
+                                   rowspan=90,
+                                   colspan=2,
+                                   fig=fig)
 
         add_rectangle()
         format_figure()
@@ -2588,13 +2635,21 @@ class ContourMap(MapPlotMethods):
 
             # Elevation contour lines
             if elevation_contours:
-                zi = interp.griddata((xs, ys), zs, (xx, yy), method='cubic')
-                contour = ax.contour(xi, yi, zi, colors='black', alpha=0.8)
+                zi = interp.griddata((xs, ys), zs, (xx, yy),
+                                     method='cubic')
+                contour = ax.contour(xi, yi, zi,
+                                     colors='black',
+                                     alpha=0.8)
                 # contourf = ax.contourf(xi, yi, zi, cmap=colormap)
-                ax.clabel(contour, fontsize=6, inline=True, inline_spacing=0.5, fmt='%d')
+                ax.clabel(contour, fontsize=6,
+                          inline=True,
+                          inline_spacing=0.5,
+                          fmt='%d')
 
             # Data filled contour
-            contourf = ax.contourf(xi, yi, di, cmap=self.colormap, levels=50)
+            contourf = ax.contourf(xi, yi, di,
+                                   cmap=self.colormap,
+                                   levels=50)
 
             # Colorbar for the data contours
             cbar = fig.colorbar(contourf, cax=cbar_ax)
@@ -2604,8 +2659,13 @@ class ContourMap(MapPlotMethods):
             # Component and channel text at the top right of the figure
             component_text = f"{component.upper()} Component" if component != 'TF' else 'Total Field'
             info_text = fig.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
-                                 transform=cbar_ax.transAxes, color='k', fontname='Century Gothic', fontsize=9,
-                                 va='bottom', ha='center', zorder=10)
+                                 transform=cbar_ax.transAxes,
+                                 color='k',
+                                 fontname='Century Gothic',
+                                 fontsize=9,
+                                 va='bottom',
+                                 ha='center',
+                                 zorder=10)
 
         return fig
 
@@ -2613,20 +2673,20 @@ class ContourMap(MapPlotMethods):
 class Map3D(MapPlotMethods):
     """
     Class that plots all GPS from PEM Files in 3D. Draws on a given Axes3D object.
-    :param: ax: Matplotlib axes object
-    :param: pem_files: List of PEMFile objects to plot
-    :param: parent: PyQt parent
-    :param: set_z: Set Z axis equal to X and Y (for non-section plots)
     """
 
-    def __init__(self, ax, pem_files, parent=None, set_z=True):
+    def __init__(self, parent=None):
+        """
+        :param parent: PyQt parent
+        """
         MapPlotMethods.__init__(self)
         self.parent = parent
+        self.pem_files = None
+        self.ax = None
+        self.set_z = None
+
         self.error = QErrorMessage()
-        self.pem_files = pem_files
-        self.ax = ax
-        self.set_z = set_z
-        self.gps_editor = GPSEditor()
+        # self.gps_editor = GPSEditor()
         self.loops = []
         self.loop_artists = []
         self.loop_label_artists = []
@@ -2643,15 +2703,23 @@ class Map3D(MapPlotMethods):
 
         self.buffer = [patheffects.Stroke(linewidth=2, foreground='white'), patheffects.Normal()]
 
-    def plot_pems(self):
-        for pem_file in self.pem_files:
-            survey_type = pem_file.survey_type.lower()
+    def plot_pems(self, pem_files, ax, set_z):
+        """
+        :param: ax: Matplotlib axes object
+        :param: pem_files: List of PEMFile objects to plot
+        :param: set_z: bool, set Z axis equal to X and Y (for non-section plots)
+        """
+        self.pem_files = pem_files
+        self.ax = ax
 
+        for pem_file in self.pem_files:
             self.plot_loop(pem_file)
-            if 'surface' in survey_type:
-                self.plot_line(pem_file)
-            if 'borehole' in survey_type:
+            if pem_file.is_borehole():
                 self.plot_hole(pem_file)
+            else:
+                self.plot_line(pem_file)
+
+        self.format_ax(set_z=set_z)
 
     def plot_loop(self, pem_file):
         loop_coords = pem_file.get_loop_coords()

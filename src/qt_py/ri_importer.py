@@ -3,7 +3,6 @@ import re
 
 import natsort
 from PyQt5 import (QtCore)
-from PyQt5.QtWidgets import (QApplication)
 from PyQt5.QtWidgets import (QWidget, QMessageBox, QAbstractScrollArea, QTableWidgetItem, QHeaderView, QTableWidget,
                              QDialogButtonBox, QVBoxLayout)
 
@@ -101,31 +100,17 @@ class BatchRIImporter(QWidget):
         self.parent = parent
         self.pem_files = []
         self.ri_files = []
-        self.ri_parser = RIParser
-        self.message = QMessageBox()
-        self.initSignals()
 
         self.setAcceptDrops(True)
         self.setGeometry(500, 300, 400, 500)
-        layout = QVBoxLayout()
-        self.setLayout(layout)
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+
         self.setWindowTitle("RI File Import")
+        self.ri_parser = RIParser()
+        self.message = QMessageBox()
 
         self.table = QTableWidget()
-        self.initTable()
-
-        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok |
-                                          QDialogButtonBox.Cancel)
-
-        self.layout().addWidget(self.table)
-        self.layout().addWidget(self.buttonBox)
-
-    def initSignals(self):
-        self.buttonBox.rejected.connect(self.close)
-        self.buttonBox.accepted.connect(self.acceptImportSignal.emit)
-        self.buttonBox.accepted.connect(self.close)
-
-    def initTable(self):
         columns = ['PEM File', 'RI File']
         self.table.setColumnCount(len(columns))
         self.table.setHorizontalHeaderLabels(columns)
@@ -135,6 +120,16 @@ class BatchRIImporter(QWidget):
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
+
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok |
+                                           QDialogButtonBox.Cancel)
+        self.button_box.setCenterButtons(True)
+        self.button_box.rejected.connect(self.close)
+        self.button_box.accepted.connect(self.acceptImportSignal.emit)
+        self.button_box.accepted.connect(self.close)
+
+        self.layout.addWidget(self.table)
+        self.layout.addWidget(self.button_box)
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
@@ -184,7 +179,7 @@ class BatchRIImporter(QWidget):
 
             # Only for boreholes, match up the RI1 file for Z, and RI2 file for XY
             if all(['borehole' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
-                ri_files = [self.ri_parser().open(filepath) for filepath in ri_filepaths]
+                ri_files = [self.ri_parser.open(filepath) for filepath in ri_filepaths]
 
                 for pem_file in self.pem_files:
                     pem_components = sorted(pem_file.get_components())

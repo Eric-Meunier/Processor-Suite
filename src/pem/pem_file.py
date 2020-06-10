@@ -189,23 +189,17 @@ class PEMFile:
                 return {'System': system, 'Zone': zone, 'North': north, 'Datum': datum}
         return None
 
-    def get_loop(self, sorted=True, closed=False):
-        return self.loop.get_loop(sorted=sorted, closed=closed)
+    def get_loop(self, sorted=True, closed=False, crs=None):
+        return self.loop.get_loop(sorted=sorted, closed=closed, crs=crs)
 
-    def get_line(self, sorted=True):
-        return self.line.get_line(sorted=sorted)
+    def get_line(self, sorted=True, crs=None):
+        return self.line.get_line(sorted=sorted, crs=crs)
 
-    def get_collar(self):
-        return self.geometry.get_collar()
+    def get_collar(self, crs=None):
+        return self.geometry.get_collar(crs=crs)
 
     def get_segments(self):
         return self.geometry.get_segments()
-
-    # def get_line_coords(self):  # All P tags
-    #     if self.is_borehole():
-    #         return self.get_collar_coords()+self.get_hole_geometry()
-    #     else:
-    #         return self.get_station_coords()
 
     def get_notes(self):
         return self.notes

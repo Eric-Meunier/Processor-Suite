@@ -25,7 +25,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
     NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.ticker import FixedLocatorj
+from matplotlib.ticker import FixedLocator
 import geomag
 
 from src.gps.gps_editor import SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeGeometry, GPXEditor, CRS
@@ -41,9 +41,10 @@ from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.qt_py.unpacker import Unpacker
 from src.qt_py.ri_importer import BatchRIImporter
 from src.qt_py.gps_adder import LineAdder, LoopAdder
-from src.qt_py.map_windows import ContourMapViewer
+from src.qt_py.map_widgets import ContourMapViewer
 from src.qt_py.name_editor import BatchNameEditor
 from src.qt_py.station_splitter import StationSplitter
+from src.qt_py.map_widgets import Map3DViewer, Section3DViewer, ContourMapViewer
 
 from src.damp.db_plot import DBPlot
 
@@ -53,32 +54,17 @@ __version__ = '0.11.0'
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
     editorWindowCreatorFile = 'qt_ui\\pem_editor.ui'
-    lineNameEditorCreatorFile = 'qt_ui\\line_name_editor.ui'
     planMapOptionsCreatorFile = 'qt_ui\\plan_map_options.ui'
-    pemFileSplitterCreatorFile = 'qt_ui\\station_splitter.ui'
-    map3DCreatorFile = 'qt_ui\\3D_map.ui'
-    section3DCreatorFile = 'qt_ui\\3D_section.ui'
-    contourMapCreatorFile = 'qt_ui\\contour_map.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     editorWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_editor.ui')
-    lineNameEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\line_name_editor.ui')
     planMapOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\plan_map_options.ui')
-    pemFileSplitterCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\station_splitter.ui')
-    map3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_map.ui')
-    section3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_section.ui')
-    contourMapCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\contour_map.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
-Ui_LineNameEditorWidget, QtBaseClass = uic.loadUiType(lineNameEditorCreatorFile)
 Ui_PlanMapOptionsWidget, QtBaseClass = uic.loadUiType(planMapOptionsCreatorFile)
-Ui_PEMFileSplitterWidget, QtBaseClass = uic.loadUiType(pemFileSplitterCreatorFile)
-Ui_Map3DWidget, QtBaseClass = uic.loadUiType(map3DCreatorFile)
-Ui_Section3DWidget, QtBaseClass = uic.loadUiType(section3DCreatorFile)
-Ui_ContourMapCreatorFile, QtBaseClass = uic.loadUiType(contourMapCreatorFile)
 
 
 def convert_station(station):
@@ -106,29 +92,29 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.allow_signals = True
 
         self.dialog = QFileDialog()
-        self.pem_parser = PEMParser()
-        self.line_adder = LineAdder()
-        self.loop_adder = LoopAdder()
-        self.file_editor = PEMFileEditor()
         self.message = QMessageBox()
         self.error = QErrorMessage()
-        self.gpx_editor = GPXEditor()
-        self.serializer = PEMSerializer()
         self.pg = CustomProgressBar()
-        self.station_splitter = StationSplitter(parent=self)
 
         # Widgets
+        self.line_adder = LineAdder()
+        self.loop_adder = LoopAdder()
+        self.gpx_editor = GPXEditor()
+        self.serializer = PEMSerializer()
+        self.station_splitter = StationSplitter(parent=self)
         self.grid_planner = GridPlanner()
         self.loop_planner = LoopPlanner()
         self.db_plot = DBPlot()
         self.unpacker = Unpacker()
         self.gpx_creator = GPXCreator()
-
         self.ri_importer = BatchRIImporter(parent=self)
         self.plan_map_options = PlanMapOptions(parent=self)
-        self.map_viewer_3d = None
+        self.batch_name_editor = BatchNameEditor()
+        self.map_viewer_3d = Map3DViewer()
+        self.freq_con = FrequencyConverter(parent=self)
         self.section_viewer_3d = None
         self.contour_viewer = None
+        self.mag_dec_calculator = MagDeclinationCalculator(parent=self)
 
         self.initMenus()
         self.initSignals()
@@ -314,7 +300,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.actionConvert_Timebase_Frequency.setStatusTip("Two way conversion between timebase and frequency")
         self.actionConvert_Timebase_Frequency.setToolTip("Two way conversion between timebase and frequency")
         self.actionConvert_Timebase_Frequency.setIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
-        self.actionConvert_Timebase_Frequency.triggered.connect(self.timebase_freqency_converter)
+        self.actionConvert_Timebase_Frequency.triggered.connect(lambda: self.freq_con.show())
 
         self.actionDamping_Box_Plotter.setStatusTip("Plot damping box data")
         self.actionDamping_Box_Plotter.setToolTip("Plot damping box data")
@@ -726,6 +712,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
+        parser = PEMParser()
         # Block all table signals
         self.block_signals()
         self.allow_signals = False
@@ -743,7 +730,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             # Create a PEMFile object if a filepath was passed
             if not isinstance(pem_file, PEMFile):
                 print(f'Parsing {os.path.basename(pem_file)}')
-                pem_file = self.pem_parser.parse(pem_file)
+                pem_file = parser.parse(pem_file)
 
             # Check if the file is already opened in the table. Won't open if it is.
             if is_opened(pem_file):
@@ -2399,140 +2386,91 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage(f'{num_repeat_stations} repeat station(s) automatically renamed.',
                                                   2000)
 
-    # def toggle_share_client(self):
-    #     if self.share_client_cbox.isChecked():
-    #         self.client_edit.setEnabled(True)
-    #         self.refresh_table()
-    #     else:
-    #         self.client_edit.setEnabled(False)
-    #         self.refresh_table()
-    #
-    # def toggle_share_grid(self):
-    #     if self.share_grid_cbox.isChecked():
-    #         self.grid_edit.setEnabled(True)
-    #         self.refresh_table()
-    #     else:
-    #         self.grid_edit.setEnabled(False)
-    #         self.refresh_table()
-    #
-    # def toggle_share_loop(self):
-    #     if self.share_loop_cbox.isChecked():
-    #         self.loop_edit.setEnabled(True)
-    #         self.refresh_table()
-    #     else:
-    #         self.loop_edit.setEnabled(False)
-    #         self.refresh_table()
-    #
-    # def toggle_share_range(self):
-    #     if self.share_range_checkbox.isChecked():
-    #         self.min_range_edit.setEnabled(True)
-    #         self.max_range_edit.setEnabled(True)
-    #         self.refresh_table()
-    #     else:
-    #         self.min_range_edit.setEnabled(False)
-    #         self.max_range_edit.setEnabled(False)
-    #         self.refresh_table()
-    #
-    # def toggle_sort_loop(self, widget):
-    #     if self.autoSortLoopsCheckbox.isChecked():
-    #         widget.fill_loop_table(widget.loop_gps.get_sorted_gps())
-    #     else:
-    #         widget.fill_loop_table(widget.loop_gps.get_gps())
-    #
-    # def toggle_zone_box(self):
-    #     if self.systemCBox.currentText() == 'UTM':
-    #         self.zoneCBox.setEnabled(True)
-    #     else:
-    #         self.zoneCBox.setEnabled(False)
-
     def calc_mag_declination(self, pem_file):
-        """
-        Pop-up window with the magnetic declination information for a coordinate found in a given PEM File. Converts
-        the first coordinates found into lat lon. Must have GPS information in order to conver to lat lon.
-        :param pem_file: PEMFile object
-        :return: None
-        """
+        crs = self.get_crs()
+        self.mag_dec_calculator.calc_mag_dec(pem_file, crs)
+        self.mag_dec_calculator.show()
 
-        def copy_text(str_value):
-            cb = QtGui.QApplication.clipboard()
-            cb.clear(mode=cb.Clipboard)
-            cb.setText(str_value, mode=cb.Clipboard)
-            self.mag_win.statusBar().showMessage(f"{str_value} copied to clipboard", 1000)
-
-        if len(self.pem_files) == 0:
-            return
-
-        if self.datumCBox.currentText() == 'NAD 1927':
-            self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
-            return
-
-        if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() == '',
-                self.datumCBox.currentText() == '']):
-            self.message.information(self, 'Error', 'GPS coordinate system information is incomplete')
-            return
-
-        zone = self.zoneCBox.currentText()
-        zone_num = int(re.search('\d+', zone).group())
-        north = True if 'n' in zone.lower() else False
-
-        if pem_file.has_collar_gps():
-            coords = pem_file.get_collar_coords()
-        elif pem_file.has_loop_gps():
-            coords = pem_file.get_loop_coords()
-        elif pem_file.has_line_coords():
-            coords = pem_file.get_line_coords()
-        else:
-            self.message.information(self, 'Error', 'No GPS')
-            return
-
-        easting, northing, elevation = int(float(coords[0][0])), int(float(coords[0][1])), int(float(coords[0][2]))
-        lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-
-        try:
-            gm = geomag.GeoMag()
-            mag = gm.GeoMag(lat, lon, elevation)
-
-        except Exception as e:
-            self.error.showMessage(f"The following error occured whilst calculating the magnetic declination: {str(e)}")
-
-        else:
-            self.mag_win = QMainWindow()
-            mag_widget = QWidget()
-            self.mag_win.setWindowTitle('Magnetic Declination')
-            self.mag_win.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
-            self.mag_win.setGeometry(600, 300, 300, 200)
-            self.mag_win.statusBar().showMessage('', 10)
-            layout = QGridLayout()
-            layout.setColumnStretch(1, 4)
-            layout.setColumnStretch(2, 4)
-            mag_widget.setLayout(layout)
-            self.mag_win.setCentralWidget(mag_widget)
-            layout.addWidget(QLabel(f'Latitude (°)'), 0, 0)
-            layout.addWidget(QLabel(f'Longitude (°)'), 1, 0)
-            layout.addWidget(QLabel('Declination (°)'), 2, 0)
-            layout.addWidget(QLabel('Inclination (°)'), 3, 0)
-            layout.addWidget(QLabel('Total Field (nT)'), 4, 0)
-
-            lat_edit = QPushButton(f"{lat:.4f}")
-            lat_edit.clicked.connect(lambda: copy_text(lat_edit.text()))
-            lon_edit = QPushButton(f"{lon:.4f}")
-            lon_edit.clicked.connect(lambda: copy_text(lon_edit.text()))
-            dec_edit = QPushButton(f"{mag.dec:.2f}")
-            dec_edit.clicked.connect(lambda: copy_text(dec_edit.text()))
-            inc_edit = QPushButton(f"{mag.dip:.2f}")
-            inc_edit.clicked.connect(lambda: copy_text(inc_edit.text()))
-            tf_edit = QPushButton(f"{mag.ti:.2f}")
-            tf_edit.clicked.connect(lambda: copy_text(tf_edit.text()))
-
-            layout.addWidget(lat_edit, 0, 2)
-            layout.addWidget(lon_edit, 1, 2)
-            layout.addWidget(dec_edit, 2, 2)
-            layout.addWidget(inc_edit, 3, 2)
-            layout.addWidget(tf_edit, 4, 2)
-
-            self.mag_win.show()
-
-            return mag.dec
+        # def copy_text(str_value):
+        #     cb = QtGui.QApplication.clipboard()
+        #     cb.clear(mode=cb.Clipboard)
+        #     cb.setText(str_value, mode=cb.Clipboard)
+        #     self.mag_win.statusBar().showMessage(f"{str_value} copied to clipboard", 1000)
+        #
+        # if len(self.pem_files) == 0:
+        #     return
+        #
+        # if self.datumCBox.currentText() == 'NAD 1927':
+        #     self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
+        #     return
+        #
+        # if any([self.systemCBox.currentText() == '', self.zoneCBox.currentText() == '',
+        #         self.datumCBox.currentText() == '']):
+        #     self.message.information(self, 'Error', 'GPS coordinate system information is incomplete')
+        #     return
+        #
+        # zone = self.zoneCBox.currentText()
+        # zone_num = int(re.search('\d+', zone).group())
+        # north = True if 'n' in zone.lower() else False
+        #
+        # if pem_file.has_collar_gps():
+        #     coords = pem_file.get_collar_coords()
+        # elif pem_file.has_loop_gps():
+        #     coords = pem_file.get_loop_coords()
+        # elif pem_file.has_line_coords():
+        #     coords = pem_file.get_line_coords()
+        # else:
+        #     self.message.information(self, 'Error', 'No GPS')
+        #     return
+        #
+        # easting, northing, elevation = int(float(coords[0][0])), int(float(coords[0][1])), int(float(coords[0][2]))
+        # lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+        #
+        # try:
+        #     gm = geomag.GeoMag()
+        #     mag = gm.GeoMag(lat, lon, elevation)
+        #
+        # except Exception as e:
+        #     self.error.showMessage(f"The following error occured whilst calculating the magnetic declination: {str(e)}")
+        #
+        # else:
+        #     self.mag_win = QMainWindow()
+        #     mag_widget = QWidget()
+        #     self.mag_win.setWindowTitle('Magnetic Declination')
+        #     self.mag_win.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
+        #     self.mag_win.setGeometry(600, 300, 300, 200)
+        #     self.mag_win.statusBar().showMessage('', 10)
+        #     layout = QGridLayout()
+        #     layout.setColumnStretch(1, 4)
+        #     layout.setColumnStretch(2, 4)
+        #     mag_widget.setLayout(layout)
+        #     self.mag_win.setCentralWidget(mag_widget)
+        #     layout.addWidget(QLabel(f'Latitude (°)'), 0, 0)
+        #     layout.addWidget(QLabel(f'Longitude (°)'), 1, 0)
+        #     layout.addWidget(QLabel('Declination (°)'), 2, 0)
+        #     layout.addWidget(QLabel('Inclination (°)'), 3, 0)
+        #     layout.addWidget(QLabel('Total Field (nT)'), 4, 0)
+        #
+        #     lat_edit = QPushButton(f"{lat:.4f}")
+        #     lat_edit.clicked.connect(lambda: copy_text(lat_edit.text()))
+        #     lon_edit = QPushButton(f"{lon:.4f}")
+        #     lon_edit.clicked.connect(lambda: copy_text(lon_edit.text()))
+        #     dec_edit = QPushButton(f"{mag.dec:.2f}")
+        #     dec_edit.clicked.connect(lambda: copy_text(dec_edit.text()))
+        #     inc_edit = QPushButton(f"{mag.dip:.2f}")
+        #     inc_edit.clicked.connect(lambda: copy_text(inc_edit.text()))
+        #     tf_edit = QPushButton(f"{mag.ti:.2f}")
+        #     tf_edit.clicked.connect(lambda: copy_text(tf_edit.text()))
+        #
+        #     layout.addWidget(lat_edit, 0, 2)
+        #     layout.addWidget(lon_edit, 1, 2)
+        #     layout.addWidget(dec_edit, 2, 2)
+        #     layout.addWidget(inc_edit, 3, 2)
+        #     layout.addWidget(tf_edit, 4, 2)
+        #
+        #     self.mag_win.show()
+        #
+        #     return mag.dec
 
     def extract_stations(self):
         """
@@ -2604,31 +2542,18 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.window().statusBar().showMessage("Must have more than 1 surface PEM file open", 2000)
 
-    # def show_loop_planner(self):
-    #     """
-    #     Opens the Loop Planner window.
-    #     :return: None
-    #     """
-    #     self.loop_planner = LoopPlanner()
-    #     self.loop_planner.show()
-    #
-    # def show_grid_planner(self):
-    #     """
-    #     Opens the Grid Planner window.
-    #     :return: None
-    #     """
-    #     self.grid_planner = GridPlanner()
-    #     self.grid_planner.show()
-
     def batch_rename(self, type):
         """
         Opens the BatchNameEditor for renaming multiple file names and/or line/hole names.
-        :param type: File names or line/hole names
+        :param type: str, either 'Line' to change the line names or 'File' to change file names
         :return: None
         """
 
         def rename_pem_files():
-
+            """
+            Retrieve and open the PEM files from the batch_name_editor object
+            :return: None
+            """
             if len(self.batch_name_editor.pem_files) > 0:
                 self.batch_name_editor.accept_changes()
                 for i, row in enumerate(rows):
@@ -2639,7 +2564,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if not pem_files:
             pem_files, rows = self.pem_files, range(self.table.rowCount())
 
-        self.batch_name_editor = BatchNameEditor(pem_files, type=type)
+        self.batch_name_editor.open(pem_files, type=type)
         self.batch_name_editor.buttonBox.accepted.connect(rename_pem_files)
         self.batch_name_editor.acceptChangesSignal.connect(rename_pem_files)
         self.batch_name_editor.buttonBox.rejected.connect(self.batch_name_editor.close)
@@ -2650,6 +2575,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Opens BatchRIImporter for bulk importing RI files.
         :return: None
         """
+
         def open_ri_files():
             ri_filepaths = self.ri_importer.ri_files
             if len(ri_filepaths) > 0:
@@ -2660,14 +2586,17 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 pass
 
         self.ri_importer.open_pem_files(self.pem_files)
-        self.ri_importer.show()
         self.ri_importer.acceptImportSignal.connect(open_ri_files)
+        self.ri_importer.show()
 
-    def timebase_freqency_converter(self):
-        """
-        Converts timebase to frequency and vise-versa.
-        :return: None
-        """
+
+class FrequencyConverter(QWidget):
+    """
+    Converts timebase to frequency and vise-versa.
+    """
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
 
         def convert_freq_to_timebase():
             freq_edit.blockSignals(True)
@@ -2701,15 +2630,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             freq_edit.blockSignals(False)
             timebase_edit.blockSignals(False)
 
-        self.freq_win = QWidget()
-        self.freq_win.setWindowTitle('Timebase / Frequency Converter')
-        self.freq_win.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
+        self.setWindowTitle('Timebase / Frequency Converter')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
         layout = QGridLayout()
-        self.freq_win.setLayout(layout)
-
-        # def keyPressEvent(self, e):
-        #     if e.key() == QtCore.Qt.Key_Escape:
-        #         self.close()
+        self.setLayout(layout)
 
         timebase_label = QLabel('Timebase (ms)')
         freq_label = QLabel('Freqency (Hz)')
@@ -2723,7 +2647,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         layout.addWidget(freq_label, 2, 0)
         layout.addWidget(freq_edit, 2, 1)
 
-        self.freq_win.show()
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
 
 
 class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
@@ -2785,6 +2711,101 @@ class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
             self.close()
         elif e.key() == QtCore.Qt.Key_Return:
             self.close()
+
+
+class MagDeclinationCalculator(QMainWindow):
+    """
+    Converts the first coordinates found into lat lon. Must have GPS information in order to conver to lat lon.
+    """
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.setWindowTitle('Magnetic Declination')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
+        self.setGeometry(600, 300, 300, 200)
+        self.statusBar().showMessage('', 10)
+
+        self.message = QMessageBox()
+        self.layout = QGridLayout()
+        self.layout.setColumnStretch(1, 4)
+        self.layout.setColumnStretch(2, 4)
+
+        self.mag_widget = QWidget()
+        self.mag_widget.setLayout(self.layout)
+        self.setCentralWidget(self.mag_widget)
+        self.layout.addWidget(QLabel(f'Latitude (°)'), 0, 0)
+        self.layout.addWidget(QLabel(f'Longitude (°)'), 1, 0)
+        self.layout.addWidget(QLabel('Declination (°)'), 2, 0)
+        self.layout.addWidget(QLabel('Inclination (°)'), 3, 0)
+        self.layout.addWidget(QLabel('Total Field (nT)'), 4, 0)
+
+        self.lat_edit = QPushButton()
+        self.lat_edit.clicked.connect(lambda: self.copy_text(self.lat_edit.text()))
+        self.lon_edit = QPushButton()
+        self.lon_edit.clicked.connect(lambda: self.copy_text(self.lon_edit.text()))
+        self.dec_edit = QPushButton()
+        self.dec_edit.clicked.connect(lambda: self.copy_text(self.dec_edit.text()))
+        self.inc_edit = QPushButton()
+        self.inc_edit.clicked.connect(lambda: self.copy_text(self.inc_edit.text()))
+        self.tf_edit = QPushButton()
+        self.tf_edit.clicked.connect(lambda: self.copy_text(self.tf_edit.text()))
+
+        self.layout.addWidget(self.lat_edit, 0, 2)
+        self.layout.addWidget(self.lon_edit, 1, 2)
+        self.layout.addWidget(self.dec_edit, 2, 2)
+        self.layout.addWidget(self.inc_edit, 3, 2)
+        self.layout.addWidget(self.tf_edit, 4, 2)
+
+    def copy_text(self, str_value):
+        """
+        Copy the str_value to the clipboard
+        :param str_value: str
+        :return None
+        """
+        cb = QtGui.QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(str_value, mode=cb.Clipboard)
+        self.statusBar().showMessage(f"{str_value} copied to clipboard", 1000)
+
+    def calc_mag_dec(self, pem_file, crs):
+        """
+        Pop-up window with the magnetic declination information for a coordinate found in a given PEM File. Converts
+        the first coordinates found into lat lon. Must have GPS information in order to conver to lat lon.
+        :param pem_file: PEMFile object
+        :param crs: CRS object
+        :return: None
+        """
+
+        if not pem_file:
+            return
+
+        if crs.Datum == 'NAD 1927':
+            self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
+            return
+
+        if not crs.is_valid():
+            self.message.information(self, 'Error', 'GPS coordinate system information is incomplete')
+            return
+
+        if pem_file.has_collar_gps():
+            coords = pem_file.get_collar(crs=crs)
+        elif pem_file.has_loop_gps():
+            coords = pem_file.get_loop(crs=crs)
+        elif pem_file.has_line_coords():
+            coords = pem_file.get_line(crs=crs)
+        else:
+            self.message.information(self, 'Error', 'No GPS')
+            return
+
+        lat, lon, elevation = coords.iloc[0]['Latitude'], coords.iloc[0]['Longitude'], coords.iloc[0]['Elevation']
+
+        gm = geomag.geomag.GeoMag()
+        mag = gm.GeoMag(lat, lon, elevation)
+        self.lat_edit.setText(f"{lat:.4f}")
+        self.lon_edit.setText(f"{lon:.4f}")
+        self.dec_edit.setText(f"{mag.dec:.2f}")
+        self.inc_edit.setText(f"{mag.dip:.2f}")
+        self.tf_edit.setText(f"{mag.ti:.2f}")
 
 
 def main():
