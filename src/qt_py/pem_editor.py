@@ -1927,7 +1927,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.start_pg(min=0, max=len(pem_files))
         count = 0
         for pem_file, row in zip(pem_files, rows):
-            if not pem_file.is_averaged():
+            if pem_file.is_averaged():
+                self.statusBar().showMessage(f'{pem_file.filename} is already averaged', 2000)
+            else:
                 print(f"Averaging {pem_file.filename}")
                 self.pg.setText(f"Averaging {pem_file.filename}")
                 # Save a backup of the un-averaged file first
@@ -2769,8 +2771,7 @@ class MagDeclinationCalculator(QMainWindow):
 
     def calc_mag_dec(self, pem_file, crs):
         """
-        Pop-up window with the magnetic declination information for a coordinate found in a given PEM File. Converts
-        the first coordinates found into lat lon. Must have GPS information in order to conver to lat lon.
+        Calculate the magnetic declination for the PEM file.
         :param pem_file: PEMFile object
         :param crs: CRS object
         :return: None
@@ -2814,7 +2815,8 @@ def main():
     mw = PEMEditor()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Trevali Peru', number=5)
+    # pem_files = pg.get_pems(client='Trevali Peru', number=5)
+    pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
     mw.open_pem_files(pem_files)
     mw.show()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])

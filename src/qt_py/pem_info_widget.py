@@ -7,7 +7,7 @@ import pandas as pd
 from copy import deepcopy
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
-                             QFileDialog, QErrorMessage, QHeaderView)
+                             QFileDialog, QErrorMessage, QHeaderView, QAbstractScrollArea)
 from collections import OrderedDict
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 from src.pem.pem_file_editor import PEMFileEditor
@@ -374,18 +374,23 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         if not self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
-            self.stationGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            # self.stationGPSTable.setSizeAdjustPolicy(
-            #     QAbstractScrollArea.AdjustToContents)
-            # self.stationGPSTable.resizeColumnsToContents()
+            # self.stationGPSTable.setColumnWidth(0, 25)
+            # self.stationGPSTable.setColumnWidth(1, 45)
+            # self.stationGPSTable.setColumnWidth(2, 45)
+            # self.stationGPSTable.setColumnWidth(3, 25)
+            # self.stationGPSTable.setColumnWidth(4, 35)
+            # self.stationGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.stationGPSTable.setSizeAdjustPolicy(
+                QAbstractScrollArea.AdjustToContents)
+            self.stationGPSTable.resizeColumnsToContents()
 
         elif self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
-            self.geometryTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            self.collarGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            # self.geometryTable.setSizeAdjustPolicy(
-            #     QAbstractScrollArea.AdjustToContents)
-            # self.geometryTable.resizeColumnsToContents()
+            # self.geometryTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            # self.collarGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.geometryTable.setSizeAdjustPolicy(
+                QAbstractScrollArea.AdjustToContents)
+            self.geometryTable.resizeColumnsToContents()
 
             # self.collarGPSTable.setSizeAdjustPolicy(
             #     QAbstractScrollArea.AdjustToContents)
@@ -397,11 +402,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # self.collarGPSTable.setItem(0, 4, units_item)
             # self.collarGPSTable.resizeColumnsToContents()
 
-        self.loopGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.dataTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # self.loopGPSTable.setSizeAdjustPolicy(
-        #     QAbstractScrollArea.AdjustToContents)
-        # self.loopGPSTable.resizeColumnsToContents()
+        # self.loopGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.dataTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.loopGPSTable.setSizeAdjustPolicy(
+            QAbstractScrollArea.AdjustToContents)
+        self.loopGPSTable.resizeColumnsToContents()
 
         # self.dataTable.blockSignals(True)
         # self.dataTable.setColumnCount(len(self.data_columns))
