@@ -1020,6 +1020,9 @@ Stations</string>
     <addaction name="actionLoop_Planner"/>
     <addaction name="actionGrid_Planner"/>
     <addaction name="actionConvert_Timebase_Frequency"/>
+    <addaction name="actionDamping_Box_Plotter"/>
+    <addaction name="actionUnpacker"/>
+    <addaction name="actionGPX_Creator"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuPEM"/>
@@ -1220,6 +1223,21 @@ Stations</string>
   <action name="actionConvert_Timebase_Frequency">
    <property name="text">
     <string>Convert Timebase/Frequency</string>
+   </property>
+  </action>
+  <action name="actionDamping_Box_Plotter">
+   <property name="text">
+    <string>Damping Box Plotter</string>
+   </property>
+  </action>
+  <action name="actionUnpacker">
+   <property name="text">
+    <string>Unpacker</string>
+   </property>
+  </action>
+  <action name="actionGPX_Creator">
+   <property name="text">
+    <string>GPX Creator</string>
    </property>
   </action>
  </widget>

@@ -8,7 +8,7 @@ from decimal import Decimal
 
 import numpy as np
 
-from src.pem.legacy.pem_parser import PEMParser
+from src.pem._legacy.pem_parser import PEMParser
 
 
 if getattr(sys, 'frozen', False):

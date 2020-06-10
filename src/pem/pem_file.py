@@ -19,6 +19,18 @@ def sort_data(data):
     return df
 
 
+def convert_station(station):
+    """
+    Converts a single station name into a number, negative if the stations was S or W
+    :return: Integer station number
+    """
+    if re.match(r"\d+(S|W)", station):
+        station = (-int(re.sub(r"\D", "", station)))
+    else:
+        station = (int(re.sub(r"\D", "", station)))
+    return station
+
+
 class PEMFile:
     """
     PEM file class
@@ -210,21 +222,15 @@ class PEMFile:
         return components
 
     def get_unique_stations(self, converted=False):
+        """
+        Return a list of unique stations in the PEM file.
+        :param converted: Bool, whether to convert the stations to Int
+        :return: list
+        """
+        stations = self.data.Station.unique()
         if converted:
-            [self.convert_station(station) for station in self.data['Station'].unique()]
-        else:
-            return self.data['Station'].unique()
-
-    def convert_station(self, station):
-        """
-        Converts a single station name into a number, negative if the stations was S or W
-        :return: Integer station number
-        """
-        if re.match(r"\d+(S|W)", station):
-            station = (-int(re.sub(r"\D", "", station)))
-        else:
-            station = (int(re.sub(r"\D", "", station)))
-        return station
+            stations = [convert_station(station) for station in stations]
+        return stations
 
     def get_profile_data(self):
         """
@@ -247,7 +253,7 @@ class PEMFile:
 
                 for i, station in enumerate(component_data):
                     reading = station['Data'][channel]
-                    station_number = int(self.convert_station(station['Station']))
+                    station_number = int(convert_station(station['Station']))
                     channel_data.append({'Station': station_number, 'Reading': reading})
 
                 component_profile_data[channel] = channel_data

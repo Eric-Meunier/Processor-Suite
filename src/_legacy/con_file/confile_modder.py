@@ -6,7 +6,7 @@ import logging
 from PyQt5 import (QtGui, uic)
 from PyQt5.QtWidgets import (QMainWindow, QAction, QApplication, QFileDialog, QDesktopWidget,
                              QTableWidgetItem, QAbstractScrollArea, QMessageBox)
-from src.pem.legacy.pem_parser import PEMParser
+from src.pem._legacy.pem_parser import PEMParser
 
 __version__ = '0.0.2'
 

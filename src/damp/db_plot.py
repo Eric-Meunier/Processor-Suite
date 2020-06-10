@@ -80,10 +80,11 @@ class DBPlot(QMainWindow):
         self.central_widget_layout = QGridLayout()
         self.central_widget.setLayout(self.central_widget_layout)
         self.setCentralWidget(self.central_widget)
+        self.setGeometry(600, 400, 800, 600)
 
-        self.setWindowTitle("DB Plot  v" + str(__version__))
+        self.setWindowTitle("DB Plot v" + str(__version__))
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'db_plot 24.png')))
+            QtGui.QIcon(os.path.join(icons_path, 'db_plot 32.png')))
         center_window(self)
 
     def initActions(self):

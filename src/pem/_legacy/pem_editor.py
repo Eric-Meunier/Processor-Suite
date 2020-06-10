@@ -1,4 +1,4 @@
-from src.pem.legacy.pem_parser import PEMParser
+from src.pem._legacy.pem_parser import PEMParser
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker

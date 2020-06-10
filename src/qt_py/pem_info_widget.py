@@ -4,18 +4,14 @@ import re
 import sys
 import natsort
 import pandas as pd
-import numpy as np
 from copy import deepcopy
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
-                             QFileDialog, QErrorMessage, QHeaderView, QTableView)
-from PyQt5.QtCore import QAbstractTableModel, Qt
-from collections import Counter, OrderedDict
+                             QFileDialog, QErrorMessage, QHeaderView)
+from collections import OrderedDict
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 from src.pem.pem_file_editor import PEMFileEditor
-from src.ri.ri_file import RIFile
-from src.qt_py.custom_tables import CustomTableWidgetItem
-
+from src._legacy.ri.ri_file import RIFile
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
