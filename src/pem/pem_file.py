@@ -1,13 +1,14 @@
-from src.pem.pem_serializer import PEMSerializer
-import re
+import math
 import os
+import re
+import time
+
+import natsort
 import numpy as np
 import pandas as pd
-import natsort
-import math
-import time
-import copy
+
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
+from src.pem.pem_serializer import PEMSerializer
 
 
 def sort_data(data):
@@ -336,9 +337,7 @@ class PEMFile:
             :param channel_times: pandas DataFrame from the PEM file
             :return: np.array with only select channels remaining
             """
-            mask = channel_times.Remove.to_list()
-            mask = [not i for i in mask]  # Invert the bool values to work with the mask correctly
-            return readings[mask]  # Only keep the "True" values from the mask
+            return readings[~channel_times.Remove]  # Only keep the "True" values from the mask
 
         # Only keep the select channels from each reading
         self.data.Reading = self.data.Reading.map(lambda x: remove_on_time(x, self.channel_times))
@@ -525,7 +524,7 @@ class PEMParser:
         #  'Tags' section
         self.re_tags = re.compile(  # Parsing the 'Tags' i.e. the information above the loop coordinates
             r'<FMT>\s(?P<Format>\d+)\s*~?.*[\r\n]'
-            r'<UNI>\s(?P<Units>.*)\s*~?.*[\r\n]'
+            r'<UNI>\s(?P<Units>nanoTesla/sec|picoTeslas)\s*~?.*[\r\n]'
             r'<OPR>\s(?P<Operator>.*)~?.*[\r\n]'
             r'<XYP>\s(?P<Probes>[\d\w\s-]*).*[\r\n]'
             r'<CUR>\s(?P<Current>\d+\.?\d?)\s*~?.*[\r\n]'
@@ -598,7 +597,7 @@ class PEMParser:
                 elif cols[i] == 'Units':
                     if match == 'nanoTesla/sec':
                         match = 'nT/s'
-                    elif match == 'picoTesla':
+                    elif match == 'picoTeslas':
                         match = 'pT'
                 elif cols[i] == 'Probes':
                     probe_cols = ['XY probe number', 'SOA', 'Tool number', 'Tool ID']
@@ -701,7 +700,7 @@ class PEMParser:
                 # Configure each channel after the last off-time channel (only for full waveform)
                 last_off_time_channel = find_last_off_time()
                 if last_off_time_channel:
-                    table.loc[last_off_time_channel:, 'Remove'] = table.loc[52:, 'Remove'].map(lambda x: True)
+                    table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(lambda x: True)
                 return table
 
             cols = [

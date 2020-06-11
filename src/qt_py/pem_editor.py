@@ -242,7 +242,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.actionSplit_All_PEM_Files.setToolTip("Remove on-time channels for all PEM files")
         self.actionSplit_All_PEM_Files.setIcon(QtGui.QIcon(os.path.join(icons_path, 'split.png')))
         self.actionSplit_All_PEM_Files.setShortcut("F6")
-        self.actionSplit_All_PEM_Files.triggered.connect(lambda: self.split_pem_channels(all=True))
+        self.actionSplit_All_PEM_Files.triggered.connect(lambda: self.split_pem_channels(pem_files=self.pem_files))
 
         self.actionScale_All_Currents.setStatusTip("Scale the current of all PEM Files to the same value")
         self.actionScale_All_Currents.setToolTip("Scale the current of all PEM Files to the same value")
@@ -1196,6 +1196,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         self.table.blockSignals(True)
+        # Reset the row
         for i, column in enumerate(self.table_columns):
             item = QTableWidgetItem('')
             item.setTextAlignment(QtCore.Qt.AlignCenter)
@@ -1942,22 +1943,19 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.pg.setValue(count)
         self.pg.hide()
 
-    def split_pem_channels(self, pem_files=[], all=False):
+    def split_pem_channels(self, pem_files=None):
         """
         Removes the on-time channels of each selected PEM File
-        :param all: bool: Whether or not to split channels for all opened PEM files or only selected ones.
+        :param
         :return: None
         """
 
         if not pem_files:
-            if not all:
-                pem_files, rows = self.get_selected_pem_files()
-            else:
-                pem_files, rows = self.pem_files, range(self.table.rowCount())
+            pem_files, rows = self.get_selected_pem_files()
         else:
             if not isinstance(pem_files, list):
                 pem_files = [pem_files]
-            pem_files, rows = pem_files, [self.pem_files.index(pem_file) for pem_file in pem_files]
+                rows = [self.pem_files.index(pem_file) for pem_file in pem_files]
 
         if not pem_files:
             return
@@ -1967,15 +1965,50 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         for pem_file, row in zip(pem_files, rows):
             if not pem_file.is_split():
                 print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
-                self.pg.setText(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
+                self.pg.setText(f"Splitting channels for {pem_file.filename}")
                 if self.auto_create_backup_files_cbox.isChecked():
                     self.write_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]', remove_old=False)
-                pem_file = self.file_editor.split_channels(pem_file)
+                pem_file = pem_file.split()
                 self.pem_info_widgets[row].open_file(pem_file, parent=self)
                 self.refresh_table_row(pem_file, row)
                 count += 1
                 self.pg.setValue(count)
         self.pg.hide()
+
+    # def split_pem_channels(self, pem_files=[], all=False):
+    #     """
+    #     Removes the on-time channels of each selected PEM File
+    #     :param all: bool: Whether or not to split channels for all opened PEM files or only selected ones.
+    #     :return: None
+    #     """
+    #
+    #     if not pem_files:
+    #         if not all:
+    #             pem_files, rows = self.get_selected_pem_files()
+    #         else:
+    #             pem_files, rows = self.pem_files, range(self.table.rowCount())
+    #     else:
+    #         if not isinstance(pem_files, list):
+    #             pem_files = [pem_files]
+    #         pem_files, rows = pem_files, [self.pem_files.index(pem_file) for pem_file in pem_files]
+    #
+    #     if not pem_files:
+    #         return
+    #
+    #     self.start_pg(min=0, max=len(pem_files))
+    #     count = 0
+    #     for pem_file, row in zip(pem_files, rows):
+    #         if not pem_file.is_split():
+    #             print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
+    #             self.pg.setText(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
+    #             if self.auto_create_backup_files_cbox.isChecked():
+    #                 self.write_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]', remove_old=False)
+    #             pem_file = self.file_editor.split_channels(pem_file)
+    #             self.pem_info_widgets[row].open_file(pem_file, parent=self)
+    #             self.refresh_table_row(pem_file, row)
+    #             count += 1
+    #             self.pg.setValue(count)
+    #     self.pg.hide()
 
     def scale_pem_coil_area(self, coil_area=None, all=False):
         """
@@ -2069,8 +2102,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                                                  'Would you like to split the unsplit file(s) and proceed with merging?',
                                                  self.message.Yes | self.message.No)
                 if response == self.message.Yes:
-                    for pem_file in pem_files:
-                        self.split_pem_channels(pem_file)
+                    self.split_pem_channels(pem_files=pem_files)
                 else:
                     return
 
@@ -2137,7 +2169,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                                                      'Would you like to split the unsplit file(s) and proceed with merging?',
                                                      self.message.Yes | self.message.No)
                     if response == self.message.Yes:
-                        self.split_pem_channels(pem_files, all=False)
+                        self.split_pem_channels(pem_files=pem_files)
                     else:
                         return
 
@@ -2172,7 +2204,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                                                      'Would you like to split the unsplit file(s) and proceed with merging?',
                                                      self.message.Yes | self.message.No)
                     if response == self.message.Yes:
-                        self.split_pem_channels(pem_files, all=False)
+                        self.split_pem_channels(pem_files=pem_files)
                     else:
                         return
 
@@ -2815,9 +2847,10 @@ def main():
     mw = PEMEditor()
 
     pg = PEMGetter()
-    # pem_files = pg.get_pems(client='Trevali Peru', number=5)
-    pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
+    pem_files = pg.get_pems(client='PEM Splitting', number=1)
+    # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
     mw.open_pem_files(pem_files)
+    mw.split_pem_channels(pem_files[0])
     mw.show()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])
     # mw.save_as_xyz()

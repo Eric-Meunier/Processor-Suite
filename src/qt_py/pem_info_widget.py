@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import natsort
+import numpy as np
 import pandas as pd
 from copy import deepcopy
 from PyQt5 import (QtCore, QtGui, uic)
@@ -730,15 +731,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         self.clear_table(self.missing_gps_table)
         data_stations = self.pem_file.data.Station.map(convert_station).unique()
-        gps_stations = self.get_line().df.Station.map(convert_station).unique()
-        missing_gps = []
-        for station in data_stations:
-            if station not in gps_stations:
-                missing_gps.append(str(station))
+        gps_stations = self.get_line().df.Station.astype(int).unique()
+        filt = np.isin(data_stations, gps_stations, invert=True)
+        missing_gps = data_stations[filt]
+        # for station in data_stations:
+        #     if station not in gps_stations:
+        #         missing_gps.append(str(station))
         for i, station in enumerate(missing_gps):
             row = i
             self.missing_gps_table.insertRow(row)
-            item = QTableWidgetItem(station)
+            item = QTableWidgetItem(str(station))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             item.setForeground(QtGui.QColor('red'))
             self.missing_gps_table.setItem(row, 0, item)
