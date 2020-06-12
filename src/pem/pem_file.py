@@ -301,22 +301,38 @@ class PEMFile:
             :param group: pandas DataFrame of PEM data for a station-component
             :return: pandas DataFrame of the averaged station-component.
             """
+            t1 = time.time()
             # Create a new data frame
-            new_data_df = pd.DataFrame(columns=group.columns)
+            # new_data_df = pd.DataFrame(columns=group.columns)
+            new_data_df = group.iloc[0]
+            print(f'Time to create data frame: {time.time() - t1}')
+
+            t2 = time.time()
             # Fill the new data frame with the last row of the group
-            new_data_df = new_data_df.append(group.iloc[-1])
+            # new_data_df = new_data_df.append(group.iloc[-1])
+            print(f'Fill the new data frame with the last row of the group: {time.time() - t2}')
+
+            t3 = time.time()
             # Sum the number of stacks column
             new_data_df['Number of stacks'] = group['Number of stacks'].sum()
+            print(f'Sum the number of stacks column: {time.time() - t3}')
+
+            t4 = time.time()
             # Add the weighted average of the readings to the reading column
             new_data_df['Reading'] = [np.average(group.Reading.to_list(),
                                                  axis=0,
                                                  weights=group['Number of stacks'].to_list())]
+            print(f'Add the weighted average of the readings to the reading column: {time.time() - t4}')
             return new_data_df
 
+        ot = time.time()
         # Create a data frame with all data averaged
         df = self.data.groupby(['Station', 'Component']).apply(weighted_average)
+        tt = time.time()
         # Sort the data frame
         df = sort_data(df)
+        print(f"Sorting time: {time.time() - tt}")
+        print(f"Total time: {time.time() - ot}")
         self.data = df
         return self
 

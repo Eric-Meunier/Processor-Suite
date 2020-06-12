@@ -6,6 +6,7 @@ import csv
 import sys
 import time
 import utm
+import timeit
 import pandas as pd
 import numpy as np
 import pyqtgraph as pg
@@ -2784,12 +2785,14 @@ def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMEditor()
-    mw.show()
+    # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Splitting', number=5)
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
+    # pem_files = pg.get_pems(client='PEM Splitting', number=5)
     # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
-    mw.open_pem_files(pem_files)
+    mw.open_pem_files(file)
+    mw.average_pem_data(all=True)
     # mw.split_pem_channels(pem_files[0])
     # mw.show()
 
@@ -2841,11 +2844,12 @@ def main():
 
 
 if __name__ == '__main__':
+    import cProfile
+    import pstats
     main()
     # cProfile.run('main()', 'restats')
     # p = pstats.Stats('restats')
-    # p.strip_dirs().sort_stats(-1).print_stats()
-    #
     # p.sort_stats('cumulative').print_stats(.5)
 
     # p.sort_stats('time', 'cumulative').print_stats()
+    # p.strip_dirs().sort_stats(-1).print_stats()
