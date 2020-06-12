@@ -99,11 +99,10 @@ class PEMFile:
             return True
 
     def is_split(self):
-        ct = self.channel_times
-        if len(ct[ct < 0]) == 2:
-            return True
-        else:
+        if self.channel_times.Remove.any():
             return False
+        else:
+            return True
 
     def has_collar_gps(self):
         if self.is_borehole():
@@ -330,17 +329,8 @@ class PEMFile:
             print(f"{self.filename} is already split.")
             return
 
-        def remove_on_time(readings, channel_times):
-            """
-            Remove the on-time channels using the channel times table from the PEM file
-            :param readings: np.array of values for a given reading
-            :param channel_times: pandas DataFrame from the PEM file
-            :return: np.array with only select channels remaining
-            """
-            return readings[~channel_times.Remove]  # Only keep the "True" values from the mask
-
         # Only keep the select channels from each reading
-        self.data.Reading = self.data.Reading.map(lambda x: remove_on_time(x, self.channel_times))
+        self.data.Reading = self.data.Reading.map(lambda x: x[~self.channel_times.Remove])
         # Create a filter and update the channels table
         filt = self.channel_times.Remove == False
         self.channel_times = self.channel_times[filt]

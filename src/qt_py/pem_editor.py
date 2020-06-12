@@ -243,6 +243,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.actionSplit_All_PEM_Files.setIcon(QtGui.QIcon(os.path.join(icons_path, 'split.png')))
         self.actionSplit_All_PEM_Files.setShortcut("F6")
         self.actionSplit_All_PEM_Files.triggered.connect(lambda: self.split_pem_channels(pem_files=self.pem_files))
+        self.actionSplit_All_PEM_Files.triggered.connect(self.refresh_table)
 
         self.actionScale_All_Currents.setStatusTip("Scale the current of all PEM Files to the same value")
         self.actionScale_All_Currents.setToolTip("Scale the current of all PEM Files to the same value")
@@ -649,7 +650,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Action of opening a PEM file. Will not open a PEM file if it is already opened.
         :param pem_files: list: Filepaths for the PEM Files
         """
-
         def is_opened(pem_file):
             if isinstance(pem_file, PEMFile):
                 pem_file = pem_file.filepath
@@ -673,6 +673,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.pg.setText(f"Opening {pem_file.filename}")
 
             pemInfoWidget = PEMFileInfoWidget()
+            # Connect a signal to refresh the table row
             pemInfoWidget.refresh_tables_signal.connect(lambda: self.refresh_table(single_row=True))
             pemInfoWidget.blockSignals(True)
 
@@ -680,6 +681,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             pem_widget = pemInfoWidget.open_file(pem_file, parent=self)
             # Change the current tab of this widget to the same as the opened ones
             pem_widget.tabs.setCurrentIndex(self.tab_num)
+            # Connect a signal to change the tab when another PIW tab is changed
             pem_widget.tabs.currentChanged.connect(self.change_pem_info_tab)
 
             self.pem_files.append(pem_file)
@@ -692,7 +694,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             Sort the PEM files (and their associated files/widget) in the main table.
             :return: None
             """
-            if len(self.pem_files) > 0:
+            if self.pem_files:
                 print('Sorting the table\n')
                 # Cannot simply sort the widgets in stackedWidget so they are removed and re-added.
                 [self.stackedWidget.removeWidget(widget) for widget in self.pem_info_widgets]
@@ -769,8 +771,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         # Add all files to the table at once for aesthetics.
         [self.add_pem_to_table(pem_file) for pem_file in files_to_add]
 
-        if self.auto_sort_files_cbox.isChecked():
-            sort_files()
+        # if self.auto_sort_files_cbox.isChecked():
+        #     sort_files()
 
         # Only refresh the table if there were already opened files
         if len(files_to_add) != len(self.pem_files):
@@ -946,9 +948,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         """
         Adds the information from a PEM file to the main table. Blocks the table signals while doing so.
         :param pem_file: PEMFile object
-        :param row: int: row of the PEM file in the table
-        :param special_cols_only: bool: Whether to only fill in the information from the non-editable columns (i.e.
-        from the 'First Station' column to the end.
+        :param row: int, row of the PEM file in the table
         :return: None
         """
         print(f"Adding {pem_file.filename} to table")
@@ -1042,6 +1042,66 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if self.allow_signals:
             self.table.blockSignals(False)
 
+    def color_table_row_text(self, row):
+        """
+        Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
+        :param row: Row of the main table to check and color
+        :return: None
+        """
+
+        def color_row(table, rowIndex, color, alpha=50):
+            """
+            Color an entire table row
+            :param rowIndex: Int: Row of the table to color
+            :param color: str: The desired color
+            :return: None
+            """
+            table.blockSignals(True)
+            color = QtGui.QColor(color)
+            color.setAlpha(alpha)
+            for j in range(table.columnCount()):
+                table.item(rowIndex, j).setBackground(color)
+            if self.allow_signals:
+                table.blockSignals(False)
+
+        self.table.blockSignals(True)
+        average_col = self.table_columns.index('Averaged')
+        split_col = self.table_columns.index('Split')
+        suffix_col = self.table_columns.index('Suffix\nWarnings')
+        repeat_col = self.table_columns.index('Repeat\nStations')
+        pem_has_gps = self.pem_files[row].has_all_gps()
+
+        for col in [average_col, split_col, suffix_col, repeat_col]:
+            item = self.table.item(row, col)
+            if item:
+                value = item.text()
+                if col == average_col:
+                    if value == 'False':
+                        item.setForeground(QtGui.QColor('red'))
+                    else:
+                        item.setForeground(QtGui.QColor('black'))
+                elif col == split_col:
+                    if value == 'False':
+                        item.setForeground(QtGui.QColor('red'))
+                    else:
+                        item.setForeground(QtGui.QColor('black'))
+                elif col == suffix_col:
+                    if int(value) > 0:
+                        item.setForeground(QtGui.QColor('red'))
+                    else:
+                        item.setForeground(QtGui.QColor('black'))
+                elif col == repeat_col:
+                    if int(value) > 0:
+                        item.setForeground(QtGui.QColor('red'))
+                    else:
+                        item.setForeground(QtGui.QColor('black'))
+
+        if not pem_has_gps:
+            color_row(self.table, row, 'magenta')
+
+        if self.allow_signals:
+            self.table.blockSignals(False)
+
     def check_for_table_anomalies(self):
         """
         Change the text color of table cells where the value warrants attention. An example of this is where the
@@ -1102,66 +1162,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 else:
                     self.table.item(row, column).setFont(normalFont)
         self.table.resizeColumnsToContents()
-
-        if self.allow_signals:
-            self.table.blockSignals(False)
-
-    def color_table_row_text(self, row):
-        """
-        Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
-        :param row: Row of the main table to check and color
-        :return: None
-        """
-
-        def color_row(table, rowIndex, color, alpha=50):
-            """
-            Color an entire table row
-            :param rowIndex: Int: Row of the table to color
-            :param color: str: The desired color
-            :return: None
-            """
-            table.blockSignals(True)
-            color = QtGui.QColor(color)
-            color.setAlpha(alpha)
-            for j in range(table.columnCount()):
-                table.item(rowIndex, j).setBackground(color)
-            if self.allow_signals:
-                table.blockSignals(False)
-
-        self.table.blockSignals(True)
-        average_col = self.table_columns.index('Averaged') + 1
-        split_col = self.table_columns.index('Split') + 1
-        suffix_col = self.table_columns.index('Suffix\nWarnings') + 1
-        repeat_col = self.table_columns.index('Repeat\nStations') + 1
-        pem_has_gps = self.pem_files[row].has_all_gps()
-
-        for col in [average_col, split_col, suffix_col, repeat_col]:
-            item = self.table.item(row, col)
-            if item:
-                value = item.text()
-                if col == average_col:
-                    if value == 'False':
-                        item.setForeground(QtGui.QColor('red'))
-                    else:
-                        item.setForeground(QtGui.QColor('black'))
-                elif col == split_col:
-                    if value == 'False':
-                        item.setForeground(QtGui.QColor('red'))
-                    else:
-                        item.setForeground(QtGui.QColor('black'))
-                elif col == suffix_col:
-                    if int(value) > 0:
-                        item.setForeground(QtGui.QColor('red'))
-                    else:
-                        item.setForeground(QtGui.QColor('black'))
-                elif col == repeat_col:
-                    if int(value) > 0:
-                        item.setForeground(QtGui.QColor('red'))
-                    else:
-                        item.setForeground(QtGui.QColor('black'))
-
-        if not pem_has_gps:
-            color_row(self.table, row, 'magenta')
 
         if self.allow_signals:
             self.table.blockSignals(False)
@@ -1936,7 +1936,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 # Save a backup of the un-averaged file first
                 if self.auto_create_backup_files_cbox.isChecked():
                     self.write_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]', remove_old=False)
+                t = time.time()
                 pem_file = pem_file.average()
+                print(f"Time to average file: {time.time() - t}")
                 self.pem_info_widgets[row].open_file(pem_file, parent=self)
                 self.refresh_table_row(pem_file, row)
                 count += 1
@@ -1949,13 +1951,12 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :param
         :return: None
         """
-
         if not pem_files:
             pem_files, rows = self.get_selected_pem_files()
         else:
             if not isinstance(pem_files, list):
                 pem_files = [pem_files]
-                rows = [self.pem_files.index(pem_file) for pem_file in pem_files]
+            rows = [self.pem_files.index(pem_file) for pem_file in pem_files]
 
         if not pem_files:
             return
@@ -1968,47 +1969,13 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.pg.setText(f"Splitting channels for {pem_file.filename}")
                 if self.auto_create_backup_files_cbox.isChecked():
                     self.write_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]', remove_old=False)
+                t = time.time()
                 pem_file = pem_file.split()
-                self.pem_info_widgets[row].open_file(pem_file, parent=self)
-                self.refresh_table_row(pem_file, row)
+                print(f"Time to split file: {time.time() - t}")
+                self.pem_info_widgets[row].open_file(pem_file, parent=self)  # Emits a signal to refresh the table row
                 count += 1
                 self.pg.setValue(count)
         self.pg.hide()
-
-    # def split_pem_channels(self, pem_files=[], all=False):
-    #     """
-    #     Removes the on-time channels of each selected PEM File
-    #     :param all: bool: Whether or not to split channels for all opened PEM files or only selected ones.
-    #     :return: None
-    #     """
-    #
-    #     if not pem_files:
-    #         if not all:
-    #             pem_files, rows = self.get_selected_pem_files()
-    #         else:
-    #             pem_files, rows = self.pem_files, range(self.table.rowCount())
-    #     else:
-    #         if not isinstance(pem_files, list):
-    #             pem_files = [pem_files]
-    #         pem_files, rows = pem_files, [self.pem_files.index(pem_file) for pem_file in pem_files]
-    #
-    #     if not pem_files:
-    #         return
-    #
-    #     self.start_pg(min=0, max=len(pem_files))
-    #     count = 0
-    #     for pem_file, row in zip(pem_files, rows):
-    #         if not pem_file.is_split():
-    #             print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
-    #             self.pg.setText(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
-    #             if self.auto_create_backup_files_cbox.isChecked():
-    #                 self.write_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]', remove_old=False)
-    #             pem_file = self.file_editor.split_channels(pem_file)
-    #             self.pem_info_widgets[row].open_file(pem_file, parent=self)
-    #             self.refresh_table_row(pem_file, row)
-    #             count += 1
-    #             self.pg.setValue(count)
-    #     self.pg.hide()
 
     def scale_pem_coil_area(self, coil_area=None, all=False):
         """
@@ -2147,12 +2114,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         """
         if len(self.pem_files) > 0:
             files_to_open = []
-            # self.spinner.start()
-            # self.spinner.show()
-
-            # time.sleep(.1)
-            # updated_pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in
-            #                      zip(copy.deepcopy(self.pem_files), range(self.table.rowCount()))]
             updated_pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in
                                                       zip(self.pem_files, range(self.table.rowCount()))]
             bh_files = [pem_file for pem_file in updated_pem_files if 'borehole' in pem_file.survey_type.lower()]
@@ -2232,28 +2193,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                                 # Open the files later to not deal with changes in index when files are opened.
                                 files_to_open.append(merged_pem)
             self.open_pem_files(files_to_open)
-            # self.spinner.stop()
-
-    # def reset_crs(self):
-    #     """
-    #     Reset all CRS drop-down menus.
-    #     :return: None
-    #     """
-    #     self.systemCBox.setCurrentIndex(0)
-    #     self.zoneCBox.setCurrentIndex(0)
-    #     self.datumCBox.setCurrentIndex(0)
-
-    # def populate_gps_boxes(self):
-    #     """
-    #     Adds the drop-down options of each CRS drop-down menu.
-    #     :return: None
-    #     """
-    #     for system in self.gps_systems:
-    #         self.systemCBox.addItem(system)
-    #     for zone in self.gps_zones:
-    #         self.zoneCBox.addItem(zone)
-    #     for datum in self.gps_datums:
-    #         self.datumCBox.addItem(datum)
 
     # def create_main_table(self):
     #     """
@@ -2845,13 +2784,15 @@ def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMEditor()
+    mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Splitting', number=1)
+    pem_files = pg.get_pems(client='PEM Splitting', number=5)
     # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
     mw.open_pem_files(pem_files)
-    mw.split_pem_channels(pem_files[0])
-    mw.show()
+    # mw.split_pem_channels(pem_files[0])
+    # mw.show()
+
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])
     # mw.save_as_xyz()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
