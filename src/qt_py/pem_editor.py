@@ -1586,7 +1586,9 @@ class PEMEditorWindow(QMainWindow, Ui_PEMEditorWindow):
                 # Save a backup of the un-averaged file first
                 if self.auto_create_backup_files_cbox.isChecked():
                     self.write_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]', remove_old=False)
+                t = time.time()
                 pem_file = self.file_editor.average(pem_file)
+                print(f"time to average: {time.time() - t}")
                 self.pem_info_widgets[row].open_file(pem_file, parent=self)
                 self.refresh_table_row(pem_file, row)
                 count += 1
@@ -3647,8 +3649,8 @@ def main():
     mw = PEMEditorWindow()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Trevali Peru', number=15)
-    mw.open_pem_files(pem_files)
+    # pem_files = pg.get_pems(client='Trevali Peru', number=15)
+    # mw.open_pem_files(pem_files)
     mw.show()
     # mw.import_ri_files()
     # mw.show_map()
