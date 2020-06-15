@@ -386,4 +386,4 @@ if __name__ == '__main__':
     file.rotate(type='mag', soa=-5)
     file.average()
     out = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\test.PEM'
-    print(file.get_serialized_file(), file=open(out, 'w'))
+    print(file.to_string(), file=open(out, 'w'))

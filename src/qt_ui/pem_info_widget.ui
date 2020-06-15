@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>759</width>
+    <width>1018</width>
     <height>799</height>
    </rect>
   </property>
@@ -36,7 +36,7 @@
      </property>
      <property name="minimumSize">
       <size>
-       <width>400</width>
+       <width>550</width>
        <height>0</height>
       </size>
      </property>
@@ -53,7 +53,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
@@ -120,10 +120,22 @@
        <item row="0" column="1" rowspan="2">
         <widget class="QGroupBox" name="loopGPSGroupBox">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>130</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>120</width>
+           <height>16777215</height>
+          </size>
          </property>
          <property name="title">
           <string>Loop Editing</string>
@@ -188,7 +200,7 @@
        <item row="0" column="0">
         <widget class="QTableWidget" name="loopGPSTable">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -248,10 +260,16 @@
        <item row="0" column="1">
         <widget class="QGroupBox" name="stationGPSGroupBox">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>130</width>
+           <height>0</height>
+          </size>
          </property>
          <property name="maximumSize">
           <size>
@@ -441,7 +459,7 @@ Not In Data</string>
        <item row="0" column="0">
         <widget class="QTableWidget" name="stationGPSTable">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -506,7 +524,7 @@ Not In Data</string>
        <item row="0" column="0">
         <widget class="QTableWidget" name="collarGPSTable">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -650,6 +668,9 @@ Not In Data</string>
          <attribute name="horizontalHeaderHighlightSections">
           <bool>false</bool>
          </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
          <column>
           <property name="text">
            <string>Tag</string>
@@ -693,7 +714,7 @@ Length</string>
        <item row="0" column="0">
         <widget class="QTableWidget" name="dataTable">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -747,7 +768,7 @@ Number</string>
        <item row="0" column="1">
         <widget class="QGroupBox" name="groupBox">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -830,6 +851,9 @@ Suffix</string>
              <set>Qt::AlignCenter</set>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_5">
+             <property name="leftMargin">
+              <number>9</number>
+             </property>
              <item>
               <widget class="QRadioButton" name="station_sort_rbtn">
                <property name="text">

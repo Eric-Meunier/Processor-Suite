@@ -1,18 +1,20 @@
-import math
 import os
 import re
 import sys
+from collections import OrderedDict
+from copy import deepcopy
+
+import math
 import natsort
 import numpy as np
 import pandas as pd
-from copy import deepcopy
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
-                             QFileDialog, QErrorMessage, QHeaderView, QAbstractScrollArea)
-from collections import OrderedDict
+                             QFileDialog, QErrorMessage, QAbstractScrollArea)
+
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 from src.pem.pem_file_editor import PEMFileEditor
-from src._legacy.ri.ri_file import RIFile
+from src.qt_py.ri_importer import RIFile
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader

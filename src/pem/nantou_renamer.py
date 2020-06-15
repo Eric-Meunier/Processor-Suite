@@ -1,5 +1,5 @@
 from src.pem._legacy.pem_parser import PEMParser
-from src.pem.pem_serializer import PEMSerializer
+from src.pem._legacy.pem_serializer import PEMSerializer
 import os
 
 

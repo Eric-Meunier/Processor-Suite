@@ -1,12 +1,9 @@
-import natsort
-
 
 class PEMSerializer:
     """
     Class for serializing PEM files to be saved
     """
 
-    # Constructor
     def __init__(self):
         pass
 
