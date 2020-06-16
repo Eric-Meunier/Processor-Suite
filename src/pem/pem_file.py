@@ -7,7 +7,7 @@ import natsort
 import numpy as np
 import pandas as pd
 
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, CRS
 
 
 def sort_data(data):
@@ -181,11 +181,12 @@ class PEMFile:
                 crs = re.split('CRS: ', note)[-1]
                 s = crs.split()
                 system = s[0]
-                zone = int(s[2])
-                north = True if s[3][:-1] == 'North' else False
+                zone = f"{s[1]} {s[2]}"
+                # zone = int(s[2])
+                # north = True if s[3][:-1] == 'North' else False
                 datum = f"{s[4]} {s[5]}"
-                print(f"CRS is {system} Zone {zone} {'North' if north else 'South'}, {datum}")
-                return {'System': system, 'Zone': zone, 'North': north, 'Datum': datum}
+                # print(f"CRS is {system} Zone {zone} {'North' if north else 'South'}, {datum}")
+                return CRS({'System': system, 'Zone': zone, 'Datum': datum})
         return None
 
     def get_loop(self, sorted=True, closed=False, crs=None):
@@ -511,7 +512,7 @@ class PEMParser:
         #  'Tags' section
         self.re_tags = re.compile(  # Parsing the 'Tags' i.e. the information above the loop coordinates
             r'<FMT>\s(?P<Format>\d+)\s*~?.*[\r\n]'
-            r'<UNI>\s(?P<Units>nanoTesla/sec|picoTeslas)\s*~?.*[\r\n]'
+            r'<UNI>\s(?P<Units>nanoTesla/sec|picoTesla)\s*~?.*[\r\n]'
             r'<OPR>\s(?P<Operator>.*)~?.*[\r\n]'
             r'<XYP>\s(?P<Probes>[\d\w\s-]*).*[\r\n]'
             r'<CUR>\s(?P<Current>\d+\.?\d?)\s*~?.*[\r\n]'
@@ -584,7 +585,7 @@ class PEMParser:
                 elif cols[i] == 'Units':
                     if match == 'nanoTesla/sec':
                         match = 'nT/s'
-                    elif match == 'picoTeslas':
+                    elif match == 'picoTesla':
                         match = 'pT'
                 elif cols[i] == 'Probes':
                     probe_cols = ['XY probe number', 'SOA', 'Tool number', 'Tool ID']
@@ -843,6 +844,7 @@ class PEMParser:
             df['ZTS'] = df['ZTS'].astype(float)
             return df
 
+        t = time.time()
         file = None
         with open(filepath, "rt") as in_file:
             file = in_file.read()
@@ -853,6 +855,7 @@ class PEMParser:
         notes = parse_notes(file)
         header = parse_header(file, units=tags.get('Units'))
         data = parse_data(file)
+        print(f"Time to parse PEM file: {time.time() - t}")
 
         return PEMFile(tags, loop_coords, line_coords, notes, header, data, filepath)
 

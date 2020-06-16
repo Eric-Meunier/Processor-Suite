@@ -5,6 +5,7 @@ from collections import OrderedDict
 from copy import deepcopy
 
 import math
+import time
 import natsort
 import numpy as np
 import pandas as pd
@@ -314,7 +315,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param parent: parent widget (PEMEditor)
         :return: PEMFileInfoWidget object
         """
-        print(f'PEMFileInfoWidget - Opening PEM File {os.path.basename(pem_file.filepath)}')
+        print(f'PEMFileInfoWidget - Opening PEM File {pem_file.filename}')
         self.pem_file = pem_file
         self.parent = parent
         self.initTables()
@@ -428,23 +429,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             table.removeRow(0)
         table.blockSignals(False)
 
-    def make_qt_row(self, df_row, table):
-        """
-        Add items from a pandas data frame row to a QTableWidget row
-        :param df_row: pandas Series object
-        :param table: QTableWidget table
-        :return: None
-        """
-        row_pos = table.rowCount()
-        # Add a new row to the table
-        table.insertRow(row_pos)
-
-        items = df_row.map(lambda x: QTableWidgetItem(str(x))).to_list()
-        # Format each item of the table to be centered
-        for m, item in enumerate(items):
-            item.setTextAlignment(QtCore.Qt.AlignCenter)
-            table.setItem(row_pos, m, item)
-
     def fill_info_tab(self):
         """
         Adds all information from the header, tags, and notes into the info_table.
@@ -504,6 +488,24 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param table: QTableWidget to fill
         :return: None
         """
+
+        def write_row(df_row, table):
+            """
+            Add items from a pandas data frame row to a QTableWidget row
+            :param df_row: pandas Series object
+            :param table: QTableWidget table
+            :return: None
+            """
+            # Add a new row to the table
+            row_pos = table.rowCount()
+            table.insertRow(row_pos)
+
+            items = df_row.map(lambda x: QTableWidgetItem(str(x))).to_list()
+            # Format each item of the table to be centered
+            for m, item in enumerate(items):
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                table.setItem(row_pos, m, item)
+
         data = deepcopy(data)
         if data.empty:
             return
@@ -517,7 +519,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             tags = [f"<P{n:02}>" for n in range(len(data.index))]
         data.insert(0, 'Tag', tags)
-        data.apply(lambda x: self.make_qt_row(x, table), axis=1)
+        data.apply(lambda x: write_row(x, table), axis=1)
 
         if table == self.stationGPSTable:
             self.check_station_duplicates()
@@ -531,23 +533,36 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fill the dataTable with given PEMFile data
         :param data: PEMFile data
         """
+        def write_data_row(df_row):
+            # Add a new row to the table
+            row_pos = self.dataTable.rowCount()
+            self.dataTable.insertRow(row_pos)
+
+            items = df_row.map(lambda x: QTableWidgetItem(str(x))).to_list()
+            # Format each item of the table to be centered
+            for m, item in enumerate(items):
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.dataTable.setItem(row_pos, m, item)
+
         data = self.get_sorted_data()
         if data.empty:
             return
         else:
             self.clear_table(self.dataTable)
             self.dataTable.blockSignals(True)
-            data.apply(lambda x: self.make_qt_row(pd.Series([x.Station,
-                                                             x.Component,
-                                                             x['Reading index'],
-                                                             x['Reading number'],
-                                                             x['Number of stacks'],
-                                                             x.ZTS]), self.dataTable), axis=1)
+
+            data.loc[:, ['Station', 'Component', 'Reading index', 'Reading number', 'Number of stacks', 'ZTS']].apply(
+                write_data_row, axis=1)
+
             self.color_data_table()
             self.dataTable.resizeColumnsToContents()
             self.dataTable.blockSignals(False)
 
     def get_sorted_data(self):
+        """
+        Returns the sorted data in the PEMFile
+        :return: PEMFile Data object
+        """
         data = self.pem_file.data
 
         if self.station_sort_rbtn.isChecked():

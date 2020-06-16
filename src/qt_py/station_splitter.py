@@ -6,8 +6,6 @@ from PyQt5 import (QtCore,  QtGui)
 from PyQt5.QtWidgets import (QWidget, QFileDialog, QApplication, QTableWidgetItem, QHeaderView, QTableWidget,
                              QPushButton, QGridLayout)
 
-from src.pem._legacy.pem_serializer import PEMSerializer
-
 
 class StationSplitter(QWidget):
     """
@@ -17,7 +15,6 @@ class StationSplitter(QWidget):
         super().__init__()
         self.pem_file = None
         self.parent = parent
-        self.serializer = PEMSerializer()
 
         self.setWindowTitle('Station Splitter')
         self.resize(300, 500)
@@ -91,7 +88,7 @@ class StationSplitter(QWidget):
                 new_pem_file.data = new_data
                 new_pem_file.filepath = save_file
                 new_pem_file.number_of_readings = len(new_data.index)
-                file = self.serializer.serialize(new_pem_file)
+                file = new_pem_file.to_string()
                 print(file, file=open(new_pem_file.filepath, 'w+'))
                 self.parent.open_pem_files(new_pem_file)
                 self.close()
