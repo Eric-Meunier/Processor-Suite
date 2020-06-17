@@ -738,10 +738,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             crs = pem_file.get_crs()
             if crs:
                 self.systemCBox.setCurrentIndex(self.gps_systems.index(crs.System))
-                if crs.System == 'UTM':
-                    hemis = 'North' if crs.North is True else 'South'
-                    self.zoneCBox.setCurrentIndex(self.gps_zones.index(f"{crs.Zone} {hemis}"))
-                self.datumCBox.setCurrentIndex(self.gps_datums.index(crs.Datum))
+                if crs.system == 'UTM':
+                    hemis = 'North' if crs.north is True else 'South'
+                    self.zoneCBox.setCurrentIndex(self.gps_zones.index(f"{crs.zone} {hemis}"))
+                self.datumCBox.setCurrentIndex(self.gps_datums.index(crs.datum))
 
         def share_header(pem_file):
             """
@@ -1074,7 +1074,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.message.information(self, 'Missing GPS', 'A file is missing required GPS')
             return
 
-        if crs.Datum == 'NAD 1927':
+        if crs.is_nad27():
             self.message.information(self, 'Invalid Datum', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
             return
 
@@ -1309,10 +1309,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.message.information(self, 'Invalid CRS', 'CRS is incomplete and/or invalid.')
                 return
 
-            system = crs.System
+            system = crs.system
             # zone = ' Zone ' + self.zoneCBox.currentText() if self.zoneCBox.isEnabled() else ''
-            zone = ' Zone ' + crs.Zone if self.zoneCBox.isEnabled() else ''
-            datum = crs.Datum
+            zone = ' Zone ' + crs.zone if self.zoneCBox.isEnabled() else ''
+            datum = crs.datum
 
             loops = []
             lines = []
@@ -2340,7 +2340,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :param pem_file: PEMFile object
         """
         crs = self.get_crs()
-        if crs.Datum == 'NAD 1927':
+        if crs.is_nad27():
             self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
             return
         if not crs.is_valid():
@@ -2656,7 +2656,7 @@ class MagDeclinationCalculator(QMainWindow):
         if not pem_file:
             return
 
-        assert crs.Datum != 'NAD 1927', 'Incompatible datum. Must be either NAD 1983 or WGS 1984'
+        assert not crs.is_nad27, 'Incompatible datum. Must be either NAD 1983 or WGS 1984'
         assert crs.is_valid(), 'GPS coordinate system information is incomplete'
 
         if pem_file.has_collar_gps():

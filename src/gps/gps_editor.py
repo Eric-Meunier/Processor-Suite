@@ -18,8 +18,8 @@ def get_latlon(df, crs):
     :return: pandas DataFrame
     """
     if not df.empty:
-        zone_num = crs.Zone_number
-        north = crs.North
+        zone_num = crs.zone_number
+        north = crs.north
         latlon = df.apply(lambda x: utm.to_latlon(x.Easting, x.Northing, zone_num, northern=north), axis=1)
         lat = latlon.map(lambda x: x[0])
         lon = latlon.map(lambda x: x[1])
@@ -640,32 +640,32 @@ class CRS:
     """
 
     def __init__(self, crs_dict):
-        self.System = crs_dict['System'] if crs_dict['System'] else None
-        self.Zone = crs_dict['Zone'] if crs_dict['System'] else None
-        if self.Zone:
-            self.Zone_number = int(re.search('\d+', self.Zone).group())
-            self.North = True if 'N' in self.Zone else False
+        self.system = crs_dict['System'] if crs_dict['System'] else None
+        self.zone = crs_dict['Zone'] if crs_dict['System'] else None
+        if self.zone:
+            self.Zone_number = int(re.search('\d+', self.zone).group())
+            self.North = True if 'N' in self.zone else False
         else:
-            self.Zone_number = None
-            self.North = None
-        self.Datum = crs_dict['Datum'] if crs_dict['System'] else None
+            self.zone_number = None
+            self.north = None
+        self.datum = crs_dict['Datum'] if crs_dict['System'] else None
 
     def is_valid(self):
         """
         If the CRS object has all information required for coordinate conversions
         :return: bool
         """
-        if self.System:
-            if self.System == 'Lat/Lon' and self.Datum:
+        if self.system:
+            if self.system == 'Lat/Lon' and self.datum:
                 return True
-            elif self.System == 'UTM':
-                if all([self.System, self.Zone, self.Zone_number, self.North is not None, self.Datum]):
+            elif self.system == 'UTM':
+                if all([self.system, self.zone, self.zone_number, self.north is not None, self.datum]):
                     return True
         return False
 
     def is_nad27(self):
-        if self.Datum:
-            if '27' in self.Datum:
+        if self.datum:
+            if '27' in self.datum:
                 return True
             else:
                 return False

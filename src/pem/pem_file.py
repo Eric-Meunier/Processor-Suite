@@ -88,7 +88,7 @@ class PEMFile:
             return False
 
     def is_rotated(self):
-        return self.data['RAD tool'].map(lambda x: x.Rotated).all()
+        return self.data['RAD tool'].map(lambda x: x.rotated).all()
 
     def is_averaged(self):
         data = self.data[['Station', 'Component']]
@@ -381,14 +381,12 @@ class PEMFile:
         :return: PEM file object with rotated data
         """
         if self.is_rotated():
-            print(f"{self.filename} is already rotated.")
-            return
+            raise ValueError(f"{self.filename} is already rotated.")
         elif not self.is_borehole():
-            print(f"{self.filename} is not a borehole file.")
-            return
+            raise TypeError(f"{self.filename} is not a borehole file.")
         elif self.data['RAD tool'].map(lambda x: x.D == 'D5').any():
-            print(f"{self.filename} appears to be a file that has been run through Otool, thus it will not be rotated.")
-            return
+            raise ValueError(
+                f"{self.filename} appears to be a file that has been run through Otool, thus it will not be rotated.")
         else:
             def rotate_data(row, type):
                 """
@@ -405,8 +403,8 @@ class PEMFile:
                     row['Station'] = np.nan
                     return row
 
-                assert len(np.unique(row['RAD tool'].map(lambda x: x.to_list()))) == 1, 'More than 1 unique RAD tool set'
-                print(f"Number of unique RAD tool sets: {len(np.unique(row['RAD tool'].map(lambda x: x.to_list())))}")
+                assert len(row['RAD ID'].unique()) == 1, 'More than 1 unique RAD tool set'
+                print(f"Number of unique RAD tool sets: {len(row['RAD ID'].unique())}")
 
                 def rotate_x(x_values, y_pair, roll_angle):
                     """
@@ -449,15 +447,16 @@ class PEMFile:
                     # Calculate the dip
                     dip = math.degrees(math.acos(rad.gx/math.sqrt((rad.gx ** 2) + (rad.gy ** 2) + (rad.gz ** 2)))) - 90
                     # Create the new rad tool series
-                    new_rad_tool = pd.Series({'D': 'D5',
-                                              'gz': rad.gz,
-                                              'gx': rad.gx,
-                                              'gy': rad.gy,
-                                              'Roll angle': roll_angle,
-                                              'Dip': dip,
-                                              'R': 'R3',
-                                              'Roll angle SOA': roll_angle - soa,
-                                              'Rotated': True})
+                    new_rad_tool = RADTool().from_dict({'D': 'D5',
+                                                        'gz': rad.gz,
+                                                        'gx': rad.gx,
+                                                        'gy': rad.gy,
+                                                        'roll_angle': roll_angle,
+                                                        'dip': dip,
+                                                        'R': 'R3',
+                                                        'angle_used': roll_angle - soa,
+                                                        'rotated': True,
+                                                        'rotation_type': 'acc'})
                     print(f"Station {row.iloc[0].Station} roll angle: {roll_angle:.2f}")
 
                 # Magnetometer rotation
@@ -468,15 +467,16 @@ class PEMFile:
                     if roll_angle > 360:
                         roll_angle = roll_angle - 360
                     dip = -90.  # The dip is assumed to be 90°
-                    new_rad_tool = pd.Series({'D': 'D5',
-                                              'Hz': rad.Hz,
-                                              'Hx': rad.Hx,
-                                              'Hy': rad.Hy,
-                                              'Roll angle': roll_angle,
-                                              'Dip': dip,
-                                              'R': 'R3',
-                                              'Roll angle SOA': roll_angle - soa,
-                                              'Rotated': True})
+                    new_rad_tool = RADTool().from_dict({'D': 'D5',
+                                                        'Hz': rad.Hz,
+                                                        'Hx': rad.Hx,
+                                                        'Hy': rad.Hy,
+                                                        'roll_angle': roll_angle,
+                                                        'dip': dip,
+                                                        'R': 'R3',
+                                                        'angle_used': roll_angle - soa,
+                                                        'rotated': True,
+                                                        'rotation_type': 'mag'})
                 else:
                     raise ValueError(f'"{type}" is an invalid rotation method')
 
@@ -493,7 +493,7 @@ class PEMFile:
             rotated_data = self.data[filt].groupby(['Station', 'RAD ID'],
                                                    as_index=False,
                                                    group_keys=False).apply(lambda i: rotate_data(i, type))
-            print(time.time() - st)
+            print(f"Time to rotate data: {time.time() - st}")
             self.data[filt] = rotated_data
             # Sort the data and remove unrotated readings
             self.data = sort_data(self.data.dropna(axis=0))
@@ -827,8 +827,10 @@ class PEMParser:
             df = pd.DataFrame(matches, columns=cols)
             # Create a RAD tool ID number to be used for grouping up readings for probe rotation, since the CDR2
             # and CDR3 don't count reading numbers the same way.
-            df['RAD ID'] = df['RAD tool'].map(get_rad_id)
-            df['RAD tool'] = df['RAD tool'].map(rad_to_series)
+            # df['RAD ID'] = df['RAD tool'].map(get_rad_id)
+            # df['RAD tool'] = df['RAD tool'].map(rad_to_series)
+            df['RAD tool'] = df['RAD tool'].map(lambda x: RADTool().from_match(x))
+            df['RAD ID'] = df['RAD tool'].map(lambda x: x.id)
             df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float))
             df[['Reading index',
                 'Gain',
@@ -1015,13 +1017,8 @@ class PEMSerializer:
                                str(reading['Number of stacks']),
                                str(reading['Readings per set']),
                                str(reading['Reading number'])]) + '\n'
-            rad = []
-            for r in reading['RAD tool'].to_list()[:-1]:
-                if isinstance(r, float):
-                    rad.append(f"{r:g}")
-                else:
-                    rad.append(r)
-            result += ' '.join(rad) + '\n'
+            rad = reading['RAD tool'].to_string()
+            result += rad + '\n'
 
             readings_per_line = 7
             reading_spacing = 12
@@ -1055,6 +1052,167 @@ class PEMSerializer:
         return result
 
 
+class RADTool:
+    """
+    Class that represents the RAD Tool reading in a PEM survey
+    """
+
+    def __init__(self):
+        self.D = None
+        self.Hx = None
+        self.gx = None
+        self.Hy = None
+        self.gy = None
+        self.Hz = None
+        self.gz = None
+        self.T = None
+
+        self.x = None
+        self.y = None
+        self.z = None
+        self.roll_angle = None
+        self.dip = None
+        self.R = None
+        self.angle_used = None  # Roll angle - SOA
+
+        self.rotated = False
+        self.rotation_type = None
+        self.id = None
+
+    def from_match(self, match):
+        """
+        Create the RADTool object using the string parsed from PEMParser
+        :param match: str, Full string parsed from PEMParser
+        :return RADTool object
+        """
+        match = match.split()
+        self.D = match[0]
+        match[1:] = np.array(match[1:], dtype=float)
+
+        if self.D == 'D7':
+            self.rotated = False
+            self.Hx = match[1]
+            self.gx = match[2]
+            self.Hy = match[3]
+            self.gy = match[4]
+            self.Hz = match[5]
+            self.gz = match[6]
+            self.T = match[7]
+
+            self.id = ''.join([
+                str(self.Hx),
+                str(self.gx),
+                str(self.Hy),
+                str(self.gy),
+                str(self.Hz),
+                str(self.gz),
+                str(self.T)
+            ])
+
+        elif self.D == 'D5':
+            self.x = match[1]
+            self.y = match[2]
+            self.z = match[3]
+            self.roll_angle = match[4]
+            self.dip = match[5]
+            if len(match) == 6:
+                self.rotated = False
+
+                self.id = ''.join([
+                    str(self.x),
+                    str(self.y),
+                    str(self.z),
+                    str(self.roll_angle),
+                    str(self.dip)
+                ])
+
+            elif len(match) == 8:
+                self.R = match[6]
+                self.angle_used = float(match[7])
+                self.rotated = True
+
+                self.id = ''.join([
+                    str(self.x),
+                    str(self.y),
+                    str(self.z),
+                    str(self.roll_angle),
+                    str(self.dip),
+                    str(self.R),
+                    str(self.angle_used)
+                ])
+
+            else:
+                raise ValueError('Error in the number of the RAD tool values')
+
+        else:
+            raise ValueError('Error in D value of RAD tool line. D value is neither D5 nor D7.')
+
+        return self
+
+    def from_dict(self, dict):
+        """
+        Use the keys and values of a dictionary to create the RADTool object
+        :param dict: dictionary with keys being the RADTool object's attributes.
+        :return: RADTool object
+        """
+        self.id = ''
+
+        for key, value in dict.items():
+            self.__setattr__(key, value)
+            self.id += str(value)
+        self.rotated = True if self.angle_used is not None else False
+
+        return self
+
+    def is_rotated(self):
+        return True if self.angle_used is not None else False
+
+    def to_string(self):
+        """
+        Create a string for PEM serialization
+        :return: str
+        """
+        if self.D == 'D5':
+            result = [self.D]
+            if self.rotation_type is None:
+                result.append(f"{self.x:g}")
+                result.append(f"{self.y:g}")
+                result.append(f"{self.z:g}")
+
+            elif self.rotation_type == 'acc':
+                result.append(f"{self.gx:g}")
+                result.append(f"{self.gy:g}")
+                result.append(f"{self.gz:g}")
+
+            elif self.rotation_type == 'mag':
+                result.append(f"{self.Hx:g}")
+                result.append(f"{self.Hy:g}")
+                result.append(f"{self.Hz:g}")
+
+            result.append(f"{self.roll_angle:g}")
+            result.append(f"{self.dip:g}")
+
+            if self.R is not None and self.angle_used is not None:
+                result.append(self.R)
+                result.append(f"{self.angle_used:g}")
+
+        elif self.D == 'D7':
+            result = [
+                self.D,
+                f"{self.Hx:g}",
+                f"{self.gx:g}",
+                f"{self.Hy:g}",
+                f"{self.gy:g}",
+                f"{self.Hz:g}",
+                f"{self.gz:g}",
+                f"{self.T:g}"
+            ]
+        else:
+            raise ValueError('RADTool D value is neither "D5" nor "D7"')
+
+        return ' '.join(result)
+
+
 if __name__ == '__main__':
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Nantou\PUX-021 ZAv.PEM'
@@ -1064,14 +1222,14 @@ if __name__ == '__main__':
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\BX-081 XYT.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\MX-198 XY.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-225G-18 CXYZ (flux).PEM'
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\PU-340 XY.PEM'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\PEM Rotation\PU-340 XY.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-237-19 XYZ (flux).PEM'
     p = PEMParser()
     file = p.parse(file)
-    file.split()
+    # file.split()
     file.rotate(type='acc', soa=0)
     # file.average()
-    file.scale_current(10)
+    # file.scale_current(10)
     out = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\test.PEM'
     print(file.to_string(), file=open(out, 'w'))
     os.startfile(out)
