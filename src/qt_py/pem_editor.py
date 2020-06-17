@@ -1637,7 +1637,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         if current_index:
-            rows = list(self.stackedWidget.currentIndex())
+            rows = [self.stackedWidget.currentIndex()]
         else:
             if rows == 'all':
                 rows = np.arange(self.table.rowCount())

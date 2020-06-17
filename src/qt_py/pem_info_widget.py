@@ -223,6 +223,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             QAbstractScrollArea.AdjustToContents)
         self.loopGPSTable.resizeColumnsToContents()
 
+        self.dataTable.setColumnHidden(0, True)
         # self.dataTable.blockSignals(True)
         # self.dataTable.setColumnCount(len(self.data_columns))
         # self.dataTable.setHorizontalHeaderLabels(self.data_columns)
@@ -552,6 +553,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.dataTable.insertRow(row_pos)
 
             items = df_row.map(lambda x: QTableWidgetItem(str(x))).to_list()
+            items.insert(0, QTableWidgetItem(str(df_row.name)))
             # Format each item of the table to be centered
             for m, item in enumerate(items):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
@@ -791,9 +793,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         selected_rows = self.get_selected_rows(self.dataTable)
 
         for row in reversed(selected_rows):
-            del self.pem_file.data[row]
+            self.pem_file.data.drop(index=row, axis=1)
             self.dataTable.removeRow(row)
-
+        self.pem_file.data.reset_index(inplace=True, drop=True)
         self.dataTable.blockSignals(True)
         self.color_data_table()
         self.dataTable.blockSignals(False)
@@ -1095,7 +1097,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 rows = np.arange(self.dataTable.rowCount())
             print(f'Reversing data polarity for {len(rows)} rows')
 
-            data.iloc[rows]['Reading'] = data.iloc[rows]['Reading'].map(lambda x: x * -1)
+            data.loc[rows]['Reading'] = data.loc[rows]['Reading'].map(lambda x: x * -1)
 
         if component and component in self.pem_file.get_components():
             note = f"<HE3> {component.upper()} component polarity reversed"
