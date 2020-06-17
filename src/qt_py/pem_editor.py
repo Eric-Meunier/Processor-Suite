@@ -791,16 +791,12 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 if self.systemCBox.currentText() == '' and self.datumCBox.currentText() == '':
                     fill_crs(pem_file)
 
-                t5 = time.time()
                 i = get_insertion_point(pem_file)
-                print(f"Time to calculate insertion point: {time.time() - t5}")
                 self.pem_files.insert(i, pem_file)
                 self.pem_info_widgets.insert(i, pem_widget)
                 self.stackedWidget.insertWidget(i, pem_widget)
                 self.table.insertRow(i)
-                t4 = time.time()
                 self.fill_pem_row(pem_file, i)
-                print(f"Time to fill row: {time.time() - t4}")
 
                 # Progress the progress bar
                 count += 1
@@ -1998,7 +1994,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
     def reverse_all_data(self, comp):
         """
         Reverse the polarity of all data of a given component for all opened PEM files.
-        :param comp: Z, X, or Y component
+        :param comp: str, either Z, X, or Y
         :return: None
         """
         if len(self.pem_files) > 0:
@@ -2686,9 +2682,9 @@ def main():
     mw = PEMEditor()
     # mw.show()
 
-    # pg = PEMGetter()
-    # pem_files = pg.get_pems(client='PEM Splitting', number=5)
-    pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\PEM Splitting\1410S (flux).PEM'
+    pg = PEMGetter()
+    pem_files = pg.get_pems(client='PEM Splitting', number=1)
+    # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\PEM Splitting\1410S (flux).PEM'
     mw.open_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])

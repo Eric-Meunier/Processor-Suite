@@ -22,21 +22,8 @@ from src.gps.gpx_module import gpxpy
 from src.gps.gpx_module.gpxpy import gpx
 from shutil import copyfile
 
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
-
+# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    # If the application is run as a bundle, the pyInstaller
-    # extends the sys module by a flag frozen=True and sets t
-    # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
     loopPlannerCreatorFile = 'qt_ui\\loop_planner.ui'
     gridPlannerCreatorFile = 'qt_ui\\grid_planner.ui'

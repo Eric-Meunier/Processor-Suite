@@ -182,6 +182,55 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elev)
         self.shiftStationSpinbox.valueChanged.connect(self.shift_station_numbers)
 
+    def initTables(self):
+        """
+        Adds the columns and formats each table.
+        :return: None
+        """
+        if not self.pem_file.is_borehole():
+            self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
+            # self.stationGPSTable.setColumnWidth(0, 25)
+            # self.stationGPSTable.setColumnWidth(1, 45)
+            # self.stationGPSTable.setColumnWidth(2, 45)
+            # self.stationGPSTable.setColumnWidth(3, 25)
+            # self.stationGPSTable.setColumnWidth(4, 35)
+            # self.stationGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.stationGPSTable.setSizeAdjustPolicy(
+                QAbstractScrollArea.AdjustToContents)
+            self.stationGPSTable.resizeColumnsToContents()
+
+        elif self.pem_file.is_borehole():
+            self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
+            # self.geometryTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            # self.collarGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.geometryTable.setSizeAdjustPolicy(
+                QAbstractScrollArea.AdjustToContents)
+            self.geometryTable.resizeColumnsToContents()
+
+            # self.collarGPSTable.setSizeAdjustPolicy(
+            #     QAbstractScrollArea.AdjustToContents)
+            # tag_item = QTableWidgetItem('<P00>')
+            # units_item = QTableWidgetItem('0')
+            # tag_item.setTextAlignment(QtCore.Qt.AlignCenter)
+            # units_item.setTextAlignment(QtCore.Qt.AlignCenter)
+            # self.collarGPSTable.setItem(0, 0, tag_item)
+            # self.collarGPSTable.setItem(0, 4, units_item)
+            # self.collarGPSTable.resizeColumnsToContents()
+
+        # self.loopGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.dataTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.loopGPSTable.setSizeAdjustPolicy(
+            QAbstractScrollArea.AdjustToContents)
+        self.loopGPSTable.resizeColumnsToContents()
+
+        # self.dataTable.blockSignals(True)
+        # self.dataTable.setColumnCount(len(self.data_columns))
+        # self.dataTable.setHorizontalHeaderLabels(self.data_columns)
+        # self.dataTable.setSizeAdjustPolicy(
+        #     QAbstractScrollArea.AdjustToContents)
+        # self.dataTable.resizeColumnsToContents()
+        # self.dataTable.blockSignals(False)
+
     def contextMenuEvent(self, event):
         if self.stationGPSTable.underMouse():
             if self.stationGPSTable.selectionModel().selectedIndexes():
@@ -308,6 +357,19 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         return super(QWidget, self).eventFilter(source, event)
 
+    def reset_spinbox(self, spinbox):
+        """
+        Reset the spinbox value to 0 when a table selection is changed without triggering the spinbox signals
+        :param spinbox: QSpinbox object, the one associated with the table.
+        :return: None
+        """
+        spinbox.blockSignals(True)
+        spinbox.setValue(0)
+        self.last_stn_gps_shift_amt = 0
+        self.last_loop_elev_shift_amt = 0
+        self.last_stn_shift_amt = 0
+        spinbox.blockSignals(False)
+
     def open_file(self, pem_file, parent):
         """
         Action of opening a PEM file.
@@ -370,55 +432,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         make_ri_table()
         fill_ri_table()
         add_header_from_pem()
-
-    def initTables(self):
-        """
-        Adds the columns and formats each table.
-        :return: None
-        """
-        if not self.pem_file.is_borehole():
-            self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
-            # self.stationGPSTable.setColumnWidth(0, 25)
-            # self.stationGPSTable.setColumnWidth(1, 45)
-            # self.stationGPSTable.setColumnWidth(2, 45)
-            # self.stationGPSTable.setColumnWidth(3, 25)
-            # self.stationGPSTable.setColumnWidth(4, 35)
-            # self.stationGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            self.stationGPSTable.setSizeAdjustPolicy(
-                QAbstractScrollArea.AdjustToContents)
-            self.stationGPSTable.resizeColumnsToContents()
-
-        elif self.pem_file.is_borehole():
-            self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
-            # self.geometryTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            # self.collarGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            self.geometryTable.setSizeAdjustPolicy(
-                QAbstractScrollArea.AdjustToContents)
-            self.geometryTable.resizeColumnsToContents()
-
-            # self.collarGPSTable.setSizeAdjustPolicy(
-            #     QAbstractScrollArea.AdjustToContents)
-            # tag_item = QTableWidgetItem('<P00>')
-            # units_item = QTableWidgetItem('0')
-            # tag_item.setTextAlignment(QtCore.Qt.AlignCenter)
-            # units_item.setTextAlignment(QtCore.Qt.AlignCenter)
-            # self.collarGPSTable.setItem(0, 0, tag_item)
-            # self.collarGPSTable.setItem(0, 4, units_item)
-            # self.collarGPSTable.resizeColumnsToContents()
-
-        # self.loopGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # self.dataTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.loopGPSTable.setSizeAdjustPolicy(
-            QAbstractScrollArea.AdjustToContents)
-        self.loopGPSTable.resizeColumnsToContents()
-
-        # self.dataTable.blockSignals(True)
-        # self.dataTable.setColumnCount(len(self.data_columns))
-        # self.dataTable.setHorizontalHeaderLabels(self.data_columns)
-        # self.dataTable.setSizeAdjustPolicy(
-        #     QAbstractScrollArea.AdjustToContents)
-        # self.dataTable.resizeColumnsToContents()
-        # self.dataTable.blockSignals(False)
 
     def clear_table(self, table):
         """
@@ -558,60 +571,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.dataTable.resizeColumnsToContents()
             self.dataTable.blockSignals(False)
 
-    def get_sorted_data(self):
-        """
-        Returns the sorted data in the PEMFile
-        :return: PEMFile Data object
-        """
-        data = self.pem_file.data
-
-        if self.station_sort_rbtn.isChecked():
-            data = data.reindex(index=natsort.order_by_index(
-                data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading number']))))
-            data.reset_index(drop=True, inplace=True)
-
-        elif self.component_sort_rbtn.isChecked():
-            data = data.reindex(index=natsort.order_by_index(
-                data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading number']))))
-            data.reset_index(drop=True, inplace=True)
-
-        elif self.reading_num_sort_rbtn.isChecked():
-            data = data.reindex(index=natsort.order_by_index(
-                data.index, natsort.index_natsorted(zip(data['Reading number'], data['Reading index']))))
-            data.reset_index(drop=True, inplace=True)
-
-        return data
-
-    def update_data_table(self):
-        """
-        Updates the table based on the values in the PEM File object (self.pem_file)
-        """
-        self.dataTable.blockSignals(True)
-        for station, row in zip(self.pem_file.data, range(self.dataTable.rowCount())):
-            items = [QTableWidgetItem(station[j]) for j in self.dataTable_columns]
-
-            for m, item in enumerate(items):
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.dataTable.setItem(row, m, item)
-
-        self.color_data_table()
-        self.check_missing_gps()
-        self.dataTable.blockSignals(False)
-
-    def update_pem_from_table(self, table_row, table_col):
-        """
-        Signal slot: Update the pem file using the values in the dataTable.
-        :param table_row: event row
-        :param table_col: event column
-        """
-        self.dataTable.blockSignals(True)
-        column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
-        data = self.pem_file.data
-        table_value = self.dataTable.item(table_row, table_col).text()
-        data[table_row][column_keys[table_col]] = table_value
-
-        self.color_data_table()
-        self.dataTable.blockSignals(False)
+    # def update_data_table(self):
+    #     """
+    #     Updates the table based on the values in the PEM File object (self.pem_file)
+    #     """
+    #     self.dataTable.blockSignals(True)
+    #     for station, row in zip(self.pem_file.data, range(self.dataTable.rowCount())):
+    #         items = [QTableWidgetItem(station[j]) for j in self.dataTable_columns]
+    #
+    #         for m, item in enumerate(items):
+    #             item.setTextAlignment(QtCore.Qt.AlignCenter)
+    #             self.dataTable.setItem(row, m, item)
+    #
+    #     self.color_data_table()
+    #     self.check_missing_gps()
+    #     self.dataTable.blockSignals(False)
 
     def color_data_table(self):
         """
@@ -761,6 +735,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             item.setForeground(QtGui.QColor('red'))
             self.missing_gps_table.setItem(row, 0, item)
+
+    def update_pem_from_table(self, table_row, table_col):
+        """
+        Signal slot: Update the pem file using the values in the dataTable.
+        :param table_row: event row
+        :param table_col: event column
+        """
+        self.dataTable.blockSignals(True)
+        column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
+        data = self.pem_file.data
+        table_value = self.dataTable.item(table_row, table_col).text()
+        data[table_row][column_keys[table_col]] = table_value
+
+        self.color_data_table()
+        self.dataTable.blockSignals(False)
 
     def remove_table_row_selection(self, table):
         """
@@ -1037,6 +1026,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     pass
         self.last_loop_elev_shift_amt = shift_amount
 
+    def shift_station_numbers(self):
+        """
+        Shift the data station number.
+        :return: None
+        """
+        selected_rows = self.get_selected_rows(self.dataTable)
+        if not selected_rows:
+            selected_rows = range(self.dataTable.rowCount())
+        shift_amount = self.shiftStationSpinbox.value()
+        self.pem_file = self.file_editor.shift_stations(self.pem_file, shift_amount - self.last_stn_shift_amt,
+                                                        rows=selected_rows)
+        self.fill_data_table()
+        self.dataTable.resizeColumnsToContents()
+        self.last_stn_shift_amt = shift_amount
+
     def flip_station_gps_polarity(self):
         """
         Multiplies the station number of the selected rows of the StationGPSTable by -1. If no rows are selected it will
@@ -1067,6 +1071,43 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 except Exception as e:
                     print(str(e))
                     pass
+
+    def reverse_polarity(self, component=None):
+        """
+        Reverse the polarity of selected readings
+        :param selected_rows: Selected rows from the dataTable to be changed. If none is selected, it will reverse
+        the polarity for all rows.
+        :param component: Selected component to be changed. If none is selected, it will reverse the polarity for
+        all rows.
+        :return: None
+        """
+        data = self.pem_file.data
+
+        if component:
+            rows = data['Component'] == component
+            print(f'Reversing data polarity for {component} component')
+
+            data[rows]['Reading'] = data[rows]['Reading'].map(lambda x: x * -1)
+        else:
+            rows = self.get_selected_rows(self.dataTable)
+            # Take all rows if none are selected
+            if not rows:
+                rows = np.arange(self.dataTable.rowCount())
+            print(f'Reversing data polarity for {len(rows)} rows')
+
+            data.iloc[rows]['Reading'] = data.iloc[rows]['Reading'].map(lambda x: x * -1)
+
+        if component and component in self.pem_file.get_components():
+            note = f"<HE3> {component.upper()} component polarity reversed"
+            if note not in self.pem_file.notes:
+                self.pem_file.notes.append(note)
+            else:
+                self.pem_file.notes.remove(note)
+
+        self.fill_data_table()
+
+        self.dataTable.resizeColumnsToContents()
+        self.window().statusBar().showMessage('Polarity flipped.', 2000)
 
     def reverse_station_gps_numbers(self):
         """
@@ -1131,58 +1172,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             self.lcdDistance.display(0)
 
-    def shift_station_numbers(self):
-        """
-        Shift the data station number.
-        :return: None
-        """
-        selected_rows = self.get_selected_rows(self.dataTable)
-        if not selected_rows:
-            selected_rows = range(self.dataTable.rowCount())
-        shift_amount = self.shiftStationSpinbox.value()
-        self.pem_file = self.file_editor.shift_stations(self.pem_file, shift_amount - self.last_stn_shift_amt,
-                                                        rows=selected_rows)
-        self.update_data_table()
-        self.dataTable.resizeColumnsToContents()
-        self.last_stn_shift_amt = shift_amount
-
-    def reset_spinbox(self, spinbox):
-        """
-        Reset the spinbox value to 0 when a table selection is changed without triggering the spinbox signals
-        :param spinbox: QSpinbox object, the one associated with the table.
-        :return: None
-        """
-        spinbox.blockSignals(True)
-        spinbox.setValue(0)
-        self.last_stn_gps_shift_amt = 0
-        self.last_loop_elev_shift_amt = 0
-        self.last_stn_shift_amt = 0
-        spinbox.blockSignals(False)
-
-    def reverse_polarity(self, selected_rows=None, component=None):
-        """
-        Reverse the polarity of selected readings
-        :param selected_rows: Selected rows from the dataTable to be changed. If none is selected, it will reverse
-        the polarity for all rows.
-        :param component: Selected component to be changed. If none is selected, it will reverse the polarity for
-        all rows.
-        :return: None
-        """
-        print(f'Reversing polarity of rows {selected_rows}, component {component}')
-        if not component:
-            selected_rows = self.get_selected_rows(self.dataTable)
-        if component or selected_rows:
-            if component and component in self.pem_file.get_components():
-                note = f"<HE3> {component.upper()} component polarity reversed"
-                if note not in self.pem_file.notes:
-                    self.pem_file.notes.append(note)
-                else:
-                    self.pem_file.notes.remove(note)
-            self.pem_file = self.file_editor.reverse_polarity(self.pem_file, rows=selected_rows, component=component)
-            self.update_data_table()
-            self.dataTable.resizeColumnsToContents()
-            self.window().statusBar().showMessage('Polarity flipped.', 2000)
-
     def change_station_suffix(self):
         """
         Change the suffix letter from the station number for selected rows in the dataTable. Only for surface files.
@@ -1239,12 +1228,36 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         if self.num_repeat_stations > 0:
             self.pem_file = self.file_editor.rename_repeats(self.pem_file)
-            self.update_data_table()
+            self.fill_data_table()
             self.refresh_tables_signal.emit()
             self.window().statusBar().showMessage(
                 f'{self.num_repeat_stations} repeat station(s) automatically renamed.', 2000)
         else:
             pass
+
+    def get_sorted_data(self):
+        """
+        Returns the sorted data in the PEMFile
+        :return: PEMFile Data object
+        """
+        data = self.pem_file.data
+
+        if self.station_sort_rbtn.isChecked():
+            data = data.reindex(index=natsort.order_by_index(
+                data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading number']))))
+            data.reset_index(drop=True, inplace=True)
+
+        elif self.component_sort_rbtn.isChecked():
+            data = data.reindex(index=natsort.order_by_index(
+                data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading number']))))
+            data.reset_index(drop=True, inplace=True)
+
+        elif self.reading_num_sort_rbtn.isChecked():
+            data = data.reindex(index=natsort.order_by_index(
+                data.index, natsort.index_natsorted(zip(data['Reading number'], data['Reading index']))))
+            data.reset_index(drop=True, inplace=True)
+
+        return data
 
     def get_selected_rows(self, table):
         """

@@ -734,76 +734,13 @@ class PEMParser:
                 elif cols[i] in ['Number of channels', 'Number of readings', 'Primary field value', 'Coil area']:
                     match = int(match)
                 elif cols[i] == 'Channel times':
-                    match = channel_table(pd.Series(match.split(), dtype=float))
+                    match = channel_table(np.array(match.split(), dtype=float))
 
                 header[cols[i]] = match
 
             return header
 
         def parse_data(file):
-
-            def rad_to_series(match):
-                """
-                Create a pandas Series from the RAD tool data
-                :param match: str: re match of the rad tool section
-                :return: pandas Series
-                """
-                match = match.split()
-                if match[0] == 'D7':
-                    index = [
-                        'D',
-                        'Hx',
-                        'gx',
-                        'Hy',
-                        'gy',
-                        'Hz',
-                        'gz',
-                        'T'
-                    ]
-                    series = pd.Series(match, index=index)
-                    series[1:] = series[1:].astype(float)
-                    series['Rotated'] = False
-                    return series
-
-                elif match[0] == 'D5':
-                    if len(match) == 6:
-                        index = [
-                            'D',
-                            'x',
-                            'y',
-                            'z',
-                            'roll angle',
-                            'dip',
-                        ]
-                        series = pd.Series(match, index=index)
-                        series[1:] = series[1:].astype(float)
-                        series['Rotated'] = False
-                        return series
-
-                    elif len(match) == 8:
-                        index = [
-                            'D',
-                            'x',
-                            'y',
-                            'z',
-                            'roll angle',
-                            'dip',
-                            'R',
-                            'roll angle used'
-                        ]
-                        series = pd.Series(match, index=index)
-                        series[1:5] = series[1:5].astype(float)
-                        series[-1:] = series[-1:].astype(float)
-                        series['Rotated'] = True
-                        return series
-
-                    else:
-                        raise ValueError('Error in the number of the RAD tool values')
-                else:
-                    raise ValueError('Error in D value of RAD tool line. D value is neither D5 nor D7.')
-
-            def get_rad_id(match):
-                return ''.join(match.split())
 
             cols = [
                 'Station',
@@ -827,8 +764,6 @@ class PEMParser:
             df = pd.DataFrame(matches, columns=cols)
             # Create a RAD tool ID number to be used for grouping up readings for probe rotation, since the CDR2
             # and CDR3 don't count reading numbers the same way.
-            # df['RAD ID'] = df['RAD tool'].map(get_rad_id)
-            # df['RAD tool'] = df['RAD tool'].map(rad_to_series)
             df['RAD tool'] = df['RAD tool'].map(lambda x: RADTool().from_match(x))
             df['RAD ID'] = df['RAD tool'].map(lambda x: x.id)
             df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float))
@@ -851,12 +786,25 @@ class PEMParser:
         with open(filepath, "rt") as in_file:
             file = in_file.read()
 
+        t1 = time.time()
         tags = parse_tags(file)
+        print(f"Time to parse tags: {time.time() - t1}")
+        t2 = time.time()
         loop_coords = parse_loop(file)
+        print(f"Time to parse loop: {time.time() - t2}")
+        t3 = time.time()
         line_coords = parse_line(file)
+        print(f"Time to parse line: {time.time() - t3}")
+        t4 = time.time()
         notes = parse_notes(file)
+        print(f"Time to parse notes: {time.time() - t4}")
+        t5 = time.time()
         header = parse_header(file, units=tags.get('Units'))
+        print(f"Time to parse header: {time.time() - t5}")
+        t6 = time.time()
         data = parse_data(file)
+        print(f"Time to parse data: {time.time() - t6}")
+
         print(f"Time to parse PEM file: {time.time() - t}")
 
         return PEMFile(tags, loop_coords, line_coords, notes, header, data, filepath)
