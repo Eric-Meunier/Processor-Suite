@@ -68,7 +68,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.station_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
         self.loop_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units']
-        self.dataTable_columns = ['Station', 'Component', 'Reading index', 'Reading number', 'Number of stacks', 'ZTS']
+        self.dataTable_columns = ['index', 'Station', 'Comp.', 'Reading index', 'Reading number', 'Number of stacks', 'ZTS']
 
         self.setupUi(self)
         self.initActions()
@@ -91,7 +91,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.remove_row_action = QAction("&Remove", self)
         self.addAction(self.loopGPSTable.remove_row_action)
         self.loopGPSTable.remove_row_action.triggered.connect(
-            lambda: self.remove_table_row_selection(self.loopGPSTable))
+            lambda: self.remove_table_row(self.loopGPSTable))
         self.loopGPSTable.remove_row_action.setShortcut('Del')
         self.loopGPSTable.remove_row_action.setEnabled(False)
 
@@ -106,21 +106,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.stationGPSTable.remove_row_action = QAction("&Remove", self)
         self.addAction(self.stationGPSTable.remove_row_action)
         self.stationGPSTable.remove_row_action.triggered.connect(
-            lambda: self.remove_table_row_selection(self.stationGPSTable))
+            lambda: self.remove_table_row(self.stationGPSTable))
         self.stationGPSTable.remove_row_action.setShortcut('Del')
         self.stationGPSTable.remove_row_action.setEnabled(False)
 
         self.collarGPSTable.remove_row_action = QAction("&Remove", self)
         self.addAction(self.collarGPSTable.remove_row_action)
         self.collarGPSTable.remove_row_action.triggered.connect(
-            lambda: self.remove_table_row_selection(self.collarGPSTable))
+            lambda: self.remove_table_row(self.collarGPSTable))
         self.collarGPSTable.remove_row_action.setShortcut('Del')
         self.collarGPSTable.remove_row_action.setEnabled(False)
 
         self.geometryTable.remove_row_action = QAction("&Remove", self)
         self.addAction(self.geometryTable.remove_row_action)
         self.geometryTable.remove_row_action.triggered.connect(
-            lambda: self.remove_table_row_selection(self.geometryTable))
+            lambda: self.remove_table_row(self.geometryTable))
         self.geometryTable.remove_row_action.setShortcut('Del')
         self.geometryTable.remove_row_action.setEnabled(False)
 
@@ -224,6 +224,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.resizeColumnsToContents()
 
         self.dataTable.setColumnHidden(0, True)
+
         # self.dataTable.blockSignals(True)
         # self.dataTable.setColumnCount(len(self.data_columns))
         # self.dataTable.setHorizontalHeaderLabels(self.data_columns)
@@ -573,22 +574,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.dataTable.resizeColumnsToContents()
             self.dataTable.blockSignals(False)
 
-    # def update_data_table(self):
-    #     """
-    #     Updates the table based on the values in the PEM File object (self.pem_file)
-    #     """
-    #     self.dataTable.blockSignals(True)
-    #     for station, row in zip(self.pem_file.data, range(self.dataTable.rowCount())):
-    #         items = [QTableWidgetItem(station[j]) for j in self.dataTable_columns]
-    #
-    #         for m, item in enumerate(items):
-    #             item.setTextAlignment(QtCore.Qt.AlignCenter)
-    #             self.dataTable.setItem(row, m, item)
-    #
-    #     self.color_data_table()
-    #     self.check_missing_gps()
-    #     self.dataTable.blockSignals(False)
-
     def color_data_table(self):
         """
         Colors the rows and cells of the dataTable based on several criteria.
@@ -613,7 +598,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             y_color.setAlpha(50)
             white_color = QtGui.QColor('white')
             for row in range(self.dataTable.rowCount()):
-                item = self.dataTable.item(row, self.dataTable_columns.index('Component'))
+                item = self.dataTable.item(row, self.dataTable_columns.index('Comp.'))
                 if item:
                     component = item.text()
                     if component == 'Z':
@@ -727,9 +712,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         gps_stations = self.get_line().df.Station.astype(int).unique()
         filt = np.isin(data_stations, gps_stations, invert=True)
         missing_gps = data_stations[filt]
-        # for station in data_stations:
-        #     if station not in gps_stations:
-        #         missing_gps.append(str(station))
+
         for i, station in enumerate(missing_gps):
             row = i
             self.missing_gps_table.insertRow(row)
@@ -753,7 +736,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.color_data_table()
         self.dataTable.blockSignals(False)
 
-    def remove_table_row_selection(self, table):
+    def remove_table_row(self, table):
         """
         Remove a selected row from a given table
         :param table: QTableWidget table. Either the loop, station, or geometry tables. Not dataTable and not collarGPS table.
@@ -793,9 +776,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         selected_rows = self.get_selected_rows(self.dataTable)
 
         for row in reversed(selected_rows):
-            self.pem_file.data.drop(index=row, axis=1)
+            # Find the data frame index of the selected row
+            ind = int(self.dataTable.item(row, self.dataTable_columns.index('index')).text())
+            self.pem_file.data.drop(index=ind, axis=1, inplace=True)
             self.dataTable.removeRow(row)
-        self.pem_file.data.reset_index(inplace=True, drop=True)
         self.dataTable.blockSignals(True)
         self.color_data_table()
         self.dataTable.blockSignals(False)
@@ -1113,18 +1097,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def reverse_station_gps_numbers(self):
         """
-        Flips the station numbers from the StationGPSTable head-over-heals.
+        Flips the station numbers from the StationGPSTable head-over-heels.
         :return: None
         """
-        gps = self.get_line()
-        if gps:
-            reversed_stations = list(reversed(list(map(lambda x: int(x[-1]), gps))))
-            reversed_gps = []
-            for i, station in enumerate(reversed_stations):
-                row = gps[i][:-1]
-                row.append(str(station))
-                reversed_gps.append(row)
-            self.fill_station_table(reversed_gps)
+        gps = self.get_line().df
+        if not gps.empty:
+            stations = gps.Station.to_list()
+            rev_stations = stations[::-1]
+            gps.Station = rev_stations
+            self.fill_gps_table(gps, self.stationGPSTable)
         else:
             pass
 
@@ -1247,17 +1228,17 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if self.station_sort_rbtn.isChecked():
             data = data.reindex(index=natsort.order_by_index(
                 data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading number']))))
-            data.reset_index(drop=True, inplace=True)
+            # data.reset_index(drop=True, inplace=True)
 
         elif self.component_sort_rbtn.isChecked():
             data = data.reindex(index=natsort.order_by_index(
                 data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading number']))))
-            data.reset_index(drop=True, inplace=True)
+            # data.reset_index(drop=True, inplace=True)
 
         elif self.reading_num_sort_rbtn.isChecked():
             data = data.reindex(index=natsort.order_by_index(
                 data.index, natsort.index_natsorted(zip(data['Reading number'], data['Reading index']))))
-            data.reset_index(drop=True, inplace=True)
+            # data.reset_index(drop=True, inplace=True)
 
         return data
 

@@ -234,7 +234,6 @@ class GPSAdder(QWidget):
         self.table.blockSignals(False)
 
 
-
 class LineAdder(GPSAdder):
 
     def __init__(self):
@@ -664,7 +663,7 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems(client='Trevali Peru', number=5)
     mw.show()
-    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])
+    mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])
 
     app.exec_()
 

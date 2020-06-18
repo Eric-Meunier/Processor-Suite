@@ -1038,11 +1038,11 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.dialog.setAcceptMode(QFileDialog.AcceptSave)
         self.dialog.setDirectory(default_path)
         self.window().statusBar().showMessage('Saving PEM files...')
-        if __name__ == '__main__':
-            file_path = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\test.PEM'
-            row = 0
-        else:
-            file_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM)')[0]  # Returns full filepath
+        # if __name__ == '__main__':
+        #     file_path = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\test.PEM'
+        #     row = 0
+        # else:
+        file_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM)')[0]  # Returns full filepath
 
         if file_path:
             pem_file = copy.deepcopy(self.pem_files[row])
@@ -1052,6 +1052,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.write_pem_file(updated_file)
             self.window().statusBar().showMessage(
                 'Save Complete. PEM file saved as {}'.format(os.path.basename(file_path)), 2000)
+            self.open_pem_files(updated_file)
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
@@ -2691,7 +2692,8 @@ def main():
     mw.show()
     # mw.reverse_all_data('X')
 
-    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])
+    # mw.open_gps_files([r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])
+    # mw.open_gps_files([r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
     # mw.save_as_xyz()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
     # import pyqtgraph.examples
