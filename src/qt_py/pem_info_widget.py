@@ -180,7 +180,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         # Spinboxes
         self.shiftStationGPSSpinbox.valueChanged.connect(self.shift_gps_station_numbers)
-        self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elev)
+        self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elevation)
         self.shiftStationSpinbox.valueChanged.connect(self.shift_station_numbers)
 
     def toggle_change_station_btn(self):
@@ -721,13 +721,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         filt = np.isin(data_stations, gps_stations, invert=True)
         missing_gps = data_stations[filt]
 
+        # Add the missing GPS stations to the missing_gps_table
         for i, station in enumerate(missing_gps):
-            row = i
-            self.missing_gps_table.insertRow(row)
+            self.missing_gps_table.insertRow(i)
             item = QTableWidgetItem(str(station))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             item.setForeground(QtGui.QColor('red'))
-            self.missing_gps_table.setItem(row, 0, item)
+            self.missing_gps_table.setItem(i, 0, item)
 
     def update_pem_from_table(self, table_row, table_col):
         """
@@ -881,6 +881,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         print('Shifting station GPS numbers')
+
         def apply_station_shift(row):
             station_column = self.stationGPSTable_columns.index('Station')
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
@@ -985,7 +986,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     pass
         self.last_stn_gps_shift_amt = shift_amount
 
-    def shift_loop_elev(self):
+    def shift_loop_elevation(self):
         """
         Shift the loop GPS elevation from the selected rows of the LoopGPSTable. If no rows are currently selected,
         it will do the shift for the entire table.
@@ -1031,6 +1032,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         selected_rows = self.get_selected_rows(self.dataTable)
         if not selected_rows:
             selected_rows = range(self.dataTable.rowCount())
+
         shift_amount = self.shiftStationSpinbox.value()
         self.pem_file = self.file_editor.shift_stations(self.pem_file, shift_amount - self.last_stn_shift_amt,
                                                         rows=selected_rows)
