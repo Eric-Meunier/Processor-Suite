@@ -66,8 +66,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.num_repeat_stations = 0
         self.suffix_warnings = 0
 
-        self.station_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
-        self.loop_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units']
+        self.stationGPSTable_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
+        self.loopGPSTable_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units']
         self.dataTable_columns = ['index', 'Station', 'Comp.', 'Reading index', 'Reading number', 'Number of stacks', 'ZTS']
 
         self.setupUi(self)
@@ -175,12 +175,20 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loopGPSTable.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shift_elevation_spinbox))
 
         self.dataTable.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationSpinbox))
+        self.dataTable.itemSelectionChanged.connect(self.toggle_change_station_btn)
         self.dataTable.cellChanged.connect(self.update_pem_from_table)
 
         # Spinboxes
         self.shiftStationGPSSpinbox.valueChanged.connect(self.shift_gps_station_numbers)
         self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elev)
         self.shiftStationSpinbox.valueChanged.connect(self.shift_station_numbers)
+
+    def toggle_change_station_btn(self):
+        selected_rows = self.get_selected_rows(self.dataTable)
+        if selected_rows:
+            self.changeStationSuffixButton.setEnabled(True)
+        else:
+            self.changeStationSuffixButton.setEnabled(False)
 
     def initTables(self):
         """
@@ -663,7 +671,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         self.stationGPSTable.blockSignals(True)
-        stations_column = self.station_columns.index('Station')
+        stations_column = self.stationGPSTable_columns.index('Station')
         stations = []
         for row in range(self.stationGPSTable.rowCount()):
             if self.stationGPSTable.item(row, stations_column):
@@ -691,7 +699,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
         blue_color.setAlpha(50)
         red_color.setAlpha(50)
-        station_col = self.station_columns.index('Station')
+        station_col = self.stationGPSTable_columns.index('Station')
 
         for row in range(self.stationGPSTable.rowCount()):
             if self.stationGPSTable.item(row, station_col) and stations[row] > sorted_stations[row]:
@@ -728,11 +736,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param table_col: event column
         """
         self.dataTable.blockSignals(True)
-        column_keys = ['Station', 'Component', 'ReadingIndex', 'ReadingNumber', 'NumStacks', 'ZTS']
         data = self.pem_file.data
-        table_value = self.dataTable.item(table_row, table_col).text()
-        data[table_row][column_keys[table_col]] = table_value
+        df_col = self.dataTable_columns[table_col]
+        df_row = int(self.dataTable.item(table_row, self.dataTable_columns.index('index')).text())
 
+        table_value = self.dataTable.item(table_row, table_col).text()
+        data.loc[df_row, df_col] = table_value
+
+        self.pem_file.data = data
         self.color_data_table()
         self.dataTable.blockSignals(False)
 
@@ -871,7 +882,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         print('Shifting station GPS numbers')
         def apply_station_shift(row):
-            station_column = self.station_columns.index('Station')
+            station_column = self.stationGPSTable_columns.index('Station')
             station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
                                                                                                               station_column) else None
             if station is not None or station == 0:
@@ -1073,7 +1084,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             rows = data['Component'] == component
             print(f'Reversing data polarity for {component} component')
 
-            data[rows]['Reading'] = data[rows]['Reading'].map(lambda x: x * -1)
+            data.loc[rows, 'Reading'] = data.loc[rows, 'Reading'].map(lambda x: x * -1)
         else:
             rows = self.get_selected_rows(self.dataTable)
             # Take all rows if none are selected
@@ -1081,7 +1092,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 rows = np.arange(self.dataTable.rowCount())
             print(f'Reversing data polarity for {len(rows)} rows')
 
-            data.loc[rows]['Reading'] = data.loc[rows]['Reading'].map(lambda x: x * -1)
+            data.loc[rows, 'Reading'] = data.loc[rows, 'Reading'].map(lambda x: x * -1)
 
         if component and component in self.pem_file.get_components():
             note = f"<HE3> {component.upper()} component polarity reversed"
@@ -1114,12 +1125,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fills the GPS station numbers in the StationGPSTable using the station numbers in the data.
         :return: None
         """
-        data_stations = self.pem_file.get_converted_unique_stations()
-        station_column = 5
+        data_stations = self.pem_file.data.Station.map(convert_station).unique()
         for row, station in enumerate(data_stations):
             item = QTableWidgetItem(str(station))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
-            self.stationGPSTable.setItem(row, station_column, item)
+            self.stationGPSTable.setItem(row, self.stationGPSTable_columns.index('Station'), item)
 
     def calc_distance(self):
         """
@@ -1127,8 +1137,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         def get_row_gps(row):
-            east_col = self.station_columns.index('Easting')
-            north_col = self.station_columns.index('Northing')
+            east_col = self.stationGPSTable_columns.index('Easting')
+            north_col = self.stationGPSTable_columns.index('Northing')
             try:
                 easting = float(self.stationGPSTable.item(row, east_col).text())
             except ValueError:
@@ -1166,10 +1176,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         suffix, okPressed = QInputDialog.getText(self, "Change Station Suffix", "New Suffix:")
         if okPressed and suffix.upper() in ['N', 'E', 'S', 'W']:
-            station_col = self.data_columns.index('Station')
+            station_col = self.dataTable_columns.index('Station')
             rows = self.get_selected_rows(self.dataTable)
             if not rows:
                 rows = range(self.dataTable.rowCount())
+
             for row in rows:
                 station = self.dataTable.item(row, station_col).text()
                 new_station = re.sub('[NESW]', suffix.upper(), station)
@@ -1178,11 +1189,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.dataTable.setItem(row, station_col, new_station_item)
         elif okPressed:
-            self.message.setWindowTitle('Invalid Suffix')
-            self.message.setText('Suffix must be one of [NSEW]')
-            self.message.setStandardButtons(QMessageBox.Ok)
-            self.message.buttonClicked.connect(self.message.close)
-            self.message.exec()
+            self.message.information(self, 'Invalid Suffix', 'Suffix must be one of [NSEW]')
+            # self.message.setWindowTitle('Invalid Suffix')
+            # self.message.setText('Suffix must be one of [NSEW]')
+            # self.message.setStandardButtons(QMessageBox.Ok)
+            # self.message.buttonClicked.connect(self.message.close)
+            # self.message.exec()
 
     def change_component(self):
         """
