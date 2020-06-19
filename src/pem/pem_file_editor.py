@@ -169,7 +169,6 @@ class PEMFileEditor:
     def shift_stations(self, pem_file, shift_amt, rows=None):
         """
         Shift station number
-        :param pem_file: PEMFile object
         :param shift_amt: Amount to shift the station number by
         :param rows: Corresponding row (reading) of the PEMFile in the dataTable
         :return: Updated PEMFile

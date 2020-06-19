@@ -753,7 +753,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param table: QTableWidget table. Either the loop, station, or geometry tables. Not dataTable and not collarGPS table.
         :return: None
         """
-        def add_tags():  # tag is either 'P' or 'L'
+        def add_tags():
+            """
+            Re-numbers the tags so no numbers are skipped due to the deleted row
+            :return:
+            """
             if table == self.loopGPSTable:
                 tag = 'L'
             else:
@@ -884,8 +888,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         def apply_station_shift(row):
             station_column = self.stationGPSTable_columns.index('Station')
-            station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
-                                                                                                              station_column) else None
+            station_item = self.stationGPSTable.item(row, station_column)
+            station = station_item.text() if station_item else None
+            try:
+                station = int(station)
+            except ValueError:
+                print(f"{station} cannot be converted to Int")
+                return
+
             if station is not None or station == 0:
                 new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_gps_shift_amt)))
                 new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
@@ -896,20 +906,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         selected_rows = self.get_selected_rows(self.stationGPSTable)
         shift_amount = self.shiftStationGPSSpinbox.value()
 
-        if selected_rows:
-            for row in selected_rows:
-                try:
-                    apply_station_shift(row)
-                except Exception as e:
-                    print(str(e))
-                    pass
-        else:
-            for row in range(self.stationGPSTable.rowCount()):
-                try:
-                    apply_station_shift(row)
-                except Exception as e:
-                    print(str(e))
-                    pass
+        rows = range(self.stationGPSTable.rowCount()) if not selected_rows else selected_rows
+        for row in rows:
+            apply_station_shift(row)
+
         self.last_stn_gps_shift_amt = shift_amount
 
     def shift_station_easting(self):
@@ -1029,13 +1029,32 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Shift the data station number.
         :return: None
         """
-        selected_rows = self.get_selected_rows(self.dataTable)
-        if not selected_rows:
-            selected_rows = range(self.dataTable.rowCount())
-
         shift_amount = self.shiftStationSpinbox.value()
-        self.pem_file = self.file_editor.shift_stations(self.pem_file, shift_amount - self.last_stn_shift_amt,
-                                                        rows=selected_rows)
+
+        def apply_shift(station, shift_value):
+            # Isolate the numbers only
+            station_num = re.search('\d+', station).group(0)
+            try:
+                station_num = int(station_num)
+            except ValueError:
+                return station
+            else:
+                # Apply the shift to the number and then replace the numbers in the original station with the new number
+                new_value = str(station_num - shift_value)
+                return re.sub('\d+', new_value, station)
+
+        rows = self.get_selected_rows(self.dataTable)
+        if not rows:
+            rows = range(self.dataTable.rowCount())
+            if not rows:
+                return
+
+        # Find the corresponding data frame rows
+        df_rows = [int(self.dataTable.item(row, self.dataTable_columns.index('index')).text()) for row in rows]
+        stations = self.pem_file.data.loc[df_rows, 'Station']
+        stations = stations.map(lambda x: apply_shift(x, self.last_stn_shift_amt - shift_amount))
+        self.pem_file.data.loc[df_rows, 'Station'] = stations
+
         self.fill_data_table()
         self.dataTable.resizeColumnsToContents()
         self.last_stn_shift_amt = shift_amount
