@@ -24,8 +24,6 @@ def convert_station(station):
     Converts a single station name into a number, negative if the stations was S or W
     :return: Integer station number
     """
-    assert re.match('\d+', station), f'No numbers found in "{station}"'
-
     if re.match(r"\d+(S|W)", station):
         station = (-int(re.sub(r"\D", "", station)))
     else:
@@ -85,6 +83,12 @@ class PEMFile:
 
     def is_borehole(self):
         if 'borehole' in self.get_survey_type().lower():
+            return True
+        else:
+            return False
+
+    def is_fluxgate(self):
+        if 'fluxgate' in self.get_survey_type().lower():
             return True
         else:
             return False
@@ -213,6 +217,23 @@ class PEMFile:
             data = self.data
         return data
 
+    def get_profile_data(self, component=None):
+        """
+        Transform the readings in the data in a manner to be plotted as a profile
+        :param component: str, used to filter the profile data and only keep the given component
+        :return: pandas DataFrame object with Station, Component and all channels as columns.
+        """
+        profile = pd.DataFrame.from_dict(dict(zip(self.data.Reading.index, self.data.Reading.values))).T
+        profile.insert(0, 'Station', self.data.Station.map(convert_station))
+        profile.insert(1, 'Component', self.data.Component)
+
+        if component:
+            filt = profile['Component'] == component.upper()
+            profile = profile[filt]
+
+        profile.sort_values(by=['Component', 'Station'], inplace=True)
+        return profile
+
     def get_components(self):
         components = list(self.data['Component'].unique())
         return components
@@ -228,35 +249,35 @@ class PEMFile:
             stations = [convert_station(station) for station in stations]
         return stations
 
-    def get_profile_data(self):
-        """
-        Transforms the data from the PEM file in profile
-        :return: Dictionary where each key is a channel, and the values of those keys are a list of
-        dictionaries which contain the stations and readings of all readings of that channel. Each component has
-        such a dictionary.
-        """
-
-        components = self.get_components()
-        profile_data = {}
-
-        for component in components:
-            component_profile_data = {}
-            component_data = [station for station in self.data if station['Component'] == component]
-            num_channels = len(component_data[0]['Data'])
-
-            for channel in range(0, num_channels):
-                channel_data = []
-
-                for i, station in enumerate(component_data):
-                    reading = station['Data'][channel]
-                    station_number = int(convert_station(station['Station']))
-                    channel_data.append({'Station': station_number, 'Reading': reading})
-
-                component_profile_data[channel] = channel_data
-
-            profile_data[component] = component_profile_data
-
-        return profile_data
+    # def get_profile_data(self):
+    #     """
+    #     Transforms the data from the PEM file in profile
+    #     :return: Dictionary where each key is a channel, and the values of those keys are a list of
+    #     dictionaries which contain the stations and readings of all readings of that channel. Each component has
+    #     such a dictionary.
+    #     """
+    #
+    #     components = self.get_components()
+    #     profile_data = {}
+    #
+    #     for component in components:
+    #         component_profile_data = {}
+    #         component_data = [station for station in self.data if station['Component'] == component]
+    #         num_channels = len(component_data[0]['Data'])
+    #
+    #         for channel in range(0, num_channels):
+    #             channel_data = []
+    #
+    #             for i, station in enumerate(component_data):
+    #                 reading = station['Data'][channel]
+    #                 station_number = int(convert_station(station['Station']))
+    #                 channel_data.append({'Station': station_number, 'Reading': reading})
+    #
+    #             component_profile_data[channel] = channel_data
+    #
+    #         profile_data[component] = component_profile_data
+    #
+    #     return profile_data
 
     def get_survey_type(self):
 
@@ -1176,6 +1197,7 @@ if __name__ == '__main__':
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-237-19 XYZ (flux).PEM'
     p = PEMParser()
     file = p.parse(file)
+    file.get_profile_data()
     # file.split()
     # file.rotate(type='acc', soa=0)
     # file.average()

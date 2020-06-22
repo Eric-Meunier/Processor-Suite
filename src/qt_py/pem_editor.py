@@ -59,8 +59,6 @@ def convert_station(station):
     Converts a single station name into a number, negative if the stations was S or W
     :return: Integer station number
     """
-    assert re.match('\d+', station), f'No numbers found in "{station}"'
-
     if re.match(r"\d+(S|W)", station):
         station = (-int(re.sub(r"\D", "", station)))
     else:
@@ -2300,7 +2298,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             new_name = ''
             for row in range(self.table.rowCount()):
                 pem_file = self.pem_files[row]
-                survey_type = pem_file.survey_type.lower()
+                # survey_type = pem_file.survey_type.lower()
                 file_name = self.table.item(row, file_name_column).text()
                 if pem_file.is_borehole():
                     # hole_name = re.findall('(.*)(xy|XY|z|Z)', file_name)
@@ -2312,7 +2310,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     if line_name:
                         new_name = line_name[0].strip()
 
-                pem_file.header['LineHole'] = new_name
+                pem_file.line_name = new_name
                 name_item = QTableWidgetItem(new_name)
                 name_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.table.setItem(row, line_name_column, name_item)
