@@ -38,8 +38,6 @@ def convert_station(station):
     Converts a single station name into a number, negative if the stations was S or W
     :return: Integer station number
     """
-    assert re.match('\d+', station), f'No numbers found in "{station}"'
-
     if re.match(r"\d+(S|W)", station):
         station = (-int(re.sub(r"\D", "", station)))
     else:
@@ -916,106 +914,36 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         print('Shifting station GPS numbers')
+        self.stationGPSTable.blockSignals(True)
 
         def apply_station_shift(row):
             station_column = self.stationGPSTable_columns.index('Station')
             station_item = self.stationGPSTable.item(row, station_column)
-            station = station_item.text() if station_item else None
+            if station_item:
+                station = station_item.text()
+            else:
+                return
+
             try:
                 station = int(station)
             except ValueError:
                 print(f"{station} cannot be converted to Int")
                 return
-
-            if station is not None or station == 0:
+            else:
                 new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_gps_shift_amt)))
                 new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.stationGPSTable.setItem(row, station_column, new_station_item)
-            else:
-                pass
 
-        selected_rows = self.get_selected_rows(self.stationGPSTable)
         shift_amount = self.shiftStationGPSSpinbox.value()
 
+        selected_rows = self.get_selected_rows(self.stationGPSTable)
         rows = range(self.stationGPSTable.rowCount()) if not selected_rows else selected_rows
+
         for row in rows:
             apply_station_shift(row)
 
         self.last_stn_gps_shift_amt = shift_amount
-
-    def shift_station_easting(self):
-        """
-        Shift the station GPS easting from the selected rows of the StationGPSTable. If no rows are currently selected,
-        it will do the shift for the entire table.
-        :return: None
-        """
-        def apply_station_shift(row):
-            easting_column = 1
-            station = int(self.stationGPSTable.item(row, easting_column).text()) if self.stationGPSTable.item(row,
-                                                                                                              easting_column) else None
-            if station is not None or station == 0:
-                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_gps_shift_amt)))
-                new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.stationGPSTable.setItem(row, easting_column, new_station_item)
-            else:
-                pass
-
-        selected_rows = self.get_selected_rows(self.stationGPSTable)
-
-        shift_amount = self.shiftStationGPSSpinbox.value()
-
-        if selected_rows:
-            for row in selected_rows:
-                try:
-                    apply_station_shift(row)
-                except Exception as e:
-                    print(str(e))
-                    pass
-        else:
-            for row in range(self.stationGPSTable.rowCount()):
-                try:
-                    apply_station_shift(row)
-                except Exception as e:
-                    print(str(e))
-                    pass
-        self.last_stn_gps_shift_amt = shift_amount
-
-    def shift_station_northing(self):
-        """
-        Shift the station GPS northing from the selected rows of the StationGPSTable. If no rows are currently selected,
-        it will do the shift for the entire table.
-        :return: None
-        """
-        def apply_station_shift(row):
-            station_column = 5
-            station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
-                                                                                                              station_column) else None
-            if station is not None or station == 0:
-                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_gps_shift_amt)))
-                new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.stationGPSTable.setItem(row, station_column, new_station_item)
-            else:
-                pass
-
-        selected_rows = self.get_selected_rows(self.stationGPSTable)
-
-        shift_amount = self.shiftStationGPSSpinbox.value()
-
-        if selected_rows:
-            for row in selected_rows:
-                try:
-                    apply_station_shift(row)
-                except Exception as e:
-                    print(str(e))
-                    pass
-        else:
-            for row in range(self.stationGPSTable.rowCount()):
-                try:
-                    apply_station_shift(row)
-                except Exception as e:
-                    print(str(e))
-                    pass
-        self.last_stn_gps_shift_amt = shift_amount
+        self.stationGPSTable.blockSignals(False)
 
     def shift_loop_elevation(self):
         """
@@ -1023,37 +951,30 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         it will do the shift for the entire table.
         :return: None
         """
-        def apply_elevation_shift(row):
-            elevation_column = 3
-            elevation = float(self.loopGPSTable.item(row, elevation_column).text()) if self.loopGPSTable.item(row,
-                                                                                                              elevation_column) else None
-            if elevation is not None or elevation == 0:
-                new_elevation = elevation + (shift_amount - self.last_loop_elev_shift_amt)
-                new_elevation_item = QTableWidgetItem('{:.2f}'.format(new_elevation))
-                new_elevation_item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.loopGPSTable.setItem(row, elevation_column, new_elevation_item)
-            else:
-                pass
+        self.loopGPSTable.blockSignals(True)
 
-        selected_rows = [model.row() for model in self.loopGPSTable.selectionModel().selectedRows()]
+        def apply_elevation_shift(row):
+            elevation_item = self.loopGPSTable.item(row, self.loopGPSTable_columns.index('Elevation'))
+            if elevation_item:
+                elevation = float(elevation_item.text())
+            else:
+                return
+
+            new_elevation = elevation + (shift_amount - self.last_loop_elev_shift_amt)
+            new_elevation_item = QTableWidgetItem('{:.2f}'.format(new_elevation))
+            new_elevation_item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.loopGPSTable.setItem(row, self.loopGPSTable_columns.index('Elevation'), new_elevation_item)
 
         shift_amount = self.shift_elevation_spinbox.value()
 
-        if selected_rows:
-            for row in selected_rows:
-                try:
-                    apply_elevation_shift(row)
-                except Exception as e:
-                    print(str(e))
-                    pass
-        else:
-            for row in range(self.loopGPSTable.rowCount()):
-                try:
-                    apply_elevation_shift(row)
-                except Exception as e:
-                    print(str(e))
-                    pass
+        selected_rows = self.get_selected_rows(self.loopGPSTable)
+        rows = range(self.loopGPSTable.rowCount()) if not selected_rows else selected_rows
+
+        for row in rows:
+            apply_elevation_shift(row)
+
         self.last_loop_elev_shift_amt = shift_amount
+        self.loopGPSTable.blockSignals(False)
 
     def shift_station_numbers(self):
         """
@@ -1074,12 +995,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 new_value = str(station_num - shift_value)
                 return re.sub('\d+', new_value, station)
 
-        # rows = self.get_selected_rows(self.dataTable)
-        # if not rows:
-        #     rows = range(self.dataTable.rowCount())
-        #     if not rows:
-        #         return
-
         # Find the corresponding data frame rows
         df_rows = self.get_df_rows()
         stations = self.pem_file.data.loc[df_rows, 'Station']
@@ -1087,7 +1002,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.pem_file.data.loc[df_rows, 'Station'] = stations
         self.fill_data_table()
-        self.dataTable.resizeColumnsToContents()
+        # self.dataTable.resizeColumnsToContents()
         self.last_stn_shift_amt = shift_amount
 
     def flip_station_gps_polarity(self):
@@ -1096,30 +1011,27 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         do so for all rows.
         :return: None
         """
+        self.stationGPSTable.blockSignals(True)
 
         def flip_stn_num(row):
             station_column = 5
-            station = int(self.stationGPSTable.item(row, station_column).text()) if self.stationGPSTable.item(row,
-                                                                                                              station_column) else None
-            if station is not None or station == 0:
-                new_station_item = QTableWidgetItem(str(station * -1))
-                new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.stationGPSTable.setItem(row, station_column, new_station_item)
+            station_item = self.stationGPSTable.item(row, station_column)
+            if station_item:
+                station = int(station_item.text())
             else:
-                pass
+                return
 
-        selected_rows = self.get_selected_rows(self.stationGPSTable)
+            new_station_item = QTableWidgetItem(str(station * -1))
+            new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.stationGPSTable.setItem(row, station_column, new_station_item)
 
-        if selected_rows:
-            for row in selected_rows:
-                flip_stn_num(row)
-        else:
-            for row in range(self.stationGPSTable.rowCount()):
-                try:
-                    flip_stn_num(row)
-                except Exception as e:
-                    print(str(e))
-                    pass
+        selected_rows = self.get_selected_rows(self.loopGPSTable)
+        rows = range(self.loopGPSTable.rowCount()) if not selected_rows else selected_rows
+
+        for row in rows:
+            flip_stn_num(row)
+
+        self.stationGPSTable.blockSignals(False)
 
     def reverse_polarity(self, component=None):
         """
@@ -1130,6 +1042,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         all rows.
         :return: None
         """
+        self.stationGPSTable.blockSignals(True)
+
         df_rows = self.get_df_rows()
 
         if component:
@@ -1153,6 +1067,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.fill_data_table()
         self.dataTable.resizeColumnsToContents()
+
+        self.stationGPSTable.blockSignals(False)
 
     def reverse_station_gps_numbers(self):
         """
@@ -1282,7 +1198,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
-    @staticmethod
     def get_selected_rows(self, table):
         """
         Return the rows that are currently selected from a given table.
@@ -1394,18 +1309,22 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             gps = self.get_loop()
 
-        if gps:
-            gps_str = ''
-            for line in gps:
-                gps_str += ' '.join(line) + '\n'
-
-            default_path = os.path.dirname(self.pem_file.filepath)
-            selected_path = self.dialog.getSaveFileName(self, 'Save File', directory=default_path,
-                                                        filter='Text files (*.txt);; CSV files (*.csv);; All files(*.*)')
-            if selected_path[0]:
-                with open(selected_path[0], 'w+') as file:
-                    file.write(gps_str)
-                os.startfile(selected_path[0])
+        default_path = os.path.dirname(self.pem_file.filepath)
+        selected_path = self.dialog.getSaveFileName(self, 'Save File', directory=default_path,
+                                                    filter='Text files (*.txt);; CSV files (*.csv);; All files(*.*)')
+        if selected_path[0]:
+            if selected_path[0].endswith('txt'):
+                gps_str = gps.to_string()
+            elif selected_path[0].endswith('csv'):
+                gps_str = gps.to_csv()
             else:
-                self.window().statusBar().showMessage('Cancelled.', 2000)
+                self.message.information(self, 'Invalid file type', f"Selected file type is invalid. Must be either"
+                f"'txt' or 'csv'")
+                return
+
+            with open(selected_path[0], 'w+') as file:
+                file.write(gps_str)
+            os.startfile(selected_path[0])
+        else:
+            self.window().statusBar().showMessage('Cancelled.', 2000)
 

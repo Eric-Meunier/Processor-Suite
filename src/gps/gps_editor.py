@@ -108,6 +108,12 @@ class TransmitterLoop:
 
         return df
 
+    def to_string(self, header=False):
+        return self.df.to_string(index=False, header=header)
+
+    def to_csv(self, header=False):
+        return self.df.to_csv(index=False, header=header)
+
 
 class SurveyLine:
     """
@@ -175,6 +181,12 @@ class SurveyLine:
             df = get_latlon(df, crs)
         return df
 
+    def to_string(self, header=False):
+        return self.df.to_string(index=False, header=header)
+
+    def to_csv(self, header=False):
+        return self.df.to_csv(index=False, header=header)
+
 
 class BoreholeCollar:
     """
@@ -205,6 +217,12 @@ class BoreholeCollar:
             df = get_latlon(df, crs)
         return df
 
+    def to_string(self, header=False):
+        return self.df.to_string(index=False, header=header)
+
+    def to_csv(self, header=False):
+        return self.df.to_csv(index=False, header=header)
+
 
 class BoreholeSegments:
     """
@@ -230,6 +248,12 @@ class BoreholeSegments:
 
     def get_segments(self):
         return self.df
+
+    def to_string(self, header=False):
+        return self.df.to_string(index=False, header=header)
+
+    def to_csv(self, header=False):
+        return self.df.to_csv(index=False, header=header)
 
 
 class BoreholeGeometry:
@@ -314,6 +338,16 @@ class BoreholeGeometry:
 
     def get_segments(self):
         return self.segments.get_segments()
+
+    def to_string(self):
+        collar_str = self.collar.to_string()
+        segment_str = self.segments.to_string()
+        return collar_str + '\n' + segment_str
+
+    def to_csv(self):
+        collar_csv = self.collar.to_csv()
+        segment_csv = self.segments.to_csv()
+        return collar_csv + '\n' + segment_csv
 
 
 # class GPSEditor:
@@ -724,14 +758,15 @@ if __name__ == '__main__':
     # gpx_editor = GPXEditor()
 
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\src\gps\sample_files\45-1.csv'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\AF19003 loop and collar.txt'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\AF19003 loop and collar.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt'
-    collar = BoreholeCollar(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt')
-    segments = BoreholeSegments(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\718-3759gyro.seg')
-    geometry = BoreholeGeometry(collar, segments)
-    geometry.get_projection(num_segments=1000)
-    # loop = TransmitterLoop(file, name=os.path.basename(file))
+    # collar = BoreholeCollar(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt')
+    # segments = BoreholeSegments(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\718-3759gyro.seg')
+    # geometry = BoreholeGeometry(collar, segments)
+    # geometry.get_projection(num_segments=1000)
+    loop = TransmitterLoop(file, name=os.path.basename(file))
+    loop.to_csv()
     # line = SurveyLine(file, name=os.path.basename(file))
     # print(loop.get_sorted_loop(), '\n', loop.get_loop())
     # gps_parser.parse_collar_gps(file)
