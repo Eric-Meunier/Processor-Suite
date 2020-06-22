@@ -38,6 +38,8 @@ def convert_station(station):
     Converts a single station name into a number, negative if the stations was S or W
     :return: Integer station number
     """
+    assert re.match('\d+', station), f'No numbers found in "{station}"'
+
     if re.match(r"\d+(S|W)", station):
         station = (-int(re.sub(r"\D", "", station)))
     else:
@@ -556,6 +558,31 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fill the dataTable with given PEMFile data
         :param data: PEMFile data
         """
+
+        def get_sorted_data():
+            """
+            Returns the sorted data in the PEMFile
+            :return: PEMFile Data data frame
+            """
+            data = self.pem_file.data
+
+            if self.station_sort_rbtn.isChecked():
+                data = data.reindex(index=natsort.order_by_index(
+                    data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading number']))))
+                # data.reset_index(drop=True, inplace=True)
+
+            elif self.component_sort_rbtn.isChecked():
+                data = data.reindex(index=natsort.order_by_index(
+                    data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading number']))))
+                # data.reset_index(drop=True, inplace=True)
+
+            elif self.reading_num_sort_rbtn.isChecked():
+                data = data.reindex(index=natsort.order_by_index(
+                    data.index, natsort.index_natsorted(zip(data['Reading number'], data['Reading index']))))
+                # data.reset_index(drop=True, inplace=True)
+
+            return data
+
         def write_data_row(df_row):
             # Add a new row to the table
             row_pos = self.dataTable.rowCount()
@@ -568,7 +595,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.dataTable.setItem(row_pos, m, item)
 
-        data = self.get_sorted_data()
+        data = get_sorted_data()
         if data.empty:
             return
         else:
@@ -651,12 +678,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             for row in range(self.dataTable.rowCount()):
                 item = self.dataTable.item(row, self.dataTable_columns.index('Station'))
                 if item:
-                    station_num = re.findall('\d+', item.text())[0]
-                    if station_num[-1] == '1' or station_num[-1] == '4' or station_num[-1] == '6' or station_num[-1] == '9':
-                        repeats += 1
-                        item.setFont(boldFont)
+                    station_num = re.findall('\d+', item.text())
+                    if station_num:
+                        station_num = station_num[0]
+                        if station_num[-1] == '1' or station_num[-1] == '4' or station_num[-1] == '6' or station_num[-1] == '9':
+                            repeats += 1
+                            item.setFont(boldFont)
+                        else:
+                            item.setFont(normalFont)
                     else:
-                        item.setFont(normalFont)
+                        break
             return repeats
 
         color_rows_by_component()
@@ -1043,18 +1074,18 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 new_value = str(station_num - shift_value)
                 return re.sub('\d+', new_value, station)
 
-        rows = self.get_selected_rows(self.dataTable)
-        if not rows:
-            rows = range(self.dataTable.rowCount())
-            if not rows:
-                return
+        # rows = self.get_selected_rows(self.dataTable)
+        # if not rows:
+        #     rows = range(self.dataTable.rowCount())
+        #     if not rows:
+        #         return
 
         # Find the corresponding data frame rows
-        df_rows = [int(self.dataTable.item(row, self.dataTable_columns.index('index')).text()) for row in rows]
+        df_rows = self.get_df_rows()
         stations = self.pem_file.data.loc[df_rows, 'Station']
         stations = stations.map(lambda x: apply_shift(x, self.last_stn_shift_amt - shift_amount))
-        self.pem_file.data.loc[df_rows, 'Station'] = stations
 
+        self.pem_file.data.loc[df_rows, 'Station'] = stations
         self.fill_data_table()
         self.dataTable.resizeColumnsToContents()
         self.last_stn_shift_amt = shift_amount
@@ -1099,22 +1130,20 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         all rows.
         :return: None
         """
-        data = self.pem_file.data
+        df_rows = self.get_df_rows()
 
         if component:
-            rows = data['Component'] == component
+            rows = self.pem_file.data['Component'] == component
             print(f'Reversing data polarity for {component} component')
-
-            data.loc[rows, 'Reading'] = data.loc[rows, 'Reading'].map(lambda x: x * -1)
+            self.window().statusBar().showMessage(f'Reversing data polarity for {component} component', 2000)
         else:
-            rows = self.get_selected_rows(self.dataTable)
-            # Take all rows if none are selected
-            if not rows:
-                rows = np.arange(self.dataTable.rowCount())
+            rows = df_rows
             print(f'Reversing data polarity for {len(rows)} rows')
+            self.window().statusBar().showMessage(f'Reversing data polarity for {len(rows)} rows', 2000)
 
-            data.loc[rows, 'Reading'] = data.loc[rows, 'Reading'].map(lambda x: x * -1)
+        self.pem_file.data.loc[rows, 'Reading'] = self.pem_file.data.loc[rows, 'Reading'].map(lambda x: x * -1)
 
+        # Add the HE tag as a note in the PEM file, or remove it if it was there previously
         if component and component in self.pem_file.get_components():
             note = f"<HE3> {component.upper()} component polarity reversed"
             if note not in self.pem_file.notes:
@@ -1123,9 +1152,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.pem_file.notes.remove(note)
 
         self.fill_data_table()
-
         self.dataTable.resizeColumnsToContents()
-        self.window().statusBar().showMessage('Polarity flipped.', 2000)
 
     def reverse_station_gps_numbers(self):
         """
@@ -1197,25 +1224,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         suffix, okPressed = QInputDialog.getText(self, "Change Station Suffix", "New Suffix:")
         if okPressed and suffix.upper() in ['N', 'E', 'S', 'W']:
-            station_col = self.dataTable_columns.index('Station')
-            rows = self.get_selected_rows(self.dataTable)
-            if not rows:
-                rows = range(self.dataTable.rowCount())
+            df_rows = self.get_df_rows()
+            stations = self.pem_file.data.loc[df_rows, 'Station']
+            stations = stations.map(lambda x: re.sub('[NESW]', suffix.upper(), x))
 
-            for row in rows:
-                station = self.dataTable.item(row, station_col).text()
-                new_station = re.sub('[NESW]', suffix.upper(), station)
+            self.pem_file.data.loc[df_rows, 'Station'] = stations
+            self.fill_data_table()
 
-                new_station_item = QTableWidgetItem(new_station)
-                new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.dataTable.setItem(row, station_col, new_station_item)
         elif okPressed:
             self.message.information(self, 'Invalid Suffix', 'Suffix must be one of [NSEW]')
-            # self.message.setWindowTitle('Invalid Suffix')
-            # self.message.setText('Suffix must be one of [NSEW]')
-            # self.message.setStandardButtons(QMessageBox.Ok)
-            # self.message.buttonClicked.connect(self.message.close)
-            # self.message.exec()
 
     def change_component(self):
         """
@@ -1224,17 +1241,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         new_comp, okPressed = QInputDialog.getText(self, "Change Component", "New Component:")
         if okPressed and new_comp.upper() in ['Z', 'X', 'Y']:
-            rows = self.get_selected_rows(self.dataTable)
-            for row in rows:
-                new_comp_item = QTableWidgetItem(new_comp.upper())
-                new_comp_item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.dataTable.setItem(row, self.data_columns.index('Comp.'), new_comp_item)
+            df_rows = self.get_df_rows()
+            components = self.pem_file.data.loc[df_rows, 'Component']
+            components = components.map(lambda x: new_comp)
+
+            self.pem_file.data.loc[df_rows, 'Component'] = components
+            self.fill_data_table()
         elif okPressed:
-            self.message.setWindowTitle('Invalid Component')
-            self.message.setText('Component must be one of [Z, X, Y]')
-            self.message.setStandardButtons(QMessageBox.Ok)
-            self.message.buttonClicked.connect(self.message.close)
-            self.message.exec()
+            self.message.information(self, 'Invalid Component', 'Component must be one of [Z, X, Y]')
 
     def rename_repeat_stations(self):
         """
@@ -1242,8 +1256,25 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         (i.e. any station ending in 1,4,6,9 to 0,5,5,0 respectively).
         :return: None
         """
+        def rename_repeat(station):
+            """
+            Applies the appropriate change to the station number
+            :param station: str, station number
+            :return: str, station number with number changed
+            """
+            station_num = int(re.findall('-?\d+', station)[0])
+            if str(station_num)[-1] in ['1', '4', '6', '9']:
+                if str(station_num)[-1] == '1' or str(station_num)[-1] == '6':
+                    print(f"station {station_num} changed to {station_num-1}")
+                    station_num -= 1
+                elif str(station_num)[-1] == '4' or str(station_num)[-1] == '9':
+                    print(f"station {station_num} changed to {station_num + 1}")
+                    station_num += 1
+                station = re.sub('\d+', str(station_num), station)
+            return station
+
         if self.num_repeat_stations > 0:
-            self.pem_file = self.file_editor.rename_repeats(self.pem_file)
+            self.pem_file.data.Station = self.pem_file.data.Station.map(rename_repeat)
             self.fill_data_table()
             self.refresh_tables_signal.emit()
             self.window().statusBar().showMessage(
@@ -1251,30 +1282,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
-    def get_sorted_data(self):
-        """
-        Returns the sorted data in the PEMFile
-        :return: PEMFile Data object
-        """
-        data = self.pem_file.data
-
-        if self.station_sort_rbtn.isChecked():
-            data = data.reindex(index=natsort.order_by_index(
-                data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading number']))))
-            # data.reset_index(drop=True, inplace=True)
-
-        elif self.component_sort_rbtn.isChecked():
-            data = data.reindex(index=natsort.order_by_index(
-                data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading number']))))
-            # data.reset_index(drop=True, inplace=True)
-
-        elif self.reading_num_sort_rbtn.isChecked():
-            data = data.reindex(index=natsort.order_by_index(
-                data.index, natsort.index_natsorted(zip(data['Reading number'], data['Reading index']))))
-            # data.reset_index(drop=True, inplace=True)
-
-        return data
-
+    @staticmethod
     def get_selected_rows(self, table):
         """
         Return the rows that are currently selected from a given table.
@@ -1282,6 +1290,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: List of rows that are selected.
         """
         return [model.row() for model in table.selectionModel().selectedRows()]
+
+    def get_df_rows(self):
+        rows = self.get_selected_rows(self.dataTable)
+        if not rows:
+            rows = range(self.dataTable.rowCount())
+
+        df_rows = [int(self.dataTable.item(row, self.dataTable_columns.index('index')).text()) for row in rows]
+        return df_rows
 
     def get_loop(self):
         """

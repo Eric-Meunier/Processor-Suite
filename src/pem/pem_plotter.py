@@ -87,11 +87,14 @@ def convert_station(station):
     Converts a single station name into a number, negative if the stations was S or W
     :return: Integer station number
     """
+    assert re.match('\d+', station), f'No numbers found in "{station}"'
+
     if re.match(r"\d+(S|W)", station):
         station = (-int(re.sub(r"\D", "", station)))
     else:
         station = (int(re.sub(r"\D", "", station)))
     return station
+
 
 def natural_sort(list):
     convert = lambda text: int(text) if text.isdigit() else text.lower()

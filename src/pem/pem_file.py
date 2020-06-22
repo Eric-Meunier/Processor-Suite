@@ -24,6 +24,8 @@ def convert_station(station):
     Converts a single station name into a number, negative if the stations was S or W
     :return: Integer station number
     """
+    assert re.match('\d+', station), f'No numbers found in "{station}"'
+
     if re.match(r"\d+(S|W)", station):
         station = (-int(re.sub(r"\D", "", station)))
     else:
@@ -1035,17 +1037,17 @@ class RADTool:
         """
         match = match.split()
         self.D = match[0]
-        match[1:] = np.array(match[1:], dtype=float)
+        match[1:] = np.array(match[1:])
 
         if self.D == 'D7':
             self.rotated = False
-            self.Hx = match[1]
-            self.gx = match[2]
-            self.Hy = match[3]
-            self.gy = match[4]
-            self.Hz = match[5]
-            self.gz = match[6]
-            self.T = match[7]
+            self.Hx = float(match[1])
+            self.gx = float(match[2])
+            self.Hy = float(match[3])
+            self.gy = float(match[4])
+            self.Hz = float(match[5])
+            self.gz = float(match[6])
+            self.T = float(match[7])
 
             self.id = ''.join([
                 str(self.Hx),
@@ -1058,11 +1060,11 @@ class RADTool:
             ])
 
         elif self.D == 'D5':
-            self.x = match[1]
-            self.y = match[2]
-            self.z = match[3]
-            self.roll_angle = match[4]
-            self.dip = match[5]
+            self.x = float(match[1])
+            self.y = float(match[2])
+            self.z = float(match[3])
+            self.roll_angle = float(match[4])
+            self.dip = float(match[5])
             if len(match) == 6:
                 self.rotated = False
 
@@ -1170,12 +1172,12 @@ if __name__ == '__main__':
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\BX-081 XYT.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\MX-198 XY.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-225G-18 CXYZ (flux).PEM'
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\PEM Rotation\PU-340 XY.PEM'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Nantou\PUX-021 XYT.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-237-19 XYZ (flux).PEM'
     p = PEMParser()
     file = p.parse(file)
     # file.split()
-    file.rotate(type='acc', soa=0)
+    # file.rotate(type='acc', soa=0)
     # file.average()
     # file.scale_current(10)
     out = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\test.PEM'

@@ -643,8 +643,8 @@ class CRS:
         self.system = crs_dict['System'] if crs_dict['System'] else None
         self.zone = crs_dict['Zone'] if crs_dict['System'] else None
         if self.zone:
-            self.Zone_number = int(re.search('\d+', self.zone).group())
-            self.North = True if 'N' in self.zone else False
+            self.zone_number = int(re.search('\d+', self.zone).group())
+            self.north = True if 'N' in self.zone else False
         else:
             self.zone_number = None
             self.north = None

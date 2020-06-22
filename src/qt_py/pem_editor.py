@@ -59,6 +59,8 @@ def convert_station(station):
     Converts a single station name into a number, negative if the stations was S or W
     :return: Integer station number
     """
+    assert re.match('\d+', station), f'No numbers found in "{station}"'
+
     if re.match(r"\d+(S|W)", station):
         station = (-int(re.sub(r"\D", "", station)))
     else:
@@ -737,10 +739,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             """
             crs = pem_file.get_crs()
             if crs:
-                self.systemCBox.setCurrentIndex(self.gps_systems.index(crs.System))
+                self.systemCBox.setCurrentIndex(self.gps_systems.index(crs.system))
                 if crs.system == 'UTM':
                     hemis = 'North' if crs.north is True else 'South'
-                    self.zoneCBox.setCurrentIndex(self.gps_zones.index(f"{crs.zone} {hemis}"))
+                    self.zoneCBox.setCurrentIndex(self.gps_zones.index(f"{crs.zone_number} {hemis}"))
                 self.datumCBox.setCurrentIndex(self.gps_datums.index(crs.datum))
 
         def share_header(pem_file):
@@ -2684,8 +2686,8 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Splitting', number=1)
-    # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\PEM Splitting\1410S (flux).PEM'
+    # pem_files = pg.get_pems(client='PEM Splitting', number=1)
+    pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
     mw.open_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
