@@ -1779,12 +1779,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
 
-        def get_crs():
-            crs = {'System': self.systemCBox.currentText(),
-                   'Zone': self.zoneCBox.currentText(),
-                   'Datum': self.datumCBox.currentText()}
-            return crs
-
         def get_save_file():
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
             self.dialog.setDirectory(default_path)
@@ -1830,7 +1824,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                            'LineLabels': self.plan_map_options.line_labels_cbox.isChecked(),
                            'HoleCollarLabels': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
                            'HoleDepthLabels': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
-                           'CRS': get_crs(),
+                           'CRS': self.get_crs(),
                            'LINPlots': self.output_lin_cbox.isChecked(),
                            'LOGPlots': self.output_log_cbox.isChecked(),
                            'STEPPlots': self.output_step_cbox.isChecked(),

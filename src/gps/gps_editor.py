@@ -7,6 +7,7 @@ from math import hypot
 import gpxpy
 import utm
 import numpy as np
+import cartopy.crs as ccrs
 from scipy import spatial
 
 
@@ -95,14 +96,20 @@ class TransmitterLoop:
         """
         return self.df['Easting'].sum() / self.df.shape[0], self.df['Northing'].sum() / self.df.shape[0]
 
+    def get_extents(self):
+        return self.df['Easting'].min(), self.df['Easting'].max(), \
+               self.df['Northing'].min(), self.df['Northing'].max(), \
+               self.df['Elevation'].min(), self.df['Elevation'].max()
+
     def get_loop(self, sorted=True, closed=False, crs=None):
         if sorted:
             df = self.get_sorted_loop()
         else:
-            df = copy.deepcopy(self.df)
+            df = self.df
 
         if closed and not df.duplicated().any():
-            df = df.append(self.df.iloc[0], ignore_index=True)
+            df = df.append(df.iloc[0], ignore_index=True)
+
         if crs:
             df = get_latlon(df, crs)
 
@@ -274,9 +281,11 @@ class BoreholeGeometry:
         collar = self.collar.get_collar().dropna()
         segments = self.segments.get_segments().dropna()
 
+        # Create the data frame
+        projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative Depth'])
+
         if collar.empty or segments.empty:
-            return None
-            # raise ValueError('Collar GPS is invalid.')
+            return projection
         else:
             # Interpolate the segments
             if num_segments:
@@ -322,13 +331,10 @@ class BoreholeGeometry:
                 depths = np.append(depths, depths[-1] - dz)
                 relative_depth = np.append(relative_depth, relative_depth[-1] + seg_l)
 
-            # Create the data frame
-            projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative Depth'])
             projection.Easting = pd.Series(eastings, dtype=float)
             projection.Northing = pd.Series(northings, dtype=float)
             projection.Elevation = pd.Series(depths, dtype=float)
             projection['Relative Depth'] = pd.Series(relative_depth, dtype=float)
-
             if crs:
                 projection = get_latlon(projection, crs)
             return projection
@@ -705,6 +711,17 @@ class CRS:
                 return False
         else:
             return None
+
+    def to_cartopy_crs(self):
+        """
+        Return the cartopy ccrs
+        :return: ccrs projection
+        """
+        if self.system == 'UTM':
+            # globe = ccrs.Globe(datum=re.sub(' 19', '', self.datum))
+            return ccrs.UTM(self.zone, southern_hemisphere=not self.north)
+        elif self.system == 'Latitude/Longitude':
+            return ccrs.Geodetic()
 
 
 class GPXEditor:

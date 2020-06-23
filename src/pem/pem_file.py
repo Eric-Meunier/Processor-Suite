@@ -187,7 +187,7 @@ class PEMFile:
                 crs = re.split('CRS: ', note)[-1]
                 s = crs.split()
                 system = s[0]
-                zone = f"{s[1]} {s[2]}"
+                zone = f"{s[2]} {s[3]}"
                 # zone = int(s[2])
                 # north = True if s[3][:-1] == 'North' else False
                 datum = f"{s[4]} {s[5]}"
@@ -249,35 +249,30 @@ class PEMFile:
             stations = [convert_station(station) for station in stations]
         return stations
 
-    # def get_profile_data(self):
-    #     """
-    #     Transforms the data from the PEM file in profile
-    #     :return: Dictionary where each key is a channel, and the values of those keys are a list of
-    #     dictionaries which contain the stations and readings of all readings of that channel. Each component has
-    #     such a dictionary.
-    #     """
-    #
-    #     components = self.get_components()
-    #     profile_data = {}
-    #
-    #     for component in components:
-    #         component_profile_data = {}
-    #         component_data = [station for station in self.data if station['Component'] == component]
-    #         num_channels = len(component_data[0]['Data'])
-    #
-    #         for channel in range(0, num_channels):
-    #             channel_data = []
-    #
-    #             for i, station in enumerate(component_data):
-    #                 reading = station['Data'][channel]
-    #                 station_number = int(convert_station(station['Station']))
-    #                 channel_data.append({'Station': station_number, 'Reading': reading})
-    #
-    #             component_profile_data[channel] = channel_data
-    #
-    #         profile_data[component] = component_profile_data
-    #
-    #     return profile_data
+    def get_gps_extents(self):
+        """
+        Return the minimum and maximum of each dimension of the GPS in the file
+        :return: tuple of float, xmin, xmax, ymin, ymax, zmin, zmax
+        """
+        loop = self.get_loop()
+
+        if self.is_borehole() and self.has_collar_gps():
+            collar = self.get_collar()
+            segments = self.get_segments()
+
+            if not segments.empty:
+                line = self.geometry.get_projection()
+            else:
+                line = collar
+        else:
+            line = self.get_line()
+
+        east = pd.concat([loop.Easting, line.Easting])
+        north = pd.concat([loop.Northing, line.Northing])
+        elev = pd.concat([loop.Elevation, line.Elevation])
+
+        xmin, xmax, ymin, ymax, zmin, zmax = east.min(), east.max(), north.min(), north.max(), elev.min(), elev.max()
+        return xmin, xmax, ymin, ymax, zmin, zmax
 
     def get_survey_type(self):
 
