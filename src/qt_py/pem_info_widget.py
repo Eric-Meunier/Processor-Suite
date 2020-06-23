@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMenu, QInputDi
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 from src.pem.pem_file_editor import PEMFileEditor
-from src.qt_py.ri_importer import RIFile
+from src.qt_py.ri_importer import RIParser
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -54,7 +54,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.pem_file = None
         self.ri_file = None
         self.file_editor = PEMFileEditor()
-        self.ri_editor = RIFile()
+        self.ri_editor = RIParser()
         self.dialog = QFileDialog()
         self.error = QErrorMessage()
         self.message = QMessageBox()

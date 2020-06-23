@@ -4,7 +4,7 @@ import re
 import copy
 import pandas as pd
 from math import hypot
-from src.gps.gpx_module import gpxpy
+import gpxpy
 import utm
 import numpy as np
 from scipy import spatial

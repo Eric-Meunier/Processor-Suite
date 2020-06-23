@@ -9,44 +9,19 @@ from PyQt5.QtWidgets import (QWidget, QMessageBox, QAbstractScrollArea, QTableWi
 __version__ = '0.0.0'
 
 
+def convert_station(station):
+    """
+    Converts a single station name into a number, negative if the stations was S or W
+    :return: Integer station number
+    """
+    if re.match(r"\d+(S|W)", station):
+        station = (-int(re.sub(r"\D", "", station)))
+    else:
+        station = (int(re.sub(r"\D", "", station)))
+    return station
+
+
 class RIFile:
-    def __init__(self):
-        self.filepath = None
-        self.header = {}
-        self.data = []
-        self.columns = ['Station', 'Component', 'Gain', 'Theoretical PP', 'Measured PP', 'S1', 'Last Step',
-                       '(M-T)*100/Tot', '(S1-T)*100/Tot', '(LS-T)*100/Tot', '(S2-S1)*100/Tot', 'S3%', 'S4%',
-                       'S5%', 'S6%', 'S7%', 'S8%', 'S9%', 'S10%']
-        self.survey_type = None
-
-    def open(self, filepath):
-        self.filepath = filepath
-        self.data = []
-
-        with open(filepath, 'rt') as in_file:
-            step_info = re.split('\$\$', in_file.read())[-1]
-            raw_file = step_info.splitlines()
-            raw_file = [line.split() for line in raw_file[1:]]  # Removing the header row
-            # Creating the remaining off-time channel columns for the header
-            [self.columns.append('Ch' + str(num + 11)) for num in range(len(raw_file[0]) - len(self.columns))]
-
-            for row in raw_file:
-                station = {}
-                for i, column in enumerate(self.columns):
-                    station[column] = row[i]
-                self.data.append(station)
-        return self
-
-    def get_components(self):
-        components = []
-        for row in self.data:
-            component = row['Component']
-            if component not in components:
-                components.append(row['Component'])
-        return components
-
-
-class RIParser:
     """
     Class that represents a Step response RI file
     """
@@ -84,6 +59,65 @@ class RIParser:
             if component not in components:
                 components.append(row['Component'])
         return components
+
+    def get_ri_profile(self, component):
+        """
+        Transforms the RI data as a profile to be plotted.
+        :param component: The component that is being plotted (i.e. X, Y, Z)
+        :return: The data in profile mode
+        """
+        profile_data = {}
+        keys = self.columns
+        component_data = list(filter(lambda d: d['Component'] == component, self.data))
+
+        for key in keys:
+            if key is not 'Gain' and key is not 'Component':
+                if key is 'Station':
+                    key = 'Stations'
+                    profile_data[key] = [convert_station(station['Station']) for station in component_data]
+                else:
+                    profile_data[key] = [float(station[key]) for station in component_data]
+        return profile_data
+
+#
+# class RIParser:
+#     """
+#     Class that represents a Step response RI file
+#     """
+#     def __init__(self):
+#         self.filepath = None
+#         self.header = {}
+#         self.data = []
+#         self.columns = ['Station', 'Component', 'Gain', 'Theoretical PP', 'Measured PP', 'S1', 'Last Step',
+#                        '(M-T)*100/Tot', '(S1-T)*100/Tot', '(LS-T)*100/Tot', '(S2-S1)*100/Tot', 'S3%', 'S4%',
+#                        'S5%', 'S6%', 'S7%', 'S8%', 'S9%', 'S10%']
+#         self.survey_type = None
+#
+#     def open(self, filepath):
+#         self.filepath = filepath
+#         self.data = []
+#
+#         with open(filepath, 'rt') as in_file:
+#             step_info = re.split('\$\$', in_file.read())[-1]
+#             raw_file = step_info.splitlines()
+#             raw_file = [line.split() for line in raw_file[1:]]  # Removing the header row
+#             # Creating the remaining off-time channel columns for the header
+#             [self.columns.append('Ch' + str(num + 11)) for num in range(len(raw_file[0]) - len(self.columns))]
+#
+#             for row in raw_file:
+#                 station = {}
+#                 for i, column in enumerate(self.columns):
+#                     station[column] = row[i]
+#                 self.data.append(station)
+#         return self
+#
+#     def get_components(self):
+#         components = []
+#         for row in self.data:
+#             component = row['Component']
+#             if component not in components:
+#                 components.append(row['Component'])
+#         return components
 
 
 class BatchRIImporter(QWidget):

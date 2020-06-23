@@ -4,10 +4,8 @@ import sys
 import os
 import re
 import csv
-from PyQt5 import (QtCore, QtGui, uic)
+from PyQt5 import (QtGui, uic)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction)
-from src.gps.gpx_module import gpxpy
-from src.gps.gpx_module.gpxpy import gpx
 
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
@@ -184,7 +182,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
             return
 
         savepath = file[0]
-        gpx = gpxpy.gpx.GPX()
+        gpx = src._legacy.gpx_module.gpxpy.gpx.GPX()
 
         if not self.system_box.currentText():
             self.message.information(self, 'Error', 'Coordinate system cannot be empty.')
@@ -211,7 +209,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
                 else:
                     # UTM converted to lat lon
                     lat, lon = utm.to_latlon(easting, northing, zone_number=zone_number, northern=north)
-                    waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=name, comment=desc)
+                    waypoint = src._legacy.gpx_module.gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=name, comment=desc)
                     gpx.waypoints.append(waypoint)
 
         elif self.system_box.currentText() == 'Lat/Lon':
@@ -224,7 +222,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
                 except ValueError:
                     pass
                 else:
-                    waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=name, comment=desc)
+                    waypoint = src._legacy.gpx_module.gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=name, comment=desc)
                     gpx.waypoints.append(waypoint)
 
         with open(savepath, 'w') as f:

@@ -12,14 +12,12 @@ import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  
 import matplotlib.ticker as ticker
 import pyqtgraph as pg
 from folium import FeatureGroup
-from folium.plugins import MeasureControl, MiniMap
+from folium.plugins import MiniMap
 from PyQt5 import QtGui, QtCore, uic, QtWebEngineWidgets
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.gps.gpx_module import gpxpy
-from src.gps.gpx_module.gpxpy import gpx
 from shutil import copyfile
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -600,7 +598,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         Save the loop and collar coordinates to a GPX file.
         :return: None
         """
-        gpx = gpxpy.gpx.GPX()
+        gpx = src._legacy.gpx_module.gpxpy.gpx.GPX()
 
         hole_name = self.hole_name_edit.text()
         if not hole_name:
@@ -612,18 +610,18 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         # Add the loop coordinates to the GPX. Creates a route for the loop and adds the corners as waypoints.
         loop_lonlat = self.get_loop_lonlat()
         loop_lonlat.append(loop_lonlat[0])
-        route = gpxpy.gpx.GPXRoute()
+        route = src._legacy.gpx_module.gpxpy.gpx.GPXRoute()
         for i, coord in enumerate(loop_lonlat):
             lon = coord[0]
             lat = coord[1]
-            waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
+            waypoint = src._legacy.gpx_module.gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
             gpx.waypoints.append(waypoint)
             route.points.append(waypoint)
         gpx.routes.append(route)
 
         # Add the collar coordinates to the GPX as a waypoint.
         hole_lonlat= self.get_collar_lonlat()
-        waypoint = gpxpy.gpx.GPXWaypoint(latitude=hole_lonlat[1], longitude=hole_lonlat[0], name=hole_name, description=hole_name)
+        waypoint = src._legacy.gpx_module.gpxpy.gpx.GPXWaypoint(latitude=hole_lonlat[1], longitude=hole_lonlat[0], name=hole_name, description=hole_name)
         gpx.waypoints.append(waypoint)
 
         save_path = self.dialog.getSaveFileName(self, 'Save GPX File', None, 'GPX Files (*.GPX);; All files(*.*)')[0]
@@ -1295,7 +1293,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         Save the loop and collar coordinates to a GPX file.
         :return: None
         """
-        gpx = gpxpy.gpx.GPX()
+        gpx = src._legacy.gpx_module.gpxpy.gpx.GPX()
 
         grid_name = self.grid_name_edit.text()
         if not grid_name:
@@ -1307,11 +1305,11 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         # Add the loop coordinates to the GPX. Creates a route for the loop and adds the corners as waypoints.
         loop_lonlat = self.get_loop_lonlat()
         loop_lonlat.append(loop_lonlat[0])
-        route = gpxpy.gpx.GPXRoute()
+        route = src._legacy.gpx_module.gpxpy.gpx.GPXRoute()
         for i, coord in enumerate(loop_lonlat):
             lon = coord[0]
             lat = coord[1]
-            waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
+            waypoint = src._legacy.gpx_module.gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
             gpx.waypoints.append(waypoint)
             route.points.append(waypoint)
         gpx.routes.append(route)
@@ -1324,8 +1322,8 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
 
             for coord in coords:
                 station = coord[2]
-                waypoint = gpxpy.gpx.GPXWaypoint(latitude=coord[1], longitude=coord[0],
-                                                 name=f"L{line_name.strip()}-{station}", description=station)
+                waypoint = src._legacy.gpx_module.gpxpy.gpx.GPXWaypoint(latitude=coord[1], longitude=coord[0],
+                                                                        name=f"L{line_name.strip()}-{station}", description=station)
                 gpx.waypoints.append(waypoint)
 
         save_path = self.dialog.getSaveFileName(self, 'Save GPX File', grid_name, 'GPX Files (*.GPX);; All files(*.*)')[0]
