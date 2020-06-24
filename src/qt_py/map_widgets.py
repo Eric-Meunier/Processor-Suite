@@ -5,8 +5,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5 import (QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QFileDialog,
-                             QErrorMessage)
+from PyQt5.QtWidgets import (QWidget, QFileDialog, QErrorMessage, QMessageBox, QApplication)
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
@@ -379,64 +378,22 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
     can be un-split, or if there are any split files, it will split the rest. Averages all files.
     """
 
-    def __init__(self, pem_files, parent=None):
+    def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('Contour Map Viewer')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map3.png')))
-        self.error = QErrorMessage()
-        self.file_editor = PEMFileEditor()
+        self.channel_list_edit.setEnabled(False)
 
-        self.cmap = ContourMap()
         self.parent = parent
-        self.pem_files = [pem_file for pem_file in pem_files if 'surface' in pem_file.survey_type.lower()]
-        # Must be at least 2 eligible surface PEM files.
-        if len(self.pem_files) < 2:
-            raise TypeError("There are fewer than 2 eligible surface PEM files")
+        self.pem_files = None
+        self.components = None
+        self.channel_times = None
+        self.channel_pairs = None
 
-        # Averages any file not already averaged.
-        for pem_file in self.pem_files:
-            if not pem_file.is_averaged():
-                print(f"Averaging {os.path.basename(pem_file.filepath)}")
-                pem_file = self.file_editor.average(pem_file)
-
-        # Either all files must be split or all un-split
-        if not all([pem_file.is_split() for pem_file in pem_files]):
-            for pem_file in self.pem_files:
-                print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
-                pem_file = self.file_editor.split_channels(pem_file)
-
-        self.components = [pem_file.get_components() for pem_file in self.pem_files]
-        self.components = list(set([item for sublist in self.components for item in sublist]))
-        self.components.append('TF')
-
-        # Disables the radio buttons of any component for which there is no data.
-        if 'Z' not in self.components:
-            self.z_rbtn.setEnabled(False)
-            self.z_rbtn.setChecked(False)
-        elif 'X' not in self.components:
-            self.x_rbtn.setEnabled(False)
-            self.x_rbtn.setChecked(False)
-        elif 'Y' not in self.components:
-            self.y_rbtn.setEnabled(False)
-            self.y_rbtn.setChecked(False)
-
-        # Checks the number of channels in each PEM file. The largest number becomes the maximum of the channel spinbox.
-        pem_file_channels = np.array([int(pem_file.header.get('NumChannels')) for pem_file in self.pem_files])
-        max_channels = pem_file_channels.max()
-        self.channel_spinbox.setMaximum(max_channels)
-
-        # Channel pairs created for use when finding the center-gate time of the current selected channel.
-        self.channel_times = self.pem_files[np.argmax(pem_file_channels)].header.get('ChannelTimes')
-        self.channel_pairs = list(map(lambda x, y: (x, y), self.channel_times[:-1], self.channel_times[1:]))
-
-        # If all files are split, removes the gap channel. Only an issue for split files.
-        if all([pem_file.is_split() for pem_file in self.pem_files]):
-            # Remove the gap channel for split files
-            for i, pair in enumerate(self.channel_pairs):
-                if float(pair[0]) >= -0.0001 and float(pair[1]) <= 0.000048:
-                    print(f"Removing channel {i} from the channel pairs")
-                    self.channel_pairs.pop(i)
+        self.error = QErrorMessage()
+        self.message = QMessageBox()
+        self.cmap = ContourMap()
 
         # Signals
         self.channel_spinbox.valueChanged.connect(self.draw_map)
@@ -457,39 +414,75 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             lambda: self.channel_list_edit.setEnabled(self.channel_list_rbtn.isChecked()))
         self.save_figure_btn.clicked.connect(self.save_figure)
 
+        # Figure and canvas
         self.figure = Figure(figsize=(11, 8.5))
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = ContourMapToolbar(self.canvas, self)
         self.toolbar_layout.addWidget(self.toolbar)
         self.toolbar.setFixedHeight(30)
         self.map_layout.addWidget(self.canvas)
+
+    def open(self, pem_files):
+        """
+        Open the PEMFiles and plot the map
+        :param pem_files: list, PEMFile objects to plot
+        :return: None
+        """
+        self.pem_files = [file for file in pem_files if not file.is_borehole()]
+
+        # Must be at least 2 eligible surface PEM files.
+        if len(self.pem_files) < 2:
+            self.message.information('Insufficient PEM Files', 'Must have at least 2 PEM files to plot')
+            return
+
+        # Averages any file not already averaged.
+        for pem_file in self.pem_files:
+            if not pem_file.is_averaged():
+                print(f"Averaging {pem_file.filename}")
+                pem_file = pem_file.average()
+
+        # Either all files must be split or all un-split
+        if not all([pem_file.is_split() for pem_file in self.pem_files]):
+            for pem_file in self.pem_files:
+                print(f"Splitting channels for {pem_file.filename}")
+                pem_file = pem_file.split()
+
+        self.components = np.append(np.unique(np.array([file.get_components() for file in self.pem_files])), 'TF')
+
+        # Disables the radio buttons of any component for which there is no data.
+        if 'Z' not in self.components:
+            self.z_rbtn.setEnabled(False)
+            self.z_rbtn.setChecked(False)
+        elif 'X' not in self.components:
+            self.x_rbtn.setEnabled(False)
+            self.x_rbtn.setChecked(False)
+        elif 'Y' not in self.components:
+            self.y_rbtn.setEnabled(False)
+            self.y_rbtn.setChecked(False)
+
+        # Checks the number of channels in each PEM file. The largest number becomes the maximum of the channel spinbox.
+        pem_file_channels = np.array([file.number_of_channels for file in self.pem_files])
+        max_channels = pem_file_channels.max()
+        self.channel_spinbox.setMaximum(max_channels)
+        self.channel_times = self.pem_files[np.argmax(pem_file_channels)].channel_times
+
         self.draw_map()
 
-        self.channel_list_edit.setEnabled(False)
-
-    def get_channel_time(self, channel):
-        """
-        Retrieve the gate-center time of a channel based on the channel times table.
-        :param channel: int: channel number
-        :return: float: channel center time.
-        """
-        current_pair = self.channel_pairs[channel]
-        channel_center = (float(current_pair[1]) - float(current_pair[0])) / 2 + float(current_pair[0])
-        channel_time = channel_center
-        return channel_time
-
     def draw_map(self):
+        """
+        Plot the map on the canvas
+        """
 
         component = self.get_selected_component().upper()
         if component not in self.components:
             return
 
         channel = self.channel_spinbox.value()
-        channel_time = self.get_channel_time(channel)
+        channel_time = self.channel_times.loc[channel]['Center']
         self.time_label.setText(f"{channel_time * 1000:.3f}ms")
 
         try:
-            self.cmap.plot_contour(self.figure, self.pem_files, component, channel,
+            self.cmap.plot_contour(self.pem_files, self.figure, component, channel,
                                    draw_grid=self.grid_cbox.isChecked(),
                                    channel_time=channel_time,
                                    plot_loops=self.plot_loops_cbox.isChecked(),
@@ -574,6 +567,207 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                 os.startfile(path)
 
 
+# class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
+#     """
+#     Window that hosts the ContourMap. Filters the given PEMFiles to only include surface surveys. Either all files
+#     can be un-split, or if there are any split files, it will split the rest. Averages all files.
+#     """
+#
+#     def __init__(self, pem_files, parent=None):
+#         super().__init__()
+#         self.setupUi(self)
+#         self.setWindowTitle('Contour Map Viewer')
+#         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map3.png')))
+#         self.error = QErrorMessage()
+#         self.file_editor = PEMFileEditor()
+#
+#         self.cmap = ContourMap()
+#         self.parent = parent
+#         self.pem_files = [pem_file for pem_file in pem_files if 'surface' in pem_file.survey_type.lower()]
+#         # Must be at least 2 eligible surface PEM files.
+#         if len(self.pem_files) < 2:
+#             raise TypeError("There are fewer than 2 eligible surface PEM files")
+#
+#         # Averages any file not already averaged.
+#         for pem_file in self.pem_files:
+#             if not pem_file.is_averaged():
+#                 print(f"Averaging {os.path.basename(pem_file.filepath)}")
+#                 pem_file = self.file_editor.average(pem_file)
+#
+#         # Either all files must be split or all un-split
+#         if not all([pem_file.is_split() for pem_file in pem_files]):
+#             for pem_file in self.pem_files:
+#                 print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
+#                 pem_file = self.file_editor.split_channels(pem_file)
+#
+#         self.components = [pem_file.get_components() for pem_file in self.pem_files]
+#         self.components = list(set([item for sublist in self.components for item in sublist]))
+#         self.components.append('TF')
+#
+#         # Disables the radio buttons of any component for which there is no data.
+#         if 'Z' not in self.components:
+#             self.z_rbtn.setEnabled(False)
+#             self.z_rbtn.setChecked(False)
+#         elif 'X' not in self.components:
+#             self.x_rbtn.setEnabled(False)
+#             self.x_rbtn.setChecked(False)
+#         elif 'Y' not in self.components:
+#             self.y_rbtn.setEnabled(False)
+#             self.y_rbtn.setChecked(False)
+#
+#         # Checks the number of channels in each PEM file. The largest number becomes the maximum of the channel spinbox.
+#         pem_file_channels = np.array([int(pem_file.header.get('NumChannels')) for pem_file in self.pem_files])
+#         max_channels = pem_file_channels.max()
+#         self.channel_spinbox.setMaximum(max_channels)
+#
+#         # Channel pairs created for use when finding the center-gate time of the current selected channel.
+#         self.channel_times = self.pem_files[np.argmax(pem_file_channels)].header.get('ChannelTimes')
+#         self.channel_pairs = list(map(lambda x, y: (x, y), self.channel_times[:-1], self.channel_times[1:]))
+#
+#         # If all files are split, removes the gap channel. Only an issue for split files.
+#         if all([pem_file.is_split() for pem_file in self.pem_files]):
+#             # Remove the gap channel for split files
+#             for i, pair in enumerate(self.channel_pairs):
+#                 if float(pair[0]) >= -0.0001 and float(pair[1]) <= 0.000048:
+#                     print(f"Removing channel {i} from the channel pairs")
+#                     self.channel_pairs.pop(i)
+#
+#         # Signals
+#         self.channel_spinbox.valueChanged.connect(self.draw_map)
+#         self.z_rbtn.clicked.connect(self.draw_map)
+#         self.x_rbtn.clicked.connect(self.draw_map)
+#         self.y_rbtn.clicked.connect(self.draw_map)
+#         self.tf_rbtn.clicked.connect(self.draw_map)
+#         self.plot_loops_cbox.toggled.connect(self.draw_map)
+#         self.plot_lines_cbox.toggled.connect(self.draw_map)
+#         self.plot_stations_cbox.toggled.connect(self.draw_map)
+#         self.label_loops_cbox.toggled.connect(self.draw_map)
+#         self.label_lines_cbox.toggled.connect(self.draw_map)
+#         self.label_stations_cbox.toggled.connect(self.draw_map)
+#         self.plot_elevation_cbox.toggled.connect(self.draw_map)
+#         self.grid_cbox.toggled.connect(self.draw_map)
+#         self.title_box_cbox.toggled.connect(self.draw_map)
+#         self.channel_list_rbtn.toggled.connect(
+#             lambda: self.channel_list_edit.setEnabled(self.channel_list_rbtn.isChecked()))
+#         self.save_figure_btn.clicked.connect(self.save_figure)
+#
+#         self.figure = Figure(figsize=(11, 8.5))
+#         self.canvas = FigureCanvas(self.figure)
+#         self.toolbar = ContourMapToolbar(self.canvas, self)
+#         self.toolbar_layout.addWidget(self.toolbar)
+#         self.toolbar.setFixedHeight(30)
+#         self.map_layout.addWidget(self.canvas)
+#         self.draw_map()
+#
+#         self.channel_list_edit.setEnabled(False)
+#
+#     def get_channel_time(self, channel):
+#         """
+#         Retrieve the gate-center time of a channel based on the channel times table.
+#         :param channel: int: channel number
+#         :return: float: channel center time.
+#         """
+#         current_pair = self.channel_pairs[channel]
+#         channel_center = (float(current_pair[1]) - float(current_pair[0])) / 2 + float(current_pair[0])
+#         channel_time = channel_center
+#         return channel_time
+#
+#     def draw_map(self):
+#
+#         component = self.get_selected_component().upper()
+#         if component not in self.components:
+#             return
+#
+#         channel = self.channel_spinbox.value()
+#         channel_time = self.get_channel_time(channel)
+#         self.time_label.setText(f"{channel_time * 1000:.3f}ms")
+#
+#         try:
+#             self.cmap.plot_contour(self.figure, self.pem_files, component, channel,
+#                                    draw_grid=self.grid_cbox.isChecked(),
+#                                    channel_time=channel_time,
+#                                    plot_loops=self.plot_loops_cbox.isChecked(),
+#                                    plot_lines=self.plot_lines_cbox.isChecked(),
+#                                    plot_stations=bool(
+#                                        self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
+#                                    label_lines=bool(
+#                                        self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
+#                                    label_loops=bool(
+#                                        self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
+#                                    label_stations=bool(
+#                                        self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
+#                                    elevation_contours=self.plot_elevation_cbox.isChecked(),
+#                                    title_box=self.title_box_cbox.isChecked())
+#         except Exception as e:
+#             self.error.showMessage(f"The following error occured while creating the contour plot:\n{str(e)}")
+#         else:
+#             self.canvas.draw()
+#
+#     def get_selected_component(self):
+#         if self.z_rbtn.isChecked():
+#             return 'Z'
+#         elif self.x_rbtn.isChecked():
+#             return 'X'
+#         elif self.y_rbtn.isChecked():
+#             return 'Y'
+#         elif self.tf_rbtn.isChecked():
+#             return 'TF'
+#
+#     def save_figure(self):
+#         """
+#         Create a PDF with the current selected channel or a list of channels.
+#         :return: None
+#         """
+#         if self.pem_files:
+#             if __name__ == '__main__':
+#                 path = r"C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\test.pdf"
+#             else:
+#                 default_path = os.path.abspath(self.pem_files[0].filepath)
+#                 path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', default_path,
+#                                                         'PDF Files (*.PDF);;PNG Files (*.PNG);;JPG Files (*.JPG')
+#             if path:
+#                 print(f"Saving PDF to {path}")
+#                 with PdfPages(path) as pdf:
+#                     # Create a figure just for saving, which is cleared after every save and closed at the end
+#                     save_fig = plt.figure(figsize=(11, 8.5))
+#
+#                     # Print plots from the list of channels if it's enabled
+#                     if self.channel_list_edit.isEnabled():
+#                         text = self.channel_list_edit.text()
+#                         try:
+#                             channels = [int(re.match('\d+', text)[0]) for text in re.split(',| ', text)]
+#                             print(f"Saving contour map plots for channels {channels}")
+#                         except IndexError:
+#                             self.error.showMessage(f"No numbers found in the list of channels")
+#                             return
+#                     else:
+#                         channels = [self.channel_spinbox.value()]
+#
+#                     for channel in channels:
+#                         channel_time = self.get_channel_time(channel)
+#                         fig = self.cmap.plot_contour(save_fig, self.pem_files, self.get_selected_component(),
+#                                                      channel,
+#                                                      draw_grid=self.grid_cbox.isChecked(),
+#                                                      channel_time=channel_time,
+#                                                      plot_loops=self.plot_loops_cbox.isChecked(),
+#                                                      plot_lines=self.plot_lines_cbox.isChecked(),
+#                                                      plot_stations=bool(
+#                                                          self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
+#                                                      label_lines=bool(
+#                                                          self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
+#                                                      label_loops=bool(
+#                                                          self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
+#                                                      label_stations=bool(
+#                                                          self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
+#                                                      elevation_contours=self.plot_elevation_cbox.isChecked(),
+#                                                      title_box=self.title_box_cbox.isChecked())
+#
+#                         pdf.savefig(fig, orientation='landscape')
+#                         save_fig.clear()
+#                     plt.close(save_fig)
+#                 os.startfile(path)
+
+
 class ContourMapToolbar(NavigationToolbar):
     """
     Custom Matplotlib toolbar for ContourMap.
@@ -581,3 +775,17 @@ class ContourMapToolbar(NavigationToolbar):
     # only display the buttons we need
     toolitems = [t for t in NavigationToolbar.toolitems if
                  t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
+
+
+if __name__ == '__main__':
+    from src.pem.pem_getter import PEMGetter
+    app = QApplication(sys.argv)
+
+    pg = PEMGetter()
+    files = pg.get_pems(client='Kazzinc', number=5)
+
+    cmap = ContourMapViewer()
+    cmap.open(files)
+    cmap.show()
+
+    app.exec_()

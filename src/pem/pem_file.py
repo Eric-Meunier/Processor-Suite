@@ -195,14 +195,14 @@ class PEMFile:
                 return CRS().from_dict({'System': system, 'Zone': zone, 'Datum': datum})
         return None
 
-    def get_loop(self, sorted=True, closed=False, crs=None):
-        return self.loop.get_loop(sorted=sorted, closed=closed, crs=crs)
+    def get_loop(self, sorted=True, closed=False):
+        return self.loop.get_loop(sorted=sorted, closed=closed)
 
-    def get_line(self, sorted=True, crs=None):
-        return self.line.get_line(sorted=sorted, crs=crs)
+    def get_line(self, sorted=True):
+        return self.line.get_line(sorted=sorted)
 
     def get_collar(self, crs=None):
-        return self.geometry.get_collar(crs=crs)
+        return self.geometry.get_collar()
 
     def get_segments(self):
         return self.geometry.get_segments()

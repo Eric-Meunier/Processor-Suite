@@ -25,6 +25,15 @@ class BaseGPS:
     def to_csv(self, header=False):
         return self.df.to_csv(index=False, header=header)
 
+    def get_extents(self):
+        """
+        Return the min and max of each dimension of the GPS
+        :return: xmin, xmax, ymin, ymax, zmin, zmax
+        """
+        return self.df['Easting'].min(), self.df['Easting'].max(), \
+               self.df['Northing'].min(), self.df['Northing'].max(), \
+               self.df['Elevation'].min(), self.df['Elevation'].max()
+
     def to_latlon(self):
         """
         Convert the data frame coordinates to Lat Lon in decimal format
@@ -221,11 +230,6 @@ class TransmitterLoop(BaseGPS):
         :return: tuple: easting centroid and northing centroid
         """
         return self.df['Easting'].sum() / self.df.shape[0], self.df['Northing'].sum() / self.df.shape[0]
-
-    def get_extents(self):
-        return self.df['Easting'].min(), self.df['Easting'].max(), \
-               self.df['Northing'].min(), self.df['Northing'].max(), \
-               self.df['Elevation'].min(), self.df['Elevation'].max()
 
     def get_loop(self, sorted=True, closed=False):
         if sorted:
@@ -706,8 +710,7 @@ class CRS:
         :return: ccrs projection
         """
         if self.system == 'UTM':
-            # globe = ccrs.Globe(datum=re.sub(' 19', '', self.datum))
-            return ccrs.UTM(self.zone, southern_hemisphere=not self.north)
+            return ccrs.UTM(self.zone_number, southern_hemisphere=not self.north)
         elif self.system == 'Latitude/Longitude':
             return ccrs.Geodetic()
 
