@@ -1131,7 +1131,7 @@ class PlanMap(MapPlotter):
         if __name__ == '__main__':
             self.crs = self.pem_files[0].get_crs()
             if not self.crs:
-                self.crs = CRS({'System': 'UTM', 'Zone': '18 North', 'Datum': 'NAD 83'})
+                self.crs = CRS().from_dict({'System': 'UTM', 'Zone': '18 North', 'Datum': 'NAD 83'})
         else:
             self.crs = kwargs.get('CRS')
 
@@ -2315,7 +2315,7 @@ class GeneralMap(MapPlotMethods):
                     self.crs = self.get_crs(file.get_crs())
                     break
                 except ValueError:
-                    print(f"{os.path.basename(file.filepath)} has no valid CRS, moving to the next file...")
+                    print(f"{file.filename} has no valid CRS, moving to the next file...")
                     pass
         else:
             self.crs = self.get_crs(kwargs.get('CRS')) if kwargs else None

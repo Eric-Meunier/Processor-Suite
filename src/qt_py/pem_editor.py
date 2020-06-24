@@ -18,7 +18,8 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
 # from pyqtspinner.spinner import WaitingSpinner
 import geomag
 
-from src.gps.gps_editor import SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeGeometry, GPXEditor, CRS
+from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeGeometry, BoreholeSegments,
+                                GPXEditor, CRS)
 from src.gps.gpx_creator import GPXCreator
 
 from src.pem.pem_file import PEMFile, PEMParser
@@ -816,41 +817,44 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Adds GPS information from the gps_files to the PEMFile object
         :param gps_files: Text or gpx file(s) with GPS information in them
         """
-        def read_gps_files(gps_files):  # Merges files together if there are multiple files
-            if len(gps_files) > 1:
-                merged_file = []
-                for file in gps_files:
-                    with open(file, mode='rt') as in_file:
-                        contents = in_file.readlines()
-                        merged_file.append(contents)
-                return merged_file
-            else:
-                with open(gps_files[0], mode='rt') as in_file:
-                    file = in_file.readlines()
-                return file
+        def merge_files(gps_files):
+            """
+            Merge contents of files into one list
+            :param gps_files: list of filepath str to open and read
+            :return: str
+            """
+            merged_file = []
+            for file in gps_files:
+                with open(file, mode='rt') as in_file:
+                    contents = in_file.readlines()
+                    merged_file.append(contents)
+            return merged_file
 
-        if len(gps_files) > 0:
-            file = read_gps_files(gps_files)
-            pem_info_widget = self.stackedWidget.currentWidget()
-            current_tab = pem_info_widget.tabs.currentWidget()
+        file = merge_files(gps_files)
+        pem_info_widget = self.stackedWidget.currentWidget()
+        current_tab = pem_info_widget.tabs.currentWidget()
+        crs = self.get_crs()
 
-            if current_tab == pem_info_widget.Station_GPS_Tab:
-                line = SurveyLine(file)
-                self.line_adder.add_df(line.get_line(sorted=self.autoSortStationsCheckbox.isChecked()))
-                self.line_adder.write_widget = pem_info_widget
-            elif current_tab == pem_info_widget.Geometry_Tab:
-                collar = BoreholeCollar(file)
-                geom = BoreholeGeometry(file)
-                if not collar.df.empty:
-                    pem_info_widget.fill_gps_table(collar.df, pem_info_widget.collarGPSTable)
-                if not geom.df.empty:
-                    pem_info_widget.fill_gps_table(geom.df, pem_info_widget.geometryTable)
-            elif current_tab == pem_info_widget.Loop_GPS_Tab:
-                loop = TransmitterLoop(file)
-                self.loop_adder.add_df(loop.get_loop(sorted=self.autoSortLoopsCheckbox.isChecked()))
-                self.loop_adder.write_widget = pem_info_widget
-            else:
-                pass
+        if current_tab == pem_info_widget.Station_GPS_Tab:
+            line = SurveyLine(file, crs=crs)
+            self.line_adder.write_widget = pem_info_widget
+            self.line_adder.add_df(line.get_line(sorted=self.autoSortStationsCheckbox.isChecked()))
+
+        elif current_tab == pem_info_widget.Geometry_Tab:
+            collar = BoreholeCollar(file, crs=crs)
+            segments = BoreholeSegments(file)
+            if not collar.df.empty:
+                pem_info_widget.fill_gps_table(collar.df, pem_info_widget.collarGPSTable)
+            if not segments.df.empty:
+                pem_info_widget.fill_gps_table(segments.df, pem_info_widget.geometryTable)
+
+        elif current_tab == pem_info_widget.Loop_GPS_Tab:
+            loop = TransmitterLoop(file, crs=crs)
+            self.loop_adder.write_widget = pem_info_widget
+            self.loop_adder.add_df(loop.get_loop(sorted=self.autoSortLoopsCheckbox.isChecked()))
+
+        else:
+            pass
 
     def open_ri_file(self, ri_files):
         """
@@ -1767,7 +1771,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         datum = self.datumCBox.currentText()
 
         crs_dict = {'System': system, 'Zone': zone, 'Datum': datum}
-        crs = CRS(crs_dict)
+        crs = CRS().from_dict(crs_dict)
         return crs
 
     def print_plots(self, selected_files=False):

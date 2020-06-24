@@ -65,17 +65,19 @@ class PEMFile:
         self.loop_polarity = header.get('Loop polarity')
         self.channel_times = header.get('Channel times')
 
-        self.loop = TransmitterLoop(loop_coords, name=self.loop_name)
-        if self.is_borehole():
-            collar = BoreholeCollar(line_coords, name=self.line_name)
-            segments = BoreholeSegments(line_coords, name=self.line_name)
-            self.geometry = BoreholeGeometry(collar, segments, name=self.line_name)
-        else:
-            self.line = SurveyLine(line_coords, name=self.line_name)
         self.notes = notes
         self.data = data
         self.filepath = filepath
         self.filename = os.path.basename(filepath)
+
+        crs = self.get_crs()
+        self.loop = TransmitterLoop(loop_coords, crs=crs)
+        if self.is_borehole():
+            collar = BoreholeCollar(line_coords, crs=crs)
+            segments = BoreholeSegments(line_coords)
+            self.geometry = BoreholeGeometry(collar, segments)
+        else:
+            self.line = SurveyLine(line_coords, crs=crs)
 
         self.unsplit_data = None
         self.unaveraged_data = None
@@ -88,7 +90,7 @@ class PEMFile:
             return False
 
     def is_fluxgate(self):
-        if 'fluxgate' in self.get_survey_type().lower():
+        if 'fluxgate' in self.get_survey_type().lower() or 'squid' in self.get_survey_type().lower():
             return True
         else:
             return False
@@ -188,11 +190,9 @@ class PEMFile:
                 s = crs.split()
                 system = s[0]
                 zone = f"{s[2]} {s[3]}"
-                # zone = int(s[2])
-                # north = True if s[3][:-1] == 'North' else False
                 datum = f"{s[4]} {s[5]}"
                 # print(f"CRS is {system} Zone {zone} {'North' if north else 'South'}, {datum}")
-                return CRS({'System': system, 'Zone': zone, 'Datum': datum})
+                return CRS().from_dict({'System': system, 'Zone': zone, 'Datum': datum})
         return None
 
     def get_loop(self, sorted=True, closed=False, crs=None):

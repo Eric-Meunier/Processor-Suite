@@ -3,41 +3,103 @@ import os
 import re
 import copy
 import pandas as pd
+import geopandas as gpd
 from math import hypot
 import gpxpy
 import utm
+from shapely.geometry import Point, asMultiPoint
 import numpy as np
 import cartopy.crs as ccrs
 from scipy import spatial
 
 
-def get_latlon(df, crs):
-    """
-    Converts and adds latitude and longitude columns to a data frame
-    :param df: pandas DataFrame of one of the GPS objects
-    :param crs: dict: CRS dictionary
-    :return: pandas DataFrame
-    """
-    if not df.empty:
-        zone_num = crs.zone_number
-        north = crs.north
-        latlon = df.apply(lambda x: utm.to_latlon(x.Easting, x.Northing, zone_num, northern=north), axis=1)
-        lat = latlon.map(lambda x: x[0])
-        lon = latlon.map(lambda x: x[1])
-        df["Latitude"] = lat
-        df["Longitude"] = lon
-    return df
+class BaseGPS:
+
+    def __init__(self):
+        self.df = None
+        self.crs = None
+
+    def to_string(self, header=False):
+        return self.df.to_string(index=False, header=header)
+
+    def to_csv(self, header=False):
+        return self.df.to_csv(index=False, header=header)
+
+    def to_latlon(self):
+        """
+        Convert the data frame coordinates to Lat Lon in decimal format
+        :return: GPS object
+        """
+        if any([not self.crs, self.df.empty, not self.crs.is_valid()]):
+            return
+        elif self.crs.is_latlon():
+            return self
+
+        latlon_crs = CRS().from_dict({'System': 'Lat/Lon',
+                                      'Zone': None,
+                                      'Datum': self.crs.datum})
+
+        zone_num = self.crs.zone_number
+        north = self.crs.north
+        latlon_df = self.df.apply(lambda x: utm.to_latlon(x.Easting, x.Northing, zone_num, northern=north),
+                                  axis=1)
+        self.df["Northing"] = latlon_df.map(lambda x: x[0])
+        self.df["Easting"] = latlon_df.map(lambda x: x[1])
+        self.crs = latlon_crs
+        return self
+
+    def to_nad27(self):
+        """
+        Convert the data frame coordinates to NAD 27
+        :return: GPS object
+        """
+        if any([not self.crs, self.df.empty, not self.crs.is_valid()]):
+            return
+        elif self.crs.is_nad27():
+            return self
+
+        if self.crs.is_latlon():
+            df = copy.deepcopy(self.df)
+        else:
+            df = copy.deepcopy(self.to_latlon().df)
+
+        # Create point objects for each coordinate
+        mpoints = asMultiPoint(df.loc[:, ['Easting', 'Northing']].to_numpy())
+        gdf = gpd.GeoSeries(list(mpoints), crs={'init': self.crs.get_epsg()})
+
+        # Convert the point objects to NAD 27
+        nad27_gdf = gdf.to_crs({'init': 'EPSG:4267'})
+        # Convert the point objects back to UTM coordinates
+        utm_gdf = nad27_gdf.map(lambda p: utm.from_latlon(p.y, p.x))
+
+        # Assign the converted UTM columns to the data frame
+        self.df['Easting'], self.df['Northing'] = utm_gdf.map(lambda x: x[0]), utm_gdf.map(lambda x: x[1])
+
+        nad27_crs = CRS().from_dict({'System': 'UTM',
+                                     'Zone Number': utm_gdf.loc[0][2],
+                                     'Zone Letter': utm_gdf.loc[0][3],
+                                     'Datum': 'NAD 27'})
+        self.crs = nad27_crs
+        return self
+
+    def to_nad83(self):
+        pass
+
+    def to_wgs84(self):
+        pass
 
 
-class TransmitterLoop:
+class TransmitterLoop(BaseGPS):
     """
     Transmitter loop GPS class
     """
 
-    def __init__(self, loop, name=None, cull_loop=True):
+    def __init__(self, loop, cull_loop=True, crs=None):
         """
         :param loop: either a str filepath of a text file or a pandas data frame containing loop GPS
         """
+        super().__init__()
+        self.crs = crs
         self.parser = GPSParser()
         if isinstance(loop, list) or isinstance(loop, str):
             loop = self.parser.parse_loop_gps(loop)
@@ -49,7 +111,6 @@ class TransmitterLoop:
         self.df.Elevation = self.df.Elevation.astype(float)
         self.df.Unit = self.df.Unit.astype(str)
 
-        self.name = name
         if cull_loop:
             self.cull_loop()
 
@@ -62,7 +123,7 @@ class TransmitterLoop:
         if self.df.shape[0] > 100:
             # Cutting down the loop size to being no more than 100 points
             num_to_cull = self.df.shape[0] - 99
-            print(f"Culling {num_to_cull} coordinates from loop {self.name}")
+            print(f"Culling {num_to_cull} coordinates from loop")
             factor = num_to_cull / self.df.shape[0]
             n = int(1/factor)
             self.df = self.df[self.df.index % n != 0]
@@ -101,7 +162,7 @@ class TransmitterLoop:
                self.df['Northing'].min(), self.df['Northing'].max(), \
                self.df['Elevation'].min(), self.df['Elevation'].max()
 
-    def get_loop(self, sorted=True, closed=False, crs=None):
+    def get_loop(self, sorted=True, closed=False):
         if sorted:
             df = self.get_sorted_loop()
         else:
@@ -110,27 +171,20 @@ class TransmitterLoop:
         if closed and not df.duplicated().any():
             df = df.append(df.iloc[0], ignore_index=True)
 
-        if crs:
-            df = get_latlon(df, crs)
-
         return df
 
-    def to_string(self, header=False):
-        return self.df.to_string(index=False, header=header)
 
-    def to_csv(self, header=False):
-        return self.df.to_csv(index=False, header=header)
-
-
-class SurveyLine:
+class SurveyLine(BaseGPS):
     """
     Survey Line class object representing the survey line GPS information
     """
 
-    def __init__(self, line, name=None):
+    def __init__(self, line, crs=None):
         """
         :param line: str filepath of a text file OR a pandas data frame containing line GPS
         """
+        super().__init__()
+        self.crs = crs
         self.parser = GPSParser()
         if isinstance(line, list) or isinstance(line, str):
             line = self.parser.parse_station_gps(line)
@@ -143,7 +197,6 @@ class SurveyLine:
         self.df.Station = self.df.Station.astype(str)
         # if self.df.Station.hasnans:
         #     raise ValueError('File is missing station numbers.')
-        self.name = name
 
     def get_sorted_line(self):
         """
@@ -178,32 +231,26 @@ class SurveyLine:
             df.drop('Distance', axis=1, inplace=True)
         return df
 
-    def get_line(self, sorted=True, crs=None):
+    def get_line(self, sorted=True):
         if sorted:
             df = self.get_sorted_line()
         else:
             df = self.df
 
-        if crs:
-            df = get_latlon(df, crs)
         return df
 
-    def to_string(self, header=False):
-        return self.df.to_string(index=False, header=header)
 
-    def to_csv(self, header=False):
-        return self.df.to_csv(index=False, header=header)
-
-
-class BoreholeCollar:
+class BoreholeCollar(BaseGPS):
     """
     Class object representing the collar GPS
     """
 
-    def __init__(self, hole, name=None):
+    def __init__(self, hole, crs=None):
         """
         :param line: str filepath of a text file OR a pandas data frame containing collar GPS
         """
+        super().__init__()
+        self.crs = crs
         self.parser = GPSParser()
         if isinstance(hole, list) or isinstance(hole, str):
             hole = self.parser.parse_collar_gps(hole)
@@ -216,30 +263,21 @@ class BoreholeCollar:
         self.df.Elevation = self.df.Elevation.astype(float)
         self.df.Unit = self.df.Unit.astype(str)
 
-        self.name = name
-
-    def get_collar(self, crs=None):
+    def get_collar(self):
         df = self.df
-        if crs:
-            df = get_latlon(df, crs)
         return df
 
-    def to_string(self, header=False):
-        return self.df.to_string(index=False, header=header)
 
-    def to_csv(self, header=False):
-        return self.df.to_csv(index=False, header=header)
-
-
-class BoreholeSegments:
+class BoreholeSegments(BaseGPS):
     """
     Class representing the segments section of a borehole in a PEM file
     """
 
-    def __init__(self, segments, name=None):
+    def __init__(self, segments):
         """
         :param hole: str filepath of a text file OR a pandas data frame containing hole geometry
         """
+        super().__init__()
         self.parser = GPSParser()
         if isinstance(segments, list) or isinstance(segments, str):
             segments = self.parser.parse_segments(segments)
@@ -251,28 +289,19 @@ class BoreholeSegments:
         self.df.Unit = self.df.Unit.astype(str)
         self.df.Depth = self.df.Depth.astype(float)
 
-        self.name = name
-
     def get_segments(self):
         return self.df
-
-    def to_string(self, header=False):
-        return self.df.to_string(index=False, header=header)
-
-    def to_csv(self, header=False):
-        return self.df.to_csv(index=False, header=header)
 
 
 class BoreholeGeometry:
     """
     Class that represents the geometry of a hole, with collar and segments.
     """
-    def __init__(self, collar, segments, name=None):
+    def __init__(self, collar, segments):
         self.collar = collar
         self.segments = segments
-        self.name = name
 
-    def get_projection(self, num_segments=None, crs=None):
+    def get_projection(self, num_segments=None):
         """
         Uses the segments to create a 3D projection of a borehole trace. Can be broken up into segments and interpolated.
         :param num_segments: Desired number of segments to be output
@@ -284,7 +313,7 @@ class BoreholeGeometry:
         # Create the data frame
         projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative Depth'])
 
-        if collar.empty or segments.empty:
+        if collar.empty or segments.empty or collar.crs.is_latlon():
             return projection
         else:
             # Interpolate the segments
@@ -335,12 +364,12 @@ class BoreholeGeometry:
             projection.Northing = pd.Series(northings, dtype=float)
             projection.Elevation = pd.Series(depths, dtype=float)
             projection['Relative Depth'] = pd.Series(relative_depth, dtype=float)
-            if crs:
-                projection = get_latlon(projection, crs)
+            # if crs:
+            #     projection = get_latlon(projection, crs)
             return projection
 
-    def get_collar(self, crs=None):
-        return self.collar.get_collar(crs=crs)
+    def get_collar(self):
+        return self.collar.get_collar()
 
     def get_segments(self):
         return self.segments.get_segments()
@@ -356,160 +385,12 @@ class BoreholeGeometry:
         return collar_csv + '\n' + segment_csv
 
 
-# class GPSEditor:
-#     """
-#     Class for editing Station, Loop, and Collar gps, and hole geometry segments
-#     :param gps_data: List of lists. Format of the items in the lists doesn't matter
-#     """
-#
-#     def __init__(self):
-#         self.parser = GPSParser()
-#
-#     def sort_loop(self, gps):
-#         loop_gps = self.format_gps(self.parser.parse_loop_gps(copy.copy(gps)))
-#         if not loop_gps:
-#             return None
-#         loop_coords_tuples = []  # Used to find the center point
-#         loop_coords = []  # The actual full coordinates
-#
-#         # Splitting up the coordinates from a string to something usable
-#         for coord in loop_gps:
-#             coord_tuple = coord[0], coord[1]
-#             # coord_item = [float(coord[0]), float(coord[1]), float(coord[2]), coord[3]]
-#             if coord_tuple not in loop_coords_tuples:
-#                 loop_coords_tuples.append(coord_tuple)
-#             if coord not in loop_coords:
-#                 loop_coords.append(coord)
-#
-#         # Finds the center point using the tuples.
-#         center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples), [len(loop_coords_tuples)] * 2))
-#
-#         # The function used in 'sorted' to figure out how to sort it
-#         def lambda_func(coord_item):
-#             coord = (coord_item[0], coord_item[1])
-#             return (math.degrees(math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360
-#
-#         sorted_coords = sorted(loop_coords, key=lambda_func)
-#         if len(sorted_coords) > 100:
-#             sorted_coords = self.cull_loop(sorted_coords)
-#         return sorted_coords
-#
-#     def get_loop_center(self, gps):
-#         loop_gps = self.format_gps(self.parser.parse_loop_gps(copy.copy(gps)))
-#         if not loop_gps:
-#             return None
-#         loop_coords_tuples = []  # Easting and Northing
-#
-#         # Splitting up the coordinates from a string to something usable
-#         for coord in loop_gps:
-#             coord_tuple = coord[0], coord[1]
-#             if coord_tuple not in loop_coords_tuples:
-#                 loop_coords_tuples.append(coord_tuple)
-#
-#         # Finds the center point using the tuples.
-#         center = list(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), loop_coords_tuples),
-#                           [len(loop_coords_tuples)] * 2))
-#         return tuple(center)
-#
-#     def sort_line(self, gps):
-#         station_gps = self.format_gps(self.parser.parse_station_gps(copy.copy(gps)))
-#         if not station_gps:
-#             return None
-#         line_coords = []
-#         line_coords_tuples = []
-#
-#         # Splitting up the coordinates from a string to something usable
-#         for coord in station_gps:
-#             coord_tuple = [float(coord[0]), float(coord[1])]
-#             if coord not in line_coords:
-#                 line_coords.append(coord)
-#                 line_coords_tuples.append(coord_tuple)
-#
-#         distances = spatial.distance.cdist(line_coords_tuples, line_coords_tuples, 'euclidean')
-#         index_of_max = np.argmax(distances, axis=0)[0]  # Will return the indexes of both ends of the line
-#         end_point = line_coords[index_of_max]
-#
-#         def distance(q):
-#             # Return the Euclidean distance between points p and q.
-#             p = end_point
-#             return hypot(p[0] - q[0], p[1] - q[1])
-#
-#         sorted_coords = sorted(line_coords, key=distance, reverse=True)
-#         return sorted_coords
-#
-#     def format_gps(self, gps):
-#         """
-#         Formats the numbers in station and loop gps
-#         :param gps_data: List without tags
-#         :return: List of strings
-#         """
-#         def format_row(row):
-#             for i, item in enumerate(row):
-#                 if i <= 2:
-#                     row[i] = float(item)
-#                 else:
-#                     row[i] = int(item)
-#             return row
-#
-#         if not gps:
-#             return None
-#
-#         formatted_gps = []
-#         for row in gps:
-#             formatted_gps.append(format_row(row))
-#         return formatted_gps
-#
-#     def cull_loop(self, gps):
-#         """
-#         Delete evenly-spaced entries to reduce the number to less than 100.
-#         :param gps: list: rows of loop GPS
-#         :return: list: Loop GPS with less than 100 items.
-#         """
-#         loop_gps = self.parser.parse_loop_gps(copy.copy(gps))
-#         if loop_gps:
-#             # Cutting down the loop size to being no more than 100 points
-#             num_to_cull = len(loop_gps) - 99
-#             factor = num_to_cull / len(loop_gps)
-#             n = int(1/factor)
-#             del loop_gps[n-1::n]
-#         return loop_gps
-#
-#     def get_station_gps(self, gps, sorted=True):
-#         # Doesn't check if it's actually surface line GPS. Can return hole collar inadvertently
-#         gps = self.format_gps(self.parser.parse_station_gps(gps))
-#         if sorted:
-#             return self.sort_line(gps)
-#         else:
-#             return gps
-#
-#     def get_loop_gps(self, gps, sorted=True):
-#         gps = self.format_gps(self.parser.parse_loop_gps(gps))
-#         if sorted:
-#             return self.sort_loop(gps)
-#         else:
-#             return self.format_gps(gps)
-#
-#     def get_geometry(self, file):
-#         segments = self.parser.parse_segments(file)
-#         if not segments:
-#             return []
-#         return segments
-#
-#     def get_collar_gps(self, file):
-#         gps = self.parser.parse_collar_gps(file)
-#         if not gps:
-#             return []
-#         return self.format_gps(gps)
-
-
 class GPSParser:
     """
     Class for parsing loop gps, station gps, and hole geometry
     """
 
     def __init__(self):
-        # self.re_station_gps = re.compile(
-        #     r'(?P<Easting>\d{4,}\.?\d*)\W{1,3}(?P<Northing>\d{4,}\.?\d*)\W{1,3}(?P<Elevation>\d{1,4}\.?\d*)\W+(?P<Units>0|1)\W+?(?P<Station>-?\d+[NESWnesw]?)')
         self.re_station_gps = re.compile(
             r'(?P<Easting>-?\d{4,}\.?\d*)[\s,]{1,3}(?P<Northing>-?\d{4,}\.?\d*)[\s,]{1,3}(?P<Elevation>-?\d{1,4}\.?\d*)[\s,]+(?P<Units>0|1)[\s,]*(?P<Station>-?\d+)?')
         self.re_loop_gps = re.compile(
@@ -572,7 +453,7 @@ class GPSParser:
                 match = re.split("[\s,]+", match.group(0))
                 matched_gps.append(match)
 
-        gps = pd.DataFrame(matched_gps, columns=cols)
+        gps = gpd.GeoDataFrame(matched_gps, columns=cols)
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
         gps['Station'] = gps['Station'].map(convert_station)
@@ -602,7 +483,7 @@ class GPSParser:
                 match = re.split("[\s,]+", match.group(0))
                 matched_gps.append(match)
 
-        gps = pd.DataFrame(matched_gps, columns=cols)
+        gps = gpd.GeoDataFrame(matched_gps, columns=cols)
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
         return gps
@@ -668,7 +549,7 @@ class GPSParser:
                 matched_gps.append(match)
                 break
 
-        gps = pd.DataFrame(matched_gps, columns=cols)
+        gps = gpd.GeoDataFrame(matched_gps, columns=cols)
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
         return gps
@@ -678,17 +559,35 @@ class CRS:
     """
     Class to represent Coordinate Reference Systems (CRS) information
     """
+    def __init__(self):
+        self.system = None
+        self.zone = None
+        self.zone_number = None
+        self.zone_letter = None
+        self.north = None
+        self.datum = None
 
-    def __init__(self, crs_dict):
-        self.system = crs_dict['System'] if crs_dict['System'] else None
-        self.zone = crs_dict['Zone'] if crs_dict['System'] else None
-        if self.zone:
-            self.zone_number = int(re.search('\d+', self.zone).group())
-            self.north = True if 'N' in self.zone else False
-        else:
-            self.zone_number = None
-            self.north = None
-        self.datum = crs_dict['Datum'] if crs_dict['System'] else None
+    def from_dict(self, crs_dict):
+        keys = crs_dict.keys()
+
+        self.system = crs_dict['System']
+        if 'Zone' in keys:
+            zone = crs_dict['Zone']
+            if zone:
+                self.zone_number = int(re.search('\d+', zone).group())
+                self.north = True if 'N' in zone.upper() else False
+        if 'Zone Number' in keys:
+            self.zone_number = crs_dict['Zone Number']
+        if 'North' in keys:
+            self.north = crs_dict['North']
+        if 'Zone Letter' in keys:
+            self.zone_letter = crs_dict['Zone Letter']
+            if self.zone_letter.lower() in ['c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm']:
+                self.north = False
+            else:
+                self.north = True
+        self.datum = crs_dict['Datum']
+        return self
 
     def is_valid(self):
         """
@@ -699,7 +598,7 @@ class CRS:
             if self.system == 'Lat/Lon' and self.datum:
                 return True
             elif self.system == 'UTM':
-                if all([self.system, self.zone, self.zone_number, self.north is not None, self.datum]):
+                if all([self.system, self.zone_number, self.north is not None, self.datum]):
                     return True
         return False
 
@@ -712,6 +611,12 @@ class CRS:
         else:
             return None
 
+    def is_latlon(self):
+        if self.system == 'Lat/Lon':
+            return True
+        else:
+            return False
+
     def to_cartopy_crs(self):
         """
         Return the cartopy ccrs
@@ -722,6 +627,21 @@ class CRS:
             return ccrs.UTM(self.zone, southern_hemisphere=not self.north)
         elif self.system == 'Latitude/Longitude':
             return ccrs.Geodetic()
+
+    def get_epsg(self):
+        """
+        Return the EPSG code for the datum
+        :return: str
+        """
+
+        if self.datum == 'WGS 84':
+            return 'EPSG:4326'
+        elif self.datum == 'NAD 27':
+            return 'EPSG:4267'
+        elif self.datum == 'NAD 83':
+            return 'EPSG:4269'
+        else:
+            return None
 
 
 class GPXEditor:
@@ -768,22 +688,23 @@ class GPXEditor:
 
 
 if __name__ == '__main__':
-    # from src.pem.pem_getter import PEMGetter
-    # pg = PEMGetter()
-    # pem_files = pg.get_pems()
+    from src.pem.pem_getter import PEMGetter
+    pg = PEMGetter()
+    pem_files = pg.get_pems(client='Raglan', number=1)
     # gps_parser = GPSParser()
     # gpx_editor = GPXEditor()
-
+    crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 83'})
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\src\gps\sample_files\45-1.csv'
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\AF19003 loop and collar.txt'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\AF19003 loop and collar.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\PERKOA SW LOOP 1.txt'
     # collar = BoreholeCollar(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt')
     # segments = BoreholeSegments(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\718-3759gyro.seg')
     # geometry = BoreholeGeometry(collar, segments)
     # geometry.get_projection(num_segments=1000)
-    loop = TransmitterLoop(file, name=os.path.basename(file))
-    loop.to_csv()
+    loop = TransmitterLoop(pem_files[0].loop.df, crs=crs)
+    loop.to_nad27()
     # line = SurveyLine(file, name=os.path.basename(file))
     # print(loop.get_sorted_loop(), '\n', loop.get_loop())
     # gps_parser.parse_collar_gps(file)
