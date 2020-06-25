@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-
+import copy
 import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5 import (QtGui, uic)
@@ -513,22 +513,21 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
     def save_figure(self):
         """
-        Create a PDF with the current selected channel or a list of channels.
+        Svae to PDF the current selected channel or a list of channels.
         :return: None
         """
         if self.pem_files:
             if __name__ == '__main__':
-                path = r"C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\test.pdf"
+                path = r"C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\test.pdf"
             else:
                 default_path = os.path.abspath(self.pem_files[0].filepath)
                 path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', default_path,
                                                         'PDF Files (*.PDF);;PNG Files (*.PNG);;JPG Files (*.JPG')
             if path:
+                # Create a new instance of ContourMap
+                cmap_save = ContourMap()
                 print(f"Saving PDF to {path}")
                 with PdfPages(path) as pdf:
-                    # Create a figure just for saving, which is cleared after every save and closed at the end
-                    save_fig = plt.figure(figsize=(11, 8.5))
-
                     # Print plots from the list of channels if it's enabled
                     if self.channel_list_edit.isEnabled():
                         text = self.channel_list_edit.text()
@@ -542,8 +541,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                         channels = [self.channel_spinbox.value()]
 
                     for channel in channels:
-                        channel_time = self.get_channel_time(channel)
-                        fig = self.cmap.plot_contour(save_fig, self.pem_files, self.get_selected_component(),
+                        channel_time = self.channel_times.loc[channel]['Center']
+                        fig = cmap_save.plot_contour(self.pem_files, self.get_selected_component(),
                                                      channel,
                                                      draw_grid=self.grid_cbox.isChecked(),
                                                      channel_time=channel_time,
@@ -561,8 +560,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                                                      title_box=self.title_box_cbox.isChecked())
 
                         pdf.savefig(fig, orientation='landscape')
-                        save_fig.clear()
-                    plt.close(save_fig)
+                        fig.clear()
+                    plt.close(fig)
                 os.startfile(path)
 
 
