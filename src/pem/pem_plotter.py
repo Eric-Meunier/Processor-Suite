@@ -784,7 +784,8 @@ class MapPlotter:
                                      va='center',
                                      zorder=zorder + 1,
                                      color=color,
-                                     path_effects=self.label_buffer)
+                                     path_effects=self.label_buffer,
+                                     clip_on=True)
                 line_labels.append(line_label)
 
             if annotate:
@@ -2400,276 +2401,269 @@ class ContourMap(MapPlotter):
         custom_cmap.set_over('magenta')
         self.colormap = custom_cmap
 
+    @staticmethod
+    def add_title(figure, loop_names, title_box=True):
+        """
+        Adds the title box to the plot. Removes any existing text first.
+        """
+        # Remove any previous title texts
+        for text in reversed(figure.texts):
+            text.remove()
+
+        # Draw the title
+        if title_box:
+            center_pos = 0.5
+            top_pos = 0.95
+
+            client = pem_files[0].client
+            grid = pem_files[0].grid
+            loops = natsort.humansorted(loop_names)
+            if len(loops) > 3:
+                loop_text = f"Loop: {loops[0]} to {loops[-1]}"
+            else:
+                loop_text = f"Loop: {', '.join(loops)}"
+
+            # coord_sys = f"{system}{' Zone ' + zone.title() if zone else ''}, {datum.upper()}"
+            # scale = f"1:{map_scale:,.0f}"
+
+            crone_text = figure.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
+                                     fontname='Century Gothic',
+                                     fontsize=11,
+                                     ha='center',
+                                     zorder=10)
+
+            survey_text = figure.text(center_pos, top_pos - 0.036, f"Cubic-Interpolation Contour Map"
+                                      f"\n{pem_files[0].survey_type.title()} Pulse EM Survey",
+                                      family='cursive',
+                                      style='italic',
+                                      fontname='Century Gothic',
+                                      fontsize=9,
+                                      ha='center',
+                                      zorder=10)
+
+            header_text = figure.text(center_pos, top_pos - 0.046, f"{client}\n{grid}\n{loop_text}",
+                                      fontname='Century Gothic',
+                                      fontsize=9.5,
+                                      va='top',
+                                      ha='center',
+                                      zorder=10)
+
+    @staticmethod
+    def add_rectangle(figure):
+        rect = patches.Rectangle(xy=(0.02, 0.02),
+                                 width=0.96,
+                                 height=0.96,
+                                 linewidth=0.7,
+                                 edgecolor='black',
+                                 facecolor='none',
+                                 transform=figure.transFigure)
+        figure.patches.append(rect)
+
+    @staticmethod
+    def format_figure(ax, cbar_ax, draw_grid=True):
+        # Clear the axes and color bar
+        ax.cla()
+        cbar_ax.cla()
+        # Hide the right and bottom spines
+        ax.spines['top'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        # Draw the grid
+        if draw_grid:
+            ax.grid()
+        else:
+            ax.grid(False)
+        # Set the X and Y axis to be the same size
+        ax.set_aspect('equal')
+        ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
+        # Move the Y tick labels to the right
+        ax.yaxis.tick_right()
+        ax.set_yticklabels(ax.get_yticklabels(), rotation=0, va='center')
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
+        ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}N'))
+        ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}E'))
+
     def plot_contour(self, pem_files, figure, component, channel,
-                     channel_time='', plot_loops=True, label_loops=False, label_lines=True,
+                     channel_time=None, plot_loops=True, label_loops=False, label_lines=True,
                      plot_lines=True, plot_stations=False, label_stations=False, elevation_contours=False,
                      draw_grid=False, title_box=False):
         """
         Plots the filled contour map on a given Matplotlib Figure object.
-        :param fig: Matplotlib Figure object
-        :param pem_files: list: PEMFile objects. Must be surface surveys, must have station GPS, and must all be
+        :param pem_files: list, PEMFile objects. Must be surface surveys, must have station GPS, and must all be
         of the same general survey type (nT/s vs pT).
-        :param component: str: Component to plot (X, Y, Z, or Total Field (TF).
-        :param channel: int: Channel to plot.
-        :param channel_time: float: The time of the center of the channel's gate.
-        :param plot_loops: bool: Whether or not to plot the loop
-        :param label_loops: bool: Show or hide loop labels
-        :param label_lines: bool: Show or hide line labels
-        :param plot_lines: bool: Show or hide surface lines
-        :param plot_stations: bool: Show or hide station markers
-        :param label_stations: bool: Show or hide label of each station
-        :param elevation_contours: bool: Show or hide elevation contour lines
-        :param draw_grid: bool: Show or hide grid
-        :param title_box: bool: Show or hide title information
+        :param figure: Matplotlib Figure object
+        :param component: str, Component to plot (X, Y, Z, or Total Field (TF).
+        :param channel: int, Channel to plot.
+        :param channel_time: float, The time of the center of the channel's gate.
+        :param plot_loops: bool, Whether or not to plot the loop
+        :param label_loops: bool, Show or hide loop labels
+        :param label_lines: bool, Show or hide line labels
+        :param plot_lines: bool, Show or hide surface lines
+        :param plot_stations: bool, Show or hide station markers
+        :param label_stations: bool, Show or hide label of each station
+        :param elevation_contours: bool, Show or hide elevation contour lines
+        :param draw_grid: bool, Show or hide grid
+        :param title_box: bool, Show or hide title information
         :return: None
         """
 
-        def plot_pem_gps(pem_file):
+        def plot_pem_gps():
             """
-            Plots the GPS information (lines, stations, loops) from the PEM file
-            :param pem_file: PEMFile object
-            :return: None
+            Plots the GPS information (lines, stations, loops) from the PEM files
             """
+            for pem_file in pem_files:
+                # Plot the line
+                line = pem_file.line
+                if all([pem_file.has_station_gps(), plot_lines, line not in lines]):
+                    lines.append(line)
+                    self.plot_line(pem_file, figure,
+                                   annotate=label_stations,
+                                   label=label_lines,
+                                   plot_ticks=plot_stations,
+                                   color=self.color)
 
-            line_gps = pem_file.get_station_coords()
-            # Plotting the line and adding the line label
-            if line_gps and line_gps not in lines:
-                lines.append(line_gps)
-                eastings, northings = [float(coord[0]) for coord in line_gps], [float(coord[1]) for coord in line_gps]
-                angle = math.degrees(math.atan2(northings[-1] - northings[0], eastings[-1] - eastings[0]))
+                # Plot the loop
+                loop = pem_file.loop
+                if all([pem_file.has_loop_gps(), plot_loops, loop not in loops]):
+                    loops.append(loop)
+                    self.plot_loop(pem_file, figure,
+                                   annotate=False,
+                                   label=label_loops,
+                                   color=self.color)
 
-                if abs(angle) > 90:
-                    x, y = eastings[-1], northings[-1]
-                    # Flip the label if it's upside-down
-                    angle = angle - 180
-                else:
-                    x, y = eastings[0], northings[0]
-
-                if plot_lines:
-                    line_plot = ax.plot(eastings, northings, '-',
-                                        color=self.color,
-                                        label='Surface Line',
-                                        zorder=2)  # Plot the line
-                if plot_stations:
-                    station_marking = ax.plot(eastings, northings, 'o',
-                                              markersize=3,
-                                              color=self.color,
-                                              markerfacecolor='w',
-                                              markeredgewidth=0.3,
-                                              label='Station',
-                                              zorder=2,
-                                              clip_on=True)  # Plot the line
-                if label_lines:
-                    line_label = ax.text(x, y, f" {pem_file.header.get('LineHole')} ",
-                                         rotation=angle,
-                                         rotation_mode='anchor',
-                                         ha='right',
-                                         va='center',
-                                         zorder=5,
-                                         color=self.color,
-                                         path_effects=self.label_buffer,
-                                         clip_on=True)
-                if label_stations:
-                    for station in line_gps:
-                        station_label = ax.text(float(station[0]), float(station[1]), f"{station[-1]}",
-                                                fontsize=7,
-                                                path_effects=self.label_buffer,
-                                                ha='center',
-                                                va='bottom',
-                                                color='k',
-                                                clip_on=True)
-
-            # Plot the loop
-            if plot_loops:
-                loop_gps = pem_file.get_loop_coords()
-                if loop_gps and loop_gps not in loops:
-                    loops.append(loop_gps)
-                    eastings, northings = [float(coord[0]) for coord in loop_gps], [float(coord[1]) for coord in loop_gps]
-                    eastings.insert(0, eastings[-1])  # To close up the loop
-                    northings.insert(0, northings[-1])
-
-                    loop_plot = ax.plot(eastings, northings, '-',
-                                        color='blue',
-                                        label='Loop',
-                                        zorder=2)  # Plot the line
-
-                    if label_loops:
-                        loop_center = self.gps_editor().get_loop_center(copy.copy(loop_gps))
-                        loop_label = ax.text(loop_center[0], loop_center[1], f" {pem_file.header.get('Loop')} ",
-                                             ha='center',
-                                             va='center',
-                                             fontsize=7,
-                                             zorder=5,
-                                             color='blue',
-                                             path_effects=self.label_buffer,
-                                             clip_on=True)
-
-        def format_figure():
-            ax.cla()
-            cbar_ax.cla()
-            ax.spines['top'].set_visible(False)
-            ax.spines['left'].set_visible(False)
-            if draw_grid:
-                ax.grid()
-            else:
-                ax.grid(False)
-            ax.set_aspect('equal')
-            ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
-            ax.yaxis.tick_right()
-            ax.set_yticklabels(ax.get_yticklabels(), rotation=0, va='center')
-            ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
-            ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}N'))
-            ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}E'))
-
-        def add_title():
+        def get_contour_data(component, channel):
             """
-            Adds the title box to the plot. Removes any existing text first.
-            :return: None
+            Create a pandas Series of tuples containing the GPS and associated channel + component reading for each
+            station in the LineGPS
+            :param component: str, which component's data to retrieve. Either X, Y, Z, or TF
+            :param channel: int, which channel's data to retrieve
+            :return: pandas Series of tuples
             """
-
-            for text in reversed(fig.texts):
-                text.remove()
-
-            if title_box:
-                center_pos = 0.5
-                top_pos = 0.95
-
-                client = pem_files[0].header.get("Client")
-                grid = pem_files[0].header.get("Grid")
-                loops = natsort.humansorted(loop_names)
-                if len(loops) > 3:
-                    loop_text = f"Loop: {loops[0]} to {loops[-1]}"
-                else:
-                    loop_text = f"Loop: {', '.join(loops)}"
-
-                # coord_sys = f"{system}{' Zone ' + zone.title() if zone else ''}, {datum.upper()}"
-                # scale = f"1:{map_scale:,.0f}"
-
-                crone_text = fig.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
-                                      fontname='Century Gothic',
-                                      fontsize=11,
-                                      ha='center',
-                                      zorder=10)
-
-                survey_text = fig.text(center_pos, top_pos - 0.036, f"Cubic-Interpolation Contour Map"
-                                       f"\n{pem_files[0].survey_type.title()} Pulse EM Survey",
-                                       family='cursive',
-                                       style='italic',
-                                       fontname='Century Gothic',
-                                       fontsize=9,
-                                       ha='center',
-                                       zorder=10)
-
-                header_text = fig.text(center_pos, top_pos - 0.046, f"{client}\n{grid}\n{loop_text}",
-                                       fontname='Century Gothic',
-                                       fontsize=9.5,
-                                       va='top',
-                                       ha='center',
-                                       zorder=10)
-
-        def add_rectangle():
-            rect = patches.Rectangle(xy=(0.02, 0.02),
-                                     width=0.96,
-                                     height=0.96,
-                                     linewidth=0.7,
-                                     edgecolor='black',
-                                     facecolor='none',
-                                     transform=fig.transFigure)
-            fig.patches.append(rect)
-
-        def get_arrays(component, channel):
             xs = np.array([])
             ys = np.array([])
             zs = np.array([])
             ds = np.array([])
 
-            # Create the lists of eastings (xs), northings (ys), elevation (zs) and data values (ds)
-            for pem_file in pem_files:
-                line_gps = pem_file.get_line_coords()
-                pem_data = pem_file.get_data()
-                pem_stations = [convert_station(station) for station in pem_file.get_unique_stations()]
-                pem_channels = int(pem_file.header.get("NumChannels"))
-                loop_name = pem_file.header.get("Loop")
+            def get_contour_row(row):
+                """
+                Retrieve the PEM reading for the component and channel and return it along with the GPS information
+                for the station
+                :param row: LineGPS data frame row
+                :return: tuple, Easting, Northing, Elevation, and PEM reading
+                """
+                easting = row.Easting
+                northing = row.Northing
+                elevation = row.Elevation
+                station_num = convert_station(row.Station)
 
-                if line_gps:
-                    for gps in line_gps:
-                        easting = float(gps[0])
-                        northing = float(gps[1])
-                        elevation = float(gps[2])
-                        station_num = int(gps[-1])
-
-                        if station_num in pem_stations:
-                            if channel <= pem_channels:
-                                station_data = list(
-                                    filter(lambda station: convert_station(station['Station']) == station_num,
-                                           pem_data))
-                                if component.lower() == 'tf':
-                                    all_component_data = [component['Data'][channel] for component in station_data]
-                                    data = math.sqrt(
-                                        sum([component_data ** 2 for component_data in all_component_data]))
-                                else:
-                                    component_data = list(
-                                        filter(lambda station: station['Component'].lower() == component.lower(),
-                                               station_data))
-                                    if component_data:
-                                        data = float(component_data[0]['Data'][channel])
-                                    else:
-                                        data = None
-
-                                if data:
-                                    # Loop name appended here in-case no data is being plotted for the current PEM file
-                                    if loop_name not in loop_names:
-                                        loop_names.append(loop_name)
-                                    xs = np.append(xs, easting)
-                                    ys = np.append(ys, northing)
-                                    zs = np.append(zs, elevation)
-                                    ds = np.append(ds, data)
-                                else:
-                                    print(
-                                        f"No data for channel {channel} of station {station_num} ({component} component) \
-                                        in file {os.path.basename(pem_file.filepath)}")
-                            else:
-                                print(f"Channel {channel} not in file {os.path.basename(pem_file.filepath)}")
-                        else:
-                            print(f"Station {station_num} not in file {os.path.basename(pem_file.filepath)}")
+                station_data = pem_data[pem_data['Station'].map(convert_station) == station_num]
+                if component.upper() == 'TF':
+                    # Get the channel reading for each component
+                    all_channel_data = station_data.Reading.map(lambda x: x[channel]).to_numpy()
+                    # Calculate the total field
+                    data = math.sqrt(sum([d ** 2 for d in all_channel_data]))
                 else:
-                    print(f"Skipping {os.path.basename(pem_file.filepath)} because it has no line GPS")
+                    # Get the channel reading for the component
+                    component_data = station_data[station_data['Component'] == component.upper()]
+                    if not component_data.empty:
+                        data = component_data.iloc[0]['Reading'][channel]
+                    else:
+                        print(f"No data for channel {channel} of station {station_num} ({component} component) \
+                                                            in file {pem_file.filename}")
+                        return
 
-            return xs, ys, zs, ds
+                # Loop name appended here in-case no data is being plotted for the current PEM file
+                if pem_file.loop_name not in loop_names:
+                    loop_names.append(pem_file.loop_name)
 
-        if all(['induction' in pem_file.survey_type.lower() for pem_file in pem_files]):
-            units = 'nT/s'
-        elif all(['fluxgate' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower() for pem_file in pem_files]):
-            units = 'pT'
-        else:
-            raise ValueError('Not all survey types are the same.')
+                return easting, northing, elevation, data
 
+            for pem_file in pem_files:
+
+                if channel > pem_file.number_of_channels:
+                    print(f"Channel {channel} not in file {pem_file.filename}")
+                    break
+
+                if component != 'TF' and component not in pem_file.get_components():
+                    print(f"{pem_file.filename} has no {component} data.")
+                    break
+
+                pem_data = pem_file.data
+                line_gps = pem_file.get_line()
+                # Filter the GPS to only keep those that are in the data
+                line_gps = line_gps[~line_gps.Station.isin(pem_file.get_unique_stations(converted=True))]
+
+                if line_gps.empty:
+                    print(f"Skipping {pem_file.filename} because it has no line GPS")
+                    break
+
+                return line_gps.apply(get_contour_row, axis=1)
+
+                # for row in line_gps.itertuples():
+                #     easting = row.Easting
+                #     northing = row.Northing
+                #     elevation = row.Elevation
+                #     station_num = convert_station(row.Station)
+                #
+                #     station_data = pem_data[pem_data['Station'].map(convert_station) == station_num]
+                #     if component.upper() == 'TF':
+                #         # Get the channel reading for each component
+                #         all_channel_data = station_data.Reading.map(lambda x: x[channel]).to_numpy()
+                #         # Calculate the total field
+                #         data = math.sqrt(sum([d ** 2 for d in all_channel_data]))
+                #     else:
+                #         # Get the channel reading for the component
+                #         component_data = station_data[station_data['Component'] == component.upper()]
+                #         if not component_data.empty:
+                #             data = component_data.iloc[0]['Reading'][channel]
+                #         else:
+                #             print(f"No data for channel {channel} of station {station_num} ({component} component) \
+                #                                                 in file {pem_file.filename}")
+                #             break
+                #
+                #     # Loop name appended here in-case no data is being plotted for the current PEM file
+                #     if pem_file.loop_name not in loop_names:
+                #         loop_names.append(pem_file.loop_name)
+                #     xs = np.append(xs, easting)
+                #     ys = np.append(ys, northing)
+                #     zs = np.append(zs, elevation)
+                #     ds = np.append(ds, data)
+                # return xs, ys, zs, ds
+
+        assert not any([file.is_fluxgate() for file in pem_files]), 'Not all survey types are the same.'
         assert len(pem_files) > 1, 'Must have at least 2 PEM files'
 
         loops = []
         loop_names = []
         lines = []
-        labels = []
 
         # Create a large grid in order to specify the placement of the colorbar
         ax = plt.subplot2grid((90, 110), (0, 0),
                               rowspan=90,
                               colspan=90,
-                              fig=fig)
+                              fig=figure)
         cbar_ax = plt.subplot2grid((90, 110), (0, 108),
                                    rowspan=90,
                                    colspan=2,
-                                   fig=fig)
+                                   fig=figure)
 
-        add_rectangle()
-        format_figure()
+        self.add_rectangle(figure)
+        self.format_figure(ax, cbar_ax, draw_grid=draw_grid)
 
-        xs, ys, zs, ds = get_arrays(component, channel)
+        # Create the contour data Series.
+        # xs, ys, zs, ds = get_contour_data(component, channel)
+        contour_data = get_contour_data(component, channel)
+
         # Plot the GPS from each PEM file onto the plot.
-        [plot_pem_gps(pem_file) for pem_file in pem_files]
-        add_title()
+        plot_pem_gps()
 
-        if all([len(xs) > 0, len(ys) > 0, len(zs) > 0, len(ds) > 0]):
+        self.add_title(figure, loop_names, title_box=title_box)
+
+        if not contour_data.empty:
+            xs = contour_data.map(lambda x: x[0]).to_numpy()
+            ys = contour_data.map(lambda x: x[1]).to_numpy()
+            zs = contour_data.map(lambda x: x[2]).to_numpy()
+            ds = contour_data.map(lambda x: x[3]).to_numpy()
+
             # Creating a 2D grid for the interpolation
             numcols, numrows = 100, 100
             xi = np.linspace(xs.min(), xs.max(), numcols)
@@ -2679,7 +2673,7 @@ class ContourMap(MapPlotter):
             # Interpolating the 2D grid data
             di = interp.griddata((xs, ys), ds, (xx, yy), method='cubic')
 
-            # Elevation contour lines
+            # Add elevation contour lines
             if elevation_contours:
                 zi = interp.griddata((xs, ys), zs, (xx, yy),
                                      method='cubic')
@@ -2687,33 +2681,34 @@ class ContourMap(MapPlotter):
                                      colors='black',
                                      alpha=0.8)
                 # contourf = ax.contourf(xi, yi, zi, cmap=colormap)
-                ax.clabel(contour, fontsize=6,
+                ax.clabel(contour,
+                          fontsize=6,
                           inline=True,
                           inline_spacing=0.5,
                           fmt='%d')
 
-            # Data filled contour
+            # Add the filled contour plot
             contourf = ax.contourf(xi, yi, di,
                                    cmap=self.colormap,
                                    levels=50)
 
-            # Colorbar for the data contours
-            cbar = fig.colorbar(contourf, cax=cbar_ax)
-            cbar_ax.set_xlabel(f"{units}")
+            # Add colorbar for the data contours
+            cbar = figure.colorbar(contourf, cax=cbar_ax)
+            cbar_ax.set_xlabel(f"{'pT' if pem_files[0].is_fluxgate() else 'nT/s'}")
             cbar.ax.get_xaxis().labelpad = 10
 
-            # Component and channel text at the top right of the figure
+            # Add component and channel text at the top right of the figure
             component_text = f"{component.upper()} Component" if component != 'TF' else 'Total Field'
-            info_text = fig.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
-                                 transform=cbar_ax.transAxes,
-                                 color='k',
-                                 fontname='Century Gothic',
-                                 fontsize=9,
-                                 va='bottom',
-                                 ha='center',
-                                 zorder=10)
+            info_text = figure.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
+                                    transform=cbar_ax.transAxes,
+                                    color='k',
+                                    fontname='Century Gothic',
+                                    fontsize=9,
+                                    va='bottom',
+                                    ha='center',
+                                    zorder=10)
 
-        return fig
+        return figure
 
 
 # class ContourMap(MapPlotMethods):

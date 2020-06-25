@@ -428,7 +428,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         :param pem_files: list, PEMFile objects to plot
         :return: None
         """
-        self.pem_files = [file for file in pem_files if not file.is_borehole()]
+        survey_type = pem_files[0].get_survey_type()
+        self.pem_files = [file for file in pem_files if not file.is_borehole() and file.get_survey_type() == survey_type]
 
         # Must be at least 2 eligible surface PEM files.
         if len(self.pem_files) < 2:
@@ -472,7 +473,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         """
         Plot the map on the canvas
         """
-
         component = self.get_selected_component().upper()
         if component not in self.components:
             return
