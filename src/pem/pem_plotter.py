@@ -9,6 +9,7 @@ from datetime import datetime
 from statistics import mean
 
 import cartopy
+import time
 import cartopy.crs as ccrs  # import projections
 import cartopy.io.shapereader as shpreader
 import cartopy.io.img_tiles as cimgt
@@ -23,6 +24,7 @@ import matplotlib.pyplot as plt
 import matplotlib.text as mtext
 import matplotlib.ticker as ticker
 import matplotlib.transforms as mtransforms
+from matplotlib.figure import Figure
 import numpy as np
 import six
 import utm
@@ -2390,8 +2392,38 @@ class ContourMap(MapPlotter):
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
+        self.pem_files = None
         self.label_buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
         self.color = 'k'
+
+        # Create the figure and add a rectangle around it
+        self.figure = Figure(figsize=(11, 8.5))
+        rect = patches.Rectangle(xy=(0.02, 0.02),
+                                 width=0.96,
+                                 height=0.96,
+                                 linewidth=0.7,
+                                 edgecolor='black',
+                                 facecolor='none',
+                                 transform=self.figure.transFigure)
+        self.figure.patches.append(rect)
+
+        # Create a large grid in order to specify the placement of the colorbar
+        self.ax = plt.subplot2grid((90, 110), (0, 0),
+                                   rowspan=90,
+                                   colspan=90,
+                                   fig=self.figure)
+        # Hide the right and bottom spines
+        self.ax.spines['top'].set_visible(False)
+        self.ax.spines['left'].set_visible(False)
+        # Set the X and Y axis to be the same size
+        self.ax.set_aspect('equal')
+        self.ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
+        self.ax.yaxis.tick_right()
+
+        self.cbar_ax = plt.subplot2grid((90, 110), (0, 108),
+                                        rowspan=90,
+                                        colspan=2,
+                                        fig=self.figure)
 
         # Creating a custom colormap that imitates the Geosoft colors
         # Blue > Teal > Green > Yellow > Red > Orange > Magenta > Light pink
@@ -2401,13 +2433,17 @@ class ContourMap(MapPlotter):
         custom_cmap.set_over('magenta')
         self.colormap = custom_cmap
 
-    @staticmethod
-    def add_title(figure, loop_names, title_box=True):
+        self.xs = None
+        self.ys = None
+        self.zs = None
+        self.ds = None
+
+    def add_title(self, loop_names, title_box=True):
         """
         Adds the title box to the plot. Removes any existing text first.
         """
         # Remove any previous title texts
-        for text in reversed(figure.texts):
+        for text in reversed(self.figure.texts):
             text.remove()
 
         # Draw the title
@@ -2415,8 +2451,8 @@ class ContourMap(MapPlotter):
             center_pos = 0.5
             top_pos = 0.95
 
-            client = pem_files[0].client
-            grid = pem_files[0].grid
+            client = self.pem_files[0].client
+            grid = self.pem_files[0].grid
             loops = natsort.humansorted(loop_names)
             if len(loops) > 3:
                 loop_text = f"Loop: {loops[0]} to {loops[-1]}"
@@ -2426,63 +2462,46 @@ class ContourMap(MapPlotter):
             # coord_sys = f"{system}{' Zone ' + zone.title() if zone else ''}, {datum.upper()}"
             # scale = f"1:{map_scale:,.0f}"
 
-            crone_text = figure.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
-                                     fontname='Century Gothic',
-                                     fontsize=11,
-                                     ha='center',
-                                     zorder=10)
+            crone_text = self.figure.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
+                                          fontname='Century Gothic',
+                                          fontsize=11,
+                                          ha='center',
+                                          zorder=10)
 
-            survey_text = figure.text(center_pos, top_pos - 0.036, f"Cubic-Interpolation Contour Map"
-                                      f"\n{pem_files[0].survey_type.title()} Pulse EM Survey",
-                                      family='cursive',
-                                      style='italic',
-                                      fontname='Century Gothic',
-                                      fontsize=9,
-                                      ha='center',
-                                      zorder=10)
+            survey_text = self.figure.text(center_pos, top_pos - 0.036, f"Cubic-Interpolation Contour Map"
+                                           f"\n{pem_files[0].get_survey_type()} Pulse EM Survey",
+                                           family='cursive',
+                                           style='italic',
+                                           fontname='Century Gothic',
+                                           fontsize=9,
+                                           ha='center',
+                                           zorder=10)
 
-            header_text = figure.text(center_pos, top_pos - 0.046, f"{client}\n{grid}\n{loop_text}",
-                                      fontname='Century Gothic',
-                                      fontsize=9.5,
-                                      va='top',
-                                      ha='center',
-                                      zorder=10)
+            header_text = self.figure.text(center_pos, top_pos - 0.046, f"{client}\n{grid}\n{loop_text}",
+                                           fontname='Century Gothic',
+                                           fontsize=9.5,
+                                           va='top',
+                                           ha='center',
+                                           zorder=10)
 
-    @staticmethod
-    def add_rectangle(figure):
-        rect = patches.Rectangle(xy=(0.02, 0.02),
-                                 width=0.96,
-                                 height=0.96,
-                                 linewidth=0.7,
-                                 edgecolor='black',
-                                 facecolor='none',
-                                 transform=figure.transFigure)
-        figure.patches.append(rect)
-
-    @staticmethod
-    def format_figure(ax, cbar_ax, draw_grid=True):
+    def format_figure(self, draw_grid=True):
         # Clear the axes and color bar
-        ax.cla()
-        cbar_ax.cla()
-        # Hide the right and bottom spines
-        ax.spines['top'].set_visible(False)
-        ax.spines['left'].set_visible(False)
+        self.ax.cla()
+        self.cbar_ax.cla()
+
         # Draw the grid
         if draw_grid:
-            ax.grid()
+            self.ax.grid()
         else:
-            ax.grid(False)
-        # Set the X and Y axis to be the same size
-        ax.set_aspect('equal')
-        ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
-        # Move the Y tick labels to the right
-        ax.yaxis.tick_right()
-        ax.set_yticklabels(ax.get_yticklabels(), rotation=0, va='center')
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
-        ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}N'))
-        ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}E'))
+            self.ax.grid(False)
 
-    def plot_contour(self, pem_files, figure, component, channel,
+        # Move the Y tick labels to the right
+        self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=0, va='center')
+        self.ax.set_xticklabels(self.ax.get_xticklabels(), rotation=90, ha='center')
+        self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}N'))
+        self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}E'))
+
+    def plot_contour(self, pem_files, component, channel,
                      channel_time=None, plot_loops=True, label_loops=False, label_lines=True,
                      plot_lines=True, plot_stations=False, label_stations=False, elevation_contours=False,
                      draw_grid=False, title_box=False):
@@ -2490,7 +2509,6 @@ class ContourMap(MapPlotter):
         Plots the filled contour map on a given Matplotlib Figure object.
         :param pem_files: list, PEMFile objects. Must be surface surveys, must have station GPS, and must all be
         of the same general survey type (nT/s vs pT).
-        :param figure: Matplotlib Figure object
         :param component: str, Component to plot (X, Y, Z, or Total Field (TF).
         :param channel: int, Channel to plot.
         :param channel_time: float, The time of the center of the channel's gate.
@@ -2515,7 +2533,7 @@ class ContourMap(MapPlotter):
                 line = pem_file.line
                 if all([pem_file.has_station_gps(), plot_lines, line not in lines]):
                     lines.append(line)
-                    self.plot_line(pem_file, figure,
+                    self.plot_line(pem_file, self.figure,
                                    annotate=label_stations,
                                    label=label_lines,
                                    plot_ticks=plot_stations,
@@ -2525,23 +2543,18 @@ class ContourMap(MapPlotter):
                 loop = pem_file.loop
                 if all([pem_file.has_loop_gps(), plot_loops, loop not in loops]):
                     loops.append(loop)
-                    self.plot_loop(pem_file, figure,
+                    self.plot_loop(pem_file, self.figure,
                                    annotate=False,
                                    label=label_loops,
                                    color=self.color)
 
-        def get_contour_data(component, channel):
+        def contour_data_to_arrays(component, channel):
             """
-            Create a pandas Series of tuples containing the GPS and associated channel + component reading for each
-            station in the LineGPS
+            Append the contour data (GPS + channel reading) to the object's arrays (xs, ys, zs, ds)
             :param component: str, which component's data to retrieve. Either X, Y, Z, or TF
             :param channel: int, which channel's data to retrieve
             :return: pandas Series of tuples
             """
-            xs = np.array([])
-            ys = np.array([])
-            zs = np.array([])
-            ds = np.array([])
 
             def get_contour_row(row):
                 """
@@ -2575,7 +2588,10 @@ class ContourMap(MapPlotter):
                 if pem_file.loop_name not in loop_names:
                     loop_names.append(pem_file.loop_name)
 
-                return easting, northing, elevation, data
+                self.xs = np.append(self.xs, easting)
+                self.ys = np.append(self.ys, northing)
+                self.zs = np.append(self.zs, elevation)
+                self.ds = np.append(self.ds, data)
 
             for pem_file in pem_files:
 
@@ -2596,7 +2612,8 @@ class ContourMap(MapPlotter):
                     print(f"Skipping {pem_file.filename} because it has no line GPS")
                     break
 
-                return line_gps.apply(get_contour_row, axis=1)
+                # Get the contour information
+                line_gps.apply(get_contour_row, axis=1)
 
                 # for row in line_gps.itertuples():
                 #     easting = row.Easting
@@ -2632,83 +2649,76 @@ class ContourMap(MapPlotter):
         assert not any([file.is_fluxgate() for file in pem_files]), 'Not all survey types are the same.'
         assert len(pem_files) > 1, 'Must have at least 2 PEM files'
 
+        self.pem_files = pem_files
+
         loops = []
         loop_names = []
         lines = []
 
-        # Create a large grid in order to specify the placement of the colorbar
-        ax = plt.subplot2grid((90, 110), (0, 0),
-                              rowspan=90,
-                              colspan=90,
-                              fig=figure)
-        cbar_ax = plt.subplot2grid((90, 110), (0, 108),
-                                   rowspan=90,
-                                   colspan=2,
-                                   fig=figure)
+        # Reset the arrays
+        self.xs = np.array([])
+        self.ys = np.array([])
+        self.zs = np.array([])
+        self.ds = np.array([])
 
-        self.add_rectangle(figure)
-        self.format_figure(ax, cbar_ax, draw_grid=draw_grid)
-
-        # Create the contour data Series.
-        # xs, ys, zs, ds = get_contour_data(component, channel)
-        contour_data = get_contour_data(component, channel)
+        # Add the title and the bounding rectangle and format the figure
+        self.add_title(loop_names, title_box=title_box)
+        self.format_figure(draw_grid=draw_grid)
 
         # Plot the GPS from each PEM file onto the plot.
         plot_pem_gps()
 
-        self.add_title(figure, loop_names, title_box=title_box)
+        # Create the data for the contour map
+        t = time.time()
+        contour_data_to_arrays(component, channel)
+        print(f"Time to get contour data: {time.time() - t}")
 
-        if not contour_data.empty:
-            xs = contour_data.map(lambda x: x[0]).to_numpy()
-            ys = contour_data.map(lambda x: x[1]).to_numpy()
-            zs = contour_data.map(lambda x: x[2]).to_numpy()
-            ds = contour_data.map(lambda x: x[3]).to_numpy()
-
+        if all([self.xs.any(), self.ys.any(), self.zs.any(), self.ds.any()]):
             # Creating a 2D grid for the interpolation
             numcols, numrows = 100, 100
-            xi = np.linspace(xs.min(), xs.max(), numcols)
-            yi = np.linspace(ys.min(), ys.max(), numrows)
+            xi = np.linspace(self.xs.min(), self.xs.max(), numcols)
+            yi = np.linspace(self.ys.min(), self.ys.max(), numrows)
             xx, yy = np.meshgrid(xi, yi)
 
             # Interpolating the 2D grid data
-            di = interp.griddata((xs, ys), ds, (xx, yy), method='cubic')
+            di = interp.griddata((self.xs, self.ys), self.ds, (xx, yy), method='cubic')
 
             # Add elevation contour lines
             if elevation_contours:
-                zi = interp.griddata((xs, ys), zs, (xx, yy),
+                zi = interp.griddata((self.xs, self.ys), self.zs, (xx, yy),
                                      method='cubic')
-                contour = ax.contour(xi, yi, zi,
-                                     colors='black',
-                                     alpha=0.8)
+                contour = self.ax.contour(xi, yi, zi,
+                                          colors='black',
+                                          alpha=0.8)
                 # contourf = ax.contourf(xi, yi, zi, cmap=colormap)
-                ax.clabel(contour,
-                          fontsize=6,
-                          inline=True,
-                          inline_spacing=0.5,
-                          fmt='%d')
+                self.ax.clabel(contour,
+                               fontsize=6,
+                               inline=True,
+                               inline_spacing=0.5,
+                               fmt='%d')
 
             # Add the filled contour plot
-            contourf = ax.contourf(xi, yi, di,
-                                   cmap=self.colormap,
-                                   levels=50)
+            contourf = self.ax.contourf(xi, yi, di,
+                                        cmap=self.colormap,
+                                        levels=50)
 
             # Add colorbar for the data contours
-            cbar = figure.colorbar(contourf, cax=cbar_ax)
-            cbar_ax.set_xlabel(f"{'pT' if pem_files[0].is_fluxgate() else 'nT/s'}")
+            cbar = self.figure.colorbar(contourf, cax=self.cbar_ax)
+            self.cbar_ax.set_xlabel(f"{'pT' if pem_files[0].is_fluxgate() else 'nT/s'}")
             cbar.ax.get_xaxis().labelpad = 10
 
             # Add component and channel text at the top right of the figure
             component_text = f"{component.upper()} Component" if component != 'TF' else 'Total Field'
-            info_text = figure.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
-                                    transform=cbar_ax.transAxes,
-                                    color='k',
-                                    fontname='Century Gothic',
-                                    fontsize=9,
-                                    va='bottom',
-                                    ha='center',
-                                    zorder=10)
+            info_text = self.figure.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
+                                         transform=self.cbar_ax.transAxes,
+                                         color='k',
+                                         fontname='Century Gothic',
+                                         fontsize=9,
+                                         va='bottom',
+                                         ha='center',
+                                         zorder=10)
 
-        return figure
+        return self.figure
 
 
 # class ContourMap(MapPlotMethods):

@@ -415,8 +415,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.save_figure_btn.clicked.connect(self.save_figure)
 
         # Figure and canvas
-        self.figure = Figure(figsize=(11, 8.5))
-        self.canvas = FigureCanvas(self.figure)
+        self.canvas = FigureCanvas(self.cmap.figure)
         self.toolbar = ContourMapToolbar(self.canvas, self)
         self.toolbar_layout.addWidget(self.toolbar)
         self.toolbar.setFixedHeight(30)
@@ -482,7 +481,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.time_label.setText(f"{channel_time * 1000:.3f}ms")
 
         try:
-            self.cmap.plot_contour(self.pem_files, self.figure, component, channel,
+            self.cmap.plot_contour(self.pem_files, component, channel,
                                    draw_grid=self.grid_cbox.isChecked(),
                                    channel_time=channel_time,
                                    plot_loops=self.plot_loops_cbox.isChecked(),
