@@ -2605,9 +2605,9 @@ class ContourMap(MapPlotMethods):
 
             # Component and channel text at the top right of the figure
             component_text = f"{component.upper()} Component" if component != 'TF' else 'Total Field'
-            info_text = fig.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
-                                 transform=cbar_ax.transAxes, color='k', fontname='Century Gothic', fontsize=9,
-                                 va='bottom', ha='center', zorder=10)
+            # info_text = fig.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
+            #                      transform=cbar_ax.transAxes, color='k', fontname='Century Gothic', fontsize=9,
+            #                      va='bottom', ha='center', zorder=10)
 
         return fig
 
@@ -3880,24 +3880,24 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Raglan', number=5)
+    pem_files = pem_getter.get_pems(client='Kazzinc', number=5)
     # map = FoliumMap(pem_files, '17N')
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
-    fig = plt.figure(figsize=(11, 8.5), dpi=100)
-    map = GeneralMap(pem_files, fig).get_map()
+    # fig = plt.figure(figsize=(11, 8.5), dpi=100)
+    # map = GeneralMap(pem_files, fig).get_map()
     # map = SectionPlot(pem_files, fig).get_section_plot()
     # map = PlanMap(pem_files, fig).get_map()
-    map.show()
-    # ax = fig.add_subplot()
-    # component = 'z'
-    # channel = 15
-    # contour = ContourMap()
-    # contour.plot_contour(ax, pem_files, component, channel)
-    # plt.show()
+
+    fig, ax = plt.subplots()
+    component = 'z'
+    channel = 15
+    map = ContourMap()
+    map.plot_contour(fig, pem_files, component, channel)
+    plt.show()
     # printer = PEMPrinter(sample_files_dir, pem_files)
     # printer.print_final_plots()
     app.exec_()
