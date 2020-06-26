@@ -1269,17 +1269,20 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         if not grid_name:
             grid_name = 'Grid'
         grid_folder = kml.newfolder(name=grid_name)
-        loop_name = self.loop_name_edit.text()
-        if not loop_name:
-            loop_name = 'Loop'
 
-        # Creates KMZ objects for the loop.
-        loop_lonlat = self.get_loop_lonlat()
-        loop_lonlat.append(loop_lonlat[0])
-        ls = grid_folder.newlinestring(name=loop_name)
-        ls.coords = loop_lonlat
-        ls.extrude = 1
-        ls.style = loop_style
+        # Save the loop if the checkbox is checked
+        if self.include_loop_cbox.isChecked():
+            loop_name = self.loop_name_edit.text()
+            if not loop_name:
+                loop_name = 'Loop'
+
+            # Creates KMZ objects for the loop.
+            loop_lonlat = self.get_loop_lonlat()
+            loop_lonlat.append(loop_lonlat[0])
+            ls = grid_folder.newlinestring(name=loop_name)
+            ls.coords = loop_lonlat
+            ls.extrude = 1
+            ls.style = loop_style
 
         # Creates KMZ object for the lines and stations
         for line in self.get_grid_lonlat():
