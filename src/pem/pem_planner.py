@@ -7,6 +7,7 @@ import utm
 import simplekml
 import folium
 import io
+import gpxpy
 
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib.ticker as ticker
@@ -598,7 +599,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         Save the loop and collar coordinates to a GPX file.
         :return: None
         """
-        gpx = src._legacy.gpx_module.gpxpy.gpx.GPX()
+        gpx = gpxpy.gpx.GPX()
 
         hole_name = self.hole_name_edit.text()
         if not hole_name:
@@ -610,18 +611,18 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         # Add the loop coordinates to the GPX. Creates a route for the loop and adds the corners as waypoints.
         loop_lonlat = self.get_loop_lonlat()
         loop_lonlat.append(loop_lonlat[0])
-        route = src._legacy.gpx_module.gpxpy.gpx.GPXRoute()
+        route = gpxpy.gpx.GPXRoute()
         for i, coord in enumerate(loop_lonlat):
             lon = coord[0]
             lat = coord[1]
-            waypoint = src._legacy.gpx_module.gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
+            waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
             gpx.waypoints.append(waypoint)
             route.points.append(waypoint)
         gpx.routes.append(route)
 
         # Add the collar coordinates to the GPX as a waypoint.
         hole_lonlat= self.get_collar_lonlat()
-        waypoint = src._legacy.gpx_module.gpxpy.gpx.GPXWaypoint(latitude=hole_lonlat[1], longitude=hole_lonlat[0], name=hole_name, description=hole_name)
+        waypoint = gpxpy.gpx.GPXWaypoint(latitude=hole_lonlat[1], longitude=hole_lonlat[0], name=hole_name, description=hole_name)
         gpx.waypoints.append(waypoint)
 
         save_path = self.dialog.getSaveFileName(self, 'Save GPX File', None, 'GPX Files (*.GPX);; All files(*.*)')[0]
@@ -949,8 +950,8 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.line_length = int(self.line_length_edit.text())
         self.line_number = int(self.line_number_edit.text())
         self.line_spacing = int(self.line_spacing_edit.text())
-        self.grid_roi.setSize((self.line_length, (self.line_number - 1) * self.line_spacing))
-        print(f"Grid size changed to {self.line_length} x {(self.line_number - 1) * self.line_spacing}")
+        self.grid_roi.setSize((self.line_length, max((self.line_number - 1) * self.line_spacing, 10)))
+        print(f"Grid size changed to {self.line_length} x {max((self.line_number - 1) * self.line_spacing, 10)}")
 
     def change_grid_pos(self):
         """
@@ -1068,7 +1069,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         :return: X, Y coordinate of the center of the grid.
         """
         a = 90 - self.grid_roi.angle()
-        w = (self.line_number - 1) * self.line_spacing
+        w = max((self.line_number - 1) * self.line_spacing, 10)
         h = self.line_length
 
         hypo = math.sqrt(w ** 2 + h ** 2)
@@ -1293,7 +1294,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         Save the loop and collar coordinates to a GPX file.
         :return: None
         """
-        gpx = src._legacy.gpx_module.gpxpy.gpx.GPX()
+        gpx = gpxpy.gpx.GPX()
 
         grid_name = self.grid_name_edit.text()
         if not grid_name:
@@ -1305,11 +1306,11 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         # Add the loop coordinates to the GPX. Creates a route for the loop and adds the corners as waypoints.
         loop_lonlat = self.get_loop_lonlat()
         loop_lonlat.append(loop_lonlat[0])
-        route = src._legacy.gpx_module.gpxpy.gpx.GPXRoute()
+        route = gpxpy.gpx.GPXRoute()
         for i, coord in enumerate(loop_lonlat):
             lon = coord[0]
             lat = coord[1]
-            waypoint = src._legacy.gpx_module.gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
+            waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
             gpx.waypoints.append(waypoint)
             route.points.append(waypoint)
         gpx.routes.append(route)
@@ -1322,7 +1323,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
 
             for coord in coords:
                 station = coord[2]
-                waypoint = src._legacy.gpx_module.gpxpy.gpx.GPXWaypoint(latitude=coord[1], longitude=coord[0],
+                waypoint = gpxpy.gpx.GPXWaypoint(latitude=coord[1], longitude=coord[0],
                                                                         name=f"L{line_name.strip()}-{station}", description=station)
                 gpx.waypoints.append(waypoint)
 
@@ -1425,8 +1426,8 @@ class CustomAxis(pg.AxisItem):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    planner = LoopPlanner()
-    # planner = GridPlanner()
+    # planner = LoopPlanner()
+    planner = GridPlanner()
     planner.show()
     # planner.view_map()
     # planner.save_gpx()

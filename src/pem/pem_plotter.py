@@ -4179,6 +4179,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems(client='Kazzinc', number=1)
+
     # map = FoliumMap(pem_files, '17N')
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
@@ -4211,9 +4212,9 @@ if __name__ == '__main__':
     # step_plot.plot('X')
     # step_fig.show()
 
-    map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
-    map_plot = PlanMap(pem_files, map_fig).plot()
-    map_plot.show()
+    # map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
+    # map_plot = PlanMap(pem_files, map_fig).plot()
+    # map_plot.show()
 
     # map = GeneralMap(pem_files, fig).get_map()
     # map = SectionPlot(pem_files, fig).get_section_plot()
