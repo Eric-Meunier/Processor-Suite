@@ -4,6 +4,7 @@ import sys
 import copy
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 from PyQt5 import (QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QFileDialog, QErrorMessage, QMessageBox, QApplication)
 from matplotlib.backends.backend_pdf import PdfPages
@@ -39,6 +40,18 @@ else:
 Ui_Map3DWidget, QtBaseClass = uic.loadUiType(map3DCreatorFile)
 Ui_Section3DWidget, QtBaseClass = uic.loadUiType(section3DCreatorFile)
 Ui_ContourMapCreatorFile, QtBaseClass = uic.loadUiType(contourMapCreatorFile)
+
+
+sys._excepthook = sys.excepthook
+
+
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
 
 
 class Map3DViewer(QWidget, Ui_Map3DWidget):
@@ -80,14 +93,41 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
 
         # self.map_plotter = Map3D(parent=self)
 
-        # # create html code of the figure
-        # html = '<html><body>'
-        # html += '</body></html>'
+        self.figure = go.Figure()
+        self.figure.update_layout(scene=dict(
+            xaxis_title='EASTING',
+            yaxis_title='NORTHING',
+            zaxis_title='ELEVATION',
+            aspectratio=dict(x=1, y=1, z=1)),
+            margin=dict(r=0, b=0, l=0, t=0))
+
+        # self.figure.update_layout(scene=dict(
+        #     xaxis=dict(
+        #         backgroundcolor="rgb(200, 200, 230)",
+        #         gridcolor="white",
+        #         showbackground=True,
+        #         zerolinecolor="white", ),
+        #     yaxis=dict(
+        #         backgroundcolor="rgb(230, 200,230)",
+        #         gridcolor="white",
+        #         showbackground=True,
+        #         zerolinecolor="white"),
+        #     zaxis=dict(
+        #         backgroundcolor="rgb(230, 230,200)",
+        #         gridcolor="white",
+        #         showbackground=True,
+        #         zerolinecolor="white", ), ),
+        #     width=700,
+        #     margin=dict(
+        #         r=10, l=10,
+        #         b=10, t=10)
+        # )
+
+        # self.figure.update_layout(scene2_aspectmode='manual',
+        #                           scene2_aspectratio=dict(x=1, y=1, z=2))
 
         # create an instance of QWebEngineView and set the html code
         self.plot_widget = QWebEngineView()
-        # self.plot_widget.setHtml(html)
-
         self.map_layout.addWidget(self.plot_widget)
 
     def open(self, pem_files):
@@ -102,29 +142,68 @@ class Map3DViewer(QWidget, Ui_Map3DWidget):
 
         def plot_loop(pem_file):
             loop = pem_file.get_loop(closed=True, sorted=True)
-            x, y, z = loop.Easting.to_numpy(), loop.Northing.to_numpy(), loop.Elevation.to_numpy()
-            figure = go.Figure(data=go.Scatter3d(x=x, y=y, z=z, mode='lines'))
-            result = plotly.offline.plot(figure, output_type='div', include_plotlyjs='cdn')
-            return result
+            if loop.to_string() not in loops:
+                t = time.time()
+                loops.append(loop.to_string())
+
+                # Plot the loop in the figure
+                self.figure.add_trace(go.Scatter3d(x=loop.Easting,
+                                                   y=loop.Northing,
+                                                   z=loop.Elevation,
+                                                   mode='lines',
+                                                   name=f"Loop {pem_file.loop_name}",
+                                                   text=loop.index))
+                print(f"Time to add loop trace: {time.time() - t}")
 
         def plot_line(pem_file):
+            t = time.time()
             line = pem_file.get_line(sorted=True)
-            x, y, z = line.Easting.to_numpy(), line.Northing.to_numpy(), line.Elevation.to_numpy()
-            figure = go.Figure(data=go.Scatter3d(x=x, y=y, z=z))
-            result = plotly.offline.plot(figure, output_type='div', include_plotlyjs='cdn')
-            return result
 
-        html = '<html><body>'
+            # Plot the line in the figure
+            self.figure.add_trace(go.Scatter3d(x=line.Easting,
+                                               y=line.Northing,
+                                               z=line.Elevation,
+                                               name=pem_file.line_name,
+                                               text=line.Station
+                                               ))
+
+            if self.label_stations_cbox.isChecked():
+                for row in line.itertuples():
+                    annotations.append(dict(x=row.Easting,
+                                            y=row.Northing,
+                                            z=row.Elevation,
+                                            ax=0,
+                                            ay=0,
+                                            text=row.Station,
+                                            showarrow=False,
+                                            xanchor="center",
+                                            yanchor="bottom"))
+
+            print(f"Time to add line trace: {time.time() - t}")
+
+        loops = []
+        annotations = []
+
         for pem_file in self.pem_files:
-            # if self.draw_loops_cbox.isChecked():
-            #     html += plot_loop(pem_file)
+            if self.draw_loops_cbox.isChecked():
+                plot_loop(pem_file)
 
             if self.draw_lines_cbox.isChecked():
-                html += plot_line(pem_file)
+                plot_line(pem_file)
 
-        html += '</body></html>'
+        # TODO Updating the figure without re-plotting
+        # Add the annotations
+        if self.label_stations_cbox.isChecked():
+            self.figure.update_scenes(annotations=annotations)
 
+        # Create the HTML
+        html = '<html><body>' + \
+               plotly.offline.plot(self.figure, output_type='div', include_plotlyjs='cdn') + \
+               '</body></html>'
+
+        t2 = time.time()
         self.plot_widget.setHtml(html)
+        print(f'Time to set HTML: {time.time() - t2}')
 
 
 class oldMap3DViewer(QWidget, Ui_Map3DWidget):
@@ -675,7 +754,7 @@ if __name__ == '__main__':
 
     map = Map3DViewer()
     map.show()
-    map.open(files[0])
+    map.open(files)
 
     # cmap = ContourMapViewer()
     # cmap.open(files)

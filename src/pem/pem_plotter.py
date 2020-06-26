@@ -1369,21 +1369,19 @@ class PlanMap(MapPlotter):
 
             # Plot the surface lines
             if not pem_file.is_borehole() and self.draw_line is True and pem_file.has_station_gps():
-                self.lines.append(pem_file.line)
                 self.station_handle = self.plot_line(pem_file, self.figure,
                                                      annotate=False)
 
             # Plot the boreholes
             if pem_file.is_borehole() and self.draw_hole_collar is True and pem_file.has_collar_gps():
-                self.holes.append(pem_file.geometry)
                 self.plot_hole(pem_file, self.figure,
                                label=self.label_collar,
                                label_depth=self.label_hole_depth)
 
             # Plot the loops
             if self.draw_loop is True and pem_file.has_loop_gps():
-                if pem_file.loop not in self.loops:
-                    self.loops.append(pem_file.loop)
+                if pem_file.get_loop().to_string() not in self.loops:
+                    self.loops.append(pem_file.get_loop().to_string())
                     self.loop_handle = self.plot_loop(pem_file, self.figure,
                                                       annotate=self.annotate_loop,
                                                       label=self.label_loop)
