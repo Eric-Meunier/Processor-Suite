@@ -65,6 +65,18 @@ pg.setConfigOption('crashWarning', True)
 matplotlib.use('QT5Agg')
 
 
+sys._excepthook = sys.excepthook
+
+
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
+
+
 class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
     """
     Program that plots the magnetic field projected to a plane perpendicular to a borehole for a interactive loop.
@@ -630,7 +642,11 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
             with open(save_path, 'w') as f:
                 f.write(gpx.to_xml())
             self.statusBar().showMessage('Save complete.', 2000)
-            os.startfile(save_path)
+            try:
+                os.startfile(save_path)
+            except OSError:
+                print(f'No application to open {save_path}')
+                pass
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
@@ -966,7 +982,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
             :return: X, Y coordinate of the bottom-right corner.
             """
             a = 90 - self.grid_roi.angle()
-            w = (self.line_number - 1) * self.line_spacing
+            w = max((self.line_number - 1) * self.line_spacing, 10)
             h = self.line_length
 
             hypo = math.sqrt(w ** 2 + h ** 2)
@@ -1299,23 +1315,29 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         grid_name = self.grid_name_edit.text()
         if not grid_name:
             grid_name = 'Grid'
-        loop_name = self.loop_name_edit.text()
-        if not loop_name:
-            loop_name = 'Loop'
 
-        # Add the loop coordinates to the GPX. Creates a route for the loop and adds the corners as waypoints.
-        loop_lonlat = self.get_loop_lonlat()
-        loop_lonlat.append(loop_lonlat[0])
-        route = gpxpy.gpx.GPXRoute()
-        for i, coord in enumerate(loop_lonlat):
-            lon = coord[0]
-            lat = coord[1]
-            waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat, longitude=lon, name=loop_name, description=f"{loop_name}-{i}")
-            gpx.waypoints.append(waypoint)
-            route.points.append(waypoint)
-        gpx.routes.append(route)
+        # Save the loop if the checkbox is checked
+        if self.include_loop_cbox.isChecked():
+            loop_name = self.loop_name_edit.text()
+            if not loop_name:
+                loop_name = 'Loop'
 
-        # Add the collar coordinates to the GPX as a waypoint.
+            # Add the loop coordinates to the GPX. Creates a route for the loop and adds the corners as waypoints.
+            loop_lonlat = self.get_loop_lonlat()
+            loop_lonlat.append(loop_lonlat[0])
+            route = gpxpy.gpx.GPXRoute()
+            for i, coord in enumerate(loop_lonlat):
+                lon = coord[0]
+                lat = coord[1]
+                waypoint = gpxpy.gpx.GPXWaypoint(latitude=lat,
+                                                 longitude=lon,
+                                                 name=loop_name,
+                                                 description=f"{loop_name}-{i}")
+                gpx.waypoints.append(waypoint)
+                route.points.append(waypoint)
+            gpx.routes.append(route)
+
+        # Add the line coordinates to the GPX as a waypoint.
         grid_lonlat = self.get_grid_lonlat()
         for line in grid_lonlat:
             line_name = line['line_name']
@@ -1323,8 +1345,10 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
 
             for coord in coords:
                 station = coord[2]
-                waypoint = gpxpy.gpx.GPXWaypoint(latitude=coord[1], longitude=coord[0],
-                                                                        name=f"L{line_name.strip()}-{station}", description=station)
+                waypoint = gpxpy.gpx.GPXWaypoint(latitude=coord[1],
+                                                 longitude=coord[0],
+                                                 name=f"L{line_name.strip()}-{station}",
+                                                 description=station)
                 gpx.waypoints.append(waypoint)
 
         save_path = self.dialog.getSaveFileName(self, 'Save GPX File', grid_name, 'GPX Files (*.GPX);; All files(*.*)')[0]
@@ -1332,7 +1356,11 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
             with open(save_path, 'w') as f:
                 f.write(gpx.to_xml())
             self.statusBar().showMessage('Save complete.', 2000)
-            os.startfile(save_path)
+            try:
+                os.startfile(save_path)
+            except OSError:
+                print(f'No application to open {save_path}')
+                pass
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
