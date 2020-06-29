@@ -2380,7 +2380,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Opens the 3D Map Viewer window
         :return: None
         """
-        self.map_viewer_3d = Map3DViewer(self.pem_files, parent=self)
+        self.map_viewer_3d = Map3DViewer(parent=self)
+        self.map_viewer_3d.open(self.pem_files)
         self.map_viewer_3d.show()
 
     def show_section_3d_viewer(self):

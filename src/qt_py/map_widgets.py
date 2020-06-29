@@ -21,7 +21,7 @@ import plotly.graph_objects as go
 import plotly
 
 import numpy as np
-from src.pem.pem_plotter import Map3D, Section3D, ContourMap
+from src.pem.pem_plotter import Section3D, ContourMap
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -53,6 +53,7 @@ sys.excepthook = exception_hook
 
 
 class Map3DViewer(QMainWindow):
+
     def __init__(self, parent=None):
         super().__init__()
         self.pem_files = None
@@ -87,7 +88,8 @@ class Map3DViewer(QMainWindow):
             yaxis_title='NORTHING',
             zaxis_title='ELEVATION',
             aspectmode='data'),
-            margin=dict(r=0, b=0, l=0, t=0))
+            margin=dict(r=0, b=0, l=0, t=0),
+        )
 
         # create an instance of QWebEngineView and set the html code
         self.plot_widget = QWebEngineView()
@@ -210,6 +212,8 @@ class Map3DViewer(QMainWindow):
                                                         color='DarkSlateGrey')),
                                   line=dict(width=4)
                                   )
+        # TODO Format the axis ticks
+        self.figure.update_layout(yaxis_tickformat='%')
 
         # Create the HTML
         html = '<html><body>'

@@ -139,7 +139,7 @@ class BatchRIImporter(QWidget):
         self.setLayout(self.layout)
 
         self.setWindowTitle("RI File Import")
-        self.ri_parser = RIParser()
+        self.ri_parser = RIFile()
         self.message = QMessageBox()
 
         self.table = QTableWidget()
