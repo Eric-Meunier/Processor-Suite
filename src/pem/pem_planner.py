@@ -77,6 +77,7 @@ def exception_hook(exctype, value, traceback):
 sys.excepthook = exception_hook
 
 
+# TODO Fix section line and provide loop corners as text, and copy to clip board the entire Qt window
 class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
     """
     Program that plots the magnetic field projected to a plane perpendicular to a borehole for a interactive loop.
@@ -90,6 +91,10 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.setGeometry(200, 200, 1400, 700)
         self.dialog = QFileDialog()
+
+        self.gps_systems = ['UTM']
+        self.gps_zones = [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
+        self.gps_datums = ['NAD 1983', 'WGS 1984']
 
         self.hole_easting = int(self.hole_easting_edit.text())
         self.hole_northing = int(self.hole_northing_edit.text())
@@ -147,6 +152,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
 
         # Plots
         self.hole_trace_plot = pg.PlotDataItem()
+        self.hole_line_center = pg.ScatterPlotItem()
         # self.hole_trace_plot.showGrid()
         self.hole_collar_plot = pg.ScatterPlotItem()
         self.section_extent_line = pg.PlotDataItem()
@@ -180,30 +186,40 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
             z = [z, self.hole_elevation + dz]
             return x, y, z
 
-        def get_section_extents():
+        def get_section_extents(x, y, z):
             """
             Calculates the two coordinates to be used for the section plot.
+            :param x: list, hole projection x values
+            :param y: list, hole projection y values
+            :param z: list, hole projection z values
             :return: (x, y) tuples of the two end-points.
             """
             # Remove the previously plotted section line
             self.section_extent_line.clear()
 
-            x, y, z = get_hole_projection()
-
             # Calculate the length of the cross-section
             line_len = math.ceil(self.hole_length / 400) * 400
-            if 90 < self.hole_az < 180 or 270 < self.hole_az < 360:
-                # Line center is based on the 80th percentile down the hole
+
+            # Find the coordinate that is 80% down the hole
+            if 90 < self.hole_az < 180:
                 line_center_x = np.percentile(x, 80)
+                line_center_y = np.percentile(y, 20)
+            elif 180 < self.hole_az < 270:
+                line_center_x = np.percentile(x, 20)
+                line_center_y = np.percentile(y, 20)
+            elif 270 < self.hole_az < 360:
+                line_center_x = np.percentile(x, 20)
                 line_center_y = np.percentile(y, 80)
             else:
-                # Line center is based on the 80th percentile down the hole
                 line_center_x = np.percentile(x, 80)
                 line_center_y = np.percentile(y, 80)
 
+            self.hole_line_center.setData([line_center_x], [line_center_y], pen=pg.mkPen(width=2, color=0.4))
+            self.plan_view_plot.addItem(self.hole_line_center)
+
+            # Calculate the end point coordinates of the section line
             dx = math.sin(math.radians(self.hole_az)) * (line_len / 2)
             dy = math.cos(math.radians(self.hole_az)) * (line_len / 2)
-
             p1 = (line_center_x - dx, line_center_y - dy)
             p2 = (line_center_x + dx, line_center_y + dy)
 
@@ -214,6 +230,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
                                              pen=pg.mkPen(color=0.5,
                                                           style=QtCore.Qt.DashLine))
             self.plan_view_plot.addItem(self.section_extent_line)
+
             return p1, p2
 
         def plot_hole_section(p1, p2, hole_projection):
@@ -314,7 +331,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.ax.clear()
 
         xs, ys, zs = get_hole_projection()
-        p1, p2 = get_section_extents()
+        p1, p2 = get_section_extents(xs, ys, zs)
 
         plot_trace(xs, ys)
         plot_hole_section(p1, p2, list(zip(xs, ys, zs)))
@@ -332,9 +349,6 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         Adds the items in the drop down menus for the GPS information.
         :return: None
         """
-        self.gps_systems = ['UTM']
-        self.gps_zones = [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
-        self.gps_datums = ['NAD 1983', 'WGS 1984']
 
         for system in self.gps_systems:
             self.systemCBox.addItem(system)
@@ -664,6 +678,10 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.setGeometry(200, 200, 1100, 700)
         self.dialog = QFileDialog()
 
+        self.gps_systems = ['UTM']
+        self.gps_zones = [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
+        self.gps_datums = ['NAD 1983', 'WGS 1984']
+
         self.loop_height = int(self.loop_height_edit.text())
         self.loop_width = int(self.loop_width_edit.text())
         self.loop_angle = int(self.loop_angle_edit.text())
@@ -857,9 +875,6 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         Adds the items in the drop down menus for the GPS information.
         :return: None
         """
-        self.gps_systems = ['UTM']
-        self.gps_zones = [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
-        self.gps_datums = ['NAD 1983', 'WGS 1984']
 
         for system in self.gps_systems:
             self.systemCBox.addItem(system)
@@ -1457,9 +1472,10 @@ class CustomAxis(pg.AxisItem):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    # planner = LoopPlanner()
-    planner = GridPlanner()
+    planner = LoopPlanner()
+    # planner = GridPlanner()
     planner.show()
+    # planner.hole_az_edit.setText('174')
     # planner.view_map()
     # planner.save_gpx()
 
