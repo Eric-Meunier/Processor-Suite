@@ -193,6 +193,8 @@ class PEMFile:
                 datum = f"{s[4]} {s[5]}"
                 # print(f"CRS is {system} Zone {zone} {'North' if north else 'South'}, {datum}")
                 return CRS().from_dict({'System': system, 'Zone': zone, 'Datum': datum})
+            else:
+                return CRS()
         return None
 
     def get_loop(self, sorted=True, closed=False):
@@ -201,11 +203,14 @@ class PEMFile:
     def get_line(self, sorted=True):
         return self.line.get_line(sorted=sorted)
 
-    def get_collar(self, crs=None):
+    def get_collar(self):
         return self.geometry.get_collar()
 
     def get_segments(self):
         return self.geometry.get_segments()
+
+    def get_geometry(self):
+        return self.geometry
 
     def get_notes(self):
         return self.notes

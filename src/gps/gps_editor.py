@@ -376,66 +376,66 @@ class BoreholeGeometry:
         :param num_segments: Desired number of segments to be output
         :return: pandas DataFrame: Projected easting, northing, elevation, and relative depth from collar
         """
-        collar = self.collar.get_collar().dropna()
-        segments = self.segments.get_segments().dropna()
-
         # Create the data frame
         projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative Depth'])
 
-        if collar.empty or segments.empty or collar.crs.is_latlon():
+        if self.collar.df.empty or self.segments.df.empty or self.collar.crs.is_latlon():
             return projection
+
+        collar = self.collar.get_collar().dropna()
+        segments = self.segments.get_segments().dropna()
+
+        # Interpolate the segments
+        if num_segments:
+            azimuths = segments.Azimuth.to_list()
+            dips = segments.Dip.to_list()
+            depths = segments.Depth.to_list()
+
+            # Create the interpolated lists
+            interp_depths = np.linspace(depths[0], depths[-1], num_segments)
+            interp_az = np.interp(interp_depths, depths, azimuths)
+            interp_dip = np.interp(interp_depths, depths, dips)
+            interp_lens = np.subtract(interp_depths[1:], interp_depths[:-1])
+            interp_lens = np.insert(interp_lens, 0, segments.iloc[0]['Segment length'])  # Add the first seg length
+            inter_units = np.full(num_segments, segments.Unit.unique()[0])
+
+            # Stack up the arrays and transpose it
+            segments = np.vstack(
+                (interp_az,
+                 interp_dip,
+                 interp_lens,
+                 inter_units,
+                 interp_depths)
+            ).T
         else:
-            # Interpolate the segments
-            if num_segments:
-                azimuths = segments.Azimuth.to_list()
-                dips = segments.Dip.to_list()
-                depths = segments.Depth.to_list()
+            segments = segments.to_numpy()
 
-                # Create the interpolated lists
-                interp_depths = np.linspace(depths[0], depths[-1], num_segments)
-                interp_az = np.interp(interp_depths, depths, azimuths)
-                interp_dip = np.interp(interp_depths, depths, dips)
-                interp_lens = np.subtract(interp_depths[1:], interp_depths[:-1])
-                interp_lens = np.insert(interp_lens, 0, segments.iloc[0]['Segment length'])  # Add the first seg length
-                inter_units = np.full(num_segments, segments.Unit.unique()[0])
+        eastings = collar.Easting.values
+        northings = collar.Northing.values
+        depths = collar.Elevation.values
+        relative_depth = np.array([0.0])
 
-                # Stack up the arrays and transpose it
-                segments = np.vstack(
-                    (interp_az,
-                     interp_dip,
-                     interp_lens,
-                     inter_units,
-                     interp_depths)
-                ).T
-            else:
-                segments = segments.to_numpy()
+        for segment in segments:
+            azimuth = math.radians(float(segment[0]))
+            dip = math.radians(float(segment[1]))
+            seg_l = float(segment[2])
+            delta_seg_l = seg_l * math.cos(dip)
+            dz = seg_l * math.sin(dip)
+            dx = delta_seg_l * math.sin(azimuth)
+            dy = delta_seg_l * math.cos(azimuth)
 
-            eastings = collar.Easting.values
-            northings = collar.Northing.values
-            depths = collar.Elevation.values
-            relative_depth = np.array([0.0])
+            eastings = np.append(eastings, eastings[-1] + dx)
+            northings = np.append(northings, northings[-1] + dy)
+            depths = np.append(depths, depths[-1] - dz)
+            relative_depth = np.append(relative_depth, relative_depth[-1] + seg_l)
 
-            for segment in segments:
-                azimuth = math.radians(float(segment[0]))
-                dip = math.radians(float(segment[1]))
-                seg_l = float(segment[2])
-                delta_seg_l = seg_l * math.cos(dip)
-                dz = seg_l * math.sin(dip)
-                dx = delta_seg_l * math.sin(azimuth)
-                dy = delta_seg_l * math.cos(azimuth)
-
-                eastings = np.append(eastings, eastings[-1] + dx)
-                northings = np.append(northings, northings[-1] + dy)
-                depths = np.append(depths, depths[-1] - dz)
-                relative_depth = np.append(relative_depth, relative_depth[-1] + seg_l)
-
-            projection.Easting = pd.Series(eastings, dtype=float)
-            projection.Northing = pd.Series(northings, dtype=float)
-            projection.Elevation = pd.Series(depths, dtype=float)
-            projection['Relative Depth'] = pd.Series(relative_depth, dtype=float)
-            # if crs:
-            #     projection = get_latlon(projection, crs)
-            return projection
+        projection.Easting = pd.Series(eastings, dtype=float)
+        projection.Northing = pd.Series(northings, dtype=float)
+        projection.Elevation = pd.Series(depths, dtype=float)
+        projection['Relative Depth'] = pd.Series(relative_depth, dtype=float)
+        # if crs:
+        #     projection = get_latlon(projection, crs)
+        return projection
 
     def get_collar(self):
         return self.collar.get_collar()

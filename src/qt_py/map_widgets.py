@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 from PyQt5 import (QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QFileDialog, QErrorMessage, QMessageBox, QApplication)
+from PyQt5.QtWidgets import (QWidget, QFileDialog, QErrorMessage, QMessageBox, QApplication, QShortcut, QGridLayout,
+                             QAction)
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
@@ -25,19 +26,16 @@ from src.pem.pem_plotter import Map3D, Section3D, ContourMap
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
-    map3DCreatorFile = 'qt_ui\\3D_map.ui'
     section3DCreatorFile = 'qt_ui\\3D_section.ui'
     contourMapCreatorFile = 'qt_ui\\contour_map.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    map3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_map.ui')
     section3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_section.ui')
     contourMapCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\contour_map.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
-Ui_Map3DWidget, QtBaseClass = uic.loadUiType(map3DCreatorFile)
 Ui_Section3DWidget, QtBaseClass = uic.loadUiType(section3DCreatorFile)
 Ui_ContourMapCreatorFile, QtBaseClass = uic.loadUiType(contourMapCreatorFile)
 
@@ -54,305 +52,196 @@ def exception_hook(exctype, value, traceback):
 sys.excepthook = exception_hook
 
 
-class Map3DViewer(QWidget, Ui_Map3DWidget):
+class Map3DViewer(QMainWindow):
     def __init__(self, parent=None):
         super().__init__()
-        self.setupUi(self)
         self.pem_files = None
         self.parent = parent
 
+        self.loops = []
+        self.lines = []
+        self.collars = []
+        self.holes = []
+        self.annotations = []
+
         self.setWindowTitle("3D Map Viewer")
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map2.png')))
+        self.resize(1000, 800)
+        layout = QGridLayout()
+        self.setLayout(layout)
 
-        self.draw_loops = self.draw_loops_cbox.isChecked()
-        self.draw_lines = self.draw_lines_cbox.isChecked()
-        self.draw_boreholes = self.draw_boreholes_cbox.isChecked()
+        self.save_img_action = QAction('Save Image')
+        self.save_img_action.setShortcut("Ctrl+S")
+        self.save_img_action.triggered.connect(self.save_img)
+        self.copy_image_action = QAction('Copy Image')
+        self.copy_image_action.setShortcut("Ctrl+C")
+        self.copy_image_action.triggered.connect(self.copy_img)
 
-        self.label_loops = self.label_loops_cbox.isChecked()
-        self.label_lines = self.label_lines_cbox.isChecked()
-        self.label_stations = self.label_stations_cbox.isChecked()
-        self.label_boreholes = self.label_boreholes_cbox.isChecked()
-
-        self.draw_loops_cbox.toggled.connect(self.plot)
-        self.draw_lines_cbox.toggled.connect(self.plot)
-
-        # self.draw_loops_cbox.toggled.connect(self.toggle_loops)
-        # self.draw_lines_cbox.toggled.connect(self.toggle_lines)
-        # self.draw_boreholes_cbox.toggled.connect(self.toggle_boreholes)
-        #
-        # self.label_loops_cbox.toggled.connect(self.toggle_loop_labels)
-        # self.label_loop_anno_cbox.toggled.connect(self.toggle_loop_anno_labels)
-        # self.label_lines_cbox.toggled.connect(self.toggle_line_labels)
-        # self.label_stations_cbox.toggled.connect(self.toggle_station_labels)
-        # self.label_boreholes_cbox.toggled.connect(self.toggle_borehole_labels)
-        # self.label_segments_cbox.toggled.connect(self.toggle_segment_labels)
-
-        # self.figure = Figure()
-        # self.canvas = FigureCanvas(self.figure)
-        # self.map_layout.addWidget(self.canvas)
-
-        # self.map_plotter = Map3D(parent=self)
+        self.file_menu = self.menuBar().addMenu('&File')
+        self.file_menu.addAction(self.save_img_action)
+        self.file_menu.addAction(self.copy_image_action)
 
         self.figure = go.Figure()
         self.figure.update_layout(scene=dict(
             xaxis_title='EASTING',
             yaxis_title='NORTHING',
             zaxis_title='ELEVATION',
-            aspectratio=dict(x=1, y=1, z=1)),
+            aspectmode='data'),
             margin=dict(r=0, b=0, l=0, t=0))
-
-        # self.figure.update_layout(scene=dict(
-        #     xaxis=dict(
-        #         backgroundcolor="rgb(200, 200, 230)",
-        #         gridcolor="white",
-        #         showbackground=True,
-        #         zerolinecolor="white", ),
-        #     yaxis=dict(
-        #         backgroundcolor="rgb(230, 200,230)",
-        #         gridcolor="white",
-        #         showbackground=True,
-        #         zerolinecolor="white"),
-        #     zaxis=dict(
-        #         backgroundcolor="rgb(230, 230,200)",
-        #         gridcolor="white",
-        #         showbackground=True,
-        #         zerolinecolor="white", ), ),
-        #     width=700,
-        #     margin=dict(
-        #         r=10, l=10,
-        #         b=10, t=10)
-        # )
-
-        # self.figure.update_layout(scene2_aspectmode='manual',
-        #                           scene2_aspectratio=dict(x=1, y=1, z=2))
 
         # create an instance of QWebEngineView and set the html code
         self.plot_widget = QWebEngineView()
-        self.map_layout.addWidget(self.plot_widget)
+        self.setCentralWidget(self.plot_widget)
 
     def open(self, pem_files):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
         self.pem_files = pem_files
-        self.plot()
+        self.plot_pems()
 
-    def plot(self):
+    def plot_pems(self):
         if not self.pem_files:
             return
 
+        def reset_figure():
+            self.figure.data = []
+            self.loops = []
+            self.lines = []
+            self.collars = []
+            self.holes = []
+
         def plot_loop(pem_file):
+            t = time.time()
+
             loop = pem_file.get_loop(closed=True, sorted=True)
-            if loop.to_string() not in loops:
-                t = time.time()
-                loops.append(loop.to_string())
+            if loop.to_string() not in self.loops:
+                self.loops.append(loop.to_string())
 
                 # Plot the loop in the figure
                 self.figure.add_trace(go.Scatter3d(x=loop.Easting,
                                                    y=loop.Northing,
                                                    z=loop.Elevation,
+                                                   legendgroup='loop',
                                                    mode='lines',
                                                    name=f"Loop {pem_file.loop_name}",
                                                    text=loop.index))
-                print(f"Time to add loop trace: {time.time() - t}")
+
+            print(f"Time to add loop trace: {time.time() - t}")
 
         def plot_line(pem_file):
             t = time.time()
             line = pem_file.get_line(sorted=True)
 
-            # Plot the line in the figure
-            self.figure.add_trace(go.Scatter3d(x=line.Easting,
-                                               y=line.Northing,
-                                               z=line.Elevation,
-                                               name=pem_file.line_name,
-                                               text=line.Station
-                                               ))
+            if line.to_string() not in self.lines:
+                self.lines.append(line.to_string())
+                # Plot the line in the figure
+                self.figure.add_trace(go.Scatter3d(x=line.Easting,
+                                                   y=line.Northing,
+                                                   z=line.Elevation,
+                                                   legendgroup='line',
+                                                   mode='lines+markers',
+                                                   name=pem_file.line_name,
+                                                   text=line.Station
+                                                   ))
 
-            if self.label_stations_cbox.isChecked():
-                for row in line.itertuples():
-                    annotations.append(dict(x=row.Easting,
-                                            y=row.Northing,
-                                            z=row.Elevation,
-                                            ax=0,
-                                            ay=0,
-                                            text=row.Station,
-                                            showarrow=False,
-                                            xanchor="center",
-                                            yanchor="bottom"))
+                # if self.label_stations_cbox.isChecked():
+                #     for row in line.itertuples():
+                #         self.annotations.append(dict(x=row.Easting,
+                #                                      y=row.Northing,
+                #                                      z=row.Elevation,
+                #                                      ax=0,
+                #                                      ay=0,
+                #                                      text=row.Station,
+                #                                      showarrow=False,
+                #                                      xanchor="center",
+                #                                      yanchor="bottom"))
+
+                print(f"Time to add line trace: {time.time() - t}")
+
+        def plot_hole(pem_file):
+            t = time.time()
+            collar = pem_file.get_collar()
+            geometry = pem_file.get_geometry()
+            proj = geometry.get_projection()
+
+            if not proj.empty:
+                if proj.to_string() not in self.holes:
+                    self.holes.append(proj.to_string())
+                    # Plot the line in the figure
+                    self.figure.add_trace(go.Scatter3d(x=proj.Easting,
+                                                       y=proj.Northing,
+                                                       z=proj.Elevation,
+                                                       mode='lines+markers',
+                                                       legendgroup='hole',
+                                                       name=pem_file.line_name,
+                                                       text=proj['Relative Depth']
+                                                       ))
+
+                else:
+                    return
+
+            elif not collar.empty and collar.to_string() not in self.collars:
+                self.collars.append(collar.to_string())
+                self.figure.add_trace(go.Scatter3d(x=collar.Easting,
+                                                   y=collar.Northing,
+                                                   z=collar.Elevation,
+                                                   # legendgroup='hole',
+                                                   name=pem_file.line_name,
+                                                   text=pem_file.line_name
+                                                   ))
 
             print(f"Time to add line trace: {time.time() - t}")
 
-        loops = []
-        annotations = []
+        reset_figure()
 
+        # Plot the PEMs
         for pem_file in self.pem_files:
-            if self.draw_loops_cbox.isChecked():
-                plot_loop(pem_file)
+            plot_loop(pem_file)
 
-            if self.draw_lines_cbox.isChecked():
+            if not pem_file.is_borehole():
                 plot_line(pem_file)
 
-        # TODO Updating the figure without re-plotting
-        # Add the annotations
-        if self.label_stations_cbox.isChecked():
-            self.figure.update_scenes(annotations=annotations)
+            else:
+                plot_hole(pem_file)
+
+        # Set the style of the markers and lines
+        self.figure.update_traces(marker=dict(size=6,
+                                              line=dict(width=2,
+                                                        color='DarkSlateGrey')),
+                                  line=dict(width=4)
+                                  )
 
         # Create the HTML
-        html = '<html><body>' + \
-               plotly.offline.plot(self.figure, output_type='div', include_plotlyjs='cdn') + \
-               '</body></html>'
+        html = '<html><body>'
+        html += plotly.offline.plot(self.figure,
+                                    output_type='div',
+                                    include_plotlyjs='cdn',
+                                    config={'displayModeBar': False}
+                                    )
+        html += '</body></html>'
 
         t2 = time.time()
+        # Add the plot HTML to be shown in the plot widget
         self.plot_widget.setHtml(html)
         print(f'Time to set HTML: {time.time() - t2}')
 
+    def save_img(self):
+        save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
 
-class oldMap3DViewer(QWidget, Ui_Map3DWidget):
-    """
-    QWidget window that displays a 3D map (plotted from Map3D) of the PEM Files.
-    """
-
-    def __init__(self, parent=None):
-        super().__init__()
-        self.setupUi(self)
-        self.pem_files = None
-        self.parent = parent
-
-        self.setWindowTitle("3D Map Viewer")
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map2.png')))
-
-        self.draw_loops = self.draw_loops_cbox.isChecked()
-        self.draw_lines = self.draw_lines_cbox.isChecked()
-        self.draw_boreholes = self.draw_boreholes_cbox.isChecked()
-
-        self.label_loops = self.label_loops_cbox.isChecked()
-        self.label_lines = self.label_lines_cbox.isChecked()
-        self.label_stations = self.label_stations_cbox.isChecked()
-        self.label_boreholes = self.label_boreholes_cbox.isChecked()
-
-        self.draw_loops_cbox.toggled.connect(self.toggle_loops)
-        self.draw_lines_cbox.toggled.connect(self.toggle_lines)
-        self.draw_boreholes_cbox.toggled.connect(self.toggle_boreholes)
-
-        self.label_loops_cbox.toggled.connect(self.toggle_loop_labels)
-        self.label_loop_anno_cbox.toggled.connect(self.toggle_loop_anno_labels)
-        self.label_lines_cbox.toggled.connect(self.toggle_line_labels)
-        self.label_stations_cbox.toggled.connect(self.toggle_station_labels)
-        self.label_boreholes_cbox.toggled.connect(self.toggle_borehole_labels)
-        self.label_segments_cbox.toggled.connect(self.toggle_segment_labels)
-
-        self.figure = Figure()
-        self.canvas = FigureCanvas(self.figure)
-        self.map_layout.addWidget(self.canvas)
-        self.figure.subplots_adjust(left=-0.1, bottom=-0.1, right=1.1, top=1.1)
-        self.ax = self.figure.add_subplot(111, projection='3d')
-
-        self.map_plotter = Map3D(parent=self)
-
-    def open(self, pem_files):
-        self.pem_files = pem_files
-
-        self.map_plotter.plot_pems(self.pem_files, self.ax)
-        # self.map_plotter.format_ax()
-
-        # Show/hide features based on the current state of the checkboxes
-        self.update_canvas()
-
-    def update_canvas(self):
-        self.toggle_loops()
-        self.toggle_lines()
-        self.toggle_boreholes()
-        self.toggle_loop_labels()
-        self.toggle_loop_anno_labels()
-        self.toggle_line_labels()
-        self.toggle_borehole_labels()
-        self.toggle_station_labels()
-        self.toggle_segment_labels()
-        self.canvas.draw()
-
-    def toggle_loops(self):
-        if self.draw_loops_cbox.isChecked():
-            for artist in self.map_plotter.loop_artists:
-                artist.set_visible(True)
+        if save_file:
+            size = self.contentsRect()
+            img = QtGui.QPixmap(size.width(), size.height())
+            self.render(img)
+            img.save(save_file)
         else:
-            for artist in self.map_plotter.loop_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
+            pass
 
-    def toggle_lines(self):
-        if self.draw_lines_cbox.isChecked():
-            for artist in self.map_plotter.line_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.map_plotter.line_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_boreholes(self):
-        if self.draw_boreholes_cbox.isChecked():
-            for artist in self.map_plotter.hole_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.map_plotter.hole_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_loop_labels(self):
-        if self.label_loops_cbox.isChecked():
-            for artist in self.map_plotter.loop_label_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.map_plotter.loop_label_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_loop_anno_labels(self):
-        if self.label_loop_anno_cbox.isChecked():
-            for artist in self.map_plotter.loop_anno_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.map_plotter.loop_anno_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_line_labels(self):
-        if self.label_lines_cbox.isChecked():
-            for artist in self.map_plotter.line_label_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.map_plotter.line_label_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_station_labels(self):
-        if self.label_stations_cbox.isChecked():
-            for artist in self.map_plotter.station_label_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.map_plotter.station_label_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_borehole_labels(self):
-        if self.label_boreholes_cbox.isChecked():
-            for artist in self.map_plotter.hole_label_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.map_plotter.hole_label_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_segment_labels(self):
-        if self.label_segments_cbox.isChecked():
-            for artist in self.map_plotter.segment_label_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.map_plotter.segment_label_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def closeEvent(self, e):
-        self.figure.clear()
-        e.accept()
+    def copy_img(self):
+        size = self.contentsRect()
+        img = QtGui.QPixmap(size.width(), size.height())
+        self.render(img)
+        img.copy(size)
+        QApplication.clipboard().setPixmap(img)
 
 
 class Section3DViewer(QWidget, Ui_Section3DWidget):
