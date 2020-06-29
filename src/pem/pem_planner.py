@@ -128,6 +128,11 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.hole_dip_edit.editingFinished.connect(self.plot_hole)
         self.hole_length_edit.editingFinished.connect(self.plot_hole)
 
+        self.save_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
+        self.copy_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+C"), self)
+        self.save_shortcut.activated.connect(self.save_img)
+        self.copy_shortcut.activated.connect(self.copy_img)
+
         # Validators
         int_validator = QtGui.QIntValidator()
         size_validator = QtGui.QIntValidator()
@@ -152,7 +157,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
 
         # Plots
         self.hole_trace_plot = pg.PlotDataItem()
-        self.hole_line_center = pg.ScatterPlotItem()
+        # self.hole_line_center = pg.ScatterPlotItem()
         # self.hole_trace_plot.showGrid()
         self.hole_collar_plot = pg.ScatterPlotItem()
         self.section_extent_line = pg.PlotDataItem()
@@ -214,8 +219,9 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
                 line_center_x = np.percentile(x, 80)
                 line_center_y = np.percentile(y, 80)
 
-            self.hole_line_center.setData([line_center_x], [line_center_y], pen=pg.mkPen(width=2, color=0.4))
-            self.plan_view_plot.addItem(self.hole_line_center)
+            # # Plot the center point to see if it's working properly
+            # self.hole_line_center.setData([line_center_x], [line_center_y], pen=pg.mkPen(width=2, color=0.4))
+            # self.plan_view_plot.addItem(self.hole_line_center)
 
             # Calculate the end point coordinates of the section line
             dx = math.sin(math.radians(self.hole_az)) * (line_len / 2)
@@ -647,7 +653,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         gpx.routes.append(route)
 
         # Add the collar coordinates to the GPX as a waypoint.
-        hole_lonlat= self.get_collar_lonlat()
+        hole_lonlat = self.get_collar_lonlat()
         waypoint = gpxpy.gpx.GPXWaypoint(latitude=hole_lonlat[1], longitude=hole_lonlat[0], name=hole_name, description=hole_name)
         gpx.waypoints.append(waypoint)
 
@@ -663,6 +669,24 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
                 pass
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
+
+    def save_img(self):
+        save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
+
+        if save_file:
+            size = self.contentsRect()
+            img = QtGui.QPixmap(size.width(), size.height())
+            self.render(img)
+            img.save(save_file)
+        else:
+            pass
+
+    def copy_img(self):
+        size = self.contentsRect()
+        img = QtGui.QPixmap(size.width(), size.height())
+        self.render(img)
+        img.copy(size)
+        QApplication.clipboard().setPixmap(img)
 
 
 class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
@@ -722,6 +746,11 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.station_spacing_edit.editingFinished.connect(self.plot_grid)
         self.line_spacing_edit.editingFinished.connect(self.plot_grid)
         self.line_spacing_edit.editingFinished.connect(self.change_grid_size)
+
+        self.save_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
+        self.copy_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+C"), self)
+        self.save_shortcut.activated.connect(self.save_img)
+        self.copy_shortcut.activated.connect(self.copy_img)
 
         # Validators
         int_validator = QtGui.QIntValidator()
@@ -1382,6 +1411,24 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
+    def save_img(self):
+        save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
+
+        if save_file:
+            size = self.contentsRect()
+            img = QtGui.QPixmap(size.width(), size.height())
+            self.render(img)
+            img.save(save_file)
+        else:
+            pass
+
+    def copy_img(self):
+        size = self.contentsRect()
+        img = QtGui.QPixmap(size.width(), size.height())
+        self.render(img)
+        img.copy(size)
+        QApplication.clipboard().setPixmap(img)
+
 
 class FoliumWindow(QtWebEngineWidgets.QWebEngineView):
 
@@ -1472,8 +1519,8 @@ class CustomAxis(pg.AxisItem):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    planner = LoopPlanner()
-    # planner = GridPlanner()
+    # planner = LoopPlanner()
+    planner = GridPlanner()
     planner.show()
     # planner.hole_az_edit.setText('174')
     # planner.view_map()
