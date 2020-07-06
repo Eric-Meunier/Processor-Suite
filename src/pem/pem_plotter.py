@@ -3897,20 +3897,20 @@ class PEMPrinter:
     :param kwargs: Plotting kwargs such as hide_gaps, gaps, and x limits used in PEMPlotter.
     """
 
-    def __init__(self, save_path, files, **kwargs):
-        self.files = files  # Zipped PEM and RI files
-        self.kwargs = kwargs
-        self.save_path = save_path
-        self.share_range = kwargs.get('ShareRange')
-        self.x_min = kwargs.get('XMin')
-        self.x_max = kwargs.get('XMax')
-        self.hide_gaps = kwargs.get('HideGaps')
-        self.print_plan_maps = kwargs.get('PlanMap')
-        self.print_section_plot = kwargs.get('SectionPlot')
-        self.print_lin_plots = kwargs.get('LINPlots')
-        self.print_log_plots = kwargs.get('LOGPlots')
-        self.print_step_plots = kwargs.get('STEPPlots')
-        self.crs = kwargs.get('CRS')
+    def __init__(self):
+        # self.files = files  # Zipped PEM and RI files
+        # self.kwargs = kwargs
+        # self.save_path = save_path
+        # self.share_range = kwargs.get('ShareRange')
+        # self.x_min = kwargs.get('XMin')
+        # self.x_max = kwargs.get('XMax')
+        # self.hide_gaps = kwargs.get('HideGaps')
+        # self.print_plan_maps = kwargs.get('PlanMap')
+        # self.print_section_plot = kwargs.get('SectionPlot')
+        # self.print_lin_plots = kwargs.get('LINPlots')
+        # self.print_log_plots = kwargs.get('LOGPlots')
+        # self.print_step_plots = kwargs.get('STEPPlots')
+        # self.crs = kwargs.get('CRS')
 
         self.pb = CustomProgressBar()
         self.pb_count = 0
@@ -3920,13 +3920,13 @@ class PEMPrinter:
         self.portrait_fig = plt.figure(figsize=(8.5, 11), num=1, clear=True)
         self.landscape_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
 
-    def print_files(self):
+    def print_files(self, save_path, files, **kwargs):
 
         def save_plots(pem_files, ri_files, x_min, x_max):
             # Saving the Plan Map. Must have a CRS.
-            if all([self.crs.get('Coordinate System'), self.crs.get('Datum')]) and self.print_plan_maps is True:
+            if self.crs.is_valid() and self.print_plan_maps is True:
                 if any([pem_file.has_any_gps() for pem_file in pem_files]):
-                    self.pb.setText(f"Saving plan map for {', '.join([pem_file.header.get('LineHole') for pem_file in pem_files])}")
+                    self.pb.setText(f"Saving plan map for {', '.join([f.line_name for f in pem_files])}")
                     plan_map = PlanMap(pem_files, self.landscape_fig, **self.kwargs)
                     pdf.savefig(plan_map.get_map(), orientation='landscape')
                     self.pb_count += 1
@@ -4050,30 +4050,47 @@ class PEMPrinter:
             print(f"Number of PDF pages: {total_count}")
             self.pb.setMaximum(total_count)
 
+        self.files = files  # Zipped PEM and RI files
+        self.kwargs = kwargs
+        self.save_path = save_path
+        self.share_range = kwargs.get('ShareRange')
+        self.x_min = kwargs.get('XMin')
+        self.x_max = kwargs.get('XMax')
+        self.hide_gaps = kwargs.get('HideGaps')
+        self.print_plan_maps = kwargs.get('PlanMap')
+        self.print_section_plot = kwargs.get('SectionPlot')
+        self.print_lin_plots = kwargs.get('LINPlots')
+        self.print_log_plots = kwargs.get('LOGPlots')
+        self.print_step_plots = kwargs.get('STEPPlots')
+        self.crs = kwargs.get('CRS')
+
+        self.pb_count = 0
+        self.pb_end = 0
+        self.pb.setValue(0)
+
         unique_bhs = defaultdict()
         unique_grids = defaultdict()
 
-        bh_files = list(filter(lambda x: 'borehole' in x[0].survey_type.lower(), self.files))
-        sf_files = list(filter(lambda x: 'surface' in x[0].survey_type.lower(), self.files))
+        bh_files = [(pem, ri) for pem, ri in self.files if pem.is_borehole()]
+        sf_files = [(pem, ri) for pem, ri in self.files if not pem.is_borehole()]
 
         if any(bh_files):
             bh_files.sort(key=lambda x: x[0].get_components(), reverse=True)
-            bh_files.sort(key=lambda x: natsort.humansorted(x[0].header['Loop']))
-            bh_files.sort(key=lambda x: natsort.humansorted(x[0].header['LineHole']))
+            bh_files = natsort.humansorted(bh_files, key=lambda x: x[0].loop_name)
+            bh_files = natsort.humansorted(bh_files, key=lambda x: x[0].line_name)
 
         if any(sf_files):
             sf_files.sort(key=lambda x: x[0].get_components(), reverse=True)
-            sf_files.sort(key=lambda x: natsort.humansorted(x[0].header['LineHole']))
-            sf_files.sort(key=lambda x: natsort.humansorted(x[0].header['Loop']))
+            sf_files = natsort.humansorted(sf_files, key=lambda x: x[0].line_name)
+            sf_files = natsort.humansorted(sf_files, key=lambda x: x[0].loop_name)
 
         # Group the files by unique surveys i.e. each entry is the same borehole and same loop
-        for survey, files in itertools.groupby(bh_files, key=lambda x: (
-                x[0].header.get('LineHole'), x[0].header.get('Loop'))):
+        for survey, files in itertools.groupby(bh_files, key=lambda x: (x[0].line_name, x[0].loop_name)):
             unique_bhs[survey] = list(files)
             print(survey, list(files))
 
         # Group the files by unique surveys i.e. each entry is the same borehole and same loop
-        for loop, files in itertools.groupby(sf_files, key=lambda x: x[0].header.get('Loop')):
+        for loop, files in itertools.groupby(sf_files, key=lambda x: x[0].loop_name):
             unique_grids[loop] = list(files)
             print(loop, list(files))
 
@@ -4083,14 +4100,13 @@ class PEMPrinter:
             for survey, files in unique_bhs.items():
                 pem_files = [pair[0] for pair in files]
                 ri_files = [pair[1] for pair in files]
+
                 if self.x_min is None and self.share_range is True:
-                    x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
-                                                               pem_file in pem_files]))
+                    x_min = min([min(f.get_unique_stations(converted=True)) for f in pem_files])
                 else:
                     x_min = self.x_min
                 if self.x_max is None and self.share_range is True:
-                    x_max = max(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
-                                                               pem_file in pem_files]))
+                    x_max = max([max(f.get_unique_stations(converted=True)) for f in pem_files])
                 else:
                     x_max = self.x_max
                 save_plots(pem_files, ri_files, x_min, x_max)
@@ -4100,13 +4116,11 @@ class PEMPrinter:
                 pem_files = [pair[0] for pair in files]
                 ri_files = [pair[1] for pair in files]
                 if self.x_min is None and self.share_range is True:
-                    x_min = min(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
-                                                               pem_file in pem_files]))
+                    x_min = min([min(f.get_unique_stations(converted=True)) for f in pem_files])
                 else:
                     x_min = self.x_min
                 if self.x_max is None and self.share_range is True:
-                    x_max = max(itertools.chain.from_iterable([pem_file.get_converted_unique_stations() for
-                                                               pem_file in pem_files]))
+                    x_max = max([max(f.get_unique_stations(converted=True)) for f in pem_files])
                 else:
                     x_max = self.x_max
                 save_plots(pem_files, ri_files, x_min, x_max)

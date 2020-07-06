@@ -392,10 +392,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_gps_table(self.pem_file.geometry.get_collar(), self.collarGPSTable)
             self.fill_gps_table(self.pem_file.geometry.get_segments(), self.geometryTable)
         else:
-            self.fill_gps_table(self.pem_file.line.get_line(sorted=self.parent.autoSortStationsCheckbox.isChecked()),
+            self.fill_gps_table(self.pem_file.line.get_line(sorted=self.parent.auto_sort_stations_cbox.isChecked()),
                                 self.stationGPSTable)
         self.fill_info_tab()
-        self.fill_gps_table(self.pem_file.loop.get_loop(sorted=self.parent.autoSortLoopsCheckbox.isChecked()),
+        self.fill_gps_table(self.pem_file.loop.get_loop(sorted=self.parent.auto_sort_loops_cbox.isChecked()),
                             self.loopGPSTable)
         self.fill_data_table()
         return self

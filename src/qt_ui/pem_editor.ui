@@ -39,7 +39,7 @@
        <enum>QTabWidget::West</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="main_frame_file_tab">
        <attribute name="title">
@@ -140,7 +140,7 @@ Create Backup Files</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
-            <widget class="QCheckBox" name="autoSortLoopsCheckbox">
+            <widget class="QCheckBox" name="auto_sort_loops_cbox">
              <property name="text">
               <string>Auto-Sort Loops</string>
              </property>
@@ -150,7 +150,7 @@ Create Backup Files</string>
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="autoSortStationsCheckbox">
+            <widget class="QCheckBox" name="auto_sort_stations_cbox">
              <property name="font">
               <font>
                <family>MS Shell Dlg 2</family>
@@ -190,7 +190,7 @@ Station Positions</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
            <item row="0" column="1">
-            <widget class="QComboBox" name="systemCBox">
+            <widget class="QComboBox" name="gps_system_cbox">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -215,7 +215,7 @@ Station Positions</string>
             </widget>
            </item>
            <item row="2" column="1">
-            <widget class="QComboBox" name="datumCBox">
+            <widget class="QComboBox" name="gps_datum_cbox">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -247,7 +247,7 @@ Station Positions</string>
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QComboBox" name="zoneCBox">
+            <widget class="QComboBox" name="gps_zone_cbox">
              <property name="enabled">
               <bool>false</bool>
              </property>
@@ -346,7 +346,7 @@ Station Positions</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
-            <widget class="QPushButton" name="reverseAllZButton">
+            <widget class="QPushButton" name="reverse_all_z_btn">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -368,7 +368,7 @@ Station Positions</string>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="reverseAllXButton">
+            <widget class="QPushButton" name="reverse_all_x_btn">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -390,7 +390,7 @@ Station Positions</string>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="reverseAllYButton">
+            <widget class="QPushButton" name="reverse_all_y_btn">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -565,14 +565,14 @@ All Repeat Stations</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_4">
            <item>
-            <widget class="QCheckBox" name="movingLoopCBox">
+            <widget class="QCheckBox" name="moving_loop_cbox">
              <property name="text">
               <string>Moving Loop</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="show_loop_anno_checkbox">
+            <widget class="QCheckBox" name="show_loop_anno_cbox">
              <property name="text">
               <string>Loop Annotations</string>
              </property>
@@ -1249,27 +1249,27 @@ Stations</string>
   <tabstop>share_loop_cbox</tabstop>
   <tabstop>loop_edit</tabstop>
   <tabstop>main_frame_tab</tabstop>
-  <tabstop>autoSortLoopsCheckbox</tabstop>
-  <tabstop>autoSortStationsCheckbox</tabstop>
-  <tabstop>systemCBox</tabstop>
-  <tabstop>zoneCBox</tabstop>
-  <tabstop>datumCBox</tabstop>
+  <tabstop>auto_sort_loops_cbox</tabstop>
+  <tabstop>auto_sort_stations_cbox</tabstop>
+  <tabstop>gps_system_cbox</tabstop>
+  <tabstop>gps_zone_cbox</tabstop>
+  <tabstop>gps_datum_cbox</tabstop>
   <tabstop>reset_crs_btn</tabstop>
   <tabstop>auto_create_backup_files_cbox</tabstop>
   <tabstop>delete_merged_files_cbox</tabstop>
   <tabstop>auto_name_line_btn</tabstop>
   <tabstop>auto_merge_files_btn</tabstop>
-  <tabstop>reverseAllZButton</tabstop>
-  <tabstop>reverseAllXButton</tabstop>
-  <tabstop>reverseAllYButton</tabstop>
+  <tabstop>reverse_all_z_btn</tabstop>
+  <tabstop>reverse_all_x_btn</tabstop>
+  <tabstop>reverse_all_y_btn</tabstop>
   <tabstop>rename_all_repeat_stations_btn</tabstop>
   <tabstop>share_range_cbox</tabstop>
   <tabstop>max_range_edit</tabstop>
   <tabstop>min_range_edit</tabstop>
   <tabstop>reset_range_btn</tabstop>
   <tabstop>hide_gaps_cbox</tabstop>
-  <tabstop>movingLoopCBox</tabstop>
-  <tabstop>show_loop_anno_checkbox</tabstop>
+  <tabstop>moving_loop_cbox</tabstop>
+  <tabstop>show_loop_anno_cbox</tabstop>
   <tabstop>plan_map_options_btn</tabstop>
   <tabstop>label_section_depths_cbox</tabstop>
   <tabstop>section_depth_edit</tabstop>

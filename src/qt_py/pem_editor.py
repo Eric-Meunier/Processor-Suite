@@ -127,11 +127,11 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.gps_zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
         self.gps_datums = ['', 'NAD 1927', 'NAD 1983', 'WGS 1984']
         for system in self.gps_systems:
-            self.systemCBox.addItem(system)
+            self.gps_system_cbox.addItem(system)
         for zone in self.gps_zones:
-            self.zoneCBox.addItem(zone)
+            self.gps_zone_cbox.addItem(zone)
         for datum in self.gps_datums:
-            self.datumCBox.addItem(datum)
+            self.gps_datum_cbox.addItem(datum)
 
         # Set validations
         int_validator = QtGui.QIntValidator()
@@ -368,13 +368,13 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.auto_name_line_btn.clicked.connect(self.auto_name_lines)
         self.auto_merge_files_btn.clicked.connect(self.auto_merge_pem_files)
 
-        self.reverseAllZButton.clicked.connect(lambda: self.reverse_all_data(comp='Z'))
-        self.reverseAllXButton.clicked.connect(lambda: self.reverse_all_data(comp='X'))
-        self.reverseAllYButton.clicked.connect(lambda: self.reverse_all_data(comp='Y'))
+        self.reverse_all_z_btn.clicked.connect(lambda: self.reverse_all_data(comp='Z'))
+        self.reverse_all_x_btn.clicked.connect(lambda: self.reverse_all_data(comp='X'))
+        self.reverse_all_y_btn.clicked.connect(lambda: self.reverse_all_data(comp='Y'))
         self.rename_all_repeat_stations_btn.clicked.connect(self.rename_all_repeat_stations)
 
-        self.systemCBox.currentIndexChanged.connect(
-            lambda: self.zoneCBox.setEnabled(True if self.systemCBox.currentText() == 'UTM' else False))
+        self.gps_system_cbox.currentIndexChanged.connect(
+            lambda: self.gps_zone_cbox.setEnabled(True if self.gps_system_cbox.currentText() == 'UTM' else False))
 
         self.reset_crs_btn.clicked.connect(self.reset_crs)
 
@@ -666,9 +666,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.pg.show()
 
     def reset_crs(self):
-        self.systemCBox.setCurrentIndex(0)
-        self.zoneCBox.setCurrentIndex(0)
-        self.datumCBox.setCurrentIndex(0)
+        self.gps_system_cbox.setCurrentIndex(0)
+        self.gps_zone_cbox.setCurrentIndex(0)
+        self.gps_datum_cbox.setCurrentIndex(0)
 
     def open_pem_files(self, pem_files):
         """
@@ -738,11 +738,11 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             """
             crs = pem_file.get_crs()
             if crs and crs.is_valid():
-                self.systemCBox.setCurrentIndex(self.gps_systems.index(crs.system))
+                self.gps_system_cbox.setCurrentIndex(self.gps_systems.index(crs.system))
                 if crs.system == 'UTM':
                     hemis = 'North' if crs.north is True else 'South'
-                    self.zoneCBox.setCurrentIndex(self.gps_zones.index(f"{crs.zone_number} {hemis}"))
-                self.datumCBox.setCurrentIndex(self.gps_datums.index(crs.datum))
+                    self.gps_zone_cbox.setCurrentIndex(self.gps_zones.index(f"{crs.zone_number} {hemis}"))
+                self.gps_datum_cbox.setCurrentIndex(self.gps_datums.index(crs.datum))
 
         def share_header(pem_file):
             """
@@ -769,7 +769,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.start_pg(min=0, max=len(pem_files))
         count = 0
 
-        if not self.autoSortLoopsCheckbox.isChecked():
+        if not self.auto_sort_loops_cbox.isChecked():
             self.message.warning(self, 'Warning', "Loops aren't being sorted.")
 
         for pem_file in pem_files:
@@ -789,7 +789,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 if not self.pem_files:
                     share_header(pem_file)
                 # Fill CRS from the file if project CRS currently empty
-                if self.systemCBox.currentText() == '' and self.datumCBox.currentText() == '':
+                if self.gps_system_cbox.currentText() == '' and self.gps_datum_cbox.currentText() == '':
                     fill_crs(pem_file)
 
                 i = get_insertion_point(pem_file)
@@ -838,7 +838,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if current_tab == pem_info_widget.Station_GPS_Tab:
             line = SurveyLine(file, crs=crs)
             self.line_adder.write_widget = pem_info_widget
-            self.line_adder.add_df(line.get_line(sorted=self.autoSortStationsCheckbox.isChecked()))
+            self.line_adder.add_df(line.get_line(sorted=self.auto_sort_stations_cbox.isChecked()))
 
         elif current_tab == pem_info_widget.Geometry_Tab:
             collar = BoreholeCollar(file, crs=crs)
@@ -851,7 +851,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         elif current_tab == pem_info_widget.Loop_GPS_Tab:
             loop = TransmitterLoop(file, crs=crs)
             self.loop_adder.write_widget = pem_info_widget
-            self.loop_adder.add_df(loop.get_loop(sorted=self.autoSortLoopsCheckbox.isChecked()))
+            self.loop_adder.add_df(loop.get_loop(sorted=self.auto_sort_loops_cbox.isChecked()))
 
         else:
             pass
@@ -890,9 +890,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             datum = 'NAD 1983'
         elif 'NAD 1927' in datum:
             datum = 'NAD 1927'
-        self.systemCBox.setCurrentIndex(self.gps_systems.index(coord_sys))
-        self.zoneCBox.setCurrentIndex(self.gps_zones.index(coord_zone))
-        self.datumCBox.setCurrentIndex(self.gps_datums.index(datum))
+        self.gps_system_cbox.setCurrentIndex(self.gps_systems.index(coord_sys))
+        self.gps_zone_cbox.setCurrentIndex(self.gps_zones.index(coord_zone))
+        self.gps_datum_cbox.setCurrentIndex(self.gps_datums.index(datum))
 
     def open_gpx_files(self, gpx_files):
         if len(gpx_files) > 0:
@@ -903,9 +903,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 file += gps
 
             if zone and hemisphere:
-                self.systemCBox.setCurrentIndex(self.gps_systems.index('UTM'))
-                self.zoneCBox.setCurrentIndex(self.gps_zones.index(f"{zone} {hemisphere.title()}"))
-                self.datumCBox.setCurrentIndex(self.gps_datums.index('WGS 1984'))
+                self.gps_system_cbox.setCurrentIndex(self.gps_systems.index('UTM'))
+                self.gps_zone_cbox.setCurrentIndex(self.gps_zones.index(f"{zone} {hemisphere.title()}"))
+                self.gps_datum_cbox.setCurrentIndex(self.gps_datums.index('WGS 1984'))
 
             pem_info_widget = self.stackedWidget.currentWidget()
             current_tab = pem_info_widget.tabs.currentWidget()
@@ -1311,8 +1311,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 return
 
             system = crs.system
-            # zone = ' Zone ' + self.zoneCBox.currentText() if self.zoneCBox.isEnabled() else ''
-            zone = ' Zone ' + crs.zone if self.zoneCBox.isEnabled() else ''
+            # zone = ' Zone ' + self.gps_zone_cbox.currentText() if self.gps_zone_cbox.isEnabled() else ''
+            zone = ' Zone ' + crs.zone if self.gps_zone_cbox.isEnabled() else ''
             datum = crs.datum
 
             loops = []
@@ -1333,7 +1333,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     folder = os.path.join(export_folder, loop)
                     for pem_file in pem_files:
                         if pem_file.has_loop_gps():
-                            loop = pem_file.get_loop(sorted=self.autoSortLoopsCheckbox.isChecked(), closed=False)
+                            loop = pem_file.get_loop(sorted=self.auto_sort_loops_cbox.isChecked(), closed=False)
                             if loop.to_string() not in loops:
                                 loop_name = pem_file.loop_name
                                 print(f"Creating CSV file for loop {loop_name}")
@@ -1676,9 +1676,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             Add the CRS from the table as a note to the PEM file.
             :return: None
             """
-            system = self.systemCBox.currentText()
-            zone = ' Zone ' + self.zoneCBox.currentText() if self.zoneCBox.isEnabled() else ''
-            datum = self.datumCBox.currentText()
+            system = self.gps_system_cbox.currentText()
+            zone = ' Zone ' + self.gps_zone_cbox.currentText() if self.gps_zone_cbox.isEnabled() else ''
+            datum = self.gps_datum_cbox.currentText()
 
             if any([system, zone, datum]):
                 for note in reversed(pem_file.notes):
@@ -1766,9 +1766,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Return a CRS object based on the CRS information in the PEM Editor window
         :return: CRS object
         """
-        system = self.systemCBox.currentText()
-        zone = self.zoneCBox.currentText()
-        datum = self.datumCBox.currentText()
+        system = self.gps_system_cbox.currentText()
+        zone = self.gps_zone_cbox.currentText()
+        datum = self.gps_datum_cbox.currentText()
 
         crs_dict = {'System': system, 'Zone': zone, 'Datum': datum}
         crs = CRS().from_dict(crs_dict)
@@ -1811,10 +1811,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             pem_files = copy.deepcopy(input_pem_files)
             self.window().statusBar().showMessage('Saving plots...', 2000)
 
-            plot_kwargs = {'ShareRange': self.share_range_checkbox.isChecked(),
-                           'HideGaps': self.hide_gaps_checkbox.isChecked(),
-                           'LoopAnnotations': self.show_loop_anno_checkbox.isChecked(),
-                           'MovingLoop': self.movingLoopCBox.isChecked(),
+            plot_kwargs = {'ShareRange': self.share_range_cbox.isChecked(),
+                           'HideGaps': self.hide_gaps_cbox.isChecked(),
+                           'LoopAnnotations': self.show_loop_anno_cbox.isChecked(),
+                           'MovingLoop': self.moving_loop_cbox.isChecked(),
                            'TitleBox': self.plan_map_options.title_box_cbox.isChecked(),
                            'Grid': self.plan_map_options.grid_cbox.isChecked(),
                            'ScaleBar': self.plan_map_options.scale_bar_cbox.isChecked(),
@@ -1837,15 +1837,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                            'LabelSectionTicks': self.label_section_depths_cbox.isChecked(),
                            'SectionDepth': self.section_depth_edit.text()}
 
-            if self.share_range_checkbox.isChecked():
-                try:
-                    plot_kwargs['XMin'] = int(self.min_range_edit.text())
-                except ValueError:
-                    plot_kwargs['XMin'] = None
-                try:
-                    plot_kwargs['XMax'] = int(self.max_range_edit.text())
-                except ValueError:
-                    plot_kwargs['XMax'] = None
+            if self.share_range_cbox.isChecked():
+                plot_kwargs['XMin'] = int(self.min_range_edit.text())
+                plot_kwargs['XMax'] = int(self.max_range_edit.text())
             else:
                 plot_kwargs['XMin'] = None
                 plot_kwargs['XMax'] = None
@@ -1855,12 +1849,13 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 ri_files.append(self.pem_info_widgets[row].ri_file)
                 self.update_pem_file_from_table(pem_file, row)
                 if not pem_file.is_averaged():
-                    self.file_editor.average(pem_file)
+                    pem_file = pem_file.average()
                 if not pem_file.is_split():
-                    self.file_editor.split_channels(pem_file)
+                    pem_file = pem_file.split()
 
             if self.output_plan_map_cbox.isChecked():
-                if not all([plot_kwargs['CRS'].get('System'), plot_kwargs['CRS'].get('Datum')]):
+                crs = self.get_crs()
+                if not crs.is_valid():
                     response = self.message.question(self, 'No CRS',
                                                      'No CRS has been selected. ' +
                                                      'Do you wish to proceed without a plan map?',
@@ -1868,20 +1863,21 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     if response == self.message.No:
                         return
 
-            save_dir = get_save_file()
+            # save_dir = get_save_file()
+            save_dir = r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\test.pdf'
             if save_dir:
                 # PEM Files and RI files zipped together for when they get sorted
                 try:
                     printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
                     self.window().statusBar().addPermanentWidget(printer.pb)
                     printer.print_files()
-                    printer.pb.hide()
-                    self.window().statusBar().showMessage('Plots saved', 2000)
                 except FileNotFoundError:
                     self.message.information(self, 'Error', f'{save_dir} does not exist')
-                    printer.pb.hide()
                 except IOError:
                     self.message.information(self, 'Error', f'{save_dir} is currently opened')
+                else:
+                    self.window().statusBar().showMessage('Plots saved', 2000)
+                finally:
                     printer.pb.hide()
             else:
                 self.window().statusBar().showMessage('Cancelled', 2000)
@@ -2361,8 +2357,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         if self.pem_files:
-            zone = self.zoneCBox.currentText()
-            datum = self.datumCBox.currentText()
+            zone = self.gps_zone_cbox.currentText()
+            datum = self.gps_datum_cbox.currentText()
             if not zone:
                 self.message.information(self, 'UTM Zone Error', f"UTM zone cannot be empty.")
             elif not datum:
@@ -2683,13 +2679,14 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    # pem_files = pg.get_pems(client='PEM Splitting', number=1)
+    pem_files = pg.get_pems(client='PEM Splitting', number=5)
     # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
-    mw.open_pem_files(r'C:\_Data\2020\Bitterroot\Surface\BR1\RAW\L8770E_04.PEM')
+    mw.open_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
     mw.show()
 
+    mw.print_plots()
     # mw.reverse_all_data('X')
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.open_gps_files([r'C:\_Data\2020\Bitterroot\Surface\BR1\GPS\L8770E_04.txt'])
