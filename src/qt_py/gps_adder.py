@@ -7,7 +7,7 @@ from PyQt5 import (QtCore, QtGui)
 from PyQt5.QtWidgets import (QWidget, QApplication, QMessageBox, QTableWidgetItem, QGridLayout,
                              QHeaderView, QTableWidget, QDialogButtonBox, QAbstractItemView, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.ticker import FixedLocator
+from matplotlib.ticker import FixedLocator, FormatStrFormatter
 
 
 def convert_station(station):
@@ -270,7 +270,7 @@ class LineAdder(GPSAdder):
         self.section_ax.clear()
 
         df = self.table_to_df()
-        df.loc[:, 'Station'] = df.loc[:, 'Station'].map(convert_station)
+        df['Station'] = df['Station'].astype(int)
 
         # Redraw the empty canvas if there is a pending error
         if self.error is True:
@@ -301,6 +301,7 @@ class LineAdder(GPSAdder):
                 legend=False
                 )
 
+        self.plan_ax.ticklabel_format(axis='both', style='plain', useOffset=False)
         # self.section_ax.xaxis.grid(True, which='minor')
         self.section_ax.xaxis.set_minor_locator(FixedLocator(df.Station.to_list()))
 
@@ -355,6 +356,8 @@ class LineAdder(GPSAdder):
             return
 
         df = self.table_to_df()
+        df['Station'] = df['Station'].astype(int)
+
         # Plot on the plan map
         plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
         self.plan_highlight = self.plan_ax.scatter([plan_x], [plan_y],
@@ -520,6 +523,7 @@ class LoopAdder(GPSAdder):
             self.section_ax.set_ylim(self.section_ax.get_ylim()[0] - 5,
                                      self.section_ax.get_ylim()[1] + 5)
 
+        self.plan_ax.ticklabel_format(axis='both', style='plain', useOffset=False)
         # ticks = self.plan_ax.get_yticklabels()
         # self.plan_ax.set_yticklabels(ticks, rotation=45)
         self.canvas.draw()

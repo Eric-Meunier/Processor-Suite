@@ -329,9 +329,9 @@ class PEMFile:
             # Sum the number of stacks column
             new_data_df['Number of stacks'] = group['Number of stacks'].sum()
             # Add the weighted average of the readings to the reading column
-            new_data_df['Reading'] = [np.average(group.Reading.to_list(),
-                                                 axis=0,
-                                                 weights=group['Number of stacks'].to_list())]
+            new_data_df['Reading'] = np.average(group.Reading.to_list(),
+                                                axis=0,
+                                                weights=group['Number of stacks'].to_list())
             return new_data_df
 
         # Create a data frame with all data averaged
@@ -356,7 +356,7 @@ class PEMFile:
         filt = self.channel_times.Remove == False
         self.channel_times = self.channel_times[filt]
         # Update the PEM file's number of channels attribute
-        self.number_of_channels = len(self.channel_times.index)
+        self.number_of_channels = len(self.channel_times.index) - 1
         return self
 
     def scale_coil_area(self, coil_area):
@@ -1063,13 +1063,13 @@ class PEMSerializer:
         :param pem_file: PEM_File object
         :return: A string in PEM file format containing the data found inside of pem_file
         """
-        result = self.serialize_tags(pem_file) + '\n' + \
-                 self.serialize_loop_coords(pem_file) + '\n' + \
-                 self.serialize_line_coords(pem_file) + '\n' + \
-                 self.serialize_notes(pem_file) +  \
-                 '~\n' + \
-                 self.serialize_header(pem_file) + '\n' + \
-                 self.serialize_data(pem_file)
+        result = self.serialize_tags(pem_file) + '\n'
+        result += self.serialize_loop_coords(pem_file) + '\n'
+        result += self.serialize_line_coords(pem_file) + '\n'
+        result += self.serialize_notes(pem_file)
+        result += '~\n'
+        result += self.serialize_header(pem_file) + '\n'
+        result += self.serialize_data(pem_file)
 
         return result
 

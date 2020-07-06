@@ -737,7 +737,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             :param pem_file: PEMFile object
             """
             crs = pem_file.get_crs()
-            if crs.is_valid():
+            if crs and crs.is_valid():
                 self.systemCBox.setCurrentIndex(self.gps_systems.index(crs.system))
                 if crs.system == 'UTM':
                     hemis = 'North' if crs.north is True else 'South'
@@ -876,8 +876,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             with open(filepath, 'r') as in_file:
                 file = in_file.read()
 
-            crs['Coordinate System'] = re.findall('Coordinate System:\W+(?P<System>.*)', file)[0]
-            crs['Coordinate Zone'] = re.findall('Coordinate Zone:\W+(?P<Zone>.*)', file)[0]
+            crs['System'] = re.findall('Coordinate System:\W+(?P<System>.*)', file)[0]
+            crs['Zone'] = re.findall('Coordinate Zone:\W+(?P<Zone>.*)', file)[0]
             crs['Datum'] = re.findall('Datum:\W+(?P<Datum>.*)', file)[0]
             return crs
 
@@ -1027,7 +1027,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 count += 1
                 self.pg.setValue(count)
 
-            self.refresh_rows()
+            self.refresh_rows(rows='all')
             self.pg.hide()
             self.window().statusBar().showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
 
@@ -1290,7 +1290,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 updated_file.filepath = os.path.join(file_dir, file_name + extension)
                 updated_file.filename = os.path.basename(updated_file.filepath)
                 self.write_pem_file(updated_file, dir=file_dir, remove_old=False)
-            self.refresh_table()
+            self.refresh_rows(rows='all')
             self.window().statusBar().showMessage(
                 f"Save complete. {len(pem_files)} PEM {'file' if len(pem_files) == 1 else 'files'} exported", 2000)
         else:
@@ -1862,7 +1862,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             if self.output_plan_map_cbox.isChecked():
                 if not all([plot_kwargs['CRS'].get('System'), plot_kwargs['CRS'].get('Datum')]):
                     response = self.message.question(self, 'No CRS',
-                                                     'No CRS has been selected. '
+                                                     'No CRS has been selected. ' +
                                                      'Do you wish to proceed without a plan map?',
                                                      self.message.Yes | self.message.No)
                     if response == self.message.No:
@@ -2691,8 +2691,8 @@ def main():
     mw.show()
 
     # mw.reverse_all_data('X')
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    mw.open_gps_files([r'C:\_Data\2020\Bitterroot\Surface\BR1\GPS\L8770E_04.txt'])
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.open_gps_files([r'C:\_Data\2020\Bitterroot\Surface\BR1\GPS\L8770E_04.txt'])
     # mw.open_gps_files([r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
     # mw.save_as_xyz()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])

@@ -210,7 +210,7 @@ class BatchRIImporter(QWidget):
         if len(ri_filepaths) == len(self.pem_files):
 
             # Only for boreholes, match up the RI1 file for Z, and RI2 file for XY
-            if all(['borehole' in pem_file.survey_type.lower() for pem_file in self.pem_files]):
+            if all([pem_file.is_borehole() for pem_file in self.pem_files]):
                 ri_files = [self.ri_parser.open(filepath) for filepath in ri_filepaths]
 
                 for pem_file in self.pem_files:
@@ -226,7 +226,7 @@ class BatchRIImporter(QWidget):
                             ri_files.pop(ri_files.index(ri_file))
                             break
 
-            elif not all([pem_file.is_borehole() for pem_file in self.pem_files]):
+            elif any([pem_file.is_borehole() for pem_file in self.pem_files]):
                 self.message.information(None, "Error", "PEM files must either be all borehole or all surface surveys")
 
             else:
