@@ -1,5 +1,5 @@
 import sys
-
+import re
 import keyboard
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,6 +8,18 @@ from PyQt5.QtWidgets import (QWidget, QApplication, QMessageBox, QTableWidgetIte
                              QHeaderView, QTableWidget, QDialogButtonBox, QAbstractItemView, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FixedLocator
+
+
+def convert_station(station):
+    """
+    Converts a single station name into a number, negative if the stations was S or W
+    :return: Integer station number
+    """
+    if re.match(r"\d+(S|W)", station):
+        station = (-int(re.sub(r"\D", "", station)))
+    else:
+        station = (int(re.sub(r"\D", "", station)))
+    return station
 
 
 class GPSAdder(QWidget):
@@ -49,7 +61,7 @@ class GPSAdder(QWidget):
         self.figure = plt.figure()
         self.figure.subplots_adjust(left=0.17, bottom=0.05, right=0.97, top=0.95)
         self.plan_ax = plt.subplot2grid((30, 1), (0, 0), rowspan=19, colspan=1, fig=self.figure)
-        self.plan_ax.set_aspect('equal')
+        self.plan_ax.set_aspect('equal', adjustable='datalim')
         self.plan_ax.use_sticky_edges = False
         self.section_ax = plt.subplot2grid((30, 1), (22, 0), rowspan=7, colspan=1, fig=self.figure)
         self.section_ax.use_sticky_edges = False
@@ -258,6 +270,7 @@ class LineAdder(GPSAdder):
         self.section_ax.clear()
 
         df = self.table_to_df()
+        df.loc[:, 'Station'] = df.loc[:, 'Station'].map(convert_station)
 
         # Redraw the empty canvas if there is a pending error
         if self.error is True:
@@ -287,6 +300,7 @@ class LineAdder(GPSAdder):
                 zorder=0,
                 legend=False
                 )
+
         # self.section_ax.xaxis.grid(True, which='minor')
         self.section_ax.xaxis.set_minor_locator(FixedLocator(df.Station.to_list()))
 

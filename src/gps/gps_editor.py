@@ -515,6 +515,10 @@ class GPSParser:
         else:
             contents = file
 
+        # Ensure there is no nested-lists
+        while isinstance(contents[0], list):
+            contents = contents[0]
+
         matched_gps = []
         for row in contents:
             match = re.search(self.re_station_gps, row)
@@ -544,6 +548,10 @@ class GPSParser:
             contents = self.open(file)
         else:
             contents = file
+
+        # Ensure there is no nested-lists
+        while isinstance(contents[0], list):
+            contents = contents[0]
 
         matched_gps = []
         for row in contents:

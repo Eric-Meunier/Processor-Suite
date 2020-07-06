@@ -1027,7 +1027,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 count += 1
                 self.pg.setValue(count)
 
-            self.refresh_table()
+            self.refresh_rows()
             self.pg.hide()
             self.window().statusBar().showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
 
@@ -2691,8 +2691,8 @@ def main():
     mw.show()
 
     # mw.reverse_all_data('X')
-
-    # mw.open_gps_files([r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    mw.open_gps_files([r'C:\_Data\2020\Bitterroot\Surface\BR1\GPS\L8770E_04.txt'])
     # mw.open_gps_files([r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
     # mw.save_as_xyz()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
