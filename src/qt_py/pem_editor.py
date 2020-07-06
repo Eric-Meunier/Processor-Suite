@@ -2684,8 +2684,8 @@ def main():
 
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Splitting', number=1)
-    pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
-    mw.open_pem_files(pem_files)
+    # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
+    # mw.open_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
     mw.show()
