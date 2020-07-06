@@ -35,7 +35,7 @@ class PEMFile:
     """
     PEM file class
     """
-    def __init__(self, tags, loop_coords, line_coords, notes, header, data, filepath=None):
+    def __init__(self, tags, loop_coords, line_coords, notes, header, channel_table, data, filepath=None):
         self.format = tags.get('Format')
         self.units = tags.get('Units')
         self.operator = tags.get('Operator')
@@ -63,7 +63,7 @@ class PEMFile:
         self.primary_field_value = header.get('Primary field value')
         self.coil_area = header.get('Coil area')
         self.loop_polarity = header.get('Loop polarity')
-        self.channel_times = header.get('Channel times')
+        self.channel_times = channel_table
 
         self.notes = notes
         self.data = data
@@ -554,8 +554,20 @@ class PEMParser:
         self.re_notes = re.compile(  # Parsing the notes i.e. GEN tags and HE tags
             r'^(?P<Notes><GEN>.*|<HE\d>.*)',
             re.MULTILINE)
+        #
+        # # Header starting from 'Client' to before the channel times
+        # self.re_header = re.compile(  # Parsing the header
+        #     r'^(?:(<|~).*[\r\n]+)'
+        #     r'(?P<Client>\w.*)[\r\n]'
+        #     r'(?P<Grid>.*)[\r\n]'
+        #     r'(?P<LineHole>.*)[\r\n]'
+        #     r'(?P<Loop>.*)[\r\n]'
+        #     r'(?P<Date>.*)[\r\n]'
+        #     r'(?P<SurveyType>.*)\s(?P<Convention>Metric|Imperial)\s(?P<Sync>Crystal-Master|Crystal-Slave|Cable)\s(?P<Timebase>\d+\.?\d+)\s(?P<Ramp>\d+)\s(?P<NumChannels>\d+)\s(?P<NumReadings>\d+)[\r\n]'
+        #     r'(?P<Receiver>#\d+)\s(?P<RxSoftwareVer>[\d.]+)\s(?P<RxSoftwareVerDate>[\w]+,[\w]+)\s(?P<RxFileName>[^\s]+)\s(?P<IsNormalized>[\w]+)\s(?P<PrimeFieldValue>\d+)\s(?P<CoilArea>-?\d+)\s(?P<LoopPolarity>-|\+)?[\n\r]+',
+        #     re.MULTILINE)
 
-        # Header starting from 'Client' to the channel start-end times
+        # Header starting from 'Client' to before the channel times
         self.re_header = re.compile(  # Parsing the header
             r'^(?:(<|~).*[\r\n]+)'
             r'(?P<Client>\w.*)[\r\n]'
@@ -563,10 +575,14 @@ class PEMParser:
             r'(?P<LineHole>.*)[\r\n]'
             r'(?P<Loop>.*)[\r\n]'
             r'(?P<Date>.*)[\r\n]'
-            r'(?P<SurveyType>.*)\s(?P<Convention>Metric|Imperial)\s(?P<Sync>Crystal-Master|Crystal-Slave|Cable)\s(?P<Timebase>\d+\.?\d+)\s(?P<Ramp>\d+)\s(?P<NumChannels>\d+)\s(?P<NumReadings>\d+)[\r\n]'
-            r'(?P<Receiver>#\d+)\s(?P<RxSoftwareVer>[\d.]+)\s(?P<RxSoftwareVerDate>[\w]+,[\w]+)\s(?P<RxFileName>[^\s]+)\s(?P<IsNormalized>[\w]+)\s(?P<PrimeFieldValue>\d+)\s(?P<CoilArea>-?\d+)\s(?P<LoopPolarity>-|\+)?[\n\r]+'
-            r'(?P<ChannelTimes>[\W\w]+)[\r\n]\$',
+            r'(?P<SurveyParameters>.+)[\r\n]'
+            r'(?P<ReceiverParameters>.+)[\r\n]',
             re.MULTILINE)
+
+        # Channel times
+        self.re_channel_times = re.compile(
+            r'[\r\n]{2}(?P<ChannelTimes>.*?)\$',
+            re.DOTALL)
 
         # Data section
         self.re_data = re.compile(  # Parsing the EM data information
@@ -644,7 +660,77 @@ class PEMParser:
 
             return notes
 
-        def parse_header(file, units=None):
+        def parse_header(file):
+
+            header_cols = [
+                'Client',
+                'Grid',
+                'Line',
+                'Loop',
+                'Date'
+            ]
+
+            survey_param_cols = [
+                'Survey type',
+                'Convention',
+                'Sync',
+                'Timebase',
+                'Ramp',
+                'Number of channels',
+                'Number of readings'
+            ]
+
+            receiver_param_cols = [
+                'Receiver number',
+                'Rx software version',
+                'Rx software version date',
+                'Rx file name',
+                'Normalized',
+                'Primary field value',
+                'Coil area',
+                'Loop polarity'
+            ]
+
+            header = {}
+            matches = self.re_header.search(file)
+
+            if not matches:
+                raise ValueError('Error parsing header. No matches were found.')
+
+            matches = matches.groups()
+
+            if len(matches) != 8:
+                raise ValueError('Error parsing header. Not all matches were found')
+
+            # Starting from index 1 to ignore the '~' match
+            for i, match in enumerate(matches[1:6]):
+                header[header_cols[i]] = match
+
+            # Survey parameters
+            survey_params = matches[6].split(' ')
+            if not survey_params:
+                raise ValueError('Error parsing survey parameters')
+
+            for j, match in enumerate(survey_params):
+                if survey_param_cols[j] in ['Timebase', 'Ramp']:
+                    match = float(match)
+                elif survey_param_cols[j] in ['Number of channels', 'Number of readings']:
+                    match = int(match)
+                header[survey_param_cols[j]] = match
+
+            # Receiver parameters
+            receiver_params = matches[7].split(' ')
+            if not receiver_params:
+                raise ValueError('Error parsing receiver parameters')
+
+            for k, match in enumerate(receiver_params):
+                if receiver_param_cols[k] in ['Primary field value', 'Coil area']:
+                    match = int(match)
+                header[receiver_param_cols[k]] = match
+
+            return header
+
+        def parse_channel_times(file, units=None):
 
             def channel_table(channel_times):
                 """
@@ -716,52 +802,14 @@ class PEMParser:
                     table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(lambda x: True)
                 return table
 
-            cols = [
-                'Client',
-                'Grid',
-                'Line',
-                'Loop',
-                'Date',
-                'Survey type',
-                'Convention',
-                'Sync',
-                'Timebase',
-                'Ramp',
-                'Number of channels',
-                'Number of readings',
-                'Receiver number',
-                'Rx software version',
-                'Rx software version date',
-                'Rx file name',
-                'Normalized',
-                'Primary field value',
-                'Coil area',
-                'Loop polarity',
-                'Channel times'
-            ]
-            header = {}
-            matches = self.re_header.findall(file)
-
+            t = time.time()
+            matches = self.re_channel_times.search(file)
+            print(f"Time to find channel time matches: {time.time() - t}")
             if not matches:
-                raise ValueError('Error parsing header. No matches were found.')
+                raise ValueError('Error parsing channel times. No matches were found.')
 
-            matches = matches[0]
-
-            if len(matches) - 1 != len(cols):
-                raise ValueError('Error parsing header. Not all matches were found')
-
-            # Starting from index 1 to ignore the '~' match
-            for i, match in enumerate(matches[1:]):
-                if cols[i] in ['Timebase', 'Ramp']:
-                    match = float(match)
-                elif cols[i] in ['Number of channels', 'Number of readings', 'Primary field value', 'Coil area']:
-                    match = int(match)
-                elif cols[i] == 'Channel times':
-                    match = channel_table(np.array(match.split(), dtype=float))
-
-                header[cols[i]] = match
-
-            return header
+            table = channel_table(np.array(matches.group(1).split(), dtype=float))
+            return table
 
         def parse_data(file):
 
@@ -822,15 +870,18 @@ class PEMParser:
         notes = parse_notes(file)
         print(f"Time to parse notes: {time.time() - t4}")
         t5 = time.time()
-        header = parse_header(file, units=tags.get('Units'))
+        header = parse_header(file)
         print(f"Time to parse header: {time.time() - t5}")
         t6 = time.time()
+        channel_table = parse_channel_times(file, units=tags.get('Units'))
+        print(f"Time to parse channel table: {time.time() - t5}")
+        t7 = time.time()
         data = parse_data(file)
-        print(f"Time to parse data: {time.time() - t6}")
+        print(f"Time to parse data: {time.time() - t7}")
 
         print(f"Time to parse PEM file: {time.time() - t}")
 
-        return PEMFile(tags, loop_coords, line_coords, notes, header, data, filepath)
+        return PEMFile(tags, loop_coords, line_coords, notes, header, channel_table, data, filepath)
 
 
 class PEMSerializer:

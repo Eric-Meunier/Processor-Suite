@@ -737,7 +737,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             :param pem_file: PEMFile object
             """
             crs = pem_file.get_crs()
-            if crs:
+            if crs.is_valid():
                 self.systemCBox.setCurrentIndex(self.gps_systems.index(crs.system))
                 if crs.system == 'UTM':
                     hemis = 'North' if crs.north is True else 'South'
@@ -2685,10 +2685,11 @@ def main():
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Splitting', number=1)
     # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
-    # mw.open_pem_files(pem_files)
+    mw.open_pem_files(r'C:\_Data\2020\Bitterroot\Surface\BR1\RAW\L8770E_04.PEM')
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
     mw.show()
+
     # mw.reverse_all_data('X')
 
     # mw.open_gps_files([r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])
