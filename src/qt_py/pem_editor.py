@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import simplekml
 import natsort
+from pathlib import Path
 from shutil import copyfile
 from itertools import chain, groupby
 from PyQt5 import (QtCore, QtGui, uic)
@@ -1128,7 +1129,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     lines.append(line_gps)
                     line_names.append(line_name)
             else:
-                bh_projection = pem_file.geometry.get_projection(num_segments=100, crs=crs)
+                bh_projection = pem_file.geometry.get_projection(num_segments=100)
                 hole_name = pem_file.line_name
                 if not bh_projection.empty and bh_projection not in traces:
                     traces.append(bh_projection)
@@ -1700,13 +1701,15 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         pem_file.grid = self.table.item(table_row, self.table_columns.index('Grid')).text()
         pem_file.line_name = self.table.item(table_row, self.table_columns.index('Line/Hole')).text()
         pem_file.loop_name = self.table.item(table_row, self.table_columns.index('Loop')).text()
-        pem_file.current = self.table.item(table_row, self.table_columns.index('Current')).text()
+        pem_file.current = float(self.table.item(table_row, self.table_columns.index('Current')).text())
         pem_file.loop = self.stackedWidget.widget(table_row).get_loop()
-
+        crs = self.get_crs()
         if pem_file.is_borehole():
             pem_file.geometry = self.stackedWidget.widget(table_row).get_geometry()
+            pem_file.geometry.collar.crs = crs
         else:
             pem_file.line = self.stackedWidget.widget(table_row).get_line()
+            pem_file.line.crs = crs
 
         return pem_file
 
@@ -1786,16 +1789,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         def get_save_file():
             default_path = os.path.split(self.pem_files[-1].filepath)[0]
             self.dialog.setDirectory(default_path)
-            if __name__ == '__main__':
-                save_dir = os.path.join(
-                    os.path.dirname(
-                        os.path.dirname(
-                            os.path.dirname(
-                                os.path.abspath(__file__)))),
-                    'sample_files/test')
-            else:
-                save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]
-                # Returns full filepath. For single PDF file
+            save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]
+            # Returns full filepath. For single PDF file
             print(f"Saving PDFs to {save_dir}")
             return save_dir
 
@@ -1810,6 +1805,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             # Needs to be deepcopied or else it changes the pem files in self.pem_files
             pem_files = copy.deepcopy(input_pem_files)
             self.window().statusBar().showMessage('Saving plots...', 2000)
+            crs = self.get_crs()
 
             plot_kwargs = {'ShareRange': self.share_range_cbox.isChecked(),
                            'HideGaps': self.hide_gaps_cbox.isChecked(),
@@ -1828,7 +1824,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                            'LineLabels': self.plan_map_options.line_labels_cbox.isChecked(),
                            'HoleCollarLabels': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
                            'HoleDepthLabels': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
-                           'CRS': self.get_crs(),
+                           'CRS': crs,
                            'LINPlots': self.output_lin_cbox.isChecked(),
                            'LOGPlots': self.output_log_cbox.isChecked(),
                            'STEPPlots': self.output_step_cbox.isChecked(),
@@ -1854,7 +1850,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     pem_file = pem_file.split()
 
             if self.output_plan_map_cbox.isChecked():
-                crs = self.get_crs()
                 if not crs.is_valid():
                     response = self.message.question(self, 'No CRS',
                                                      'No CRS has been selected. ' +
@@ -1863,14 +1858,16 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     if response == self.message.No:
                         return
 
-            # save_dir = get_save_file()
-            save_dir = r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\test.pdf'
+            if __name__ == '__main__':
+                save_dir = str(Path(__file__).parent.parent.parent/'sample_files'/'test')
+            else:
+                save_dir = get_save_file()
             if save_dir:
                 # PEM Files and RI files zipped together for when they get sorted
                 try:
-                    printer = PEMPrinter(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
+                    printer = PEMPrinter()
                     self.window().statusBar().addPermanentWidget(printer.pb)
-                    printer.print_files()
+                    printer.print_files(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
                 except FileNotFoundError:
                     self.message.information(self, 'Error', f'{save_dir} does not exist')
                 except IOError:

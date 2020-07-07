@@ -100,7 +100,7 @@ class ProfilePlotter:
         self.x_max = x_max
         self.hide_gaps = hide_gaps
 
-    def format_figure(self, component):
+    def format_figure(self, component, borehole=False):
         """
         Formats a figure, mainly the spines, adjusting the padding, and adding the rectangle.
         """
@@ -146,6 +146,11 @@ class ProfilePlotter:
                         va='top')
 
             # TODO add Z-Component (+ve up) X-Component (+ve Grid North) Y-Component (+ve Grid West)
+            if borehole is True:
+                pass
+            else:
+                pass
+
             plt.figtext(0.550, 0.935, f"{s_title}: {self.pem_file.line_name}\n" +
                         f"Loop: {self.pem_file.loop_name}\n" +
                         f"{component} Component",
@@ -180,8 +185,8 @@ class ProfilePlotter:
             x_label_locator = ticker.AutoLocator()
             major_locator = ticker.FixedLocator(sorted(component_stations))
             plt.xlim(self.x_min, self.x_max)
-            self.figure.axes[0].xaxis.set_major_locator(
-                major_locator)  # for some reason this seems to apply to all axes
+            # for some reason this seems to apply to all axes
+            self.figure.axes[0].xaxis.set_major_locator(major_locator)
             self.figure.axes[-1].xaxis.set_major_locator(x_label_locator)
 
         def format_yaxis():
@@ -380,7 +385,7 @@ class LINPlotter(ProfilePlotter):
                     offset = len(interp_stations) * 0.10
 
         add_ylabels()
-        self.format_figure(component)
+        self.format_figure(component, borehole=self.pem_file.is_borehole())
         return self.figure
 
 
@@ -431,7 +436,7 @@ class LOGPlotter(ProfilePlotter):
                 offset = len(interp_stations) * 0.10
 
         add_ylabels()
-        self.format_figure(component)
+        self.format_figure(component, borehole=self.pem_file.is_borehole())
         return self.figure
 
 
@@ -578,7 +583,7 @@ class STEPPlotter(ProfilePlotter):
         plot_offtime_lines()
 
         add_ylabel()
-        self.format_figure(component)
+        self.format_figure(component, borehole=self.pem_file.is_borehole())
         return self.figure
 
 
@@ -891,7 +896,7 @@ class MapPlotter:
                             markersize=9,
                             marker=(2, 0, angle),
                             mew=.5,
-                            color=self.color)
+                            color=color)
 
                 if label_depth:
                     # Label the depth at the bottom of the hole
@@ -907,7 +912,7 @@ class MapPlotter:
             return collar_handle
 
     @staticmethod
-    def add_scale_bar(ax, x_pos=0.5, y_pos=0.05):
+    def add_scale_bar(ax, x_pos=0.5, y_pos=0.05, scale_factor=1., units='m'):
         """
         Adds scale bar to the axes.
         Gets the width of the map in meters, find the best bar length number, and converts the bar length to
@@ -961,17 +966,22 @@ class MapPlotter:
 
         buffer = [patheffects.Stroke(linewidth=1, foreground='white'), patheffects.Normal()]
 
-        map_width = plt.xlim()[1] - plt.xlim()[0]
+        map_width = ax.get_xlim()[1] - ax.get_xlim()[0]
         # map_width = ax.get_extent()[1] - ax.get_extent()[0]
         num_digit = int(np.floor(np.log10(map_width)))  # number of digits in number
         base = 0.5 * 10 ** num_digit
         bar_map_length = round(map_width, -num_digit)  # round to 1sf
         bar_map_length = base * math.ceil(bar_map_length / 8 / base)  # Rounds to the nearest 1,2,5...
-        if bar_map_length > 10000:
-            units = 'kilometers'
-            bar_map_length = bar_map_length / 1000
+        # Multiply by scale factor for Section Plot
+        bar_map_length = bar_map_length * scale_factor
+        if units == 'm':
+            if bar_map_length > 10000:
+                units = 'kilometers'
+                bar_map_length = bar_map_length / 1000
+            else:
+                units = 'meters'
         else:
-            units = 'meters'
+            units = 'feet'
 
         bar_ax_length = bar_map_length / map_width
         left_pos = x_pos - (bar_ax_length / 2)
@@ -1369,7 +1379,6 @@ class PlanMap(MapPlotter):
         Plot all the PEM Files and format and return the figure
         :return: Plotted Matplotlib figure
         """
-
         survey_type = self.pem_files[0].get_survey_type()
         for pem_file in self.pem_files:
             # Remove files that aren't the same survey type
@@ -1497,7 +1506,7 @@ class PlanMap(MapPlotter):
                          transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.020, f"{'Hole' if is_borehole else 'Line'}"
-            f" and Loop Location Map",
+                         f" and Loop Location Map",
                          family='cursive',
                          fontname='Century Gothic',
                          fontsize=10,
@@ -1515,7 +1524,7 @@ class PlanMap(MapPlotter):
                          transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
-            f"{survey_text}",
+                         f"{survey_text}",
                          fontname='Century Gothic',
                          fontsize=10,
                          va='top',
@@ -1737,7 +1746,7 @@ class SectionPlot(MapPlotter):
 
             # Label end-of-hole depth
             angle = math.degrees(math.atan2(plotz[-1] - plotz[-100], plotx[-1] - plotx[-100])) + 90
-            self.ax.text(plotx[-1] + line_len * .01, plotz[-1], f" {hole_len:.0f} m ",
+            self.ax.text(plotx[-1] + self.line_len * .01, plotz[-1], f" {hole_len:.0f} m ",
                          color='k',
                          ha='left',
                          rotation=angle,
@@ -1768,7 +1777,7 @@ class SectionPlot(MapPlotter):
 
             # Format the axes
             ylim = self.ax.get_ylim()
-            self.ax.set_xlim(0, line_len)
+            self.ax.set_xlim(0, self.line_len)
             self.ax.set_ylim(ylim[1] - section_depth, ylim[1] + (0.05 * section_depth))
 
         while isinstance(pem_file, list):
@@ -1790,10 +1799,10 @@ class SectionPlot(MapPlotter):
         # Calculate the end-points to be used to plot the cross section on
         bbox = self.ax.get_window_extent().transformed(self.figure.dpi_scale_trans.inverted())
         plot_width = bbox.width * .0254  # Convert to meters
-        self.p1, self.p2, self.line_az, self.line_len = self.get_section_end_points(geometry, proj, hole_depth, plot_width)
+        self.p1, self.p2, self.line_az = self.get_section_end_points(geometry, proj, hole_depth, plot_width)
 
         # Calculate the length of the cross-section (c = sqrt(a² + b²))
-        line_len = math.sqrt((self.p1[0] - self.p2[0]) ** 2 + (self.p1[1] - self.p2[1]) ** 2)
+        self.line_len = math.sqrt((self.p1[0] - self.p2[0]) ** 2 + (self.p1[1] - self.p2[1]) ** 2)
         section_depth = self.line_len * (bbox.height / bbox.width)
 
         plot_hole_section(proj)
@@ -1877,7 +1886,7 @@ class SectionPlot(MapPlotter):
         line_xy_1 = (line_center_x - dx, line_center_y - dy)
         line_xy_2 = (line_center_x + dx, line_center_y + dy)
 
-        return line_xy_1, line_xy_2, line_az, line_len
+        return line_xy_1, line_xy_2, line_az
 
     def format_figure(self):
 
@@ -1888,117 +1897,117 @@ class SectionPlot(MapPlotter):
             current_scale = map_width / (bbox.width * .0254)
             return current_scale
 
-        def add_scale_bar(units):
-            """
-            Adds scale bar to the axes.
-            Gets the width of the map in meters, find the best bar length number, and converts the bar length to
-            equivalent axes percentage, then plots using axes transform so it is static on the axes.
-            :return: None
-            """
-
-            def myround(x, base=5):
-                return base * math.ceil(x / base)
-
-            def add_rectangles(left_bar_pos, bar_center, right_bar_pos, y):
-                """
-                Draw the scale bar itself, using multiple rectangles.
-                :param left_bar_pos: Axes position of the left-most part of the scale bar
-                :param bar_center: Axes position center scale bar
-                :param right_bar_pos: Axes position of the right-most part of the scale bar
-                :param y: Axes height of the desired location of the scale bar
-                :return: None
-                """
-                rect_height = 0.005
-                line_width = 0.4
-                sm_rect_width = (bar_center - left_bar_pos) / 5
-                sm_rect_xs = np.arange(left_bar_pos, bar_center, sm_rect_width)
-                big_rect_x = bar_center
-                big_rect_width = right_bar_pos - bar_center
-
-                # Adding the small rectangles
-                for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
-                    fill = 'w' if i % 2 == 0 else 'k'
-                    patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
-                                              ec='k',
-                                              linewidth=line_width,
-                                              facecolor=fill,
-                                              transform=self.ax.transAxes,
-                                              zorder=9)
-                    self.ax.add_patch(patch)
-                for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
-                    fill = 'k' if i % 2 == 0 else 'w'
-                    patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
-                                              ec='k',
-                                              zorder=9,
-                                              linewidth=line_width,
-                                              facecolor=fill,
-                                              transform=self.ax.transAxes)
-                    self.ax.add_patch(patch)
-
-                # Adding the big rectangles
-                patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
-                                           ec='k',
-                                           facecolor='k',
-                                           linewidth=line_width,
-                                           transform=self.ax.transAxes,
-                                           zorder=9)
-                patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
-                                           ec='k',
-                                           facecolor='w',
-                                           linewidth=line_width,
-                                           transform=self.ax.transAxes,
-                                           zorder=9)
-                # Background rectangle
-                patch3 = patches.Rectangle((left_bar_pos, y - rect_height), big_rect_width * 2, rect_height * 2,
-                                           ec='k',
-                                           facecolor='w',
-                                           linewidth=line_width,
-                                           transform=self.ax.transAxes,
-                                           zorder=5,
-                                           path_effects=buffer)
-                self.ax.add_patch(patch1)
-                self.ax.add_patch(patch2)
-                self.ax.add_patch(patch3)
-
-            # bar_center = 0.85
-            bar_center = 0.015 + (0.38 / 2)
-            bar_height_pos = 0.25
-            map_width = self.line_len
-            num_digit = int(np.floor(np.log10(map_width)))  # number of digits in number
-            bar_map_length = round(map_width, -num_digit)  # round to 1sf
-            bar_map_length = myround(bar_map_length / 4, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
-            units = 'meters' if units == 'm' else 'feet'
-
-            buffer = [patheffects.Stroke(linewidth=5, foreground='white'), patheffects.Normal()]
-            bar_ax_length = bar_map_length / map_width
-            left_bar_pos = bar_center - (bar_ax_length / 2)
-            right_bar_pos = bar_center + (bar_ax_length / 2)
-
-            add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
-            self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
-                         ha='center',
-                         transform=self.ax.transAxes,
-                         path_effects=buffer,
-                         fontsize=7,
-                         zorder=9)
-            self.ax.text(bar_center, bar_height_pos + .009, f"0",
-                         ha='center',
-                         transform=self.ax.transAxes,
-                         path_effects=buffer,
-                         fontsize=7,
-                         zorder=9)
-            self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
-                         ha='center',
-                         transform=self.ax.transAxes,
-                         path_effects=buffer,
-                         fontsize=7,
-                         zorder=9)
-            self.ax.text(bar_center, bar_height_pos - .018, f"({units})",
-                         ha='center',
-                         transform=self.ax.transAxes,
-                         path_effects=buffer,
-                         fontsize=7,
-                         zorder=9)
+        # def add_scale_bar(units):
+        #     """
+        #     Adds scale bar to the axes.
+        #     Gets the width of the map in meters, find the best bar length number, and converts the bar length to
+        #     equivalent axes percentage, then plots using axes transform so it is static on the axes.
+        #     :return: None
+        #     """
+        #
+        #     def myround(x, base=5):
+        #         return base * math.ceil(x / base)
+        #
+        #     def add_rectangles(left_bar_pos, bar_center, right_bar_pos, y):
+        #         """
+        #         Draw the scale bar itself, using multiple rectangles.
+        #         :param left_bar_pos: Axes position of the left-most part of the scale bar
+        #         :param bar_center: Axes position center scale bar
+        #         :param right_bar_pos: Axes position of the right-most part of the scale bar
+        #         :param y: Axes height of the desired location of the scale bar
+        #         :return: None
+        #         """
+        #         rect_height = 0.005
+        #         line_width = 0.4
+        #         sm_rect_width = (bar_center - left_bar_pos) / 5
+        #         sm_rect_xs = np.arange(left_bar_pos, bar_center, sm_rect_width)
+        #         big_rect_x = bar_center
+        #         big_rect_width = right_bar_pos - bar_center
+        #
+        #         # Adding the small rectangles
+        #         for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
+        #             fill = 'w' if i % 2 == 0 else 'k'
+        #             patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
+        #                                       ec='k',
+        #                                       linewidth=line_width,
+        #                                       facecolor=fill,
+        #                                       transform=self.ax.transAxes,
+        #                                       zorder=9)
+        #             self.ax.add_patch(patch)
+        #         for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
+        #             fill = 'k' if i % 2 == 0 else 'w'
+        #             patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
+        #                                       ec='k',
+        #                                       zorder=9,
+        #                                       linewidth=line_width,
+        #                                       facecolor=fill,
+        #                                       transform=self.ax.transAxes)
+        #             self.ax.add_patch(patch)
+        #
+        #         # Adding the big rectangles
+        #         patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
+        #                                    ec='k',
+        #                                    facecolor='k',
+        #                                    linewidth=line_width,
+        #                                    transform=self.ax.transAxes,
+        #                                    zorder=9)
+        #         patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
+        #                                    ec='k',
+        #                                    facecolor='w',
+        #                                    linewidth=line_width,
+        #                                    transform=self.ax.transAxes,
+        #                                    zorder=9)
+        #         # Background rectangle
+        #         patch3 = patches.Rectangle((left_bar_pos, y - rect_height), big_rect_width * 2, rect_height * 2,
+        #                                    ec='k',
+        #                                    facecolor='w',
+        #                                    linewidth=line_width,
+        #                                    transform=self.ax.transAxes,
+        #                                    zorder=5,
+        #                                    path_effects=buffer)
+        #         self.ax.add_patch(patch1)
+        #         self.ax.add_patch(patch2)
+        #         self.ax.add_patch(patch3)
+        #
+        #     bar_center = 0.015 + (0.38 / 2)
+        #     bar_height_pos = 0.25
+        #     map_width = self.line_len
+        #     num_digit = int(np.floor(np.log10(map_width)))  # number of digits in number
+        #     bar_map_length = round(map_width, -num_digit)  # round to 1sf
+        #     bar_map_length = myround(bar_map_length / 4, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
+        #     print(f"Section plot map width: {map_width}")
+        #     units = 'meters' if units == 'm' else 'feet'
+        #
+        #     buffer = [patheffects.Stroke(linewidth=5, foreground='white'), patheffects.Normal()]
+        #     bar_ax_length = bar_map_length / map_width
+        #     left_bar_pos = bar_center - (bar_ax_length / 2)
+        #     right_bar_pos = bar_center + (bar_ax_length / 2)
+        #
+        #     add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
+        #     self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
+        #                  ha='center',
+        #                  transform=self.ax.transAxes,
+        #                  path_effects=buffer,
+        #                  fontsize=7,
+        #                  zorder=9)
+        #     self.ax.text(bar_center, bar_height_pos + .009, f"0",
+        #                  ha='center',
+        #                  transform=self.ax.transAxes,
+        #                  path_effects=buffer,
+        #                  fontsize=7,
+        #                  zorder=9)
+        #     self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
+        #                  ha='center',
+        #                  transform=self.ax.transAxes,
+        #                  path_effects=buffer,
+        #                  fontsize=7,
+        #                  zorder=9)
+        #     self.ax.text(bar_center, bar_height_pos - .018, f"({units})",
+        #                  ha='center',
+        #                  transform=self.ax.transAxes,
+        #                  path_effects=buffer,
+        #                  fontsize=7,
+        #                  zorder=9)
 
         def add_title():
 
@@ -2153,8 +2162,7 @@ class SectionPlot(MapPlotter):
 
         add_coord_labels()
         add_title()
-        add_scale_bar(units)
-        # self.add_scale_bar(self.ax)
+        self.add_scale_bar(self.ax, x_pos=0.205, y_pos=0.25, scale_factor=2, units=units)
 
 
 class GeneralMap(MapPlotMethods):
@@ -4449,20 +4457,50 @@ class PEMPrinter:
         self.pb = CustomProgressBar()
         self.pb_count = 0
         self.pb_end = 0
-        self.pb.setValue(0)
 
-        self.portrait_fig = plt.figure(figsize=(8.5, 11), num=1, clear=True)
-        self.landscape_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
+        self.portrait_fig = plt.figure(num=1, clear=True)
+        self.portrait_fig.set_size_inches((8.5, 11))
+        self.landscape_fig = plt.figure(num=2, clear=True)
+        self.landscape_fig.set_size_inches((11, 8.5))
+
+        self.share_range = None
+        self.x_min = None
+        self.x_max = None
+        self.print_plan_maps = None
+        self.print_section_plot = None
+        self.print_lin_plots = None
+        self.print_log_plots = None
+        self.print_step_plots = None
+        self.hide_gaps = None
+        self.crs = None
 
     def print_files(self, save_path, files, **kwargs):
+        """
+        Plot the files to a PDF document
+        :param save_path: str, PDF document filepath
+        :param files: list of PEMFile and RIFile objects. RI files are optional.
+        :param kwargs: dictionary of additional plotting arguments.
+        """
 
-        def save_plots(pem_files, ri_files, x_min, x_max):
-            # Saving the Plan Map. Must have a CRS.
-            if self.crs.is_valid() and self.print_plan_maps is True:
+        def save_plots(pem_files, ri_files, x_min, x_max, **kwargs):
+            """
+            Create the plots and save them as a PDF file
+            :param pem_files: list, PEMFile objects to plot
+            :param ri_files: optional list, RIFile objects for Step plots
+            :param x_min: float, minimum x-axis limit to be shared between all profile plots
+            :param x_max: float, maximum x-axis limit to be shared between all profile plots
+            :param kwargs: dict, dictionary of additional arguments
+            """
+            # Saving the Plan Map. Must have a valid CRS.
+            if self.crs and self.print_plan_maps is True:
                 if any([pem_file.has_any_gps() for pem_file in pem_files]):
                     self.pb.setText(f"Saving plan map for {', '.join([f.line_name for f in pem_files])}")
-                    plan_map = PlanMap(pem_files, self.landscape_fig, **self.kwargs)
-                    pdf.savefig(plan_map.get_map(), orientation='landscape')
+                    # Plot the plan map
+                    plan_map = PlanMap(pem_files, self.landscape_fig, **kwargs)
+                    plan_fig = plan_map.plot()
+                    # Save the plot to the PDF file
+                    pdf.savefig(plan_fig, orientation='landscape')
+
                     self.pb_count += 1
                     self.pb.setValue(self.pb_count)
                     self.landscape_fig.clf()
@@ -4471,18 +4509,20 @@ class PEMPrinter:
 
             # Save the Section plot as long as it is a borehole survey. Must have loop, collar GPS and segments.
             if self.print_section_plot is True and pem_files[0].is_borehole():
-                if pem_files[0].has_collar_gps() and pem_files[0].has_loop_gps() and pem_files[0].has_geometry():
-                    self.pb.setText(f"Saving section plot for {pem_files[0].header.get('LineHole')}")
-                    section_depth = self.kwargs.get('SectionDepth')
+                if pem_files[0].has_geometry():
+                    self.pb.setText(f"Saving section plot for {pem_files[0].line_name}")
+                    section_depth = kwargs.get('SectionDepth')
                     stations = sorted(set(itertools.chain.from_iterable(
-                        [pem_file.get_converted_unique_stations() for pem_file in pem_files])))
+                        [pem_file.get_unique_stations(converted=True) for pem_file in pem_files])))
+                    # Plot the section plot
+                    section_plotter = SectionPlot()
+                    section_fig = section_plotter.plot(pem_files, self.portrait_fig,
+                                                       stations=stations,
+                                                       hole_depth=section_depth,
+                                                       label_ticks=kwargs.get('LabelSectionTicks'))
+                    # Save the plot to the PDF file
+                    pdf.savefig(section_fig, orientation='portrait')
 
-                    section_plotter = SectionPlot(pem_files, self.portrait_fig,
-                                                  stations=stations,
-                                                  hole_depth=section_depth,
-                                                  **self.kwargs)
-                    section_fig = section_plotter.get_section_plot()
-                    pdf.savefig(section_fig)
                     self.pb_count += 1
                     self.pb.setValue(self.pb_count)
                     self.portrait_fig.clear()
@@ -4492,16 +4532,25 @@ class PEMPrinter:
             # Saving the LIN plots
             if self.print_lin_plots is True:
                 for pem_file in pem_files:
+                    # Create the LINPlotter instance
+                    lin_plotter = LINPlotter(pem_file, self.portrait_fig,
+                                             x_min=x_min,
+                                             x_max=x_max,
+                                             hide_gaps=self.hide_gaps)
                     components = pem_file.get_components()
-                    for component in components:
-                        self.configure_lin_fig()
-                        lin_plotter = LINPlotter()
-                        self.pb.setText(
-                            f"Saving LIN plot for {pem_file.header.get('LineHole')}, component {component}")
 
-                        plotted_fig = lin_plotter.plot(pem_file, component, self.portrait_fig, x_min=x_min,
-                                                       x_max=x_max, hide_gaps=self.hide_gaps)
-                        pdf.savefig(plotted_fig)
+                    for component in components:
+                        # Configure the figure since it gets cleared after each plot
+                        t = time.time()
+                        self.configure_lin_fig()
+                        print(f"Time to configure LIN figure: {time.time() - t}")
+
+                        self.pb.setText(f"Saving LIN plot for {pem_file.line_name}, component {component}")
+                        # Plot the LIN profile
+                        plotted_fig = lin_plotter.plot(component)
+                        # Save the figure to the PDF
+                        pdf.savefig(plotted_fig, orientation='portrait')
+
                         self.pb_count += 1
                         self.pb.setValue(self.pb_count)
                         self.portrait_fig.clear()
@@ -4509,16 +4558,25 @@ class PEMPrinter:
             # Saving the LOG plots
             if self.print_log_plots is True:
                 for pem_file in pem_files:
+                    # Create the LOGPlotter instance
+                    log_plotter = LOGPlotter(pem_file, self.portrait_fig,
+                                             x_min=x_min,
+                                             x_max=x_max,
+                                             hide_gaps=self.hide_gaps)
                     components = pem_file.get_components()
-                    for component in components:
-                        self.configure_log_fig()
-                        log_plotter = LOGPlotter()
-                        self.pb.setText(
-                            f"Saving LOG plot for {pem_file.header.get('LineHole')}, component {component}")
 
-                        plotted_fig = log_plotter.plot(pem_file, component, self.portrait_fig, x_min=x_min,
-                                                       x_max=x_max, hide_gaps=self.hide_gaps)
-                        pdf.savefig(plotted_fig)
+                    for component in components:
+                        # Configure the figure since it gets cleared after each plot
+                        t = time.time()
+                        self.configure_log_fig()
+                        print(f"Time to configure LOG figure: {time.time() - t}")
+
+                        self.pb.setText(f"Saving LOG plot for {pem_file.line_name}, component {component}")
+                        # Plot the LOG profile
+                        plotted_fig = log_plotter.plot(component)
+                        # Save the figure to the PDF
+                        pdf.savefig(plotted_fig, orientation='portrait')
+
                         self.pb_count += 1
                         self.pb.setValue(self.pb_count)
                         self.portrait_fig.clear()
@@ -4527,15 +4585,19 @@ class PEMPrinter:
             if self.print_step_plots is True:
                 for pem_file, ri_file in zip(pem_files, ri_files):
                     if ri_file:
+                        step_plotter = STEPPlotter(pem_file, ri_file, self.portrait_fig,
+                                                   x_min=x_min,
+                                                   x_max=x_max,
+                                                   hide_gaps=self.hide_gaps)
                         components = pem_file.get_components()
                         for component in components:
-                            self.pb.setText(
-                                f"Saving STEP plot for {pem_file.header.get('LineHole')}, component {component}")
+                            self.pb.setText(f"Saving STEP plot for {pem_file.line_name}, component {component}")
                             self.configure_step_fig()
-                            step_plotter = STEPPlotter()
-                            plotted_fig = step_plotter.plot(pem_file, ri_file, component, self.portrait_fig,
-                                                            x_min=x_min, x_max=x_max, hide_gaps=self.hide_gaps)
-                            pdf.savefig(plotted_fig)
+                            # Plot the step profile
+                            plotted_fig = step_plotter.plot(component)
+                            # Save the plot to the PDF file
+                            pdf.savefig(plotted_fig, orientation='portrait')
+
                             self.pb_count += 1
                             self.pb.setValue(self.pb_count)
                             self.portrait_fig.clear()
@@ -4585,19 +4647,18 @@ class PEMPrinter:
             print(f"Number of PDF pages: {total_count}")
             self.pb.setMaximum(total_count)
 
-        self.files = files  # Zipped PEM and RI files
-        self.kwargs = kwargs
-        self.save_path = save_path
+        files = files  # Zipped PEM and RI files
+        kwargs = kwargs
+        save_path = save_path
         self.share_range = kwargs.get('ShareRange')
         self.x_min = kwargs.get('XMin')
         self.x_max = kwargs.get('XMax')
-        self.hide_gaps = kwargs.get('HideGaps')
+
         self.print_plan_maps = kwargs.get('PlanMap')
         self.print_section_plot = kwargs.get('SectionPlot')
         self.print_lin_plots = kwargs.get('LINPlots')
         self.print_log_plots = kwargs.get('LOGPlots')
         self.print_step_plots = kwargs.get('STEPPlots')
-        self.crs = kwargs.get('CRS')
 
         self.pb_count = 0
         self.pb_end = 0
@@ -4606,8 +4667,8 @@ class PEMPrinter:
         unique_bhs = defaultdict()
         unique_grids = defaultdict()
 
-        bh_files = [(pem, ri) for pem, ri in self.files if pem.is_borehole()]
-        sf_files = [(pem, ri) for pem, ri in self.files if not pem.is_borehole()]
+        bh_files = [(pem, ri) for pem, ri in files if pem.is_borehole()]
+        sf_files = [(pem, ri) for pem, ri in files if not pem.is_borehole()]
 
         if any(bh_files):
             bh_files.sort(key=lambda x: x[0].get_components(), reverse=True)
@@ -4631,7 +4692,7 @@ class PEMPrinter:
 
         set_pb_max(unique_bhs, unique_grids)  # Set the maximum for the progress bar
 
-        with PdfPages(self.save_path + '.PDF') as pdf:
+        with PdfPages(save_path + '.PDF') as pdf:
             for survey, files in unique_bhs.items():
                 pem_files = [pair[0] for pair in files]
                 ri_files = [pair[1] for pair in files]
@@ -4644,7 +4705,8 @@ class PEMPrinter:
                     x_max = max([max(f.get_unique_stations(converted=True)) for f in pem_files])
                 else:
                     x_max = self.x_max
-                save_plots(pem_files, ri_files, x_min, x_max)
+
+                save_plots(pem_files, ri_files, x_min, x_max, **kwargs)
                 self.pb.setText('Complete')
 
             for loop, files in unique_grids.items():
@@ -4658,11 +4720,13 @@ class PEMPrinter:
                     x_max = max([max(f.get_unique_stations(converted=True)) for f in pem_files])
                 else:
                     x_max = self.x_max
+
                 save_plots(pem_files, ri_files, x_min, x_max)
+                self.pb.setText('Complete')
 
         plt.close(self.portrait_fig)
         plt.close(self.landscape_fig)
-        os.startfile(self.save_path + '.PDF')
+        os.startfile(save_path + '.PDF')
 
     def configure_lin_fig(self):
         """
@@ -4674,7 +4738,7 @@ class PEMPrinter:
 
     def configure_log_fig(self):
         """
-        Configure the lob plot axes
+        Configure the log plot axes
         """
         self.portrait_fig, ax = plt.subplots(1, 1, num=1, clear=True)
         ax2 = ax.twiny()
@@ -4725,7 +4789,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Raglan', number=1)
+    pem_files = pem_getter.get_pems(client='Raglan', number=5)
 
     # map = FoliumMap(pem_files, '17N')
     # editor = PEMPlotEditor(pem_files[0])
@@ -4733,9 +4797,10 @@ if __name__ == '__main__':
     # planner = LoopPlanner()
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
-    fig = plt.figure(figsize=(8.5, 11), dpi=100)
-    sp = SectionPlot()
-    sp.plot(pem_files, figure=fig)
+    for file in pem_files:
+        fig = plt.figure(figsize=(8.5, 11), dpi=100)
+        sp = SectionPlot()
+        sp.plot(file, figure=fig)
     plt.show()
 
     # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
@@ -4762,9 +4827,9 @@ if __name__ == '__main__':
     # step_plot.plot('X')
     # step_fig.show()
 
-    map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
-    map_plot = PlanMap(pem_files, map_fig).plot()
-    map_plot.show()
+    # map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
+    # map_plot = PlanMap(pem_files, map_fig).plot()
+    # map_plot.show()
 
     # map = GeneralMap(pem_files, fig).get_map()
     # map = SectionPlot(pem_files, fig).get_section_plot()
