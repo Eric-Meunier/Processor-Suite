@@ -1,20 +1,24 @@
 import math
 import numpy as np
+import pandas as pd
 from timeit import default_timer as timer
 
 
 class MagneticFieldCalculator:
     """
     Class that calculates magnetic field for a given transmitter loop.
-    :param: pem_file: PEMFile object
+    :param: wire: list or DataFrame of wire (loop) coordinates
     """
 
-    def __init__(self, wire_coordinates):
-        self.wire = np.array(wire_coordinates, dtype='float')
-        # Remove any unwanted columns. Only easting, northing, elevation is required.
-        while self.wire.shape[1] > 3:
-            print(f"Loop has {self.wire.shape[1]} columns in row. Removing the last column...")
-            self.wire = np.delete(self.wire, 3, axis=1)
+    def __init__(self, wire):
+        if isinstance(wire, pd.DataFrame):
+            self.wire = wire.loc[:, ['Easting', 'Northing', 'Elevation']].to_numpy()
+        else:
+            self.wire = np.array(wire, dtype='float')
+            # Remove any unwanted columns. Only easting, northing, elevation is required.
+            while self.wire.shape[1] > 3:
+                print(f"Loop has {self.wire.shape[1]} columns in row. Removing the last column...")
+                self.wire = np.delete(self.wire, 3, axis=1)
 
     def get_magnitude(self, vector):
         return math.sqrt(sum(i ** 2 for i in vector))

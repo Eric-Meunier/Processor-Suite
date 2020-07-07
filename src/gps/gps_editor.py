@@ -34,6 +34,13 @@ class BaseGPS:
                self.df['Northing'].min(), self.df['Northing'].max(), \
                self.df['Elevation'].min(), self.df['Elevation'].max()
 
+    def get_units(self):
+        units = self.df['Unit'].unique()
+        if units == '0' or '2':
+            return 'm'
+        else:
+            return 'ft'
+
     def to_latlon(self):
         """
         Convert the data frame coordinates to Lat Lon in decimal format
@@ -326,7 +333,7 @@ class BoreholeCollar(BaseGPS):
 
         self.df = hole.drop_duplicates()
         # Replace empty cells with NaN and then drop any rows with NaNs
-        self.df = self.df.replace(to_replace='', value=np.nan)  #.dropna()
+        self.df = self.df.replace(to_replace='', value=np.nan)
         self.df.Easting = self.df.Easting.astype(float)
         self.df.Northing = self.df.Northing.astype(float)
         self.df.Elevation = self.df.Elevation.astype(float)
