@@ -269,7 +269,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.action3D_Map.setToolTip("Show 3D map of all PEM files")
         self.action3D_Map.setShortcut('Ctrl+M')
         self.action3D_Map.setIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map2.png')))
-        self.action3D_Map.triggered.connect(self.show_map_3d_viewer)
+        self.action3D_Map.triggered.connect(lambda: self.map_viewer_3d.open(self.pem_files))
 
         self.actionContour_Map.setIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map3.png')))
         self.actionContour_Map.setStatusTip("Show a contour map of surface PEM files")
@@ -620,28 +620,29 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         gps_files = [file for file in urls if
                      file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith(
                          'seg') or file.lower().endswith('xyz')]
+        gpx_files = [file for file in urls if file.lower().endswith('gpx')]
         ri_files = [file for file in urls if
                     file.lower().endswith('ri1') or file.lower().endswith('ri2') or file.lower().endswith('ri3')]
         inf_files = [file for file in urls if file.lower().endswith('inf') or file.lower().endswith('log')]
-        gpx_files = [file for file in urls if file.lower().endswith('gpx')]
 
         start_time = time.time()
         if pem_files:
             self.open_pem_files(pem_files)
             print(f'open_pem_files time: {time.time() - start_time} seconds')
 
+        t2 = time.time()
         if gps_files:
             self.open_gps_files(gps_files)
-            print(f'open_gps_files time: {time.time() - start_time} seconds')
+            print(f'open_gps_files time: {time.time() - t2} seconds')
+
+        if gpx_files:
+            self.open_gps_files(gpx_files)
 
         if ri_files:
             self.open_ri_file(ri_files)
 
         if inf_files:
             self.open_inf_file(inf_files)
-
-        if gpx_files:
-            self.open_gpx_files(gpx_files)
 
     def change_pem_info_tab(self, tab_num):
         """
@@ -822,19 +823,24 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
     def open_gps_files(self, gps_files):
         """
         Adds GPS information from the gps_files to the PEMFile object
-        :param gps_files: Text or gpx file(s) with GPS information in them
+        :param gps_files: list or str, filepaths of text file or GPX files
         """
         def merge_files(gps_files):
             """
             Merge contents of files into one list
-            :param gps_files: list of filepath str to open and read
+            :param gps_files: list of str, filepaths of text file or GPX files
             :return: str
             """
             merged_file = []
             for file in gps_files:
-                with open(file, mode='rt') as in_file:
-                    contents = in_file.readlines()
-                    merged_file.append(contents)
+                if file.endswith('gpx'):
+                    # Convert the GPX file to string
+                    gps, zone, hemisphere = self.gpx_editor.get_utm(file, as_string=True)
+                    merged_file.append(gps)
+                else:
+                    with open(file, mode='rt') as in_file:
+                        contents = in_file.readlines()
+                        merged_file.append(contents)
             return merged_file
 
         file = merge_files(gps_files)
@@ -900,31 +906,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.gps_system_cbox.setCurrentIndex(self.gps_systems.index(coord_sys))
         self.gps_zone_cbox.setCurrentIndex(self.gps_zones.index(coord_zone))
         self.gps_datum_cbox.setCurrentIndex(self.gps_datums.index(datum))
-
-    def open_gpx_files(self, gpx_files):
-        if len(gpx_files) > 0:
-            file = []
-            zone, hemisphere = None, None
-            for gpx_file in gpx_files:
-                gps, zone, hemisphere = self.gpx_editor.get_utm(gpx_file)
-                file += gps
-
-            if zone and hemisphere:
-                self.gps_system_cbox.setCurrentIndex(self.gps_systems.index('UTM'))
-                self.gps_zone_cbox.setCurrentIndex(self.gps_zones.index(f"{zone} {hemisphere.title()}"))
-                self.gps_datum_cbox.setCurrentIndex(self.gps_datums.index('WGS 1984'))
-
-            pem_info_widget = self.stackedWidget.currentWidget()
-            current_tab = pem_info_widget.tabs.currentWidget()
-            # TODO this
-            if current_tab == pem_info_widget.Station_GPS_Tab:
-                pem_info_widget.add_station_gps(file)
-            elif current_tab == pem_info_widget.Geometry_Tab:
-                pem_info_widget.add_geometry(file)
-            elif current_tab == pem_info_widget.Loop_GPS_Tab:
-                pem_info_widget.add_loop_gps(file)
-            else:
-                pass
 
     def open_in_text_editor(self):
         """
@@ -2373,26 +2354,17 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         else:
             self.window().statusBar().showMessage('No PEM files are opened.', 2000)
 
-    def show_map_3d_viewer(self):
-        """
-        Opens the 3D Map Viewer window
-        :return: None
-        """
-        self.map_viewer_3d = Map3DViewer(parent=self)
-        self.map_viewer_3d.open(self.pem_files)
-        self.map_viewer_3d.show()
-
-    def show_section_3d_viewer(self):
-        """
-        Opens the 3D Borehole Section Viewer window
-        :return: None
-        """
-        pem_file, row = self.get_selected_pem_files()
-        if 'borehole' in pem_file[0].survey_type.lower():
-            self.section_3d_viewer = Section3DViewer(pem_file[0], parent=self)
-            self.section_3d_viewer.show()
-        else:
-            self.statusBar().showMessage('Invalid survey type', 2000)
+    # def show_section_3d_viewer(self):
+    #     """
+    #     Opens the 3D Borehole Section Viewer window
+    #     :return: None
+    #     """
+    #     pem_file, row = self.get_selected_pem_files()
+    #     if 'borehole' in pem_file[0].survey_type.lower():
+    #         self.section_3d_viewer = Section3DViewer(pem_file[0], parent=self)
+    #         self.section_3d_viewer.show()
+    #     else:
+    #         self.statusBar().showMessage('Invalid survey type', 2000)
 
     def show_batch_renamer(self, type):
         """
@@ -2619,7 +2591,7 @@ class MagDeclinationCalculator(QMainWindow):
         cb.setText(str_value, mode=cb.Clipboard)
         self.statusBar().showMessage(f"{str_value} copied to clipboard", 1000)
 
-    def calc_mag_dec(self, pem_file, crs):
+    def calc_mag_dec(self, pem_file):
         """
         Calculate the magnetic declination for the PEM file.
         :param pem_file: PEMFile object
@@ -2629,20 +2601,26 @@ class MagDeclinationCalculator(QMainWindow):
         if not pem_file:
             return
 
-        assert not crs.is_nad27, 'Incompatible datum. Must be either NAD 1983 or WGS 1984'
-        assert crs.is_valid(), 'GPS coordinate system information is incomplete'
+        crs = self.get_crs()
+        if crs.is_nad27():
+            self.message.information(self, 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
+            return
+        if not crs.is_valid():
+            self.message.information(self,'GPS coordinate system information is incomplete')
+            return
 
         if pem_file.has_collar_gps():
-            coords = pem_file.get_collar(crs=crs)
+            coords = pem_file.geometry.collar
         elif pem_file.has_loop_gps():
-            coords = pem_file.get_loop(crs=crs)
+            coords = pem_file.loop
         elif pem_file.has_line_coords():
-            coords = pem_file.get_line(crs=crs)
+            coords = pem_file.line
         else:
             self.message.information(self, 'Error', 'No GPS')
             return
 
-        lat, lon, elevation = coords.iloc[0]['Latitude'], coords.iloc[0]['Longitude'], coords.iloc[0]['Elevation']
+        coords = coords.to_latlon().df
+        lat, lon, elevation = coords.iloc[0]['Northing'], coords.iloc[0]['Easting'], coords.iloc[0]['Elevation']
 
         gm = geomag.geomag.GeoMag()
         mag = gm.GeoMag(lat, lon, elevation)
@@ -2660,7 +2638,7 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Kazzinc', number=3)
+    pem_files = pg.get_pems(client='PEM Rotation', number=1)
     # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
     mw.open_pem_files(pem_files)
     # mw.average_pem_data()
@@ -2670,7 +2648,7 @@ def main():
     # mw.print_plots()
     # mw.reverse_all_data('X')
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    # mw.open_gps_files([r'C:\_Data\2020\Bitterroot\Surface\BR1\GPS\L8770E_04.txt'])
+    mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\GPX files\Loop-32.gpx'])
     # mw.open_gps_files([r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
     # mw.save_as_xyz()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])

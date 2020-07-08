@@ -9,6 +9,7 @@ import pandas as pd
 
 from pathlib import Path
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, CRS
+from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 
 
 def sort_data(data):
@@ -406,125 +407,142 @@ class PEMFile:
         """
         assert self.is_borehole(), f"{self.filename} is not a borehole file."
 
-        if self.data['RAD tool'].map(lambda x: x.D == 'D5').any():
-            print(f"{self.filename} appears to be a file that has been run through Otool, thus it will not be rotated.")
-            return self
-        else:
+        # if self.data['RAD tool'].map(lambda x: x.D == 'D5').any():
+        #     print(f"{self.filename} appears to be a file that has been run through Otool, thus it will not be rotated.")
+        #     return self
+        # else:
 
-            def rotate_data(row, method):
-                """
-                Rotate the data for a given reading
-                :param row: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
-                reading from X and Y components, and the RAD tool values for all readings must all be the same.
-                :param type: str: type of rotation to apply. Either 'acc' for accelerometer or 'mag' for magnetic
-                :return: pandas DataFrame: data frame of the readings with the data rotated.
-                """
-                if row.Component.nunique() < 2:
-                    r = row.iloc[0]
-                    print(f"Removing {r.Station} - {r.Component}, reading {r['Reading number']}, index {r['Reading index']} since it has no pairing X/Y reading")
-                    # Set the station name as NaN so it can be easily removed later.
-                    row['Station'] = np.nan
-                    return row
-
-                assert len(row['RAD ID'].unique()) == 1, 'More than 1 unique RAD tool set'
-                print(f"Number of unique RAD tool sets: {len(row['RAD ID'].unique())}")
-
-                def rotate_x(x_values, y_pair, roll_angle):
-                    """
-                    Rotate the X data of a reading
-                    Formula: X' = Xcos(roll) - Ysin(roll)
-                    :param x: list: list of x readings to rotated
-                    :param y_pair: list: list of paired y reading
-                    :param roll_angle: float: calculated roll angle
-                    :return: list: rotated x values
-                    """
-                    rotated_x = [x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)) for (x, y) in zip(x_values, y_pair)]
-                    return np.array(rotated_x, dtype=float)
-
-                def rotate_y(y_values, x_pair, roll_angle):
-                    """
-                    Rotate the Y data of a reading
-                    Y' = Xsin(roll) + Ycos(roll)
-                    :param y: list: list of y readings to rotated
-                    :param x_pair: list: list of paired x reading
-                    :param roll_angle: float: calculated roll angle
-                    :return: list: rotated y values
-                    """
-                    rotated_y = [x * math.sin(math.radians(roll_angle)) + y * math.cos(math.radians(roll_angle)) for (x, y) in zip(x_pair, y_values)]
-                    return np.array(rotated_y, dtype=float)
-
-                x_data = row[row['Component'] == 'X']
-                y_data = row[row['Component'] == 'Y']
-                # Save the first reading of each component to be used a the 'pair' reading for rotation
-                x_pair = x_data.iloc[0].Reading
-                y_pair = y_data.iloc[0].Reading
-
-                rad = row.iloc[0]['RAD tool']
-                # Accelerometer rotation
-                if method == 'acc':
-                    theta = math.atan2(rad.gy, rad.gz)
-                    cc_roll_angle = 360 - math.degrees(theta) if rad.gy < 0 else math.degrees(theta)
-                    roll_angle = 360 - cc_roll_angle if rad.gy > 0 else cc_roll_angle
-                    if roll_angle >= 360:
-                        roll_angle = roll_angle - 360
-                    # Calculate the dip
-                    dip = math.degrees(math.acos(rad.gx/math.sqrt((rad.gx ** 2) + (rad.gy ** 2) + (rad.gz ** 2)))) - 90
-                    # Create the new rad tool series
-                    new_rad_tool = RADTool().from_dict({'D': 'D5',
-                                                        'gz': rad.gz,
-                                                        'gx': rad.gx,
-                                                        'gy': rad.gy,
-                                                        'roll_angle': roll_angle,
-                                                        'dip': dip,
-                                                        'R': 'R3',
-                                                        'angle_used': roll_angle - soa,
-                                                        'rotated': True,
-                                                        'rotation_type': 'acc'})
-                    print(f"Station {row.iloc[0].Station} roll angle: {roll_angle:.2f}")
-
-                # Magnetometer rotation
-                elif method == 'mag':
-                    theta = math.atan2(-rad.Hy, -rad.Hz)
-                    cc_roll_angle = math.degrees(theta)
-                    roll_angle = 360 - cc_roll_angle if rad.Hy < 0 else cc_roll_angle
-                    if roll_angle > 360:
-                        roll_angle = roll_angle - 360
-                    dip = -90.  # The dip is assumed to be 90°
-                    new_rad_tool = RADTool().from_dict({'D': 'D5',
-                                                        'Hz': rad.Hz,
-                                                        'Hx': rad.Hx,
-                                                        'Hy': rad.Hy,
-                                                        'roll_angle': roll_angle,
-                                                        'dip': dip,
-                                                        'R': 'R3',
-                                                        'angle_used': roll_angle - soa,
-                                                        'rotated': True,
-                                                        'rotation_type': 'mag'})
-
-                elif method == 'pp':
-                    pass
-                else:
-                    raise ValueError(f'"{type}" is an invalid rotation method')
-
-                x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle + soa))
-                y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle + soa))
-                row = x_data.append(y_data)
-                # Add the new rad tool series to the row
-                row['RAD tool'] = row['RAD tool'].map(lambda p: new_rad_tool)
+        def rotate_data(row, method):
+            """
+            Rotate the data for a given reading
+            :param row: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
+            reading from X and Y components, and the RAD tool values for all readings must all be the same.
+            :param type: str: type of rotation to apply. Either 'acc' for accelerometer or 'mag' for magnetic
+            :return: pandas DataFrame: data frame of the readings with the data rotated.
+            """
+            if row.Component.nunique() < 2:
+                r = row.iloc[0]
+                print(f"Removing {r.Station} - {r.Component}, reading {r['Reading number']}, index {r['Reading index']} since it has no pairing X/Y reading")
+                # Set the station name as NaN so it can be easily removed later.
+                row['Station'] = np.nan
                 return row
 
-            # Create a filter for X and Y data only
-            filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
-            st = time.time()
-            rotated_data = self.data[filt].groupby(['Station', 'RAD ID'],
-                                                   as_index=False,
-                                                   group_keys=False).apply(lambda i: rotate_data(i, method))
-            print(f"Time to rotate data: {time.time() - st}")
-            self.data[filt] = rotated_data
-            # Sort the data and remove unrotated readings
-            self.data = sort_data(self.data.dropna(axis=0))
-            self.probes['SOA'] = str(soa)
-            return self
+            assert len(row['RAD ID'].unique()) == 1, 'More than 1 unique RAD tool set'
+            print(f"Number of unique RAD tool sets: {len(row['RAD ID'].unique())}")
+
+            def rotate_x(x_values, y_pair, roll_angle):
+                """
+                Rotate the X data of a reading
+                Formula: X' = Xcos(roll) - Ysin(roll)
+                :param x: list: list of x readings to rotated
+                :param y_pair: list: list of paired y reading
+                :param roll_angle: float: calculated roll angle
+                :return: list: rotated x values
+                """
+                rotated_x = [x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)) for (x, y) in zip(x_values, y_pair)]
+                return np.array(rotated_x, dtype=float)
+
+            def rotate_y(y_values, x_pair, roll_angle):
+                """
+                Rotate the Y data of a reading
+                Y' = Xsin(roll) + Ycos(roll)
+                :param y: list: list of y readings to rotated
+                :param x_pair: list: list of paired x reading
+                :param roll_angle: float: calculated roll angle
+                :return: list: rotated y values
+                """
+                rotated_y = [x * math.sin(math.radians(roll_angle)) + y * math.cos(math.radians(roll_angle)) for (x, y) in zip(x_pair, y_values)]
+                return np.array(rotated_y, dtype=float)
+
+            x_data = row[row['Component'] == 'X']
+            y_data = row[row['Component'] == 'Y']
+            # Save the first reading of each component to be used a the 'pair' reading for rotation
+            x_pair = x_data.iloc[0].Reading
+            y_pair = y_data.iloc[0].Reading
+
+            rad = row.iloc[0]['RAD tool']
+            # Accelerometer rotation
+            if method == 'acc':
+                if rad.D == 'D5':
+                    x, y, z = rad.x, rad.y, rad.z
+                else:
+                    x, y, z = rad.gx, rad.gy, rad.gz
+
+                theta = math.atan2(y, z)
+                cc_roll_angle = 360 - math.degrees(theta) if y < 0 else math.degrees(theta)
+                roll_angle = 360 - cc_roll_angle if y > 0 else cc_roll_angle
+                if roll_angle >= 360:
+                    roll_angle = roll_angle - 360
+                # Calculate the dip
+                dip = math.degrees(math.acos(x / math.sqrt((x ** 2) + (y ** 2) + (z ** 2)))) - 90
+                # Create the new rad tool series
+                new_rad_tool = RADTool().from_dict({'D': 'D5',
+                                                    'gz': z,
+                                                    'gx': x,
+                                                    'gy': y,
+                                                    'roll_angle': roll_angle,
+                                                    'dip': dip,
+                                                    'R': 'R3',
+                                                    'angle_used': roll_angle - soa,
+                                                    'rotated': True,
+                                                    'rotation_type': 'acc'})
+                print(f"Station {row.iloc[0].Station} roll angle: {roll_angle:.2f}")
+
+            # Magnetometer rotation
+            elif method == 'mag':
+                if rad.D == 'D5':
+                    x, y, z = rad.x, rad.y, rad.z
+                else:
+                    x, y, z = rad.Hx, rad.Hy, rad.Hz
+
+                theta = math.atan2(-y, -z)
+                cc_roll_angle = math.degrees(theta)
+                roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
+                if roll_angle > 360:
+                    roll_angle = roll_angle - 360
+                dip = -90.  # The dip is assumed to be 90°
+                new_rad_tool = RADTool().from_dict({'D': 'D5',
+                                                    'Hz': z,
+                                                    'Hx': x,
+                                                    'Hy': y,
+                                                    'roll_angle': roll_angle,
+                                                    'dip': dip,
+                                                    'R': 'R3',
+                                                    'angle_used': roll_angle - soa,
+                                                    'rotated': True,
+                                                    'rotation_type': 'mag'})
+
+            elif method == 'pp':
+                assert self.has_loop_gps(), f"{self.filename} has no loop GPS."
+                assert self.has_geometry(), f"{self.filename} has incomplete geometry."
+                assert self.ramp > 0
+
+                geometry = self.get_geometry()
+                loop = self.get_loop(sorted=True, closed=True)
+                mag_calc = MagneticFieldCalculator(loop)
+
+            else:
+                raise ValueError(f'"{method}" is an invalid rotation method')
+
+            x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle + soa))
+            y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle + soa))
+            row = x_data.append(y_data)
+            # Add the new rad tool series to the row
+            row['RAD tool'] = row['RAD tool'].map(lambda p: new_rad_tool)
+            return row
+
+        # Create a filter for X and Y data only
+        filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
+        st = time.time()
+        rotated_data = self.data[filt].groupby(['Station', 'RAD ID'],
+                                               as_index=False,
+                                               group_keys=False).apply(lambda i: rotate_data(i, method))
+        print(f"Time to rotate data: {time.time() - st}")
+        self.data[filt] = rotated_data
+        # Sort the data and remove unrotated readings
+        self.data = sort_data(self.data.dropna(axis=0))
+        self.probes['SOA'] = str(soa)
+        return self
 
 
 class PEMParser:
@@ -1049,7 +1067,8 @@ class PEMSerializer:
             reading_spacing = 12
             count = 0
 
-            channel_readings = [f'{r:<8g}' for r in reading['Reading']]
+            # channel_readings = [f'{r:<8g}' for r in reading['Reading']]
+            channel_readings = [f'{r:10.3f}' for r in reading['Reading']]
 
             for i in range(0, len(channel_readings), readings_per_line):
                 readings = channel_readings[i:i + readings_per_line]
@@ -1243,6 +1262,7 @@ if __name__ == '__main__':
 
     pg = PEMGetter()
     files = pg.get_pems(client='PEM Rotation', number=1)
+    # files = pg.get_pems(client='Raglan', number=1)
     file = files[0]
     # p = PEMParser()
     # file = p.parse(file)
@@ -1254,6 +1274,6 @@ if __name__ == '__main__':
 
     # file.average()
     # file.scale_current(10)
-    out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'testing'/'testpem.pem')
+    out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filename} - test rotation.pem')
     print(file.to_string(), file=open(out, 'w'))
     os.startfile(out)

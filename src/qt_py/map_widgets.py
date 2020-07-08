@@ -99,6 +99,7 @@ class Map3DViewer(QMainWindow):
             pem_files = [pem_files]
         self.pem_files = pem_files
         self.plot_pems()
+        self.show()
 
     def plot_pems(self):
         if not self.pem_files:

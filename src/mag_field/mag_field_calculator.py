@@ -20,6 +20,14 @@ class MagneticFieldCalculator:
                 print(f"Loop has {self.wire.shape[1]} columns in row. Removing the last column...")
                 self.wire = np.delete(self.wire, 3, axis=1)
 
+    def scale_vector(self, vector, factor):
+        """
+        :param vector: list or tuple
+        :param factor: float or int
+        """
+        newvector = list(map(lambda x: x * factor, vector))
+        return newvector
+
     def get_magnitude(self, vector):
         return math.sqrt(sum(i ** 2 for i in vector))
 
@@ -42,7 +50,7 @@ class MagneticFieldCalculator:
         wire_coords for the wire.
         :param x, y, z: Position at which the magnetic field is calculated
         :param I: float: Current (Amps)
-        :return: Magnetic field strength for each component
+        :return: Magnetic field strength (in Teslas) for each component
         """
 
         def loop_difference(loop_listorarray):

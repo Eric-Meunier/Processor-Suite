@@ -755,13 +755,14 @@ class GPXEditor:
             gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', waypoint.name])
         return gps
 
-    def get_utm(self, gpx_filepath):
+    def get_utm(self, gpx_file, as_string=False):
         """
         Retrieve the GPS from the GPS file in UTM coordinates
-        :param gpx_filepath: filepath of a GPX file
-        :return: List of rows of UTM gps with elevation, units (0 or 1) and comment/name from the GPX waypoint
+        :param gpx_file: str, filepath
+        :param as_string: bool, return a string instead of tuple if True
+        :return: latitude, longitude, elevation, unit, stn
         """
-        gps = self.parse_gpx(gpx_filepath)
+        gps = self.parse_gpx(gpx_file)
         zone = None
         hemisphere = None
         utm_gps = []
@@ -777,7 +778,12 @@ class GPXEditor:
             zone = u[2]
             letter = u[3]
             hemisphere = 'north' if lat >= 0 else 'south'  # Used in PEMEditor
-            utm_gps.append([u[0], u[1], elevation, units, stn])
+
+            if as_string is True:
+                utm_gps.append(' '.join([str(u[0]), str(u[1]), str(elevation), units, stn]))
+            else:
+                utm_gps.append([u[0], u[1], elevation, units, stn])
+
         return utm_gps, zone, hemisphere
 
     def get_lat_long(self, gpx_filepath):
