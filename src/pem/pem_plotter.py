@@ -145,15 +145,24 @@ class ProfilePlotter:
                         fontsize=10,
                         va='top')
 
-            # TODO add Z-Component (+ve up) X-Component (+ve Grid North) Y-Component (+ve Grid West)
             if borehole is True:
-                pass
+                if component == 'Z':
+                    comp_str = 'Z Component (axial; +ve up hole)'
+                elif component == 'X':
+                    comp_str = 'X Component (crosswise; +ve along azimuth)'
+                else:
+                    comp_str = 'Y Component (crosswise; +ve left of azimuth)'
             else:
-                pass
+                if component == 'Z':
+                    comp_str = 'Z-Component (+ve up)'
+                elif component == 'X':
+                    comp_str = 'X-Component (+ve grid north)'
+                else:
+                    comp_str = 'Y-Component (+ve grid west)'
 
             plt.figtext(0.550, 0.935, f"{s_title}: {self.pem_file.line_name}\n" +
                         f"Loop: {self.pem_file.loop_name}\n" +
-                        f"{component} Component",
+                        comp_str,
                         fontname='Century Gothic',
                         fontsize=10,
                         va='top',
@@ -1770,10 +1779,11 @@ class SectionPlot(MapPlotter):
 
                     # Label the station ticks
                     if self.label_ticks:
-                        self.ax.text(x, z, f"{self.stations[station_indexes.index(i)]} {geometry.segments.get_units()}",
-                                     rotation=angle,
-                                     color='dimgray',
-                                     size=8)
+                        if i != len(plotx) - 1:
+                            self.ax.text(x, z, f" {self.stations[station_indexes.index(i)]}",
+                                         rotation=angle,
+                                         color='dimgray',
+                                         size=8)
 
             # Format the axes
             ylim = self.ax.get_ylim()

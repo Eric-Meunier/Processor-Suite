@@ -2676,7 +2676,7 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Splitting', number=5)
+    pem_files = pg.get_pems(client='Raglan', number=3)
     # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
     mw.open_pem_files(pem_files)
     # mw.average_pem_data()
