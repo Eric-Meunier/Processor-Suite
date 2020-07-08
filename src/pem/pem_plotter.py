@@ -1,5 +1,4 @@
 import copy
-import io
 import itertools
 import os
 import re
@@ -14,7 +13,6 @@ import cartopy.crs as ccrs  # import projections
 import cartopy.io.shapereader as shpreader
 import cartopy.io.img_tiles as cimgt
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-import folium
 import math
 import natsort
 # import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
@@ -29,8 +27,8 @@ import numpy as np
 import six
 import utm
 from PIL import Image
-from PyQt5 import QtCore, uic
-from PyQt5.QtWidgets import (QProgressBar, QErrorMessage, QApplication, QWidget)
+from PyQt5 import QtCore
+from PyQt5.QtWidgets import (QProgressBar, QErrorMessage, QApplication)
 from cartopy.feature import NaturalEarthFeature
 from matplotlib import patches
 from matplotlib import patheffects
@@ -40,16 +38,15 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.transforms import Bbox
 # from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
-from src.qt_py.ri_importer import RIFile
-from src.pem.pem_file import PEMParser
-from src.gps.gps_editor import CRS
+
 from scipy import interpolate as interp
 from scipy import stats
 from shapely.geometry import Point
 
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-# from src.gps.gps_editor import GPSEditor
-from src.pem.pem_planner import FoliumWindow
+from src.qt_py.ri_importer import RIFile
+from src.pem.pem_file import PEMParser
+from src.gps.gps_editor import CRS
 
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
@@ -100,7 +97,7 @@ class ProfilePlotter:
         self.x_max = x_max
         self.hide_gaps = hide_gaps
 
-    def format_figure(self, component, borehole=False):
+    def format_figure(self, component):
         """
         Formats a figure, mainly the spines, adjusting the padding, and adding the rectangle.
         """
@@ -145,24 +142,24 @@ class ProfilePlotter:
                         fontsize=10,
                         va='top')
 
-            if borehole is True:
-                if component == 'Z':
-                    comp_str = 'Z Component (axial; +ve up hole)'
-                elif component == 'X':
-                    comp_str = 'X Component (crosswise; +ve along azimuth)'
-                else:
-                    comp_str = 'Y Component (crosswise; +ve left of azimuth)'
-            else:
-                if component == 'Z':
-                    comp_str = 'Z-Component (+ve up)'
-                elif component == 'X':
-                    comp_str = 'X-Component (+ve grid north)'
-                else:
-                    comp_str = 'Y-Component (+ve grid west)'
+            # if borehole is True:
+            #     if component == 'Z':
+            #         comp_str = 'Z Component (axial; +ve up hole)'
+            #     elif component == 'X':
+            #         comp_str = 'X Component (crosswise; +ve along azimuth)'
+            #     else:
+            #         comp_str = 'Y Component (crosswise; +ve left of azimuth)'
+            # else:
+            #     if component == 'Z':
+            #         comp_str = 'Z-Component (+ve up)'
+            #     elif component == 'X':
+            #         comp_str = 'X-Component (+ve grid north)'
+            #     else:
+            #         comp_str = 'Y-Component (+ve grid west)'
 
             plt.figtext(0.550, 0.935, f"{s_title}: {self.pem_file.line_name}\n" +
                         f"Loop: {self.pem_file.loop_name}\n" +
-                        comp_str,
+                        f"{component.upper()} Component",
                         fontname='Century Gothic',
                         fontsize=10,
                         va='top',
@@ -394,7 +391,7 @@ class LINPlotter(ProfilePlotter):
                     offset = len(interp_stations) * 0.10
 
         add_ylabels()
-        self.format_figure(component, borehole=self.pem_file.is_borehole())
+        self.format_figure(component)
         return self.figure
 
 
@@ -445,7 +442,7 @@ class LOGPlotter(ProfilePlotter):
                 offset = len(interp_stations) * 0.10
 
         add_ylabels()
-        self.format_figure(component, borehole=self.pem_file.is_borehole())
+        self.format_figure(component)
         return self.figure
 
 
@@ -592,7 +589,7 @@ class STEPPlotter(ProfilePlotter):
         plot_offtime_lines()
 
         add_ylabel()
-        self.format_figure(component, borehole=self.pem_file.is_borehole())
+        self.format_figure(component)
         return self.figure
 
 
@@ -1870,6 +1867,8 @@ class SectionPlot(MapPlotter):
         # If no hole_depth is given, it will take the 80% percentile
         if not hole_depth:
             hole_depth = np.percentile(interp_depths, 80)
+        else:
+            hole_depth = float(hole_depth)
 
         # Nearest index of the 50th and hole_depth% depths
         i_perc_50_depth = min(range(len(interp_depths)), key=lambda i: abs(interp_depths[i] - perc_50_depth))
@@ -3825,140 +3824,6 @@ class Map3D(MapPlotMethods):
         self.ax.zaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
 
 
-class FoliumMap:
-
-    def __init__(self, pem_files, utm_zone):
-        self.pem_files = pem_files
-        self.zone = utm_zone
-        self.error = QErrorMessage()
-        self.plot_pems()
-
-    def plot_pems(self):
-        station_group = folium.FeatureGroup(name='Stations')
-        line_group = folium.FeatureGroup(name='Lines')
-        loop_group = folium.FeatureGroup(name='Loop')
-        collar_group = folium.FeatureGroup(name='Collars')
-        loops = []
-        collars = []
-        lines = []
-        start_location = None
-
-        for pem_file in self.pem_files:
-
-            if pem_file.is_borehole():
-                if pem_file.has_collar_gps():
-                    coords, hole_name = pem_file.get_collar_coords()[0], pem_file.header.get('LineHole')
-                    if coords not in collars:
-                        collars.append(coords)
-                        try:
-                            collar_lat, collar_lon = self.convert_to_latlon(int(float(coords[0])),
-                                                                            int(float(coords[1])))
-                        except ValueError as e:
-                            self.error.showMessage(
-                                f"The following error occured when converting UTM to Lat Lon: {str(e)}")
-                            print(f"The following error occured when converting UTM to Lat Lon: {str(e)}")
-                        else:
-                            if start_location is None:
-                                start_location = (collar_lat, collar_lon)
-                            # Plot collar
-                            folium.Marker((collar_lat, collar_lon),
-                                          popup=hole_name,
-                                          tooltip=hole_name
-                                          ).add_to(collar_group)
-            else:
-                if pem_file.has_station_gps():
-                    coords, line_name = pem_file.get_line_coords(), pem_file.header.get('LineHole')
-                    if coords not in lines:
-                        lines.append(coords)
-                        stations = [row[-1] for row in coords]
-                        coords = [(int(float(row[0])), int(float(row[1]))) for row in coords]
-                        try:
-                            coords = [self.convert_to_latlon(e, n) for (e, n) in coords]
-                        except ValueError as e:
-                            self.error.showMessage(
-                                f"The following error occured when converting UTM to Lat Lon: {str(e)}")
-                            print(f"The following error occured when converting UTM to Lat Lon: {str(e)}")
-                        else:
-                            if start_location is None:
-                                start_location = coords[0]
-                            # Plot line
-                            folium.PolyLine(locations=coords,
-                                            popup=line_name,
-                                            tooltip=line_name,
-                                            line_opacity=0.5,
-                                            color='blue'
-                                            ).add_to(line_group)
-                            # Plot stations
-                            for coords, station in zip(coords, stations):
-                                folium.Marker(coords,
-                                              popup=station,
-                                              tooltip=station,
-                                              size=10
-                                              ).add_to(station_group)
-
-            if pem_file.has_loop_gps():
-                coords, loop_name = pem_file.get_loop_coords(), pem_file.header.get('Loop')
-                if coords not in loops:
-                    loops.append(coords)
-                    coords = [(int(float(row[0])), int(float(row[1]))) for row in coords]
-                    try:
-                        coords = [self.convert_to_latlon(e, n) for (e, n) in coords]
-                        coords.append(coords[0])  # Close-up the loop
-                    except ValueError as e:
-                        self.error.showMessage(
-                            f"The following error occured when converting UTM to Lat Lon: {str(e)}")
-                        print(f"The following error occured when converting UTM to Lat Lon: {str(e)}")
-                    else:
-                        if start_location is None:
-                            start_location = coords[0]
-                        # Plot loop
-                        folium.PolyLine(locations=coords,
-                                        popup=loop_name,
-                                        tooltip=loop_name,
-                                        line_opacity=0.5,
-                                        color='magenta'
-                                        ).add_to(loop_group)
-
-        self.m = folium.Map(location=start_location,
-                            zoom_start=15,
-                            zoom_control=False,
-                            control_scale=True,
-                            tiles='OpenStreetMap',
-                            attr='testing attr'
-                            )
-        folium.raster_layers.TileLayer('OpenStreetMap').add_to(self.m)
-        folium.raster_layers.TileLayer('Stamen Toner').add_to(self.m)
-        folium.raster_layers.TileLayer('Stamen Terrain').add_to(self.m)
-        folium.raster_layers.TileLayer('Cartodb positron').add_to(self.m)
-        station_group.add_to(self.m)
-        line_group.add_to(self.m)
-        loop_group.add_to(self.m)
-        collar_group.add_to(self.m)
-        folium.LayerControl().add_to(self.m)
-
-    def convert_to_latlon(self, easting, northing):
-        """
-        Convert a UTM easting and northing to lat lon
-        """
-        zone = self.zone
-        zone_num = int(re.search('\d+', zone).group())
-        north = True if 'n' in zone.lower() else False
-
-        easting = int(float(easting))
-        northing = int(float(northing))
-        lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-        return lat, lon
-
-    def get_map(self):
-        # So the HTML can be opened in PyQt
-        data = io.BytesIO()
-        self.m.save(data, close_file=False)
-
-        self.w = FoliumWindow()
-        self.w.setHtml(data.getvalue().decode())
-        return self.w
-
-
 class Section3D(Map3D, MapPlotMethods):
     def __init__(self, ax, pem_file, **kwargs):
         if isinstance(pem_file, list):
@@ -4799,19 +4664,18 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Raglan', number=5)
+    pem_files = pem_getter.get_pems(client='Kazzinc', number=5)
 
-    # map = FoliumMap(pem_files, '17N')
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
-    for file in pem_files:
-        fig = plt.figure(figsize=(8.5, 11), dpi=100)
-        sp = SectionPlot()
-        sp.plot(file, figure=fig)
-    plt.show()
+    # for file in pem_files:
+    #     fig = plt.figure(figsize=(8.5, 11), dpi=100)
+    #     sp = SectionPlot()
+    #     sp.plot(file, figure=fig)
+    # plt.show()
 
     # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
     # ax6 = ax5.twiny()

@@ -24,7 +24,7 @@ from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, Bor
 from src.gps.gpx_creator import GPXCreator
 
 from src.pem.pem_file import PEMFile, PEMParser
-from src.pem.pem_plotter import PEMPrinter, CustomProgressBar, FoliumMap
+from src.pem.pem_plotter import PEMPrinter, CustomProgressBar
 from src.pem.pem_planner import LoopPlanner, GridPlanner
 
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
@@ -33,7 +33,8 @@ from src.qt_py.ri_importer import BatchRIImporter
 from src.qt_py.gps_adder import LineAdder, LoopAdder
 from src.qt_py.name_editor import BatchNameEditor
 from src.qt_py.station_splitter import StationSplitter
-from src.qt_py.map_widgets import Map3DViewer, Section3DViewer, ContourMapViewer
+from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, FoliumMap
+from src.qt_py.derotator import Derotator
 
 from src.damp.db_plot import DBPlot
 
@@ -87,22 +88,22 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.text_browsers = []
 
         # Widgets
-        self.line_adder = LineAdder()
-        self.loop_adder = LoopAdder()
+        self.line_adder = LineAdder(parent=self)
+        self.loop_adder = LoopAdder(parent=self)
         self.gpx_editor = GPXEditor()
         self.station_splitter = StationSplitter(parent=self)
-        self.grid_planner = GridPlanner()
-        self.loop_planner = LoopPlanner()
-        self.db_plot = DBPlot()
-        self.unpacker = Unpacker()
-        self.gpx_creator = GPXCreator()
+        self.grid_planner = GridPlanner(parent=self)
+        self.loop_planner = LoopPlanner(parent=self)
+        self.db_plot = DBPlot(parent=self)
+        self.unpacker = Unpacker(parent=self)
+        self.gpx_creator = GPXCreator(parent=self)
         self.ri_importer = BatchRIImporter(parent=self)
         self.plan_map_options = PlanMapOptions(parent=self)
-        self.batch_name_editor = BatchNameEditor()
-        self.map_viewer_3d = Map3DViewer()
+        self.batch_name_editor = BatchNameEditor(parent=self)
+        self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
-        self.section_viewer_3d = None
-        self.contour_viewer = None
+        self.contour_viewer = ContourMapViewer(parent=self)
+        self.derotator = Derotator(parent=self)
 
         self.initMenus()
         self.initSignals()
@@ -273,7 +274,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.actionContour_Map.setIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map3.png')))
         self.actionContour_Map.setStatusTip("Show a contour map of surface PEM files")
         self.actionContour_Map.setToolTip("Show a contour map of surface PEM files")
-        self.actionContour_Map.triggered.connect(self.show_contour_map_viewer)
+        self.actionContour_Map.triggered.connect(lambda: self.contour_viewer.open(self.pem_files))
 
         # Tools menu
         self.actionLoop_Planner.setStatusTip("Loop planner")
@@ -416,7 +417,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.table.print_plots_action.triggered.connect(lambda: self.print_plots(selected_files=True))
 
                 self.table.extract_stations_action = QAction("&Extract Stations", self)
-                self.table.extract_stations_action.triggered.connect(self.show_station_splitter)
+                self.table.extract_stations_action.triggered.connect(
+                    lambda: self.station_splitter.open(selected_pems[0]))
 
                 self.table.calc_mag_dec = QAction("&Magnetic Declination", self)
                 self.table.calc_mag_dec.setIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
@@ -441,6 +443,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.table.scale_ca_action = QAction("&Scale Coil Area", self)
                 self.table.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
                 self.table.scale_ca_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'coil.png')))
+
+                self.table.derotate_action = QAction("&De-rotate XY", self)
+                self.table.derotate_action.triggered.connect(self.derotate_xy)
+                self.table.derotate_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'derotate.png')))
 
                 self.table.share_loop_action = QAction("&Share Loop", self)
                 self.table.share_loop_action.triggered.connect(self.share_loop)
@@ -493,7 +499,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     self.table.menu.addAction(self.table.rename_files_action)
                 self.table.menu.addSeparator()
                 if all([f.is_borehole() for f in selected_pems]):
-                    self.table.menu.addAction(self.table.view_3d_section_action)
+                    self.table.menu.addAction(self.table.derotate_action)
                     self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.remove_file_action)
 
@@ -1983,6 +1989,14 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 pem_file = pem_file.scale_current(current)
                 self.refresh_rows(rows=row)
 
+    def derotate_xy(self):
+        pem_files, rows = self.get_selected_pem_files()
+        self.derotator.open(pem_files)
+        # soa, okPressed = QInputDialog.getDouble(self, "Sensor Offset Angle", "SOA:")
+        # if okPressed:
+        #     for pem_file in pem_files:
+        #         pem_file = pem_file.rotate(soa=soa)
+
     def reverse_all_data(self, comp):
         """
         Reverse the polarity of all data of a given component for all opened PEM files.
@@ -2339,15 +2353,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         m.calc_mag_dec(pem_file, crs)
         m.show()
 
-    def show_station_splitter(self):
-        """
-        Opens the PEMFileSplitter window, which will allow selected stations to be saved as a new PEM file.
-        :return: None
-        """
-        pem_file, row = self.get_selected_pem_files()
-        self.station_splitter.open(pem_file[0])
-        self.station_splitter.show()
-
     def show_plan_map(self):
         """
         Opens the interactive plan Map window
@@ -2388,27 +2393,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.section_3d_viewer.show()
         else:
             self.statusBar().showMessage('Invalid survey type', 2000)
-
-    def show_contour_map_viewer(self):
-        """
-        Opens the Contour Map Viewer window
-        :return: None
-        """
-        if len(self.pem_files) > 1:
-            pem_files = copy.deepcopy(self.pem_files)
-            try:
-                self.contour_map_viewer = ContourMapViewer(pem_files, parent=self)
-            except TypeError as e:
-                self.error.setWindowTitle('Error')
-                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
-                return
-            except ValueError as e:
-                self.error.setWindowTitle('Error')
-                self.error.showMessage(f"The following error occured while creating the contour map: {str(e)}")
-            else:
-                self.contour_map_viewer.show()
-        else:
-            self.window().statusBar().showMessage("Must have more than 1 surface PEM file open", 2000)
 
     def show_batch_renamer(self, type):
         """
@@ -2676,14 +2660,14 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Raglan', number=3)
+    pem_files = pg.get_pems(client='Kazzinc', number=3)
     # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
     mw.open_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
     mw.show()
 
-    mw.print_plots()
+    # mw.print_plots()
     # mw.reverse_all_data('X')
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.open_gps_files([r'C:\_Data\2020\Bitterroot\Surface\BR1\GPS\L8770E_04.txt'])

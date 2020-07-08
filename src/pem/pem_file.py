@@ -7,6 +7,7 @@ import natsort
 import numpy as np
 import pandas as pd
 
+from pathlib import Path
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, CRS
 
 
@@ -395,23 +396,22 @@ class PEMFile:
         self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{old_current}A')
         return self
 
-    def rotate(self, type='acc', soa=0):
+    def rotate(self, method='acc', soa=0):
         """
         Rotate the XY data of the PEM file.
         Formula: X' = Xcos(roll) - Ysin(roll), Y' = Xsin(roll) + Ycos(roll)
-        :param type: str: Method of rotation, either 'acc' for accelerometer or 'mag' for magnetic
+        :param method: str: Method of rotation, either 'acc' for accelerometer or 'mag' for magnetic
         :param soa: int: Sensor offset angle
         :return: PEM file object with rotated data
         """
-        if self.is_rotated():
-            raise ValueError(f"{self.filename} is already rotated.")
-        elif not self.is_borehole():
-            raise TypeError(f"{self.filename} is not a borehole file.")
-        elif self.data['RAD tool'].map(lambda x: x.D == 'D5').any():
-            raise ValueError(
-                f"{self.filename} appears to be a file that has been run through Otool, thus it will not be rotated.")
+        assert self.is_borehole(), f"{self.filename} is not a borehole file."
+
+        if self.data['RAD tool'].map(lambda x: x.D == 'D5').any():
+            print(f"{self.filename} appears to be a file that has been run through Otool, thus it will not be rotated.")
+            return self
         else:
-            def rotate_data(row, type):
+
+            def rotate_data(row, method):
                 """
                 Rotate the data for a given reading
                 :param row: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
@@ -461,7 +461,7 @@ class PEMFile:
 
                 rad = row.iloc[0]['RAD tool']
                 # Accelerometer rotation
-                if type == 'acc':
+                if method == 'acc':
                     theta = math.atan2(rad.gy, rad.gz)
                     cc_roll_angle = 360 - math.degrees(theta) if rad.gy < 0 else math.degrees(theta)
                     roll_angle = 360 - cc_roll_angle if rad.gy > 0 else cc_roll_angle
@@ -483,7 +483,7 @@ class PEMFile:
                     print(f"Station {row.iloc[0].Station} roll angle: {roll_angle:.2f}")
 
                 # Magnetometer rotation
-                elif type == 'mag':
+                elif method == 'mag':
                     theta = math.atan2(-rad.Hy, -rad.Hz)
                     cc_roll_angle = math.degrees(theta)
                     roll_angle = 360 - cc_roll_angle if rad.Hy < 0 else cc_roll_angle
@@ -500,6 +500,9 @@ class PEMFile:
                                                         'angle_used': roll_angle - soa,
                                                         'rotated': True,
                                                         'rotation_type': 'mag'})
+
+                elif method == 'pp':
+                    pass
                 else:
                     raise ValueError(f'"{type}" is an invalid rotation method')
 
@@ -515,7 +518,7 @@ class PEMFile:
             st = time.time()
             rotated_data = self.data[filt].groupby(['Station', 'RAD ID'],
                                                    as_index=False,
-                                                   group_keys=False).apply(lambda i: rotate_data(i, type))
+                                                   group_keys=False).apply(lambda i: rotate_data(i, method))
             print(f"Time to rotate data: {time.time() - st}")
             self.data[filt] = rotated_data
             # Sort the data and remove unrotated readings
@@ -1236,23 +1239,21 @@ class RADTool:
 
 
 if __name__ == '__main__':
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\7600N.PEM'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Nantou\PUX-021 ZAv.PEM'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\L1000N_29.PEM'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\BX-081 XY.PEM'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\MRC-067 XY.PEM'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\BX-081 XYT.PEM'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\MX-198 XY.PEM'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-225G-18 CXYZ (flux).PEM'
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Nantou\PUX-021 XYT.PEM'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\SAN-237-19 XYZ (flux).PEM'
-    p = PEMParser()
-    file = p.parse(file)
-    file.get_profile_data()
+    from src.pem.pem_getter import PEMGetter
+
+    pg = PEMGetter()
+    files = pg.get_pems(client='PEM Rotation', number=1)
+    file = files[0]
+    # p = PEMParser()
+    # file = p.parse(file)
+    # file.get_profile_data()
+
     # file.split()
-    # file.rotate(type='acc', soa=0)
+
+    file.rotate(method='pp', soa=0)
+
     # file.average()
     # file.scale_current(10)
-    out = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEM Rotation\test.PEM'
+    out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'testing'/'testpem.pem')
     print(file.to_string(), file=open(out, 'w'))
     os.startfile(out)

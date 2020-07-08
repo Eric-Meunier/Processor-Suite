@@ -47,6 +47,7 @@ class StationSplitter(QWidget):
     def open(self, pem_file):
         self.pem_file = pem_file
         self.fill_table()
+        self.show()
 
     def closeEvent(self, e):
         # self.table.clear()

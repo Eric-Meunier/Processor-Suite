@@ -1,27 +1,26 @@
+import io
 import os
 import re
 import sys
-import copy
+import time
+
+import folium
+# import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib.pyplot as plt
 import numpy as np
-import time
-from PyQt5 import (QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QFileDialog, QErrorMessage, QMessageBox, QApplication, QShortcut, QGridLayout,
-                             QAction)
+import plotly
+import plotly.graph_objects as go
+from PyQt5 import (QtGui)
+from PyQt5 import uic
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtWidgets import (QErrorMessage, QApplication, QWidget, QShortcut, QFileDialog, QMessageBox, QGridLayout,
+                             QAction, QMainWindow)
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
-from mpl_toolkits.mplot3d import Axes3D  # Must be here for 3D projection to work.
-from matplotlib.figure import Figure
 
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWidgets import QApplication, QMainWindow
-from PyQt5 import QtCore
-import plotly.graph_objects as go
-import plotly
+from src.pem.pem_plotter import ContourMap
 
-import numpy as np
-from src.pem.pem_plotter import Section3D, ContourMap
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -248,54 +247,54 @@ class Map3DViewer(QMainWindow):
         QApplication.clipboard().setPixmap(img)
 
 
-class Section3DViewer(QWidget, Ui_Section3DWidget):
-    """
-    Displays a 3D vector plot of a borehole. Plots the vector plot itself in 2D, on a plane that is automatically
-    calculated
-    """
-
-    def __init__(self, pem_file, parent=None):
-        super().__init__()
-        self.setupUi(self)
-        self.pem_file = pem_file
-        if not self.pem_file.is_borehole():
-            raise TypeError(f'{os.path.basename(self.pem_file.filepath)} is not a borehole file.')
-        self.parent = parent
-        self.list_points = []
-
-        self.setWindowTitle('3D Section Viewer')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
-
-        self.draw_loop = self.draw_loop_cbox.isChecked()
-        self.draw_borehole = self.draw_borehole_cbox.isChecked()
-        self.draw_mag_field = self.draw_mag_field_cbox.isChecked()
-
-        self.label_loop = self.label_loop_cbox.isChecked()
-        self.label_loop_anno = self.label_loop_anno_cbox.isChecked()
-        self.label_borehole = self.label_borehole_cbox.isChecked()
-
-        self.draw_loop_cbox.toggled.connect(self.toggle_loop)
-        self.draw_borehole_cbox.toggled.connect(self.toggle_borehole)
-        self.draw_mag_field_cbox.toggled.connect(self.toggle_mag_field)
-
-        self.label_loop_cbox.toggled.connect(self.toggle_loop_label)
-        self.label_loop_anno_cbox.toggled.connect(self.toggle_loop_anno_labels)
-        self.label_borehole_cbox.toggled.connect(self.toggle_borehole_label)
-        self.label_segments_cbox.toggled.connect(self.toggle_segment_labels)
-
-        self.figure = Figure()
-        self.canvas = FigureCanvas(self.figure)
-        # self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)  # Needed for key-press events
-        # self.canvas.setFocus()
-
-        self.map_layout.addWidget(self.canvas)
-        self.ax = self.figure.add_subplot(111, projection='3d')
-
-        self.section_plotter = Section3D(self.ax, self.pem_file, parent=self)
-        self.section_plotter.plot_3d_magnetic_field()
-        self.section_plotter.format_ax()
-        self.figure.subplots_adjust(left=-0.1, bottom=-0.1, right=1.1, top=1.1)
-        self.update_canvas()
+# class Section3DViewer(QWidget, Ui_Section3DWidget):
+#     """
+#     Displays a 3D vector plot of a borehole. Plots the vector plot itself in 2D, on a plane that is automatically
+#     calculated
+#     """
+#
+#     def __init__(self, pem_file, parent=None):
+#         super().__init__()
+#         self.setupUi(self)
+#         self.pem_file = pem_file
+#         if not self.pem_file.is_borehole():
+#             raise TypeError(f'{os.path.basename(self.pem_file.filepath)} is not a borehole file.')
+#         self.parent = parent
+#         self.list_points = []
+#
+#         self.setWindowTitle('3D Section Viewer')
+#         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
+#
+#         self.draw_loop = self.draw_loop_cbox.isChecked()
+#         self.draw_borehole = self.draw_borehole_cbox.isChecked()
+#         self.draw_mag_field = self.draw_mag_field_cbox.isChecked()
+#
+#         self.label_loop = self.label_loop_cbox.isChecked()
+#         self.label_loop_anno = self.label_loop_anno_cbox.isChecked()
+#         self.label_borehole = self.label_borehole_cbox.isChecked()
+#
+#         self.draw_loop_cbox.toggled.connect(self.toggle_loop)
+#         self.draw_borehole_cbox.toggled.connect(self.toggle_borehole)
+#         self.draw_mag_field_cbox.toggled.connect(self.toggle_mag_field)
+#
+#         self.label_loop_cbox.toggled.connect(self.toggle_loop_label)
+#         self.label_loop_anno_cbox.toggled.connect(self.toggle_loop_anno_labels)
+#         self.label_borehole_cbox.toggled.connect(self.toggle_borehole_label)
+#         self.label_segments_cbox.toggled.connect(self.toggle_segment_labels)
+#
+#         self.figure = Figure()
+#         self.canvas = FigureCanvas(self.figure)
+#         # self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)  # Needed for key-press events
+#         # self.canvas.setFocus()
+#
+#         self.map_layout.addWidget(self.canvas)
+#         self.ax = self.figure.add_subplot(111, projection='3d')
+#
+#         self.section_plotter = Section3D(self.ax, self.pem_file, parent=self)
+#         self.section_plotter.plot_3d_magnetic_field()
+#         self.section_plotter.format_ax()
+#         self.figure.subplots_adjust(left=-0.1, bottom=-0.1, right=1.1, top=1.1)
+#         self.update_canvas()
 
     """
     Not used
@@ -359,81 +358,81 @@ class Section3DViewer(QWidget, Ui_Section3DWidget):
             self.figure.canvas.mpl_disconnect(self.cid_click)
     """
 
-    def update_canvas(self):
-        self.toggle_loop()
-        self.toggle_borehole()
-        self.toggle_mag_field()
-        self.toggle_loop_label()
-        self.toggle_loop_anno_labels()
-        self.toggle_borehole_label()
-        self.toggle_segment_labels()
-
-    def toggle_loop(self):
-        if self.draw_loop_cbox.isChecked():
-            for artist in self.section_plotter.loop_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.section_plotter.loop_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_borehole(self):
-        if self.draw_borehole_cbox.isChecked():
-            for artist in self.section_plotter.hole_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.section_plotter.hole_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_mag_field(self):
-        if self.draw_mag_field_cbox.isChecked():
-            for artist in self.section_plotter.mag_field_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.section_plotter.mag_field_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_loop_label(self):
-        if self.label_loop_cbox.isChecked():
-            for artist in self.section_plotter.loop_label_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.section_plotter.loop_label_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_loop_anno_labels(self):
-        if self.label_loop_anno_cbox.isChecked():
-            for artist in self.section_plotter.loop_anno_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.section_plotter.loop_anno_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_borehole_label(self):
-        if self.label_borehole_cbox.isChecked():
-            for artist in self.section_plotter.hole_label_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.section_plotter.hole_label_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def toggle_segment_labels(self):
-        if self.label_segments_cbox.isChecked():
-            for artist in self.section_plotter.segment_label_artists:
-                artist.set_visible(True)
-        else:
-            for artist in self.section_plotter.segment_label_artists:
-                artist.set_visible(False)
-        self.canvas.draw()
-
-    def closeEvent(self, e):
-        self.figure.clear()
-        e.accept()
+    # def update_canvas(self):
+    #     self.toggle_loop()
+    #     self.toggle_borehole()
+    #     self.toggle_mag_field()
+    #     self.toggle_loop_label()
+    #     self.toggle_loop_anno_labels()
+    #     self.toggle_borehole_label()
+    #     self.toggle_segment_labels()
+    #
+    # def toggle_loop(self):
+    #     if self.draw_loop_cbox.isChecked():
+    #         for artist in self.section_plotter.loop_artists:
+    #             artist.set_visible(True)
+    #     else:
+    #         for artist in self.section_plotter.loop_artists:
+    #             artist.set_visible(False)
+    #     self.canvas.draw()
+    #
+    # def toggle_borehole(self):
+    #     if self.draw_borehole_cbox.isChecked():
+    #         for artist in self.section_plotter.hole_artists:
+    #             artist.set_visible(True)
+    #     else:
+    #         for artist in self.section_plotter.hole_artists:
+    #             artist.set_visible(False)
+    #     self.canvas.draw()
+    #
+    # def toggle_mag_field(self):
+    #     if self.draw_mag_field_cbox.isChecked():
+    #         for artist in self.section_plotter.mag_field_artists:
+    #             artist.set_visible(True)
+    #     else:
+    #         for artist in self.section_plotter.mag_field_artists:
+    #             artist.set_visible(False)
+    #     self.canvas.draw()
+    #
+    # def toggle_loop_label(self):
+    #     if self.label_loop_cbox.isChecked():
+    #         for artist in self.section_plotter.loop_label_artists:
+    #             artist.set_visible(True)
+    #     else:
+    #         for artist in self.section_plotter.loop_label_artists:
+    #             artist.set_visible(False)
+    #     self.canvas.draw()
+    #
+    # def toggle_loop_anno_labels(self):
+    #     if self.label_loop_anno_cbox.isChecked():
+    #         for artist in self.section_plotter.loop_anno_artists:
+    #             artist.set_visible(True)
+    #     else:
+    #         for artist in self.section_plotter.loop_anno_artists:
+    #             artist.set_visible(False)
+    #     self.canvas.draw()
+    #
+    # def toggle_borehole_label(self):
+    #     if self.label_borehole_cbox.isChecked():
+    #         for artist in self.section_plotter.hole_label_artists:
+    #             artist.set_visible(True)
+    #     else:
+    #         for artist in self.section_plotter.hole_label_artists:
+    #             artist.set_visible(False)
+    #     self.canvas.draw()
+    #
+    # def toggle_segment_labels(self):
+    #     if self.label_segments_cbox.isChecked():
+    #         for artist in self.section_plotter.segment_label_artists:
+    #             artist.set_visible(True)
+    #     else:
+    #         for artist in self.section_plotter.segment_label_artists:
+    #             artist.set_visible(False)
+    #     self.canvas.draw()
+    #
+    # def closeEvent(self, e):
+    #     self.figure.clear()
+    #     e.accept()
 
 
 class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
@@ -496,7 +495,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
         # Must be at least 2 eligible surface PEM files.
         if len(self.pem_files) < 2:
-            self.message.information('Insufficient PEM Files', 'Must have at least 2 PEM files to plot')
+            self.message.information(self, 'Insufficient PEM Files', 'Must have at least 2 surface PEM files to plot')
             return
 
         # Averages any file not already averaged.
@@ -531,6 +530,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.channel_times = self.pem_files[np.argmax(pem_file_channels)].channel_times
 
         self.draw_map()
+        self.show()
 
     def draw_map(self):
         """
@@ -629,6 +629,170 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                 os.startfile(path)
 
 
+class FoliumMap(QMainWindow):
+
+    def __init__(self):
+        super().__init__()
+        self.pem_files = None
+        self.crs = None
+        self.map = None
+        self.win = None
+        # start_location is used as the zoom-point when the map is opened
+        self.start_location = None
+
+        self.error = QErrorMessage()
+        layout = QGridLayout()
+        self.setLayout(layout)
+        self.setWindowTitle('Map')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+
+        self.save_img_action = QAction('Save Image')
+        self.save_img_action.setShortcut("Ctrl+S")
+        self.save_img_action.triggered.connect(self.save_img)
+        self.copy_image_action = QAction('Copy Image')
+        self.copy_image_action.setShortcut("Ctrl+C")
+        self.copy_image_action.triggered.connect(self.copy_img)
+
+        self.file_menu = self.menuBar().addMenu('&File')
+        self.file_menu.addAction(self.save_img_action)
+        self.file_menu.addAction(self.copy_image_action)
+
+        # create an instance of QWebEngineView and set the html code
+        self.web_engine_widget = QWebEngineView()
+        self.setCentralWidget(self.web_engine_widget)
+
+    def open(self, pem_files, crs):
+        self.pem_files = pem_files
+        self.crs = crs
+        self.error = QErrorMessage()
+
+        if self.crs.is_valid():
+            self.plot_pems()
+
+            # Add the map to a QWebEngineView
+            data = io.BytesIO()
+            self.map.save(data, close_file=False)
+            self.web_engine_widget.setHtml(data.getvalue().decode())
+
+            self.show()
+
+    def plot_pems(self):
+
+        def plot_borehole(pem_file):
+            if pem_file.has_collar_gps():
+                # Add the CRS to the collar and retrieve the lat lon coordinates
+                pem_file.geometry.collar.crs = self.crs
+                collar = pem_file.geometry.collar.to_latlon().df
+
+                if collar.to_string() not in collars:
+                    collars.append(collar.to_string())
+                    if self.start_location is None:
+                        self.start_location = collar.loc[0, ['Northing', 'Easting']]
+
+                    # Plot the collar
+                    folium.Marker(collar.loc[0, ['Northing', 'Easting']],
+                                  popup=pem_file.line_name,
+                                  tooltip=pem_file.line_name
+                                  ).add_to(collar_group)
+
+        def plot_line(pem_file):
+            if pem_file.has_station_gps():
+                # Add the CRS to the line and retrieve the lat lon coordinates
+                pem_file.line.crs = self.crs
+                line = pem_file.line.to_latlon().df
+
+                if line.to_string() not in lines:
+                    lines.append(line.to_string())
+                    if self.start_location is None:
+                        self.start_location = line.loc[0, ['Northing', 'Easting']]
+
+                    # Plot the line
+                    folium.PolyLine(locations=line.loc[:, ['Northing', 'Easting']],
+                                    popup=pem_file.line_name,
+                                    tooltip=pem_file.line_name,
+                                    line_opacity=0.5,
+                                    color='blue'
+                                    ).add_to(line_group)
+
+                    # Plot the stations markers
+                    for row in line.itertuples():
+                        folium.Marker((row.Northing, row.Easting),
+                                      popup=row.Station,
+                                      tooltip=row.Station,
+                                      size=10
+                                      ).add_to(station_group)
+
+        def plot_loop(pem_file):
+            if pem_file.has_loop_gps():
+                # Add the CRS to the loop and retrieve the lat lon coordinates
+                pem_file.loop.crs = self.crs
+                loop = pem_file.loop.to_latlon().get_loop(sorted=True, closed=True)
+
+                if loop.to_string() not in loops:
+                    loops.append(loop.to_string())
+                    if self.start_location is None:
+                        self.start_location = loop.loc[0, ['Northing', 'Easting']]
+                    # Plot loop
+                    folium.PolyLine(locations=loop.loc[:, ['Northing', 'Easting']],
+                                    popup=pem_file.loop_name,
+                                    tooltip=pem_file.loop_name,
+                                    line_opacity=0.5,
+                                    color='magenta'
+                                    ).add_to(loop_group)
+
+        station_group = folium.FeatureGroup(name='Stations')
+        line_group = folium.FeatureGroup(name='Lines')
+        loop_group = folium.FeatureGroup(name='Loop')
+        collar_group = folium.FeatureGroup(name='Collars')
+        loops = []
+        collars = []
+        lines = []
+
+        for pem_file in self.pem_files:
+            if pem_file.is_borehole():
+                plot_borehole(pem_file)
+            else:
+                plot_line(pem_file)
+
+            plot_loop(pem_file)
+
+        self.map = folium.Map(location=self.start_location,
+                              zoom_start=15,
+                              zoom_control=False,
+                              control_scale=True,
+                              tiles='OpenStreetMap',
+                              attr='testing attr'
+                              )
+
+        folium.raster_layers.TileLayer('OpenStreetMap').add_to(self.map)
+        folium.raster_layers.TileLayer('Stamen Toner').add_to(self.map)
+        folium.raster_layers.TileLayer('Stamen Terrain').add_to(self.map)
+        folium.raster_layers.TileLayer('Cartodb positron').add_to(self.map)
+        station_group.add_to(self.map)
+        line_group.add_to(self.map)
+        loop_group.add_to(self.map)
+        collar_group.add_to(self.map)
+        folium.LayerControl().add_to(self.map)
+
+    def save_img(self):
+        save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
+
+        if save_file:
+            size = self.contentsRect()
+            img = QtGui.QPixmap(size.width(), size.height())
+            self.render(img)
+            img.save(save_file)
+        else:
+            pass
+
+    def copy_img(self):
+        size = self.contentsRect()
+        img = QtGui.QPixmap(size.width(), size.height())
+        self.render(img)
+        img.copy(size)
+        QApplication.clipboard().setPixmap(img)
+
+
 class ContourMapToolbar(NavigationToolbar):
     """
     Custom Matplotlib toolbar for ContourMap.
@@ -645,9 +809,12 @@ if __name__ == '__main__':
     pg = PEMGetter()
     files = pg.get_pems(client='Kazzinc', number=5)
 
-    map = Map3DViewer()
-    map.show()
-    map.open(files)
+    # map = Map3DViewer()
+    # map.show()
+    # map.open(files)
+
+    fmap = FoliumMap()
+    fmap.open(files, files[0].get_crs())
 
     # cmap = ContourMapViewer()
     # cmap.open(files)

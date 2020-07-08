@@ -36,8 +36,9 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
     Program to convert a CSV file into a GPX file. The datum of the intput GPS must be NAD 83 or WGS 84.
     Columns of the CSV must be 'Name', 'Comment', 'Easting', 'Northing'.
     """
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
         self.setupUi(self)
         self.setWindowTitle("GPX Creator")
         self.setWindowIcon(

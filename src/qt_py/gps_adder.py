@@ -248,8 +248,9 @@ class GPSAdder(QWidget):
 
 class LineAdder(GPSAdder):
 
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
         self.setWindowTitle('Line Adder')
         self.button_box.accepted.connect(self.accept)
 
@@ -382,8 +383,9 @@ class LineAdder(GPSAdder):
 
 class LoopAdder(GPSAdder):
 
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
         self.setWindowTitle('Loop Adder')
         self.button_box.accepted.connect(self.accept)
 

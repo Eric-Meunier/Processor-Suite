@@ -77,20 +77,22 @@ def exception_hook(exctype, value, traceback):
 sys.excepthook = exception_hook
 
 
-# TODO Fix section line and provide loop corners as text, and copy to clip board the entire Qt window
+# TODO provide loop corners as text
 class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
     """
     Program that plots the magnetic field projected to a plane perpendicular to a borehole for a interactive loop.
     Loop and borehole collar can be exported as KMZ or GPX files.
     """
 
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
         self.setupUi(self)
         self.setWindowTitle('Loop Planner')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.setGeometry(200, 200, 1400, 700)
         self.dialog = QFileDialog()
+        self.win = FoliumWindow()
 
         self.gps_systems = ['UTM']
         self.gps_zones = [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
@@ -574,9 +576,8 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         data = io.BytesIO()
         m.save(data, close_file=False)
 
-        self.w = FoliumWindow()
-        self.w.setHtml(data.getvalue().decode())
-        self.w.show()
+        self.win.setHtml(data.getvalue().decode())
+        self.win.show()
 
     def save_kmz(self):
         """
@@ -694,13 +695,17 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
     Program to plan a surface grid.
     """
 
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
         self.setupUi(self)
         self.setWindowTitle('Grid Planner')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.setGeometry(200, 200, 1100, 700)
         self.dialog = QFileDialog()
+        self.win = FoliumWindow()
+
+        self.plan_view_plot = None
 
         self.gps_systems = ['UTM']
         self.gps_zones = [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
@@ -719,7 +724,7 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.line_spacing = int(self.line_spacing_edit.text())
 
         self.grid_east_center, self.grid_north_center = 0, 0
-        self.lines =[]
+        self.lines = []
 
         # Signals
         self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
@@ -1286,9 +1291,8 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         data = io.BytesIO()
         m.save(data, close_file=False)
 
-        self.w = FoliumWindow()
-        self.w.setHtml(data.getvalue().decode())
-        self.w.show()
+        self.win.setHtml(data.getvalue().decode())
+        self.win.show()
 
     def save_kmz(self):
         """

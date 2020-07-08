@@ -87,8 +87,9 @@ icons_lib = {
 
 class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
         self.setupUi(self)
         self.setWindowTitle('Unpacker')
         self.setWindowIcon(
