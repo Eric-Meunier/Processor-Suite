@@ -23,6 +23,12 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
+      <property name="maximumSize">
+       <size>
+        <width>300</width>
+        <height>16777215</height>
+       </size>
+      </property>
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
       </property>
@@ -501,6 +507,9 @@ of Lines</string>
     </property>
     <addaction name="actionSave_as_KMZ"/>
     <addaction name="actionSave_as_GPX"/>
+    <addaction name="separator"/>
+    <addaction name="actionCopy_Grid_to_Clipboard"/>
+    <addaction name="actionCopy_Loop_to_Clipboard"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -525,6 +534,16 @@ of Lines</string>
   <action name="view_map_action">
    <property name="text">
     <string>Map</string>
+   </property>
+  </action>
+  <action name="actionCopy_Grid_to_Clipboard">
+   <property name="text">
+    <string>Copy Grid to Clipboard</string>
+   </property>
+  </action>
+  <action name="actionCopy_Loop_to_Clipboard">
+   <property name="text">
+    <string>Copy Loop to Clipboard</string>
    </property>
   </action>
  </widget>

@@ -19,13 +19,13 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
 # from pyqtspinner.spinner import WaitingSpinner
 import geomag
 
-from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeGeometry, BoreholeSegments,
+from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments,
                                 GPXEditor, CRS)
 from src.gps.gpx_creator import GPXCreator
 
 from src.pem.pem_file import PEMFile, PEMParser
 from src.pem.pem_plotter import PEMPrinter, CustomProgressBar
-from src.pem.pem_planner import LoopPlanner, GridPlanner
+from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.qt_py.unpacker import Unpacker
@@ -585,9 +585,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 e.ignore()
 
         else:
-            eligible_tabs = [self.stackedWidget.currentWidget().Station_GPS_Tab,
-                             self.stackedWidget.currentWidget().Loop_GPS_Tab,
-                             self.stackedWidget.currentWidget().Geometry_Tab]
+            eligible_tabs = [self.stackedWidget.currentWidget().station_gps_tab,
+                             self.stackedWidget.currentWidget().loop_gps_tab,
+                             self.stackedWidget.currentWidget().geometry_tab]
 
             gps_conditions = bool(all([
                 e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
@@ -599,7 +599,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             ri_conditions = bool(all([
                 e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
                 ri_files is True,
-                self.stackedWidget.currentWidget().tabs.currentWidget() == self.stackedWidget.currentWidget().RI_Tab,
+                self.stackedWidget.currentWidget().tabs.currentWidget() == self.stackedWidget.currentWidget().ri_tab,
                 len(self.pem_files) > 0
             ]))
 
@@ -619,8 +619,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         pem_files = [file for file in urls if file.lower().endswith('pem')]
         gps_files = [file for file in urls if
                      file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith(
-                         'seg') or file.lower().endswith('xyz')]
-        gpx_files = [file for file in urls if file.lower().endswith('gpx')]
+                         'seg') or file.lower().endswith('xyz') or file.lower().endswith('gpx')]
         ri_files = [file for file in urls if
                     file.lower().endswith('ri1') or file.lower().endswith('ri2') or file.lower().endswith('ri3')]
         inf_files = [file for file in urls if file.lower().endswith('inf') or file.lower().endswith('log')]
@@ -634,9 +633,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if gps_files:
             self.open_gps_files(gps_files)
             print(f'open_gps_files time: {time.time() - t2} seconds')
-
-        if gpx_files:
-            self.open_gps_files(gpx_files)
 
         if ri_files:
             self.open_ri_file(ri_files)
@@ -848,12 +844,12 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         current_tab = pem_info_widget.tabs.currentWidget()
         crs = self.get_crs()
 
-        if current_tab == pem_info_widget.Station_GPS_Tab:
+        if current_tab == pem_info_widget.station_gps_tab:
             line = SurveyLine(file, crs=crs)
             self.line_adder.write_widget = pem_info_widget
             self.line_adder.add_df(line.get_line(sorted=self.auto_sort_stations_cbox.isChecked()))
 
-        elif current_tab == pem_info_widget.Geometry_Tab:
+        elif current_tab == pem_info_widget.geometry_tab:
             collar = BoreholeCollar(file, crs=crs)
             segments = BoreholeSegments(file)
             if not collar.df.empty:
@@ -861,7 +857,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             if not segments.df.empty:
                 pem_info_widget.fill_gps_table(segments.df, pem_info_widget.geometryTable)
 
-        elif current_tab == pem_info_widget.Loop_GPS_Tab:
+        elif current_tab == pem_info_widget.loop_gps_tab:
             loop = TransmitterLoop(file, crs=crs)
             self.loop_adder.write_widget = pem_info_widget
             self.loop_adder.add_df(loop.get_loop(sorted=self.auto_sort_loops_cbox.isChecked()))
@@ -872,9 +868,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
     def open_ri_file(self, ri_files):
         """
         Adds RI file information to the associated PEMFile object. Only accepts 1 file.
-        :param ri_file: Text file with step plot information in them
+        :param ri_file: str filepath, Text file with step plot information in them
         """
-        ri_file = ri_files[0]  # Filepath
+        ri_file = ri_files[0]
         pem_info_widget = self.stackedWidget.currentWidget()
         pem_info_widget.open_ri_file(ri_file)
 
@@ -2647,9 +2643,9 @@ def main():
 
     # mw.print_plots()
     # mw.reverse_all_data('X')
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\GPX files\Loop-32.gpx'])
-    # mw.open_gps_files([r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\GPX files\Loop-32.gpx'])
+    mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\718-3739gyro.seg'])
     # mw.save_as_xyz()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
     # import pyqtgraph.examples
@@ -2697,8 +2693,6 @@ def main():
 
 
 if __name__ == '__main__':
-    import cProfile
-    import pstats
     main()
     # cProfile.run('main()', 'restats')
     # p = pstats.Stats('restats')

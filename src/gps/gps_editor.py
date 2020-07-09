@@ -557,7 +557,7 @@ class GPSParser:
             contents = file
 
         # Ensure there is no nested-lists
-        while isinstance(contents[0], list):
+        while any(isinstance(i, list) for i in contents):
             contents = contents[0]
 
         matched_gps = []
@@ -589,6 +589,10 @@ class GPSParser:
             contents = self.open(file)
         else:
             contents = file
+
+        # Ensure there is no nested-lists
+        while any(isinstance(i, list) for i in contents):
+            contents = contents[0]
 
         matched_seg = []
         for row in contents:
@@ -624,6 +628,10 @@ class GPSParser:
             contents = self.open(file)
         else:
             contents = file
+
+        # Ensure there is no nested-lists
+        while any(isinstance(i, list) for i in contents):
+            contents = contents[0]
 
         matched_gps = []
         for row in contents:

@@ -118,6 +118,7 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         self.actionSave_as_GPX.setIcon(QtGui.QIcon(os.path.join(icons_path, 'garmin_file.png')))
         self.view_map_action.triggered.connect(self.view_map)
         self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+        self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_to_clipboard)
 
         self.loop_height_edit.editingFinished.connect(self.change_loop_height)
         self.loop_width_edit.editingFinished.connect(self.change_loop_width)
@@ -671,9 +672,25 @@ class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
 
+    def copy_to_clipboard(self):
+        """
+        Copy the loop corner coordinates to the  clip board.
+        :return: None
+        """
+        crs_str = f"{self.systemCBox.currentText()} Zone {self.zoneCBox.currentText()}, {self.datumCBox.currentText()}"
+        result = crs_str + '\n'
+        corners = self.get_loop_coords()
+        for point in corners:
+            easting = f"{point[0]:.0f} E"
+            northing = f"{point[1]:.0f} N"
+            result += easting + ', ' + northing + '\n'
+        cb = QtGui.QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(result, mode=cb.Clipboard)
+        self.statusBar().showMessage(f"Loop corner coordinates copied to clipboard", 2000)
+
     def save_img(self):
         save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
-
         if save_file:
             size = self.contentsRect()
             img = QtGui.QPixmap(size.width(), size.height())
@@ -733,6 +750,8 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         self.actionSave_as_GPX.setIcon(QtGui.QIcon(os.path.join(icons_path, 'garmin_file.png')))
         self.view_map_action.triggered.connect(self.view_map)
         self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+        self.actionCopy_Grid_to_Clipboard.triggered.connect(self.copy_grid_to_clipboard)
+        self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_loop_to_clipboard)
 
         self.loop_height_edit.editingFinished.connect(self.change_loop_height)
         self.loop_width_edit.editingFinished.connect(self.change_loop_width)
@@ -1145,37 +1164,6 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
         # print(f"Center is at {x - dx}, {y + dy}")
         return x - dx, y + dy
 
-    def get_loop_coords(self):
-        """
-        Return the coordinates of the loop corners
-        :return: list of (x, y)
-        """
-        x, y = self.loop_roi.pos()
-        w, h = self.loop_roi.size()
-        angle = self.loop_roi.angle()
-        c1 = (x, y)
-        c2 = (c1[0] + w * (math.cos(math.radians(angle))), c1[1] + w * (math.sin(math.radians(angle))))
-        c3 = (c2[0] - h * (math.sin(math.radians(angle))), c2[1] + h * (math.sin(math.radians(90-angle))))
-        c4 = (c3[0] + w * (math.cos(math.radians(180-angle))), c3[1] - w * (math.sin(math.radians(180-angle))))
-        corners = [c1, c2, c3, c4]
-
-        return corners
-
-    def get_loop_lonlat(self):
-        zone = self.zoneCBox.currentText()
-        zone_num = int(re.search('\d+', zone).group())
-        north = True if 'n' in zone.lower() else False
-
-        loop_gps = self.get_loop_coords()
-        loop_lonlat = []
-        for row in loop_gps:
-            easting = int(float(row[0]))
-            northing = int(float(row[1]))
-            lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
-            loop_lonlat.append((lon, lat))
-
-        return loop_lonlat
-
     def get_grid_lonlat(self):
         """
         Convert the coordinates of all stations in the grid to lon lat.
@@ -1212,6 +1200,37 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
             raise ValueError('Easting and/or Northing is out of bounds.')
         else:
             return lon, lat
+
+    def get_loop_coords(self):
+        """
+        Return the coordinates of the loop corners
+        :return: list of (x, y)
+        """
+        x, y = self.loop_roi.pos()
+        w, h = self.loop_roi.size()
+        angle = self.loop_roi.angle()
+        c1 = (x, y)
+        c2 = (c1[0] + w * (math.cos(math.radians(angle))), c1[1] + w * (math.sin(math.radians(angle))))
+        c3 = (c2[0] - h * (math.sin(math.radians(angle))), c2[1] + h * (math.sin(math.radians(90-angle))))
+        c4 = (c3[0] + w * (math.cos(math.radians(180-angle))), c3[1] - w * (math.sin(math.radians(180-angle))))
+        corners = [c1, c2, c3, c4]
+
+        return corners
+
+    def get_loop_lonlat(self):
+        zone = self.zoneCBox.currentText()
+        zone_num = int(re.search('\d+', zone).group())
+        north = True if 'n' in zone.lower() else False
+
+        loop_gps = self.get_loop_coords()
+        loop_lonlat = []
+        for row in loop_gps:
+            easting = int(float(row[0]))
+            northing = int(float(row[1]))
+            lat, lon = utm.to_latlon(easting, northing, zone_num, northern=north)
+            loop_lonlat.append((lon, lat))
+
+        return loop_lonlat
 
     def view_map(self):
         """
@@ -1414,6 +1433,42 @@ class GridPlanner(QMainWindow, Ui_GridPlannerWindow):
                 pass
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
+
+    def copy_grid_to_clipboard(self):
+        """
+        Copy the grid station coordinates to the clipboard.
+        :return: None
+        """
+        crs_str = f"{self.systemCBox.currentText()} Zone {self.zoneCBox.currentText()}, {self.datumCBox.currentText()}"
+        result = crs_str + '\n'
+        for line in self.lines:
+            line_name = line['line_name']
+            coords = line['station_coords']
+            result += f"Line {line_name.strip()}" + '\n'
+            for point in coords:
+                result += f"{point[0]:.0f} E, {point[1]:.0f} N, {point[2]}" + '\n'
+            result += '\n'
+        cb = QtGui.QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(result, mode=cb.Clipboard)
+        self.statusBar().showMessage(f"Grid coordinates copied to clipboard", 2000)
+
+    def copy_loop_to_clipboard(self):
+        """
+        Copy the loop corner coordinates to the clipboard.
+        :return: None
+        """
+        crs_str = f"{self.systemCBox.currentText()} Zone {self.zoneCBox.currentText()}, {self.datumCBox.currentText()}"
+        result = crs_str + '\n'
+        corners = self.get_loop_coords()
+        for point in corners:
+            easting = f"{point[0]:.0f} E"
+            northing = f"{point[1]:.0f} N"
+            result += easting + ', ' + northing + '\n'
+        cb = QtGui.QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(result, mode=cb.Clipboard)
+        self.statusBar().showMessage(f"Loop corner coordinates copied to clipboard", 2000)
 
     def save_img(self):
         save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]

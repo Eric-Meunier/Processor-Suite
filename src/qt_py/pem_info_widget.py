@@ -196,7 +196,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         if not self.pem_file.is_borehole():
-            self.tabs.removeTab(self.tabs.indexOf(self.Geometry_Tab))
+            self.tabs.removeTab(self.tabs.indexOf(self.geometry_tab))
             # self.stationGPSTable.setColumnWidth(0, 25)
             # self.stationGPSTable.setColumnWidth(1, 45)
             # self.stationGPSTable.setColumnWidth(2, 45)
@@ -207,7 +207,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.stationGPSTable.resizeColumnsToContents()
 
         elif self.pem_file.is_borehole():
-            self.tabs.removeTab(self.tabs.indexOf(self.Station_GPS_Tab))
+            self.tabs.removeTab(self.tabs.indexOf(self.station_gps_tab))
             # self.geometryTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
             # self.collarGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
             self.geometryTable.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)

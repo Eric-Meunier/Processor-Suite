@@ -530,6 +530,8 @@ Mostly used for underground holes.</string>
     </property>
     <addaction name="actionSave_as_KMZ"/>
     <addaction name="actionSave_as_GPX"/>
+    <addaction name="separator"/>
+    <addaction name="actionCopy_Loop_to_Clipboard"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -554,6 +556,11 @@ Mostly used for underground holes.</string>
   <action name="view_map_action">
    <property name="text">
     <string>Map</string>
+   </property>
+  </action>
+  <action name="actionCopy_Loop_to_Clipboard">
+   <property name="text">
+    <string>Copy to Clipboard</string>
    </property>
   </action>
  </widget>

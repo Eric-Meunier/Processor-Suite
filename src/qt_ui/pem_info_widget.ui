@@ -53,9 +53,9 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>3</number>
      </property>
-     <widget class="QWidget" name="Info">
+     <widget class="QWidget" name="info_tab">
       <attribute name="title">
        <string>Info</string>
       </attribute>
@@ -80,11 +80,11 @@
          <attribute name="verticalHeaderVisible">
           <bool>false</bool>
          </attribute>
-         <attribute name="verticalHeaderMinimumSectionSize">
-          <number>0</number>
-         </attribute>
          <attribute name="verticalHeaderDefaultSectionSize">
           <number>23</number>
+         </attribute>
+         <attribute name="verticalHeaderMinimumSectionSize">
+          <number>0</number>
          </attribute>
          <attribute name="verticalHeaderStretchLastSection">
           <bool>false</bool>
@@ -112,7 +112,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="Loop_GPS_Tab">
+     <widget class="QWidget" name="loop_gps_tab">
       <attribute name="title">
        <string>Loop GPS</string>
       </attribute>
@@ -252,7 +252,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="Station_GPS_Tab">
+     <widget class="QWidget" name="station_gps_tab">
       <attribute name="title">
        <string>Station GPS</string>
       </attribute>
@@ -516,7 +516,7 @@ Not In Data</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="Geometry_Tab">
+     <widget class="QWidget" name="geometry_tab">
       <attribute name="title">
        <string>Hole Geometry</string>
       </attribute>
@@ -706,7 +706,7 @@ Length</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="Data_Tab">
+     <widget class="QWidget" name="data_tab">
       <attribute name="title">
        <string>Data</string>
       </attribute>
@@ -931,7 +931,7 @@ Repeats</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="RI_Tab">
+     <widget class="QWidget" name="ri_tab">
       <attribute name="title">
        <string>RI File</string>
       </attribute>
