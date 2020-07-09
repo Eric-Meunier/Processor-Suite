@@ -516,7 +516,7 @@ class PEMFile:
             elif method == 'pp':
                 assert self.has_loop_gps(), f"{self.filename} has no loop GPS."
                 assert self.has_geometry(), f"{self.filename} has incomplete geometry."
-                assert self.ramp > 0
+                assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename}."
 
                 geometry = self.get_geometry()
                 loop = self.get_loop(sorted=True, closed=True)

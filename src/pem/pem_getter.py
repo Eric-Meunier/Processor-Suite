@@ -9,7 +9,14 @@ class PEMGetter:
     def __init__(self):
         self.parser = PEMParser
 
-    def get_pems(self, client='', number=None):
+    def get_pems(self, client='', number=None, selection=None):
+        """
+        Retrieve a list of PEMFiles
+        :param client: str, folder from which to retrieve files
+        :param number: int, number of files to selected
+        :param selection: int, index of file to select
+        :return: list
+        """
         sample_files_dir = os.path.join(
             os.path.dirname(
                 os.path.dirname(
@@ -22,8 +29,15 @@ class PEMGetter:
                       os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
         pem_files = []
 
-        for file in file_names[:number]:
-            filepath = os.path.join(sample_files_dir, file)
+        if number:
+            for file in file_names[:number]:
+                filepath = os.path.join(sample_files_dir, file)
+                pem_file = self.parser().parse(filepath)
+                print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
+                # pem_files.append((pem_file, None))  # Empty second item for ri_files
+                pem_files.append(pem_file)
+        elif selection and not selection > len(file_names):
+            filepath = os.path.join(sample_files_dir, file_names[selection])
             pem_file = self.parser().parse(filepath)
             print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
             # pem_files.append((pem_file, None))  # Empty second item for ri_files

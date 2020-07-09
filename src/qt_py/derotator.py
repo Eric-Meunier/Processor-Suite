@@ -100,6 +100,10 @@ class Derotator(QMainWindow, Ui_Derotator):
             ax.setXLink(self.y_ax0)
 
         self.axes = np.concatenate([self.x_view_axes, self.y_view_axes])
+        # Disable the 'A' button and auto-scaling SI units
+        for ax in self.axes:
+            ax.hideButtons()
+            ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
     def reset_range(self):
         """
@@ -204,7 +208,10 @@ class Derotator(QMainWindow, Ui_Derotator):
                 for ch in range(bounds[0], bounds[1] + 1):
                     data = profile_data[filt].loc[:, ['Station', 'Reading number', 'Reading index', ch]]
                     # Plot the data by grouping them up by reading index
-                    data.groupby('Reading index').apply(lambda j: plot_lines(j, ax, ch))
+                    if pem_file.is_averaged():
+                        plot_lines(data, ax, ch)
+                    else:
+                        data.groupby('Reading index').apply(lambda group: plot_lines(group, ax, ch))
 
         if not pem_file:
             return
@@ -373,7 +380,7 @@ def main():
     mw = Derotator()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', number=2)
+    pem_files = pg.get_pems(client='PEM Rotation', selection=4)
     mw.open(pem_files)
 
     app.exec_()
