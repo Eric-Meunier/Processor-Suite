@@ -53,6 +53,17 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
+sys._excepthook = sys.excepthook
+
+
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
+
 mpl.rcParams['path.simplify'] = True
 mpl.rcParams['path.simplify_threshold'] = 1.0
 mpl.rcParams['agg.path.chunksize'] = 10000
@@ -90,6 +101,12 @@ class ProfilePlotter:
     def __init__(self, pem_file, figure, x_min=None, x_max=None, hide_gaps=True):
         if isinstance(pem_file, str) and os.path.isfile(pem_file):
             pem_file = PEMParser().parse(pem_file)
+
+        if not pem_file.is_averaged():
+            pem_file = pem_file.average()
+        if not pem_file.is_split():
+            pem_file = pem_file.split()
+
         self.pem_file = pem_file
         self.figure = figure
 
@@ -115,7 +132,7 @@ class ProfilePlotter:
                                      transform=self.figure.transFigure)
             self.figure.patches.append(rect)
 
-        def add_title(component):
+        def format_title(component):
             """
             Adds the title header to a figure
             """
@@ -254,7 +271,7 @@ class ProfilePlotter:
                 plt.setp(ax.get_xticklabels(), visible=True, size=12, fontname='Century Gothic')
 
         add_rectangle()
-        add_title(component)
+        format_title(component)
         format_xaxis(component)
         format_yaxis()
         for ax in self.figure.axes:
@@ -347,7 +364,10 @@ class LINPlotter(ProfilePlotter):
                     ax.set_ylabel(f"Channel {channel_bounds[i][0]} - {channel_bounds[i][1]}\n({units})")
 
         def calc_channel_bounds():
-            # channel_bounds is a list of tuples showing the inclusive bounds of each data plot
+            """
+            Create tuples of start and end channels to be plotted per axes
+            :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
+            """
             channel_bounds = [None] * 4
             num_channels_per_plot = int((self.pem_file.number_of_channels - 1) // 4)
             remainder_channels = int((self.pem_file.number_of_channels - 1) % 4)
@@ -363,12 +383,12 @@ class LINPlotter(ProfilePlotter):
             channel_bounds.insert(0, (0, 0))
             return channel_bounds
 
+        profile = self.pem_file.get_profile_data(component=component)
         channel_bounds = calc_channel_bounds()
         for i, group in enumerate(channel_bounds):
             # Starting offset used for channel annotations
             offset = 100
             ax = self.figure.axes[i]
-            profile = self.pem_file.get_profile_data(component=component)
 
             for j in range(group[0], group[1] + 1):
                 stations = profile.loc[:, 'Station']

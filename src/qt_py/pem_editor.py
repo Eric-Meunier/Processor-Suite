@@ -40,6 +40,17 @@ from src.damp.db_plot import DBPlot
 
 __version__ = '0.11.0'
 
+sys._excepthook = sys.excepthook
+
+
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
+
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
@@ -2634,7 +2645,7 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', number=1)
+    pem_files = pg.get_pems(client='PEM Rotation', number=2)
     # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
     mw.open_pem_files(pem_files)
     # mw.average_pem_data()
@@ -2643,9 +2654,9 @@ def main():
 
     # mw.print_plots()
     # mw.reverse_all_data('X')
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\GPX files\Loop-32.gpx'])
-    mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\718-3739gyro.seg'])
+    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\718-3739gyro.seg'])
     # mw.save_as_xyz()
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
     # import pyqtgraph.examples

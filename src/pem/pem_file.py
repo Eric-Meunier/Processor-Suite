@@ -233,12 +233,14 @@ class PEMFile:
         profile = pd.DataFrame.from_dict(dict(zip(self.data.Reading.index, self.data.Reading.values))).T
         profile.insert(0, 'Station', self.data.Station.map(convert_station))
         profile.insert(1, 'Component', self.data.Component)
+        profile.insert(2, 'Reading number', self.data['Reading number'])
+        profile.insert(3, 'Reading index', self.data['Reading index'])
 
         if component:
             filt = profile['Component'] == component.upper()
             profile = profile[filt]
 
-        profile.sort_values(by=['Component', 'Station'], inplace=True)
+        profile.sort_values(by=['Component', 'Station', 'Reading index', 'Reading number'], inplace=True)
         return profile
 
     def get_components(self):
@@ -428,7 +430,6 @@ class PEMFile:
                 return row
 
             assert len(row['RAD ID'].unique()) == 1, 'More than 1 unique RAD tool set'
-            print(f"Number of unique RAD tool sets: {len(row['RAD ID'].unique())}")
 
             def rotate_x(x_values, y_pair, roll_angle):
                 """

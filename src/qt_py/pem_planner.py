@@ -77,7 +77,6 @@ def exception_hook(exctype, value, traceback):
 sys.excepthook = exception_hook
 
 
-# TODO provide loop corners as text
 class LoopPlanner(QMainWindow, Ui_LoopPlannerWindow):
     """
     Program that plots the magnetic field projected to a plane perpendicular to a borehole for a interactive loop.
