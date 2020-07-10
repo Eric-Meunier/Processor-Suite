@@ -386,7 +386,7 @@ class BoreholeGeometry:
         # Create the data frame
         projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative Depth'])
 
-        if self.collar.df.empty or self.segments.df.empty or self.collar.crs.is_latlon():
+        if self.collar.df.empty or self.segments.df.empty:
             return projection
 
         collar = self.collar.get_collar().dropna()

@@ -84,7 +84,6 @@ class PEMFile:
         self.unsplit_data = None
         self.unaveraged_data = None
         self.old_filepath = None
-        self.ineligible_stations = None
 
     def is_borehole(self):
         if 'borehole' in self.get_survey_type().lower():
@@ -411,29 +410,28 @@ class PEMFile:
         assert self.is_borehole(), f"{self.filename} is not a borehole file."
 
         def filter_data(df):
+            """
+            Remove reading groups that don't have and X and Y pair. Such readings have their station name changed
+            to NaN and are added to a 'ineligible_stations' data frame.
+            :param df: group pd DataFrame, readings of the same station and same RAD tool ID
+            :return: pd DataFrame
+            """
             if df.Component.nunique() < 2:
-                self.ineligible_stations = pd.concat([df, self.ineligible_stations])
+                # Capture to the ineligible stations
+                global ineligible_stations
+                ineligible_stations = pd.concat([df, ineligible_stations])
+                # Make the station NaN so it can be easily removed after
                 df.Station = np.nan
             return df
 
-        def rotate_data(row, method):
+        def rotate_data(group, method):
             """
             Rotate the data for a given reading
-            :param row: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
+            :param group: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
             reading from X and Y components, and the RAD tool values for all readings must all be the same.
             :param method: str: type of rotation to apply. Either 'acc' for accelerometer or 'mag' for magnetic
             :return: pandas DataFrame: data frame of the readings with the data rotated.
             """
-            # # Remove readings that don't have a pair X or Y
-            # if row.Component.nunique() < 2:
-            #     ineligible_stations = pd.concat([row, self.ineligible_stations], ignore_index=True)
-            #     # Set the station name as NaN so it can be easily removed later.
-            #     # row['Station'] = np.nan
-            #     return
-
-            # else:
-            # assert len(row['RAD_ID'].unique()) == 1, 'More than 1 unique RAD tool set'
-
             def rotate_x(x_values, y_pair, roll_angle):
                 """
                 Rotate the X data of a reading
@@ -458,13 +456,13 @@ class PEMFile:
                 rotated_y = [x * math.sin(math.radians(roll_angle)) + y * math.cos(math.radians(roll_angle)) for (x, y) in zip(x_pair, y_values)]
                 return np.array(rotated_y, dtype=float)
 
-            x_data = row[row['Component'] == 'X']
-            y_data = row[row['Component'] == 'Y']
+            x_data = group[group['Component'] == 'X']
+            y_data = group[group['Component'] == 'Y']
             # Save the first reading of each component to be used a the 'pair' reading for rotation
             x_pair = x_data.iloc[0].Reading
             y_pair = y_data.iloc[0].Reading
 
-            rad = row.iloc[0]['RAD_tool']
+            rad = group.iloc[0]['RAD_tool']
             # Accelerometer rotation
             if method == 'acc':
                 if rad.D == 'D5':
@@ -490,7 +488,7 @@ class PEMFile:
                                                     'angle_used': roll_angle - soa,
                                                     'rotated': True,
                                                     'rotation_type': 'acc'})
-                print(f"Station {row.iloc[0].Station} roll angle: {roll_angle:.2f}")
+                print(f"Station {group.iloc[0].Station} roll angle: {roll_angle:.2f}")
 
             # Magnetometer rotation
             elif method == 'mag':
@@ -517,13 +515,15 @@ class PEMFile:
                                                     'rotation_type': 'mag'})
 
             elif method == 'pp':
-                assert self.has_loop_gps(), f"{self.filename} has no loop GPS."
-                assert self.has_geometry(), f"{self.filename} has incomplete geometry."
-                assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename}."
 
-                geometry = self.get_geometry()
-                loop = self.get_loop(sorted=True, closed=True)
-                mag_calc = MagneticFieldCalculator(loop)
+                def get_cleaned_pp(row):
+                    pass
+
+                global proj, loop, ramp, mag_calc, ch_times, ch_numbers
+
+                PPx = group.iloc[0]
+
+                # print(f"PP value: {v}")
 
             else:
                 raise ValueError(f'"{method}" is an invalid rotation method')
@@ -535,15 +535,48 @@ class PEMFile:
             row['RAD_tool'] = row['RAD_tool'].map(lambda p: new_rad_tool)
             return row
 
+        # Set up for PP rotation
+        if method.upper() == 'PP':
+            assert self.has_loop_gps(), f"{self.filename} has no loop GPS."
+            assert self.has_geometry(), f"{self.filename} has incomplete geometry."
+            assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename}."
+
+            global proj, loop, ramp, mag_calc, ch_times, ch_numbers
+            proj = self.geometry.get_projection()
+            loop = self.get_loop(sorted=True, closed=True)
+            # Get the ramp in seconds
+            ramp = self.ramp / 1000 / 1000
+            mag_calc = MagneticFieldCalculator(loop)
+
+            # Only keep off-time channels with PP
+            ch_times = self.channel_times[self.channel_times.loc[:, 'Remove'] == False]
+            # Normalize the channel times so they start from turn off
+            ch_times.loc[:, 'Start':'Center'] = ch_times.loc[:, 'Start':'Center'].applymap(lambda x: x + ramp)
+
+            pp_ch = ch_times.iloc[0]
+            # Make sure the PP channel is within the ramp
+            assert pp_ch.End < ramp, 'PP channel does not fall within the ramp'
+            pp_center = pp_ch['Center']
+
+            # Get the special channel numbers
+            ch_numbers = []
+            for i in range(1, len(ch_times)):
+                # Add the ramp time iteratively to the PP center time
+                t = (i * ramp) + pp_center
+                # Create a filter to find in which channel the time falls in
+                filt = (ch_times['Start'] < t) & (ch_times['End'] > t)
+                ch_index = ch_times[filt].index.values[0]
+
+                ch_numbers.append(ch_index)
+
+        global ineligible_stations
+        ineligible_stations = pd.DataFrame()
         # Create a filter for X and Y data only
         filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
         st = time.time()
         # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
         filtered_data = self.data[filt].groupby(['Station', 'RAD_ID'],
                                                 as_index=False).apply(lambda k: filter_data(k)).dropna(axis=0)
-        # Capture the ineligible stations
-        # ineligible_stations = filtered_data[pd.isnull(filtered_data['Station'])].copy()
-
         # Rotate the data
         rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
                                              as_index=False).apply(lambda i: rotate_data(i, method))
@@ -552,7 +585,7 @@ class PEMFile:
         # Sort the data and remove unrotated readings
         # self.data = sort_data(self.data)
         self.probes['SOA'] = str(soa)
-        return self, self.ineligible_stations
+        return self, ineligible_stations
 
 
 class PEMParser:
@@ -1271,7 +1304,7 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
 
     pg = PEMGetter()
-    files = pg.get_pems(client='PEM Rotation', number=1)
+    files = pg.get_pems(client='PEM Rotation', selection=4)
     # files = pg.get_pems(client='Raglan', number=1)
     file = files[0]
     # p = PEMParser()
