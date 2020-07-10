@@ -18,7 +18,7 @@
     <item row="1" column="1">
      <widget class="QTabWidget" name="tab_widget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="lin_tab" native="true">
        <attribute name="title">
@@ -137,31 +137,14 @@
          </layout>
         </widget>
        </item>
-       <item row="4" column="0">
-        <widget class="QListWidget" name="bad_stations_list">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
        <item row="3" column="0">
+        <widget class="QListWidget" name="list"/>
+       </item>
+       <item row="2" column="0">
         <widget class="QLabel" name="bad_stations_label">
          <property name="text">
           <string>Stations ineligible for de-rotation
 due to missing X and/or Y pair:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QCheckBox" name="plot_average_data_cbox">
-         <property name="text">
-          <string>Plot averaged data</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
          </property>
         </widget>
        </item>

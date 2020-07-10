@@ -6,7 +6,7 @@ import numpy as np
 import time
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QRadioButton, QGridLayout,
-                             QLabel, QLineEdit, QShortcut, QAbstractItemView)
+                             QLabel, QLineEdit, QShortcut, QTableWidgetItem)
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from src.pem.pem_plotter import LINPlotter, LOGPlotter
@@ -62,7 +62,6 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.mag_btn.clicked.connect(self.rotate)
         self.pp_btn.clicked.connect(self.rotate)
         self.soa_sbox.editingFinished.connect(self.rotate)
-        self.plot_average_data_cbox.toggled.connect(self.rotate)
 
         self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.reset_range)
@@ -71,7 +70,9 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.change_component_shortcut.activated.connect(self.change_tab)
 
         self.bad_stations_label.hide()
-        self.bad_stations_list.hide()
+        self.list.hide()
+
+        self.statusBar().hide()
 
         # Configure the plots
         self.x_view.ci.layout.setSpacing(10)  # Spacing between plots
@@ -145,8 +146,8 @@ class Derotator(QMainWindow, Ui_Derotator):
                 return
 
         self.setWindowTitle(f"XY De-rotation - {pem_file.filename}")
-        self.show()
         self.rotate()
+        self.show()
 
     def plot_pem(self, pem_file):
         """
@@ -206,12 +207,8 @@ class Derotator(QMainWindow, Ui_Derotator):
 
                 # Plot the data
                 for ch in range(bounds[0], bounds[1] + 1):
-                    data = profile_data[filt].loc[:, ['Station', 'Reading number', 'Reading index', ch]]
-                    # Plot the data by grouping them up by reading index
-                    if pem_file.is_averaged():
-                        plot_lines(data, ax, ch)
-                    else:
-                        data.groupby('Reading index').apply(lambda group: plot_lines(group, ax, ch))
+                    data = profile_data[filt].loc[:, ['Station', ch]]
+                    plot_lines(data, ax, ch)
 
         if not pem_file:
             return
@@ -220,14 +217,16 @@ class Derotator(QMainWindow, Ui_Derotator):
         if not pem_file.is_split():
             pem_file = pem_file.split()
 
-        # Average the data if wanted and if the check box is checked
-        if self.plot_average_data_cbox.isChecked() and not pem_file.is_averaged():
+        # Average the data if it isn't averaged
+        if not pem_file.is_averaged():
             pem_file = pem_file.average()
 
         clear_plots()
 
         # Get the profile data
         profile_data = pem_file.get_profile_data()
+        if profile_data.empty:
+            return
 
         t = time.time()
         plot_lin('X')
@@ -238,6 +237,13 @@ class Derotator(QMainWindow, Ui_Derotator):
         """
         Rotate and plot the data, always using the original PEMFile
         """
+
+        def fill_table(stations):
+            self.list.clear()
+            for s in stations.itertuples():
+                result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
+                self.list.addItem(result)
+
         if self.acc_btn.isChecked():
             method = 'acc'
         elif self.mag_btn.isChecked():
@@ -249,7 +255,17 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         # Create a copy of the pem_file so it is never changed
         pem_file = copy.deepcopy(self.pem_file)
-        rotated_file = pem_file.rotate(method=method, soa=soa)
+        rotated_file, ineligible_stations = pem_file.rotate(method=method, soa=soa)
+        # Fill the table with the ineligible stations
+        if not ineligible_stations.empty:
+            fill_table(ineligible_stations)
+            self.bad_stations_label.show()
+            self.list.show()
+
+        else:
+            self.bad_stations_label.hide()
+            self.list.hide()
+
         self.plot_pem(rotated_file)
 
 
@@ -380,7 +396,7 @@ def main():
     mw = Derotator()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', selection=4)
+    pem_files = pg.get_pems(client='PEM Rotation', selection=3)
     mw.open(pem_files)
 
     app.exec_()

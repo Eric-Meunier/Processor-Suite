@@ -68,7 +68,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.stationGPSTable_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units', 'Station']
         self.loopGPSTable_columns = ['Tag', 'Easting', 'Northing', 'Elevation', 'Units']
-        self.dataTable_columns = ['index', 'Station', 'Comp.', 'Reading index', 'Reading number', 'Number of stacks', 'ZTS']
+        self.dataTable_columns = ['index', 'Station', 'Comp.', 'Reading_index', 'Reading_number', 'Number_of_stacks', 'ZTS']
 
         self.setupUi(self)
         self.initActions()
@@ -569,17 +569,17 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
             if self.station_sort_rbtn.isChecked():
                 data = data.reindex(index=natsort.order_by_index(
-                    data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading number']))))
+                    data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading_number']))))
                 # data.reset_index(drop=True, inplace=True)
 
             elif self.component_sort_rbtn.isChecked():
                 data = data.reindex(index=natsort.order_by_index(
-                    data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading number']))))
+                    data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading_number']))))
                 # data.reset_index(drop=True, inplace=True)
 
             elif self.reading_num_sort_rbtn.isChecked():
                 data = data.reindex(index=natsort.order_by_index(
-                    data.index, natsort.index_natsorted(zip(data['Reading number'], data['Reading index']))))
+                    data.index, natsort.index_natsorted(zip(data['Reading_number'], data['Reading_index']))))
                 # data.reset_index(drop=True, inplace=True)
 
             return data
@@ -603,7 +603,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.clear_table(self.dataTable)
             self.dataTable.blockSignals(True)
 
-            data.loc[:, ['Station', 'Component', 'Reading index', 'Reading number', 'Number of stacks', 'ZTS']].apply(
+            data.loc[:, ['Station', 'Component', 'Reading_index', 'Reading_number', 'Number_of_stacks', 'ZTS']].apply(
                 write_data_row, axis=1)
 
             self.color_data_table()

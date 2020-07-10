@@ -435,9 +435,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.table.calc_mag_dec.setIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
                 self.table.calc_mag_dec.triggered.connect(lambda: self.show_mag_dec(selected_pems[0]))
 
-                self.table.view_3d_section_action = QAction("&View 3D Section", self)
-                self.table.view_3d_section_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
-                self.table.view_3d_section_action.triggered.connect(self.show_section_3d_viewer)
+                # self.table.view_3d_section_action = QAction("&View 3D Section", self)
+                # self.table.view_3d_section_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
+                # self.table.view_3d_section_action.triggered.connect(self.show_section_3d_viewer)
 
                 self.table.average_action = QAction("&Average", self)
                 self.table.average_action.triggered.connect(lambda: self.average_pem_data(selected=True))

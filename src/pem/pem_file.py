@@ -15,7 +15,7 @@ from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 def sort_data(data):
     # Sort the data frame
     df = data.reindex(index=natsort.order_by_index(
-        data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading number']))))
+        data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading_number']))))
     # Reset the index
     df.reset_index(drop=True, inplace=True)
     return df
@@ -84,6 +84,7 @@ class PEMFile:
         self.unsplit_data = None
         self.unaveraged_data = None
         self.old_filepath = None
+        self.ineligible_stations = None
 
     def is_borehole(self):
         if 'borehole' in self.get_survey_type().lower():
@@ -98,7 +99,7 @@ class PEMFile:
             return False
 
     def is_rotated(self):
-        return self.data['RAD tool'].map(lambda x: x.rotated).all()
+        return self.data['RAD_tool'].map(lambda x: x.rotated).all()
 
     def is_averaged(self):
         data = self.data[['Station', 'Component']]
@@ -233,14 +234,14 @@ class PEMFile:
         profile = pd.DataFrame.from_dict(dict(zip(self.data.Reading.index, self.data.Reading.values))).T
         profile.insert(0, 'Station', self.data.Station.map(convert_station))
         profile.insert(1, 'Component', self.data.Component)
-        profile.insert(2, 'Reading number', self.data['Reading number'])
-        profile.insert(3, 'Reading index', self.data['Reading index'])
+        profile.insert(2, 'Reading_number', self.data['Reading_number'])
+        profile.insert(3, 'Reading_index', self.data['Reading_index'])
 
         if component:
             filt = profile['Component'] == component.upper()
             profile = profile[filt]
 
-        profile.sort_values(by=['Component', 'Station', 'Reading index', 'Reading number'], inplace=True)
+        profile.sort_values(by=['Component', 'Station', 'Reading_index', 'Reading_number'], inplace=True)
         return profile
 
     def get_components(self):
@@ -331,11 +332,11 @@ class PEMFile:
             # Take the first row as a new data frame
             new_data_df = group.iloc[0]
             # Sum the number of stacks column
-            new_data_df['Number of stacks'] = group['Number of stacks'].sum()
+            new_data_df['Number_of_stacks'] = group['Number_of_stacks'].sum()
             # Add the weighted average of the readings to the reading column
             new_data_df['Reading'] = np.average(group.Reading.to_list(),
                                                 axis=0,
-                                                weights=group['Number of stacks'].to_list())
+                                                weights=group['Number_of_stacks'].to_list())
             return new_data_df
 
         # Create a data frame with all data averaged
@@ -409,27 +410,29 @@ class PEMFile:
         """
         assert self.is_borehole(), f"{self.filename} is not a borehole file."
 
-        # if self.data['RAD tool'].map(lambda x: x.D == 'D5').any():
-        #     print(f"{self.filename} appears to be a file that has been run through Otool, thus it will not be rotated.")
-        #     return self
-        # else:
+        def filter_data(df):
+            if df.Component.nunique() < 2:
+                self.ineligible_stations = pd.concat([df, self.ineligible_stations])
+                df.Station = np.nan
+            return df
 
         def rotate_data(row, method):
             """
             Rotate the data for a given reading
             :param row: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
             reading from X and Y components, and the RAD tool values for all readings must all be the same.
-            :param type: str: type of rotation to apply. Either 'acc' for accelerometer or 'mag' for magnetic
+            :param method: str: type of rotation to apply. Either 'acc' for accelerometer or 'mag' for magnetic
             :return: pandas DataFrame: data frame of the readings with the data rotated.
             """
-            if row.Component.nunique() < 2:
-                r = row.iloc[0]
-                print(f"Removing {r.Station} - {r.Component}, reading {r['Reading number']}, index {r['Reading index']} since it has no pairing X/Y reading")
-                # Set the station name as NaN so it can be easily removed later.
-                row['Station'] = np.nan
-                return row
+            # # Remove readings that don't have a pair X or Y
+            # if row.Component.nunique() < 2:
+            #     ineligible_stations = pd.concat([row, self.ineligible_stations], ignore_index=True)
+            #     # Set the station name as NaN so it can be easily removed later.
+            #     # row['Station'] = np.nan
+            #     return
 
-            assert len(row['RAD ID'].unique()) == 1, 'More than 1 unique RAD tool set'
+            # else:
+            # assert len(row['RAD_ID'].unique()) == 1, 'More than 1 unique RAD tool set'
 
             def rotate_x(x_values, y_pair, roll_angle):
                 """
@@ -461,7 +464,7 @@ class PEMFile:
             x_pair = x_data.iloc[0].Reading
             y_pair = y_data.iloc[0].Reading
 
-            rad = row.iloc[0]['RAD tool']
+            rad = row.iloc[0]['RAD_tool']
             # Accelerometer rotation
             if method == 'acc':
                 if rad.D == 'D5':
@@ -529,21 +532,27 @@ class PEMFile:
             y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle + soa))
             row = x_data.append(y_data)
             # Add the new rad tool series to the row
-            row['RAD tool'] = row['RAD tool'].map(lambda p: new_rad_tool)
+            row['RAD_tool'] = row['RAD_tool'].map(lambda p: new_rad_tool)
             return row
 
         # Create a filter for X and Y data only
         filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
         st = time.time()
-        rotated_data = self.data[filt].groupby(['Station', 'RAD ID'],
-                                               as_index=False,
-                                               group_keys=False).apply(lambda i: rotate_data(i, method))
+        # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
+        filtered_data = self.data[filt].groupby(['Station', 'RAD_ID'],
+                                                as_index=False).apply(lambda k: filter_data(k)).dropna(axis=0)
+        # Capture the ineligible stations
+        # ineligible_stations = filtered_data[pd.isnull(filtered_data['Station'])].copy()
+
+        # Rotate the data
+        rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
+                                             as_index=False).apply(lambda i: rotate_data(i, method))
         print(f"Time to rotate data: {time.time() - st}")
-        self.data[filt] = rotated_data
+        self.data = sort_data(rotated_data)
         # Sort the data and remove unrotated readings
-        self.data = sort_data(self.data.dropna(axis=0))
+        # self.data = sort_data(self.data)
         self.probes['SOA'] = str(soa)
-        return self
+        return self, self.ineligible_stations
 
 
 class PEMParser:
@@ -838,15 +847,15 @@ class PEMParser:
             cols = [
                 'Station',
                 'Component',
-                'Reading index',
+                'Reading_index',
                 'Gain',
-                'Rx type',
+                'Rx_type',
                 'ZTS',
-                'Coil delay',
-                'Number of stacks',
-                'Readings per set',
-                'Reading number',
-                'RAD tool',
+                'Coil_delay',
+                'Number_of_stacks',
+                'Readings_per_set',
+                'Reading_number',
+                'RAD_tool',
                 'Reading'
             ]
 
@@ -857,20 +866,20 @@ class PEMParser:
             df = pd.DataFrame(matches, columns=cols)
             # Create a RAD tool ID number to be used for grouping up readings for probe rotation, since the CDR2
             # and CDR3 don't count reading numbers the same way.
-            df['RAD tool'] = df['RAD tool'].map(lambda x: RADTool().from_match(x))
-            df['RAD ID'] = df['RAD tool'].map(lambda x: x.id)
+            df['RAD_tool'] = df['RAD_tool'].map(lambda x: RADTool().from_match(x))
+            df['RAD_ID'] = df['RAD_tool'].map(lambda x: x.id)
             df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float))
-            df[['Reading index',
+            df[['Reading_index',
                 'Gain',
-                'Coil delay',
-                'Number of stacks',
-                'Readings per set',
-                'Reading number']] = df[['Reading index',
+                'Coil_delay',
+                'Number_of_stacks',
+                'Readings_per_set',
+                'Reading_number']] = df[['Reading_index',
                                          'Gain',
-                                         'Coil delay',
-                                         'Number of stacks',
-                                         'Readings per set',
-                                         'Reading number']].astype(int)
+                                         'Coil_delay',
+                                         'Number_of_stacks',
+                                         'Readings_per_set',
+                                         'Reading_number']].astype(int)
             df['ZTS'] = df['ZTS'].astype(float)
             return df
 
@@ -1053,15 +1062,15 @@ class PEMSerializer:
 
         def serialize_reading(reading):
             result = ' '.join([reading['Station'],
-                               reading['Component'] + 'R' + str(reading['Reading index']),
+                               reading['Component'] + 'R' + str(reading['Reading_index']),
                                str(reading['Gain']),
-                               reading['Rx type'],
+                               reading['Rx_type'],
                                str(reading['ZTS']),
-                               str(reading['Coil delay']),
-                               str(reading['Number of stacks']),
-                               str(reading['Readings per set']),
-                               str(reading['Reading number'])]) + '\n'
-            rad = reading['RAD tool'].to_string()
+                               str(reading['Coil_delay']),
+                               str(reading['Number_of_stacks']),
+                               str(reading['Reading_per_set']),
+                               str(reading['Reading_number'])]) + '\n'
+            rad = reading['RAD_tool'].to_string()
             result += rad + '\n'
 
             readings_per_line = 7
