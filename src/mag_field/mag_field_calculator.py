@@ -44,13 +44,15 @@ class MagneticFieldCalculator:
         angle = math.acos(np.dot(v1, v2) / (len1 * len2))
         return angle
 
-    def calc_total_field(self, x, y, z, amps=1):
+    def calc_total_field(self, x, y, z, amps=1, out_units='pT', ramp=None):
         """
         Calculate the magnetic field at position (x, y, z) with current I using Biot-Savart Law. Uses the geometry of
         wire_coords for the wire.
         :param x, y, z: Position at which the magnetic field is calculated
-        :param I: float: Current (Amps)
-        :return: Magnetic field strength (in Teslas) for each component
+        :param amps: float, Current (Amps)
+        :param out_units: str, desired output units. Can be either nT, pT, or nT/s (ramp required)
+        :param ramp: float, ramp length (in seconds), used only for nT/s units
+        :return: tuple, (x, y, z) Magnetic field strength (in Teslas by default)
         """
 
         def loop_difference(loop):
@@ -93,6 +95,18 @@ class MagneticFieldCalculator:
 
         field = cross * factor
         field = np.sum(field, axis=0)
+
+        if out_units == 'nT':
+            field = field * (10 ** 9)
+        elif out_units == 'pT':
+            field = field * (10 ** 12)
+        elif out_units == 'nT/s':
+            if ramp is None:
+                raise ValueError('For units of nT/s, a ramp time (in seconds) must be given')
+            else:
+                field = (field * (10 ** 9)) / ramp
+        else:
+            raise ValueError('Invalid output unit')
 
         return field[0], field[1], field[2]
 

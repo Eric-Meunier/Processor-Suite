@@ -3,7 +3,6 @@ import os
 import re
 import time
 import copy
-import magpylib as magpy
 import natsort
 import numpy as np
 import pandas as pd
@@ -519,6 +518,11 @@ class PEMFile:
             elif method == 'pp':
 
                 def get_cleaned_pp(row):
+                    """
+                    Calculate the cleaned PP value of a station
+                    :param row: PEM data DataFrame row
+                    :return: float, cleaned PP value
+                    """
                     pp_value = row.Reading[0]
                     values = []
                     for num in ch_numbers:
@@ -526,19 +530,22 @@ class PEMFile:
                     cleaned_pp = pp_value + sum(values)
                     return cleaned_pp
 
-                global proj, loop, ramp, mag_calc, ch_times, ch_numbers
+                # global proj, loop, ramp, mag_calc, ch_times, ch_numbers
 
-                PPx = group.apply(get_cleaned_pp, axis=1)
+                # Calculate the cleaned PP value for each component
+                # TODO What to do with multiple values for one component
+                PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1)
+                PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1)
 
+                # Find the location in 3D space of the station
                 filt = proj.loc[:, 'Relative Depth'] == float(group.Station.iloc[0])
                 x, y, z = proj[filt].iloc[0]['Easting'], proj[filt].iloc[0]['Northing'], proj[filt].iloc[0]['Elevation']
-                if self.units == 'pT':
-                    Bx, By, Bz = mag_calc.calc_total_field(x, y, z, amps=self.current) / 1000 / ramp
-                else:
-                    Bx, By, Bz = mag_calc.calc_total_field(x, y, z, amps=self.current)
 
+                # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
+                Tx, Ty, Tz = mag_calc.calc_total_field(x, y, z, amps=self.current, out_units='nT/s', ramp=ramp)
 
-                print('nothing')
+                # Calculate the required rotation angle
+                roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy.iloc[0], PPx.iloc[0]))
             else:
                 raise ValueError(f'"{method}" is an invalid rotation method')
 
@@ -560,7 +567,7 @@ class PEMFile:
             proj = self.geometry.get_projection()
             loop = self.get_loop(sorted=True, closed=True)
             # Get the ramp in seconds
-            ramp = self.ramp / 1000 / 1000
+            ramp = self.ramp / 10 ** 6
             mag_calc = MagneticFieldCalculator(loop)
 
             # Only keep off-time channels with PP
@@ -594,7 +601,7 @@ class PEMFile:
                                                 as_index=False).apply(lambda k: filter_data(k)).dropna(axis=0)
         # Rotate the data
         rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
-                                             as_index=False).apply(lambda i: rotate_data(i, method))
+                                             as_index=False).apply(lambda l: rotate_data(l, method))
         print(f"Time to rotate data: {time.time() - st}")
         self.data = sort_data(rotated_data)
         # Sort the data and remove unrotated readings
