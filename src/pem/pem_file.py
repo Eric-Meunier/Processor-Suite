@@ -196,9 +196,7 @@ class PEMFile:
                 datum = f"{s[4]} {s[5]}"
                 # print(f"CRS is {system} Zone {zone} {'North' if north else 'South'}, {datum}")
                 return CRS().from_dict({'System': system, 'Zone': zone, 'Datum': datum})
-            else:
-                return CRS()
-        return None
+        return CRS()
 
     def get_loop(self, sorted=True, closed=False):
         return self.loop.get_loop(sorted=sorted, closed=closed)
@@ -539,13 +537,32 @@ class PEMFile:
 
                 # Find the location in 3D space of the station
                 filt = proj.loc[:, 'Relative Depth'] == float(group.Station.iloc[0])
-                x, y, z = proj[filt].iloc[0]['Easting'], proj[filt].iloc[0]['Northing'], proj[filt].iloc[0]['Elevation']
+                x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
+                                      proj[filt].iloc[0]['Northing'], \
+                                      proj[filt].iloc[0]['Elevation']
 
                 # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
-                Tx, Ty, Tz = mag_calc.calc_total_field(x, y, z, amps=self.current, out_units='nT/s', ramp=ramp)
+                Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
+                                                       amps=self.current,
+                                                       out_units='nT/s',
+                                                       ramp=ramp)
 
                 # Calculate the required rotation angle
                 roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy.iloc[0], PPx.iloc[0]))
+
+                # Calculate the dip
+                # dip = math.degrees(math.acos(x / math.sqrt((x ** 2) + (y ** 2) + (z ** 2)))) - 90
+                # # Create the new rad tool series
+                # new_rad_tool = RADTool().from_dict({'D': 'D7',
+                #                                     'gz': z,
+                #                                     'gx': x,
+                #                                     'gy': y,
+                #                                     'roll_angle': roll_angle,
+                #                                     'dip': dip,
+                #                                     'R': 'R2',
+                #                                     'angle_used': roll_angle - soa,
+                #                                     'rotated': True,
+                #                                     'rotation_type': 'pp'})
             else:
                 raise ValueError(f'"{method}" is an invalid rotation method')
 
@@ -1123,7 +1140,7 @@ class PEMSerializer:
                                str(reading['ZTS']),
                                str(reading['Coil_delay']),
                                str(reading['Number_of_stacks']),
-                               str(reading['Reading_per_set']),
+                               str(reading['Readings_per_set']),
                                str(reading['Reading_number'])]) + '\n'
             rad = reading['RAD_tool'].to_string()
             result += rad + '\n'
@@ -1326,7 +1343,7 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
 
     pg = PEMGetter()
-    files = pg.get_pems(client='PEM Rotation', selection=4)
+    files = pg.get_pems(client='PEM Rotation', selection=3)
     # files = pg.get_pems(client='Raglan', number=1)
     file = files[0]
     # p = PEMParser()
@@ -1335,7 +1352,7 @@ if __name__ == '__main__':
 
     # file.split()
 
-    file.rotate(method='pp', soa=0)
+    file.rotate(method='acc', soa=0)
 
     # file.average()
     # file.scale_current(10)

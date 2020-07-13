@@ -1852,10 +1852,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     if response == self.message.No:
                         return
 
-            if __name__ == '__main__':
-                save_dir = str(Path(__file__).parent.parent.parent/'sample_files'/'test')
-            else:
-                save_dir = get_save_file()
+            # if __name__ == '__main__':
+            #     save_dir = str(Path(__file__).parent.parent.parent/'sample_files'/'test')
+            # else:
+            save_dir = get_save_file()
             if save_dir:
                 # PEM Files and RI files zipped together for when they get sorted
                 try:
@@ -2338,7 +2338,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             return
 
         m = MagDeclinationCalculator(parent=self)
-        m.calc_mag_dec(pem_file, crs)
+        m.calc_mag_dec(pem_file, self.get_crs())
         m.show()
 
     def show_plan_map(self):
@@ -2598,7 +2598,7 @@ class MagDeclinationCalculator(QMainWindow):
         cb.setText(str_value, mode=cb.Clipboard)
         self.statusBar().showMessage(f"{str_value} copied to clipboard", 1000)
 
-    def calc_mag_dec(self, pem_file):
+    def calc_mag_dec(self, pem_file, crs):
         """
         Calculate the magnetic declination for the PEM file.
         :param pem_file: PEMFile object
@@ -2608,12 +2608,11 @@ class MagDeclinationCalculator(QMainWindow):
         if not pem_file:
             return
 
-        crs = self.get_crs()
         if crs.is_nad27():
             self.message.information(self, 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
             return
         if not crs.is_valid():
-            self.message.information(self,'GPS coordinate system information is incomplete')
+            self.message.information(self, 'GPS coordinate system information is incomplete')
             return
 
         if pem_file.has_collar_gps():
@@ -2645,9 +2644,9 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', number=3)
+    # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
     mw.show()

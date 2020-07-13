@@ -215,7 +215,7 @@ class BatchRIImporter(QWidget):
 
                 for pem_file in self.pem_files:
                     pem_components = sorted(pem_file.get_components())
-                    pem_name = re.sub('[^0-9]', '', pem_file.header.get('LineHole'))[-4:]
+                    pem_name = re.sub('[^0-9]', '', pem_file.line_name)[-4:]
 
                     for ri_file in ri_files:
                         ri_components = sorted(ri_file.get_components())

@@ -720,7 +720,7 @@ class MapPlotter:
             # Loop extents
             xmin, xmax, ymin, ymax, zmin, zmax = loop.get_extents()
             # Loop center
-            xcenter, ycenter = loop.get_center()
+            xcenter, ycenter, zcenter = loop.get_center()
 
             loop_label_quandrant = find_quadrant(collar.df.iloc[0]['Easting'], collar.df.iloc[0]['Northing'])
             return loop_label_quandrant
@@ -926,7 +926,7 @@ class MapPlotter:
 
                 if label_depth:
                     # Label the depth at the bottom of the hole
-                    bh_depth = ax.text(seg_x[-1], seg_y[-1], f"  {projection.iloc[-1]['Elevation']:.0f} m",
+                    bh_depth = ax.text(seg_x[-1], seg_y[-1], f"  {projection.iloc[-1]['Relative Depth']:.0f} m",
                                        rotation=angle + 90,
                                        fontsize=8,
                                        color=color,
@@ -1504,6 +1504,7 @@ class PlanMap(MapPlotter):
             client = self.pem_files[0].client
             grid = self.pem_files[0].grid
             loops = natsort.humansorted([file.loop_name for file in self.pem_files])
+            loops = list(set(loops))
             hole = self.pem_files[0].line_name
             is_borehole = self.pem_files[0].is_borehole()
             timebases = np.unique(np.array([file.timebase for file in self.pem_files], dtype=str))
@@ -4545,6 +4546,7 @@ class PEMPrinter:
         files = files  # Zipped PEM and RI files
         kwargs = kwargs
         save_path = save_path
+        self.crs = kwargs.get('CRS')
         self.share_range = kwargs.get('ShareRange')
         self.x_min = kwargs.get('XMin')
         self.x_max = kwargs.get('XMax')
