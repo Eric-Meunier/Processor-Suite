@@ -4684,18 +4684,17 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Kazzinc', number=5)
+    pem_files = pem_getter.get_pems(client='PEM Rotation', selection=4)
 
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
-    # for file in pem_files:
-    #     fig = plt.figure(figsize=(8.5, 11), dpi=100)
-    #     sp = SectionPlot()
-    #     sp.plot(file, figure=fig)
-    # plt.show()
+    fig = plt.figure(figsize=(8.5, 11), dpi=100)
+    sp = SectionPlot()
+    sp.plot(pem_files[0], figure=fig)
+    plt.show()
 
     # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
     # ax6 = ax5.twiny()

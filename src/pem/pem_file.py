@@ -2,10 +2,12 @@ import math
 import os
 import re
 import time
-
+import copy
+import magpylib as magpy
 import natsort
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from pathlib import Path
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, CRS
@@ -517,14 +519,26 @@ class PEMFile:
             elif method == 'pp':
 
                 def get_cleaned_pp(row):
-                    pass
+                    pp_value = row.Reading[0]
+                    values = []
+                    for num in ch_numbers:
+                        values.append(row.Reading[num])
+                    cleaned_pp = pp_value + sum(values)
+                    return cleaned_pp
 
                 global proj, loop, ramp, mag_calc, ch_times, ch_numbers
 
-                PPx = group.iloc[0]
+                PPx = group.apply(get_cleaned_pp, axis=1)
 
-                # print(f"PP value: {v}")
+                filt = proj.loc[:, 'Relative Depth'] == float(group.Station.iloc[0])
+                x, y, z = proj[filt].iloc[0]['Easting'], proj[filt].iloc[0]['Northing'], proj[filt].iloc[0]['Elevation']
+                if self.units == 'pT':
+                    Bx, By, Bz = mag_calc.calc_total_field(x, y, z, amps=self.current) / 1000 / ramp
+                else:
+                    Bx, By, Bz = mag_calc.calc_total_field(x, y, z, amps=self.current)
 
+
+                print('nothing')
             else:
                 raise ValueError(f'"{method}" is an invalid rotation method')
 
@@ -542,6 +556,7 @@ class PEMFile:
             assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename}."
 
             global proj, loop, ramp, mag_calc, ch_times, ch_numbers
+
             proj = self.geometry.get_projection()
             loop = self.get_loop(sorted=True, closed=True)
             # Get the ramp in seconds
@@ -560,7 +575,7 @@ class PEMFile:
 
             # Get the special channel numbers
             ch_numbers = []
-            for i in range(1, len(ch_times)):
+            for i in range(1, len(ch_times) + 1):
                 # Add the ramp time iteratively to the PP center time
                 t = (i * ramp) + pp_center
                 # Create a filter to find in which channel the time falls in

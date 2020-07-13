@@ -223,7 +223,7 @@ class TransmitterLoop(BaseGPS):
             return self.df
 
         df = copy.deepcopy(self.df)
-        cx, cy = self.get_center()
+        cx, cy, cz = self.get_center()
         df['dx'] = pd.Series(df['Easting'] - cx).astype(float)
         df['dy'] = pd.Series(df['Northing'] - cy).astype(float)
         df['angle'] = df.apply(lambda x: get_angle(x['dx'], x['dy']), axis=1)
@@ -233,10 +233,12 @@ class TransmitterLoop(BaseGPS):
 
     def get_center(self):
         """
-        Return the centroid of the loop by taking the average of the easting and the northing.
-        :return: tuple: easting centroid and northing centroid
+        Return the centroid of the loop by taking the average of the easting, northing, and elevation.
+        :return: tuple: easting, northing, and elevation centroid
         """
-        return self.df['Easting'].sum() / self.df.shape[0], self.df['Northing'].sum() / self.df.shape[0]
+        return self.df['Easting'].sum() / self.df.shape[0], \
+               self.df['Northing'].sum() / self.df.shape[0], \
+               self.df['Elevation'].sum() / self.df.shape[0],
 
     def get_loop(self, sorted=True, closed=False):
         if sorted:
@@ -244,7 +246,7 @@ class TransmitterLoop(BaseGPS):
         else:
             df = self.df
 
-        if closed and not df.duplicated().any():
+        if not df.empty and closed and not df.duplicated().any():
             df = df.append(df.iloc[0], ignore_index=True)
 
         return df

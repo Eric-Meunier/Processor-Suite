@@ -44,7 +44,7 @@ class MagneticFieldCalculator:
         angle = math.acos(np.dot(v1, v2) / (len1 * len2))
         return angle
 
-    def calc_total_field(self, x, y, z, I=1):
+    def calc_total_field(self, x, y, z, amps=1):
         """
         Calculate the magnetic field at position (x, y, z) with current I using Biot-Savart Law. Uses the geometry of
         wire_coords for the wire.
@@ -53,10 +53,9 @@ class MagneticFieldCalculator:
         :return: Magnetic field strength (in Teslas) for each component
         """
 
-        def loop_difference(loop_listorarray):
-            loop_array = np.array(loop_listorarray)
-            loop_diff = np.append(np.diff(loop_array, axis=0),
-                                  [loop_array[0] - loop_array[-1]], axis=0)
+        def loop_difference(loop):
+            loop_array = np.array(loop)
+            loop_diff = np.append(np.diff(loop_array, axis=0), [loop_array[0] - loop_array[-1]], axis=0)
             return loop_diff
 
         def array_shift(arr, shift_num):
@@ -73,11 +72,9 @@ class MagneticFieldCalculator:
 
         u0 = 1.25663706e-6  # Constant
         loop_array = np.array(self.wire)
-        # point = np.array([pos[0], pos[1], pos[2]])
-        point = np.array([x, y, z])
         loop_diff = loop_difference(loop_array)
 
-        AP = point - loop_array
+        AP = np.array([x, y, z]) - loop_array
         BP = array_shift(AP, -1)
 
         r1 = np.sqrt((AP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
@@ -87,9 +84,11 @@ class MagneticFieldCalculator:
         cross = np.cross(loop_diff, AP)
 
         CrossSqrd = (np.sqrt((cross ** 2).sum(-1))[..., np.newaxis]).squeeze() ** 2
-        top = (Dot1 / r1 - Dot2 / r2) * u0 * I
+        top = (Dot1 / r1 - Dot2 / r2) * u0 * amps
         bottom = (CrossSqrd * 4 * np.pi)
         factor = (top / bottom)
+        cross = cross[~np.isnan(factor)]  # new
+        factor = factor[~np.isnan(factor)]  # new
         factor = factor[..., np.newaxis]
 
         field = cross * factor
@@ -238,3 +237,4 @@ class MagneticFieldCalculator:
         xx, zz = np.meshgrid(a, c)
 
         return xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len
+
