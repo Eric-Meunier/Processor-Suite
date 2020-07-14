@@ -379,10 +379,11 @@ class BoreholeGeometry:
         self.collar = collar
         self.segments = segments
 
-    def get_projection(self, num_segments=None):
+    def get_projection(self, num_segments=None, stations=None):
         """
         Uses the segments to create a 3D projection of a borehole trace. Can be broken up into segments and interpolated.
         :param num_segments: Desired number of segments to be output
+        :param stations: list, stations to use for interpolation to ensure they are in the segments
         :return: pandas DataFrame: Projected easting, northing, elevation, and relative depth from collar
         """
         # Create the data frame
@@ -395,13 +396,17 @@ class BoreholeGeometry:
         segments = self.segments.get_segments().dropna()
 
         # Interpolate the segments
-        if num_segments:
+        if num_segments or stations:
             azimuths = segments.Azimuth.to_list()
             dips = segments.Dip.to_list()
             depths = segments.Depth.to_list()
 
             # Create the interpolated lists
-            interp_depths = np.linspace(depths[0], depths[-1], num_segments)
+            if stations:
+                interp_depths = sorted(np.unique(np.concatenate((depths, stations))))
+                num_segments = len(interp_depths)
+            else:
+                interp_depths = np.linspace(depths[0], depths[-1], num_segments)
             interp_az = np.interp(interp_depths, depths, azimuths)
             interp_dip = np.interp(interp_depths, depths, dips)
             interp_lens = np.subtract(interp_depths[1:], interp_depths[:-1])
@@ -416,6 +421,7 @@ class BoreholeGeometry:
                  inter_units,
                  interp_depths)
             ).T
+
         else:
             segments = segments.to_numpy()
 

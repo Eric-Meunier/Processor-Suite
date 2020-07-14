@@ -139,7 +139,7 @@ class BatchRIImporter(QWidget):
         self.setLayout(self.layout)
 
         self.setWindowTitle("RI File Import")
-        self.ri_parser = RIFile()
+        # self.ri_parser = RIFile()
         self.message = QMessageBox()
 
         self.table = QTableWidget()
@@ -211,7 +211,7 @@ class BatchRIImporter(QWidget):
 
             # Only for boreholes, match up the RI1 file for Z, and RI2 file for XY
             if all([pem_file.is_borehole() for pem_file in self.pem_files]):
-                ri_files = [self.ri_parser.open(filepath) for filepath in ri_filepaths]
+                ri_files = [RIFile().open(filepath) for filepath in ri_filepaths]
 
                 for pem_file in self.pem_files:
                     pem_components = sorted(pem_file.get_components())

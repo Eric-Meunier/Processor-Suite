@@ -89,24 +89,26 @@ class MagneticFieldCalculator:
         top = (Dot1 / r1 - Dot2 / r2) * u0 * amps
         bottom = (CrossSqrd * 4 * np.pi)
         factor = (top / bottom)
-        cross = cross[~np.isnan(factor)]  # new
-        factor = factor[~np.isnan(factor)]  # new
+
+        cross = cross[~np.isnan(factor)]  # filter out any NaN
+        factor = factor[~np.isnan(factor)]  # filter out any NaN
         factor = factor[..., np.newaxis]
 
         field = cross * factor
         field = np.sum(field, axis=0)
 
-        if out_units == 'nT':
-            field = field * (10 ** 9)
-        elif out_units == 'pT':
-            field = field * (10 ** 12)
-        elif out_units == 'nT/s':
-            if ramp is None:
-                raise ValueError('For units of nT/s, a ramp time (in seconds) must be given')
+        if out_units:
+            if out_units == 'nT':
+                field = field * (10 ** 9)
+            elif out_units == 'pT':
+                field = field * (10 ** 12)
+            elif out_units == 'nT/s':
+                if ramp is None:
+                    raise ValueError('For units of nT/s, a ramp time (in seconds) must be given')
+                else:
+                    field = (field * (10 ** 9)) / ramp
             else:
-                field = (field * (10 ** 9)) / ramp
-        else:
-            raise ValueError('Invalid output unit')
+                raise ValueError('Invalid output unit')
 
         return field[0], field[1], field[2]
 

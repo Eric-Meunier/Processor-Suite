@@ -462,6 +462,10 @@ class PEMFile:
             y_pair = y_data.iloc[0].Reading
 
             rad = group.iloc[0]['RAD_tool']
+            # Create a new RAD tool
+            new_rad = copy.copy(rad)
+            keys = ['roll_angle', 'dip', 'R', 'angle_used', 'rotated', 'rotation_type']
+
             # Accelerometer rotation
             if method == 'acc':
                 if rad.D == 'D5':
@@ -476,18 +480,12 @@ class PEMFile:
                     roll_angle = roll_angle - 360
                 # Calculate the dip
                 dip = math.degrees(math.acos(x / math.sqrt((x ** 2) + (y ** 2) + (z ** 2)))) - 90
-                # Create the new rad tool series
-                new_rad_tool = RADTool().from_dict({'D': 'D5',
-                                                    'gz': z,
-                                                    'gx': x,
-                                                    'gy': y,
-                                                    'roll_angle': roll_angle,
-                                                    'dip': dip,
-                                                    'R': 'R3',
-                                                    'angle_used': roll_angle - soa,
-                                                    'rotated': True,
-                                                    'rotation_type': 'acc'})
-                print(f"Station {group.iloc[0].Station} roll angle: {roll_angle:.2f}")
+                # Create a new RAD tool
+                new_rad = copy.copy(rad)
+                keys = ['roll_angle', 'dip', 'R', 'angle_used', 'rotated', 'rotation_type']
+                values = [roll_angle, dip, 'R3', roll_angle - soa, True, 'acc']
+                for key, value in zip(keys, values):
+                    setattr(new_rad, key, value)
 
             # Magnetometer rotation
             elif method == 'mag':
@@ -501,17 +499,12 @@ class PEMFile:
                 roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
                 if roll_angle > 360:
                     roll_angle = roll_angle - 360
+                # Calculate the dip
                 dip = -90.  # The dip is assumed to be 90°
-                new_rad_tool = RADTool().from_dict({'D': 'D5',
-                                                    'Hz': z,
-                                                    'Hx': x,
-                                                    'Hy': y,
-                                                    'roll_angle': roll_angle,
-                                                    'dip': dip,
-                                                    'R': 'R3',
-                                                    'angle_used': roll_angle - soa,
-                                                    'rotated': True,
-                                                    'rotation_type': 'mag'})
+
+                values = [roll_angle, dip, 'R3', roll_angle - soa, True, 'mag']
+                for key, value in zip(keys, values):
+                    setattr(new_rad, key, value)
 
             elif method == 'pp':
 
@@ -528,7 +521,17 @@ class PEMFile:
                     cleaned_pp = pp_value + sum(values)
                     return cleaned_pp
 
+                assert rad.D == 'D7', 'For PP rotation, D must be D7, not D5. Insufficient information available.'
                 # global proj, loop, ramp, mag_calc, ch_times, ch_numbers
+
+                # Calculate the dip
+                dip = math.degrees(math.acos(rad.gx / math.sqrt((rad.gx ** 2) + (rad.gy ** 2) + (rad.gz ** 2)))) - 90
+
+                # # Calculate the azimuth
+                # g = math.sqrt(sum([rad.gx ** 2, rad.gy ** 2, rad.gz ** 2]))
+                # Hx1 = (rad.Hx * (rad.gy ** 2 + rad.gz ** 2) - (rad.Hy * rad.gy * rad.gx) - (rad.Hz * rad.gx * rad.gz)) / g * math.sqrt(rad.gy ** 2 + rad.gz ** 2)
+                # Hy1 = (rad.Hy * rad.gz - rad.Hz * rad.gy) / math.sqrt(rad.gy ** 2 + rad.gz ** 2)
+                # az = 90 - math.degrees(math.atan(-Hy1 / Hx1))
 
                 # Calculate the cleaned PP value for each component
                 # TODO What to do with multiple values for one component
@@ -550,19 +553,10 @@ class PEMFile:
                 # Calculate the required rotation angle
                 roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy.iloc[0], PPx.iloc[0]))
 
-                # Calculate the dip
-                # dip = math.degrees(math.acos(x / math.sqrt((x ** 2) + (y ** 2) + (z ** 2)))) - 90
-                # # Create the new rad tool series
-                # new_rad_tool = RADTool().from_dict({'D': 'D7',
-                #                                     'gz': z,
-                #                                     'gx': x,
-                #                                     'gy': y,
-                #                                     'roll_angle': roll_angle,
-                #                                     'dip': dip,
-                #                                     'R': 'R2',
-                #                                     'angle_used': roll_angle - soa,
-                #                                     'rotated': True,
-                #                                     'rotation_type': 'pp'})
+                values = [roll_angle, dip, 'R2', roll_angle - soa, True, 'pp']
+                for key, value in zip(keys, values):
+                    setattr(new_rad, key, value)
+
             else:
                 raise ValueError(f'"{method}" is an invalid rotation method')
 
@@ -570,7 +564,7 @@ class PEMFile:
             y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle + soa))
             row = x_data.append(y_data)
             # Add the new rad tool series to the row
-            row['RAD_tool'] = row['RAD_tool'].map(lambda p: new_rad_tool)
+            row['RAD_tool'] = row['RAD_tool'].map(lambda p: new_rad)
             return row
 
         # Set up for PP rotation
@@ -581,7 +575,7 @@ class PEMFile:
 
             global proj, loop, ramp, mag_calc, ch_times, ch_numbers
 
-            proj = self.geometry.get_projection()
+            proj = self.geometry.get_projection(stations=self.get_unique_stations(converted=True))
             loop = self.get_loop(sorted=True, closed=True)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6
@@ -1318,10 +1312,6 @@ class RADTool:
             result.append(f"{self.roll_angle:g}")
             result.append(f"{self.dip:g}")
 
-            if self.R is not None and self.angle_used is not None:
-                result.append(self.R)
-                result.append(f"{self.angle_used:g}")
-
         elif self.D == 'D7':
             result = [
                 self.D,
@@ -1335,6 +1325,10 @@ class RADTool:
             ]
         else:
             raise ValueError('RADTool D value is neither "D5" nor "D7"')
+
+        if self.R is not None and self.angle_used is not None:
+            result.append(self.R)
+            result.append(f"{self.angle_used:g}")
 
         return ' '.join(result)
 
@@ -1352,7 +1346,7 @@ if __name__ == '__main__':
 
     # file.split()
 
-    file.rotate(method='acc', soa=0)
+    file.rotate(method='pp', soa=0)
 
     # file.average()
     # file.scale_current(10)
