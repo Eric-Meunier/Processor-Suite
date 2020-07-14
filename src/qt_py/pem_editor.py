@@ -1273,6 +1273,11 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
                 extension = os.path.splitext(pem_file.filepath)[-1]
                 if export_final is True:
+                    # Make sure the file is averaged and split
+                    if not pem_file.is_split():
+                        pem_file = pem_file.split()
+                    if not pem_file.is_averaged():
+                        pem_file = pem_file.average()
                     # Remove underscore-dates and tags
                     file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))
                     if not pem_file.is_borehole():

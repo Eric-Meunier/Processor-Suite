@@ -1057,7 +1057,7 @@ class PEMSerializer:
                 result += '\n<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
             else:
                 for row in segs.itertuples():
-                    tag = f"<P{row.Index:02d}>"
+                    tag = f"<P{row.Index + 1:02d}>"
                     row = f"{tag} {row.Azimuth:.2f} {row.Dip:.2f} {row[3]:.2f} {row.Unit} {row.Depth:.2f}"
                     result += '\n' + row
             return result
