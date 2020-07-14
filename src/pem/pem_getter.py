@@ -36,7 +36,7 @@ class PEMGetter:
                 print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
                 # pem_files.append((pem_file, None))  # Empty second item for ri_files
                 pem_files.append(pem_file)
-        elif selection and not selection > len(file_names):
+        elif selection is not None and not selection > len(file_names):
             filepath = os.path.join(sample_files_dir, file_names[selection])
             pem_file = self.parser().parse(filepath)
             print(f'PEMGetter: Getting File {os.path.basename(filepath)}')

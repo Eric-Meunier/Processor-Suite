@@ -396,7 +396,7 @@ def main():
     mw = Derotator()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', selection=4)
+    pem_files = pg.get_pems(client='PEM Rotation', selection=0)
     mw.open(pem_files)
 
     app.exec_()

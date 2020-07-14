@@ -16,7 +16,7 @@ from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 def sort_data(data):
     # Sort the data frame
     df = data.reindex(index=natsort.order_by_index(
-        data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading_number']))))
+        data.index, natsort.index_humansorted(zip(data.Component, data.Station, data['Reading_number']))))
     # Reset the index
     df.reset_index(drop=True, inplace=True)
     return df
@@ -609,14 +609,18 @@ class PEMFile:
         st = time.time()
         # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
         filtered_data = self.data[filt].groupby(['Station', 'RAD_ID'],
+                                                group_keys=False,
                                                 as_index=False).apply(lambda k: filter_data(k)).dropna(axis=0)
         # Rotate the data
         rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
+                                             group_keys=False,
                                              as_index=False).apply(lambda l: rotate_data(l, method))
         print(f"Time to rotate data: {time.time() - st}")
-        self.data = sort_data(rotated_data)
-        # Sort the data and remove unrotated readings
-        # self.data = sort_data(self.data)
+
+        self.data[filt] = rotated_data
+        # Remove the rows that were filtered out in filtered_data
+        self.data.dropna(inplace=True)
+
         self.probes['SOA'] = str(soa)
         return self, ineligible_stations
 
@@ -1337,7 +1341,7 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
 
     pg = PEMGetter()
-    files = pg.get_pems(client='PEM Rotation', selection=3)
+    files = pg.get_pems(client='PEM Rotation', selection=0)
     # files = pg.get_pems(client='Raglan', number=1)
     file = files[0]
     # p = PEMParser()
@@ -1346,7 +1350,7 @@ if __name__ == '__main__':
 
     # file.split()
 
-    file.rotate(method='pp', soa=0)
+    file.rotate(method='acc', soa=0)
 
     # file.average()
     # file.scale_current(10)
