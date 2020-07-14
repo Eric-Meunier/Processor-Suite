@@ -20,7 +20,7 @@
       <property name="currentIndex">
        <number>1</number>
       </property>
-      <widget class="QWidget" name="lin_tab" native="true">
+      <widget class="QWidget" name="lin_tab">
        <attribute name="title">
         <string>X Component</string>
        </attribute>
@@ -30,7 +30,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="log_tab" native="true">
+      <widget class="QWidget" name="log_tab">
        <attribute name="title">
         <string>Y Component</string>
        </attribute>
@@ -104,8 +104,18 @@
           </item>
           <item>
            <widget class="QRadioButton" name="pp_btn">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>PP</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="none_btn">
+            <property name="text">
+             <string>None</string>
             </property>
            </widget>
           </item>

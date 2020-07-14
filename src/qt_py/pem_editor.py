@@ -114,7 +114,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_viewer = ContourMapViewer(parent=self)
-        self.derotator = Derotator(parent=self)
+        # self.derotator = Derotator(parent=self)
 
         self.initMenus()
         self.initSignals()
@@ -1983,12 +1983,19 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.refresh_rows(rows=row)
 
     def derotate_xy(self):
+
+        def accept_file():
+            self.remove_file(rows=rows)
+            self.open_pem_files(derotator.rotated_file)
+            derotator.close()
+
         pem_files, rows = self.get_selected_pem_files()
-        self.derotator.open(pem_files)
-        # soa, okPressed = QInputDialog.getDouble(self, "Sensor Offset Angle", "SOA:")
-        # if okPressed:
-        #     for pem_file in pem_files:
-        #         pem_file = pem_file.rotate(soa=soa)
+        assert len(pem_files) == 1, 'Can only de-rotate one file at a time.'
+
+        pem_file = self.update_pem_file_from_table(pem_files[0], rows[0])
+        derotator = Derotator(parent=self)
+        derotator.accept_sig.connect(accept_file)
+        derotator.open(pem_file)
 
     def reverse_all_data(self, comp):
         """
@@ -2649,9 +2656,8 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    # pem_files = pg.get_pems(client='PEM Rotation', number=3)
-    # pem_files = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\renum.PEM'
-    # mw.open_pem_files(pem_files)
+    pem_files = pg.get_pems(client='PEM Rotation', selection=1)
+    mw.open_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
     mw.show()

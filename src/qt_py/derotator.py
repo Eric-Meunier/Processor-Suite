@@ -43,24 +43,31 @@ pg.setConfigOption('crashWarning', True)
 
 
 class Derotator(QMainWindow, Ui_Derotator):
+    accept_sig = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
         self.parent = parent
         self.pem_file = None
+        self.rotated_file = None
+
+        self.acc_rotated_file = None
+        self.mag_rotated_file = None
+        self.pp_rotated_file = None
 
         self.setWindowTitle('XY De-rotation')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'derotate.png')))
 
         self.message = QMessageBox()
 
-        self.button_box.accepted.connect(self.rotate)
+        self.button_box.accepted.connect(lambda: self.accept_sig.emit())
         self.button_box.rejected.connect(self.close)
 
         self.acc_btn.clicked.connect(self.rotate)
         self.mag_btn.clicked.connect(self.rotate)
         self.pp_btn.clicked.connect(self.rotate)
+        self.none_btn.clicked.connect(self.rotate)
         self.soa_sbox.editingFinished.connect(self.rotate)
 
         self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
@@ -127,6 +134,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         Open, rotate, and plot the PEMFile.
         :param pem_file: borehole PEMFile object
         """
+
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
 
@@ -146,8 +154,8 @@ class Derotator(QMainWindow, Ui_Derotator):
                 return
 
         self.setWindowTitle(f"XY De-rotation - {pem_file.filename}")
-        self.rotate()
         self.show()
+        self.rotate()
 
     def plot_pem(self, pem_file):
         """
@@ -248,16 +256,23 @@ class Derotator(QMainWindow, Ui_Derotator):
             method = 'acc'
         elif self.mag_btn.isChecked():
             method = 'mag'
-        else:
+        elif self.pp_btn.isChecked():
             method = 'pp'
+        else:
+            method = None
 
+        ineligible_stations = None
         soa = self.soa_sbox.value()
-
         # Create a copy of the pem_file so it is never changed
         pem_file = copy.deepcopy(self.pem_file)
-        rotated_file, ineligible_stations = pem_file.rotate(method=method, soa=soa)
+
+        if method is not None:
+            self.rotated_file, ineligible_stations = pem_file.rotate(method=method, soa=soa)
+        else:
+            self.rotated_file = pem_file
+
         # Fill the table with the ineligible stations
-        if not ineligible_stations.empty:
+        if ineligible_stations is not None and not ineligible_stations.empty:
             fill_table(ineligible_stations)
             self.bad_stations_label.show()
             self.list.show()
@@ -266,7 +281,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.bad_stations_label.hide()
             self.list.hide()
 
-        self.plot_pem(rotated_file)
+        self.plot_pem(self.rotated_file)
 
 
 # # Works with Maptlotlib
