@@ -43,6 +43,9 @@ pg.setConfigOption('crashWarning', True)
 
 
 class Derotator(QMainWindow, Ui_Derotator):
+    """
+    Class that de-rotates XY data of a PEMFile
+    """
     accept_sig = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):

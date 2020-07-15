@@ -99,7 +99,12 @@ class PEMFile:
             return False
 
     def is_rotated(self):
-        return self.data['RAD_tool'].map(lambda x: x.rotated).all()
+        if self.is_borehole():
+            filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
+            xy_data = self.data[filt]
+            return xy_data['RAD_tool'].map(lambda x: x.rotated).all()
+        else:
+            return False
 
     def is_averaged(self):
         data = self.data[['Station', 'Component']]
@@ -557,8 +562,7 @@ class PEMFile:
                 for key, value in zip(keys, values):
                     setattr(new_rad, key, value)
 
-            else:
-                raise ValueError(f'"{method}" is an invalid rotation method')
+                self.notes.append(f"<GEN> XY data de-rotated using cleaned PP.")
 
             x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle + soa))
             y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle + soa))
@@ -567,8 +571,13 @@ class PEMFile:
             row['RAD_tool'] = row['RAD_tool'].map(lambda p: new_rad)
             return row
 
+        if method.lower() == 'acc':
+            self.notes.append(f"<GEN> XY data de-rotated using accelerometer")
+
+        elif method.lower() == 'mag':
+            self.notes.append(f"<GEN> XY data de-rotated using magnetometer")
         # Set up for PP rotation
-        if method.upper() == 'PP':
+        elif method.upper() == 'PP':
             assert self.has_loop_gps(), f"{self.filename} has no loop GPS."
             assert self.has_geometry(), f"{self.filename} has incomplete geometry."
             assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename}."
@@ -601,6 +610,11 @@ class PEMFile:
                 ch_index = ch_times[filt].index.values[0]
 
                 ch_numbers.append(ch_index)
+
+            self.notes.append(f"<GEN> XY data de-rotated using cleaned PP")
+
+        else:
+            raise ValueError(f'"{method}" is an invalid rotation method')
 
         global ineligible_stations
         ineligible_stations = pd.DataFrame()

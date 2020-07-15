@@ -13,9 +13,10 @@ from pathlib import Path
 from shutil import copyfile
 from itertools import chain, groupby
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
-                             QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser,
-                             QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton)
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
+                             QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,
+                             QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView)
 # from pyqtspinner.spinner import WaitingSpinner
 import geomag
 
@@ -85,7 +86,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
-        self.initUi()
+        self.init_ui()
 
         self.pem_files = []
         self.pem_info_widgets = []
@@ -114,10 +115,22 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_viewer = ContourMapViewer(parent=self)
-        # self.derotator = Derotator(parent=self)
 
-        self.initMenus()
-        self.initSignals()
+        # Project tree
+        self.project_dir = ''
+        self.file_sys_model = QFileSystemModel()
+        self.file_sys_model.setRootPath(QtCore.QDir.rootPath())
+        self.project_tree.setModel(self.file_sys_model)
+        self.project_tree.setColumnHidden(1, True)
+        self.project_tree.setColumnHidden(2, True)
+        self.project_tree.setColumnHidden(3, True)
+        self.project_tree.clicked.connect(self.project_dir_changed)
+        # self.dir_tree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        # self.dir_tree.customContextMenuRequested.connect(self.open_menu)
+        self.move_dir_tree_to(self.file_sys_model.rootPath())
+
+        self.init_menus()
+        self.init_signals()
 
         self.table_columns = [
             'File',
@@ -135,7 +148,12 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             'Suffix\nWarnings',
             'Repeat\nStations'
         ]
-        # self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+
+        for i, col in enumerate(self.table_columns[1:]):
+            header.setSectionResizeMode(i + 1, QHeaderView.ResizeToContents)
+
         self.gps_systems = ['', 'UTM']
         self.gps_zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
         self.gps_datums = ['', 'NAD 1927', 'NAD 1983', 'WGS 1984']
@@ -151,33 +169,54 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.max_range_edit.setValidator(int_validator)
         self.min_range_edit.setValidator(int_validator)
         self.section_depth_edit.setValidator(int_validator)
+        
+        # Actions
+        self.actionDel_File = QAction("&Remove File", self)
+        self.actionDel_File.setShortcut("Del")
+        self.actionDel_File.triggered.connect(self.remove_file)
+        self.addAction(self.actionDel_File)
+        self.actionDel_File.setEnabled(False)
 
-    def initUi(self):
+        self.actionClear_Files = QAction("&Clear All Files", self)
+        self.actionClear_Files.setShortcut("Shift+Del")
+        self.actionClear_Files.setStatusTip("Clear all files")
+        self.actionClear_Files.setToolTip("Clear all files")
+        self.actionClear_Files.triggered.connect(lambda: self.remove_file(rows=np.arange(self.table.rowCount())))
+
+        self.merge_action = QAction("&Merge", self)
+        self.merge_action.triggered.connect(lambda: self.merge_pem_files(selected=True))
+        self.merge_action.setShortcut("Shift+M")
+
+    def init_ui(self):
         """
         Initializing the UI.
         :return: None
         """
         def center_window(win):
-            qtRectangle = win.frameGeometry()
-            centerPoint = QDesktopWidget().availableGeometry().center()
-            qtRectangle.moveCenter(centerPoint)
-            win.move(qtRectangle.topLeft())
+            qt_rectangle = win.frameGeometry()
+            center_point = QDesktopWidget().availableGeometry().center()
+            qt_rectangle.moveCenter(center_point)
+            win.move(qt_rectangle.topLeft())
 
         self.setupUi(self)
         self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'conder.png')))
+            QIcon(os.path.join(icons_path, 'conder.png')))
         self.setGeometry(500, 300, 1700, 900)
         center_window(self)
 
-        self.stackedWidget.hide()
-        self.pemInfoDockWidget.hide()
-        self.plotsDockWidget.hide()
-        # self.plotsDockWidget.setWidget(self.tabWidget)
-        # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.stackedWidget)
+        self.refresh_pem_list_btn.setIcon(QIcon(os.path.join(icons_path, 'refresh.png')))
+        self.refresh_gps_list_btn.setIcon(QIcon(os.path.join(icons_path, 'refresh.png')))
+        self.refresh_pem_list_btn.setText('')
+        self.refresh_gps_list_btn.setText('')
 
-    def initMenus(self):
+        # self.stackedWidget.hide()
+        self.frame.hide()
+        self.table.horizontalHeader().hide()
+        # self.pemInfoDockWidget.hide()
+
+    def init_menus(self):
         """
         Initializing all actions.
         :return: None
@@ -186,11 +225,11 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.actionOpenFile.setShortcut("Ctrl+O")
         self.actionOpenFile.setStatusTip('Open file')
         self.actionOpenFile.setToolTip('Open file')
-        self.actionOpenFile.setIcon(QtGui.QIcon(os.path.join(icons_path, 'open.png')))
+        self.actionOpenFile.setIcon(QIcon(os.path.join(icons_path, 'open.png')))
         self.actionOpenFile.triggered.connect(self.open_file_dialog)
 
         self.actionSaveFiles.setShortcut("Ctrl+S")
-        self.actionSaveFiles.setIcon(QtGui.QIcon(os.path.join(icons_path, 'save.png')))
+        self.actionSaveFiles.setIcon(QIcon(os.path.join(icons_path, 'save.png')))
         self.actionSaveFiles.setStatusTip("Save all files")
         self.actionSaveFiles.setToolTip("Save all files")
         self.actionSaveFiles.triggered.connect(lambda: self.save_pem_files(selected=False))
@@ -235,54 +274,54 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         self.actionAverage_All_PEM_Files.setStatusTip("Average all PEM files")
         self.actionAverage_All_PEM_Files.setToolTip("Average all PEM files")
-        self.actionAverage_All_PEM_Files.setIcon(QtGui.QIcon(os.path.join(icons_path, 'average.png')))
+        self.actionAverage_All_PEM_Files.setIcon(QIcon(os.path.join(icons_path, 'average.png')))
         self.actionAverage_All_PEM_Files.setShortcut("F5")
         self.actionAverage_All_PEM_Files.triggered.connect(lambda: self.average_pem_data(selected=False))
         # self.actionAverage_All_PEM_Files.triggered.connect(self.refresh_table)
 
         self.actionSplit_All_PEM_Files.setStatusTip("Remove on-time channels for all PEM files")
         self.actionSplit_All_PEM_Files.setToolTip("Remove on-time channels for all PEM files")
-        self.actionSplit_All_PEM_Files.setIcon(QtGui.QIcon(os.path.join(icons_path, 'split.png')))
+        self.actionSplit_All_PEM_Files.setIcon(QIcon(os.path.join(icons_path, 'split.png')))
         self.actionSplit_All_PEM_Files.setShortcut("F6")
         self.actionSplit_All_PEM_Files.triggered.connect(lambda: self.split_pem_channels(selected=False))
         # self.actionSplit_All_PEM_Files.triggered.connect(self.refresh_table)
 
         self.actionScale_All_Currents.setStatusTip("Scale the current of all PEM Files to the same value")
         self.actionScale_All_Currents.setToolTip("Scale the current of all PEM Files to the same value")
-        self.actionScale_All_Currents.setIcon(QtGui.QIcon(os.path.join(icons_path, 'current.png')))
+        self.actionScale_All_Currents.setIcon(QIcon(os.path.join(icons_path, 'current.png')))
         self.actionScale_All_Currents.setShortcut("F7")
         self.actionScale_All_Currents.triggered.connect(lambda: self.scale_pem_current(selected=False))
 
         self.actionChange_All_Coil_Areas.setStatusTip("Scale all coil areas to the same value")
         self.actionChange_All_Coil_Areas.setToolTip("Scale all coil areas to the same value")
-        self.actionChange_All_Coil_Areas.setIcon(QtGui.QIcon(os.path.join(icons_path, 'coil.png')))
+        self.actionChange_All_Coil_Areas.setIcon(QIcon(os.path.join(icons_path, 'coil.png')))
         self.actionChange_All_Coil_Areas.setShortcut("F8")
         self.actionChange_All_Coil_Areas.triggered.connect(lambda: self.scale_pem_coil_area(selected=False))
 
         # GPS menu
         self.actionSave_as_KMZ.setStatusTip("Create a KMZ file using all GPS in the opened PEM file(s)")
         self.actionSave_as_KMZ.setToolTip("Create a KMZ file using all GPS in the opened PEM file(s)")
-        self.actionSave_as_KMZ.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
+        self.actionSave_as_KMZ.setIcon(QIcon(os.path.join(icons_path, 'google_earth.png')))
         self.actionSave_as_KMZ.triggered.connect(self.save_as_kmz)
 
         self.actionExport_All_GPS.setStatusTip("Export all GPS in the opened PEM file(s) to separate CSV files")
         self.actionExport_All_GPS.setToolTip("Export all GPS in the opened PEM file(s) to separate CSV files")
-        self.actionExport_All_GPS.setIcon(QtGui.QIcon(os.path.join(icons_path, 'csv.png')))
+        self.actionExport_All_GPS.setIcon(QIcon(os.path.join(icons_path, 'csv.png')))
         self.actionExport_All_GPS.triggered.connect(self.export_all_gps)
 
         # Map menu
         self.actionPlan_Map.setStatusTip("Plot all PEM files on an interactive plan map")
         self.actionPlan_Map.setToolTip("Plot all PEM files on an interactive plan map")
-        self.actionPlan_Map.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+        self.actionPlan_Map.setIcon(QIcon(os.path.join(icons_path, 'folium.png')))
         self.actionPlan_Map.triggered.connect(self.show_plan_map)
 
         self.action3D_Map.setStatusTip("Show 3D map of all PEM files")
         self.action3D_Map.setToolTip("Show 3D map of all PEM files")
         self.action3D_Map.setShortcut('Ctrl+M')
-        self.action3D_Map.setIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map2.png')))
+        self.action3D_Map.setIcon(QIcon(os.path.join(icons_path, '3d_map2.png')))
         self.action3D_Map.triggered.connect(lambda: self.map_viewer_3d.open(self.pem_files))
 
-        self.actionContour_Map.setIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map3.png')))
+        self.actionContour_Map.setIcon(QIcon(os.path.join(icons_path, 'contour_map3.png')))
         self.actionContour_Map.setStatusTip("Show a contour map of surface PEM files")
         self.actionContour_Map.setToolTip("Show a contour map of surface PEM files")
         self.actionContour_Map.triggered.connect(lambda: self.contour_viewer.open(self.pem_files))
@@ -290,54 +329,35 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         # Tools menu
         self.actionLoop_Planner.setStatusTip("Loop planner")
         self.actionLoop_Planner.setToolTip("Loop planner")
-        self.actionLoop_Planner.setIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
+        self.actionLoop_Planner.setIcon(QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.actionLoop_Planner.triggered.connect(lambda: self.loop_planner.show())
 
         self.actionGrid_Planner.setStatusTip("Grid planner")
         self.actionGrid_Planner.setToolTip("Grid planner")
-        self.actionGrid_Planner.setIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'grid_planner.png')))
+        self.actionGrid_Planner.setIcon(QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.actionGrid_Planner.triggered.connect(lambda: self.grid_planner.show())
 
         self.actionConvert_Timebase_Frequency.setStatusTip("Two way conversion between timebase and frequency")
         self.actionConvert_Timebase_Frequency.setToolTip("Two way conversion between timebase and frequency")
-        self.actionConvert_Timebase_Frequency.setIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
+        self.actionConvert_Timebase_Frequency.setIcon(QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
         self.actionConvert_Timebase_Frequency.triggered.connect(lambda: self.freq_con.show())
 
         self.actionDamping_Box_Plotter.setStatusTip("Plot damping box data")
         self.actionDamping_Box_Plotter.setToolTip("Plot damping box data")
-        self.actionDamping_Box_Plotter.setIcon(QtGui.QIcon(os.path.join(icons_path, 'db_plot 32.png')))
+        self.actionDamping_Box_Plotter.setIcon(QIcon(os.path.join(icons_path, 'db_plot 32.png')))
         self.actionDamping_Box_Plotter.triggered.connect(lambda: self.db_plot.show())
 
         self.actionUnpacker.setStatusTip("Unpack and organize a raw folder")
         self.actionUnpacker.setToolTip("Unpack and organize a raw folder")
-        self.actionUnpacker.setIcon(QtGui.QIcon(os.path.join(icons_path, 'unpacker_1.png')))
+        self.actionUnpacker.setIcon(QIcon(os.path.join(icons_path, 'unpacker_1.png')))
         self.actionUnpacker.triggered.connect(lambda: self.unpacker.show())
 
         self.actionGPX_Creator.setStatusTip("GPX file creator")
         self.actionGPX_Creator.setToolTip("GPX file creator")
-        self.actionGPX_Creator.setIcon(QtGui.QIcon(os.path.join(icons_path, 'gpx_creator_4.png')))
+        self.actionGPX_Creator.setIcon(QIcon(os.path.join(icons_path, 'gpx_creator_4.png')))
         self.actionGPX_Creator.triggered.connect(lambda: self.gpx_creator.show())
 
-        # Actions
-        self.actionDel_File = QAction("&Remove File", self)
-        self.actionDel_File.setShortcut("Del")
-        self.actionDel_File.triggered.connect(self.remove_file)
-        self.addAction(self.actionDel_File)
-        self.actionDel_File.setEnabled(False)
-
-        self.actionClear_Files = QAction("&Clear All Files", self)
-        self.actionClear_Files.setShortcut("Shift+Del")
-        self.actionClear_Files.setStatusTip("Clear all files")
-        self.actionClear_Files.setToolTip("Clear all files")
-        self.actionClear_Files.triggered.connect(lambda: self.remove_file(rows=np.arange(self.table.rowCount())))
-
-        self.merge_action = QAction("&Merge", self)
-        self.merge_action.triggered.connect(self.merge_pem_files_selection)
-        self.merge_action.setShortcut("Shift+M")
-
-    def initSignals(self):
+    def init_signals(self):
         """
         Initializing all signals.
         :return: None
@@ -359,13 +379,13 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.share_loop_cbox.stateChanged.connect(
             lambda: self.loop_edit.setEnabled(self.share_loop_cbox.isChecked()))
         # single_row must be explicitly stated since stateChanged returns an int based on the state
-        self.share_client_cbox.stateChanged.connect(lambda: self.refresh_rows(rows='all'))
-        self.share_grid_cbox.stateChanged.connect(lambda: self.refresh_rows(rows='all'))
-        self.share_loop_cbox.stateChanged.connect(lambda: self.refresh_rows(rows='all'))
+        self.share_client_cbox.stateChanged.connect(lambda: self.set_shared_header('client'))
+        self.share_grid_cbox.stateChanged.connect(lambda: self.set_shared_header('grid'))
+        self.share_loop_cbox.stateChanged.connect(lambda: self.set_shared_header('loop'))
 
-        self.client_edit.textChanged.connect(lambda: self.refresh_rows(rows='all'))
-        self.grid_edit.textChanged.connect(lambda: self.refresh_rows(rows='all'))
-        self.loop_edit.textChanged.connect(lambda: self.refresh_rows(rows='all'))
+        self.client_edit.textChanged.connect(lambda: self.set_shared_header('client'))
+        self.grid_edit.textChanged.connect(lambda: self.set_shared_header('grid'))
+        self.loop_edit.textChanged.connect(lambda: self.set_shared_header('loop'))
 
         self.share_range_cbox.stateChanged.connect(
             lambda: self.min_range_edit.setEnabled(self.share_range_cbox.isChecked()))
@@ -379,7 +399,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         # self.max_range_edit.editingFinished.connect(lambda: self.refresh_table(single_row=False))
 
         self.auto_name_line_btn.clicked.connect(self.auto_name_lines)
-        self.auto_merge_files_btn.clicked.connect(self.auto_merge_pem_files)
+        self.auto_merge_files_btn.clicked.connect(lambda: self.merge_pem_files(auto_select=True))
 
         self.reverse_all_z_btn.clicked.connect(lambda: self.reverse_all_data(comp='Z'))
         self.reverse_all_x_btn.clicked.connect(lambda: self.reverse_all_data(comp='X'))
@@ -388,8 +408,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         self.gps_system_cbox.currentIndexChanged.connect(
             lambda: self.gps_zone_cbox.setEnabled(True if self.gps_system_cbox.currentText() == 'UTM' else False))
-
-        self.reset_crs_btn.clicked.connect(self.reset_crs)
 
     def contextMenuEvent(self, event):
         """
@@ -404,14 +422,14 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu = QMenu(self.table)
                 self.table.remove_file_action = QAction("&Remove", self)
                 self.table.remove_file_action.triggered.connect(self.remove_file)
-                self.table.remove_file_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'remove.png')))
+                self.table.remove_file_action.setIcon(QIcon(os.path.join(icons_path, 'remove.png')))
 
                 self.table.open_file_action = QAction("&Open", self)
                 self.table.open_file_action.triggered.connect(self.open_in_text_editor)
-                self.table.open_file_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'txt_file.png')))
+                self.table.open_file_action.setIcon(QIcon(os.path.join(icons_path, 'txt_file.png')))
 
                 self.table.save_file_action = QAction("&Save", self)
-                self.table.save_file_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'save.png')))
+                self.table.save_file_action.setIcon(QIcon(os.path.join(icons_path, 'save.png')))
                 self.table.save_file_action.triggered.connect(self.save_pem_files)
 
                 self.table.export_pem_action = QAction("&Export...", self)
@@ -424,7 +442,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.table.save_as_xyz_action.triggered.connect(lambda: self.save_as_xyz(selected=True))
 
                 self.table.print_plots_action = QAction("&Print Plots", self)
-                self.table.print_plots_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'pdf.png')))
+                self.table.print_plots_action.setIcon(QIcon(os.path.join(icons_path, 'pdf.png')))
                 self.table.print_plots_action.triggered.connect(lambda: self.print_plots(selected_files=True))
 
                 self.table.extract_stations_action = QAction("&Extract Stations", self)
@@ -432,32 +450,32 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     lambda: self.station_splitter.open(selected_pems[0]))
 
                 self.table.calc_mag_dec = QAction("&Magnetic Declination", self)
-                self.table.calc_mag_dec.setIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
+                self.table.calc_mag_dec.setIcon(QIcon(os.path.join(icons_path, 'mag_field.png')))
                 self.table.calc_mag_dec.triggered.connect(lambda: self.show_mag_dec(selected_pems[0]))
 
                 # self.table.view_3d_section_action = QAction("&View 3D Section", self)
-                # self.table.view_3d_section_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
+                # self.table.view_3d_section_action.setIcon(QIcon(os.path.join(icons_path, 'section_3d.png')))
                 # self.table.view_3d_section_action.triggered.connect(self.show_section_3d_viewer)
 
                 self.table.average_action = QAction("&Average", self)
                 self.table.average_action.triggered.connect(lambda: self.average_pem_data(selected=True))
-                self.table.average_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'average.png')))
+                self.table.average_action.setIcon(QIcon(os.path.join(icons_path, 'average.png')))
 
                 self.table.split_action = QAction("&Split Channels", self)
                 self.table.split_action.triggered.connect(lambda: self.split_pem_channels(selected=True))
-                self.table.split_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'split.png')))
+                self.table.split_action.setIcon(QIcon(os.path.join(icons_path, 'split.png')))
 
                 self.table.scale_current_action = QAction("&Scale Current", self)
                 self.table.scale_current_action.triggered.connect(lambda: self.scale_pem_current(selected=True))
-                self.table.scale_current_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'current.png')))
+                self.table.scale_current_action.setIcon(QIcon(os.path.join(icons_path, 'current.png')))
 
                 self.table.scale_ca_action = QAction("&Scale Coil Area", self)
                 self.table.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
-                self.table.scale_ca_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'coil.png')))
+                self.table.scale_ca_action.setIcon(QIcon(os.path.join(icons_path, 'coil.png')))
 
                 self.table.derotate_action = QAction("&De-rotate XY", self)
                 self.table.derotate_action.triggered.connect(self.derotate_xy)
-                self.table.derotate_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'derotate.png')))
+                self.table.derotate_action.setIcon(QIcon(os.path.join(icons_path, 'derotate.png')))
 
                 self.table.share_loop_action = QAction("&Share Loop", self)
                 self.table.share_loop_action.triggered.connect(self.share_loop)
@@ -601,14 +619,14 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                              self.stackedWidget.currentWidget().geometry_tab]
 
             gps_conditions = bool(all([
-                e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
+                e.answerRect().intersects(self.stackedWidget.geometry()),
                 text_files is True or gpx_files is True,
                 self.stackedWidget.currentWidget().tabs.currentWidget() in eligible_tabs,
                 len(self.pem_files) > 0
             ]))
 
             ri_conditions = bool(all([
-                e.answerRect().intersects(self.pemInfoDockWidget.geometry()),
+                e.answerRect().intersects(self.stackedWidget.geometry()),
                 ri_files is True,
                 self.stackedWidget.currentWidget().tabs.currentWidget() == self.stackedWidget.currentWidget().ri_tab,
                 len(self.pem_files) > 0
@@ -661,21 +679,21 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             for widget in self.pem_info_widgets:
                 widget.tabs.setCurrentIndex(self.tab_num)
 
-    def block_signals(self, bool):
-        print(f'Blocking all signals {bool}')
+    def block_signals(self, block_status):
+        print(f'Blocking all signals {block_status}')
         for thing in [self.table, self.client_edit, self.grid_edit, self.loop_edit, self.min_range_edit,
                       self.max_range_edit]:
-            thing.blockSignals(bool)
+            thing.blockSignals(block_status)
 
-    def start_pg(self, min=0, max=100):
+    def start_pg(self, start=0, end=100):
         """
         Add the progress bar to the status bar and make it visible.
-        :param min: Starting value of the progress bar, usually 0.
-        :param max: Maximum value of the progress bar.
+        :param start: Starting value of the progress bar, usually 0.
+        :param end: Maximum value of the progress bar.
         :return: None
         """
-        self.pg.setValue(min)
-        self.pg.setMaximum(max)
+        self.pg.setValue(start)
+        self.pg.setMaximum(end)
         self.pg.setText('')
         self.window().statusBar().addPermanentWidget(self.pg)
         self.pg.show()
@@ -774,14 +792,15 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
+        if not pem_files:
+            return
+
         t1 = time.time()
         parser = PEMParser()
         self.table.setUpdatesEnabled(False)
-        self.stackedWidget.show()
-        self.pemInfoDockWidget.show()
 
         # Start the progress bar
-        self.start_pg(min=0, max=len(pem_files))
+        self.start_pg(start=0, end=len(pem_files))
         count = 0
 
         if not self.auto_sort_loops_cbox.isChecked():
@@ -807,6 +826,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 if self.gps_system_cbox.currentText() == '' and self.gps_datum_cbox.currentText() == '':
                     fill_crs(pem_file)
 
+                if self.project_dir == self.file_sys_model.rootPath():
+                    self.move_dir_tree_to(str(Path(pem_file.filepath).parent))
+
                 i = get_insertion_point(pem_file)
                 self.pem_files.insert(i, pem_file)
                 self.pem_info_widgets.insert(i, pem_widget)
@@ -821,10 +843,12 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         # Set the shared range boxes
         self.fill_share_range()
-
         self.table.setUpdatesEnabled(True)
+
         self.pg.hide()
-        self.table.resizeColumnsToContents()
+        self.frame.show()
+        self.table.horizontalHeader().show()
+        # self.table.resizeColumnsToContents()
         print(f"Time to open all PEM files: {time.time() - t1}")
 
     def open_gps_files(self, gps_files):
@@ -832,14 +856,14 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Adds GPS information from the gps_files to the PEMFile object
         :param gps_files: list or str, filepaths of text file or GPX files
         """
-        def merge_files(gps_files):
+        def merge_files(files):
             """
             Merge contents of files into one list
-            :param gps_files: list of str, filepaths of text file or GPX files
+            :param files: list of str, filepaths of text file or GPX files
             :return: str
             """
             merged_file = []
-            for file in gps_files:
+            for file in files:
                 if file.endswith('gpx'):
                     # Convert the GPX file to string
                     gps, zone, hemisphere = self.gpx_editor.get_utm(file, as_string=True)
@@ -879,7 +903,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
     def open_ri_file(self, ri_files):
         """
         Adds RI file information to the associated PEMFile object. Only accepts 1 file.
-        :param ri_file: str filepath, Text file with step plot information in them
+        :param ri_files: list, str filepaths with step plot information in them
         """
         ri_file = ri_files[0]
         pem_info_widget = self.stackedWidget.currentWidget()
@@ -926,7 +950,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.text_browsers.append(browser)
             browser.setText(pem_str)
             browser.resize(600, 800)
-            browser.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'txt_file.png')))
+            browser.setWindowIcon(QIcon(os.path.join(icons_path, 'txt_file.png')))
             browser.setWindowTitle('Text View')
             browser.show()
             # os.startfile(pem_file.filepath)
@@ -944,6 +968,46 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     pass
         else:
             pass
+
+    # def get_project_path(self):
+    #     """
+    #     Return the path of the selected directory tree item.
+    #     :return: str: filepath
+    #     """
+    #     index = self.project_tree.currentIndex()
+    #     index_item = self.file_sys_model.index(index.row(), 0, index.parent())
+    #     path = self.file_sys_model.filePath(index_item)
+    #     return path
+
+    def project_dir_changed(self, model):
+        """
+        Signal slot, changes the project director to the path clicked in the project_tree
+        :param model: signal passed var, QModelIndex
+        :return:
+        """
+        path = self.file_sys_model.filePath(model)
+        self.project_dir = path
+        print(f"New project dir: {path}")
+
+    def move_dir_tree_to(self, path):
+        """
+        Changes the directory tree to show the given directory.
+        :param path: File path of the desired directory
+        :return: None
+        """
+        model = self.file_sys_model.index(path)
+
+        # Adds a timer or else it doesn't actually scroll to it properly.
+        QtCore.QTimer.singleShot(150, lambda: self.project_tree.scrollTo(model, QAbstractItemView.EnsureVisible))
+
+        # Expands the path folder
+        self.project_tree.expand(model)
+
+        # Set the model to be selected in the tree
+        self.project_tree.setCurrentIndex(model)
+
+        # Update the GPS and PEM files lists
+        self.project_dir_changed(model)
 
     def write_pem_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
         """
@@ -1425,7 +1489,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             item = QTableWidgetItem(str(info))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             # Disable editing of columns past First Station
-            if i > self.table_columns.index('First\nStation'):
+            if i > self.table_columns.index('Coil\nArea'):
                 item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
             self.table.setItem(row, i, item)
 
@@ -1607,7 +1671,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     self.table.item(row, column).setFont(boldFont)
                 else:
                     self.table.item(row, column).setFont(normalFont)
-        self.table.resizeColumnsToContents()
+        # self.table.resizeColumnsToContents()
 
         if self.allow_signals:
             self.table.blockSignals(False)
@@ -1633,6 +1697,57 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
     #             self.table.blockSignals(False)
     #     else:
     #         pass
+
+    def set_shared_header(self, header):
+        """
+        Signal slot, change the header information for each file in the table when the shared header LineEdits are
+        changed
+        :param header: str, either 'client', 'grid', or 'loop'.
+        """
+        self.table.blockSignals(True)
+
+        bold_font, normal_font = QtGui.QFont(), QtGui.QFont()
+        bold_font.setBold(True)
+        normal_font.setBold(False)
+
+        files, rows = self.pem_files, np.arange(self.table.rowCount())
+        for file, row in zip(files, rows):
+
+            if header == 'client':
+                client = self.client_edit.text() if self.share_client_cbox.isChecked() else file.client
+
+                item = QTableWidgetItem(str(client))
+                if client != file.client:
+                    item.setFont(bold_font)
+                else:
+                    item.setFont(normal_font)
+
+            elif header == 'grid':
+                grid = self.grid_edit.text() if self.share_grid_cbox.isChecked() else file.grid
+
+                item = QTableWidgetItem(str(grid))
+                if grid != file.grid:
+                    item.setFont(bold_font)
+                else:
+                    item.setFont(normal_font)
+
+            elif header == 'loop':
+                loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() else file.loop
+
+                item = QTableWidgetItem(str(loop))
+                if loop != file.loop:
+                    item.setFont(bold_font)
+                else:
+                    item.setFont(normal_font)
+
+            else:
+                raise ValueError(f"{header} is not a valid header")
+
+            column = self.table_columns.index(header.title())
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.table.setItem(row, column, item)
+
+        self.table.blockSignals(False)
 
     def refresh_rows(self, rows=None, current_index=False):
         """
@@ -1742,14 +1857,15 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             del self.pem_info_widgets[row]
 
         if len(self.pem_files) == 0:
-            self.stackedWidget.hide()
-            self.pemInfoDockWidget.hide()
+            self.frame.hide()
+            self.table.horizontalHeader().hide()
             self.client_edit.setText('')
             self.grid_edit.setText('')
             self.loop_edit.setText('')
             self.min_range_edit.setText('')
             self.max_range_edit.setText('')
             self.reset_crs()
+            self.project_dir = self.file_sys_model.rootPath()
 
     def get_selected_pem_files(self):
         """
@@ -1780,8 +1896,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         """
         Save the final plots as PDFs for the selected PEM files. If no PEM files are selected, it saves it for all open
         PEM files
-        :param pem_files: List of PEMFile objects
-        :param rows: Corresponding rows of the selected PEM files in order to link the RI file to the correct PEM file
+        :param selected_files: Bool, whether to only use the PEM files that are currently selected.
         :return: None
         """
 
@@ -1862,10 +1977,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             # else:
             save_dir = get_save_file()
             if save_dir:
-                # PEM Files and RI files zipped together for when they get sorted
+                printer = PEMPrinter()
+                self.window().statusBar().addPermanentWidget(printer.pb)
                 try:
-                    printer = PEMPrinter()
-                    self.window().statusBar().addPermanentWidget(printer.pb)
+                    # PEM Files and RI files zipped together for when they get sorted
                     printer.print_files(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
                 except FileNotFoundError:
                     self.message.information(self, 'Error', f'{save_dir} does not exist')
@@ -1891,7 +2006,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if not pem_files:
             return
 
-        self.start_pg(min=0, max=len(pem_files))
+        self.start_pg(start=0, end=len(pem_files))
         count = 0
         for pem_file, row in zip(pem_files, rows):
             if not pem_file.is_averaged():
@@ -1925,7 +2040,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if not pem_files:
             return
 
-        self.start_pg(min=0, max=len(pem_files))
+        self.start_pg(start=0, end=len(pem_files))
         count = 0
         for pem_file, row in zip(pem_files, rows):
             if not pem_file.is_split():
@@ -1950,8 +2065,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :param selected: bool, True will only export selected rows.
         """
         if not coil_area:
-            coil_area, okPressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:")
-            if not okPressed:
+            coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:")
+            if not ok_pressed:
                 return
 
         if selected is True:
@@ -1970,8 +2085,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :param selected: bool, True will only export selected rows.
         :return: None
         """
-        current, okPressed = QInputDialog.getDouble(self, "Scale Current", "Current:")
-        if okPressed:
+        current, ok_pressed = QInputDialog.getDouble(self, "Scale Current", "Current:")
+        if ok_pressed:
             if selected is True:
                 pem_files, rows = self.get_selected_pem_files()
             else:
@@ -1983,6 +2098,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.refresh_rows(rows=row)
 
     def derotate_xy(self):
+        """
+        Open the XY de-rotator
+        """
 
         def accept_file():
             self.remove_file(rows=rows)
@@ -2008,226 +2126,298 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 pem_info_widget.reverse_polarity(component=comp)
                 pem_file = pem_info_widget.pem_file
 
-    def merge_pem_files(self, pem_files):
+    def merge_pem_files(self, selected=False, auto_select=False):
         """
         Action of merging multiple PEM files.
-        :param pem_files: List of PEMFile objects
-        :return: Single merged PEMFile object
+        :param selected: Bool, use selected PEM files
+        :param auto_select: Bool, automatically select which PEM files to merge
         """
-        print(f"Merging {', '.join([os.path.basename(pem_file.filepath) for pem_file in pem_files])}")
 
-        if isinstance(pem_files, list) and len(pem_files) > 1:
-            # Data merging section
-            currents = [float(pem_file.tags.get('Current')) for pem_file in pem_files]
-            coil_areas = [float(pem_file.header.get('CoilArea')) for pem_file in pem_files]
+        def merge_pems(pem_files):
+            """
+            Merge the list of PEM files into a single PEM file.
+            :param pem_files: list, PEMFile objects.
+            :return: single PEMFile object
+            """
+            if isinstance(pem_files, list) and len(pem_files) > 1:
+                print(f"Merging {', '.join([f.filename for f in pem_files])}")
+                # Data merging section
+                currents = [pem_file.current for pem_file in pem_files]
+                coil_areas = [pem_file.coil_area for pem_file in pem_files]
 
-            # If any currents are different
-            if not all([current == currents[0] for current in currents]):
-                response = self.message.question(self, 'Warning - Unequal Current',
-                                                 f"{', '.join([os.path.basename(pem_file.filepath) for pem_file in pem_files])} do not have the same current. Proceed with merging anyway?",
-                                                 self.message.Yes | self.message.No)
-                if response == self.message.No:
-                    self.window().statusBar().showMessage('Aborted.', 2000)
-                    return
+                # If any currents are different
+                if not all([current == currents[0] for current in currents]):
+                    response = self.message.question(self, 'Warning - Different currents',
+                                                     f"{', '.join([f.filename for f in pem_files])} do not have the same current. Proceed with merging anyway?",
+                                                     self.message.Yes | self.message.No)
+                    if response == self.message.No:
+                        self.window().statusBar().showMessage('Aborted.', 2000)
+                        return
 
-            # If any coil areas are different
-            if not all([coil_area == coil_areas[0] for coil_area in coil_areas]):
-                response = self.message.question(self, 'Warning - Unequal Coil Areas',
-                                                 f"{', '.join([os.path.basename(pem_file.filepath) for pem_file in pem_files])} do not have the same coil area. Proceed with merging anyway?",
-                                                 self.message.Yes | self.message.No)
-                if response == self.message.No:
-                    self.window().statusBar().showMessage('Aborted.', 2000)
-                    return
+                # If any coil areas are different
+                if not all([coil_area == coil_areas[0] for coil_area in coil_areas]):
+                    response = self.message.question(self, 'Warning - Different coil areas',
+                                                     f"{', '.join([f.filename for f in pem_files])} do not have the same coil area. Proceed with merging anyway?",
+                                                     self.message.Yes | self.message.No)
+                    if response == self.message.No:
+                        self.window().statusBar().showMessage('Aborted.', 2000)
+                        return
 
-            # If the files aren't all split or un-split
-            if any([pem_file.is_split() for pem_file in pem_files]) and any(
-                    [not pem_file.is_split() for pem_file in pem_files]):
-                response = self.message.question(self, 'Merge PEM Files',
-                                                 'There is a mix of channel splitting in the selected files. '
-                                                 'Would you like to split the unsplit file(s) and proceed with merging?',
-                                                 self.message.Yes | self.message.No)
-                if response == self.message.Yes:
-                    self.split_pem_channels(pem_files=pem_files)
-                else:
-                    return
+                # If the files aren't all split or un-split
+                if any([pem_file.is_split() for pem_file in pem_files]) and any(
+                        [not pem_file.is_split() for pem_file in pem_files]):
+                    response = self.message.question(self, 'Warning - Different channel split states',
+                                                     'There is a mix of channel splitting in the selected files. '
+                                                     'Would you like to split the unsplit file(s) and proceed with merging?',
+                                                     self.message.Yes | self.message.No)
+                    if response == self.message.Yes:
+                        for pem_file in pem_files:
+                            pem_file = pem_file.split()
+                    else:
+                        return
 
-            merged_pem = copy.deepcopy(pem_files[0])
-            merged_pem.data = list(chain.from_iterable([pem_file.data for pem_file in pem_files]))
-            merged_pem.header['NumReadings'] = str(sum(
-                list(chain([int(pem_file.header.get('NumReadings')) for pem_file in pem_files]))))
-            merged_pem.is_merged = True
+                # If the files aren't all de-rotated
+                if any([pem_file.is_rotated() for pem_file in pem_files]) and any(
+                        [not pem_file.is_rotated() for pem_file in pem_files]):
+                    self.message.information(self, 'Error - Different states of XY de-rotation',
+                                             'There is a mix of XY de-rotation in the selected files.')
 
-            dir = os.path.split(merged_pem.filepath)[0]
-            extension = os.path.splitext(merged_pem.filepath)[-1]
-            file_name = os.path.splitext(os.path.basename(merged_pem.filepath))[0]
+                merged_pem = copy.deepcopy(pem_files[0])
+                merged_pem.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
+                merged_pem.number_of_readings = sum([f.number_of_readings for f in pem_files])
+                merged_pem.is_merged = True
+                merged_pem.filepath = pem_files[0].filepath
+                merged_pem.filename = os.path.basename(merged_pem.filepath)
 
-            merged_pem.filepath = os.path.join(dir, file_name + extension)
-            return merged_pem
+                return merged_pem
 
-    def merge_pem_files_selection(self):
-        pem_files, rows = self.get_selected_pem_files()
-        if len(pem_files) > 1:
-            # First update the PEM Files from the table
+        if selected is True:
+            pem_files, rows = self.get_selected_pem_files()
+            if len(pem_files) < 2:
+                self.message.information(self, 'Error', 'Must select multiple PEM Files')
+                return
+
+            # Update the PEM Files from the table
             for pem_file, row in zip(pem_files, rows):
                 self.update_pem_file_from_table(pem_file, row)
-            merged_pem = self.merge_pem_files(pem_files)
-            if merged_pem:
-                # Backup and remove the old files:
-                for row in reversed(rows):
-                    pem_file = copy.deepcopy(self.pem_files[row])
-                    if self.auto_create_backup_files_cbox.isChecked():
-                        self.write_pem_file(pem_file, tag='[-M]', backup=True,
-                                            remove_old=self.delete_merged_files_cbox.isChecked())
-                    if self.delete_merged_files_cbox.isChecked():
-                        self.remove_file(row)
-                self.write_pem_file(merged_pem, tag='[M]', remove_old=False)
-                self.open_pem_files(merged_pem)
-        else:
-            self.message.information(None, 'Error', 'Must select multiple PEM Files')
+            # Merge the files
+            merged_pem = merge_pems(pem_files)
 
-    def auto_merge_pem_files(self):
-        """
-        Automatically merge PEM files. Groups surface files up by loop name first, then by line name, then does the merge.
-        :return: None
-        """
-        if len(self.pem_files) > 0:
+            # Backup and remove the old files:
+            for row in reversed(rows):
+                pem_file = copy.deepcopy(self.pem_files[row])
+                if self.auto_create_backup_files_cbox.isChecked():
+                    # Create a backup file
+                    self.write_pem_file(pem_file,
+                                        tag='[-M]',
+                                        backup=True,
+                                        remove_old=self.delete_merged_files_cbox.isChecked())
+                if self.delete_merged_files_cbox.isChecked():
+                    # Delete the pre-merged files
+                    self.remove_file(row)
+            # Save and open the merged file
+            self.write_pem_file(merged_pem,
+                                tag='[M]',
+                                remove_old=False)
+            self.open_pem_files(merged_pem)
+
+        elif auto_select is True:
+            if not self.pem_files:
+                return
+
             files_to_open = []
-            updated_pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in
-                                                      zip(self.pem_files, range(self.table.rowCount()))]
-            bh_files = [pem_file for pem_file in updated_pem_files if 'borehole' in pem_file.survey_type.lower()]
-            sf_files = [pem_file for pem_file in updated_pem_files if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower()]
+            files_to_remove = []
+            pem_files, rows = copy.deepcopy(self.pem_files), np.arange(self.table.rowCount())
+            pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in zip(pem_files, rows)]
 
-            # Surface lines
-            for loop, pem_files in groupby(sf_files, key=lambda x: x.header.get('Loop')):
+            bh_files = [f for f in pem_files if f.is_borehole()]
+            sf_files = [f for f in pem_files if f not in bh_files]
+
+            # Merge surface files
+            # Group the files by loop name
+            for loop, loop_files in groupby(sf_files, key=lambda x: x.loop_name):
+                loop_files = list(loop_files)
                 print(f"Auto merging loop {loop}")
-                pem_files = list(pem_files)
-                if any([pem_file.is_split() for pem_file in pem_files]) and any(
-                        [not pem_file.is_split() for pem_file in pem_files]):
-                    response = self.message.question(self, 'Merge PEM Files',
-                                                     'There is a mix of channel splitting in the selected files. '
-                                                     'Would you like to split the unsplit file(s) and proceed with merging?',
-                                                     self.message.Yes | self.message.No)
-                    if response == self.message.Yes:
-                        self.split_pem_channels(pem_files=pem_files)
-                    else:
-                        return
 
-                for line, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
-                    pem_files = list(pem_files)
-                    if len(pem_files) > 1:
-                        print(f"Auto merging line {line}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
-                        rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
-                        merged_pem = self.merge_pem_files(pem_files)
-                        if merged_pem:
-                            # Backup and remove the old files:
-                            for row in reversed(rows):
-                                pem_file = updated_pem_files[row]
-                                if self.auto_create_backup_files_cbox.isChecked():
-                                    self.write_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
-                                                        remove_old=self.delete_merged_files_cbox.isChecked())
-                                if self.delete_merged_files_cbox.isChecked():
-                                    self.remove_file(row)
-                                    updated_pem_files.pop(row)
-                            self.write_pem_file(merged_pem, tag='[M]')
-                            # Open the files later to not deal with changes in index when files are opened.
-                            files_to_open.append(merged_pem)
+                # Group the files by line name
+                for line, line_files in groupby(loop_files, key=lambda x: x.line_name):
+                    line_files = list(line_files)
+                    print(f"Auto merging line {line}: {[f.filename for f in line_files]}")
+                    # Find the rows of the files
+                    # rows = [pem_files.index(pem_file) for pem_file in line_files]
 
-            # Boreholes
-            for loop, pem_files in groupby(bh_files, key=lambda x: x.header.get('Loop')):
+                    # Merge the files
+                    merged_pem = merge_pems(line_files)
+                    files_to_open.append(merged_pem)
+                    files_to_remove.append(line_files)
+
+                    # # Backup and remove the old files:
+                    # for row in reversed(rows):
+                    #     pem_file = pem_files[row]
+                    #     if self.auto_create_backup_files_cbox.isChecked():
+                    #         self.write_pem_file(pem_file,
+                    #                             tag='[-M]',
+                    #                             backup=True,
+                    #                             remove_old=self.delete_merged_files_cbox.isChecked())
+                    #     if self.delete_merged_files_cbox.isChecked():
+                    #         self.remove_file([row])
+                    #         pem_files.pop(row)
+                    # self.write_pem_file(merged_pem, tag='[M]')
+                    # # Open the files later to not deal with changes in index when files are opened.
+                    # files_to_open.append(merged_pem)
+
+            # Merge borehole files
+            # Group the files by loop
+            for loop, loop_files in groupby(bh_files, key=lambda x: x.loop_name):
                 print(f"Loop {loop}")
-                pem_files = list(pem_files)
-                if any([pem_file.is_split() for pem_file in pem_files]) and any(
-                        [not pem_file.is_split() for pem_file in pem_files]):
-                    response = self.message.question(self, 'Merge PEM Files',
-                                                     'There is a mix of channel splitting in the selected files. '
-                                                     'Would you like to split the unsplit file(s) and proceed with merging?',
-                                                     self.message.Yes | self.message.No)
-                    if response == self.message.Yes:
-                        self.split_pem_channels(pem_files=pem_files)
-                    else:
-                        return
+                loop_files = list(loop_files)
 
-                for hole, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
+                # Group the files by hole name
+                for hole, hole_files in groupby(loop_files, key=lambda x: x.line_name):
                     print(f"Hole {hole}")
-                    pem_files = sorted(list(pem_files), key=lambda x: x.get_components())
-                    for components, pem_files in groupby(pem_files, key=lambda x: x.get_components()):
+                    hole_files = sorted(list(hole_files), key=lambda x: x.get_components())
+
+                    # Group the files by their components
+                    for components, comp_files in groupby(hole_files, key=lambda x: x.get_components()):
                         print(f"Components {components}")
-                        pem_files = list(pem_files)
-                        if len(pem_files) > 1:
-                            print(f"Auto merging hole {hole}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
-                            rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
-                            merged_pem = self.merge_pem_files(pem_files)
-                            if merged_pem:
-                                # Backup and remove the old files:
-                                for row in reversed(rows):
-                                    pem_file = updated_pem_files[row]
-                                    if self.auto_create_backup_files_cbox.isChecked():
-                                        self.write_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
-                                                            remove_old=self.delete_merged_files_cbox.isChecked())
-                                    if self.delete_merged_files_cbox.isChecked():
-                                        self.remove_file(row)
-                                        updated_pem_files.pop(row)
-                                self.write_pem_file(merged_pem, tag='[M]')
-                                # Open the files later to not deal with changes in index when files are opened.
-                                files_to_open.append(merged_pem)
+                        comp_files = list(comp_files)
+                        if len(comp_files) > 1:
+                            print(f"Auto merging hole {hole}: {[f.filename for f in comp_files]}")
+                            # Find the rows of each file
+                            # rows = [pem_files.index(pem_file) for pem_file in comp_files]
+
+                            # Merge the files
+                            merged_pem = merge_pems(comp_files)
+                            files_to_open.append(merged_pem)
+                            files_to_remove.append(comp_files)
+
+                            # # Backup and remove the old files:
+                            # for row in reversed(rows):
+                            #     pem_file = pem_files[row]
+                            #     if self.auto_create_backup_files_cbox.isChecked():
+                            #         self.write_pem_file(copy.deepcopy(pem_file),
+                            #                             tag='[-M]',
+                            #                             backup=True,
+                            #                             remove_old=self.delete_merged_files_cbox.isChecked())
+                            #     if self.delete_merged_files_cbox.isChecked():
+                            #         self.remove_file([row])
+                            #         pem_files.pop(row)
+                            # self.write_pem_file(merged_pem, tag='[M]')
+                            # # Open the files later to not deal with changes in index when files are opened.
+                            # files_to_open.append(merged_pem)
+
+            files_to_remove = np.vstack(files_to_remove)
+            # for file in files_to_remove:
+            #     row =
             self.open_pem_files(files_to_open)
 
-    # def create_main_table(self):
-    #     """
-    #     Creates the table (self.table) when the editor is first opened
-    #     :return: None
-    #     """
-    #     self.table_columns = ['File', 'Date', 'Client', 'Grid', 'Line/Hole', 'Loop', 'Current', 'Coil Area',
-    #                           'First\nStation',
-    #                           'Last\nStation', 'Averaged', 'Split', 'Suffix\nWarnings', 'Repeat\nStations']
-    #     self.table.setColumnCount(len(self.table_columns))
-    #     self.table.setHorizontalHeaderLabels(self.table_columns)
-    #     self.table.setSizeAdjustPolicy(
-    #         QAbstractScrollArea.AdjustToContents)
-
-    # def sort_all_station_gps(self):
-    #     """
-    #     Sorts the station GPS (based on positions only) of all opened PEM files.
-    #     :return: None
-    #     """
-    #     if self.pem_files:
-    #         for i in range(self.stackedWidget.count()):
-    #             widget = self.stackedWidget.widget(i)
-    #             if widget.station_gps:
-    #                 widget.fill_station_table(widget.station_gps.get_sorted_gps(widget.get_line()))
-    #             else:
-    #                 pass
-    #         self.window().statusBar().showMessage('All stations have been sorted', 2000)
-    #
-    # def sort_all_loop_gps(self):
-    #     """
-    #     Sorts the loop GPS (counter-clockwise) of all opened PEM files.
-    #     :return: None
-    #     """
-    #     if self.pem_files:
-    #         for i in range(self.stackedWidget.count()):
-    #             widget = self.stackedWidget.widget(i)
-    #             if widget.loop_gps:
-    #                 widget.fill_loop_table(widget.loop_gps.get_sorted_gps(widget.get_loop()))
-    #             else:
-    #                 pass
-    #         self.window().statusBar().showMessage('All loops have been sorted', 2000)
-
-    # def fill_share_header(self):
-    #     """
-    #     Uses the client, grid, and loop information from the first PEM file opened to be used as the basis
-    #     to be used on all opened PEM files if the toggle is on.
-    #     :return: None
-    #     """
-    #     if self.pem_files:
-    #         self.client_edit.setText(self.pem_files[0].header['Client'])
-    #         self.grid_edit.setText(self.pem_files[0].header['Grid'])
-    #         self.loop_edit.setText(self.pem_files[0].header['Loop'])
-    #         self.update_table()
+    # def merge_pem_files_selection(self):
+    #     pem_files, rows = self.get_selected_pem_files()
+    #     if len(pem_files) > 1:
+    #         # First update the PEM Files from the table
+    #         for pem_file, row in zip(pem_files, rows):
+    #             self.update_pem_file_from_table(pem_file, row)
+    #         merged_pem = self.merge_pem_files(pem_files)
+    #         if merged_pem:
+    #             # Backup and remove the old files:
+    #             for row in reversed(rows):
+    #                 pem_file = copy.deepcopy(self.pem_files[row])
+    #                 if self.auto_create_backup_files_cbox.isChecked():
+    #                     self.write_pem_file(pem_file, tag='[-M]', backup=True,
+    #                                         remove_old=self.delete_merged_files_cbox.isChecked())
+    #                 if self.delete_merged_files_cbox.isChecked():
+    #                     self.remove_file(row)
+    #             self.write_pem_file(merged_pem, tag='[M]', remove_old=False)
+    #             self.open_pem_files(merged_pem)
     #     else:
-    #         self.client_edit.setText('')
-    #         self.grid_edit.setText('')
-    #         self.loop_edit.setText('')
+    #         self.message.information(self, 'Error', 'Must select multiple PEM Files')
+
+    # def auto_merge_pem_files(self):
+    #     """
+    #     Automatically merge PEM files. Groups surface files up by loop name first, then by line name, then does the merge.
+    #     :return: None
+    #     """
+        # if len(self.pem_files) > 0:
+        #     files_to_open = []
+        #     updated_pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in
+        #                                               zip(self.pem_files, range(self.table.rowCount()))]
+        #     bh_files = [pem_file for pem_file in updated_pem_files if 'borehole' in pem_file.survey_type.lower()]
+        #     sf_files = [pem_file for pem_file in updated_pem_files if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower()]
+        #
+        #     # Surface lines
+        #     for loop, pem_files in groupby(sf_files, key=lambda x: x.header.get('Loop')):
+        #         print(f"Auto merging loop {loop}")
+        #         pem_files = list(pem_files)
+        #         if any([pem_file.is_split() for pem_file in pem_files]) and any(
+        #                 [not pem_file.is_split() for pem_file in pem_files]):
+        #             response = self.message.question(self, 'Merge PEM Files',
+        #                                              'There is a mix of channel splitting in the selected files. '
+        #                                              'Would you like to split the unsplit file(s) and proceed with merging?',
+        #                                              self.message.Yes | self.message.No)
+        #             if response == self.message.Yes:
+        #                 self.split_pem_channels(pem_files=pem_files)
+        #             else:
+        #                 return
+        #
+        #         for line, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
+        #             pem_files = list(pem_files)
+        #             if len(pem_files) > 1:
+        #                 print(f"Auto merging line {line}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
+        #                 rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
+        #                 merged_pem = self.merge_pem_files(pem_files)
+        #                 if merged_pem:
+        #                     # Backup and remove the old files:
+        #                     for row in reversed(rows):
+        #                         pem_file = updated_pem_files[row]
+        #                         if self.auto_create_backup_files_cbox.isChecked():
+        #                             self.write_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
+        #                                                 remove_old=self.delete_merged_files_cbox.isChecked())
+        #                         if self.delete_merged_files_cbox.isChecked():
+        #                             self.remove_file(row)
+        #                             updated_pem_files.pop(row)
+        #                     self.write_pem_file(merged_pem, tag='[M]')
+        #                     # Open the files later to not deal with changes in index when files are opened.
+        #                     files_to_open.append(merged_pem)
+        #
+        #     # Boreholes
+        #     for loop, pem_files in groupby(bh_files, key=lambda x: x.header.get('Loop')):
+        #         print(f"Loop {loop}")
+        #         pem_files = list(pem_files)
+        #         if any([pem_file.is_split() for pem_file in pem_files]) and any(
+        #                 [not pem_file.is_split() for pem_file in pem_files]):
+        #             response = self.message.question(self, 'Merge PEM Files',
+        #                                              'There is a mix of channel splitting in the selected files. '
+        #                                              'Would you like to split the unsplit file(s) and proceed with merging?',
+        #                                              self.message.Yes | self.message.No)
+        #             if response == self.message.Yes:
+        #                 self.split_pem_channels(pem_files=pem_files)
+        #             else:
+        #                 return
+        #
+        #         for hole, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
+        #             print(f"Hole {hole}")
+        #             pem_files = sorted(list(pem_files), key=lambda x: x.get_components())
+        #             for components, pem_files in groupby(pem_files, key=lambda x: x.get_components()):
+        #                 print(f"Components {components}")
+        #                 pem_files = list(pem_files)
+        #                 if len(pem_files) > 1:
+        #                     print(f"Auto merging hole {hole}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
+        #                     rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
+        #                     merged_pem = merge_pems(pem_files)
+        #                     if merged_pem:
+        #                         # Backup and remove the old files:
+        #                         for row in reversed(rows):
+        #                             pem_file = updated_pem_files[row]
+        #                             if self.auto_create_backup_files_cbox.isChecked():
+        #                                 self.write_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
+        #                                                     remove_old=self.delete_merged_files_cbox.isChecked())
+        #                             if self.delete_merged_files_cbox.isChecked():
+        #                                 self.remove_file(row)
+        #                                 updated_pem_files.pop(row)
+        #                         self.write_pem_file(merged_pem, tag='[M]')
+        #                         # Open the files later to not deal with changes in index when files are opened.
+        #                         files_to_open.append(merged_pem)
+        #     self.open_pem_files(files_to_open)
 
     def fill_share_range(self):
         """
@@ -2474,7 +2664,7 @@ class FrequencyConverter(QWidget):
             timebase_edit.blockSignals(False)
 
         self.setWindowTitle('Timebase / Frequency Converter')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
         layout = QGridLayout()
         self.setLayout(layout)
 
@@ -2564,7 +2754,7 @@ class MagDeclinationCalculator(QMainWindow):
         super().__init__()
         self.parent = parent
         self.setWindowTitle('Magnetic Declination')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'mag_field.png')))
         self.setGeometry(600, 300, 300, 200)
         self.statusBar().showMessage('', 10)
 
@@ -2656,11 +2846,13 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', selection=1)
+    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051')
+    mw.show()
     mw.open_pem_files(pem_files)
+    # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
-    mw.show()
+    # mw.show()
 
     # mw.print_plots()
     # mw.reverse_all_data('X')

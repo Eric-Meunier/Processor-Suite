@@ -9,7 +9,7 @@ class PEMGetter:
     def __init__(self):
         self.parser = PEMParser
 
-    def get_pems(self, client='', number=None, selection=None):
+    def get_pems(self, client=None, number=None, selection=None, subfolder=None):
         """
         Retrieve a list of PEMFiles
         :param client: str, folder from which to retrieve files
@@ -25,6 +25,9 @@ class PEMGetter:
             'sample_files/PEMGetter files')
         if client:
             sample_files_dir = os.path.join(sample_files_dir, client)
+            if subfolder:
+                sample_files_dir = os.path.join(sample_files_dir, subfolder)
+
         file_names = [f for f in os.listdir(sample_files_dir) if
                       os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
         pem_files = []
@@ -42,5 +45,12 @@ class PEMGetter:
             print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
             # pem_files.append((pem_file, None))  # Empty second item for ri_files
             pem_files.append(pem_file)
+        else:
+            for file in file_names:
+                filepath = os.path.join(sample_files_dir, file)
+                pem_file = self.parser().parse(filepath)
+                print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
+                # pem_files.append((pem_file, None))  # Empty second item for ri_files
+                pem_files.append(pem_file)
 
         return pem_files
