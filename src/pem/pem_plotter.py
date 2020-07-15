@@ -746,10 +746,10 @@ class MapPlotter:
                         label_x, label_y = get_label_pos(collar, loop)
                     else:
                         # Plot the label in the center
-                        label_x, label_y = loop.get_center()
+                        label_x, label_y, _ = loop.get_center()
                 else:
                     # Plot the label in the center
-                    label_x, label_y = loop.get_center()
+                    label_x, label_y, _ = loop.get_center()
 
                 loop_label = ax.text(label_x, label_y,
                                      f"Tx Loop {pem_file.loop_name}",
@@ -1349,7 +1349,7 @@ class PlanMap(MapPlotter):
     :param: **kwargs: Dictionary of settings
     """
 
-    def __init__(self, pem_files, figure, **kwargs):
+    def __init__(self, pem_files, figure, crs, **kwargs):
         super().__init__()
         self.figure = figure
 
@@ -1392,7 +1392,7 @@ class PlanMap(MapPlotter):
             if not self.crs.is_valid():
                 self.crs = CRS().from_dict({'System': 'UTM', 'Zone': '18 North', 'Datum': 'NAD 83'})
         else:
-            self.crs = kwargs.get('CRS')
+            self.crs = crs
 
         assert self.crs, 'No CRS'
         assert self.crs.is_valid(), 'Invalid CRS'
@@ -4392,7 +4392,7 @@ class PEMPrinter:
                 if any([pem_file.has_any_gps() for pem_file in pem_files]):
                     self.pb.setText(f"Saving plan map for {', '.join([f.line_name for f in pem_files])}")
                     # Plot the plan map
-                    plan_map = PlanMap(pem_files, self.landscape_fig, **kwargs)
+                    plan_map = PlanMap(pem_files, self.landscape_fig, self.crs, **kwargs)
                     plan_fig = plan_map.plot()
                     # Save the plot to the PDF file
                     pdf.savefig(plan_fig, orientation='landscape')
@@ -4434,6 +4434,9 @@ class PEMPrinter:
                                              x_max=x_max,
                                              hide_gaps=self.hide_gaps)
                     components = pem_file.get_components()
+                    if 'Z' in components:
+                        components.pop(components.index('Z'))
+                        components.insert(0, 'Z')
 
                     for component in components:
                         # Configure the figure since it gets cleared after each plot
@@ -4460,6 +4463,9 @@ class PEMPrinter:
                                              x_max=x_max,
                                              hide_gaps=self.hide_gaps)
                     components = pem_file.get_components()
+                    if 'Z' in components:
+                        components.pop(components.index('Z'))
+                        components.insert(0, 'Z')
 
                     for component in components:
                         # Configure the figure since it gets cleared after each plot
@@ -4486,6 +4492,10 @@ class PEMPrinter:
                                                    x_max=x_max,
                                                    hide_gaps=self.hide_gaps)
                         components = pem_file.get_components()
+                        if 'Z' in components:
+                            components.pop(components.index('Z'))
+                            components.insert(0, 'Z')
+
                         for component in components:
                             self.pb.setText(f"Saving STEP plot for {pem_file.line_name}, component {component}")
                             self.configure_step_fig()
