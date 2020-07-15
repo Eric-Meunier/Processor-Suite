@@ -1380,7 +1380,6 @@ Station Positions</string>
   <tabstop>output_step_cbox</tabstop>
   <tabstop>print_plots_btn</tabstop>
   <tabstop>table</tabstop>
-  <tabstop>tabWidget</tabstop>
  </tabstops>
  <resources/>
  <connections/>
