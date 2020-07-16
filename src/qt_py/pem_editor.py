@@ -430,7 +430,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
                 self.table.save_file_action = QAction("&Save", self)
                 self.table.save_file_action.setIcon(QIcon(os.path.join(icons_path, 'save.png')))
-                self.table.save_file_action.triggered.connect(self.save_pem_files)
+                self.table.save_file_action.triggered.connect(lambda: self.save_pem_files(selected=True))
 
                 self.table.export_pem_action = QAction("&Export...", self)
                 self.table.export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True))
@@ -1704,6 +1704,19 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         changed
         :param header: str, either 'client', 'grid', or 'loop'.
         """
+
+        def color_cell(row, column, color, alpha=50):
+            """
+            Color an entire table row
+            :param row: Int, Row of the table to color
+            :param column: Int, Column of the table to color
+            :param color: str, The desired color
+            :return: None
+            """
+            color = QtGui.QColor(color)
+            color.setAlpha(alpha)
+            self.table.item(row, column).setBackground(color)
+
         self.table.blockSignals(True)
 
         bold_font, normal_font = QtGui.QFont(), QtGui.QFont()
@@ -1732,7 +1745,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     item.setFont(normal_font)
 
             elif header == 'loop':
-                loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() else file.loop
+                loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() else file.loop_name
 
                 item = QTableWidgetItem(str(loop))
                 if loop != file.loop:
@@ -1744,8 +1757,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 raise ValueError(f"{header} is not a valid header")
 
             column = self.table_columns.index(header.title())
+
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, column, item)
+            color_cell(row, column, 'white' if file.has_all_gps() else 'magenta')
 
         self.table.blockSignals(False)
 
@@ -2186,10 +2201,21 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 merged_pem.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
                 merged_pem.number_of_readings = sum([f.number_of_readings for f in pem_files])
                 merged_pem.is_merged = True
-                merged_pem.filepath = pem_files[0].filepath
+
+                # Add the M tag
+                if '[M]' not in pem_files[0].filepath:
+                    split_path = os.path.splitext(pem_files[0].filepath)
+                    merged_pem.filepath = split_path[0] + '[M]' + split_path[1]
+                else:
+                    merged_pem.filepath = pem_files[0].filepath
+
                 merged_pem.filename = os.path.basename(merged_pem.filepath)
 
+                self.write_pem_file(merged_pem)
                 return merged_pem
+
+        files_to_open = []
+        files_to_remove = []
 
         if selected is True:
             pem_files, rows = self.get_selected_pem_files()
@@ -2203,30 +2229,13 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             # Merge the files
             merged_pem = merge_pems(pem_files)
 
-            # Backup and remove the old files:
-            for row in reversed(rows):
-                pem_file = copy.deepcopy(self.pem_files[row])
-                if self.auto_create_backup_files_cbox.isChecked():
-                    # Create a backup file
-                    self.write_pem_file(pem_file,
-                                        tag='[-M]',
-                                        backup=True,
-                                        remove_old=self.delete_merged_files_cbox.isChecked())
-                if self.delete_merged_files_cbox.isChecked():
-                    # Delete the pre-merged files
-                    self.remove_file(row)
-            # Save and open the merged file
-            self.write_pem_file(merged_pem,
-                                tag='[M]',
-                                remove_old=False)
-            self.open_pem_files(merged_pem)
+            files_to_open.append(merged_pem)
+            files_to_remove.append(pem_files)
 
         elif auto_select is True:
             if not self.pem_files:
                 return
 
-            files_to_open = []
-            files_to_remove = []
             pem_files, rows = copy.deepcopy(self.pem_files), np.arange(self.table.rowCount())
             pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in zip(pem_files, rows)]
 
@@ -2243,28 +2252,14 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 for line, line_files in groupby(loop_files, key=lambda x: x.line_name):
                     line_files = list(line_files)
                     print(f"Auto merging line {line}: {[f.filename for f in line_files]}")
-                    # Find the rows of the files
-                    # rows = [pem_files.index(pem_file) for pem_file in line_files]
 
                     # Merge the files
                     merged_pem = merge_pems(line_files)
+                    # Save the new file
+                    self.write_pem_file(merged_pem, tag='[M]')
+
                     files_to_open.append(merged_pem)
                     files_to_remove.append(line_files)
-
-                    # # Backup and remove the old files:
-                    # for row in reversed(rows):
-                    #     pem_file = pem_files[row]
-                    #     if self.auto_create_backup_files_cbox.isChecked():
-                    #         self.write_pem_file(pem_file,
-                    #                             tag='[-M]',
-                    #                             backup=True,
-                    #                             remove_old=self.delete_merged_files_cbox.isChecked())
-                    #     if self.delete_merged_files_cbox.isChecked():
-                    #         self.remove_file([row])
-                    #         pem_files.pop(row)
-                    # self.write_pem_file(merged_pem, tag='[M]')
-                    # # Open the files later to not deal with changes in index when files are opened.
-                    # files_to_open.append(merged_pem)
 
             # Merge borehole files
             # Group the files by loop
@@ -2283,33 +2278,27 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                         comp_files = list(comp_files)
                         if len(comp_files) > 1:
                             print(f"Auto merging hole {hole}: {[f.filename for f in comp_files]}")
-                            # Find the rows of each file
-                            # rows = [pem_files.index(pem_file) for pem_file in comp_files]
 
                             # Merge the files
                             merged_pem = merge_pems(comp_files)
+
                             files_to_open.append(merged_pem)
                             files_to_remove.append(comp_files)
 
-                            # # Backup and remove the old files:
-                            # for row in reversed(rows):
-                            #     pem_file = pem_files[row]
-                            #     if self.auto_create_backup_files_cbox.isChecked():
-                            #         self.write_pem_file(copy.deepcopy(pem_file),
-                            #                             tag='[-M]',
-                            #                             backup=True,
-                            #                             remove_old=self.delete_merged_files_cbox.isChecked())
-                            #     if self.delete_merged_files_cbox.isChecked():
-                            #         self.remove_file([row])
-                            #         pem_files.pop(row)
-                            # self.write_pem_file(merged_pem, tag='[M]')
-                            # # Open the files later to not deal with changes in index when files are opened.
-                            # files_to_open.append(merged_pem)
+        files_to_remove = np.hstack(files_to_remove)
+        rows = [self.pem_files.index(f) for f in files_to_remove]
 
-            files_to_remove = np.vstack(files_to_remove)
-            # for file in files_to_remove:
-            #     row =
-            self.open_pem_files(files_to_open)
+        if self.auto_create_backup_files_cbox.isChecked():
+            for file in reversed(files_to_remove):
+                self.write_pem_file(copy.deepcopy(file),
+                                    tag='[-M]',
+                                    backup=True,
+                                    remove_old=self.delete_merged_files_cbox.isChecked())
+
+        if self.delete_merged_files_cbox.isChecked():
+            self.remove_file(rows=rows)
+
+        self.open_pem_files(files_to_open)
 
     # def merge_pem_files_selection(self):
     #     pem_files, rows = self.get_selected_pem_files()
@@ -2846,7 +2835,7 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051')
+    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=1)
     mw.show()
     mw.open_pem_files(pem_files)
     # mw.merge_pem_files(pem_files)

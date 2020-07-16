@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1018</width>
+    <width>780</width>
     <height>799</height>
    </rect>
   </property>
@@ -29,20 +29,20 @@
    <item row="0" column="0">
     <widget class="QTabWidget" name="tabs">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+      <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
      <property name="minimumSize">
       <size>
-       <width>450</width>
+       <width>400</width>
        <height>0</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>450</width>
+       <width>16777215</width>
        <height>16777215</height>
       </size>
      </property>
@@ -59,7 +59,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>4</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="info_tab">
       <attribute name="title">
@@ -213,7 +213,7 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>300</width>
+           <width>320</width>
            <height>0</height>
           </size>
          </property>
@@ -472,7 +472,7 @@ Not In Data</string>
          </property>
          <property name="minimumSize">
           <size>
-           <width>300</width>
+           <width>350</width>
            <height>0</height>
           </size>
          </property>

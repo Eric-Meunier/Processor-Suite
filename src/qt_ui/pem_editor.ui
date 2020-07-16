@@ -24,10 +24,16 @@
     <item row="0" column="5" rowspan="10">
      <widget class="QTableWidget" name="table">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>0</height>
+       </size>
       </property>
       <property name="mouseTracking">
        <bool>true</bool>
@@ -1126,9 +1132,15 @@ Station Positions</string>
     </item>
     <item row="0" column="6" rowspan="9">
      <widget class="QFrame" name="frame">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="minimumSize">
        <size>
-        <width>450</width>
+        <width>0</width>
         <height>0</height>
        </size>
       </property>
@@ -1151,15 +1163,15 @@ Station Positions</string>
        <item>
         <widget class="QStackedWidget" name="stackedWidget">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
          <property name="minimumSize">
           <size>
-           <width>300</width>
-           <height>300</height>
+           <width>0</width>
+           <height>0</height>
           </size>
          </property>
          <property name="frameShape">

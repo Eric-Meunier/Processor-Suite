@@ -71,10 +71,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dataTable_columns = ['index', 'Station', 'Comp.', 'Reading_index', 'Reading_number', 'Number_of_stacks', 'ZTS']
 
         self.setupUi(self)
-        self.initActions()
-        self.initSignals()
+        self.init_actions()
+        self.init_signals()
 
-    def initActions(self):
+    def init_actions(self):
         self.loopGPSTable.installEventFilter(self)
         self.stationGPSTable.installEventFilter(self)
         self.collarGPSTable.installEventFilter(self)
@@ -140,7 +140,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.riTable.remove_ri_file_action.setShortcut('Shift+Del')
         self.riTable.remove_ri_file_action.setEnabled(False)
 
-    def initSignals(self):
+    def init_signals(self):
         # Buttons
         # self.sortStationsButton.clicked.connect(self.sort_station_gps)
         # self.sortLoopButton.clicked.connect(self.sort_loop_gps)
@@ -190,7 +190,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             self.changeStationSuffixButton.setEnabled(False)
 
-    def initTables(self):
+    def init_tables(self):
         """
         Adds the columns and formats each table.
         :return: None
@@ -204,14 +204,19 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # self.stationGPSTable.setColumnWidth(4, 35)
             # self.stationGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
             self.stationGPSTable.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
-            self.stationGPSTable.resizeColumnsToContents()
+            # self.stationGPSTable.resizeColumnsToContents()
 
         elif self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.station_gps_tab))
             # self.geometryTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
             # self.collarGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.collarGPSTable.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
             self.geometryTable.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
-            self.geometryTable.resizeColumnsToContents()
+
+            header = self.collarGPSTable.horizontalHeader()
+            for i in range(self.collarGPSTable.columnCount() + 1):
+                header.setSectionResizeMode(i, QHeaderView.ResizeToContents)
+            # self.geometryTable.resizeColumnsToContents()
 
             # self.collarGPSTable.setSizeAdjustPolicy(
             #     QAbstractScrollArea.AdjustToContents)
@@ -226,7 +231,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # self.loopGPSTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # self.dataTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.loopGPSTable.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
-        self.loopGPSTable.resizeColumnsToContents()
+        # self.loopGPSTable.resizeColumnsToContents()
 
         self.dataTable.setColumnHidden(0, True)
 
@@ -387,7 +392,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         print(f'PEMFileInfoWidget - Opening PEM File {pem_file.filename}')
         self.pem_file = pem_file
         self.parent = parent
-        self.initTables()
+        self.init_tables()
         if self.pem_file.is_borehole():
             self.fill_gps_table(self.pem_file.geometry.get_collar(), self.collarGPSTable)
             self.fill_gps_table(self.pem_file.geometry.get_segments(), self.geometryTable)
@@ -542,8 +547,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if table == self.loopGPSTable:
             tags = [f"<L{n:02}>" for n in range(len(data.index))]
+        elif table == self.geometryTable:
+            tags = [f"<P{n + 1:02}>" for n in range(len(data.index))]
         else:
             tags = [f"<P{n:02}>" for n in range(len(data.index))]
+
         data.insert(0, 'Tag', tags)
         data.apply(lambda x: write_row(x, table), axis=1)
 
