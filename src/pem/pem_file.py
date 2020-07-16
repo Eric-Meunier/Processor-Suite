@@ -533,19 +533,14 @@ class PEMFile:
                 assert rad.D == 'D7', 'For PP rotation, D must be D7, not D5. Insufficient information available.'
                 # global proj, loop, ramp, mag_calc, ch_times, ch_numbers
 
-                # Calculate the dip
-                dip = math.degrees(math.acos(rad.gx / math.sqrt((rad.gx ** 2) + (rad.gy ** 2) + (rad.gz ** 2)))) - 90
-
-                # Calculate the azimuth
-                g = math.sqrt(sum([rad.gx ** 2, rad.gy ** 2, rad.gz ** 2]))
-                numer = ((rad.Hz * rad.gy) - (rad.Hy * rad.gz)) * g
-                denumer = rad.Hx * (rad.gy ** 2 + rad.gz ** 2) - (rad.Hy * rad.gx * rad.gy) - (rad.Hz * rad.gx * rad.gz)
-                az = math.degrees(math.atan2(numer, denumer))
-
                 # Calculate the cleaned PP value for each component
                 # TODO What to do with multiple values for one component
                 PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1)
                 PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1)
+
+                # Find the dip at the station's depth
+                dip = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
+                azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
 
                 # Find the location in 3D space of the station
                 filt = proj.loc[:, 'Relative Depth'] == float(group.Station.iloc[0])
@@ -559,7 +554,7 @@ class PEMFile:
                                                        out_units='nT/s',
                                                        ramp=ramp)
 
-                r1 = R.from_euler('Y', dip, degrees=True)
+                r1 = R.from_euler('ZX', [azimuth, dip], degrees=True)
                 result = r1.apply([Tx, Ty, Tz])
                 # Calculate the required rotation angle
                 roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy.iloc[0], PPx.iloc[0]))
@@ -588,18 +583,19 @@ class PEMFile:
             assert self.has_geometry(), f"{self.filename()} has incomplete geometry."
             assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename()}."
 
-            global proj, loop, ramp, mag_calc, ch_times, ch_numbers
+            global proj, loop, ramp, mag_calc, ch_times, ch_numbers, segments
 
             proj = self.geometry.get_projection(stations=self.get_unique_stations(converted=True))
             loop = self.get_loop(sorted=True, closed=True)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6
             mag_calc = MagneticFieldCalculator(loop)
+            segments = self.get_segments()
 
             # Only keep off-time channels with PP
             ch_times = self.channel_times[self.channel_times.loc[:, 'Remove'] == False]
             # Normalize the channel times so they start from turn off
-            ch_times.loc[:, 'Start':'Center'] = ch_times.loc[:, 'Start':'Center'].applymap(lambda x: x + ramp)
+            # ch_times.loc[:, 'Start':'Center'] = ch_times.loc[:, 'Start':'Center'].applymap(lambda x: x + ramp)
 
             pp_ch = ch_times.iloc[0]
             # Make sure the PP channel is within the ramp
@@ -612,7 +608,7 @@ class PEMFile:
                 # Add the ramp time iteratively to the PP center time
                 t = (i * ramp) + pp_center
                 # Create a filter to find in which channel the time falls in
-                filt = (ch_times['Start'] < t) & (ch_times['End'] > t)
+                filt = (ch_times['Start'] <= t) & (ch_times['End'] > t)
                 ch_index = ch_times[filt].index.values[0]
 
                 ch_numbers.append(ch_index)
