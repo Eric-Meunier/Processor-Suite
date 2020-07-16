@@ -619,14 +619,14 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                              self.stackedWidget.currentWidget().geometry_tab]
 
             gps_conditions = bool(all([
-                e.answerRect().intersects(self.stackedWidget.geometry()),
+                e.answerRect().intersects(self.frame.geometry()),
                 text_files is True or gpx_files is True,
                 self.stackedWidget.currentWidget().tabs.currentWidget() in eligible_tabs,
                 len(self.pem_files) > 0
             ]))
 
             ri_conditions = bool(all([
-                e.answerRect().intersects(self.stackedWidget.geometry()),
+                e.answerRect().intersects(self.frame.geometry()),
                 ri_files is True,
                 self.stackedWidget.currentWidget().tabs.currentWidget() == self.stackedWidget.currentWidget().ri_tab,
                 len(self.pem_files) > 0
@@ -2837,7 +2837,7 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=1)
     mw.show()
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
     # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
