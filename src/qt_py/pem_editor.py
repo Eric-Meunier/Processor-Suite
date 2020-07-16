@@ -729,7 +729,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             :return: None
             """
             t2 = time.time()
-            self.pg.setText(f"Opening {pem_file.filename}")
+            self.pg.setText(f"Opening {pem_file.filename()}")
 
             pem_info_widget = PEMFileInfoWidget()
             pem_info_widget.blockSignals(True)
@@ -760,7 +760,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             else:
                 pems = copy.deepcopy(self.pem_files)
                 pems.append(pem_file)
-                pems = natsort.humansorted(pems, key=lambda x: x.filename)
+                pems = natsort.humansorted(pems, key=lambda x: x.filename())
                 i = pems.index(pem_file)
             return i
 
@@ -815,7 +815,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
             # Check if the file is already opened in the table. Won't open if it is.
             if is_opened(pem_file):
-                self.statusBar().showMessage(f"{pem_file.filename} is already opened", 2000)
+                self.statusBar().showMessage(f"{pem_file.filename()} is already opened", 2000)
             else:
                 # Create the PEMInfoWidget
                 pem_widget = add_info_widget(pem_file)
@@ -1352,7 +1352,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                             file_name = file_name + 'Av'
 
                 updated_file.filepath = os.path.join(file_dir, file_name + extension)
-                updated_file.filename = os.path.basename(updated_file.filepath)
                 self.write_pem_file(updated_file, dir=file_dir, remove_old=False)
             self.refresh_rows(rows='all')
             self.window().statusBar().showMessage(
@@ -1461,14 +1460,14 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :param row: int, row of the PEM file in the table
         :return: None
         """
-        print(f"Filling {pem_file.filename}'s information to the table")
+        print(f"Filling {pem_file.filename()}'s information to the table")
         self.table.blockSignals(True)
 
         info_widget = self.pem_info_widgets[row]
 
         # Get the information for each column
         row_info = [
-            pem_file.filename,
+            pem_file.filename(),
             pem_file.date,
             self.client_edit.text() if self.share_client_cbox.isChecked() else pem_file.client,
             self.grid_edit.text() if self.share_grid_cbox.isChecked() else pem_file.grid,
@@ -1541,7 +1540,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 # Create a copy and delete the old one.
                 copyfile(old_path, new_path)
                 pem_file.filepath = new_path
-                pem_file.filename = os.path.basename(new_path)
                 os.remove(old_path)
 
                 self.window().statusBar().showMessage(f"File renamed to {str(new_value)}", 2000)
@@ -1648,7 +1646,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         info_widget = self.pem_info_widgets[self.pem_files.index(pem_file)]
 
         row_info = [
-            pem_file.filename,
+            pem_file.filename(),
             pem_file.date,
             pem_file.client,
             pem_file.grid,
@@ -1774,8 +1772,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if current_index:
             rows = [self.stackedWidget.currentIndex()]
         else:
-            if rows == 'all':
-                rows = np.arange(self.table.rowCount())
+            if isinstance(rows, str):
+                if rows == 'all':
+                    rows = np.arange(self.table.rowCount())
             elif not isinstance(rows, list) and not isinstance(rows, np.ndarray):
                 rows = [rows]
 
@@ -1824,7 +1823,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             pem_file.filepath = filepath
 
         add_crs_tag()
-        pem_file.filename = os.path.basename(pem_file.filepath)
         pem_file.date = self.table.item(table_row, self.table_columns.index('Date')).text()
         pem_file.client = self.table.item(table_row, self.table_columns.index('Client')).text()
         pem_file.grid = self.table.item(table_row, self.table_columns.index('Grid')).text()
@@ -2025,8 +2023,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         count = 0
         for pem_file, row in zip(pem_files, rows):
             if not pem_file.is_averaged():
-                print(f"Averaging {pem_file.filename}")
-                self.pg.setText(f"Averaging {pem_file.filename}")
+                print(f"Averaging {pem_file.filename()}")
+                self.pg.setText(f"Averaging {pem_file.filename()}")
                 # Save a backup of the un-averaged file first
                 if self.auto_create_backup_files_cbox.isChecked():
                     self.write_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]', remove_old=False)
@@ -2060,7 +2058,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         for pem_file, row in zip(pem_files, rows):
             if not pem_file.is_split():
                 print(f"Splitting channels for {os.path.basename(pem_file.filepath)}")
-                self.pg.setText(f"Splitting channels for {pem_file.filename}")
+                self.pg.setText(f"Splitting channels for {pem_file.filename()}")
                 if self.auto_create_backup_files_cbox.isChecked():
                     self.write_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]', remove_old=False)
                 t = time.time()
@@ -2090,7 +2088,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
 
         for pem_file, row in zip(pem_files, rows):
-            print(f"Performing coil area change for {pem_file.filename}")
+            print(f"Performing coil area change for {pem_file.filename()}")
             pem_file = pem_file.scale_coil_area(coil_area)
             self.refresh_rows(rows=row)
 
@@ -2108,7 +2106,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
 
             for pem_file, row in zip(pem_files, rows):
-                print(f"Performing current change for {pem_file.filename}")
+                print(f"Performing current change for {pem_file.filename()}")
                 pem_file = pem_file.scale_current(current)
                 self.refresh_rows(rows=row)
 
@@ -2155,7 +2153,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             :return: single PEMFile object
             """
             if isinstance(pem_files, list) and len(pem_files) > 1:
-                print(f"Merging {', '.join([f.filename for f in pem_files])}")
+                print(f"Merging {', '.join([f.filename() for f in pem_files])}")
                 # Data merging section
                 currents = [pem_file.current for pem_file in pem_files]
                 coil_areas = [pem_file.coil_area for pem_file in pem_files]
@@ -2163,7 +2161,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 # If any currents are different
                 if not all([current == currents[0] for current in currents]):
                     response = self.message.question(self, 'Warning - Different currents',
-                                                     f"{', '.join([f.filename for f in pem_files])} do not have the same current. Proceed with merging anyway?",
+                                                     f"{', '.join([f.filename() for f in pem_files])} do not have the same current. Proceed with merging anyway?",
                                                      self.message.Yes | self.message.No)
                     if response == self.message.No:
                         self.window().statusBar().showMessage('Aborted.', 2000)
@@ -2172,7 +2170,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 # If any coil areas are different
                 if not all([coil_area == coil_areas[0] for coil_area in coil_areas]):
                     response = self.message.question(self, 'Warning - Different coil areas',
-                                                     f"{', '.join([f.filename for f in pem_files])} do not have the same coil area. Proceed with merging anyway?",
+                                                     f"{', '.join([f.filename() for f in pem_files])} do not have the same coil area. Proceed with merging anyway?",
                                                      self.message.Yes | self.message.No)
                     if response == self.message.No:
                         self.window().statusBar().showMessage('Aborted.', 2000)
@@ -2208,8 +2206,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     merged_pem.filepath = split_path[0] + '[M]' + split_path[1]
                 else:
                     merged_pem.filepath = pem_files[0].filepath
-
-                merged_pem.filename = os.path.basename(merged_pem.filepath)
 
                 self.write_pem_file(merged_pem)
                 return merged_pem
@@ -2251,7 +2247,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 # Group the files by line name
                 for line, line_files in groupby(loop_files, key=lambda x: x.line_name):
                     line_files = list(line_files)
-                    print(f"Auto merging line {line}: {[f.filename for f in line_files]}")
+                    print(f"Auto merging line {line}: {[f.filename() for f in line_files]}")
 
                     # Merge the files
                     merged_pem = merge_pems(line_files)
@@ -2277,7 +2273,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                         print(f"Components {components}")
                         comp_files = list(comp_files)
                         if len(comp_files) > 1:
-                            print(f"Auto merging hole {hole}: {[f.filename for f in comp_files]}")
+                            print(f"Auto merging hole {hole}: {[f.filename() for f in comp_files]}")
 
                             # Merge the files
                             merged_pem = merge_pems(comp_files)

@@ -6,6 +6,7 @@ import copy
 import natsort
 import numpy as np
 import pandas as pd
+from scipy.spatial.transform import Rotation as R
 from matplotlib import pyplot as plt
 
 from pathlib import Path
@@ -71,7 +72,6 @@ class PEMFile:
         self.notes = notes
         self.data = data
         self.filepath = filepath
-        self.filename = os.path.basename(filepath)
 
         crs = self.get_crs()
         self.loop = TransmitterLoop(loop_coords, crs=crs)
@@ -169,6 +169,9 @@ class PEMFile:
                 return False
             else:
                 return True
+
+    def filename(self):
+        return os.path.basename(self.filepath)
 
     def get_gps_units(self):
         """
@@ -323,7 +326,7 @@ class PEMFile:
         :return: PEM file object
         """
         if self.is_averaged():
-            print(f"{self.filename} is already averaged")
+            print(f"{self.filename()} is already averaged")
             return
 
         def weighted_average(group):
@@ -355,7 +358,7 @@ class PEMFile:
         :return: PEM file object with split data
         """
         if self.is_split():
-            print(f"{self.filename} is already split.")
+            print(f"{self.filename()} is already split.")
             return
 
         # Only keep the select channels from each reading
@@ -379,7 +382,7 @@ class PEMFile:
 
         scale_factor = float(old_coil_area / new_coil_area)
         self.data.Reading = self.data.Reading.map(lambda x: x * scale_factor)
-        print(f"{self.filename} coil area scaled to {new_coil_area} from {old_coil_area}")
+        print(f"{self.filename()} coil area scaled to {new_coil_area} from {old_coil_area}")
 
         self.coil_area = new_coil_area
         self.notes.append(f'<HE3> Data scaled by coil area change of {old_coil_area}/{new_coil_area}')
@@ -397,7 +400,7 @@ class PEMFile:
 
         scale_factor = float(new_current / old_current)
         self.data.Reading = self.data.Reading.map(lambda x: x * scale_factor)
-        print(f"{self.filename} current scaled to {new_current}A from {old_current}A")
+        print(f"{self.filename()} current scaled to {new_current}A from {old_current}A")
 
         self.current = new_current
         self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{old_current}A')
@@ -411,7 +414,7 @@ class PEMFile:
         :param soa: int: Sensor offset angle
         :return: PEM file object with rotated data
         """
-        assert self.is_borehole(), f"{self.filename} is not a borehole file."
+        assert self.is_borehole(), f"{self.filename()} is not a borehole file."
 
         def filter_data(df):
             """
@@ -446,6 +449,7 @@ class PEMFile:
                 :return: list: rotated x values
                 """
                 rotated_x = [x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)) for (x, y) in zip(x_values, y_pair)]
+                # r = R.from_euler('Z', roll_angle, degrees=True)
                 return np.array(rotated_x, dtype=float)
 
             def rotate_y(y_values, x_pair, roll_angle):
@@ -532,11 +536,11 @@ class PEMFile:
                 # Calculate the dip
                 dip = math.degrees(math.acos(rad.gx / math.sqrt((rad.gx ** 2) + (rad.gy ** 2) + (rad.gz ** 2)))) - 90
 
-                # # Calculate the azimuth
-                # g = math.sqrt(sum([rad.gx ** 2, rad.gy ** 2, rad.gz ** 2]))
-                # Hx1 = (rad.Hx * (rad.gy ** 2 + rad.gz ** 2) - (rad.Hy * rad.gy * rad.gx) - (rad.Hz * rad.gx * rad.gz)) / g * math.sqrt(rad.gy ** 2 + rad.gz ** 2)
-                # Hy1 = (rad.Hy * rad.gz - rad.Hz * rad.gy) / math.sqrt(rad.gy ** 2 + rad.gz ** 2)
-                # az = 90 - math.degrees(math.atan(-Hy1 / Hx1))
+                # Calculate the azimuth
+                g = math.sqrt(sum([rad.gx ** 2, rad.gy ** 2, rad.gz ** 2]))
+                numer = ((rad.Hz * rad.gy) - (rad.Hy * rad.gz)) * g
+                denumer = rad.Hx * (rad.gy ** 2 + rad.gz ** 2) - (rad.Hy * rad.gx * rad.gy) - (rad.Hz * rad.gx * rad.gz)
+                az = math.degrees(math.atan2(numer, denumer))
 
                 # Calculate the cleaned PP value for each component
                 # TODO What to do with multiple values for one component
@@ -555,6 +559,8 @@ class PEMFile:
                                                        out_units='nT/s',
                                                        ramp=ramp)
 
+                r1 = R.from_euler('Y', dip, degrees=True)
+                result = r1.apply([Tx, Ty, Tz])
                 # Calculate the required rotation angle
                 roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy.iloc[0], PPx.iloc[0]))
 
@@ -578,9 +584,9 @@ class PEMFile:
             self.notes.append(f"<GEN> XY data de-rotated using magnetometer")
         # Set up for PP rotation
         elif method.upper() == 'PP':
-            assert self.has_loop_gps(), f"{self.filename} has no loop GPS."
-            assert self.has_geometry(), f"{self.filename} has incomplete geometry."
-            assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename}."
+            assert self.has_loop_gps(), f"{self.filename()} has no loop GPS."
+            assert self.has_geometry(), f"{self.filename()} has incomplete geometry."
+            assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename()}."
 
             global proj, loop, ramp, mag_calc, ch_times, ch_numbers
 
@@ -1368,6 +1374,6 @@ if __name__ == '__main__':
 
     # file.average()
     # file.scale_current(10)
-    out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filename} - test rotation.pem')
+    out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filename()} - test rotation.pem')
     print(file.to_string(), file=open(out, 'w'))
     os.startfile(out)

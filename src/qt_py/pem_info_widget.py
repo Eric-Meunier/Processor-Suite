@@ -389,7 +389,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param parent: parent widget (PEMEditor)
         :return: PEMFileInfoWidget object
         """
-        print(f'PEMFileInfoWidget - Opening PEM File {pem_file.filename}')
+        print(f'PEMFileInfoWidget - Opening PEM File {pem_file.filename()}')
         self.pem_file = pem_file
         self.parent = parent
         self.init_tables()

@@ -502,13 +502,13 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         # Averages any file not already averaged.
         for pem_file in self.pem_files:
             if not pem_file.is_averaged():
-                print(f"Averaging {pem_file.filename}")
+                print(f"Averaging {pem_file.filename()}")
                 pem_file = pem_file.average()
 
         # Either all files must be split or all un-split
         if not all([pem_file.is_split() for pem_file in self.pem_files]):
             for pem_file in self.pem_files:
-                print(f"Splitting channels for {pem_file.filename}")
+                print(f"Splitting channels for {pem_file.filename()}")
                 pem_file = pem_file.split()
 
         self.components = np.append(np.unique(np.array([file.get_components() for file in self.pem_files])), 'TF')

@@ -83,7 +83,7 @@ class StationSplitter(QWidget):
             default_path = os.path.split(self.pem_file.filepath)[0]
             save_file = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0] + '.PEM'
             if save_file:
-                new_pem_file = copy.copy(self.pem_file)
+                new_pem_file = copy.deepcopy(self.pem_file)
                 filt = self.pem_file.data.Station.isin(selected_stations)
                 new_data = self.pem_file.data.loc[filt]
                 new_pem_file.data = new_data
@@ -95,7 +95,6 @@ class StationSplitter(QWidget):
                 self.close()
             else:
                 pass
-                # self.close()
 
 
 if __name__ == '__main__':
