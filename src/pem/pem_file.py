@@ -1308,6 +1308,31 @@ class RADTool:
 
         return self
 
+    def get_azimuth(self):
+        """
+        Calculate the azimuth of the RAD tool object. Must be D7.
+        :return: float, azimuth
+        """
+        if not self.D == 'D7':
+            return None
+
+        g = math.sqrt(sum([self.gx ** 2, self.gy ** 2, self.gz ** 2]))
+        numer = ((self.Hz * self.gy) - (self.Hy * self.gz)) * g
+        denumer = self.Hx * (self.gy ** 2 + self.gz ** 2) - (self.Hy * self.gx * self.gy) - (self.Hz * self.gx * self.gz)
+        azimuth = math.degrees(math.atan2(numer, denumer))
+        return azimuth
+
+    def get_dip(self):
+        """
+        Calculate the dip of the RAD tool object. Must be D7.
+        :return: float, dip
+        """
+        if not self.D == 'D7':
+            return None
+
+        dip = math.degrees(math.acos(self.gx / math.sqrt((self.gx ** 2) + (self.gy ** 2) + (self.gz ** 2)))) - 90
+        return dip
+
     def is_rotated(self):
         return True if self.angle_used is not None else False
 
