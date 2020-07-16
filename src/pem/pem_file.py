@@ -1355,7 +1355,7 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
 
     pg = PEMGetter()
-    files = pg.get_pems(client='PEM Rotation', selection=0)
+    files = pg.get_pems(client='PEM Rotation', selection=5)
     # files = pg.get_pems(client='Raglan', number=1)
     file = files[0]
     # p = PEMParser()
@@ -1364,7 +1364,7 @@ if __name__ == '__main__':
 
     # file.split()
 
-    file.rotate(method='acc', soa=0)
+    file.rotate(method='pp', soa=0)
 
     # file.average()
     # file.scale_current(10)

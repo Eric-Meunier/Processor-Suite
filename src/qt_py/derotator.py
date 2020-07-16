@@ -221,6 +221,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                     data = profile_data[filt].loc[:, ['Station', ch]]
                     plot_lines(data, ax, ch)
 
+        pem_file = copy.deepcopy(pem_file)  # Needed otherwise the returned PEMFile will be averaged and split
         if not pem_file:
             return
 
