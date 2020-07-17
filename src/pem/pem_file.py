@@ -535,9 +535,9 @@ class PEMFile:
 
                 # Calculate the cleaned PP value for each component
                 # TODO What to do with multiple values for one component
-                PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1)
-                PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1)
-
+                PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1).iloc[0]
+                PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1).iloc[0]
+                PPxy = math.sqrt(sum([PPx ** 2, PPy ** 2]))
                 # Find the dip at the station's depth
                 dip = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
                 azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
@@ -557,7 +557,7 @@ class PEMFile:
                 r1 = R.from_euler('ZX', [azimuth, dip], degrees=True)
                 result = r1.apply([Tx, Ty, Tz])
                 # Calculate the required rotation angle
-                roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy.iloc[0], PPx.iloc[0]))
+                roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy, PPx))
 
                 values = [roll_angle, dip, 'R2', roll_angle - soa, True, 'pp']
                 for key, value in zip(keys, values):
@@ -604,11 +604,13 @@ class PEMFile:
 
             # Get the special channel numbers
             ch_numbers = []
-            for i in range(1, len(ch_times) + 1):
+            total_time = pp_center
+            for i in range(len(ch_times)):
+                total_time += ramp
                 # Add the ramp time iteratively to the PP center time
-                t = (i * ramp) + pp_center
+                # t = ((i + 1) * ramp) + pp_center
                 # Create a filter to find in which channel the time falls in
-                filt = (ch_times['Start'] <= t) & (ch_times['End'] > t)
+                filt = (ch_times['Start'] <= total_time) & (ch_times['End'] > total_time)
                 ch_index = ch_times[filt].index.values[0]
 
                 ch_numbers.append(ch_index)
