@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 
 from pathlib import Path
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, CRS
-from src.mag_field.mag_field_calculator import MagneticFieldCalculator
+from src.mag_field.mag_field_calculator import MagneticFieldCalculator, Wire, BiotSavart
 
 
 def sort_data(data):
@@ -523,11 +523,9 @@ class PEMFile:
                     :param row: PEM data DataFrame row
                     :return: float, cleaned PP value
                     """
-                    pp_value = row.Reading[0]
-                    values = []
+                    cleaned_pp = row.Reading[0]
                     for num in ch_numbers:
-                        values.append(row.Reading[num])
-                    cleaned_pp = pp_value + sum(values)
+                        cleaned_pp += row.Reading[num]
                     return cleaned_pp
 
                 assert rad.D == 'D7', 'For PP rotation, D must be D7, not D5. Insufficient information available.'
@@ -540,7 +538,7 @@ class PEMFile:
                 PPxy = math.sqrt(sum([PPx ** 2, PPy ** 2]))
                 # Find the dip at the station's depth
                 dip = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
-                azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
+                azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Azimuth)
 
                 # Find the location in 3D space of the station
                 filt = proj.loc[:, 'Relative Depth'] == float(group.Station.iloc[0])
@@ -554,8 +552,14 @@ class PEMFile:
                                                        out_units='nT/s',
                                                        ramp=ramp)
 
-                r1 = R.from_euler('ZX', [azimuth, dip], degrees=True)
+                # print(f"Calculated PP at {group.Station.unique()[0]}: {Tx}, {Ty}, {Tz}")
+                r1 = R.from_euler('Z', 90 - azimuth, degrees=True)
+                # result = r1.apply([Tx, Ty, Tz])
                 result = r1.apply([Tx, Ty, Tz])
+
+                angle = 90 - azimuth
+                # zprime = math.
+
                 # Calculate the required rotation angle
                 roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy, PPx))
 
@@ -583,13 +587,17 @@ class PEMFile:
             assert self.has_geometry(), f"{self.filename()} has incomplete geometry."
             assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename()}."
 
-            global proj, loop, ramp, mag_calc, ch_times, ch_numbers, segments
+            global proj, loop, ramp, mag_calc, w, solver, ch_times, ch_numbers, segments
 
             proj = self.geometry.get_projection(stations=self.get_unique_stations(converted=True))
-            loop = self.get_loop(sorted=True, closed=True)
+            loop = self.get_loop(sorted=True, closed=False)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6
             mag_calc = MagneticFieldCalculator(loop)
+            w = Wire(path=loop.loc[:, 'Easting':'Elevation'].to_numpy(),
+                     discretization_length=1,
+                     current=self.current)
+            solver = BiotSavart(wire=w)
             segments = self.get_segments()
 
             # Only keep off-time channels with PP
@@ -605,10 +613,10 @@ class PEMFile:
             # Get the special channel numbers
             ch_numbers = []
             total_time = pp_center
-            for i in range(len(ch_times)):
-                total_time += ramp
+            for i in range(len(ch_times) + 1):
                 # Add the ramp time iteratively to the PP center time
-                # t = ((i + 1) * ramp) + pp_center
+                total_time += ramp
+
                 # Create a filter to find in which channel the time falls in
                 filt = (ch_times['Start'] <= total_time) & (ch_times['End'] > total_time)
                 ch_index = ch_times[filt].index.values[0]

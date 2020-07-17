@@ -1577,8 +1577,8 @@ class CustomAxis(pg.AxisItem):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    # planner = LoopPlanner()
-    planner = GridPlanner()
+    planner = LoopPlanner()
+    # planner = GridPlanner()
     planner.show()
     # planner.hole_az_edit.setText('174')
     # planner.view_map()
