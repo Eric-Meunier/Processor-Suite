@@ -44,7 +44,7 @@ class MagneticFieldCalculator:
         return newvector[0], newvector[1], newvector[2]
 
     @staticmethod
-    def get_angle_2V(v1, v2):
+    def get_angle_2v(v1, v2):
         len1 = math.sqrt(sum(i ** 2 for i in v1))
         len2 = math.sqrt(sum(i ** 2 for i in v2))
         angle = math.acos(np.dot(v1, v2) / (len1 * len2))
@@ -205,7 +205,7 @@ class MagneticFieldCalculator:
         planeNormal = np.cross(vec, [0, 0, -1])
 
         # Angle between the plane and j_hat
-        theta = self.get_angle_2V(planeNormal, [0, 1, 0])
+        theta = self.get_angle_2v(planeNormal, [0, 1, 0])
 
         # Fixes angles where p2.y is less than p1.y
         if c2[1] < c1[1]:
@@ -268,7 +268,7 @@ class MagneticFieldCalculator:
         planeNormal = np.cross(vec, [0, 0, -1])
 
         # Angle between the plane and j_hat
-        theta = self.get_angle_2V(planeNormal, [0, 1, 0])
+        theta = self.get_angle_2v(planeNormal, [0, 1, 0])
 
         # Fixes angles where p2.y is less than p1.y
         if c2[1] < c1[1]:

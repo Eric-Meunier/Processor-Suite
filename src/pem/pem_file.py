@@ -7,11 +7,10 @@ import natsort
 import numpy as np
 import pandas as pd
 from scipy.spatial.transform import Rotation as R
-from matplotlib import pyplot as plt
 
 from pathlib import Path
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, CRS
-from src.mag_field.mag_field_calculator import MagneticFieldCalculator, Wire, BiotSavart
+from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 
 
 def sort_data(data):
@@ -464,140 +463,152 @@ class PEMFile:
                 rotated_y = [x * math.sin(math.radians(roll_angle)) + y * math.cos(math.radians(roll_angle)) for (x, y) in zip(x_pair, y_values)]
                 return np.array(rotated_y, dtype=float)
 
+            def get_new_rad(method):
+                """
+                Create a new RADTool object ready for XY de-rotation based on the rotation method
+                :param method: str, either 'acc', 'mag', or 'pp'
+                :return: RADTool object
+                """
+                keys = ['roll_angle', 'dip', 'R', 'angle_used', 'rotated', 'rotation_type']
+                rad = group.iloc[0]['RAD_tool']
+                # Create a new RAD tool
+                new_rad = copy.copy(rad)
+
+                # Accelerometer rotation
+                if method == 'acc':
+                    if rad.D == 'D5':
+                        x, y, z = rad.x, rad.y, rad.z
+                    else:
+                        x, y, z = rad.gx, rad.gy, rad.gz
+
+                    theta = math.atan2(y, z)
+                    cc_roll_angle = 360 - math.degrees(theta) if y < 0 else math.degrees(theta)
+                    roll_angle = 360 - cc_roll_angle if y > 0 else cc_roll_angle
+                    if roll_angle >= 360:
+                        roll_angle = roll_angle - 360
+                    # Calculate the dip
+                    dip = math.degrees(math.acos(x / math.sqrt((x ** 2) + (y ** 2) + (z ** 2)))) - 90
+                    # Create a new RAD tool
+                    values = [roll_angle, dip, 'R3', roll_angle - soa, True, 'acc']
+                    for key, value in zip(keys, values):
+                        setattr(new_rad, key, value)
+
+                    self.notes.append(f"<GEN> XY data de-rotated using accelerometer")
+
+                # Magnetometer rotation
+                elif method == 'mag':
+                    if rad.D == 'D5':
+                        x, y, z = rad.x, rad.y, rad.z
+                    else:
+                        x, y, z = rad.Hx, rad.Hy, rad.Hz
+
+                    theta = math.atan2(-y, -z)
+                    cc_roll_angle = math.degrees(theta)
+                    roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
+                    if roll_angle > 360:
+                        roll_angle = roll_angle - 360
+                    # Calculate the dip
+                    dip = -90.  # The dip is assumed to be 90°
+
+                    values = [roll_angle, dip, 'R3', roll_angle - soa, True, 'mag']
+                    for key, value in zip(keys, values):
+                        setattr(new_rad, key, value)
+
+                    self.notes.append(f"<GEN> XY data de-rotated using magnetometer")
+
+                elif method == 'pp':
+
+                    def get_cleaned_pp(row):
+                        """
+                        Calculate the cleaned PP value of a station
+                        :param row: PEM data DataFrame row
+                        :return: float, cleaned PP value
+                        """
+                        cleaned_pp = row.Reading[0]
+                        for num in ch_numbers:
+                            cleaned_pp += row.Reading[num]
+                        return cleaned_pp
+
+                    assert rad.D == 'D7', 'For PP rotation, D must be D7, not D5. Insufficient information available.'
+                    # global proj, loop, ramp, mag_calc, ch_times, ch_numbers
+
+                    # Calculate the cleaned PP value for each component
+                    # TODO What to do with multiple values for one component
+                    PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1).iloc[0]
+                    PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1).iloc[0]
+                    PPxy = math.sqrt(sum([PPx ** 2, PPy ** 2]))
+
+                    # Find the dip at the station's depth
+                    dip = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
+                    azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Azimuth)
+
+                    # Find the location in 3D space of the station
+                    filt = proj.loc[:, 'Relative Depth'] == float(group.Station.iloc[0])
+                    x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
+                                          proj[filt].iloc[0]['Northing'], \
+                                          proj[filt].iloc[0]['Elevation']
+
+                    # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
+                    Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
+                                                           amps=self.current,
+                                                           out_units='nT/s',
+                                                           ramp=ramp)
+
+                    # Rotate the theoretical values into the same frame of reference used with boreholes
+                    Tx, Ty, Tz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
+
+                    # print(f"Calculated PP at {group.Station.unique()[0]}: {Tx}, {Ty}, {Tz}")
+
+                    # Azimuth is converted to degrees
+                    # Dip is done relative to vertical, thus 90 - dip
+                    angle = 450 - azimuth
+                    if angle > 360:
+                        angle = angle - 360
+                    # r1 = R.from_euler('ZY', [azimuth, 90 - dip], degrees=True)
+                    r1 = R.from_euler('YZ', [90 - dip, azimuth], degrees=True)
+                    result = r1.apply([Tx, Ty, Tz])
+
+                    # Calculate the required rotation angle
+                    roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy, PPx))
+
+                    values = [roll_angle, dip, 'R2', roll_angle - soa, True, 'pp']
+                    for key, value in zip(keys, values):
+                        setattr(new_rad, key, value)
+
+                    self.notes.append(f"<GEN> XY data de-rotated using cleaned PP.")
+
+                return new_rad
+
             x_data = group[group['Component'] == 'X']
             y_data = group[group['Component'] == 'Y']
             # Save the first reading of each component to be used a the 'pair' reading for rotation
             x_pair = x_data.iloc[0].Reading
             y_pair = y_data.iloc[0].Reading
 
-            rad = group.iloc[0]['RAD_tool']
-            # Create a new RAD tool
-            new_rad = copy.copy(rad)
-            keys = ['roll_angle', 'dip', 'R', 'angle_used', 'rotated', 'rotation_type']
+            # Create a new RADTool object ready for de-rotating
+            new_rad = get_new_rad(method)
+            roll_angle = new_rad.angle_used + soa  # Roll angle used for de-rotation
 
-            # Accelerometer rotation
-            if method == 'acc':
-                if rad.D == 'D5':
-                    x, y, z = rad.x, rad.y, rad.z
-                else:
-                    x, y, z = rad.gx, rad.gy, rad.gz
-
-                theta = math.atan2(y, z)
-                cc_roll_angle = 360 - math.degrees(theta) if y < 0 else math.degrees(theta)
-                roll_angle = 360 - cc_roll_angle if y > 0 else cc_roll_angle
-                if roll_angle >= 360:
-                    roll_angle = roll_angle - 360
-                # Calculate the dip
-                dip = math.degrees(math.acos(x / math.sqrt((x ** 2) + (y ** 2) + (z ** 2)))) - 90
-                # Create a new RAD tool
-                new_rad = copy.copy(rad)
-                keys = ['roll_angle', 'dip', 'R', 'angle_used', 'rotated', 'rotation_type']
-                values = [roll_angle, dip, 'R3', roll_angle - soa, True, 'acc']
-                for key, value in zip(keys, values):
-                    setattr(new_rad, key, value)
-
-            # Magnetometer rotation
-            elif method == 'mag':
-                if rad.D == 'D5':
-                    x, y, z = rad.x, rad.y, rad.z
-                else:
-                    x, y, z = rad.Hx, rad.Hy, rad.Hz
-
-                theta = math.atan2(-y, -z)
-                cc_roll_angle = math.degrees(theta)
-                roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
-                if roll_angle > 360:
-                    roll_angle = roll_angle - 360
-                # Calculate the dip
-                dip = -90.  # The dip is assumed to be 90°
-
-                values = [roll_angle, dip, 'R3', roll_angle - soa, True, 'mag']
-                for key, value in zip(keys, values):
-                    setattr(new_rad, key, value)
-
-            elif method == 'pp':
-
-                def get_cleaned_pp(row):
-                    """
-                    Calculate the cleaned PP value of a station
-                    :param row: PEM data DataFrame row
-                    :return: float, cleaned PP value
-                    """
-                    cleaned_pp = row.Reading[0]
-                    for num in ch_numbers:
-                        cleaned_pp += row.Reading[num]
-                    return cleaned_pp
-
-                assert rad.D == 'D7', 'For PP rotation, D must be D7, not D5. Insufficient information available.'
-                # global proj, loop, ramp, mag_calc, ch_times, ch_numbers
-
-                # Calculate the cleaned PP value for each component
-                # TODO What to do with multiple values for one component
-                PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1).iloc[0]
-                PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1).iloc[0]
-                PPxy = math.sqrt(sum([PPx ** 2, PPy ** 2]))
-                # Find the dip at the station's depth
-                dip = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
-                azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Azimuth)
-
-                # Find the location in 3D space of the station
-                filt = proj.loc[:, 'Relative Depth'] == float(group.Station.iloc[0])
-                x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
-                                      proj[filt].iloc[0]['Northing'], \
-                                      proj[filt].iloc[0]['Elevation']
-
-                # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
-                Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
-                                                       amps=self.current,
-                                                       out_units='nT/s',
-                                                       ramp=ramp)
-
-                # print(f"Calculated PP at {group.Station.unique()[0]}: {Tx}, {Ty}, {Tz}")
-                r1 = R.from_euler('Z', 90 - azimuth, degrees=True)
-                # result = r1.apply([Tx, Ty, Tz])
-                result = r1.apply([Tx, Ty, Tz])
-
-                angle = 90 - azimuth
-                # zprime = math.
-
-                # Calculate the required rotation angle
-                roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy, PPx))
-
-                values = [roll_angle, dip, 'R2', roll_angle - soa, True, 'pp']
-                for key, value in zip(keys, values):
-                    setattr(new_rad, key, value)
-
-                self.notes.append(f"<GEN> XY data de-rotated using cleaned PP.")
-
-            x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle + soa))
-            y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle + soa))
+            x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle))
+            y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle))
             row = x_data.append(y_data)
             # Add the new rad tool series to the row
             row['RAD_tool'] = row['RAD_tool'].map(lambda p: new_rad)
             return row
 
-        if method.lower() == 'acc':
-            self.notes.append(f"<GEN> XY data de-rotated using accelerometer")
-
-        elif method.lower() == 'mag':
-            self.notes.append(f"<GEN> XY data de-rotated using magnetometer")
         # Set up for PP rotation
-        elif method.upper() == 'PP':
+        if method.upper() == 'PP':
             assert self.has_loop_gps(), f"{self.filename()} has no loop GPS."
             assert self.has_geometry(), f"{self.filename()} has incomplete geometry."
             assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename()}."
 
-            global proj, loop, ramp, mag_calc, w, solver, ch_times, ch_numbers, segments
+            global proj, loop, ramp, mag_calc, ch_times, ch_numbers, segments
 
             proj = self.geometry.get_projection(stations=self.get_unique_stations(converted=True))
             loop = self.get_loop(sorted=True, closed=False)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6
             mag_calc = MagneticFieldCalculator(loop)
-            w = Wire(path=loop.loc[:, 'Easting':'Elevation'].to_numpy(),
-                     discretization_length=1,
-                     current=self.current)
-            solver = BiotSavart(wire=w)
             segments = self.get_segments()
 
             # Only keep off-time channels with PP
@@ -622,8 +633,6 @@ class PEMFile:
                 ch_index = ch_times[filt].index.values[0]
 
                 ch_numbers.append(ch_index)
-
-            self.notes.append(f"<GEN> XY data de-rotated using cleaned PP")
 
         else:
             raise ValueError(f'"{method}" is an invalid rotation method')

@@ -2070,6 +2070,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 count += 1
                 self.pg.setValue(count)
         self.pg.hide()
+        self.refresh_rows(rows='all')
 
     def scale_pem_coil_area(self, coil_area=None, selected=False):
         """
