@@ -156,6 +156,11 @@ class Derotator(QMainWindow, Ui_Derotator):
             if response == self.message.No:
                 return
 
+        if self.pem_file.has_loop_gps() and self.pem_file.has_geometry():
+            self.pp_btn.setEnabled(True)
+        else:
+            self.pp_btn.setEnabled(False)
+
         self.setWindowTitle(f"XY De-rotation - {pem_file.filename()}")
         self.show()
         self.rotate()
@@ -179,7 +184,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                 :param ax: pyqtgraph PlotItem
                 :param channel: int, channel to plot
                 """
-                ax.plot(x=df['Station'], y=df[channel], pen='k')
+                ax.plot(x=df['Station'], y=df[channel], pen=pg.mkPen('m', width=1.25))
 
             def calc_channel_bounds():
                 """
@@ -415,7 +420,7 @@ def main():
     mw = Derotator()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', selection=0)
+    pem_files = pg.get_pems(client='PEM Rotation', file='BX-081.PEM')
     mw.open(pem_files)
 
     app.exec_()

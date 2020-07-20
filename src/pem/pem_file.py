@@ -69,7 +69,7 @@ class PEMFile:
         self.channel_times = channel_table
 
         self.notes = notes
-        self.data = data
+        self.data = sort_data(data)
         self.filepath = filepath
 
         crs = self.get_crs()
@@ -84,6 +84,7 @@ class PEMFile:
         self.unsplit_data = None
         self.unaveraged_data = None
         self.old_filepath = None
+        self.pp_table = None
 
     def is_borehole(self):
         if 'borehole' in self.get_survey_type().lower():
@@ -430,7 +431,57 @@ class PEMFile:
                 df.Station = np.nan
             return df
 
-        def rotate_data(group, method):
+        def setup_pp():
+            assert self.has_loop_gps(), f"{self.filename()} has no loop GPS."
+            assert self.has_geometry(), f"{self.filename()} has incomplete geometry."
+            assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename()}."
+
+            global proj, loop, ramp, mag_calc, ch_times, ch_numbers
+
+            self.pp_table = pd.DataFrame(columns=['Station',
+                                                  'Azimuth',
+                                                  'Dip',
+                                                  'Easting',
+                                                  'Northing',
+                                                  'Elevation',
+                                                  'TPPx',
+                                                  'TPPy',
+                                                  'TPPz',
+                                                  'CPPx',
+                                                  'CPPy',
+                                                  'CPPz'])
+            proj = self.geometry.get_projection(stations=self.get_unique_stations(converted=True))
+            loop = self.get_loop(sorted=True, closed=False)
+            # Get the ramp in seconds
+            ramp = self.ramp / 10 ** 6
+            mag_calc = MagneticFieldCalculator(loop)
+
+            # Only keep off-time channels with PP
+            ch_times = self.channel_times[self.channel_times.loc[:, 'Remove'] == False]
+            # Normalize the channel times so they start from turn off
+            # ch_times.loc[:, 'Start':'Center'] = ch_times.loc[:, 'Start':'Center'].applymap(lambda x: x + ramp)
+
+            pp_ch = ch_times.iloc[0]
+            # Make sure the PP channel is within the ramp
+            assert pp_ch.End < ramp, 'PP channel does not fall within the ramp'
+            pp_center = pp_ch['Center']
+
+            # Get the special channel numbers
+            ch_numbers = []
+            total_time = pp_center
+            last_time = ch_times.iloc[-1].End
+            # TODO Double check this is done correctly
+            while (total_time + ramp) < last_time:
+                # Add the ramp time iteratively to the PP center time until reaching the end of the off-time
+                total_time += ramp
+
+                # Create a filter to find in which channel the time falls in
+                filt = (ch_times['Start'] <= total_time) & (ch_times['End'] > total_time)
+                ch_index = ch_times[filt].index.values[0]
+
+                ch_numbers.append(ch_index)
+
+        def rotate_data(group, method, soa):
             """
             Rotate the data for a given reading
             :param group: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
@@ -463,16 +514,85 @@ class PEMFile:
                 rotated_y = [x * math.sin(math.radians(roll_angle)) + y * math.cos(math.radians(roll_angle)) for (x, y) in zip(x_pair, y_values)]
                 return np.array(rotated_y, dtype=float)
 
+            def get_cleaned_pp(row):
+                """
+                Calculate the cleaned PP value of a station
+                :param row: PEM data DataFrame row
+                :return: float, cleaned PP value
+                """
+                cleaned_pp = row.Reading[0]
+                for num in ch_numbers:
+                    cleaned_pp += row.Reading[num]
+                return cleaned_pp
+
             def get_new_rad(method):
                 """
                 Create a new RADTool object ready for XY de-rotation based on the rotation method
                 :param method: str, either 'acc', 'mag', or 'pp'
                 :return: RADTool object
                 """
-                keys = ['roll_angle', 'dip', 'R', 'angle_used', 'rotated', 'rotation_type']
                 rad = group.iloc[0]['RAD_tool']
                 # Create a new RAD tool
-                new_rad = copy.copy(rad)
+                new_rad = copy.copy(group.iloc[0]['RAD_tool'])
+
+                # Add the PP information (theoretical PP, cleaned PP, roll angle) to the new RAD Tool object
+                if include_pp is True:
+                    # Calculate the cleaned PP value for each component
+                    cleaned_PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1).mean()
+                    cleaned_PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1).mean()
+
+                    # Calculate the raw PP value for each component
+                    pp_ch_index = self.channel_times[self.channel_times.Remove == False].index.values[0]
+                    raw_PPx = group[group.Component == 'X'].apply(lambda x: x.Reading[pp_ch_index], axis=1).mean()
+                    raw_PPy = group[group.Component == 'Y'].apply(lambda x: x.Reading[pp_ch_index], axis=1).mean()
+
+                    # Find the dip at the station's depth
+                    seg_dip = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
+                    seg_azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Azimuth)
+
+                    # Find the location in 3D space of the station
+                    filt = proj.loc[:, 'Relative Depth'] == float(group.Station.iloc[0])
+                    x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
+                                          proj[filt].iloc[0]['Northing'], \
+                                          proj[filt].iloc[0]['Elevation']
+
+                    # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
+                    Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
+                                                           amps=self.current,
+                                                           out_units='nT/s',
+                                                           ramp=ramp)
+
+                    # Rotate the theoretical values into the same frame of reference used with boreholes
+                    Tx, Ty, Tz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
+
+                    # Rotate the theoretical values into the hole coordinate system
+                    r = R.from_euler('YZ', [90 - seg_dip, seg_azimuth], degrees=True)
+                    rT = r.apply([Tx, Ty, Tz])  # The rotated theoretical values
+
+                    print(f"Calculated PP at {group.Station.unique()[0]}: {rT[0]:.2f}, {rT[1]:.2f}, {rT[2]:.2f}")
+
+                    # Calculate the required rotation angle
+                    pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx))
+                    if pp_roll_angle < 0:
+                        pp_roll_angle = pp_roll_angle + 360
+                    print(f"PP roll angle at {group.Station.unique()[0]}: {pp_roll_angle:.2f}")
+
+                    # Update the RAD Tool object with the new information
+                    pp_info = {
+                        'ppx_theory': rT[0],
+                        'ppy_theory': rT[1],
+                        'ppz_theory': rT[2],
+                        'ppxy_theory': math.sqrt(sum([rT[0] ** 2, rT[1] ** 2])),
+                        'ppx_cleaned': cleaned_PPx,
+                        'ppy_cleaned': cleaned_PPy,
+                        'ppxy_cleaned': math.sqrt(sum([cleaned_PPx ** 2, cleaned_PPy ** 2])),
+                        'ppx_raw': raw_PPx,
+                        'ppy_raw': raw_PPy,
+                        'ppxy_raw': math.sqrt(sum([raw_PPx ** 2, raw_PPy ** 2])),
+                        'pp_rotation_angle': pp_roll_angle
+                    }
+                    for key, value in pp_info.items():
+                        setattr(new_rad, key, value)
 
                 # Accelerometer rotation
                 if method == 'acc':
@@ -488,9 +608,15 @@ class PEMFile:
                         roll_angle = roll_angle - 360
                     # Calculate the dip
                     dip = math.degrees(math.acos(x / math.sqrt((x ** 2) + (y ** 2) + (z ** 2)))) - 90
-                    # Create a new RAD tool
-                    values = [roll_angle, dip, 'R3', roll_angle - soa, True, 'acc']
-                    for key, value in zip(keys, values):
+
+                    # Update the new_rad with the de-rotation information
+                    new_info = {'roll_angle': roll_angle,
+                                'dip': dip,
+                                'R': 'R3',
+                                'angle_used': roll_angle - soa,
+                                'rotated': True,
+                                'rotation_type': 'acc'}
+                    for key, value in new_info.items():
                         setattr(new_rad, key, value)
 
                     self.notes.append(f"<GEN> XY data de-rotated using accelerometer")
@@ -510,72 +636,34 @@ class PEMFile:
                     # Calculate the dip
                     dip = -90.  # The dip is assumed to be 90°
 
-                    values = [roll_angle, dip, 'R3', roll_angle - soa, True, 'mag']
-                    for key, value in zip(keys, values):
+                    # Update the new_rad with the de-rotation information
+                    new_info = {'roll_angle': roll_angle,
+                                'dip': dip,
+                                'R': 'R3',
+                                'angle_used': roll_angle - soa,
+                                'rotated': True,
+                                'rotation_type': 'mag'}
+                    for key, value in new_info.items():
                         setattr(new_rad, key, value)
 
                     self.notes.append(f"<GEN> XY data de-rotated using magnetometer")
 
+                # PP rotation
                 elif method == 'pp':
-
-                    def get_cleaned_pp(row):
-                        """
-                        Calculate the cleaned PP value of a station
-                        :param row: PEM data DataFrame row
-                        :return: float, cleaned PP value
-                        """
-                        cleaned_pp = row.Reading[0]
-                        for num in ch_numbers:
-                            cleaned_pp += row.Reading[num]
-                        return cleaned_pp
-
-                    assert rad.D == 'D7', 'For PP rotation, D must be D7, not D5. Insufficient information available.'
-                    # global proj, loop, ramp, mag_calc, ch_times, ch_numbers
-
-                    # Calculate the cleaned PP value for each component
-                    # TODO What to do with multiple values for one component
-                    PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1).iloc[0]
-                    PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1).iloc[0]
-                    PPxy = math.sqrt(sum([PPx ** 2, PPy ** 2]))
-
-                    # Find the dip at the station's depth
-                    dip = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
-                    azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Azimuth)
-
-                    # Find the location in 3D space of the station
-                    filt = proj.loc[:, 'Relative Depth'] == float(group.Station.iloc[0])
-                    x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
-                                          proj[filt].iloc[0]['Northing'], \
-                                          proj[filt].iloc[0]['Elevation']
-
-                    # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
-                    Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
-                                                           amps=self.current,
-                                                           out_units='nT/s',
-                                                           ramp=ramp)
-
-                    # Rotate the theoretical values into the same frame of reference used with boreholes
-                    Tx, Ty, Tz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
-
-                    # print(f"Calculated PP at {group.Station.unique()[0]}: {Tx}, {Ty}, {Tz}")
-
-                    # Azimuth is converted to degrees
-                    # Dip is done relative to vertical, thus 90 - dip
-                    angle = 450 - azimuth
-                    if angle > 360:
-                        angle = angle - 360
-                    # r1 = R.from_euler('ZY', [azimuth, 90 - dip], degrees=True)
-                    r1 = R.from_euler('YZ', [90 - dip, azimuth], degrees=True)
-                    result = r1.apply([Tx, Ty, Tz])
-
-                    # Calculate the required rotation angle
-                    roll_angle = math.degrees(math.atan2(Ty, Tx) - math.atan2(PPy, PPx))
-
-                    values = [roll_angle, dip, 'R2', roll_angle - soa, True, 'pp']
-                    for key, value in zip(keys, values):
+                    # Update the new_rad with the de-rotation information
+                    new_info = {'roll_angle': pp_roll_angle,
+                                'dip': seg_dip,
+                                'R': 'R2',
+                                'angle_used': pp_roll_angle - soa,
+                                'rotated': True,
+                                'rotation_type': 'pp'}
+                    for key, value in new_info.items():
                         setattr(new_rad, key, value)
 
                     self.notes.append(f"<GEN> XY data de-rotated using cleaned PP.")
+
+                else:
+                    raise ValueError(f"{method} is not a valid de-rotation method.")
 
                 return new_rad
 
@@ -587,7 +675,7 @@ class PEMFile:
 
             # Create a new RADTool object ready for de-rotating
             new_rad = get_new_rad(method)
-            roll_angle = new_rad.angle_used + soa  # Roll angle used for de-rotation
+            roll_angle = new_rad.angle_used  # Roll angle used for de-rotation
 
             x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle))
             y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle))
@@ -596,49 +684,15 @@ class PEMFile:
             row['RAD_tool'] = row['RAD_tool'].map(lambda p: new_rad)
             return row
 
-        # Set up for PP rotation
-        if method.upper() == 'PP':
-            assert self.has_loop_gps(), f"{self.filename()} has no loop GPS."
-            assert self.has_geometry(), f"{self.filename()} has incomplete geometry."
-            assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename()}."
-
-            global proj, loop, ramp, mag_calc, ch_times, ch_numbers, segments
-
-            proj = self.geometry.get_projection(stations=self.get_unique_stations(converted=True))
-            loop = self.get_loop(sorted=True, closed=False)
-            # Get the ramp in seconds
-            ramp = self.ramp / 10 ** 6
-            mag_calc = MagneticFieldCalculator(loop)
-            segments = self.get_segments()
-
-            # Only keep off-time channels with PP
-            ch_times = self.channel_times[self.channel_times.loc[:, 'Remove'] == False]
-            # Normalize the channel times so they start from turn off
-            # ch_times.loc[:, 'Start':'Center'] = ch_times.loc[:, 'Start':'Center'].applymap(lambda x: x + ramp)
-
-            pp_ch = ch_times.iloc[0]
-            # Make sure the PP channel is within the ramp
-            assert pp_ch.End < ramp, 'PP channel does not fall within the ramp'
-            pp_center = pp_ch['Center']
-
-            # Get the special channel numbers
-            ch_numbers = []
-            total_time = pp_center
-            for i in range(len(ch_times) + 1):
-                # Add the ramp time iteratively to the PP center time
-                total_time += ramp
-
-                # Create a filter to find in which channel the time falls in
-                filt = (ch_times['Start'] <= total_time) & (ch_times['End'] > total_time)
-                ch_index = ch_times[filt].index.values[0]
-
-                ch_numbers.append(ch_index)
-
-        else:
-            raise ValueError(f'"{method}" is an invalid rotation method')
-
-        global ineligible_stations
+        global ineligible_stations, include_pp
         ineligible_stations = pd.DataFrame()
+        include_pp = False
+        segments = self.get_segments()
+
+        if all([self.has_loop_gps(), self.has_geometry(), self.ramp > 0]):
+            setup_pp()
+            include_pp = True
+
         # Create a filter for X and Y data only
         filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
         st = time.time()
@@ -649,13 +703,12 @@ class PEMFile:
         # Rotate the data
         rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
                                              group_keys=False,
-                                             as_index=False).apply(lambda l: rotate_data(l, method))
+                                             as_index=False).apply(lambda l: rotate_data(l, method, soa))
         print(f"Time to rotate data: {time.time() - st}")
 
         self.data[filt] = rotated_data
         # Remove the rows that were filtered out in filtered_data
         self.data.dropna(inplace=True)
-
         self.probes['SOA'] = str(soa)
         return self, ineligible_stations
 
@@ -1238,6 +1291,23 @@ class RADTool:
         self.rotation_type = None
         self.id = None
 
+        self.ppx_theory = None
+        self.ppy_theory = None
+        self.ppx_theory = None
+        self.ppxy_theory = None
+
+        self.ppx_cleaned = None
+        self.ppy_cleaned = None
+        self.ppx_cleaned = None
+        self.ppxy_cleaned = None
+
+        self.ppx_raw = None
+        self.ppy_raw = None
+        self.ppx_raw = None
+        self.ppxy_raw = None
+
+        self.pp_rotation_angle = None
+
     def from_match(self, match):
         """
         Create the RADTool object using the string parsed from PEMParser
@@ -1401,7 +1471,7 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
 
     pg = PEMGetter()
-    files = pg.get_pems(client='PEM Rotation', selection=5)
+    files = pg.get_pems(client='PEM Rotation', file='MRC-067 XY.PEM')
     # files = pg.get_pems(client='Raglan', number=1)
     file = files[0]
     # p = PEMParser()

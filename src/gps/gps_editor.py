@@ -3,7 +3,7 @@ import os
 import re
 import copy
 import pandas as pd
-# import geopandas as gpd
+import geopandas as gpd
 from math import hypot
 import gpxpy
 import utm
@@ -73,24 +73,24 @@ class BaseGPS:
     #         return
     #     elif self.crs.is_nad27():
     #         return self
-    # 
+    #
     #     if self.crs.is_latlon():
     #         df = copy.deepcopy(self.df)
     #     else:
     #         df = copy.deepcopy(self.to_latlon().df)
-    # 
+    #
     #     # Create point objects for each coordinate
     #     mpoints = asMultiPoint(df.loc[:, ['Easting', 'Northing']].to_numpy())
     #     gdf = gpd.GeoSeries(list(mpoints), crs={'init': self.crs.get_epsg()})
-    # 
+    #
     #     # Convert the point objects to NAD 27
     #     nad27_gdf = gdf.to_crs({'init': 'EPSG:4267'})
     #     # Convert the point objects back to UTM coordinates
     #     utm_gdf = nad27_gdf.map(lambda p: utm.from_latlon(p.y, p.x))
-    # 
+    #
     #     # Assign the converted UTM columns to the data frame
     #     self.df['Easting'], self.df['Northing'] = utm_gdf.map(lambda x: x[0]), utm_gdf.map(lambda x: x[1])
-    # 
+    #
     #     # Create the new CRS object for NAD 27
     #     nad27_crs = CRS().from_dict({'System': 'UTM',
     #                                  'Zone Number': utm_gdf.loc[0][2],
@@ -98,7 +98,7 @@ class BaseGPS:
     #                                  'Datum': 'NAD 27'})
     #     self.crs = nad27_crs
     #     return self
-    # 
+    #
     # def to_nad83(self):
     #     """
     #     Convert the data frame coordinates to NAD 83
@@ -108,24 +108,24 @@ class BaseGPS:
     #         return
     #     elif self.crs.is_nad83():
     #         return self
-    # 
+    #
     #     if self.crs.is_latlon():
     #         df = copy.deepcopy(self.df)
     #     else:
     #         df = copy.deepcopy(self.to_latlon().df)
-    # 
+    #
     #     # Create point objects for each coordinate
     #     mpoints = asMultiPoint(df.loc[:, ['Easting', 'Northing']].to_numpy())
     #     gdf = gpd.GeoSeries(list(mpoints), crs={'init': self.crs.get_epsg()})
-    # 
+    #
     #     # Convert the point objects to NAD 83
     #     nad83_gdf = gdf.to_crs({'init': 'EPSG:4269'})
     #     # Convert the point objects back to UTM coordinates
     #     utm_gdf = nad83_gdf.map(lambda p: utm.from_latlon(p.y, p.x))
-    # 
+    #
     #     # Assign the converted UTM columns to the data frame
     #     self.df['Easting'], self.df['Northing'] = utm_gdf.map(lambda x: x[0]), utm_gdf.map(lambda x: x[1])
-    # 
+    #
     #     # Create the new CRS object for NAD 27
     #     nad83_crs = CRS().from_dict({'System': 'UTM',
     #                                  'Zone Number': utm_gdf.loc[0][2],
@@ -133,7 +133,7 @@ class BaseGPS:
     #                                  'Datum': 'NAD 83'})
     #     self.crs = nad83_crs
     #     return self
-    # 
+    #
     # def to_wgs84(self):
     #     """
     #     Convert the data frame coordinates to WGS 84
@@ -143,24 +143,24 @@ class BaseGPS:
     #         return
     #     elif self.crs.is_wgs84():
     #         return self
-    # 
+    #
     #     if self.crs.is_latlon():
     #         df = copy.deepcopy(self.df)
     #     else:
     #         df = copy.deepcopy(self.to_latlon().df)
-    # 
+    #
     #     # Create point objects for each coordinate
     #     mpoints = asMultiPoint(df.loc[:, ['Easting', 'Northing']].to_numpy())
     #     gdf = gpd.GeoSeries(list(mpoints), crs={'init': self.crs.get_epsg()})
-    # 
+    #
     #     # Convert the point objects to WGS 84
     #     wgs84_gdf = gdf.to_crs({'init': 'EPSG:4326'})
     #     # Convert the point objects back to UTM coordinates
     #     utm_gdf = wgs84_gdf.map(lambda p: utm.from_latlon(p.y, p.x))
-    # 
+    #
     #     # Assign the converted UTM columns to the data frame
     #     self.df['Easting'], self.df['Northing'] = utm_gdf.map(lambda x: x[0]), utm_gdf.map(lambda x: x[1])
-    # 
+    #
     #     # Create the new CRS object for WGS 84
     #     wgs84_crs = CRS().from_dict({'System': 'UTM',
     #                                  'Zone Number': utm_gdf.loc[0][2],
@@ -575,7 +575,7 @@ class GPSParser:
                 match = re.split("[\s,]+", match.group(0))
                 matched_gps.append(match)
 
-        gps = pd.DataFrame(matched_gps, columns=cols)
+        gps = gpd.GeoDataFrame(matched_gps, columns=cols)
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
         return gps
