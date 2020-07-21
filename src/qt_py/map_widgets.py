@@ -115,7 +115,7 @@ class Map3DViewer(QMainWindow):
         def plot_loop(pem_file):
             t = time.time()
 
-            loop = pem_file.get_loop(closed=True, sorted=True)
+            loop = pem_file.get_loop(closed=True)
             if loop.to_string() not in self.loops:
                 self.loops.append(loop.to_string())
 
@@ -132,7 +132,7 @@ class Map3DViewer(QMainWindow):
 
         def plot_line(pem_file):
             t = time.time()
-            line = pem_file.get_line(sorted=True)
+            line = pem_file.get_line()
 
             if line.to_string() not in self.lines:
                 self.lines.append(line.to_string())
@@ -727,7 +727,7 @@ class FoliumMap(QMainWindow):
             if pem_file.has_loop_gps():
                 # Add the CRS to the loop and retrieve the lat lon coordinates
                 pem_file.loop.crs = self.crs
-                loop = pem_file.loop.to_latlon().get_loop(sorted=True, closed=True)
+                loop = pem_file.loop.to_latlon().get_loop(closed=True)
 
                 if loop.to_string() not in loops:
                     loops.append(loop.to_string())

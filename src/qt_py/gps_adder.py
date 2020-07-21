@@ -104,8 +104,8 @@ class GPSAdder(QWidget):
             self.highlight_point(row)
 
     def close(self):
-        self.write_widget = None
-        self.write_table = None
+        # self.write_widget = None
+        # self.write_table = None
         self.clear_table()
         self.hide()
 
@@ -116,7 +116,7 @@ class GPSAdder(QWidget):
             self.table.removeRow(0)
         self.table.blockSignals(True)
 
-    def add_df(self, df):
+    def open(self, df):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
         :param df: pandas DataFrame
@@ -182,24 +182,76 @@ class GPSAdder(QWidget):
         self.error = False
         return df
 
-    def plot_table(self):
+    def plot_table(self, preserve_limits=False):
         pass
+
+    # def onpick(self, event):
+    #     """
+    #     Signal slot: When a point in the plots is clicked, highlights the associated row in the table.
+    #     :param event: Mouse click event
+    #     :return: None
+    #     """
+    #     # Ignore mouse wheel events
+    #     if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
+    #         return
+    #
+    #     ind = event.ind[0]
+    #     print(f"Point {ind} clicked")
+    #
+    #     self.table.selectRow(ind)
+    #     self.highlight_point(row=ind)
 
     def onpick(self, event):
         """
-        Signal slot: When a point in the plots is clicked, highlights the associated row in the table.
+        Signal slot: When a point in the plots is clicked
         :param event: Mouse click event
         :return: None
         """
+        self.table.blockSignals(True)
+
+        def swap_points():
+            """
+            Swaps the position of two points on either axes. Creates a data frame from the table, then swaps the
+            corresponding rows in the data frame, then re-creates the table and plots the data.
+            :return: None
+            """
+            points = self.selection
+            # Create the data frame
+            df = self.table_to_df()
+            # Create a copy of the two rows.
+            a, b = df.iloc[points[0]].copy(), df.iloc[points[1]].copy()
+            # Allocate the two rows in reverse order
+            df.iloc[points[0]], df.iloc[points[1]] = b, a
+            self.df_to_table(df)
+            self.plot_table(preserve_limits=True)
+
         # Ignore mouse wheel events
         if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
             return
+        index = event.ind[0]
+        print(f"Point {index} clicked")
 
-        ind = event.ind[0]
-        print(f"Point {ind} clicked")
+        # Swap two points when CTRL is pressed when selecting two points
+        if keyboard.is_pressed('ctrl'):
+            print('CTRL is pressed')
+            # Reset the selection if two were already selected
+            if len(self.selection) == 2:
+                self.selection = []
+            self.selection.append(index)
+            print(f'Selected points: {self.selection}')
 
-        self.table.selectRow(ind)
-        self.highlight_point(row=ind)
+            if len(self.selection) == 2:
+                print(f"Two points are selected, swapping them...")
+                swap_points()
+                index = self.selection[0]
+        else:
+            # Reset the selection if CTRL isn't pressed
+            self.selection = []
+
+        self.table.selectRow(index)
+        self.highlight_point(row=index)
+
+        self.table.blockSignals(False)
 
     def highlight_point(self, row=None):
         pass
@@ -259,14 +311,18 @@ class LineAdder(GPSAdder):
         Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
         :return: None
         """
-        self.write_widget.fill_gps_table(self.table_to_df().dropna(), self.write_widget.stationGPSTable)
-        self.close()
+        self.write_widget.fill_gps_table(self.table_to_df().dropna(), self.write_widget.line_table)
+        self.hide()
 
-    def plot_table(self):
+    def plot_table(self, preserve_limits=False):
         """
         Plot the data from the table to the axes. Ignores any rows that have NaN somewhere in the row.
         :return: None
         """
+        if preserve_limits is True:
+            plan_xlim, plan_ylim = self.plan_ax.get_xlim(), self.plan_ax.get_ylim()
+            section_xlim, section_ylim = self.section_ax.get_xlim(), self.section_ax.get_ylim()
+
         self.plan_ax.clear()
         self.section_ax.clear()
 
@@ -316,9 +372,15 @@ class LineAdder(GPSAdder):
                         picker=True
                         )
 
-        # Add flat elevation for the section plot limits
-        self.section_ax.set_ylim(self.section_ax.get_ylim()[0] - 5,
-                                 self.section_ax.get_ylim()[1] + 5)
+        if preserve_limits is True:
+            self.plan_ax.set_xlim(plan_xlim)
+            self.plan_ax.set_ylim(plan_ylim)
+            self.section_ax.set_xlim(section_xlim)
+            self.section_ax.set_ylim(section_ylim)
+        else:
+            # Add flat elevation for the section plot limits
+            self.section_ax.set_ylim(self.section_ax.get_ylim()[0] - 5,
+                                     self.section_ax.get_ylim()[1] + 5)
         # self.plan_ax.set_yticklabels(self.plan_ax.get_yticklabels(), rotation=0, ha='center')
         self.canvas.draw()
 
@@ -356,28 +418,30 @@ class LineAdder(GPSAdder):
         if self.error is True:
             return
 
+        color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
+
         df = self.table_to_df()
         df['Station'] = df['Station'].astype(int)
 
         # Plot on the plan map
         plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
         self.plan_highlight = self.plan_ax.scatter([plan_x], [plan_y],
-                                                   color='lightsteelblue',
-                                                   edgecolors='blue',
+                                                   color=light_color,
+                                                   edgecolors=color,
                                                    zorder=3
                                                    )
-        self.plan_lx = self.plan_ax.axhline(plan_y, color='blue')
-        self.plan_ly = self.plan_ax.axvline(plan_x, color='blue')
+        self.plan_lx = self.plan_ax.axhline(plan_y, color=color)
+        self.plan_ly = self.plan_ax.axvline(plan_x, color=color)
 
         # Plot on the section map
         section_x, section_y = df.loc[row, 'Station'], df.loc[row, 'Elevation']
         self.section_highlight = self.section_ax.scatter([section_x], [section_y],
-                                                         color='lightsteelblue',
-                                                         edgecolors='blue',
+                                                         color=light_color,
+                                                         edgecolors=color,
                                                          zorder=3
                                                          )
-        self.section_lx = self.section_ax.axhline(section_y, color='blue')
-        self.section_ly = self.section_ax.axvline(section_x, color='blue')
+        self.section_lx = self.section_ax.axhline(section_y, color=color)
+        self.section_ly = self.section_ax.axvline(section_x, color=color)
         self.canvas.draw()
 
 
@@ -389,59 +453,59 @@ class LoopAdder(GPSAdder):
         self.setWindowTitle('Loop Adder')
         self.button_box.accepted.connect(self.accept)
 
-    def onpick(self, event):
-        """
-        Signal slot: When a point in the plots is clicked
-        :param event: Mouse click event
-        :return: None
-        """
-        self.table.blockSignals(True)
+    # def onpick(self, event):
+    #     """
+    #     Signal slot: When a point in the plots is clicked
+    #     :param event: Mouse click event
+    #     :return: None
+    #     """
+    #     self.table.blockSignals(True)
+    #
+    #     def swap_points():
+    #         """
+    #         Swaps the position of two points on either axes. Creates a data frame from the table, then swaps the
+    #         corresponding rows in the data frame, then re-creates the table and plots the data.
+    #         :return: None
+    #         """
+    #         points = self.selection
+    #         # Create the data frame
+    #         df = self.table_to_df()
+    #         # Create a copy of the two rows.
+    #         a, b = df.iloc[points[0]].copy(), df.iloc[points[1]].copy()
+    #         # Allocate the two rows in reverse order
+    #         df.iloc[points[0]], df.iloc[points[1]] = b, a
+    #         self.df_to_table(df)
+    #         self.plot_table(preserve_limits=True)
+    #
+    #     # Ignore mouse wheel events
+    #     if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
+    #         return
+    #     index = event.ind[0]
+    #     print(f"Point {index} clicked")
+    #
+    #     # Swap two points when CTRL is pressed when selecting two points
+    #     if keyboard.is_pressed('ctrl'):
+    #         print('CTRL is pressed')
+    #         # Reset the selection if two were already selected
+    #         if len(self.selection) == 2:
+    #             self.selection = []
+    #         self.selection.append(index)
+    #         print(f'Selected points: {self.selection}')
+    #
+    #         if len(self.selection) == 2:
+    #             print(f"Two points are selected, swapping them...")
+    #             swap_points()
+    #             index = self.selection[0]
+    #     else:
+    #         # Reset the selection if CTRL isn't pressed
+    #         self.selection = []
+    #
+    #     self.table.selectRow(index)
+    #     self.highlight_point(row=index)
+    #
+    #     self.table.blockSignals(False)
 
-        def swap_points():
-            """
-            Swaps the position of two points on either axes. Creates a data frame from the table, then swaps the
-            corresponding rows in the data frame, then re-creates the table and plots the data.
-            :return: None
-            """
-            points = self.selection
-            # Create the data frame
-            df = self.table_to_df()
-            # Create a copy of the two rows.
-            a, b = df.iloc[points[0]].copy(), df.iloc[points[1]].copy()
-            # Allocate the two rows in reverse order
-            df.iloc[points[0]], df.iloc[points[1]] = b, a
-            self.df_to_table(df)
-            self.plot_table(preserve_limits=True)
-
-        # Ignore mouse wheel events
-        if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
-            return
-        index = event.ind[0]
-        print(f"Point {index} clicked")
-
-        # Swap two points when CTRL is pressed when selecting two points
-        if keyboard.is_pressed('ctrl'):
-            print('CTRL is pressed')
-            # Reset the selection if two were already selected
-            if len(self.selection) == 2:
-                self.selection = []
-            self.selection.append(index)
-            print(f'Selected points: {self.selection}')
-
-            if len(self.selection) == 2:
-                print(f"Two points are selected, swapping them...")
-                swap_points()
-                index = self.selection[0]
-        else:
-            # Reset the selection if CTRL isn't pressed
-            self.selection = []
-
-        self.table.selectRow(index)
-        self.highlight_point(row=index)
-
-        self.table.blockSignals(False)
-
-    def add_df(self, df):
+    def open(self, df):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
         :param df: pandas DataFrame
@@ -459,8 +523,8 @@ class LoopAdder(GPSAdder):
         Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
         :return: None
         """
-        self.write_widget.fill_gps_table(self.table_to_df().dropna(), self.write_widget.loopGPSTable)
-        self.close()
+        self.write_widget.fill_gps_table(self.table_to_df().dropna(), self.write_widget.loop_table)
+        self.hide()
 
     def plot_table(self, preserve_limits=False):
         """

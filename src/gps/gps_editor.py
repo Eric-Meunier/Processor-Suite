@@ -209,7 +209,6 @@ class TransmitterLoop(BaseGPS):
             n = int(1/factor)
             self.df = self.df[self.df.index % n != 0]
             self.df.reset_index(drop=True, inplace=True)
-        return self.df
 
     def get_sorted_loop(self):
         """

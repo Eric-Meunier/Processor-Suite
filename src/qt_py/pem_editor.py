@@ -115,6 +115,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_viewer = ContourMapViewer(parent=self)
+        self.folium_map = FoliumMap()
 
         # Project tree
         self.project_dir = ''
@@ -313,18 +314,18 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.actionPlan_Map.setStatusTip("Plot all PEM files on an interactive plan map")
         self.actionPlan_Map.setToolTip("Plot all PEM files on an interactive plan map")
         self.actionPlan_Map.setIcon(QIcon(os.path.join(icons_path, 'folium.png')))
-        self.actionPlan_Map.triggered.connect(self.show_plan_map)
+        self.actionPlan_Map.triggered.connect(lambda: self.folium_map.open(self.updated_pem_files(), self.get_crs()))
 
         self.action3D_Map.setStatusTip("Show 3D map of all PEM files")
         self.action3D_Map.setToolTip("Show 3D map of all PEM files")
         self.action3D_Map.setShortcut('Ctrl+M')
         self.action3D_Map.setIcon(QIcon(os.path.join(icons_path, '3d_map2.png')))
-        self.action3D_Map.triggered.connect(lambda: self.map_viewer_3d.open(self.pem_files))
+        self.action3D_Map.triggered.connect(lambda: self.map_viewer_3d.open(self.updated_pem_files()))
 
         self.actionContour_Map.setIcon(QIcon(os.path.join(icons_path, 'contour_map3.png')))
         self.actionContour_Map.setStatusTip("Show a contour map of surface PEM files")
         self.actionContour_Map.setToolTip("Show a contour map of surface PEM files")
-        self.actionContour_Map.triggered.connect(lambda: self.contour_viewer.open(self.pem_files))
+        self.actionContour_Map.triggered.connect(lambda: self.contour_viewer.open(self.updated_pem_files()))
 
         # Tools menu
         self.actionLoop_Planner.setStatusTip("Loop planner")
@@ -882,20 +883,20 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if current_tab == pem_info_widget.station_gps_tab:
             line = SurveyLine(file, crs=crs)
             self.line_adder.write_widget = pem_info_widget
-            self.line_adder.add_df(line.get_line(sorted=self.auto_sort_stations_cbox.isChecked()))
+            self.line_adder.open(line.get_line(sorted=self.auto_sort_stations_cbox.isChecked()))
 
         elif current_tab == pem_info_widget.geometry_tab:
             collar = BoreholeCollar(file, crs=crs)
             segments = BoreholeSegments(file)
             if not collar.df.empty:
-                pem_info_widget.fill_gps_table(collar.df, pem_info_widget.collarGPSTable)
+                pem_info_widget.fill_gps_table(collar.df, pem_info_widget.collar_table)
             if not segments.df.empty:
-                pem_info_widget.fill_gps_table(segments.df, pem_info_widget.geometryTable)
+                pem_info_widget.fill_gps_table(segments.df, pem_info_widget.segments_table)
 
         elif current_tab == pem_info_widget.loop_gps_tab:
             loop = TransmitterLoop(file, crs=crs)
             self.loop_adder.write_widget = pem_info_widget
-            self.loop_adder.add_df(loop.get_loop(sorted=self.auto_sort_loops_cbox.isChecked()))
+            self.loop_adder.open(loop.get_loop(sorted=self.auto_sort_loops_cbox.isChecked()))
 
         else:
             pass
@@ -1829,8 +1830,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         pem_file.line_name = self.table.item(table_row, self.table_columns.index('Line/Hole')).text()
         pem_file.loop_name = self.table.item(table_row, self.table_columns.index('Loop')).text()
         pem_file.current = float(self.table.item(table_row, self.table_columns.index('Current')).text())
-        pem_file.loop = self.stackedWidget.widget(table_row).get_loop()
+
         crs = self.get_crs()
+        pem_file.loop = self.stackedWidget.widget(table_row).get_loop()
+        pem_file.loop.crs = crs
         if pem_file.is_borehole():
             pem_file.geometry = self.stackedWidget.widget(table_row).get_geometry()
             pem_file.geometry.collar.crs = crs
@@ -1839,6 +1842,15 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             pem_file.line.crs = crs
 
         return pem_file
+
+    def updated_pem_files(self):
+        """
+        Return the updated version of the opened PEM files
+        :return: list, updated PEM files
+        """
+        files, rows = self.pem_files, np.arange(self.table.rowCount())
+        updated_files = [self.update_pem_file_from_table(copy.deepcopy(file), row) for file, row in zip(files, rows)]
+        return updated_files
 
     def backup_files(self):
         """
@@ -2430,7 +2442,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         widget_loop = widget.get_loop().df
         if not widget_loop.empty:
             for widget in self.pem_info_widgets:
-                widget.fill_gps_table(widget_loop, widget.loopGPSTable)
+                widget.fill_gps_table(widget_loop, widget.loop_table)
 
     def share_collar(self):
         """
@@ -2441,7 +2453,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         widget_collar = widget.get_collar().df
         if not widget_collar.empty:
             for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
-                widget.fill_gps_table(widget_collar, widget.collarGPSTable)
+                widget.fill_gps_table(widget_collar, widget.collar_table)
 
     def share_segments(self):
         """
@@ -2452,7 +2464,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         wigdet_segments = widget.get_segments().df
         if not wigdet_segments.empty:
             for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
-                widget.fill_gps_table(wigdet_segments, widget.geometryTable)
+                widget.fill_gps_table(wigdet_segments, widget.segments_table)
 
     def share_station_gps(self):
         """
@@ -2463,7 +2475,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         widget_line = widget.get_line().df
         if not widget_line.empty:
             for widget in list(filter(lambda x: not x.pem_file.is_borehole(), self.pem_info_widgets)):
-                widget.fill_gps_table(widget_line, widget.stationGPSTable)
+                widget.fill_gps_table(widget_line, widget.line_table)
 
     def auto_name_lines(self):
         """
@@ -2528,26 +2540,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         m = MagDeclinationCalculator(parent=self)
         m.calc_mag_dec(pem_file, self.get_crs())
         m.show()
-
-    def show_plan_map(self):
-        """
-        Opens the interactive plan Map window
-        :return: None
-        """
-        if self.pem_files:
-            zone = self.gps_zone_cbox.currentText()
-            datum = self.gps_datum_cbox.currentText()
-            if not zone:
-                self.message.information(self, 'UTM Zone Error', f"UTM zone cannot be empty.")
-            elif not datum:
-                self.message.information(self, 'Datum Error', f"Datum cannot be empty.")
-            elif datum == 'NAD 1927':
-                self.message.information(self, 'Datum Error', f"Datum cannot be NAD 1927.")
-            else:
-                self.map = FoliumMap(self.pem_files, zone).get_map()
-                self.map.show()
-        else:
-            self.window().statusBar().showMessage('No PEM files are opened.', 2000)
 
     # def show_section_3d_viewer(self):
     #     """
@@ -2832,9 +2824,9 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=1)
+    pem_files = pg.get_pems(client='Kazzinc', number=2)
     mw.show()
-    # mw.open_pem_files(pem_files)
+    mw.open_pem_files(pem_files)
     # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])

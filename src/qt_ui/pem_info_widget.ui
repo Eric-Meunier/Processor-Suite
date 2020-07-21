@@ -29,20 +29,20 @@
    <item row="0" column="0">
     <widget class="QTabWidget" name="tabs">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
+      <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
      <property name="minimumSize">
       <size>
-       <width>400</width>
+       <width>500</width>
        <height>0</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>16777215</width>
+       <width>500</width>
        <height>16777215</height>
       </size>
      </property>
@@ -59,7 +59,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>5</number>
      </property>
      <widget class="QWidget" name="info_tab">
       <attribute name="title">
@@ -123,10 +123,58 @@
        <string>Loop GPS</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
-       <item row="0" column="1" rowspan="2">
-        <widget class="QGroupBox" name="loopGPSGroupBox">
+       <item row="1" column="0" colspan="3">
+        <widget class="QTableWidget" name="loop_table">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>350</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+         <property name="showGrid">
+          <bool>false</bool>
+         </property>
+         <attribute name="horizontalHeaderHighlightSections">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <column>
+          <property name="text">
+           <string>Easting</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Northing</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Elevation</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Unit</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item row="1" column="3" rowspan="2">
+        <widget class="QFrame" name="frame_3">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -143,19 +191,19 @@
            <height>16777215</height>
           </size>
          </property>
-         <property name="title">
-          <string>Loop Editing</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-         </property>
-         <property name="flat">
-          <bool>false</bool>
-         </property>
-         <property name="checkable">
-          <bool>false</bool>
-         </property>
          <layout class="QVBoxLayout" name="verticalLayout">
+          <property name="leftMargin">
+           <number>6</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>6</number>
+          </property>
+          <property name="bottomMargin">
+           <number>6</number>
+          </property>
           <item>
            <widget class="QLabel" name="shiftElevationLabel">
             <property name="text">
@@ -174,21 +222,28 @@
            </widget>
           </item>
           <item>
-           <widget class="Line" name="line_2">
+           <widget class="Line" name="line">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="export_loop_gps_btn">
+           <widget class="QPushButton" name="edit_loop_btn">
             <property name="text">
-             <string>Export GPS</string>
+             <string>Edit Loop</string>
             </property>
            </widget>
           </item>
           <item>
-           <spacer name="verticalSpacer_4">
+           <widget class="QPushButton" name="export_loop_gps_btn">
+            <property name="text">
+             <string>Export Loop</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
             </property>
@@ -203,59 +258,6 @@
          </layout>
         </widget>
        </item>
-       <item row="0" column="0">
-        <widget class="QTableWidget" name="loopGPSTable">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>320</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="selectionBehavior">
-          <enum>QAbstractItemView::SelectRows</enum>
-         </property>
-         <property name="showGrid">
-          <bool>false</bool>
-         </property>
-         <attribute name="horizontalHeaderHighlightSections">
-          <bool>false</bool>
-         </attribute>
-         <attribute name="verticalHeaderVisible">
-          <bool>false</bool>
-         </attribute>
-         <column>
-          <property name="text">
-           <string>Tag</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Easting</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Northing</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Elevation</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Units</string>
-          </property>
-         </column>
-        </widget>
-       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="station_gps_tab">
@@ -263,8 +265,8 @@
        <string>Station GPS</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_3">
-       <item row="0" column="1">
-        <widget class="QGroupBox" name="stationGPSGroupBox">
+       <item row="0" column="4">
+        <widget class="QFrame" name="frame">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -283,10 +285,25 @@
            <height>16777215</height>
           </size>
          </property>
-         <property name="title">
-          <string>Station Editing</string>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
+          <property name="leftMargin">
+           <number>6</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>6</number>
+          </property>
+          <property name="bottomMargin">
+           <number>6</number>
+          </property>
           <item>
            <widget class="QLabel" name="shiftStationLabel">
             <property name="text">
@@ -308,7 +325,28 @@
            </widget>
           </item>
           <item>
-           <widget class="Line" name="line">
+           <widget class="Line" name="line_6">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="edit_line_btn">
+            <property name="text">
+             <string>Edit Line</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="export_station_gps_btn">
+            <property name="text">
+             <string>Export GPS</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="Line" name="line_5">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -329,6 +367,13 @@
            </widget>
           </item>
           <item>
+           <widget class="Line" name="line_4">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="stations_from_data_btn">
             <property name="text">
              <string>Make Stations
@@ -345,42 +390,16 @@ Not In Data</string>
            </widget>
           </item>
           <item>
-           <spacer name="verticalSpacer_3">
+           <widget class="Line" name="line_2">
             <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QPushButton" name="export_station_gps_btn">
-            <property name="text">
-             <string>Export GPS</string>
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
           <item>
-           <spacer name="verticalSpacer_6">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
            <widget class="QLabel" name="label_4">
             <property name="text">
-             <string>Missing GPS</string>
+             <string>Missing Stations</string>
             </property>
            </widget>
           </item>
@@ -392,9 +411,15 @@ Not In Data</string>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>300</height>
+             </size>
+            </property>
             <property name="maximumSize">
              <size>
-              <width>100</width>
+              <width>16777215</width>
               <height>16777215</height>
              </size>
             </property>
@@ -430,22 +455,9 @@ Not In Data</string>
            </widget>
           </item>
           <item>
-           <spacer name="verticalSpacer_5">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
            <widget class="QLabel" name="label_2">
             <property name="text">
-             <string>Distance:</string>
+             <string>Distance</string>
             </property>
            </widget>
           </item>
@@ -462,8 +474,8 @@ Not In Data</string>
          </layout>
         </widget>
        </item>
-       <item row="0" column="0">
-        <widget class="QTableWidget" name="stationGPSTable">
+       <item row="0" column="1" rowspan="19" colspan="3">
+        <widget class="QTableWidget" name="line_table">
          <property name="sizePolicy">
           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -474,6 +486,12 @@ Not In Data</string>
           <size>
            <width>350</width>
            <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>350</width>
+           <height>16777215</height>
           </size>
          </property>
          <property name="selectionBehavior">
@@ -488,11 +506,6 @@ Not In Data</string>
          <attribute name="verticalHeaderVisible">
           <bool>false</bool>
          </attribute>
-         <column>
-          <property name="text">
-           <string>Tag</string>
-          </property>
-         </column>
          <column>
           <property name="text">
            <string>Easting</string>
@@ -510,7 +523,7 @@ Not In Data</string>
          </column>
          <column>
           <property name="text">
-           <string>Units</string>
+           <string>Unit</string>
           </property>
          </column>
          <column>
@@ -528,7 +541,7 @@ Not In Data</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_5">
        <item row="0" column="0">
-        <widget class="QTableWidget" name="collarGPSTable">
+        <widget class="QTableWidget" name="collar_table">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -580,11 +593,6 @@ Not In Data</string>
          <row/>
          <column>
           <property name="text">
-           <string>Tag</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
            <string>Easting</string>
           </property>
          </column>
@@ -605,7 +613,7 @@ Not In Data</string>
          </column>
          <item row="0" column="0">
           <property name="text">
-           <string>&lt;P00&gt;</string>
+           <string/>
           </property>
           <property name="textAlignment">
            <set>AlignCenter</set>
@@ -629,14 +637,6 @@ Not In Data</string>
          </item>
          <item row="0" column="3">
           <property name="text">
-           <string/>
-          </property>
-          <property name="textAlignment">
-           <set>AlignCenter</set>
-          </property>
-         </item>
-         <item row="0" column="4">
-          <property name="text">
            <string>0</string>
           </property>
           <property name="textAlignment">
@@ -646,7 +646,7 @@ Not In Data</string>
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QTableWidget" name="geometryTable">
+        <widget class="QTableWidget" name="segments_table">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -679,11 +679,6 @@ Not In Data</string>
          </attribute>
          <column>
           <property name="text">
-           <string>Tag</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
            <string>Azimuth</string>
           </property>
          </column>
@@ -710,6 +705,28 @@ Length</string>
          </column>
         </widget>
        </item>
+       <item row="0" column="1" rowspan="2">
+        <widget class="QFrame" name="frame_2">
+         <property name="minimumSize">
+          <size>
+           <width>120</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>120</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="data_tab">
@@ -718,7 +735,7 @@ Length</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_6">
        <item row="0" column="0">
-        <widget class="QTableWidget" name="dataTable">
+        <widget class="QTableWidget" name="data_table">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -737,6 +754,9 @@ Length</string>
          <property name="sortingEnabled">
           <bool>false</bool>
          </property>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
          <column>
           <property name="text">
            <string>index</string>
@@ -777,7 +797,7 @@ Number</string>
         </widget>
        </item>
        <item row="0" column="1">
-        <widget class="QGroupBox" name="groupBox">
+        <widget class="QFrame" name="frame">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -796,10 +816,19 @@ Number</string>
            <height>16777215</height>
           </size>
          </property>
-         <property name="title">
-          <string>Data Editing</string>
-         </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
+          <property name="leftMargin">
+           <number>6</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>6</number>
+          </property>
+          <property name="bottomMargin">
+           <number>6</number>
+          </property>
           <item>
            <widget class="QLabel" name="label">
             <property name="text">
@@ -854,6 +883,19 @@ Suffix</string>
            </widget>
           </item>
           <item>
+           <spacer name="verticalSpacer_4">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
            <widget class="QGroupBox" name="groupBox_2">
             <property name="title">
              <string>Sort By</string>
@@ -861,9 +903,21 @@ Suffix</string>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
             </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
             <layout class="QVBoxLayout" name="verticalLayout_5">
              <property name="leftMargin">
-              <number>9</number>
+              <number>3</number>
+             </property>
+             <property name="topMargin">
+              <number>3</number>
+             </property>
+             <property name="rightMargin">
+              <number>3</number>
+             </property>
+             <property name="bottomMargin">
+              <number>3</number>
              </property>
              <item>
               <widget class="QRadioButton" name="station_sort_rbtn">
@@ -943,7 +997,7 @@ Repeats</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_7">
        <item row="0" column="0">
-        <widget class="QTableWidget" name="riTable">
+        <widget class="QTableWidget" name="ri_table">
          <property name="autoScroll">
           <bool>false</bool>
          </property>

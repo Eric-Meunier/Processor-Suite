@@ -206,10 +206,10 @@ class PEMFile:
                 return CRS().from_dict({'System': system, 'Zone': zone, 'Datum': datum})
         return CRS()
 
-    def get_loop(self, sorted=True, closed=False):
+    def get_loop(self, sorted=False, closed=False):
         return self.loop.get_loop(sorted=sorted, closed=closed)
 
-    def get_line(self, sorted=True):
+    def get_line(self, sorted=False):
         return self.line.get_line(sorted=sorted)
 
     def get_collar(self):
@@ -224,7 +224,7 @@ class PEMFile:
     def get_notes(self):
         return self.notes
 
-    def get_data(self, sorted=True):
+    def get_data(self, sorted=False):
         if sorted:
             data = sort_data(self.data)
         else:
