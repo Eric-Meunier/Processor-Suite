@@ -1410,7 +1410,7 @@ class PlanMap(MapPlotter):
             # Remove files that aren't the same survey type
             if pem_file.get_survey_type() != survey_type:
                 print(
-                    f"{pem_file.filename()} is not the correct survey type: {pem_file.get_survey_type()} vs {survey_type}")
+                    f"{pem_file.filepath.name} is not the correct survey type: {pem_file.get_survey_type()} vs {survey_type}")
                 self.pem_files.pop(pem_file)
                 break
 
@@ -1810,7 +1810,7 @@ class SectionPlot(MapPlotter):
 
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
-        assert pem_file.has_geometry(), f'{pem_file.filename()} does not have hole geometry and/or collar GPS'
+        assert pem_file.has_geometry(), f'{pem_file.filepath.name} does not have hole geometry and/or collar GPS'
 
         self.pem_file = pem_file
         self.figure = figure
@@ -2247,7 +2247,7 @@ class GeneralMap(MapPlotMethods):
                     self.crs = self.get_crs(file.get_crs())
                     break
                 except ValueError:
-                    print(f"{file.filename()} has no valid CRS, moving to the next file...")
+                    print(f"{file.filepath.name} has no valid CRS, moving to the next file...")
                     pass
         else:
             self.crs = self.get_crs(kwargs.get('CRS')) if kwargs else None
@@ -3174,7 +3174,7 @@ class ContourMap(MapPlotter):
                         data = component_data.iloc[0]['Reading'][channel]
                     else:
                         print(f"No data for channel {channel} of station {station_num} ({component} component) \
-                                                            in file {pem_file.filename()}")
+                                                            in file {pem_file.filepath.name}")
                         return
 
                 # Loop name appended here in-case no data is being plotted for the current PEM file
@@ -3189,11 +3189,11 @@ class ContourMap(MapPlotter):
             for pem_file in pem_files:
 
                 if channel > pem_file.number_of_channels:
-                    print(f"Channel {channel} not in file {pem_file.filename()}")
+                    print(f"Channel {channel} not in file {pem_file.filepath.name}")
                     break
 
                 if component != 'TF' and component not in pem_file.get_components():
-                    print(f"{pem_file.filename()} has no {component} data.")
+                    print(f"{pem_file.filepath.name} has no {component} data.")
                     break
 
                 pem_data = pem_file.data
@@ -3202,7 +3202,7 @@ class ContourMap(MapPlotter):
                 line_gps = line_gps[~line_gps.Station.isin(pem_file.get_unique_stations(converted=True))]
 
                 if line_gps.empty:
-                    print(f"Skipping {pem_file.filename()} because it has no line GPS")
+                    print(f"Skipping {pem_file.filepath.name} because it has no line GPS")
                     break
 
                 # Get the contour information
@@ -3708,7 +3708,7 @@ class Map3D(MapPlotMethods):
             except ValueError as e:
                 self.error.setWindowTitle(f"3D Map Error")
                 self.error.showMessage(
-                    f"The following error occurred while creating the 3D map for {os.path.basename(pem_file.filepath)}:"
+                    f"The following error occurred while creating the 3D map for {pem_file.filepath.name}:"
                     f"\n{str(e)}")
                 return
             else:
@@ -3747,7 +3747,7 @@ class Map3D(MapPlotMethods):
             except ValueError as e:
                 self.error.setWindowTitle(f"3D Map Error")
                 self.error.showMessage(
-                    f"The following error occurred while creating the 3D map for {os.path.basename(pem_file.filepath)}:"
+                    f"The following error occurred while creating the 3D map for {pem_file.filepath.name}:"
                     f"\n{str(e)}")
                 return
             else:

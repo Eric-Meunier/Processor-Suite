@@ -194,7 +194,7 @@ class BatchRIImporter(QWidget):
     def open_pem_files(self, pem_files):
         self.pem_files = pem_files
 
-        names = [os.path.basename(pem_file.filepath) for pem_file in self.pem_files]
+        names = [pem_file.filepath.name for pem_file in self.pem_files]
 
         for i, name in enumerate(names):
             row_pos = self.table.rowCount()

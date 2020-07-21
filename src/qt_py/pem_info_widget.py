@@ -5,16 +5,15 @@ from collections import OrderedDict
 from copy import deepcopy
 
 import math
-import time
 import natsort
 import numpy as np
 import pandas as pd
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
-                             QFileDialog, QErrorMessage, QAbstractScrollArea, QHeaderView)
+                             QFileDialog, QErrorMessage, QHeaderView)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
-from src.pem.pem_file_editor import PEMFileEditor
+from src.pem._legacy.pem_file_editor import PEMFileEditor
 from src.qt_py.ri_importer import RIFile
 from src.qt_py.gps_adder import LoopAdder, LineAdder
 
@@ -371,7 +370,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param parent: parent widget (PEMEditor)
         :return: PEMFileInfoWidget object
         """
-        print(f'PEMFileInfoWidget - Opening PEM File {pem_file.filename()}')
+        print(f'PEMFileInfoWidget - Opening PEM File {pem_file.filepath.name}')
         self.pem_file = pem_file
         self.parent = parent
         self.init_tables()
@@ -529,8 +528,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if table == self.loop_table:
             self.edit_loop_btn.setEnabled(True)
+            table.verticalHeader().show()
         elif table == self.line_table:
             self.edit_line_btn.setEnabled(True)
+            table.verticalHeader().show()
+        elif table == self.segments_table:
+            table.verticalHeader().show()
         #     tags = [f"<L{n:02}>" for n in range(len(data.index))]
         # elif table == self.segments_table:
         #     tags = [f"<P{n + 1:02}>" for n in range(len(data.index))]
@@ -1305,7 +1308,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             gps = self.get_loop()
 
-        default_path = os.path.dirname(self.pem_file.filepath)
+        default_path = self.pem_file.filepath.parent
         selected_path = self.dialog.getSaveFileName(self, 'Save File', directory=default_path,
                                                     filter='Text files (*.txt);; CSV files (*.csv);; All files(*.*)')
         if selected_path[0]:

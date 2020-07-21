@@ -150,7 +150,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         if self.pem_file.is_rotated():
             response = self.message.question(self, 'File already de-rotated',
-                                             f"{pem_file.filename()} is already de-rotated. " +
+                                             f"{pem_file.filepath.name} is already de-rotated. " +
                                              'Do you wish to de-rotate again?',
                                              self.message.Yes | self.message.No)
             if response == self.message.No:
@@ -161,7 +161,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         else:
             self.pp_btn.setEnabled(False)
 
-        self.setWindowTitle(f"XY De-rotation - {pem_file.filename()}")
+        self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
         self.show()
         self.rotate()
 
@@ -348,13 +348,13 @@ class Derotator(QMainWindow, Ui_Derotator):
 #
 #         if self.pem_file.is_rotated():
 #             response = self.message.question(self, 'File already de-rotated',
-#                                              f"{pem_file.filename()} is already de-rotated. " +
+#                                              f"{pem_file.filepath.name} is already de-rotated. " +
 #                                              'Do you wish to de-rotate again?',
 #                                              self.message.Yes | self.message.No)
 #             if response == self.message.No:
 #                 return
 #
-#         self.setWindowTitle(f"XY De-rotation - {pem_file.filename()}")
+#         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
 #         self.plot_pem(self.pem_file)
 #         self.show()
 #

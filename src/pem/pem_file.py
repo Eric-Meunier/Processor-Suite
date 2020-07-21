@@ -70,7 +70,7 @@ class PEMFile:
 
         self.notes = notes
         self.data = sort_data(data)
-        self.filepath = filepath
+        self.filepath = Path(filepath)
 
         crs = self.get_crs()
         self.loop = TransmitterLoop(loop_coords, crs=crs)
@@ -169,9 +169,6 @@ class PEMFile:
                 return False
             else:
                 return True
-
-    def filename(self):
-        return os.path.basename(self.filepath)
 
     def get_gps_units(self):
         """
@@ -326,7 +323,7 @@ class PEMFile:
         :return: PEM file object
         """
         if self.is_averaged():
-            print(f"{self.filename()} is already averaged")
+            print(f"{self.filepath.name} is already averaged")
             return
 
         def weighted_average(group):
@@ -358,7 +355,7 @@ class PEMFile:
         :return: PEM file object with split data
         """
         if self.is_split():
-            print(f"{self.filename()} is already split.")
+            print(f"{self.filepath.name} is already split.")
             return
 
         # Only keep the select channels from each reading
@@ -382,7 +379,7 @@ class PEMFile:
 
         scale_factor = float(old_coil_area / new_coil_area)
         self.data.Reading = self.data.Reading.map(lambda x: x * scale_factor)
-        print(f"{self.filename()} coil area scaled to {new_coil_area} from {old_coil_area}")
+        print(f"{self.filepath.name} coil area scaled to {new_coil_area} from {old_coil_area}")
 
         self.coil_area = new_coil_area
         self.notes.append(f'<HE3> Data scaled by coil area change of {old_coil_area}/{new_coil_area}')
@@ -400,7 +397,7 @@ class PEMFile:
 
         scale_factor = float(new_current / old_current)
         self.data.Reading = self.data.Reading.map(lambda x: x * scale_factor)
-        print(f"{self.filename()} current scaled to {new_current}A from {old_current}A")
+        print(f"{self.filepath.name} current scaled to {new_current}A from {old_current}A")
 
         self.current = new_current
         self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{old_current}A')
@@ -414,7 +411,7 @@ class PEMFile:
         :param soa: int: Sensor offset angle
         :return: PEM file object with rotated data
         """
-        assert self.is_borehole(), f"{self.filename()} is not a borehole file."
+        assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
 
         def filter_data(df):
             """
@@ -432,9 +429,9 @@ class PEMFile:
             return df
 
         def setup_pp():
-            assert self.has_loop_gps(), f"{self.filename()} has no loop GPS."
-            assert self.has_geometry(), f"{self.filename()} has incomplete geometry."
-            assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filename()}."
+            assert self.has_loop_gps(), f"{self.filepath.name} has no loop GPS."
+            assert self.has_geometry(), f"{self.filepath.name} has incomplete geometry."
+            assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filepath.name}."
 
             global proj, loop, ramp, mag_calc, ch_times, ch_numbers
 
@@ -1484,6 +1481,6 @@ if __name__ == '__main__':
 
     # file.average()
     # file.scale_current(10)
-    out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filename()} - test rotation.pem')
+    out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filepath.name} - test rotation.pem')
     print(file.to_string(), file=open(out, 'w'))
     os.startfile(out)
