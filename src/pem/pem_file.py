@@ -314,7 +314,7 @@ class PEMFile:
         :return: str: Full text of the PEM file
         """
         ps = PEMSerializer()
-        text = ps.serialize(self)
+        text = ps.serialize(copy.deepcopy(self))
         return text
 
     def average(self):

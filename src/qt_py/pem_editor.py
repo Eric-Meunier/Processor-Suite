@@ -118,7 +118,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.folium_map = FoliumMap()
 
         # Project tree
-        self.project_dir = ''
+        self.project_dir = None
         self.file_sys_model = QFileSystemModel()
         self.file_sys_model.setRootPath(QtCore.QDir.rootPath())
         self.project_tree.setModel(self.file_sys_model)
@@ -922,8 +922,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 if self.gps_system_cbox.currentText() == '' and self.gps_datum_cbox.currentText() == '':
                     fill_crs(pem_file)
 
-                # if self.project_dir == self.file_sys_model.rootPath():
-                #     self.move_dir_tree_to(str(pem_file.filepath.parent))
+                if self.project_dir is None:
+                    self.move_dir_tree_to(pem_file.filepath.parent)
 
                 i = get_insertion_point(pem_file)
                 self.pem_files.insert(i, pem_file)
@@ -941,8 +941,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.fill_share_range()
         self.table.setUpdatesEnabled(True)
 
-        # Move the project directory tree
-        self.move_dir_tree_to(pem_files[0].filepath.parent)
+        # # Move the project directory tree
+        # self.move_dir_tree_to(pem_files[0].filepath.parent)
 
         self.pg.hide()
         self.frame.show()
@@ -2355,12 +2355,12 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 merged_pem.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
                 merged_pem.number_of_readings = sum([f.number_of_readings for f in pem_files])
                 merged_pem.is_merged = True
+                merged_pem.filepath = pem_files[0].filepath
 
                 # Add the M tag
-                if '[M]' not in pem_files[0].filepath:
-                    merged_pem.filepath = Path(pem_files[0].filepath.stem + '[M]' + pem_files[0].filepath.suffix)
-                else:
-                    merged_pem.filepath = pem_files[0].filepath
+                if '[M]' not in pem_files[0].filepath.name:
+                    merged_pem.filepath = merged_pem.filepath.with_name(
+                        merged_pem.filepath.stem + '[M]' + merged_pem.filepath.suffix)
 
                 self.write_pem_file(merged_pem)
                 return merged_pem
@@ -2381,7 +2381,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             merged_pem = merge_pems(pem_files)
 
             files_to_open.append(merged_pem)
-            files_to_remove.append(pem_files)
+            files_to_remove.extend(pem_files)
 
         elif auto_select is True:
             if not self.pem_files:
@@ -2406,11 +2406,11 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
                     # Merge the files
                     merged_pem = merge_pems(line_files)
-                    # Save the new file
-                    self.write_pem_file(merged_pem, tag='[M]')
+                    # # Save the new file
+                    # self.write_pem_file(merged_pem, tag='[M]')
 
                     files_to_open.append(merged_pem)
-                    files_to_remove.append(line_files)
+                    files_to_remove.extend(line_files)
 
             # Merge borehole files
             # Group the files by loop
@@ -2434,10 +2434,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                             merged_pem = merge_pems(comp_files)
 
                             files_to_open.append(merged_pem)
-                            files_to_remove.append(comp_files)
+                            files_to_remove.extend(comp_files)
 
-        files_to_remove = np.hstack(files_to_remove)
-        rows = [self.pem_files.index(f) for f in files_to_remove]
+        # files_to_remove = np.hstack(files_to_remove)
+        rows = [pem_files.index(f) for f in files_to_remove]
 
         if self.auto_create_backup_files_cbox.isChecked():
             for file in reversed(files_to_remove):
@@ -2968,7 +2968,7 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems(client='Kazzinc', number=2)
     # mw.show()
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
     # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
