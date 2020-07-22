@@ -744,6 +744,14 @@ class CRS:
         elif self.system == 'Latitude/Longitude':
             return ccrs.Geodetic()
 
+    def to_string(self):
+        if self.system == 'UTM':
+            north = 'North' if self.north else 'South'
+            string = f"{self.system} Zone {self.zone_number} {north}, {self.datum.upper()}"
+        else:
+            string = f"{self.system}, {self.datum.upper()}"
+        return string
+
     def get_epsg(self):
         """
         Return the EPSG code for the datum

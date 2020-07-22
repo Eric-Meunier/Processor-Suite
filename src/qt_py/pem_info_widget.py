@@ -50,9 +50,9 @@ def convert_station(station):
     :return: Integer station number
     """
     if re.match(r"\d+(S|W)", station):
-        station = (-int(re.sub(r"\D", "", station)))
+        station = (-int(re.sub(r"[SW]", "", station.upper())))
     else:
-        station = (int(re.sub(r"\D", "", station)))
+        station = (int(re.sub(r"[EN]", "", station.upper())))
     return station
 
 
@@ -183,7 +183,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         # Table changes
         self.line_table.cellChanged.connect(self.check_station_duplicates)
-        self.line_table.cellChanged.connect(self.check_station_order)
+        self.line_table.cellChanged.connect(self.color_line_table)
         self.line_table.cellChanged.connect(self.check_missing_gps)
         self.line_table.itemSelectionChanged.connect(self.calc_distance)
         self.line_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
@@ -545,7 +545,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if table == self.line_table:
             self.check_station_duplicates()
-            self.check_station_order()
+            self.color_line_table()
             self.check_missing_gps()
         # table.resizeColumnsToContents()
         table.blockSignals(False)
@@ -713,9 +713,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 stations.append(station)
         self.line_table.blockSignals(False)
 
-    def check_station_order(self):
+    def color_line_table(self):
         """
-        Colors the stationGPS rows, station number column, based on issues with the ordering of the station numbers.
+        Colors the line_table rows, station number column, based on issues with the ordering of the station numbers.
         This is done by first creating a list of ordered numbers based on the first and last GPS station numbers,
         then comparing these values with the coinciding value in the table.
         :return: None
@@ -806,9 +806,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if table == self.line_table:
             self.check_station_duplicates()
             self.check_missing_gps()
-            add_tags()
-        elif table == self.loop_table:
-            add_tags()
+            # add_tags()
+        # elif table == self.loop_table:
+            # add_tags()
         self.refresh_tables_signal.emit()
 
     def remove_data_row(self):

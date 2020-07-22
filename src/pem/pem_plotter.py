@@ -1349,13 +1349,17 @@ class PlanMap(MapPlotter):
     :param: **kwargs: Dictionary of settings
     """
 
-    def __init__(self, pem_files, figure, crs, **kwargs):
+    def __init__(self, pem_files, figure, crs, annotate_loop=False, is_moving_loop=False, draw_title_box=True,
+                 draw_grid=True, draw_scale_bar=True, draw_north_arrow=True, draw_legend=True, draw_loops=True,
+                 draw_lines=True, draw_collars=True, draw_hole_traces=True, label_loops=True, label_lines=True,
+                 label_collars=True, label_hole_depth=True):
         super().__init__()
         self.figure = figure
 
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
         self.pem_files = pem_files
+        self.crs = crs
 
         self.loops = []
         self.loop_names = []
@@ -1371,28 +1375,27 @@ class PlanMap(MapPlotter):
         self.map_scale = None
         self.color = 'black'
 
-        self.annotate_loop = kwargs.get('LoopAnnotations') if kwargs else False
-        self.moving_loop = kwargs.get('MovingLoop') if kwargs else True
-        self.title_box = kwargs.get('TitleBox') if kwargs else True
-        self.map_grid = kwargs.get('Grid') if kwargs else True
-        self.scale_bar = kwargs.get('ScaleBar') if kwargs else True
-        self.north_arrow = kwargs.get('NorthArrow') if kwargs else True
-        self.show_legend = kwargs.get('Legend') if kwargs else True
-        self.draw_loop = kwargs.get('DrawLoops') if kwargs else True
-        self.draw_line = kwargs.get('DrawLines') if kwargs else True
-        self.draw_hole_collar = kwargs.get('DrawHoleCollars') if kwargs else True
-        self.draw_hole_trace = kwargs.get('DrawHoleTraces') if kwargs else True
-        self.label_loop = kwargs.get('LoopLabels') if kwargs else True
-        self.label_line = kwargs.get('LineLabels') if kwargs else True
-        self.label_collar = kwargs.get('HoleCollarLabels') if kwargs else True
-        self.label_hole_depth = kwargs.get('HoleDepthLabels') if kwargs else True
+        self.annotate_loop = annotate_loop
+        self.is_moving_loop = is_moving_loop
+        self.draw_title_box = draw_title_box
+        self.draw_grid = draw_grid 
+        self.draw_scale_bar = draw_scale_bar
+        self.draw_north_arrow = draw_north_arrow
+        self.draw_legend = draw_legend
+        self.draw_loops = draw_loops
+        self.draw_lines = draw_lines
+        self.draw_collars = draw_collars
+        self.draw_hole_traces = draw_hole_traces
+        self.label_loops = label_loops
+        self.label_lines = label_lines
+        self.label_collars = label_collars
+        self.label_hole_depth = label_hole_depth
 
-        if __name__ == '__main__':
-            self.crs = self.pem_files[0].get_crs()
-            if not self.crs.is_valid():
-                self.crs = CRS().from_dict({'System': 'UTM', 'Zone': '18 North', 'Datum': 'NAD 83'})
-        else:
-            self.crs = crs
+        # if __name__ == '__main__':
+        #     self.crs = self.pem_files[0].get_crs()
+        #     if not self.crs.is_valid():
+        #         self.crs = CRS().from_dict({'System': 'UTM', 'Zone': '18 North', 'Datum': 'NAD 83'})
+        # else:
 
         assert self.crs, 'No CRS'
         assert self.crs.is_valid(), 'Invalid CRS'
@@ -1415,23 +1418,23 @@ class PlanMap(MapPlotter):
                 break
 
             # Plot the surface lines
-            if not pem_file.is_borehole() and self.draw_line is True and pem_file.has_station_gps():
+            if not pem_file.is_borehole() and self.draw_lines is True and pem_file.has_station_gps():
                 self.station_handle = self.plot_line(pem_file, self.figure,
                                                      annotate=False)
 
             # Plot the boreholes
-            if pem_file.is_borehole() and self.draw_hole_collar is True and pem_file.has_collar_gps():
+            if pem_file.is_borehole() and self.draw_collars is True and pem_file.has_collar_gps():
                 self.plot_hole(pem_file, self.figure,
-                               label=self.label_collar,
+                               label=self.label_collars,
                                label_depth=self.label_hole_depth)
 
             # Plot the loops
-            if self.draw_loop is True and pem_file.has_loop_gps():
+            if self.draw_loops is True and pem_file.has_loop_gps():
                 if pem_file.get_loop().to_string() not in self.loops:
                     self.loops.append(pem_file.get_loop().to_string())
                     self.loop_handle = self.plot_loop(pem_file, self.figure,
                                                       annotate=self.annotate_loop,
-                                                      label=self.label_loop)
+                                                      label=self.label_loops)
 
         self.format_figure()
         return self.figure
@@ -1506,22 +1509,15 @@ class PlanMap(MapPlotter):
             loops = natsort.humansorted([file.loop_name for file in self.pem_files])
             loops = list(set(loops))
             hole = self.pem_files[0].line_name
-            is_borehole = self.pem_files[0].is_borehole()
             timebases = np.unique(np.array([file.timebase for file in self.pem_files], dtype=str))
 
-            if is_borehole:
-                if self.moving_loop and len(loops) > 1:
+            if not self.pem_files[0].is_borehole():
+                if self.is_moving_loop and len(loops) > 1:
                     survey_text = f"Loop: {loops[0]} to {loops[-1]}"
                 else:
                     survey_text = f"Loop: {', '.join(loops)}"
             else:
                 survey_text = f"Hole: {hole}    Loop: {', '.join(loops)}"
-
-            if self.crs.system == 'UTM':
-                north = 'North' if self.crs.north else 'South'
-                coord_sys = f"{self.crs.system} {self.crs.zone} {north}, {self.crs.datum.upper()}"
-            else:
-                coord_sys = f"{self.crs.system}, {self.crs.datum.upper()}"
 
             scale = f"1:{self.map_scale:,.0f}"
 
@@ -1532,7 +1528,7 @@ class PlanMap(MapPlotter):
                          zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(center_pos, top_pos - 0.020, f"{'Hole' if is_borehole else 'Line'}"
+            self.ax.text(center_pos, top_pos - 0.020, f"{'Hole' if self.pem_files[0].is_borehole() else 'Line'}"
                          f" and Loop Location Map",
                          family='cursive',
                          fontname='Century Gothic',
@@ -1567,7 +1563,7 @@ class PlanMap(MapPlotter):
                          zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(left_pos, top_pos - 0.167, f"{coord_sys}",
+            self.ax.text(left_pos, top_pos - 0.167, f"{self.crs.to_string()}",
                          family='cursive',
                          style='italic',
                          color='dimgray',
@@ -1598,30 +1594,32 @@ class PlanMap(MapPlotter):
         self.map_scale = self.set_scale(self.ax, self.figure, self.map_crs)
 
         # Add the grid
-        if self.map_grid:
+        if self.draw_grid:
+            # self.ax.grid(True)
+            # self.ax.gridlines(crs=self.map_crs, x_inline=True)
             self.ax.grid(linestyle='dotted', zorder=0)
         else:
             self.ax.grid(False)
 
         # Add the scale bar
-        if self.scale_bar:
+        if self.draw_scale_bar:
             self.add_scale_bar(self.ax)
 
         # Add the north arrow
-        if self.north_arrow:
+        if self.draw_north_arrow:
             self.add_north_arrow(self.ax)
 
         # Add the title box
-        if self.title_box:
+        if self.draw_title_box:
             add_title()
 
         # Add the legend
-        if self.show_legend:
+        if self.draw_legend:
             legend_handles = [handle for handle in
                               [self.loop_handle, self.station_handle, self.collar_handle] if
                               handle is not None]
             # Manually add the hole trace legend handle
-            if self.draw_hole_trace and self.pem_files[0].is_borehole():
+            if self.draw_hole_traces and self.pem_files[0].is_borehole():
                 legend_handles.append(
                     mlines.Line2D([], [],
                                   linestyle='--',
@@ -2234,7 +2232,7 @@ class GeneralMap(MapPlotMethods):
         self.show_legend = kwargs.get('Legend') if kwargs else True
         self.draw_loops = kwargs.get('DrawLoops') if kwargs else True
         self.draw_lines = kwargs.get('DrawLines') if kwargs else True
-        self.draw_hole_collars = kwargs.get('DrawHoleCollars') if kwargs else True
+        self.draw_collars = kwargs.get('DrawHoleCollars') if kwargs else True
         self.draw_hole_traces = kwargs.get('DrawHoleTraces') if kwargs else True
         self.loop_labels = kwargs.get('LoopLabels') if kwargs else True
         self.line_labels = kwargs.get('LineLabels') if kwargs else True
@@ -2423,7 +2421,7 @@ class GeneralMap(MapPlotMethods):
             if not pem_file.is_borehole() and self.draw_lines is True and pem_file.has_station_gps():
                 add_line_to_map(pem_file)
 
-            if pem_file.is_borehole() and self.draw_hole_collars is True and pem_file.has_collar_gps():
+            if pem_file.is_borehole() and self.draw_collars is True and pem_file.has_collar_gps():
                 add_hole_to_map(pem_file)
 
             if self.draw_loops is True and pem_file.has_loop_gps():
@@ -4349,7 +4347,7 @@ class PEMPrinter:
     :param kwargs: Plotting kwargs such as hide_gaps, gaps, and x limits used in PEMPlotter.
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.pb = CustomProgressBar()
         self.pb_count = 0
         self.pb_end = 0
@@ -4359,18 +4357,37 @@ class PEMPrinter:
         self.landscape_fig = plt.figure(num=2, clear=True)
         self.landscape_fig.set_size_inches((11, 8.5))
 
-        self.share_range = None
-        self.x_min = None
-        self.x_max = None
-        self.print_plan_maps = None
-        self.print_section_plot = None
-        self.print_lin_plots = None
-        self.print_log_plots = None
-        self.print_step_plots = None
-        self.hide_gaps = None
-        self.crs = None
+        self.print_plan_maps = kwargs.get('make_plan_map')
+        self.print_section_plot = kwargs.get('make_section_plots')
+        self.print_lin_plots = kwargs.get('make_lin_plots')
+        self.print_log_plots = kwargs.get('make_log_plots')
+        self.print_step_plots = kwargs.get('make_step_plots')
+        
+        self.crs = kwargs.get('CRS')
+        self.share_range = kwargs.get('share_range')
+        self.x_min = kwargs.get('x_min')
+        self.x_max = kwargs.get('x_max')
+        self.hide_gaps = kwargs.get('hide_gaps')
+        self.is_moving_loop = kwargs.get('is_moving_loop')
+        self.section_depth = kwargs.get('section_depth')
 
-    def print_files(self, save_path, files, **kwargs):
+        self.annotate_loop = kwargs.get('annotate_loop')
+        self.draw_title_box = kwargs.get('draw_title_box')
+        self.draw_grid = kwargs.get('draw_grid')
+        self.draw_scale_bar = kwargs.get('draw_scale_bar')
+        self.draw_north_arrow = kwargs.get('draw_north_arrow')
+        self.draw_legend = kwargs.get('draw_legend')
+        self.draw_loops = kwargs.get('draw_loops')
+        self.draw_lines = kwargs.get('draw_lines')
+        self.draw_collars = kwargs.get('draw_collars')
+        self.draw_hole_traces = kwargs.get('draw_hole_traces')
+        self.label_loops = kwargs.get('label_loops')
+        self.label_lines = kwargs.get('label_lines')
+        self.label_collars = kwargs.get('label_collars')
+        self.label_hole_depths = kwargs.get('label_hole_depths')
+        self.draw_segment_labels = kwargs.get('draw_segment_labels')
+
+    def print_files(self, save_path, files):
         """
         Plot the files to a PDF document
         :param save_path: str, PDF document filepath
@@ -4378,7 +4395,7 @@ class PEMPrinter:
         :param kwargs: dictionary of additional plotting arguments.
         """
 
-        def save_plots(pem_files, ri_files, x_min, x_max, **kwargs):
+        def save_plots(pem_files, ri_files, x_min, x_max):
             """
             Create the plots and save them as a PDF file
             :param pem_files: list, PEMFile objects to plot
@@ -4392,7 +4409,24 @@ class PEMPrinter:
                 if any([pem_file.has_any_gps() for pem_file in pem_files]):
                     self.pb.setText(f"Saving plan map for {', '.join([f.line_name for f in pem_files])}")
                     # Plot the plan map
-                    plan_map = PlanMap(pem_files, self.landscape_fig, self.crs, **kwargs)
+                    plan_map = PlanMap(pem_files, self.landscape_fig, self.crs,
+                                       annotate_loop=self.annotate_loop,
+                                       is_moving_loop=self.is_moving_loop,
+                                       draw_title_box=self.draw_title_box,
+                                       draw_grid=self.draw_grid,
+                                       draw_scale_bar=self.draw_scale_bar,
+                                       draw_north_arrow=self.draw_north_arrow,
+                                       draw_legend=self.draw_legend,
+                                       draw_loops=self.draw_loops,
+                                       draw_lines=self.draw_lines,
+                                       draw_collars=self.draw_collars,
+                                       draw_hole_traces=self.draw_hole_traces,
+                                       label_loops=self.label_loops,
+                                       label_lines=self.label_lines,
+                                       label_collars=self.label_collars,
+                                       label_hole_depth=self.label_hole_depths,
+                                       )
+                    
                     plan_fig = plan_map.plot()
                     # Save the plot to the PDF file
                     pdf.savefig(plan_fig, orientation='landscape')
@@ -4407,15 +4441,14 @@ class PEMPrinter:
             if self.print_section_plot is True and pem_files[0].is_borehole():
                 if pem_files[0].has_geometry():
                     self.pb.setText(f"Saving section plot for {pem_files[0].line_name}")
-                    section_depth = kwargs.get('SectionDepth')
                     stations = sorted(set(itertools.chain.from_iterable(
                         [pem_file.get_unique_stations(converted=True) for pem_file in pem_files])))
                     # Plot the section plot
                     section_plotter = SectionPlot()
                     section_fig = section_plotter.plot(pem_files, self.portrait_fig,
                                                        stations=stations,
-                                                       hole_depth=section_depth,
-                                                       label_ticks=kwargs.get('LabelSectionTicks'))
+                                                       hole_depth=self.section_depth,
+                                                       label_ticks=self.draw_segment_labels)
                     # Save the plot to the PDF file
                     pdf.savefig(section_fig, orientation='portrait')
 
@@ -4554,18 +4587,7 @@ class PEMPrinter:
             self.pb.setMaximum(total_count)
 
         files = files  # Zipped PEM and RI files
-        kwargs = kwargs
         save_path = save_path
-        self.crs = kwargs.get('CRS')
-        self.share_range = kwargs.get('ShareRange')
-        self.x_min = kwargs.get('XMin')
-        self.x_max = kwargs.get('XMax')
-
-        self.print_plan_maps = kwargs.get('PlanMap')
-        self.print_section_plot = kwargs.get('SectionPlot')
-        self.print_lin_plots = kwargs.get('LINPlots')
-        self.print_log_plots = kwargs.get('LOGPlots')
-        self.print_step_plots = kwargs.get('STEPPlots')
 
         self.pb_count = 0
         self.pb_end = 0
@@ -4613,7 +4635,7 @@ class PEMPrinter:
                 else:
                     x_max = self.x_max
 
-                save_plots(pem_files, ri_files, x_min, x_max, **kwargs)
+                save_plots(pem_files, ri_files, x_min, x_max)
                 self.pb.setText('Complete')
 
             for loop, files in unique_grids.items():
@@ -4650,7 +4672,7 @@ class PEMPrinter:
         self.portrait_fig, ax = plt.subplots(1, 1, num=1, clear=True)
         ax2 = ax.twiny()
         ax2.get_shared_x_axes().join(ax, ax2)
-        plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
+        plt.yscale('symlog', linthresh=10, linscale=1. / math.log(10), subs=list(np.arange(2, 10, 1)))
 
     def configure_step_fig(self):
         """

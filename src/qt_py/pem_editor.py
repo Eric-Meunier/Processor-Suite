@@ -2070,8 +2070,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         def get_save_file():
             default_path = self.pem_files[-1].filepath.parent
-            self.dialog.setDirectory(default_path)
-            save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0]
+            self.dialog.setDirectory(str(default_path))
+            save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', str(default_path))[0])[0]
             # Returns full filepath. For single PDF file
             print(f"Saving PDFs to {save_dir}")
             return save_dir
@@ -2089,38 +2089,40 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.window().statusBar().showMessage('Saving plots...', 2000)
             crs = self.get_crs()
 
-            plot_kwargs = {'ShareRange': self.share_range_cbox.isChecked(),
-                           'HideGaps': self.hide_gaps_cbox.isChecked(),
-                           'LoopAnnotations': self.show_loop_anno_cbox.isChecked(),
-                           'MovingLoop': self.moving_loop_cbox.isChecked(),
-                           'TitleBox': self.plan_map_options.title_box_cbox.isChecked(),
-                           'Grid': self.plan_map_options.grid_cbox.isChecked(),
-                           'ScaleBar': self.plan_map_options.scale_bar_cbox.isChecked(),
-                           'NorthArrow': self.plan_map_options.north_arrow_cbox.isChecked(),
-                           'Legend': self.plan_map_options.legend_cbox.isChecked(),
-                           'DrawLoops': self.plan_map_options.draw_loops_cbox.isChecked(),
-                           'DrawLines': self.plan_map_options.draw_lines_cbox.isChecked(),
-                           'DrawHoleCollars': self.plan_map_options.draw_hole_collars_cbox.isChecked(),
-                           'DrawHoleTraces': self.plan_map_options.draw_hole_traces_cbox.isChecked(),
-                           'LoopLabels': self.plan_map_options.loop_labels_cbox.isChecked(),
-                           'LineLabels': self.plan_map_options.line_labels_cbox.isChecked(),
-                           'HoleCollarLabels': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
-                           'HoleDepthLabels': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
-                           'CRS': crs,
-                           'LINPlots': self.output_lin_cbox.isChecked(),
-                           'LOGPlots': self.output_log_cbox.isChecked(),
-                           'STEPPlots': self.output_step_cbox.isChecked(),
-                           'PlanMap': self.output_plan_map_cbox.isChecked(),
-                           'SectionPlot': self.output_section_cbox.isChecked(),
-                           'LabelSectionTicks': self.label_section_depths_cbox.isChecked(),
-                           'SectionDepth': self.section_depth_edit.text()}
+            plot_kwargs = {
+                'CRS': crs,
+                'share_range': self.share_range_cbox.isChecked(),
+                'hide_gaps': self.hide_gaps_cbox.isChecked(),
+                'annotate_loop': self.show_loop_anno_cbox.isChecked(),
+                'is_moving_loop': self.moving_loop_cbox.isChecked(),
+                'draw_title_box': self.plan_map_options.title_box_cbox.isChecked(),
+                'draw_grid': self.plan_map_options.grid_cbox.isChecked(),
+                'draw_scale_bar': self.plan_map_options.scale_bar_cbox.isChecked(),
+                'draw_north_arrow': self.plan_map_options.north_arrow_cbox.isChecked(),
+                'draw_legend': self.plan_map_options.legend_cbox.isChecked(),
+                'draw_loops': self.plan_map_options.draw_loops_cbox.isChecked(),
+                'draw_lines': self.plan_map_options.draw_lines_cbox.isChecked(),
+                'draw_collars': self.plan_map_options.draw_hole_collars_cbox.isChecked(),
+                'draw_hole_traces': self.plan_map_options.draw_hole_traces_cbox.isChecked(),
+                'make_lin_plots': self.output_lin_cbox.isChecked(),
+                'make_log_plots': self.output_log_cbox.isChecked(),
+                'make_step_plots': self.output_step_cbox.isChecked(),
+                'make_plan_map': self.output_plan_map_cbox.isChecked(),
+                'make_section_plot': self.output_section_cbox.isChecked(),
+                'label_loops': self.plan_map_options.loop_labels_cbox.isChecked(),
+                'label_lines': self.plan_map_options.line_labels_cbox.isChecked(),
+                'label_collars': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
+                'label_hole_depths': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
+                'label_segments': self.label_section_depths_cbox.isChecked(),
+                'section_depth': self.section_depth_edit.text()
+            }
 
             if self.share_range_cbox.isChecked():
-                plot_kwargs['XMin'] = int(self.min_range_edit.text())
-                plot_kwargs['XMax'] = int(self.max_range_edit.text())
+                plot_kwargs['x_min'] = int(self.min_range_edit.text())
+                plot_kwargs['x_max'] = int(self.max_range_edit.text())
             else:
-                plot_kwargs['XMin'] = None
-                plot_kwargs['XMax'] = None
+                plot_kwargs['x_min'] = None
+                plot_kwargs['x_max'] = None
 
             ri_files = []
             for row, pem_file in zip(rows, pem_files):
@@ -2145,11 +2147,11 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             # else:
             save_dir = get_save_file()
             if save_dir:
-                printer = PEMPrinter()
+                printer = PEMPrinter(**plot_kwargs)
                 self.window().statusBar().addPermanentWidget(printer.pb)
                 try:
                     # PEM Files and RI files zipped together for when they get sorted
-                    printer.print_files(save_dir, files=list(zip(pem_files, ri_files)), **plot_kwargs)
+                    printer.print_files(save_dir, files=list(zip(pem_files, ri_files)))
                 except FileNotFoundError:
                     self.message.information(self, 'Error', f'{save_dir} does not exist')
                 except IOError:
@@ -2968,13 +2970,18 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems(client='Kazzinc', number=2)
     # mw.show()
-    # mw.open_pem_files(pem_files)
+    mw.open_pem_files(pem_files)
     # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
     mw.show()
 
-    # mw.print_plots()
+    mw.output_lin_cbox.setChecked(False)
+    mw.output_log_cbox.setChecked(False)
+    mw.output_step_cbox.setChecked(False)
+    mw.output_section_cbox.setChecked(False)
+    mw.print_plots()
+
     # mw.reverse_all_data('X')
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\GPX files\Loop-32.gpx'])
@@ -3002,14 +3009,6 @@ def main():
     # mw.sort_files()
     # section = Section3DViewer(pem_files[0])
     # section.show()
-
-    # mw.share_loop_cbox.setChecked(False)
-    # mw.output_lin_cbox.setChecked(False)
-    # mw.output_log_cbox.setChecked(False)
-    # mw.output_step_cbox.setChecked(False)
-    # mw.output_section_cbox.setChecked(False)
-    # mw.output_plan_map_cbox.setChecked(False)
-    # mw.print_plots()
 
     # map = Map3DViewer(pem_files)
     # map.show()
