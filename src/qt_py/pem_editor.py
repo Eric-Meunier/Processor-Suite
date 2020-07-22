@@ -127,6 +127,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.project_tree.setColumnHidden(3, True)
         self.project_tree.clicked.connect(self.project_dir_changed)
         # self.move_dir_tree_to(self.file_sys_model.rootPath())
+        self.raw_dir = None
+        self.gps_dir = None
 
         self.init_menus()
         self.init_signals()
@@ -361,6 +363,93 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         Initializing all signals.
         :return: None
         """
+
+        def set_shared_header(header):
+            """
+            Signal slot, change the header information for each file in the table when the shared header LineEdits are
+            changed
+            :param header: str, either 'client', 'grid', or 'loop'.
+            """
+
+            def color_cell(row, column, color, alpha=50):
+                """
+                Color an entire table row
+                :param row: Int, Row of the table to color
+                :param column: Int, Column of the table to color
+                :param color: str, The desired color
+                :return: None
+                """
+                color = QtGui.QColor(color)
+                color.setAlpha(alpha)
+                self.table.item(row, column).setBackground(color)
+
+            self.table.blockSignals(True)
+
+            bold_font, normal_font = QtGui.QFont(), QtGui.QFont()
+            bold_font.setBold(True)
+            normal_font.setBold(False)
+
+            files, rows = self.pem_files, np.arange(self.table.rowCount())
+            for file, row in zip(files, rows):
+
+                if header == 'client':
+                    client = self.client_edit.text() if self.share_client_cbox.isChecked() else file.client
+
+                    item = QTableWidgetItem(str(client))
+                    if client != file.client:
+                        item.setFont(bold_font)
+                    else:
+                        item.setFont(normal_font)
+
+                elif header == 'grid':
+                    grid = self.grid_edit.text() if self.share_grid_cbox.isChecked() else file.grid
+
+                    item = QTableWidgetItem(str(grid))
+                    if grid != file.grid:
+                        item.setFont(bold_font)
+                    else:
+                        item.setFont(normal_font)
+
+                elif header == 'loop':
+                    loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() else file.loop_name
+
+                    item = QTableWidgetItem(str(loop))
+                    if loop != file.loop:
+                        item.setFont(bold_font)
+                    else:
+                        item.setFont(normal_font)
+
+                else:
+                    raise ValueError(f"{header} is not a valid header")
+
+                column = self.table_columns.index(header.title())
+
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.table.setItem(row, column, item)
+                color_cell(row, column, 'white' if file.has_all_gps() else 'magenta')
+
+            self.table.blockSignals(False)
+
+        def toggle_pem_list_buttons():
+            if self.pem_list.selectedItems():
+                self.add_pem_btn.setEnabled(True)
+                self.remove_pem_btn.setEnabled(True)
+            else:
+                self.add_pem_btn.setEnabled(False)
+                self.remove_pem_btn.setEnabled(False)
+
+        def toggle_gps_list_buttons():
+            if self.gps_list.selectedItems():
+                self.add_gps_btn.setEnabled(True)
+                self.remove_gps_btn.setEnabled(True)
+            else:
+                self.add_gps_btn.setEnabled(False)
+                self.remove_gps_btn.setEnabled(False)
+
+        def add_gps_list_files():
+            filepaths = [os.path.join(self.gps_dir, item.text()) for item in self.gps_list.selectedItems()]
+            self.open_gps_files(filepaths)
+
         self.table.viewport().installEventFilter(self)
         self.table.installEventFilter(self)
         self.table.setFocusPolicy(QtCore.Qt.StrongFocus)
@@ -378,13 +467,13 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.share_loop_cbox.stateChanged.connect(
             lambda: self.loop_edit.setEnabled(self.share_loop_cbox.isChecked()))
         # single_row must be explicitly stated since stateChanged returns an int based on the state
-        self.share_client_cbox.stateChanged.connect(lambda: self.set_shared_header('client'))
-        self.share_grid_cbox.stateChanged.connect(lambda: self.set_shared_header('grid'))
-        self.share_loop_cbox.stateChanged.connect(lambda: self.set_shared_header('loop'))
+        self.share_client_cbox.stateChanged.connect(lambda: set_shared_header('client'))
+        self.share_grid_cbox.stateChanged.connect(lambda: set_shared_header('grid'))
+        self.share_loop_cbox.stateChanged.connect(lambda: set_shared_header('loop'))
 
-        self.client_edit.textChanged.connect(lambda: self.set_shared_header('client'))
-        self.grid_edit.textChanged.connect(lambda: self.set_shared_header('grid'))
-        self.loop_edit.textChanged.connect(lambda: self.set_shared_header('loop'))
+        self.client_edit.textChanged.connect(lambda: set_shared_header('client'))
+        self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
+        self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
         self.share_range_cbox.stateChanged.connect(
             lambda: self.min_range_edit.setEnabled(self.share_range_cbox.isChecked()))
@@ -407,6 +496,14 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         self.gps_system_cbox.currentIndexChanged.connect(
             lambda: self.gps_zone_cbox.setEnabled(True if self.gps_system_cbox.currentText() == 'UTM' else False))
+
+        self.refresh_pem_list_btn.clicked.connect(self.fill_pem_list)
+        self.refresh_gps_list_btn.clicked.connect(self.fill_gps_list)
+
+        self.pem_list.itemSelectionChanged.connect(toggle_pem_list_buttons)
+        self.gps_list.itemSelectionChanged.connect(toggle_gps_list_buttons)
+
+        self.add_gps_btn.clicked.connect(add_gps_list_files)
 
     def contextMenuEvent(self, event):
         """
@@ -873,7 +970,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 else:
                     with open(file, mode='rt') as in_file:
                         contents = in_file.readlines()
-                        merged_file.append(contents)
+                        merged_file.extend(contents)
             return merged_file
 
         file = merge_files(gps_files)
@@ -987,27 +1084,100 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :param model: signal passed var, QModelIndex
         :return:
         """
+        path = Path(self.file_sys_model.filePath(model))
 
-        def set_gps_tree():
-            pass
+        # Only fill the files lists if the project directory changed
+        if str(path) != str(self.project_dir):
+            self.project_dir = path
+            print(f"New project dir: {str(path)}")
 
-        def set_pem_tree():
-            pass
+            self.fill_gps_list()
+            self.fill_pem_list()
 
-        path = self.file_sys_model.filePath(model)
-        self.project_dir = path
-        print(f"New project dir: {path}")
+    def fill_gps_list(self):
+        """
+        Populate the GPS files list based on the files found in the nearest 'GPS' folder in the project directory
+        """
 
-        p = Path(path)
-        all_files = []
-        for i in p.parent.rglob('*.*'):
-            all_files.append((i.name, i.parent, time.ctime(i.stat().st_ctime)))
+        def find_gps_dir():
+            # Try to find the 'GPS' folder in the current directory
+            search_result = list(self.project_dir.glob('GPS'))
+            if search_result:
+                gps_dir = search_result[0]
+                print(f"GPS dir found: {str(gps_dir)}")
+                return gps_dir
 
-        columns = ["File_Name", "Parent", "Created"]
-        df = pd.DataFrame.from_records(all_files, columns=columns)
+            # Find the nearest 'GPS' folder (within 3 parent levels)
+            else:
+                attempt = 0
+                while attempt < 3:
+                    search_result = list(self.project_dir.parents[attempt].glob('GPS'))
+                    if search_result:
+                        gps_dir = search_result[0]
+                        print(f"GPS dir found: {str(gps_dir)}")
+                        return gps_dir
+                    else:
+                        attempt += 1
+                return None
 
-        set_gps_tree()
-        set_pem_tree()
+        self.gps_list.clear()
+        # Find the nearest 'GPS' folder
+        t = time.time()
+        self.gps_dir = find_gps_dir()
+        print(f'Time to find gps_dir: {time.time() - t}')
+
+        if self.gps_dir:
+            self.gps_list_dir_label.setText(f"({str(self.gps_dir)})")
+            txt_files = list(self.gps_dir.glob("*.txt"))
+            csv_files = list(self.gps_dir.glob("*.csv"))
+            gps_files = np.hstack([txt_files, csv_files])
+
+            for file in gps_files:
+                self.gps_list.addItem(file.name)
+        else:
+            self.gps_list_dir_label.setText('')
+
+    def fill_pem_list(self):
+        """
+        Populate the PEM files list based on the files found in the nearest 'PEM', 'RAW', and 'Final'
+         folder in the project directory
+        """
+
+        def find_raw_dir():
+            # Try to find the 'RAW' folder in the current directory
+            search_result = list(self.project_dir.glob('RAW'))
+            if search_result:
+                raw_dir = search_result[0]
+                print(f"RAW dir found: {str(raw_dir)}")
+                return raw_dir
+
+            # Find the nearest 'RAW' folder (within 3 parent levels)
+            else:
+                attempt = 0
+                while attempt < 3:
+                    search_result = list(self.project_dir.parents[attempt].glob('RAW'))
+                    if search_result:
+                        raw_dir = search_result[0]
+                        print(f"RAW dir found: {str(raw_dir)}")
+                        return raw_dir
+                    else:
+                        attempt += 1
+                return None
+
+        self.pem_list.clear()
+        # Find the nearest 'GPS' folder
+        t = time.time()
+        self.raw_dir = find_raw_dir()
+        print(f'Time to find raw_dir: {time.time() - t}')
+
+        if self.raw_dir:
+            self.pem_list_dir_label.setText(f"({str(self.raw_dir)})")
+            pem_files = self.raw_dir.glob('*.PEM')
+
+            for file in pem_files:
+                self.pem_list.addItem(file.name)
+        else:
+            self.pem_list_dir_label.setText('')
 
     def move_dir_tree_to(self, dir_path):
         """
@@ -1031,6 +1201,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         # Set the model to be selected in the tree
         self.project_tree.setCurrentIndex(model)
+
+        # Update the GPS and PEM trees
+        self.project_dir_changed(model)
 
     def write_pem_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
         """
@@ -1730,72 +1903,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
     #             self.table.blockSignals(False)
     #     else:
     #         pass
-
-    def set_shared_header(self, header):
-        """
-        Signal slot, change the header information for each file in the table when the shared header LineEdits are
-        changed
-        :param header: str, either 'client', 'grid', or 'loop'.
-        """
-
-        def color_cell(row, column, color, alpha=50):
-            """
-            Color an entire table row
-            :param row: Int, Row of the table to color
-            :param column: Int, Column of the table to color
-            :param color: str, The desired color
-            :return: None
-            """
-            color = QtGui.QColor(color)
-            color.setAlpha(alpha)
-            self.table.item(row, column).setBackground(color)
-
-        self.table.blockSignals(True)
-
-        bold_font, normal_font = QtGui.QFont(), QtGui.QFont()
-        bold_font.setBold(True)
-        normal_font.setBold(False)
-
-        files, rows = self.pem_files, np.arange(self.table.rowCount())
-        for file, row in zip(files, rows):
-
-            if header == 'client':
-                client = self.client_edit.text() if self.share_client_cbox.isChecked() else file.client
-
-                item = QTableWidgetItem(str(client))
-                if client != file.client:
-                    item.setFont(bold_font)
-                else:
-                    item.setFont(normal_font)
-
-            elif header == 'grid':
-                grid = self.grid_edit.text() if self.share_grid_cbox.isChecked() else file.grid
-
-                item = QTableWidgetItem(str(grid))
-                if grid != file.grid:
-                    item.setFont(bold_font)
-                else:
-                    item.setFont(normal_font)
-
-            elif header == 'loop':
-                loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() else file.loop_name
-
-                item = QTableWidgetItem(str(loop))
-                if loop != file.loop:
-                    item.setFont(bold_font)
-                else:
-                    item.setFont(normal_font)
-
-            else:
-                raise ValueError(f"{header} is not a valid header")
-
-            column = self.table_columns.index(header.title())
-
-            item.setTextAlignment(QtCore.Qt.AlignCenter)
-            self.table.setItem(row, column, item)
-            color_cell(row, column, 'white' if file.has_all_gps() else 'magenta')
-
-        self.table.blockSignals(False)
 
     def refresh_rows(self, rows=None, current_index=False):
         """
@@ -2860,12 +2967,12 @@ def main():
 
     pg = PEMGetter()
     pem_files = pg.get_pems(client='Kazzinc', number=2)
-    mw.show()
+    # mw.show()
     mw.open_pem_files(pem_files)
     # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
-    # mw.show()
+    mw.show()
 
     # mw.print_plots()
     # mw.reverse_all_data('X')

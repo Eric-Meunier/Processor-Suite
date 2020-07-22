@@ -166,19 +166,19 @@ Stations</string>
        <enum>QTabWidget::North</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="main_frame_file_tab">
        <attribute name="title">
         <string>PEM</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout">
-        <item>
+        <item alignment="Qt::AlignTop">
          <widget class="QScrollArea" name="scrollArea_2">
           <property name="minimumSize">
            <size>
             <width>200</width>
-            <height>0</height>
+            <height>380</height>
            </size>
           </property>
           <property name="widgetResizable">
@@ -188,53 +188,29 @@ Stations</string>
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
+             <y>-2</y>
              <width>263</width>
-             <height>626</height>
+             <height>616</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_8">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_7">
-              <property name="text">
-               <string>PEM Files in Project Directory</string>
+            <item row="7" column="0" colspan="2">
+             <widget class="QGroupBox" name="groupBox_9">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
               </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QPushButton" name="refresh_pem_list_btn">
-              <property name="maximumSize">
-               <size>
-                <width>23</width>
-                <height>23</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Refresh</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0" colspan="2">
-             <widget class="QListWidget" name="listWidget">
               <property name="minimumSize">
                <size>
-                <width>0</width>
-                <height>200</height>
+                <width>245</width>
+                <height>0</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0" colspan="2">
-             <widget class="QGroupBox" name="groupBox_9">
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
+                <width>245</width>
                 <height>16777215</height>
                </size>
               </property>
@@ -244,15 +220,15 @@ Stations</string>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_7">
-               <item>
+              <layout class="QGridLayout" name="gridLayout_10">
+               <item row="0" column="0">
                 <widget class="QPushButton" name="auto_name_line_btn">
                  <property name="text">
                   <string>Auto-Name Lines/Holes</string>
                  </property>
                 </widget>
                </item>
-               <item>
+               <item row="1" column="0">
                 <widget class="QPushButton" name="auto_merge_files_btn">
                  <property name="text">
                   <string>Auto-Merge Files</string>
@@ -262,18 +238,24 @@ Stations</string>
               </layout>
              </widget>
             </item>
-            <item row="3" column="0" colspan="2">
+            <item row="8" column="0" colspan="2">
              <widget class="QGroupBox" name="groupBox_2">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+               <sizepolicy hsizetype="Fixed" vsizetype="Maximum">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="minimumSize">
                <size>
-                <width>0</width>
+                <width>245</width>
                 <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>245</width>
+                <height>16777215</height>
                </size>
               </property>
               <property name="title">
@@ -285,8 +267,8 @@ Stations</string>
               <property name="flat">
                <bool>false</bool>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_2">
-               <item>
+              <layout class="QGridLayout" name="gridLayout_11">
+               <item row="0" column="2">
                 <widget class="QPushButton" name="reverse_all_z_btn">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -300,15 +282,18 @@ Stations</string>
                    <height>23</height>
                   </size>
                  </property>
+                 <property name="toolTip">
+                  <string>Reverse the polarity of all Z component data.</string>
+                 </property>
                  <property name="text">
-                  <string>+/- All Z Data</string>
+                  <string>+/- Z Data</string>
                  </property>
                  <property name="checkable">
                   <bool>false</bool>
                  </property>
                 </widget>
                </item>
-               <item>
+               <item row="0" column="0">
                 <widget class="QPushButton" name="reverse_all_x_btn">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -322,15 +307,18 @@ Stations</string>
                    <height>23</height>
                   </size>
                  </property>
+                 <property name="toolTip">
+                  <string>Reverse the polarity of all X component data.</string>
+                 </property>
                  <property name="text">
-                  <string>+/- All X Data</string>
+                  <string>+/- X Data</string>
                  </property>
                  <property name="checkable">
                   <bool>false</bool>
                  </property>
                 </widget>
                </item>
-               <item>
+               <item row="0" column="1">
                 <widget class="QPushButton" name="reverse_all_y_btn">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -344,27 +332,47 @@ Stations</string>
                    <height>23</height>
                   </size>
                  </property>
+                 <property name="toolTip">
+                  <string>Reverse the polarity of all Y component data.</string>
+                 </property>
                  <property name="text">
-                  <string>+/- All Y Data</string>
+                  <string>+/- Y Data</string>
                  </property>
                  <property name="checkable">
                   <bool>false</bool>
                  </property>
                 </widget>
                </item>
-               <item>
+               <item row="3" column="0" colspan="3">
                 <widget class="QPushButton" name="rename_all_repeat_stations_btn">
                  <property name="text">
-                  <string>Auto-Rename
-All Repeat Stations</string>
+                  <string>Auto-Rename All Repeat Stations</string>
                  </property>
                 </widget>
                </item>
               </layout>
              </widget>
             </item>
-            <item row="4" column="0" colspan="2">
+            <item row="9" column="0" colspan="2">
              <widget class="QGroupBox" name="groupBox_8">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>245</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>245</width>
+                <height>16777215</height>
+               </size>
+              </property>
               <property name="title">
                <string>Options</string>
               </property>
@@ -407,6 +415,167 @@ Create Backup Files</string>
               </layout>
              </widget>
             </item>
+            <item row="5" column="0" colspan="2" alignment="Qt::AlignBottom">
+             <widget class="QFrame" name="frame_3">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>230</height>
+               </size>
+              </property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_14">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0" rowspan="3">
+                <widget class="QListWidget" name="pem_list">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>240</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>1677700</width>
+                   <height>1677700</height>
+                  </size>
+                 </property>
+                 <property name="dragEnabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="dragDropMode">
+                  <enum>QAbstractItemView::NoDragDrop</enum>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::ExtendedSelection</enum>
+                 </property>
+                 <property name="selectionBehavior">
+                  <enum>QAbstractItemView::SelectRows</enum>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QPushButton" name="remove_pem_btn">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>50</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>20</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>Remove the selected PEM files from the list (can be brought back by refreshing).</string>
+                 </property>
+                 <property name="text">
+                  <string>-</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QPushButton" name="add_pem_btn">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>50</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>20</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add the selected PEM files to the project.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>+</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_7">
+              <property name="text">
+               <string>Available PEM Files in Project Directory</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QPushButton" name="refresh_pem_list_btn">
+              <property name="maximumSize">
+               <size>
+                <width>23</width>
+                <height>23</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Refresh</string>
+              </property>
+              <property name="text">
+               <string>Refresh</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0" colspan="2">
+             <widget class="QLabel" name="pem_list_dir_label">
+              <property name="maximumSize">
+               <size>
+                <width>245</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>7</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="scaledContents">
+               <bool>true</bool>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </widget>
@@ -418,8 +587,20 @@ Create Backup Files</string>
         <string>GPS</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_6">
-        <item>
+        <item alignment="Qt::AlignTop">
          <widget class="QScrollArea" name="scrollArea_3">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>200</width>
+            <height>380</height>
+           </size>
+          </property>
           <property name="verticalScrollBarPolicy">
            <enum>Qt::ScrollBarAlwaysOn</enum>
           </property>
@@ -432,47 +613,18 @@ Create Backup Files</string>
              <x>0</x>
              <y>0</y>
              <width>263</width>
-             <height>354</height>
+             <height>378</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_9">
             <item row="0" column="0">
              <widget class="QLabel" name="label_6">
               <property name="text">
-               <string>GPS Files in Project Directory</string>
+               <string>Available GPS Files in Project Directory</string>
               </property>
              </widget>
             </item>
-            <item row="0" column="1">
-             <widget class="QPushButton" name="refresh_gps_list_btn">
-              <property name="maximumSize">
-               <size>
-                <width>23</width>
-                <height>23</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>PushButton</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0" colspan="2">
-             <widget class="QListWidget" name="gps_list">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0" colspan="2">
+            <item row="14" column="0" colspan="2">
              <widget class="QGroupBox" name="groupBox_3">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -486,8 +638,8 @@ Create Backup Files</string>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_3">
-               <item>
+              <layout class="QGridLayout" name="gridLayout_12">
+               <item row="0" column="0">
                 <widget class="QCheckBox" name="auto_sort_loops_cbox">
                  <property name="text">
                   <string>Auto-Sort Loops</string>
@@ -497,7 +649,7 @@ Create Backup Files</string>
                  </property>
                 </widget>
                </item>
-               <item>
+               <item row="0" column="1">
                 <widget class="QCheckBox" name="auto_sort_stations_cbox">
                  <property name="font">
                   <font>
@@ -517,6 +669,166 @@ Station Positions</string>
                 </widget>
                </item>
               </layout>
+             </widget>
+            </item>
+            <item row="11" column="0" colspan="2">
+             <widget class="QLabel" name="gps_list_dir_label">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>245</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>7</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="scaledContents">
+               <bool>true</bool>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="10" column="0" colspan="2">
+             <widget class="QFrame" name="frame_2">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>230</height>
+               </size>
+              </property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_13">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0" rowspan="3">
+                <widget class="QListWidget" name="gps_list">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>216</width>
+                   <height>240</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>100000</width>
+                   <height>100000</height>
+                  </size>
+                 </property>
+                 <property name="dragEnabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="dragDropMode">
+                  <enum>QAbstractItemView::NoDragDrop</enum>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::ExtendedSelection</enum>
+                 </property>
+                 <property name="selectionBehavior">
+                  <enum>QAbstractItemView::SelectRows</enum>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="2">
+                <widget class="QPushButton" name="remove_gps_btn">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>50</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>20</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove the selected GPS files from the list (can be brought back by refreshing).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>-</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="2">
+                <widget class="QPushButton" name="add_gps_btn">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>50</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>20</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>Add the selected GPS files to the currently selected PEM file and Information tab.</string>
+                 </property>
+                 <property name="text">
+                  <string>+</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QPushButton" name="refresh_gps_list_btn">
+              <property name="maximumSize">
+               <size>
+                <width>23</width>
+                <height>23</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Refresh</string>
+              </property>
+              <property name="text">
+               <string>PushButton</string>
+              </property>
              </widget>
             </item>
            </layout>
@@ -1409,15 +1721,12 @@ Station Positions</string>
   <tabstop>loop_edit</tabstop>
   <tabstop>main_frame_tab</tabstop>
   <tabstop>auto_sort_loops_cbox</tabstop>
-  <tabstop>auto_sort_stations_cbox</tabstop>
   <tabstop>gps_system_cbox</tabstop>
   <tabstop>gps_zone_cbox</tabstop>
   <tabstop>gps_datum_cbox</tabstop>
   <tabstop>auto_create_backup_files_cbox</tabstop>
   <tabstop>delete_merged_files_cbox</tabstop>
   <tabstop>reverse_all_z_btn</tabstop>
-  <tabstop>reverse_all_x_btn</tabstop>
-  <tabstop>reverse_all_y_btn</tabstop>
   <tabstop>share_range_cbox</tabstop>
   <tabstop>max_range_edit</tabstop>
   <tabstop>min_range_edit</tabstop>
