@@ -450,6 +450,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             filepaths = [os.path.join(self.gps_dir, item.text()) for item in self.gps_list.selectedItems()]
             self.open_gps_files(filepaths)
 
+        def add_pem_list_files():
+            filepaths = [os.path.join(self.raw_dir, item.text()) for item in self.pem_list.selectedItems()]
+            self.open_pem_files(filepaths)
+
         self.table.viewport().installEventFilter(self)
         self.table.installEventFilter(self)
         self.table.setFocusPolicy(QtCore.Qt.StrongFocus)
@@ -504,6 +508,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.gps_list.itemSelectionChanged.connect(toggle_gps_list_buttons)
 
         self.add_gps_btn.clicked.connect(add_gps_list_files)
+        self.add_pem_btn.clicked.connect(add_pem_list_files)
 
     def contextMenuEvent(self, event):
         """
