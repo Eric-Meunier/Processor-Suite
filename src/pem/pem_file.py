@@ -22,16 +22,19 @@ def sort_data(data):
     return df
 
 
-def convert_station(station):
-    """
-    Converts a single station name into a number, negative if the stations was S or W
-    :return: Integer station number
-    """
-    if re.match(r"\d+(S|W)", station):
-        station = (-int(re.sub(r"\D", "", station)))
-    else:
-        station = (int(re.sub(r"\D", "", station)))
-    return station
+class StationConverter:
+
+    @staticmethod
+    def convert_station(station):
+        """
+        Converts a single station name into a number, negative if the stations was S or W
+        :return: Integer station number
+        """
+        if re.match(r"\d+(S|W)", station):
+            station = (-int(re.sub(r"[SW]", "", station.upper())))
+        else:
+            station = (int(re.sub(r"[EN]", "", station.upper())))
+        return station
 
 
 class PEMFile:
@@ -39,6 +42,7 @@ class PEMFile:
     PEM file class
     """
     def __init__(self, tags, loop_coords, line_coords, notes, header, channel_table, data, filepath=None):
+        self.converter = StationConverter()
         self.format = tags.get('Format')
         self.units = tags.get('Units')
         self.operator = tags.get('Operator')
@@ -235,7 +239,7 @@ class PEMFile:
         :return: pandas DataFrame object with Station, Component and all channels as columns.
         """
         profile = pd.DataFrame.from_dict(dict(zip(self.data.Reading.index, self.data.Reading.values))).T
-        profile.insert(0, 'Station', self.data.Station.map(convert_station))
+        profile.insert(0, 'Station', self.data.Station.map(self.converter.convert_station))
         profile.insert(1, 'Component', self.data.Component)
         profile.insert(2, 'Reading_number', self.data['Reading_number'])
         profile.insert(3, 'Reading_index', self.data['Reading_index'])
@@ -251,7 +255,7 @@ class PEMFile:
         components = list(self.data['Component'].unique())
         return components
 
-    def get_unique_stations(self, converted=False):
+    def get_stations(self, converted=False):
         """
         Return a list of unique stations in the PEM file.
         :param converted: Bool, whether to convert the stations to Int
@@ -259,8 +263,8 @@ class PEMFile:
         """
         stations = self.data.Station.unique()
         if converted:
-            stations = [convert_station(station) for station in stations]
-        return stations
+            stations = [self.converter.convert_station(station) for station in stations]
+        return np.array(stations)
 
     def get_gps_extents(self):
         """
@@ -314,7 +318,7 @@ class PEMFile:
         :return: str: Full text of the PEM file
         """
         ps = PEMSerializer()
-        text = ps.serialize(self)
+        text = ps.serialize(copy.deepcopy(self))
         return text
 
     def average(self):
@@ -447,7 +451,7 @@ class PEMFile:
                                                   'CPPx',
                                                   'CPPy',
                                                   'CPPz'])
-            proj = self.geometry.get_projection(stations=self.get_unique_stations(converted=True))
+            proj = self.geometry.get_projection(stations=self.get_stations(converted=True))
             loop = self.get_loop(sorted=True, closed=False)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6

@@ -1,5 +1,4 @@
 import sys
-import re
 import keyboard
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,18 +7,6 @@ from PyQt5.QtWidgets import (QWidget, QApplication, QMessageBox, QTableWidgetIte
                              QHeaderView, QTableWidget, QDialogButtonBox, QAbstractItemView, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FixedLocator, FormatStrFormatter
-
-
-def convert_station(station):
-    """
-    Converts a single station name into a number, negative if the stations was S or W
-    :return: Integer station number
-    """
-    if re.match(r"\d+(S|W)", station):
-        station = (-int(re.sub(r"\D", "", station)))
-    else:
-        station = (int(re.sub(r"\D", "", station)))
-    return station
 
 
 class GPSAdder(QWidget):

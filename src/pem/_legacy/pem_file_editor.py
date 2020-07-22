@@ -41,7 +41,7 @@ class PEMFileEditor:
             unwanted_keys = ['Data', 'NumStacks']
             num_channels = pem_file.header.get('NumChannels')
             pem_data = pem_file.get_data()
-            unique_stations = pem_file.get_unique_stations()
+            unique_stations = pem_file.get_stations()
             components = pem_file.get_components()
 
             for station in unique_stations:

@@ -65,7 +65,7 @@ class StationSplitter(QWidget):
         Add each station in the PEM file as a row in the table.
         :return: None
         """
-        stations = self.pem_file.get_unique_stations()
+        stations = self.pem_file.get_stations()
 
         for i, station in enumerate(stations):
             row = i

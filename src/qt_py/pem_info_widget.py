@@ -12,8 +12,8 @@ from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
                              QFileDialog, QErrorMessage, QHeaderView)
 
+from src.pem.pem_file import StationConverter
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
-from src.pem._legacy.pem_file_editor import PEMFileEditor
 from src.qt_py.ri_importer import RIFile
 from src.qt_py.gps_adder import LoopAdder, LineAdder
 
@@ -44,18 +44,6 @@ def exception_hook(exctype, value, traceback):
 sys.excepthook = exception_hook
 
 
-def convert_station(station):
-    """
-    Converts a single station name into a number, negative if the stations was S or W
-    :return: Integer station number
-    """
-    if re.match(r"\d+(S|W)", station):
-        station = (-int(re.sub(r"\D", "", station)))
-    else:
-        station = (int(re.sub(r"\D", "", station)))
-    return station
-
-
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     refresh_tables_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to refresh its main table.
 
@@ -64,7 +52,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.parent = None
         self.pem_file = None
         self.ri_file = None
-        self.file_editor = PEMFileEditor()
+        self.converter = StationConverter()
         self.ri_editor = RIFile()
         self.dialog = QFileDialog()
         self.error = QErrorMessage()
@@ -183,7 +171,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         # Table changes
         self.line_table.cellChanged.connect(self.check_station_duplicates)
-        self.line_table.cellChanged.connect(self.check_station_order)
+        self.line_table.cellChanged.connect(self.color_line_table)
         self.line_table.cellChanged.connect(self.check_missing_gps)
         self.line_table.itemSelectionChanged.connect(self.calc_distance)
         self.line_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
@@ -545,7 +533,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if table == self.line_table:
             self.check_station_duplicates()
-            self.check_station_order()
+            self.color_line_table()
             self.check_missing_gps()
         # table.resizeColumnsToContents()
         table.blockSignals(False)
@@ -713,15 +701,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 stations.append(station)
         self.line_table.blockSignals(False)
 
-    def check_station_order(self):
+    def color_line_table(self):
         """
-        Colors the stationGPS rows, station number column, based on issues with the ordering of the station numbers.
+        Colors the line_table rows, station number column, based on issues with the ordering of the station numbers.
         This is done by first creating a list of ordered numbers based on the first and last GPS station numbers,
         then comparing these values with the coinciding value in the table.
         :return: None
         """
         self.line_table.blockSignals(True)
-        stations = self.get_line().df.Station.map(convert_station).to_list()
+        stations = self.get_line().df.Station.map(self.converter.convert_station).to_list()
         sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
 
         blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
@@ -744,7 +732,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         self.clear_table(self.missing_gps_table)
-        data_stations = self.pem_file.data.Station.map(convert_station).unique()
+        data_stations = self.pem_file.get_stations(converted=True)
         gps_stations = self.get_line().df.Station.astype(int).unique()
         filt = np.isin(data_stations, gps_stations, invert=True)
         missing_gps = data_stations[filt]
@@ -806,9 +794,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if table == self.line_table:
             self.check_station_duplicates()
             self.check_missing_gps()
-            add_tags()
-        elif table == self.loop_table:
-            add_tags()
+            # add_tags()
+        # elif table == self.loop_table:
+            # add_tags()
         self.refresh_tables_signal.emit()
 
     def remove_data_row(self):
@@ -843,7 +831,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         gps = self.get_line()
         # Get unique stations in the data
-        em_stations = self.pem_file.data.Station.map(convert_station).unique()
+        em_stations = self.pem_file.get_stations(converted=True)
         # Create a filter for GPS stations that are in the data stations
         filt = gps.df.Station.astype(int).isin(em_stations)
         gps = gps.df.loc[filt]
@@ -1088,7 +1076,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fills the GPS station numbers in the StationGPSTable using the station numbers in the data.
         :return: None
         """
-        data_stations = self.pem_file.data.Station.map(convert_station).unique()
+        data_stations = self.pem_file.get_stations(converted=True)
         for row, station in enumerate(data_stations):
             item = QTableWidgetItem(str(station))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
