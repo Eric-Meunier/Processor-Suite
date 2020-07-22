@@ -81,9 +81,9 @@ def convert_station(station):
     :return: Integer station number
     """
     if re.match(r"\d+(S|W)", station):
-        station = (-int(re.sub(r"\D", "", station)))
+        station = (-int(re.sub(r"[SW]", "", station.upper())))
     else:
-        station = (int(re.sub(r"\D", "", station)))
+        station = (int(re.sub(r"[EN]", "", station.upper())))
     return station
 
 
@@ -1730,7 +1730,7 @@ class SectionPlot(MapPlotter):
 
             # Plotting station ticks on the projected hole
             if self.stations is None:
-                self.stations = self.pem_file.get_unique_stations(converted=True)
+                self.stations = self.pem_file.get_stations(converted=True)
 
             hole_len = geometry.segments.df.iloc[-1]['Depth']
             collar_elevation = geometry.collar.df.iloc[0]['Elevation']
@@ -3197,7 +3197,7 @@ class ContourMap(MapPlotter):
                 pem_data = pem_file.data
                 line_gps = pem_file.get_line()
                 # Filter the GPS to only keep those that are in the data
-                line_gps = line_gps[~line_gps.Station.isin(pem_file.get_unique_stations(converted=True))]
+                line_gps = line_gps[~line_gps.Station.isin(pem_file.get_stations(converted=True))]
 
                 if line_gps.empty:
                     print(f"Skipping {pem_file.filepath.name} because it has no line GPS")
@@ -4442,7 +4442,7 @@ class PEMPrinter:
                 if pem_files[0].has_geometry():
                     self.pb.setText(f"Saving section plot for {pem_files[0].line_name}")
                     stations = sorted(set(itertools.chain.from_iterable(
-                        [pem_file.get_unique_stations(converted=True) for pem_file in pem_files])))
+                        [pem_file.get_stations(converted=True) for pem_file in pem_files])))
                     # Plot the section plot
                     section_plotter = SectionPlot()
                     section_fig = section_plotter.plot(pem_files, self.portrait_fig,
@@ -4627,11 +4627,11 @@ class PEMPrinter:
                 ri_files = [pair[1] for pair in files]
 
                 if self.x_min is None and self.share_range is True:
-                    x_min = min([min(f.get_unique_stations(converted=True)) for f in pem_files])
+                    x_min = min([min(f.get_stations(converted=True)) for f in pem_files])
                 else:
                     x_min = self.x_min
                 if self.x_max is None and self.share_range is True:
-                    x_max = max([max(f.get_unique_stations(converted=True)) for f in pem_files])
+                    x_max = max([max(f.get_stations(converted=True)) for f in pem_files])
                 else:
                     x_max = self.x_max
 
@@ -4642,11 +4642,11 @@ class PEMPrinter:
                 pem_files = [pair[0] for pair in files]
                 ri_files = [pair[1] for pair in files]
                 if self.x_min is None and self.share_range is True:
-                    x_min = min([min(f.get_unique_stations(converted=True)) for f in pem_files])
+                    x_min = min([min(f.get_stations(converted=True)) for f in pem_files])
                 else:
                     x_min = self.x_min
                 if self.x_max is None and self.share_range is True:
-                    x_max = max([max(f.get_unique_stations(converted=True)) for f in pem_files])
+                    x_max = max([max(f.get_stations(converted=True)) for f in pem_files])
                 else:
                     x_max = self.x_max
 

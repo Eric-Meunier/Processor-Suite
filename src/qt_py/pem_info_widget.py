@@ -744,7 +744,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         self.clear_table(self.missing_gps_table)
-        data_stations = self.pem_file.data.Station.map(convert_station).unique()
+        data_stations = self.pem_file.get_stations(converted=True)
         gps_stations = self.get_line().df.Station.astype(int).unique()
         filt = np.isin(data_stations, gps_stations, invert=True)
         missing_gps = data_stations[filt]
@@ -843,7 +843,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         gps = self.get_line()
         # Get unique stations in the data
-        em_stations = self.pem_file.data.Station.map(convert_station).unique()
+        em_stations = self.pem_file.get_stations(converted=True)
         # Create a filter for GPS stations that are in the data stations
         filt = gps.df.Station.astype(int).isin(em_stations)
         gps = gps.df.loc[filt]
@@ -1088,7 +1088,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fills the GPS station numbers in the StationGPSTable using the station numbers in the data.
         :return: None
         """
-        data_stations = self.pem_file.data.Station.map(convert_station).unique()
+        data_stations = self.pem_file.get_stations(converted=True)
         for row, station in enumerate(data_stations):
             item = QTableWidgetItem(str(station))
             item.setTextAlignment(QtCore.Qt.AlignCenter)

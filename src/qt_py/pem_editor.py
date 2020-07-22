@@ -1683,8 +1683,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.loop_edit.text() if self.share_loop_cbox.isChecked() else pem_file.loop_name,
             pem_file.current,
             pem_file.coil_area,
-            pem_file.data.Station.map(convert_station).min(),
-            pem_file.data.Station.map(convert_station).max(),
+            pem_file.get_stations(converted=True).min(),
+            pem_file.get_stations(converted=True).max(),
             pem_file.is_averaged(),
             pem_file.is_split(),
             str(info_widget.suffix_warnings),
@@ -1862,8 +1862,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             pem_file.loop_name,
             pem_file.current,
             pem_file.coil_area,
-            pem_file.data.Station.map(convert_station).min(),
-            pem_file.data.Station.map(convert_station).max(),
+            pem_file.get_stations(converted=True).min(),
+            pem_file.get_stations(converted=True).max(),
             pem_file.is_averaged(),
             pem_file.is_split(),
             str(info_widget.suffix_warnings),
@@ -2568,8 +2568,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         if self.pem_files:
-            min_stations = [f.data.Station.map(convert_station).min() for f in self.pem_files]
-            max_stations = [f.data.Station.map(convert_station).max() for f in self.pem_files]
+            min_stations = [f.get_stations(converted=True).min() for f in self.pem_files]
+            max_stations = [f.get_stations(converted=True).max() for f in self.pem_files]
             min_range, max_range = min(min_stations), max(max_stations)
             self.min_range_edit.setText(str(min_range))
             self.max_range_edit.setText(str(max_range))

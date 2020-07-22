@@ -251,7 +251,7 @@ class PEMFile:
         components = list(self.data['Component'].unique())
         return components
 
-    def get_unique_stations(self, converted=False):
+    def get_stations(self, converted=False):
         """
         Return a list of unique stations in the PEM file.
         :param converted: Bool, whether to convert the stations to Int
@@ -447,7 +447,7 @@ class PEMFile:
                                                   'CPPx',
                                                   'CPPy',
                                                   'CPPz'])
-            proj = self.geometry.get_projection(stations=self.get_unique_stations(converted=True))
+            proj = self.geometry.get_projection(stations=self.get_stations(converted=True))
             loop = self.get_loop(sorted=True, closed=False)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6

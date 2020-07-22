@@ -15,9 +15,9 @@ def convert_station(station):
     :return: Integer station number
     """
     if re.match(r"\d+(S|W)", station):
-        station = (-int(re.sub(r"\D", "", station)))
+        station = (-int(re.sub(r"[SW]", "", station.upper())))
     else:
-        station = (int(re.sub(r"\D", "", station)))
+        station = (int(re.sub(r"[EN]", "", station.upper())))
     return station
 
 
