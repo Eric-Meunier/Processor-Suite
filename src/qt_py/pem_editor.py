@@ -24,7 +24,7 @@ from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, Bor
                                 GPXEditor, CRS)
 from src.gps.gpx_creator import GPXCreator
 
-from src.pem.pem_file import PEMFile, PEMParser
+from src.pem.pem_file import PEMFile, PEMParser, StationConverter
 from src.pem.pem_plotter import PEMPrinter, CustomProgressBar
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 
@@ -69,18 +69,6 @@ Ui_PEMEditorWindow, QtBaseClass = uic.loadUiType(editorWindowCreatorFile)
 Ui_PlanMapOptionsWidget, QtBaseClass = uic.loadUiType(planMapOptionsCreatorFile)
 
 
-def convert_station(station):
-    """
-    Converts a single station name into a number, negative if the stations was S or W
-    :return: Integer station number
-    """
-    if re.match(r"\d+(S|W)", station):
-        station = (-int(re.sub(r"\D", "", station)))
-    else:
-        station = (int(re.sub(r"\D", "", station)))
-    return station
-
-
 class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
     def __init__(self, parent=None):
@@ -93,6 +81,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.tab_num = 1
         self.allow_signals = True
 
+        self.converter = StationConverter()
         self.dialog = QFileDialog()
         self.message = QMessageBox()
         self.error = QErrorMessage()
@@ -1479,7 +1468,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
             df['Component'] = pem_data.Component.copy()
             df['Station'] = pem_data.Station.copy()
-            df['c_Station'] = df.Station.map(convert_station)
+            df['c_Station'] = df.Station.map(self.converter.convert_station)
             # Add the GPS
             df = df.apply(get_station_gps, axis=1)
 

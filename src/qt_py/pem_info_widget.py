@@ -12,8 +12,8 @@ from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
                              QFileDialog, QErrorMessage, QHeaderView)
 
+from src.pem.pem_file import StationConverter
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
-from src.pem._legacy.pem_file_editor import PEMFileEditor
 from src.qt_py.ri_importer import RIFile
 from src.qt_py.gps_adder import LoopAdder, LineAdder
 
@@ -44,18 +44,6 @@ def exception_hook(exctype, value, traceback):
 sys.excepthook = exception_hook
 
 
-def convert_station(station):
-    """
-    Converts a single station name into a number, negative if the stations was S or W
-    :return: Integer station number
-    """
-    if re.match(r"\d+(S|W)", station):
-        station = (-int(re.sub(r"[SW]", "", station.upper())))
-    else:
-        station = (int(re.sub(r"[EN]", "", station.upper())))
-    return station
-
-
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     refresh_tables_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to refresh its main table.
 
@@ -64,7 +52,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.parent = None
         self.pem_file = None
         self.ri_file = None
-        self.file_editor = PEMFileEditor()
+        self.converter = StationConverter()
         self.ri_editor = RIFile()
         self.dialog = QFileDialog()
         self.error = QErrorMessage()
@@ -721,7 +709,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         self.line_table.blockSignals(True)
-        stations = self.get_line().df.Station.map(convert_station).to_list()
+        stations = self.get_line().df.Station.map(self.converter.convert_station).to_list()
         sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
 
         blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
