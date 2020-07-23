@@ -464,9 +464,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
         self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
-        self.share_range_cbox.stateChanged.connect(
+        self.share_range_cbox.toggled.connect(
             lambda: self.min_range_edit.setEnabled(self.share_range_cbox.isChecked()))
-        self.share_range_cbox.stateChanged.connect(
+        self.share_range_cbox.toggled.connect(
             lambda: self.max_range_edit.setEnabled(self.share_range_cbox.isChecked()))
         # self.share_range_cbox.stateChanged.connect(self.refresh_table)
 
@@ -2969,7 +2969,7 @@ def main():
     mw.output_log_cbox.setChecked(False)
     mw.output_step_cbox.setChecked(False)
     mw.output_section_cbox.setChecked(False)
-    mw.print_plots()
+    # mw.print_plots()
 
     # mw.reverse_all_data('X')
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)

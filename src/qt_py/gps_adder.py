@@ -2,11 +2,13 @@ import sys
 import keyboard
 import matplotlib.pyplot as plt
 import pandas as pd
+from pathlib import Path
 from PyQt5 import (QtCore, QtGui)
-from PyQt5.QtWidgets import (QWidget, QApplication, QMessageBox, QTableWidgetItem, QGridLayout,
+from PyQt5.QtWidgets import (QWidget, QApplication, QMessageBox, QTableWidgetItem, QGridLayout, QCheckBox,
                              QHeaderView, QTableWidget, QDialogButtonBox, QAbstractItemView, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FixedLocator, FormatStrFormatter
+from src.gps.gps_editor import TransmitterLoop, SurveyLine
 
 
 class GPSAdder(QWidget):
@@ -44,6 +46,7 @@ class GPSAdder(QWidget):
         self.message = QMessageBox()
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.setCenterButtons(True)
+        self.button_box.accepted.connect(self.accept)
 
         self.figure = plt.figure()
         self.figure.subplots_adjust(left=0.17, bottom=0.05, right=0.97, top=0.95)
@@ -60,10 +63,14 @@ class GPSAdder(QWidget):
         self.section_zoom = self.zp.zoom_factory(self.section_ax)
         self.section_pan = self.zp.pan_factory(self.section_ax)
 
+        self.auto_sort_cbox = QCheckBox("Sort Automatically", self)
+        self.auto_sort_cbox.setChecked(True)
+
         self.setLayout(self.layout)
-        self.layout.addWidget(self.table, 0, 0)
-        self.layout.addWidget(self.button_box, 1, 0, 1, 2)
-        self.layout.addWidget(self.canvas, 0, 1)
+        self.layout.addWidget(self.auto_sort_cbox, 0, 0)
+        self.layout.addWidget(self.table, 1, 0)
+        self.layout.addWidget(self.button_box, 2, 0, 1, 2)
+        self.layout.addWidget(self.canvas, 1, 1)
 
         self.canvas.mpl_connect('pick_event', self.onpick)
 
@@ -103,18 +110,8 @@ class GPSAdder(QWidget):
             self.table.removeRow(0)
         self.table.blockSignals(True)
 
-    def open(self, df):
-        """
-        Add the data frame to GPSAdder. Adds the data to the table and plots it.
-        :param df: pandas DataFrame
-        :return: None
-        """
-        self.show()
-        self.clear_table()
-        self.df = df
-        self.df_to_table(self.df)
-        self.plot_table()
-        self.check_table()
+    def open(self, o):
+        pass
 
     def df_to_table(self, df):
         """
@@ -290,8 +287,29 @@ class LineAdder(GPSAdder):
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
+        self.line = None
         self.setWindowTitle('Line Adder')
-        self.button_box.accepted.connect(self.accept)
+        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
+
+    def open(self, o):
+        """
+        Add the data frame to GPSAdder. Adds the data to the table and plots it.
+        :param o: Union, filepath; GPS object; DataFrame; Loop to open
+        """
+        if isinstance(o, str):
+            if Path(o).is_file():
+                self.line = SurveyLine(o)
+            else:
+                raise ValueError(f"{o} is not a valid file.")
+        elif isinstance(o, SurveyLine):
+            self.line = o
+
+        self.show()
+        self.clear_table()
+        self.df = self.line.get_line(sorted=self.auto_sort_cbox.isChecked())
+        self.df_to_table(self.df)
+        self.plot_table()
+        self.check_table()
 
     def accept(self):
         """
@@ -437,70 +455,26 @@ class LoopAdder(GPSAdder):
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
+        self.loop = None
         self.setWindowTitle('Loop Adder')
-        self.button_box.accepted.connect(self.accept)
+        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
 
-    # def onpick(self, event):
-    #     """
-    #     Signal slot: When a point in the plots is clicked
-    #     :param event: Mouse click event
-    #     :return: None
-    #     """
-    #     self.table.blockSignals(True)
-    #
-    #     def swap_points():
-    #         """
-    #         Swaps the position of two points on either axes. Creates a data frame from the table, then swaps the
-    #         corresponding rows in the data frame, then re-creates the table and plots the data.
-    #         :return: None
-    #         """
-    #         points = self.selection
-    #         # Create the data frame
-    #         df = self.table_to_df()
-    #         # Create a copy of the two rows.
-    #         a, b = df.iloc[points[0]].copy(), df.iloc[points[1]].copy()
-    #         # Allocate the two rows in reverse order
-    #         df.iloc[points[0]], df.iloc[points[1]] = b, a
-    #         self.df_to_table(df)
-    #         self.plot_table(preserve_limits=True)
-    #
-    #     # Ignore mouse wheel events
-    #     if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
-    #         return
-    #     index = event.ind[0]
-    #     print(f"Point {index} clicked")
-    #
-    #     # Swap two points when CTRL is pressed when selecting two points
-    #     if keyboard.is_pressed('ctrl'):
-    #         print('CTRL is pressed')
-    #         # Reset the selection if two were already selected
-    #         if len(self.selection) == 2:
-    #             self.selection = []
-    #         self.selection.append(index)
-    #         print(f'Selected points: {self.selection}')
-    #
-    #         if len(self.selection) == 2:
-    #             print(f"Two points are selected, swapping them...")
-    #             swap_points()
-    #             index = self.selection[0]
-    #     else:
-    #         # Reset the selection if CTRL isn't pressed
-    #         self.selection = []
-    #
-    #     self.table.selectRow(index)
-    #     self.highlight_point(row=index)
-    #
-    #     self.table.blockSignals(False)
-
-    def open(self, df):
+    def open(self, o):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
-        :param df: pandas DataFrame
-        :return: None
+        :param o: Union, filepath; GPS object; DataFrame; Loop to open
         """
+        if isinstance(o, str):
+            if Path(o).is_file():
+                self.loop = TransmitterLoop(o)
+            else:
+                raise ValueError(f"{o} is not a valid file.")
+        elif isinstance(o, TransmitterLoop):
+            self.loop = o
+
         self.show()
         self.clear_table()
-        self.df = df
+        self.df = self.loop.get_loop(closed=True, sorted=self.auto_sort_cbox.isChecked())
         self.df_to_table(self.df)
         self.plot_table()
         self.check_table()
@@ -729,12 +703,15 @@ class ZoomPan:
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
-    mw = LoopAdder()
+    # mw = LoopAdder()
+    mw = LineAdder()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Trevali Peru', number=5)
-    mw.show()
-    mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 240.txt'])
+    # file = r'C:\Users\kajth\PycharmProjects\Crone\sample_files\Loop GPS\LOOP 3.txt'
+    file = r'C:\Users\kajth\PycharmProjects\Crone\sample_files\Line GPS\LINE 0S.txt'
+    loop = TransmitterLoop(file)
+    line = SurveyLine(file)
+    mw.open(file)
 
     app.exec_()
 
