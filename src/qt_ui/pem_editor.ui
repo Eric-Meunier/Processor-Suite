@@ -85,7 +85,7 @@
     <item row="0" column="1">
      <widget class="QTableWidget" name="table">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -712,7 +712,7 @@ Stations</string>
         <number>0</number>
        </property>
        <item row="1" column="0" colspan="2">
-        <widget class="QGroupBox" name="coord_system_box">
+        <widget class="QGroupBox" name="project_crs_box">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
            <horstretch>0</horstretch>
@@ -1012,14 +1012,14 @@ Stations</string>
         <widget class="QTabWidget" name="main_frame_tab">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
+           <horstretch>10</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
          <property name="minimumSize">
           <size>
            <width>260</width>
-           <height>400</height>
+           <height>0</height>
           </size>
          </property>
          <property name="maximumSize">
@@ -1032,7 +1032,7 @@ Stations</string>
           <enum>QTabWidget::North</enum>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>1</number>
          </property>
          <widget class="QWidget" name="main_frame_file_tab">
           <attribute name="title">
@@ -1070,7 +1070,7 @@ Stations</string>
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>245</width>
+                   <width>0</width>
                    <height>0</height>
                   </size>
                  </property>
@@ -1132,7 +1132,7 @@ Create Backup Files</string>
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>245</width>
+                   <width>0</width>
                    <height>0</height>
                   </size>
                  </property>
@@ -1169,14 +1169,14 @@ Create Backup Files</string>
                <item row="8" column="0" colspan="2">
                 <widget class="QGroupBox" name="groupBox_2">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>245</width>
+                   <width>0</width>
                    <height>0</height>
                   </size>
                  </property>
@@ -1293,94 +1293,6 @@ Create Backup Files</string>
                   </size>
                  </property>
                 </spacer>
-               </item>
-              </layout>
-             </widget>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="main_frame_gps_tab">
-          <attribute name="title">
-           <string>GPS</string>
-          </attribute>
-          <layout class="QVBoxLayout" name="verticalLayout_6">
-           <item alignment="Qt::AlignTop">
-            <widget class="QScrollArea" name="scrollArea_3">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>200</width>
-               <height>380</height>
-              </size>
-             </property>
-             <property name="verticalScrollBarPolicy">
-              <enum>Qt::ScrollBarAlwaysOn</enum>
-             </property>
-             <property name="widgetResizable">
-              <bool>true</bool>
-             </property>
-             <widget class="QWidget" name="scrollAreaWidgetContents_3">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>305</width>
-                <height>378</height>
-               </rect>
-              </property>
-              <layout class="QGridLayout" name="gridLayout_9">
-               <item row="14" column="0" colspan="2">
-                <widget class="QGroupBox" name="groupBox_3">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="title">
-                  <string> Import Options</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                 <layout class="QGridLayout" name="gridLayout_12">
-                  <item row="0" column="0">
-                   <widget class="QCheckBox" name="auto_sort_loops_cbox">
-                    <property name="text">
-                     <string>Auto-Sort Loops</string>
-                    </property>
-                    <property name="checked">
-                     <bool>true</bool>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QCheckBox" name="auto_sort_stations_cbox">
-                    <property name="font">
-                     <font>
-                      <family>MS Shell Dlg 2</family>
-                     </font>
-                    </property>
-                    <property name="text">
-                     <string>Auto-Sort
-Station Positions</string>
-                    </property>
-                    <property name="checked">
-                     <bool>true</bool>
-                    </property>
-                    <property name="tristate">
-                     <bool>false</bool>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
                </item>
               </layout>
              </widget>
@@ -1574,7 +1486,7 @@ Station Positions</string>
                <item>
                 <widget class="QGroupBox" name="groupBox_5">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -1674,6 +1586,19 @@ Station Positions</string>
                   </item>
                  </layout>
                 </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_2">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
               </layout>
              </widget>
@@ -1909,7 +1834,6 @@ Station Positions</string>
   <tabstop>grid_edit</tabstop>
   <tabstop>share_loop_cbox</tabstop>
   <tabstop>loop_edit</tabstop>
-  <tabstop>auto_sort_loops_cbox</tabstop>
   <tabstop>gps_system_cbox</tabstop>
   <tabstop>gps_zone_cbox</tabstop>
   <tabstop>gps_datum_cbox</tabstop>

@@ -53,7 +53,7 @@ class PEMFileWidget(QWidget):
         QApplication.processEvents()
         # TODO Find alternative to calling processEvents()?
 
-        self.editor.open_files(file_name)
+        self.editor.open(file_name)
 
         lin_figs, log_figs = self.editor.generate_plots(**kwargs)
 

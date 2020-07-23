@@ -1,9 +1,12 @@
 import sys
+import os
 import keyboard
 import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib
 from pathlib import Path
 from PyQt5 import (QtCore, QtGui)
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QApplication, QMessageBox, QTableWidgetItem, QGridLayout, QCheckBox,
                              QHeaderView, QTableWidget, QDialogButtonBox, QAbstractItemView, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -11,16 +14,26 @@ from matplotlib.ticker import FixedLocator, FormatStrFormatter
 from src.gps.gps_editor import TransmitterLoop, SurveyLine
 
 
+# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
+if getattr(sys, 'frozen', False):
+    application_path = sys._MEIPASS
+    icons_path = 'icons'
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+
+
 class GPSAdder(QWidget):
     """
     Class to help add station GPS to a PEM file. Helps with files that have missing stations numbers or other
     formatting errors.
     """
-    # matplotlib.style.use('ggplot')
+    matplotlib.style.use('ggplot')
 
     def __init__(self):
         super().__init__()
         self.resize(1000, 800)
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'gps_adder.png')))
 
         self.df = None
         self.write_table = None  # QTableWidget, one of the ones in the write_widget
@@ -462,7 +475,7 @@ class LoopAdder(GPSAdder):
     def open(self, o):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
-        :param o: Union, filepath; GPS object; DataFrame; Loop to open
+        :param o: Union, filepath; GPS object; Loop to open
         """
         if isinstance(o, str):
             if Path(o).is_file():
@@ -471,6 +484,8 @@ class LoopAdder(GPSAdder):
                 raise ValueError(f"{o} is not a valid file.")
         elif isinstance(o, TransmitterLoop):
             self.loop = o
+        else:
+            raise ValueError(f"{o} is not a valid input.")
 
         self.show()
         self.clear_table()

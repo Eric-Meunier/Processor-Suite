@@ -154,15 +154,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.export_station_gps_btn.clicked.connect(lambda: self.export_gps('station'))
         self.export_loop_gps_btn.clicked.connect(lambda: self.export_gps('loop'))
 
-        self.edit_loop_btn.clicked.connect(lambda:
-                                           self.loop_adder.open(
-                                               self.get_loop().get_loop(
-                                                   sorted=self.parent.auto_sort_loops_cbox.isChecked(),
-                                                   closed=True)))
-        self.edit_line_btn.clicked.connect(lambda:
-                                           self.line_adder.open(
-                                               self.get_line().get_line(
-                                                   sorted=self.parent.auto_sort_stations_cbox.isChecked())))
+        self.edit_loop_btn.clicked.connect(lambda: self.loop_adder.open(self.get_loop()))
+        self.edit_line_btn.clicked.connect(lambda: self.line_adder.open(self.get_line()))
 
         # Radio buttons
         self.station_sort_rbtn.clicked.connect(self.fill_data_table)
@@ -366,11 +359,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_gps_table(self.pem_file.geometry.get_collar(), self.collar_table)
             self.fill_gps_table(self.pem_file.geometry.get_segments(), self.segments_table)
         else:
-            self.fill_gps_table(self.pem_file.line.get_line(sorted=self.parent.auto_sort_stations_cbox.isChecked()),
-                                self.line_table)
+            self.fill_gps_table(self.pem_file.line.get_line(), self.line_table)
         self.fill_info_tab()
-        self.fill_gps_table(self.pem_file.loop.get_loop(sorted=self.parent.auto_sort_loops_cbox.isChecked()),
-                            self.loop_table)
+        self.fill_gps_table(self.pem_file.loop.get_loop(), self.loop_table)
         self.fill_data_table()
         return self
 
