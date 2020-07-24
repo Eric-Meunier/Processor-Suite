@@ -56,10 +56,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.rotated_file = None
         self.pp_plotted = False
         self.rotation_note = None
-
-        self.acc_rotated_file = None
-        self.mag_rotated_file = None
-        self.pp_rotated_file = None
+        self.soa = self.soa_sbox.value()
 
         self.setWindowTitle('XY De-rotation')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'derotate.png')))
@@ -269,8 +266,8 @@ class Derotator(QMainWindow, Ui_Derotator):
                 stations = raw_pem.data[x_filt].Station.astype(int)
 
                 if self.pp_btn.isEnabled():
-                    x_pp_angle_cleaned = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.pp_rotation_angle_cleaned)
-                    x_pp_angle_raw = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.pp_rotation_angle_raw)
+                    x_pp_angle_cleaned = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
+                    x_pp_angle_raw = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.raw_pp_roll_angle)
 
                     # Create and plot the scatter plot items
                     cpp_item = pg.ScatterPlotItem()
@@ -294,16 +291,25 @@ class Derotator(QMainWindow, Ui_Derotator):
                     self.rot_ax_legend.addItem(rpp_item, 'Raw PP')
 
                 x_angle_used = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.angle_used)
+                acc_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.acc_roll_angle - self.soa)
+                mag_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.mag_roll_angle - self.soa)
 
-                if method != 'pp':
-                    tool_item = pg.ScatterPlotItem()
-                    tool_item.setData(x_angle_used, stations,
-                                      pen='k',
-                                      brush=None,
-                                      symbol='s',
-                                      size=18)
-                    ax.addItem(tool_item)
-                    self.rot_ax_legend.addItem(tool_item, 'Tool')
+                acc_item = pg.ScatterPlotItem()
+                mag_item = pg.ScatterPlotItem()
+                acc_item.setData(acc_angles, stations,
+                                  pen='k',
+                                  brush=None,
+                                  symbol='s',
+                                  size=18)
+                mag_item.setData(mag_angles, stations,
+                                  pen='c',
+                                  brush=None,
+                                  symbol='star',
+                                  size=18)
+                ax.addItem(acc_item)
+                ax.addItem(mag_item)
+                self.rot_ax_legend.addItem(acc_item, 'Acc')
+                self.rot_ax_legend.addItem(mag_item, 'Mag')
 
         def plot_pp_values():
             """
@@ -388,12 +394,12 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         method = self.get_method()
         ineligible_stations = None
-        soa = self.soa_sbox.value()
+        self.soa = self.soa_sbox.value()
         # Create a copy of the pem_file so it is never changed
         pem_file = copy.deepcopy(self.pem_file)
 
         if method is not None:
-            self.rotated_file, ineligible_stations = pem_file.rotate(method=method, soa=soa)
+            self.rotated_file, ineligible_stations = pem_file.rotate(method=method, soa=self.soa)
         else:
             self.rotated_file = pem_file
 
@@ -552,7 +558,7 @@ def main():
     mw = Derotator()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
+    pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     mw.open(pem_files)
 
     app.exec_()
