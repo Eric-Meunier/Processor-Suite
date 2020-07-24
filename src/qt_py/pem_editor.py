@@ -2245,7 +2245,13 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         def accept_file():
             self.remove_file(rows=rows)
-            self.open_pem_files(derotator.rotated_file)
+
+            rotated_pem = derotator.rotated_file
+            rotation_note = derotator.rotation_note
+            if rotation_note is not None:
+                rotated_pem.notes.append(rotation_note)
+            self.open_pem_files(rotated_pem)
+
             derotator.close()
 
         pem_files, rows = self.get_selected_pem_files()

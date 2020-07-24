@@ -28,7 +28,9 @@ class GPSAdder(QWidget):
     Class to help add station GPS to a PEM file. Helps with files that have missing stations numbers or other
     formatting errors.
     """
-    matplotlib.style.use('ggplot')
+    # matplotlib.style.use('ggplot')
+    # matplotlib.style.use('seaborn')
+    matplotlib.style.use('fast')
 
     def __init__(self):
         super().__init__()

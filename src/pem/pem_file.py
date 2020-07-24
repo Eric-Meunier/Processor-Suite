@@ -407,6 +407,8 @@ class PEMFile:
         self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{old_current}A')
         return self
 
+    # TODO Make rotation calculate and store the rotation angle of each method for each rad ID,
+    #  then apply based on the rad ID
     def rotate(self, method='acc', soa=0):
         """
         Rotate the XY data of the PEM file.
@@ -457,6 +459,7 @@ class PEMFile:
             ramp = self.ramp / 10 ** 6
             mag_calc = MagneticFieldCalculator(loop)
 
+            # TODO Remove the last channel of fluxgates
             # Only keep off-time channels with PP
             ch_times = self.channel_times[self.channel_times.loc[:, 'Remove'] == False]
             # Normalize the channel times so they start from turn off
@@ -478,9 +481,9 @@ class PEMFile:
 
                 # Create a filter to find in which channel the time falls in
                 filt = (ch_times['Start'] <= total_time) & (ch_times['End'] > total_time)
-                ch_index = ch_times[filt].index.values[0]
-
-                ch_numbers.append(ch_index)
+                if filt.any():
+                    ch_index = ch_times[filt].index.values[0]
+                    ch_numbers.append(ch_index)
 
         def rotate_data(group, method, soa):
             """
@@ -573,10 +576,15 @@ class PEMFile:
                     print(f"Calculated PP at {group.Station.unique()[0]}: {rT[0]:.2f}, {rT[1]:.2f}, {rT[2]:.2f}")
 
                     # Calculate the required rotation angle
-                    pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx))
-                    if pp_roll_angle < 0:
-                        pp_roll_angle = pp_roll_angle + 360
-                    print(f"PP roll angle at {group.Station.unique()[0]}: {pp_roll_angle:.2f}")
+                    clean_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx))
+                    if clean_pp_roll_angle < 0:
+                        clean_pp_roll_angle = clean_pp_roll_angle + 360
+                    print(f"PP roll angle at {group.Station.unique()[0]}: {clean_pp_roll_angle:.2f}")
+
+                    raw_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) - math.atan2(raw_PPy, raw_PPx))
+                    if raw_pp_roll_angle < 0:
+                        raw_pp_roll_angle = raw_pp_roll_angle + 360
+                    print(f"PP roll angle at {group.Station.unique()[0]}: {raw_pp_roll_angle:.2f}")
 
                     # Update the RAD Tool object with the new information
                     pp_info = {
@@ -590,7 +598,8 @@ class PEMFile:
                         'ppx_raw': raw_PPx,
                         'ppy_raw': raw_PPy,
                         'ppxy_raw': math.sqrt(sum([raw_PPx ** 2, raw_PPy ** 2])),
-                        'pp_rotation_angle': pp_roll_angle
+                        'pp_rotation_angle_cleaned': clean_pp_roll_angle,
+                        'pp_rotation_angle_raw': raw_pp_roll_angle
                     }
                     for key, value in pp_info.items():
                         setattr(new_rad, key, value)
@@ -607,6 +616,10 @@ class PEMFile:
                     roll_angle = 360 - cc_roll_angle if y > 0 else cc_roll_angle
                     if roll_angle >= 360:
                         roll_angle = roll_angle - 360
+                    elif roll_angle < 0:
+                        roll_angle = roll_angle + 360
+
+                    print(f"Acc roll angle at {group.Station.unique()[0]}: {roll_angle}")
                     # Calculate the dip
                     dip = math.degrees(math.acos(x / math.sqrt((x ** 2) + (y ** 2) + (z ** 2)))) - 90
 
@@ -620,8 +633,6 @@ class PEMFile:
                     for key, value in new_info.items():
                         setattr(new_rad, key, value)
 
-                    self.notes.append(f"<GEN> XY data de-rotated using accelerometer")
-
                 # Magnetometer rotation
                 elif method == 'mag':
                     if rad.D == 'D5':
@@ -634,6 +645,10 @@ class PEMFile:
                     roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
                     if roll_angle > 360:
                         roll_angle = roll_angle - 360
+                    elif roll_angle < 0:
+                        roll_angle = roll_angle + 360
+
+                    print(f"Mag roll angle at {group.Station.unique()[0]}: {roll_angle}")
                     # Calculate the dip
                     dip = -90.  # The dip is assumed to be 90°
 
@@ -647,21 +662,17 @@ class PEMFile:
                     for key, value in new_info.items():
                         setattr(new_rad, key, value)
 
-                    self.notes.append(f"<GEN> XY data de-rotated using magnetometer")
-
                 # PP rotation
                 elif method == 'pp':
                     # Update the new_rad with the de-rotation information
-                    new_info = {'roll_angle': pp_roll_angle,
+                    new_info = {'roll_angle': clean_pp_roll_angle,
                                 'dip': seg_dip,
                                 'R': 'R2',
-                                'angle_used': pp_roll_angle - soa,
+                                'angle_used': clean_pp_roll_angle - soa,
                                 'rotated': True,
                                 'rotation_type': 'pp'}
                     for key, value in new_info.items():
                         setattr(new_rad, key, value)
-
-                    self.notes.append(f"<GEN> XY data de-rotated using cleaned PP.")
 
                 else:
                     raise ValueError(f"{method} is not a valid de-rotation method.")

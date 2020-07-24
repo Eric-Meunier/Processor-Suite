@@ -47,13 +47,13 @@ class PEMGetter:
             pem_files.append(pem_file)
         elif file is not None:
             index = file_names.index(file)
-            if index:
+            if index is not None:
                 filepath = os.path.join(sample_files_dir, file_names[index])
                 pem_file = self.parser().parse(filepath)
                 print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
                 pem_files.append(pem_file)
             else:
-                print(f"Could not find file {file}")
+                raise ValueError(f"Could not find file {file}")
         else:
             for file in file_names:
                 filepath = os.path.join(sample_files_dir, file)
