@@ -582,7 +582,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 write_data_row, axis=1)
 
             self.color_data_table()
-            self.data_table.resizeColumnsToContents()
+            # self.data_table.resizeColumnsToContents()
             self.data_table.blockSignals(False)
 
     def color_data_table(self):

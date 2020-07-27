@@ -116,8 +116,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.project_tree.setColumnHidden(3, True)
         self.project_tree.clicked.connect(self.project_dir_changed)
         # self.move_dir_tree_to(self.file_sys_model.rootPath())
-        self.raw_dir = None
-        self.gps_dir = None
+        self.available_pems = []
+        self.available_gps = []
 
         self.init_menus()
         self.init_signals()
@@ -435,9 +435,27 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.add_gps_btn.setEnabled(False)
                 self.remove_gps_btn.setEnabled(False)
 
+        def add_pem_list_files():
+            selected_rows = [self.pem_list.row(i) for i in self.pem_list.selectedItems()]
+            filepaths = [str(self.available_pems[j]) for j in selected_rows]
+            self.open_pem_files(filepaths)
+
         def add_gps_list_files():
-            filepaths = [os.path.join(self.gps_dir, item.text()) for item in self.gps_list.selectedItems()]
+            selected_rows = [self.gps_list.row(i) for i in self.gps_list.selectedItems()]
+            filepaths = [str(self.available_gps[j]) for j in selected_rows]
             self.open_gps_files(filepaths)
+
+        def remove_pem_list_files():
+            selected_rows = [self.pem_list.row(i) for i in self.pem_list.selectedItems()]
+            for row in reversed(selected_rows):
+                self.available_pems.pop(row)
+                self.pem_list.takeItem(row)
+
+        def remove_gps_list_files():
+            selected_rows = [self.gps_list.row(i) for i in self.gps_list.selectedItems()]
+            for row in reversed(selected_rows):
+                self.available_gps.pop(row)
+                self.gps_list.takeItem(row)
 
         self.table.viewport().installEventFilter(self)
         self.table.installEventFilter(self)
@@ -492,7 +510,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.pem_list.itemSelectionChanged.connect(toggle_pem_list_buttons)
         self.gps_list.itemSelectionChanged.connect(toggle_gps_list_buttons)
 
+        self.add_pem_btn.clicked.connect(add_pem_list_files)
         self.add_gps_btn.clicked.connect(add_gps_list_files)
+        self.remove_pem_btn.clicked.connect(remove_pem_list_files)
+        self.remove_gps_btn.clicked.connect(remove_gps_list_files)
 
     def contextMenuEvent(self, event):
         """
@@ -1087,83 +1108,37 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         def find_gps_dir():
             # Try to find the 'GPS' folder in the current directory
-            search_result = list(self.project_dir.glob('GPS'))
+            search_result = list(self.project_dir.rglob('GPS'))
             if search_result:
                 gps_dir = search_result[0]
                 print(f"GPS dir found: {str(gps_dir)}")
                 return gps_dir
 
-            # Find the nearest 'GPS' folder (within 3 parent levels)
-            else:
-                attempt = 0
-                while attempt < 3:
-                    search_result = list(self.project_dir.parents[attempt].glob('GPS'))
-                    if search_result:
-                        gps_dir = search_result[0]
-                        print(f"GPS dir found: {str(gps_dir)}")
-                        return gps_dir
-                    else:
-                        attempt += 1
-                return None
-
         self.gps_list.clear()
-        # Find the nearest 'GPS' folder
         t = time.time()
-        self.gps_dir = find_gps_dir()
-        print(f'Time to find gps_dir: {time.time() - t}')
+        gps_dir = find_gps_dir()
 
-        if self.gps_dir:
-            self.gps_list_dir_label.setText(f"({str(self.gps_dir)})")
-            txt_files = list(self.gps_dir.glob("*.txt"))
-            csv_files = list(self.gps_dir.glob("*.csv"))
-            gps_files = np.hstack([txt_files, csv_files])
+        if gps_dir:
+            self.available_gps = list(gps_dir.rglob('*.txt'))
+            self.available_gps.extend(gps_dir.rglob('*.csv'))
+            self.available_gps.extend(gps_dir.rglob('*.gpx'))
+            print(f'Time to find gps files: {time.time() - t}')
 
-            for file in gps_files:
-                self.gps_list.addItem(file.name)
-        else:
-            self.gps_list_dir_label.setText('')
+            for file in self.available_gps:
+                self.gps_list.addItem(f"{file.parent.name}/{file.name}")
 
     def fill_pem_list(self):
         """
-        Populate the PEM files list based on the files found in the nearest 'PEM', 'RAW', and 'Final'
-         folder in the project directory
+        Populate the pem_list with all *.pem files found in the project_dir.
         """
-
-        def find_raw_dir():
-            # Try to find the 'RAW' folder in the current directory
-            search_result = list(self.project_dir.glob('RAW'))
-            if search_result:
-                raw_dir = search_result[0]
-                print(f"RAW dir found: {str(raw_dir)}")
-                return raw_dir
-
-            # Find the nearest 'RAW' folder (within 3 parent levels)
-            else:
-                attempt = 0
-                while attempt < 3:
-                    search_result = list(self.project_dir.parents[attempt].glob('RAW'))
-                    if search_result:
-                        raw_dir = search_result[0]
-                        print(f"RAW dir found: {str(raw_dir)}")
-                        return raw_dir
-                    else:
-                        attempt += 1
-                return None
-
         self.pem_list.clear()
         # Find the nearest 'GPS' folder
         t = time.time()
-        self.raw_dir = find_raw_dir()
-        print(f'Time to find raw_dir: {time.time() - t}')
+        self.available_pems = list(self.project_dir.rglob('*.PEM'))
+        print(f'Time to find pem files: {time.time() - t}')
 
-        if self.raw_dir:
-            self.pem_list_dir_label.setText(f"({str(self.raw_dir)})")
-            pem_files = self.raw_dir.glob('*.PEM')
-
-            for file in pem_files:
-                self.pem_list.addItem(file.name)
-        else:
-            self.pem_list_dir_label.setText('')
+        for file in self.available_pems:
+            self.pem_list.addItem(f"{file.parent.name}/{file.name}")
 
     def move_dir_tree_to(self, dir_path):
         """

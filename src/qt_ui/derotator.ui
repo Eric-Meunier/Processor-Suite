@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>926</width>
-    <height>779</height>
+    <width>1080</width>
+    <height>700</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,6 +17,12 @@
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="1" column="1">
      <widget class="QTabWidget" name="tab_widget">
+      <property name="minimumSize">
+       <size>
+        <width>350</width>
+        <height>0</height>
+       </size>
+      </property>
       <property name="currentIndex">
        <number>0</number>
       </property>
@@ -55,7 +61,7 @@
     <item row="1" column="0" alignment="Qt::AlignTop">
      <widget class="QFrame" name="frame">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+       <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -165,7 +171,7 @@ due to missing X and/or Y pair:</string>
      <widget class="QTabWidget" name="tabWidget">
       <property name="maximumSize">
        <size>
-        <width>600</width>
+        <width>350</width>
         <height>16777215</height>
        </size>
       </property>
@@ -214,8 +220,8 @@ due to missing X and/or Y pair:</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>926</width>
-     <height>22</height>
+     <width>1080</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>
