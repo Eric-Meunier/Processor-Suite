@@ -54,10 +54,9 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.parent = parent
         self.pem_file = None
         self.rotated_file = None
-
-        self.acc_rotated_file = None
-        self.mag_rotated_file = None
-        self.pp_rotated_file = None
+        self.pp_plotted = False
+        self.rotation_note = None
+        self.soa = self.soa_sbox.value()
 
         self.setWindowTitle('XY De-rotation')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'derotate.png')))
@@ -116,6 +115,32 @@ class Derotator(QMainWindow, Ui_Derotator):
             ax.hideButtons()
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
+        # Create the rotation angle plot
+        self.rot_ax = self.rotation_view.addPlot(0, 0)
+        self.rot_ax.invertY(True)
+        self.rot_ax.showGrid(x=False, y=True, alpha=0.3)
+        self.rot_ax_legend = self.rot_ax.addLegend(pen='k', brush='w')
+        self.rot_ax_legend.setParent(self.rotation_view)
+        # legend.anchor((0, 0), (0.6, 0.01))
+        self.rot_ax.hideAxis('bottom')
+        self.rot_ax.showAxis('top')
+        self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees')
+        self.rot_ax.setLabel('left', 'Station', units=None)
+        self.rot_ax.getAxis('top').enableAutoSIPrefix(enable=False)
+
+        # Create the pp values plot
+        self.pp_ax = self.pp_view.addPlot(0, 0)
+        self.pp_ax.invertY(True)
+        self.pp_ax.showGrid(x=False, y=True, alpha=0.3)
+        self.pp_ax_legend = self.pp_ax.addLegend(pen='k', brush='w')
+        self.pp_ax_legend.setParent(self.pp_view)
+        # self.pp_ax_legend.anchor((0, 0), (0.6, 0.01))
+        self.pp_ax.hideAxis('bottom')
+        self.pp_ax.showAxis('top')
+        self.pp_ax.setLabel('top', 'Magnetic Field Strength', units='nT/s')
+        self.pp_ax.setLabel('left', 'Station', units=None)
+        self.pp_ax.getAxis('top').enableAutoSIPrefix(enable=False)
+
     def reset_range(self):
         """
         Reset the range of each plot
@@ -137,6 +162,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         Open, rotate, and plot the PEMFile.
         :param pem_file: borehole PEMFile object
         """
+        assert pem_file, 'Invalid PEM file'
 
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
@@ -174,6 +200,8 @@ class Derotator(QMainWindow, Ui_Derotator):
         def clear_plots():
             for ax in self.axes:
                 ax.clear()
+            self.rot_ax.clear()
+            # self.pp_ax.clear()
 
         def plot_lin(component):
 
@@ -184,7 +212,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                 :param ax: pyqtgraph PlotItem
                 :param channel: int, channel to plot
                 """
-                ax.plot(x=df['Station'], y=df[channel], pen=pg.mkPen('m', width=1.25))
+                ax.plot(x=df['Station'], y=df[channel], pen=pg.mkPen('k', width=1.25))
 
             def calc_channel_bounds():
                 """
@@ -192,8 +220,8 @@ class Derotator(QMainWindow, Ui_Derotator):
                 :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
                 """
                 channel_bounds = [None] * 4
-                num_channels_per_plot = int((pem_file.number_of_channels - 1) // 4)
-                remainder_channels = int((pem_file.number_of_channels - 1) % 4)
+                num_channels_per_plot = int((processed_pem.number_of_channels - 1) // 4)
+                remainder_channels = int((processed_pem.number_of_channels - 1) % 4)
 
                 for k in range(0, len(channel_bounds)):
                     channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
@@ -217,38 +245,141 @@ class Derotator(QMainWindow, Ui_Derotator):
 
                 # Set the Y-axis labels
                 if i == 0:
-                    ax.setLabel('left', f"PP channel", units=pem_file.units)
+                    ax.setLabel('left', f"PP channel", units=processed_pem.units)
                 else:
-                    ax.setLabel('left', f"Channel {bounds[0]} to {bounds[1]}", units=pem_file.units)
+                    ax.setLabel('left', f"Channel {bounds[0]} to {bounds[1]}", units=processed_pem.units)
 
                 # Plot the data
                 for ch in range(bounds[0], bounds[1] + 1):
                     data = profile_data[filt].loc[:, ['Station', ch]]
                     plot_lines(data, ax, ch)
 
-        pem_file = copy.deepcopy(pem_file)  # Needed otherwise the returned PEMFile will be averaged and split
+        def plot_rotation():
+            """
+            Plot the rotation angle of the tool (if selected) and the PP rotation angles for comparison.
+            """
+            method = self.get_method()
+
+            if method is not None:
+                ax = self.rot_ax
+                x_filt = raw_pem.data['Component'] == 'X'
+                stations = raw_pem.data[x_filt].Station.astype(int)
+
+                if self.pp_btn.isEnabled():
+                    x_pp_angle_cleaned = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
+                    x_pp_angle_raw = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.raw_pp_roll_angle)
+
+                    # Create and plot the scatter plot items
+                    cpp_item = pg.ScatterPlotItem()
+                    cpp_item.setData(x_pp_angle_cleaned, stations,
+                                     pen='m',
+                                     brush=None,
+                                     symbol='o',
+                                     size=18)
+                    rpp_item = pg.ScatterPlotItem()
+                    rpp_item.setData(x_pp_angle_raw, stations,
+                                     pen='b',
+                                     brush=None,
+                                     symbol='t',
+                                     size=18)
+
+                    # Add the scatter plot items to the scatter plot
+                    ax.addItem(cpp_item)
+                    ax.addItem(rpp_item)
+                    # Add the items to the legend
+                    self.rot_ax_legend.addItem(cpp_item, 'Cleaned PP')
+                    self.rot_ax_legend.addItem(rpp_item, 'Raw PP')
+
+                x_angle_used = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.angle_used)
+                acc_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.acc_roll_angle - self.soa)
+                mag_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.mag_roll_angle - self.soa)
+
+                acc_item = pg.ScatterPlotItem()
+                mag_item = pg.ScatterPlotItem()
+                acc_item.setData(acc_angles, stations,
+                                  pen='k',
+                                  brush=None,
+                                  symbol='s',
+                                  size=18)
+                mag_item.setData(mag_angles, stations,
+                                  pen='c',
+                                  brush=None,
+                                  symbol='star',
+                                  size=18)
+                ax.addItem(acc_item)
+                ax.addItem(mag_item)
+                self.rot_ax_legend.addItem(acc_item, 'Acc')
+                self.rot_ax_legend.addItem(mag_item, 'Mag')
+
+        def plot_pp_values():
+            """
+            Plot the theoretical PP values with the measured (raw) and cleaned PP
+            """
+            ax = self.pp_ax
+            # Used for PP values and rotation angle plots, not lin plots
+            x_filt = raw_pem.data['Component'] == 'X'
+            stations = raw_pem.data[x_filt].Station.astype(int)
+
+            ppxy_theory = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_theory)
+            ppxy_cleaned = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_cleaned)
+            ppxy_raw = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_raw)
+
+            theory_item = pg.ScatterPlotItem()
+            theory_item.setData(ppxy_theory, stations,
+                                pen='k',
+                                brush=None,
+                                symbol='o',
+                                size=14)
+            cleaned_item = pg.ScatterPlotItem()
+            cleaned_item.setData(ppxy_cleaned, stations,
+                                 pen='m',
+                                 brush=None,
+                                 symbol='s',
+                                 size=14)
+            raw_item = pg.ScatterPlotItem()
+            raw_item.setData(ppxy_raw, stations,
+                             pen='b',
+                             brush=None,
+                             symbol='t',
+                             size=14)
+
+            ax.addItem(theory_item)
+            ax.addItem(cleaned_item)
+            ax.addItem(raw_item)
+
+            self.pp_ax_legend.addItem(theory_item, 'Theory')
+            self.pp_ax_legend.addItem(cleaned_item, 'Cleaned PP')
+            self.pp_ax_legend.addItem(raw_item, 'Raw PP')
+            self.pp_plotted = True
+
         if not pem_file:
             return
 
+        raw_pem = copy.deepcopy(pem_file)  # Needed otherwise the returned PEMFile will be averaged and split
+        processed_pem = copy.deepcopy(pem_file)
+
         # Split the data if it isn't already split
-        if not pem_file.is_split():
-            pem_file = pem_file.split()
+        if not processed_pem.is_split():
+            processed_pem = processed_pem.split()
 
         # Average the data if it isn't averaged
-        if not pem_file.is_averaged():
-            pem_file = pem_file.average()
+        if not processed_pem.is_averaged():
+            processed_pem = processed_pem.average()
 
         clear_plots()
 
         # Get the profile data
-        profile_data = pem_file.get_profile_data()
+        profile_data = processed_pem.get_profile_data()
         if profile_data.empty:
             return
 
         t = time.time()
         plot_lin('X')
         plot_lin('Y')
-        print(f"Time to make lin plots: {time.time() - t}")
+        plot_rotation()
+        if self.pp_plotted is False and self.pp_btn.isEnabled():
+            plot_pp_values()
+        print(f"Time to make plots: {time.time() - t}")
 
     def rotate(self):
         """
@@ -261,22 +392,14 @@ class Derotator(QMainWindow, Ui_Derotator):
                 result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
                 self.list.addItem(result)
 
-        if self.acc_btn.isChecked():
-            method = 'acc'
-        elif self.mag_btn.isChecked():
-            method = 'mag'
-        elif self.pp_btn.isChecked():
-            method = 'pp'
-        else:
-            method = None
-
+        method = self.get_method()
         ineligible_stations = None
-        soa = self.soa_sbox.value()
+        self.soa = self.soa_sbox.value()
         # Create a copy of the pem_file so it is never changed
         pem_file = copy.deepcopy(self.pem_file)
 
         if method is not None:
-            self.rotated_file, ineligible_stations = pem_file.rotate(method=method, soa=soa)
+            self.rotated_file, ineligible_stations = pem_file.rotate(method=method, soa=self.soa)
         else:
             self.rotated_file = pem_file
 
@@ -291,6 +414,21 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.list.hide()
 
         self.plot_pem(self.rotated_file)
+
+    def get_method(self):
+        if self.acc_btn.isChecked():
+            method = 'acc'
+            self.rotation_note = '<GEN> XY data de-rotated using accelerometer'
+        elif self.mag_btn.isChecked():
+            method = 'mag'
+            self.rotation_note = '<GEN> XY data de-rotated using magnetometer'
+        elif self.pp_btn.isChecked():
+            method = 'pp'
+            self.rotation_note = '<GEN> XY data de-rotated using cleaned PP.'
+        else:
+            method = None
+            self.rotation_note = None
+        return method
 
 
 # # Works with Maptlotlib
@@ -420,7 +558,7 @@ def main():
     mw = Derotator()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', file='BX-081.PEM')
+    pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     mw.open(pem_files)
 
     app.exec_()

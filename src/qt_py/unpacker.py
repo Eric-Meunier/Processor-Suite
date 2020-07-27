@@ -1,70 +1,13 @@
-import sys
 import os
-from pyunpack import Archive
-from shutil import copyfile, rmtree
+import sys
 from pathlib import Path
+from shutil import copyfile, rmtree
+
+import numpy as np
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QTableWidget,
                              QFileSystemModel, QAbstractItemView, QErrorMessage, QMenu, QDialogButtonBox)
-
-
-class UnpackerTable(QTableWidget):
-    """
-    Re-implement a QTableWidget object to customize it
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def dropEvent(self, event: QtGui.QDropEvent):
-        if not event.isAccepted() and event.source() == self:
-            drop_row = self.drop_on(event)
-
-            rows = sorted(set(item.row() for item in self.selectedItems()))
-            rows_to_move = [[QTableWidgetItem(self.item(row_index, column_index)) for column_index in range(self.columnCount())]
-                            for row_index in rows]
-            for row_index in reversed(rows):
-                self.removeRow(row_index)
-                if row_index < drop_row:
-                    drop_row -= 1
-
-            for row_index, data in enumerate(rows_to_move):
-                row_index += drop_row
-                self.insertRow(row_index)
-                for column_index, column_data in enumerate(data):
-                    self.setItem(row_index, column_index, column_data)
-            event.accept()
-            for row_index in range(len(rows_to_move)):
-                self.item(drop_row + row_index, 0).setSelected(True)
-                self.item(drop_row + row_index, 1).setSelected(True)
-        super().dropEvent(event)
-
-    def drop_on(self, event):
-        index = self.indexAt(event.pos())
-        if not index.isValid():
-            return self.rowCount()
-
-        return index.row() + 1 if self.is_below(event.pos(), index) else index.row()
-
-    def is_below(self, pos, index):
-        rect = self.visualRect(index)
-        margin = 2
-        if pos.y() - rect.top() < margin:
-            return False
-        elif rect.bottom() - pos.y() < margin:
-            return True
-        # noinspection PyTypeChecker
-        return rect.contains(pos, True) and not (int(self.model().flags(index)) & QtCore.Qt.ItemIsDropEnabled) and pos.y() >= rect.center().y()
-
-
-class CustomTableWidgetItem(QTableWidgetItem):
-    def __init__(self, text, sortKey):
-            QTableWidgetItem.__init__(self, text, QTableWidgetItem.UserType)
-            self.sortKey = sortKey
-
-    #Qt uses a simple < check for sorting items, override this to use the sortKey
-    def __lt__(self, other):
-            return self.sortKey < other.sortKey
-
+from pyunpack import Archive
 
 # This must be placed after the custom table or else there are issues with class promotion in Qt Designer.
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -79,10 +22,6 @@ else:
 
 # Load Qt ui file into a class
 Ui_UnpackerCreator, QtBaseClass = uic.loadUiType(unpackerCreatorFile)
-
-icons_lib = {
-    'cor': QtGui.QIcon(os.path.join(icons_path, 'pathfinder_cor.ico'))
-}
 
 
 class Unpacker(QMainWindow, Ui_UnpackerCreator):
@@ -440,6 +379,14 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             rmtree(self.path)
         self.statusBar().showMessage('Complete.', 2000)
 
+        if self.open_damp_files_cbox.isChecked():
+            db_files = []
+            for row in np.arange(self.damp_table.rowCount()):
+                filepath = os.path.join(self.damp_table.item(row, 0).text(), self.damp_table.item(row, 1).text())
+                db_files.append(filepath)
+            self.parent.db_plot.open(db_files)
+            self.parent.db_plot.show()
+
 
 def main():
     app = QApplication(sys.argv)
@@ -447,9 +394,9 @@ def main():
     up = Unpacker()
     up.move(app.desktop().screen().rect().center() - up.rect().center())
     up.show()
-    folder = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19'
-    zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
-    up.open_folder(folder)
+    # folder = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19'
+    # zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
+    # up.open_folder(folder)
 
     sys.exit(app.exec())
 

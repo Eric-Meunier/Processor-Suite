@@ -395,13 +395,13 @@ class BoreholeGeometry:
         segments = self.segments.get_segments().dropna()
 
         # Interpolate the segments
-        if num_segments or stations:
+        if num_segments is not None or stations is not None:
             azimuths = segments.Azimuth.to_list()
             dips = segments.Dip.to_list()
             depths = segments.Depth.to_list()
 
             # Create the interpolated lists
-            if stations:
+            if stations is not None:
                 interp_depths = sorted(np.unique(np.concatenate((depths, stations))))
                 num_segments = len(interp_depths)
             else:

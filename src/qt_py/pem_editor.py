@@ -468,9 +468,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
         self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
-        self.share_range_cbox.stateChanged.connect(
+        self.share_range_cbox.toggled.connect(
             lambda: self.min_range_edit.setEnabled(self.share_range_cbox.isChecked()))
-        self.share_range_cbox.stateChanged.connect(
+        self.share_range_cbox.toggled.connect(
             lambda: self.max_range_edit.setEnabled(self.share_range_cbox.isChecked()))
         # self.share_range_cbox.stateChanged.connect(self.refresh_table)
 
@@ -723,7 +723,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             ]))
 
             inf_conditions = bool(all([
-                e.answerRect().intersects(self.main_frame_gps_tab.geometry()),
+                e.answerRect().intersects(self.project_crs_box.geometry()),
                 inf_files is True or gpx_files is True,
             ]))
 
@@ -893,9 +893,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.start_pg(start=0, end=len(pem_files))
         count = 0
 
-        if not self.auto_sort_loops_cbox.isChecked():
-            self.message.warning(self, 'Warning', "Loops aren't being sorted.")
-
         for pem_file in pem_files:
             t3 = time.time()
             # Create a PEMFile object if a filepath was passed
@@ -975,7 +972,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         if current_tab == pem_info_widget.station_gps_tab:
             line = SurveyLine(file, crs=crs)
             self.line_adder.write_widget = pem_info_widget
-            self.line_adder.open(line.get_line(sorted=self.auto_sort_stations_cbox.isChecked()))
+            self.line_adder.open(line)
 
         elif current_tab == pem_info_widget.geometry_tab:
             collar = BoreholeCollar(file, crs=crs)
@@ -988,7 +985,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         elif current_tab == pem_info_widget.loop_gps_tab:
             loop = TransmitterLoop(file, crs=crs)
             self.loop_adder.write_widget = pem_info_widget
-            self.loop_adder.open(loop.get_loop(sorted=self.auto_sort_loops_cbox.isChecked()))
+            self.loop_adder.open(loop)
 
         else:
             pass
@@ -1247,14 +1244,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         :return: None
         """
         if self.pem_files:
-            if not self.auto_sort_loops_cbox.isChecked():
-                response = self.message.question(self, 'Warning',
-                                                 'The loops are not being automatically sorted.'
-                                                 'Continue with saving the PEM files?',
-                                                 self.message.Yes | self.message.No)
-                if response == self.message.No:
-                    return
-
             if selected is True:
                 pem_files, rows = self.get_selected_pem_files()
             else:
@@ -1303,14 +1292,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         file_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM)')[0]  # Returns full filepath
 
         if file_path:
-            if not self.auto_sort_loops_cbox.isChecked():
-                response = self.message.question(self, 'Warning',
-                                                 'The loops are not being automatically sorted.'
-                                                 'Continue with saving the PEM file?',
-                                                 self.message.Yes | self.message.No)
-                if response == self.message.No:
-                    return
-
             pem_file = copy.deepcopy(self.pem_files[row])
             pem_file.filepath = Path(file_path)
             updated_file = self.update_pem_file_from_table(pem_file, row, filepath=file_path)
@@ -1598,7 +1579,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     folder = os.path.join(export_folder, loop)
                     for pem_file in pem_files:
                         if pem_file.has_loop_gps():
-                            loop = pem_file.get_loop(sorted=self.auto_sort_loops_cbox.isChecked(), closed=False)
+                            loop = pem_file.get_loop(closed=False)
                             if loop.to_string() not in loops:
                                 loop_name = pem_file.loop_name
                                 print(f"Creating CSV file for loop {loop_name}")
@@ -2269,7 +2250,13 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         def accept_file():
             self.remove_file(rows=rows)
-            self.open_pem_files(derotator.rotated_file)
+
+            rotated_pem = derotator.rotated_file
+            rotation_note = derotator.rotation_note
+            if rotation_note is not None:
+                rotated_pem.notes.append(rotation_note)
+            self.open_pem_files(rotated_pem)
+
             derotator.close()
 
         pem_files, rows = self.get_selected_pem_files()
@@ -2974,7 +2961,7 @@ def main():
     mw.output_log_cbox.setChecked(False)
     mw.output_step_cbox.setChecked(False)
     mw.output_section_cbox.setChecked(False)
-    mw.print_plots()
+    # mw.print_plots()
 
     # mw.reverse_all_data('X')
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)

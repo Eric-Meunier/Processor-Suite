@@ -163,7 +163,7 @@ class DBPlot(QMainWindow):
     def dropEvent(self, e):
         try:
             urls = [url.toLocalFile() for url in e.mimeData().urls()]
-            self.open_files(urls)
+            self.open(urls)
             # Resize the window
             if self.central_widget_layout.sizeHint().height() > self.size().height() or self.central_widget_layout.sizeHint().width() > self.size().width():
                 self.resize(self.central_widget_layout.sizeHint().width(), self.central_widget_layout.sizeHint().height())
@@ -179,7 +179,7 @@ class DBPlot(QMainWindow):
             if files[0] != '':
                 for file in files[0]:
                     if file.lower().endswith('log') or file.lower().endswith('txt') or file.lower().endswith('rtf'):
-                        self.open_files(file)
+                        self.open(file)
                     else:
                         pass
             else:
@@ -189,10 +189,10 @@ class DBPlot(QMainWindow):
             self.message.information(None, 'Error', str(e))
             pass
 
-    def open_files(self, files):
+    def open(self, files):
         """
         Parse and plot damping box data.
-        :param files: str: filepath of files to open
+        :param files: list of str, filepaths to open
         :return: None
         """
         # Only work with lists (to accomodate files with multiple logs, so if input isn't a list, makes it one
@@ -619,7 +619,7 @@ def main():
     plotter = DampPlot
     files = [r'C:\_Data\2020\Iscaycruz\Surface\Yanagarin\Loop 2\Dump\January 11, 2020\Damp\YAT-Log(234)-20200111-171807.txt',
              r'C:\_Data\2020\Iscaycruz\Surface\Yanagarin\Loop 2\Dump\January 11, 2020\Damp\YAT-Log(234)-20200111-171818.txt']
-    mw.open_files(files)
+    mw.open(files)
     # d = plotter(parser.parse(file))
     # d.show()
     app.exec_()
