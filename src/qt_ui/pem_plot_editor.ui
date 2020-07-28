@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>857</width>
+    <width>1016</width>
     <height>748</height>
    </rect>
   </property>
@@ -14,21 +14,55 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="0">
-    <layout class="QGridLayout" name="decay_layout"/>
-   </item>
    <item row="0" column="0">
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>sdfsdfsdfsd</string>
-     </property>
-    </widget>
+    <widget class="GraphicsLayoutWidget" name="decay_view"/>
    </item>
-   <item row="2" column="0">
-    <layout class="QGridLayout" name="toolbar_layout"/>
+   <item row="0" column="1">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="x_tab">
+      <attribute name="title">
+       <string>X</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="GraphicsLayoutWidget" name="x_profile_view"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="y_tab">
+      <attribute name="title">
+       <string>Y</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="GraphicsLayoutWidget" name="y_profile_view"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="z_tab">
+      <attribute name="title">
+       <string>Z</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="GraphicsLayoutWidget" name="z_profile_view"/>
+       </item>
+      </layout>
+     </widget>
+    </widget>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>GraphicsLayoutWidget</class>
+   <extends>QGraphicsView</extends>
+   <header>pyqtgraph</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
