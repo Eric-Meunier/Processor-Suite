@@ -447,15 +447,15 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         def remove_pem_list_files():
             selected_rows = [self.pem_list.row(i) for i in self.pem_list.selectedItems()]
-            for row in reversed(selected_rows):
-                self.available_pems.pop(row)
+            for row in sorted(selected_rows, reverse=True):
                 self.pem_list.takeItem(row)
+                self.available_pems.pop(row)
 
         def remove_gps_list_files():
             selected_rows = [self.gps_list.row(i) for i in self.gps_list.selectedItems()]
-            for row in reversed(selected_rows):
-                self.available_gps.pop(row)
+            for row in sorted(selected_rows, reverse=True):
                 self.gps_list.takeItem(row)
+                self.available_gps.pop(row)
 
         self.table.viewport().installEventFilter(self)
         self.table.installEventFilter(self)
@@ -1098,8 +1098,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.project_dir = path
             print(f"New project dir: {str(path)}")
 
-            self.fill_gps_list()
-            self.fill_pem_list()
+            # self.fill_gps_list()
+            # self.fill_pem_list()
 
     def fill_gps_list(self):
         """

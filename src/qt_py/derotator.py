@@ -201,7 +201,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         def clear_plots():
             for ax in self.axes:
-                if ax is not self.pp_ax and ax is not self.rot_ax:
+                if ax not in [self.pp_ax, self.rot_ax]:
                     ax.clear()
 
         def plot_lin(component):
