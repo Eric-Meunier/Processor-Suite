@@ -58,9 +58,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.error = QErrorMessage()
         self.message = QMessageBox()
         self.message.setIcon(QMessageBox.Information)
-        self.loop_adder = LoopAdder(parent=self)
+        self.loop_adder = LoopAdder
         self.loop_adder.write_widget = self
-        self.line_adder = LineAdder(parent=self)
+        self.line_adder = LineAdder
         self.line_adder.write_widget = self
 
         self.last_stn_gps_shift_amt = 0
@@ -154,8 +154,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.export_station_gps_btn.clicked.connect(lambda: self.export_gps('station'))
         self.export_loop_gps_btn.clicked.connect(lambda: self.export_gps('loop'))
 
-        self.edit_loop_btn.clicked.connect(lambda: self.loop_adder.open(self.get_loop()))
-        self.edit_line_btn.clicked.connect(lambda: self.line_adder.open(self.get_line()))
+        self.edit_loop_btn.clicked.connect(lambda: self.loop_adder(parent=self).open(self.get_loop()))
+        self.edit_line_btn.clicked.connect(lambda: self.line_adder(parent=self).open(self.get_line()))
 
         # Radio buttons
         self.station_sort_rbtn.clicked.connect(self.fill_data_table)

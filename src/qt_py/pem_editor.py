@@ -2333,8 +2333,9 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             # Merge the files
             merged_pem = merge_pems(pem_files)
 
-            files_to_open.append(merged_pem)
-            files_to_remove.extend(pem_files)
+            if merged_pem is not None:
+                files_to_open.append(merged_pem)
+                files_to_remove.extend(pem_files)
 
         elif auto_select is True:
             if not self.pem_files:
@@ -2355,15 +2356,15 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 # Group the files by line name
                 for line, line_files in groupby(loop_files, key=lambda x: x.line_name):
                     line_files = list(line_files)
-                    print(f"Auto merging line {line}: {[f.filepath.name for f in line_files]}")
+                    if len(line_files) > 1:
+                        print(f"Auto merging line {line}: {[f.filepath.name for f in line_files]}")
 
-                    # Merge the files
-                    merged_pem = merge_pems(line_files)
-                    # # Save the new file
-                    # self.write_pem_file(merged_pem, tag='[M]')
+                        # Merge the files
+                        merged_pem = merge_pems(line_files)
 
-                    files_to_open.append(merged_pem)
-                    files_to_remove.extend(line_files)
+                        if merged_pem is not None:
+                            files_to_open.append(merged_pem)
+                            files_to_remove.extend(line_files)
 
             # Merge borehole files
             # Group the files by loop
@@ -2386,10 +2387,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                             # Merge the files
                             merged_pem = merge_pems(comp_files)
 
-                            files_to_open.append(merged_pem)
-                            files_to_remove.extend(comp_files)
+                            if merged_pem is not None:
+                                files_to_open.append(merged_pem)
+                                files_to_remove.extend(comp_files)
 
-        # files_to_remove = np.hstack(files_to_remove)
         rows = [pem_files.index(f) for f in files_to_remove]
 
         if self.auto_create_backup_files_cbox.isChecked():
@@ -2919,9 +2920,10 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Kazzinc', number=2)
+    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051')
     # mw.show()
     mw.open_pem_files(pem_files)
+    mw.delete_merged_files_cbox.setChecked(False)
     # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
@@ -2932,45 +2934,6 @@ def main():
     mw.output_step_cbox.setChecked(False)
     mw.output_section_cbox.setChecked(False)
     # mw.print_plots()
-
-    # mw.reverse_all_data('X')
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\GPX files\Loop-32.gpx'])
-    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\718-3739gyro.seg'])
-    # mw.save_as_xyz()
-    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP4.txt'])
-    # import pyqtgraph.examples
-    # pyqtgraph.examples.run()
-
-    # mw.open_gps_files([r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 300S.txt'])
-    # mw.import_ri_files()
-    # mw.show_map()
-    # mw.timebase_freqency_converter()
-    # mw.calc_mag_declination(pem_files[0])
-    # mw.save_as_xyz(selected_files=False)
-    # mw.show_contour_map_viewer()
-    # mw.contour_map_viewer.save_figure()
-    # mw.auto_merge_pem_files()
-    # mw.save_as_kmz()
-    # spinner = WaitingSpinner(mw.table)
-    # spinner.start()
-    # spinner.show()
-
-    # mw.auto_merge_pem_files()
-    # mw.sort_files()
-    # section = Section3DViewer(pem_files[0])
-    # section.show()
-
-    # map = Map3DViewer(pem_files)
-    # map.show()
-
-    # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\DC6200E-LP124.PEM')
-    # mw.open_gpx_files(r'C:\_Data\2019\_Mowgli Testing\loop_13_transmitters.GPX')
-
-    # mw.open_pem_files(r'C:\_Data\2019\_Mowgli Testing\1200NAv.PEM')
-    # mw.open_ri_file([r'C:\_Data\2019\_Mowgli Testing\1200N.RI3'])
-    # mw.print_plots()
-    # mw.print_plots(final=True)
 
     app.exec_()
 

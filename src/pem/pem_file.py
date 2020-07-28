@@ -569,7 +569,7 @@ class PEMFile:
 
             def calculate_angles():
                 """
-                Calculate the roll angle given by each available method and add it to the RAD tool object.
+                Calculate the roll angle for each available method and add it to the RAD tool object.
                 """
 
                 def calculate_pp_angles():

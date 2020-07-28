@@ -29,7 +29,7 @@
    <item row="1" column="0">
     <widget class="QTabWidget" name="tabs">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
+      <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -59,7 +59,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="info_tab">
       <attribute name="title">
@@ -86,11 +86,11 @@
          <attribute name="verticalHeaderVisible">
           <bool>false</bool>
          </attribute>
-         <attribute name="verticalHeaderMinimumSectionSize">
-          <number>0</number>
-         </attribute>
          <attribute name="verticalHeaderDefaultSectionSize">
           <number>23</number>
+         </attribute>
+         <attribute name="verticalHeaderMinimumSectionSize">
+          <number>0</number>
          </attribute>
          <attribute name="verticalHeaderStretchLastSection">
           <bool>false</bool>
