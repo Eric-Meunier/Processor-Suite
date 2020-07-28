@@ -142,11 +142,17 @@ class GPSAdder(QWidget):
              :param series: pandas Series object
              :return: None
              """
+            def series_to_items(x):
+                if isinstance(x, float):
+                    return QTableWidgetItem(f"{x:.2f}")
+                else:
+                    return QTableWidgetItem(str(x))
+
             row_pos = self.table.rowCount()
             # Add a new row to the table
             self.table.insertRow(row_pos)
 
-            items = series.map(lambda x: QTableWidgetItem(str(x))).to_list()
+            items = series.map(series_to_items).to_list()
             # Format each item of the table to be centered
             for m, item in enumerate(items):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)

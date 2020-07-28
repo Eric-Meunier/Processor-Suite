@@ -433,6 +433,9 @@ class PEMFile:
             return df
 
         def setup_pp():
+            """
+            Set up the necessary variables used for cleaned PP rotation.
+            """
             assert self.has_loop_gps(), f"{self.filepath.name} has no loop GPS."
             assert self.has_geometry(), f"{self.filepath.name} has incomplete geometry."
             assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filepath.name}."
@@ -515,17 +518,6 @@ class PEMFile:
                 rotated_y = [x * math.sin(math.radians(roll_angle)) + y * math.cos(math.radians(roll_angle)) for (x, y) in zip(x_pair, y_values)]
                 return np.array(rotated_y, dtype=float)
 
-            def get_cleaned_pp(row):
-                """
-                Calculate the cleaned PP value of a station
-                :param row: PEM data DataFrame row
-                :return: float, cleaned PP value
-                """
-                cleaned_pp = row.Reading[0]
-                for num in ch_numbers:
-                    cleaned_pp += row.Reading[num]
-                return cleaned_pp
-
             def get_new_rad(method):
                 """
                 Create a new RADTool object ready for XY de-rotation based on the rotation method
@@ -533,12 +525,17 @@ class PEMFile:
                 :return: RADTool object
                 """
 
+                # PP rotation using cleaned PP
                 if method == 'pp':
+                    if self.is_fluxgate():
+                        roll_angle = rad.measured_pp_roll_angle
+                    else:
+                        roll_angle = rad.cleaned_pp_roll_angle
                     # Update the new_rad with the de-rotation information
-                    new_info = {'roll_angle': rad.cleaned_pp_roll_angle,
-                                'dip': rad.seg_dip,
-                                'R': 'R2',
-                                'angle_used': rad.clean_pp_roll_angle - soa,
+                    new_info = {'roll_angle': roll_angle,
+                                'dip': rad.pp_dip,
+                                'R': 'R1',
+                                'angle_used': roll_angle,
                                 'rotated': True,
                                 'rotation_type': 'pp'}
 
@@ -565,6 +562,7 @@ class PEMFile:
                 else:
                     raise ValueError(f"{method} is not a valid de-rotation method.")
 
+                # Set the new attributes to the RAD object
                 for key, value in new_info.items():
                     setattr(rad, key, value)
                 return rad
@@ -575,17 +573,26 @@ class PEMFile:
                 """
 
                 def calculate_pp_angles():
+
+                    def get_cleaned_pp(row):
+                        """
+                        Calculate the cleaned PP value of a station
+                        :param row: PEM data DataFrame row
+                        :return: float, cleaned PP value
+                        """
+                        cleaned_pp = row.Reading[0]
+                        for num in ch_numbers:
+                            cleaned_pp += row.Reading[num]
+                        return cleaned_pp
+
                     # Add the PP information (theoretical PP, cleaned PP, roll angle) to the new RAD Tool object
                     if include_pp is True:
-                        # Calculate the cleaned PP value for each component
-                        cleaned_PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1).mean()
-                        cleaned_PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1).mean()
-
                         # Calculate the raw PP value for each component
                         pp_ch_index = self.channel_times[self.channel_times.Remove == False].index.values[0]
-                        raw_PPx = group[group.Component == 'X'].apply(lambda x: x.Reading[pp_ch_index], axis=1).mean()
-                        raw_PPy = group[group.Component == 'Y'].apply(lambda x: x.Reading[pp_ch_index], axis=1).mean()
-
+                        measured_ppx = group[group.Component == 'X'].apply(lambda x: x.Reading[pp_ch_index], axis=1).mean()
+                        measured_ppy = group[group.Component == 'Y'].apply(lambda x: x.Reading[pp_ch_index], axis=1).mean()
+                        ppxy_measured = math.sqrt(sum([measured_ppx ** 2, measured_ppy ** 2]))
+                        
                         # Find the dip at the station's depth
                         seg_dip = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
                         seg_azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Azimuth)
@@ -608,20 +615,30 @@ class PEMFile:
                         # Rotate the theoretical values into the hole coordinate system
                         r = R.from_euler('YZ', [90 - seg_dip, seg_azimuth], degrees=True)
                         rT = r.apply([Tx, Ty, Tz])  # The rotated theoretical values
+                        ppxy_theory = math.sqrt(sum([rT[0] ** 2, rT[1] ** 2]))
 
-                        print(f"Calculated PP at {group.Station.unique()[0]}: {rT[0]:.2f}, {rT[1]:.2f}, {rT[2]:.2f}")
+                        # print(f"Calculated PP at {group.Station.unique()[0]}: {rT[0]:.2f}, {rT[1]:.2f}, {rT[2]:.2f}")
+                        
+                        if not self.is_fluxgate():
+                            # Calculate the cleaned PP value for each component for non-fluxgate surveys
+                            cleaned_PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1).mean()
+                            cleaned_PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1).mean()
+                            ppxy_cleaned = math.sqrt(sum([cleaned_PPx ** 2, cleaned_PPy ** 2]))
 
-                        # Calculate the required rotation angle
-                        clean_pp_roll_angle = math.degrees(
-                            math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx))
-                        if clean_pp_roll_angle < 0:
-                            clean_pp_roll_angle = clean_pp_roll_angle + 360
-                        print(f"Cleaned PP roll angle at {group.Station.unique()[0]}: {clean_pp_roll_angle:.2f}")
+                            # Calculate the required rotation angle
+                            cleaned_pp_roll_angle = math.degrees(
+                                math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx))
+                            if cleaned_pp_roll_angle < 0:
+                                cleaned_pp_roll_angle = cleaned_pp_roll_angle + 360
+                            # print(f"Cleaned PP roll angle at {group.Station.unique()[0]}: {clean_pp_roll_angle:.2f}")
+                        else:
+                            cleaned_pp_roll_angle = None
+                            ppxy_cleaned = None
 
-                        raw_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) - math.atan2(raw_PPy, raw_PPx))
-                        if raw_pp_roll_angle < 0:
-                            raw_pp_roll_angle = raw_pp_roll_angle + 360
-                        print(f"Raw PP roll angle at {group.Station.unique()[0]}: {raw_pp_roll_angle:.2f}")
+                        measured_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) - math.atan2(measured_ppy, measured_ppx))
+                        if measured_pp_roll_angle < 0:
+                            measured_pp_roll_angle = measured_pp_roll_angle + 360
+                        # print(f"Raw PP roll angle at {group.Station.unique()[0]}: {measured_pp_roll_angle:.2f}")
 
                         # Update the RAD Tool object with the new information
                         pp_info = {
@@ -630,20 +647,19 @@ class PEMFile:
                             # 'ppz_theory': rT[2],
                             # 'ppx_cleaned': cleaned_PPx,
                             # 'ppy_cleaned': cleaned_PPy,
-                            # 'ppx_raw': raw_PPx,
-                            # 'ppy_raw': raw_PPy,
-                            'ppxy_theory': math.sqrt(sum([rT[0] ** 2, rT[1] ** 2])),
-                            'ppxy_cleaned': math.sqrt(sum([cleaned_PPx ** 2, cleaned_PPy ** 2])),
-                            'ppxy_raw': math.sqrt(sum([raw_PPx ** 2, raw_PPy ** 2])),
-                            'cleaned_pp_roll_angle': clean_pp_roll_angle,
-                            'raw_pp_roll_angle': raw_pp_roll_angle,
-                            'pp_dip': seg_dip
+                            # 'ppx_raw': measured_ppx,
+                            # 'ppy_raw': measured_ppy,
+                            'ppxy_theory': ppxy_theory,
+                            'ppxy_cleaned': ppxy_cleaned,
+                            'ppxy_measured': ppxy_measured,
+                            'cleaned_pp_roll_angle': cleaned_pp_roll_angle,
+                            'measured_pp_roll_angle': measured_pp_roll_angle,
+                            'pp_dip': -seg_dip
                         }
                         for key, value in pp_info.items():
                             setattr(rad, key, value)
 
                 def calculate_acc_angles():
-                    # Accelerometer rotation
                     if rad.D == 'D5':
                         x, y, z = rad.x, rad.y, rad.z
                     else:
@@ -680,7 +696,7 @@ class PEMFile:
                     if roll_angle > 360:
                         roll_angle = roll_angle - 360
                     elif roll_angle < 0:
-                        roll_angle = roll_angle + 360
+                        roll_angle = -roll_angle
 
                     print(f"Mag roll angle at {group.Station.unique()[0]}: {roll_angle}")
                     # Calculate the dip
@@ -697,12 +713,25 @@ class PEMFile:
                 calculate_acc_angles()
                 calculate_mag_angles()
 
+            def weighted_average(group):
+                """
+                Function to calculate the weighted average reading of a station-component group.
+                :param group: pandas DataFrame of PEM data for a station-component
+                :return: np array, averaged reading
+                """
+                # Sum the number of stacks column
+                weights = group['Number_of_stacks'].to_list()
+                # Add the weighted average of the readings to the reading column
+                averaged_reading = np.average(group.Reading.to_list(),
+                                              axis=0,
+                                              weights=weights)
+                return averaged_reading
+
             x_data = group[group['Component'] == 'X']
             y_data = group[group['Component'] == 'Y']
             # Save the first reading of each component to be used a the 'pair' reading for rotation
-            # TODO the x and y pair should be an averaged reading
-            x_pair = x_data.iloc[0].Reading
-            y_pair = y_data.iloc[0].Reading
+            x_pair = weighted_average(x_data)
+            y_pair = weighted_average(y_data)
 
             rad = group.iloc[0]['RAD_tool']
             # Calculate all the roll angles available and add it to the RAD tool object
@@ -890,8 +919,8 @@ class PEMFile:
     #
     #                 # Calculate the raw PP value for each component
     #                 pp_ch_index = self.channel_times[self.channel_times.Remove == False].index.values[0]
-    #                 raw_PPx = group[group.Component == 'X'].apply(lambda x: x.Reading[pp_ch_index], axis=1).mean()
-    #                 raw_PPy = group[group.Component == 'Y'].apply(lambda x: x.Reading[pp_ch_index], axis=1).mean()
+    #                 measured_ppx = group[group.Component == 'X'].apply(lambda x: x.Reading[pp_ch_index], axis=1).mean()
+    #                 measured_ppy = group[group.Component == 'Y'].apply(lambda x: x.Reading[pp_ch_index], axis=1).mean()
     #
     #                 # Find the dip at the station's depth
     #                 seg_dip = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
@@ -924,10 +953,10 @@ class PEMFile:
     #                     clean_pp_roll_angle = clean_pp_roll_angle + 360
     #                 print(f"PP roll angle at {group.Station.unique()[0]}: {clean_pp_roll_angle:.2f}")
     #
-    #                 raw_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) - math.atan2(raw_PPy, raw_PPx))
-    #                 if raw_pp_roll_angle < 0:
-    #                     raw_pp_roll_angle = raw_pp_roll_angle + 360
-    #                 print(f"PP roll angle at {group.Station.unique()[0]}: {raw_pp_roll_angle:.2f}")
+    #                 measured_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) - math.atan2(measured_ppy, measured_ppx))
+    #                 if measured_pp_roll_angle < 0:
+    #                     measured_pp_roll_angle = measured_pp_roll_angle + 360
+    #                 print(f"PP roll angle at {group.Station.unique()[0]}: {measured_pp_roll_angle:.2f}")
     #
     #                 # Update the RAD Tool object with the new information
     #                 pp_info = {
@@ -938,11 +967,11 @@ class PEMFile:
     #                     'ppx_cleaned': cleaned_PPx,
     #                     'ppy_cleaned': cleaned_PPy,
     #                     'ppxy_cleaned': math.sqrt(sum([cleaned_PPx ** 2, cleaned_PPy ** 2])),
-    #                     'ppx_raw': raw_PPx,
-    #                     'ppy_raw': raw_PPy,
-    #                     'ppxy_raw': math.sqrt(sum([raw_PPx ** 2, raw_PPy ** 2])),
+    #                     'ppx_raw': measured_ppx,
+    #                     'ppy_raw': measured_ppy,
+    #                     'ppxy_raw': math.sqrt(sum([measured_ppx ** 2, measured_ppy ** 2])),
     #                     'pp_rotation_angle_cleaned': clean_pp_roll_angle,
-    #                     'pp_rotation_angle_raw': raw_pp_roll_angle
+    #                     'pp_rotation_angle_raw': measured_pp_roll_angle
     #                 }
     #                 for key, value in pp_info.items():
     #                     setattr(new_rad, key, value)
@@ -1649,10 +1678,10 @@ class RADTool:
 
         self.ppxy_theory = None
         self.ppxy_cleaned = None
-        self.ppxy_raw = None
+        self.ppxy_measured = None
 
         self.cleaned_pp_roll_angle = None
-        self.raw_pp_roll_angle = None
+        self.measured_pp_roll_angle = None
         self.acc_roll_angle = None
         self.mag_roll_angle = None
 
@@ -1819,7 +1848,7 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
 
     pg = PEMGetter()
-    files = pg.get_pems(client='PEM Rotation', file='MRC-067 XY.PEM')
+    files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # files = pg.get_pems(client='Raglan', number=1)
     file = files[0]
     # p = PEMParser()
@@ -1828,7 +1857,7 @@ if __name__ == '__main__':
 
     # file.split()
 
-    file.rotate(method='pp', soa=0)
+    file.rotate(method='mag', soa=0)
 
     # file.average()
     # file.scale_current(10)
