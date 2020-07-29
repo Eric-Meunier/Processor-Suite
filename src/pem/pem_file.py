@@ -174,6 +174,9 @@ class PEMFile:
             else:
                 return True
 
+    def has_d7(self):
+        return self.data.RAD_tool.map(lambda x: x.D == 'D7').all()
+
     def get_gps_units(self):
         """
         Return the type of units being used for GPS ('m' or 'ft')
@@ -1794,6 +1797,58 @@ class RADTool:
 
         dip = math.degrees(math.acos(self.gx / math.sqrt((self.gx ** 2) + (self.gy ** 2) + (self.gz ** 2)))) - 90
         return dip
+
+    def get_acc_roll(self):
+        """
+        Calculate the roll angle as measured by the accelerometer. Must be D7.
+        :return: float, roll angle
+        """
+        if not self.D == 'D7':
+            return None
+
+        x, y, z = self.gx, self.gy, self.gz
+
+        theta = math.atan2(y, z)
+        cc_roll_angle = 360 - math.degrees(theta) if y < 0 else math.degrees(theta)
+        roll_angle = 360 - cc_roll_angle if y > 0 else cc_roll_angle
+        if roll_angle >= 360:
+            roll_angle = roll_angle - 360
+        elif roll_angle < 0:
+            roll_angle = roll_angle + 360
+
+        return roll_angle
+
+    def get_mag_roll(self):
+        """
+        Calculate the roll angle as measured by the magnetometer. Must be D7.
+        :return: float, roll angle
+        """
+        if not self.D == 'D7':
+            return None
+
+        x, y, z = self.Hx, self.Hy, self.Hz
+
+        theta = math.atan2(-y, -z)
+        cc_roll_angle = math.degrees(theta)
+        roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
+        if roll_angle > 360:
+            roll_angle = roll_angle - 360
+        elif roll_angle < 0:
+            roll_angle = -roll_angle
+
+        return roll_angle
+
+    def get_mag_strength(self):
+        """
+        Calculate and return the magnetic field strength (total field) in units of nT
+        :return: float
+        """
+        if not self.D == 'D7':
+            return None
+
+        x, y, z = self.Hx, self.Hy, self.Hz
+        mag_strength = math.sqrt(sum([x ** 2, y ** 2, z ** 2])) * (10 ** 5)
+        return mag_strength
 
     def is_rotated(self):
         return True if self.angle_used is not None else False

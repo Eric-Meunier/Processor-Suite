@@ -1,246 +1,175 @@
+from PyQt5 import (uic)
+from PyQt5.QtWidgets import (QMainWindow)
+
+import copy
+import sys
+import os
+import math
 import numpy as np
-from scipy.interpolate import interp1d, splrep, BSpline
+import pandas as pd
+import matplotlib.pyplot as plt
+from PyQt5.QtWidgets import (QApplication)
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.lines import Line2D
-from matplotlib.artist import Artist
+from src.mpl.interactive_spline import InteractiveSpline
+from src.mpl.zoom_pan import ZoomPan
+
+if getattr(sys, 'frozen', False):
+    application_path = sys._MEIPASS
+    pemGeometryCreatorFile = 'qt_ui\\pem_geometry.ui'
+    icons_path = 'icons'
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+    pemGeometryCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_geometry.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+
+# Load Qt ui file into a class
+Ui_PemGeometry, QtBaseClass = uic.loadUiType(pemGeometryCreatorFile)
 
 
-def dist(x, y):
-    """
-    Return the distance between two points.
-    """
-    d = x - y
-    return np.sqrt(np.dot(d, d))
+class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
+    def __init__(self, parent=None):
+        super().__init__()
+        self.setupUi(self)
+        self.setWindowTitle('PEM Geometry')
+        self.resize(1100, 800)
 
-def dist_point_to_segment(p, s0, s1):
-    """
-    Get the distance of a point to a segment.
-      *p*, *s0*, *s1* are *xy* sequences
-    This algorithm from
-    http://geomalgorithms.com/a02-_lines.html
-    """
-    v = s1 - s0
-    w = p - s0
-    c1 = np.dot(w, v)
-    if c1 <= 0:
-        return dist(p, s0)
-    c2 = np.dot(v, v)
-    if c2 <= c1:
-        return dist(p, s1)
-    b = c1 / c2
-    pb = s0 + b * v
-    return dist(p, pb)
+        self.parent = parent
+        self.pem_file = None
+        self.az_line = None
+        self.az_spline = None
+        self.background = None
+        self.df = None
 
+        self.figure, (self.mag_ax, self.dip_ax, self.roll_ax) = plt.subplots(1, 3, sharey=True)
+        # self.figure.subplots_adjust(left=0.10, bottom=0.15, right=0.97, top=0.92)
+        self.canvas = FigureCanvas(self.figure)
+        self.plots_layout.addWidget(self.canvas)
 
-class PolygonInteractor(object):
+        self.mag_ax.use_sticky_edges = False
+        self.dip_ax.use_sticky_edges = False
+        self.roll_ax.use_sticky_edges = False
+        self.mag_ax.invert_yaxis()
 
-    """
-    A polygon editor.
-    https://matplotlib.org/gallery/event_handling/poly_editor.html
+        self.az_ax = self.mag_ax.twiny()
+        # self.roll_ax.spines["bottom"].set_position(("axes", -0.09))
 
-    Key-bindings
+        self.az_ax.set_xlabel('Azimuth (°)', color='r')
+        self.dip_ax.set_xlabel('Dip (°)', color='b')
+        self.mag_ax.set_xlabel('Magnetic Field Strength (nT)', color='g')
+        self.roll_ax.set_xlabel('Roll Angle (°)', color='k')
 
-      't' toggle vertex markers on and off.  When vertex markers are on,
-          you can move them, delete them
+        tkw = dict(size=4, width=1.5)
+        self.az_ax.tick_params(axis='x', colors='r', **tkw)
+        self.dip_ax.tick_params(axis='x', colors='b', **tkw)
+        self.dip_ax.tick_params(axis='y', which='major', right=True, direction='out')
+        self.mag_ax.tick_params(axis='x', colors='g', **tkw)
+        self.roll_ax.yaxis.set_label_position('right')
+        self.roll_ax.yaxis.set_ticks_position('right')
 
-      'd' delete the vertex under point
+        self.zp = ZoomPan()
+        self.az_zoom = self.zp.zoom_factory(self.az_ax)
+        self.az_pan = self.zp.pan_factory(self.az_ax)
+        self.dip_zoom = self.zp.zoom_factory(self.dip_ax)
+        self.dip_pan = self.zp.pan_factory(self.dip_ax)
+        self.mag_zoom = self.zp.zoom_factory(self.mag_ax)
+        self.mag_pan = self.zp.pan_factory(self.mag_ax)
+        self.roll_zoom = self.zp.zoom_factory(self.roll_ax)
+        self.roll_pan = self.zp.pan_factory(self.roll_ax)
 
-      'i' insert a vertex at point.  You must be within epsilon of the
-          line connecting two existing vertices
+        self.mag_dec_sbox.valueChanged.connect(self.redraw_az_line)
 
-    """
+    def redraw_az_line(self):
+        v = self.mag_dec_sbox.value()
+        self.az_line.set_data(az + v, stations)
+        self.canvas.draw()
 
-    showverts = True
-    epsilon = 10  # max pixel distance to count as a vertex hit
-
-    def __init__(self, ax, poly):
-        if poly.figure is None:
-            raise RuntimeError('You must first add the polygon to a figure '
-                               'or canvas before defining the interactor')
-        self.ax = ax
-        canvas = poly.figure.canvas
-        self.poly = poly
-        self.poly.set_visible(False)
-
-        x, y = zip(*self.poly.xy)
-        self.line = Line2D(x, y,
-                           ls="",
-                           marker='o',
-                           markerfacecolor='r',
-                           animated=True)
-        self.ax.add_line(self.line)
-
-        self.cid = self.poly.add_callback(self.poly_changed)
-        self._ind = None  # the active vert
-
-        canvas.mpl_connect('draw_event', self.draw_callback)
-        canvas.mpl_connect('button_press_event', self.button_press_callback)
-        canvas.mpl_connect('key_press_event', self.key_press_callback)
-        canvas.mpl_connect('button_release_event', self.button_release_callback)
-        canvas.mpl_connect('motion_notify_event', self.motion_notify_callback)
-        self.canvas = canvas
-
-        x, y = self.interpolate()
-        self.line2 = Line2D(x, y, animated=True)
-        self.ax.add_line(self.line2)
-
-    # def interpolate(self):
-    #     x, y = self.poly.xy[:].T
-    #     i = np.arange(len(x))
-    #
-    #     interp_i = np.linspace(0, i.max(), 100 * i.max())
-    #
-    #     xi = interp1d(i, x, kind='cubic')(interp_i)
-    #     yi = interp1d(i, y, kind='cubic')(interp_i)
-    #
-    #     return xi, yi
-
-    def interpolate(self):
-        verts = self.poly.xy
-        x = np.array([v[0] for v in verts])
-        y = np.array([v[1] for v in verts])
-
-        t, c, k = splrep(x, y, s=0, k=4)
-
-        N = 100
-        xmin, xmax = x.min(), x.max()
-
-        xi = np.linspace(xmin, xmax, N)
-        spline = BSpline(t, c, k, extrapolate=False)
-        yi = spline(xi)
-
-        return xi, yi
-
-    def draw_callback(self, event):
-        self.background = self.canvas.copy_from_bbox(self.ax.bbox)
-        self.ax.draw_artist(self.poly)
-        self.ax.draw_artist(self.line)
-        self.ax.draw_artist(self.line2)
-        # do not need to blit here, this will fire before the screen is
-        # updated
-
-    def poly_changed(self, poly):
-        'this method is called whenever the polygon object is called'
-        # only copy the artist props to the line (except visibility)
-        vis = self.line.get_visible()
-        Artist.update_from(self.line, poly)
-        self.line.set_visible(vis)  # don't use the poly visibility state
-
-    def get_ind_under_point(self, event):
-        'get the index of the vertex under point if within epsilon tolerance'
-
-        # display coords
-        xy = np.asarray(self.poly.xy)
-        xyt = self.poly.get_transform().transform(xy)
-        xt, yt = xyt[:, 0], xyt[:, 1]
-        d = np.hypot(xt - event.x, yt - event.y)
-        indseq, = np.nonzero(d == d.min())
-        ind = indseq[0]
-
-        if d[ind] >= self.epsilon:
-            ind = None
-
-        return ind
-
-    def button_press_callback(self, event):
-        'whenever a mouse button is pressed'
-        if not self.showverts:
+    def open(self, pem_file):
+        if not pem_file.is_borehole():
+            print(f"{pem_file.filepath.name} is not a borehole file.")
             return
-        if event.inaxes is None:
+        elif not pem_file.has_d7() and not pem_file.has_geometry():
+            print(f"{pem_file.filepath.name} does not have D7 RAD tool objects nor P tag geometry.")
             return
-        if event.button != 1:
-            return
-        self._ind = self.get_ind_under_point(event)
+        # elif not 'X'in pem_file.data.Component.unique() or not 'Y'in pem_file.data.Component.unique():
+        #     return
 
-    def button_release_callback(self, event):
-        'whenever a mouse button is released'
-        if not self.showverts:
-            return
-        if event.button != 1:
-            return
-        self._ind = None
+        self.pem_file = copy.deepcopy(pem_file)
+        if not self.pem_file.is_averaged():
+            self.pem_file = self.pem_file.average()
+        self.plot_pem()
+        self.show()
 
-    def key_press_callback(self, event):
-        'whenever a key is pressed'
-        if not event.inaxes:
-            return
+    def plot_pem(self):
 
-        if event.key == 't':
-            self.showverts = not self.showverts
-            self.line.set_visible(self.showverts)
-            if not self.showverts:
-                self._ind = None
+        if self.pem_file.has_d7():
+            self.df = pd.DataFrame({'Station': self.pem_file.data.Station,
+                                    'RAD_tool': self.pem_file.data.RAD_tool,
+                                    'RAD_ID': self.pem_file.data.RAD_ID})
+            # Only keep unique RAD IDs
+            self.df.drop_duplicates(subset='RAD_ID', inplace=True)
 
-        elif event.key == 'd':
-            ind = self.get_ind_under_point(event)
-            if ind is not None:
-                self.poly.xy = np.delete(self.poly.xy,
-                                         ind, axis=0)
-                self.line.set_data(zip(*self.poly.xy))
+            global az, stations
+            az = self.df.RAD_tool.map(lambda x: x.get_azimuth() + self.mag_dec_sbox.value())
+            dip = self.df.RAD_tool.map(lambda x: x.get_dip())
+            mag = self.df.RAD_tool.map(lambda x: x.get_mag_strength())
+            acc_roll = self.df.RAD_tool.map(lambda x: x.get_acc_roll())
+            mag_roll = self.df.RAD_tool.map(lambda x: x.get_mag_roll())
+            stations = self.df.Station.astype(int)
 
-        elif event.key == 'i':
-            xys = self.poly.get_transform().transform(self.poly.xy)
-            p = event.x, event.y  # display coords
-            for i in range(len(xys) - 1):
-                s0 = xys[i]
-                s1 = xys[i + 1]
-                d = dist_point_to_segment(p, s0, s1)
-                if d <= self.epsilon:
-                    self.poly.xy = np.insert(
-                        self.poly.xy, i+1,
-                        [event.xdata, event.ydata],
-                        axis=0)
-                    self.line.set_data(zip(*self.poly.xy))
-                    break
-        if self.line.stale:
-            self.canvas.draw_idle()
+            self.az_line, = self.az_ax.plot(az, stations, '-r',
+                                            label='Tool Azimuth',
+                                            lw=0.6,
+                                            zorder=2)
 
-    def motion_notify_callback(self, event):
-        'on mouse movement'
-        if not self.showverts:
-            return
-        if self._ind is None:
-            return
-        if event.inaxes is None:
-            return
-        if event.button != 1:
-            return
+            spline_stations = np.linspace(stations.iloc[0], stations.iloc[-1], 5)
+            spline_az = np.interp(spline_stations, stations, az)
 
-        x, y = event.xdata, event.ydata
+            # self.az_spline, = self.az_ax.plot(spline_az, spline_stations, '-m',
+            #                                   label='Spline Azimuth',
+            #                                   lw=0.6,
+            #                                   zorder=2)
 
-        self.poly.xy[self._ind] = x, y
-        # if self._ind == 0:
-        #     self.poly.xy[-1] = x, y
-        # elif self._ind == len(self.poly.xy) - 1:
-        #     self.poly.xy[0] = x, y
-        self.line.set_data(zip(*self.poly.xy))
+            self.az_spline = InteractiveSpline(self.az_ax, zip(spline_az, spline_stations),
+                                               line_color='magenta')
 
-        x, y = self.interpolate()
-        self.line2.set_data(x, y)
+            tool_mag, = self.mag_ax.plot(mag, stations, '-g',
+                                         label='Total Magnetic Field',
+                                         lw=0.6,
+                                         alpha=0.4,
+                                         zorder=1)
+            tool_dip, = self.dip_ax.plot(dip, stations, '-b',
+                                         label='Tool Dip',
+                                         lw=0.6,
+                                         zorder=1)
 
-        self.canvas.restore_region(self.background)
-        self.ax.draw_artist(self.poly)
-        self.ax.draw_artist(self.line)
-        self.ax.draw_artist(self.line2)
-        self.canvas.blit(self.ax.bbox)
+            acc_roll_plot, = self.roll_ax.plot(acc_roll, stations, '-b',
+                                               label='Accelerometer',
+                                               lw=0.6,
+                                               zorder=1)
+
+            mag_roll_plot, = self.roll_ax.plot(mag_roll, stations, '-r',
+                                               label='Magnetometer',
+                                               lw=0.6,
+                                               zorder=1)
+
+            az_lines = [self.az_line, tool_mag]
+            dip_lines = [tool_dip]
+            roll_lines = [acc_roll_plot, mag_roll_plot]
+            self.az_ax.legend(az_lines, [l.get_label() for l in az_lines])
+            self.dip_ax.legend(dip_lines, [l.get_label() for l in dip_lines])
+            self.roll_ax.legend(roll_lines, [l.get_label() for l in roll_lines])
 
 
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Polygon
+    from src.pem.pem_getter import PEMGetter
+    app = QApplication(sys.argv)
 
-    xs = (921, 951, 993, 1035, 1065)
-    ys = (1181, 1230, 1243, 1230, 1181)
+    pg = PEMGetter()
+    files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
 
-    poly = Polygon(list(zip(xs, ys)), closed=False, animated=True)
+    win = PEMGeometry()
+    win.open(files[0])
 
-    fig, ax = plt.subplots()
-    ax.add_patch(poly)
-    p = PolygonInteractor(ax, poly)
-
-    ax.set_title('Click and drag a point to move it')
-
-    ax.set_xlim((800, 1300))
-    ax.set_ylim((1000, 1300))
-
-    plt.show()
+    app.exec_()
