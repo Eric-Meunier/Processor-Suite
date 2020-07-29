@@ -56,25 +56,31 @@ class InteractiveSpline:
     showverts = True
     epsilon = 10  # max pixel distance to count as a vertex hit
 
-    def __init__(self, ax, spline_coords, line_color='magenta', vertical_plot=False):
+    def __init__(self, ax, spline_coords, line_color='magenta', vertical_plot=True):
         """
         :param ax: Matplotlib Axes object
         :param spline_coords: list of tuple, x and y coordinates of the spline to create
+        :param line_color: str, color of the line
+        :param vertical_plot: bool, if the target axes is being plotted vertically
         """
+        self.ax = ax
+        self.vp = vertical_plot
+
         # Create a Polygon object from the coordinates
-        poly = Polygon(list(spline_coords), closed=False, animated=True)
+        coords = np.array(list(spline_coords))
+        if self.vp:
+            coords = np.flip(coords, axis=1)
+        poly = Polygon(coords, closed=False, animated=True)
         ax.add_patch(poly)
         if poly.figure is None:
             raise RuntimeError('You must first add the polygon to a figure '
                                'or canvas before defining the interactor')
-        self.ax = ax
-
         canvas = poly.figure.canvas
         self.poly = poly
         self.poly.set_visible(False)
         self.background = None
         self._ind = None  # the active vert
-        self.method = 'cubic'
+        self.method = 'quadratic'
 
         x, y = zip(*self.poly.xy)
         self.line = Line2D(x, y,
@@ -111,26 +117,21 @@ class InteractiveSpline:
         :param method: str, either 'cubic' or 'bspline'
         :return: tuple of arrays, x and y coordinates of spline
         """
-        x, y = self.poly.xy.T
+        if self.vp:
+            y, x = self.poly.xy.T
+        else:
+            x, y = self.poly.xy.T
 
-        # xmin, xmax = self.ax.get_xlim()
         xmin, xmax = x.min(), x.max()
         xi = np.linspace(xmin, xmax, 1000)
 
-        if method == 'cubic':
-            f = interp1d(x, y, kind='cubic')
-            yi = f(xi)
+        f = interp1d(x, y, kind=method)
+        yi = f(xi)
 
-        elif method == 'bspline':
-            t, c, k = splrep(x, y, s=0, k=4)
-
-            spline = BSpline(t, c, k, extrapolate=False)
-            yi = spline(xi)
-
+        if self.vp:
+            return yi, xi
         else:
-            raise ValueError(f"{method} is not a valid interpolation method.")
-
-        return xi, yi
+            return xi, yi
 
     def draw_callback(self, event):
         self.background = self.canvas.copy_from_bbox(self.ax.bbox)
@@ -192,7 +193,9 @@ class InteractiveSpline:
                         self.poly.xy, i + 1,
                         [event.xdata, event.ydata],
                         axis=0)
+
                     self.line.set_data(zip(*self.poly.xy))
+
                     xi, yi = self.interpolate(self.method)
                     self.spline.set_data(xi, yi)
                     break
@@ -204,7 +207,12 @@ class InteractiveSpline:
             if all([ind is not None, ind != 0, ind != len(self.poly.xy), len(self.poly.xy) > 4]):
                 self.poly.xy = np.delete(self.poly.xy,
                                          self._ind, axis=0)
+
+                # if self.vp:
+                #     self.line.set_data(zip(*np.flip(self.poly.xy, axis=1)))
+                # else:
                 self.line.set_data(zip(*self.poly.xy))
+
                 xi, yi = self.interpolate(self.method)
                 self.spline.set_data(xi, yi)
             else:
@@ -263,6 +271,9 @@ class InteractiveSpline:
         else:
             self.poly.xy[self._ind] = x, y
 
+        # if self.vp:
+        #     self.line.set_data(zip(*np.flip(self.poly.xy, axis=1)))
+        # else:
         self.line.set_data(zip(*self.poly.xy))
 
         xi, yi = self.interpolate(self.method)

@@ -126,12 +126,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             spline_stations = np.linspace(stations.iloc[0], stations.iloc[-1], 5)
             spline_az = np.interp(spline_stations, stations, az)
 
-            # self.az_spline, = self.az_ax.plot(spline_az, spline_stations, '-m',
-            #                                   label='Spline Azimuth',
-            #                                   lw=0.6,
-            #                                   zorder=2)
-
-            self.az_spline = InteractiveSpline(self.az_ax, zip(spline_az, spline_stations),
+            self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
                                                line_color='magenta')
 
             tool_mag, = self.mag_ax.plot(mag, stations, '-g',
