@@ -48,6 +48,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QCheckBox" name="az_spline_cbox">
+         <property name="text">
+          <string>Azimuth Spline</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>

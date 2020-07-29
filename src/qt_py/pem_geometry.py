@@ -26,6 +26,17 @@ else:
 # Load Qt ui file into a class
 Ui_PemGeometry, QtBaseClass = uic.loadUiType(pemGeometryCreatorFile)
 
+sys._excepthook = sys.excepthook
+
+
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
+
 
 class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
@@ -78,7 +89,9 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.roll_zoom = self.zp.zoom_factory(self.roll_ax)
         self.roll_pan = self.zp.pan_factory(self.roll_ax)
 
+        # Signals
         self.mag_dec_sbox.valueChanged.connect(self.redraw_az_line)
+        self.az_spline_cbox.toggled.connect(self.toggle_az_spline)
 
     def redraw_az_line(self):
         v = self.mag_dec_sbox.value()
@@ -118,16 +131,11 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             mag_roll = self.df.RAD_tool.map(lambda x: x.get_mag_roll())
             stations = self.df.Station.astype(int)
 
+            # Plot the tool information
             self.az_line, = self.az_ax.plot(az, stations, '-r',
                                             label='Tool Azimuth',
                                             lw=0.6,
                                             zorder=2)
-
-            spline_stations = np.linspace(stations.iloc[0], stations.iloc[-1], 5)
-            spline_az = np.interp(spline_stations, stations, az)
-
-            self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
-                                               line_color='magenta')
 
             tool_mag, = self.mag_ax.plot(mag, stations, '-g',
                                          label='Total Magnetic Field',
@@ -152,9 +160,27 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             az_lines = [self.az_line, tool_mag]
             dip_lines = [tool_dip]
             roll_lines = [acc_roll_plot, mag_roll_plot]
+
+            # Plot the spline, but only show if the checkbox is checked
+            spline_stations = np.linspace(stations.iloc[0], stations.iloc[-1], 5)
+            spline_az = np.interp(spline_stations, stations, az)
+
+            self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
+                                               line_color='magenta')
+            az_lines.append(Line2D([], [],
+                                   linestyle='-',
+                                   color='magenta',
+                                   label='Spline'))
+
             self.az_ax.legend(az_lines, [l.get_label() for l in az_lines])
             self.dip_ax.legend(dip_lines, [l.get_label() for l in dip_lines])
             self.roll_ax.legend(roll_lines, [l.get_label() for l in roll_lines])
+            # self.canvas.draw()
+
+    def toggle_az_spline(self):
+        if self.az_spline_cbox.isChecked():
+            self.az_spline_cbox.set_data()
+
 
 
 if __name__ == '__main__':

@@ -86,7 +86,8 @@ class InteractiveSpline:
         self.line = Line2D(x, y,
                            ls="",
                            marker='o',
-                           markerfacecolor='r',
+                           markerfacecolor=line_color,
+                           markeredgecolor='dimgray',
                            animated=True,
                            zorder=1)
         self.ax.add_line(self.line)
