@@ -4,35 +4,37 @@ import numpy as np
 from matplotlib.artist import Artist
 from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
+from PyQt5.QtCore import Qt
+from scipy import spatial
 from scipy.interpolate import interp1d, splrep, BSpline
 
 
-def dist(x, y):
-    """
-    Return the distance between two points.
-    """
-    d = x - y
-    return np.sqrt(np.dot(d, d))
-
-
-def dist_point_to_segment(p, s0, s1):
-    """
-    Get the distance of a point to a segment.
-      *p*, *s0*, *s1* are *xy* sequences
-    This algorithm from
-    http://geomalgorithms.com/a02-_lines.html
-    """
-    v = s1 - s0
-    w = p - s0
-    c1 = np.dot(w, v)
-    if c1 <= 0:
-        return dist(p, s0)
-    c2 = np.dot(v, v)
-    if c2 <= c1:
-        return dist(p, s1)
-    b = c1 / c2
-    pb = s0 + b * v
-    return dist(p, pb)
+# def dist(x, y):
+#     """
+#     Return the distance between two points.
+#     """
+#     d = x - y
+#     return np.sqrt(np.dot(d, d))
+#
+#
+# def dist_point_to_segment(p, s0, s1):
+#     """
+#     Get the distance of a point to a segment.
+#       *p*, *s0*, *s1* are *xy* sequences
+#     This algorithm from
+#     http://geomalgorithms.com/a02-_lines.html
+#     """
+#     v = s1 - s0
+#     w = p - s0
+#     c1 = np.dot(w, v)
+#     if c1 <= 0:
+#         return dist(p, s0)
+#     c2 = np.dot(v, v)
+#     if c2 <= c1:
+#         return dist(p, s1)
+#     b = c1 / c2
+#     pb = s0 + b * v
+#     return dist(p, pb)
 
 
 class InteractiveSpline:
@@ -77,7 +79,7 @@ class InteractiveSpline:
                                'or canvas before defining the interactor')
         canvas = poly.figure.canvas
         self.poly = poly
-        self.poly.set_visible(False)
+        self.poly.set_visible(True)
         self.background = None
         self._ind = None  # the active vert
         self.method = 'quadratic'
@@ -109,8 +111,8 @@ class InteractiveSpline:
         self.canvas = canvas
 
     def get_spline_coords(self):
-        x, y = self.poly.xy[:].T
-        return x, y
+        spline_coords = self.spline.get_transform().transform(self.spline._xy)
+        return spline_coords
 
     def interpolate(self, method):
         """
@@ -162,7 +164,7 @@ class InteractiveSpline:
         d = np.hypot(xt - event.x, yt - event.y)
         indseq, = np.nonzero(d == d.min())
         ind = indseq[0]
-
+        print(f"Index clicked: {ind} ({self.poly.xy[ind]})")
         if d[ind] >= self.epsilon:
             ind = None
 
@@ -181,43 +183,52 @@ class InteractiveSpline:
             return
         self._ind = self.get_ind_under_point(event)
 
-        # Add a knot
+        # Add a knot if the point clicked is close enough to the spline
         if keyboard.is_pressed('left ctrl'):
+            print(f"Mouse button clicked with left ctrl held.")
             xys = self.poly.get_transform().transform(self.poly.xy)
             p = event.x, event.y  # display coords
-            for i in range(len(xys) - 1):
-                s0 = xys[i]
-                s1 = xys[i + 1]
-                d = dist_point_to_segment(p, s0, s1)
-                if d <= self.epsilon:
-                    self.poly.xy = np.insert(
-                        self.poly.xy, i + 1,
-                        [event.xdata, event.ydata],
-                        axis=0)
 
-                    self.line.set_data(zip(*self.poly.xy))
+            # Find the distance of the point clicked to the nearest spline coordinate
+            spline_coords = self.get_spline_coords()
+            distance, spline_index = spatial.KDTree(spline_coords).query(p)
 
-                    xi, yi = self.interpolate(self.method)
-                    self.spline.set_data(xi, yi)
-                    break
+            # Find which poly segment the value falls within
+            if self.vp:
+                i = np.where(p[1] >= xys[:, 1])[0][0]
+                print(f"Poly segment index: {i}")
+            else:
+                i = np.where(p[0] >= xys[:, 0])[0][0]
+                print(f"Poly segment index: {i}")
+
+            if distance <= self.epsilon * 2:
+                self.poly.xy = np.insert(
+                    self.poly.xy, i,
+                    [event.xdata, event.ydata],
+                    axis=0)
+
+                self.line.set_data(zip(*self.poly.xy))
+
+                xi, yi = self.interpolate(self.method)
+                self.spline.set_data(xi, yi)
 
         # Remove a knot
         elif keyboard.is_pressed('alt'):
+        # elif event.button == Qt.RightButton:
             ind = self.get_ind_under_point(event)
 
             if all([ind is not None, ind != 0, ind != len(self.poly.xy), len(self.poly.xy) > 4]):
-                self.poly.xy = np.delete(self.poly.xy,
-                                         self._ind, axis=0)
+                print(f"Deleting index {ind}")
+                print(f"Poly XY before delete: \n{self.poly.xy}")
+                self.poly.xy = np.delete(self.poly.xy, ind, axis=0)
+                print(f"Poly XY after delete: \n{self.poly.xy}")
 
-                # if self.vp:
-                #     self.line.set_data(zip(*np.flip(self.poly.xy, axis=1)))
-                # else:
                 self.line.set_data(zip(*self.poly.xy))
 
                 xi, yi = self.interpolate(self.method)
                 self.spline.set_data(xi, yi)
             else:
-                print(f"Cannot have fewer than 4 knots")
+                print(f"Cannot delete that knot.")
 
         if self.line.stale:
             self.canvas.draw_idle()
@@ -292,8 +303,8 @@ if __name__ == '__main__':
     xs = (921, 951, 993, 1035, 1065)
     ys = (1181, 1230, 1243, 1230, 1181)
 
-    ax.set_xlim((800, 1300))
-    ax.set_ylim((1000, 1300))
+    ax.set_ylim((800, 1300))
+    ax.set_xlim((1000, 1300))
 
     p = InteractiveSpline(ax, zip(xs, ys))
 

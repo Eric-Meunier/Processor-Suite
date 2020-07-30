@@ -564,7 +564,7 @@ def main():
     mw = Derotator()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
     mw.open(pem_files)
 
     app.exec_()

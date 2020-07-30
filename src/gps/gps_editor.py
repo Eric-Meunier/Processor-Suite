@@ -192,8 +192,8 @@ class TransmitterLoop(BaseGPS):
         self.df.Elevation = self.df.Elevation.astype(float)
         self.df.Unit = self.df.Unit.astype(str)
 
-        if cull_loop:
-            self.cull_loop()
+        # if cull_loop:
+        #     self.cull_loop()
 
     def cull_loop(self):
         """
