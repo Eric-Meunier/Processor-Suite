@@ -48,22 +48,31 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         self.parent = parent
         self.pem_file = None
-        self.az_line = None
+        self.tool_az_line = None
         self.az_spline = None
         self.background = None
         self.df = None
 
+        self.az_lines = []
+        self.dip_lines = []
+        self.roll_lines = []
+
         self.figure, (self.mag_ax, self.dip_ax, self.roll_ax) = plt.subplots(1, 3, sharey=True)
-        # self.figure.subplots_adjust(left=0.10, bottom=0.15, right=0.97, top=0.92)
+        self.figure.subplots_adjust(left=0.07, bottom=0.08, right=0.94, top=0.92)
         self.canvas = FigureCanvas(self.figure)
         self.plots_layout.addWidget(self.canvas)
 
-        self.mag_ax.use_sticky_edges = False
-        self.dip_ax.use_sticky_edges = False
-        self.roll_ax.use_sticky_edges = False
+        # self.mag_ax.use_sticky_edges = False
+        # self.dip_ax.use_sticky_edges = False
+        # self.roll_ax.use_sticky_edges = False
         self.mag_ax.invert_yaxis()
+        # self.mag_ax.autoscale_view()
 
         self.az_ax = self.mag_ax.twiny()
+        # self.az_ax.autoscale_view()
+        # self.az_ax.margins(y=.1, x=.1)
+        # self.az_ax.set_ylim(auto=True)
+        # self.az_ax.set_ylim(ymin=-10)
         # self.roll_ax.spines["bottom"].set_position(("axes", -0.09))
 
         self.az_ax.set_xlabel('Azimuth (°)', color='r')
@@ -92,11 +101,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         # Signals
         self.mag_dec_sbox.valueChanged.connect(self.redraw_az_line)
         self.az_spline_cbox.toggled.connect(self.toggle_az_spline)
-
-    def redraw_az_line(self):
-        v = self.mag_dec_sbox.value()
-        self.az_line.set_data(az + v, stations)
-        self.canvas.draw()
+        self.dip_spline_cbox.toggled.connect(self.toggle_dip_spline)
 
     def open(self, pem_file):
         if not pem_file.is_borehole():
@@ -111,76 +116,139 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.pem_file = copy.deepcopy(pem_file)
         if not self.pem_file.is_averaged():
             self.pem_file = self.pem_file.average()
+
         self.plot_pem()
         self.show()
 
     def plot_pem(self):
 
-        if self.pem_file.has_d7():
-            self.df = pd.DataFrame({'Station': self.pem_file.data.Station,
-                                    'RAD_tool': self.pem_file.data.RAD_tool,
-                                    'RAD_ID': self.pem_file.data.RAD_ID})
-            # Only keep unique RAD IDs
-            self.df.drop_duplicates(subset='RAD_ID', inplace=True)
+        def add_az_spline():
+            """
+            Add the azimuth spline line
+            """
+            spline_stations = np.linspace(0, stations.iloc[-1], 10)
+            spline_az = np.interp(spline_stations, stations, tool_az + self.mag_dec_sbox.value())
 
-            global az, stations
-            az = self.df.RAD_tool.map(lambda x: x.get_azimuth() + self.mag_dec_sbox.value())
-            dip = self.df.RAD_tool.map(lambda x: x.get_dip())
+            self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
+                                               line_color='red')
+
+            self.toggle_az_spline()
+
+            # self.az_lines.append(Line2D([], [],
+            #                             linestyle='-',
+            #                             color='magenta',
+            #                             label='Spline'))
+
+        def add_dip_spline():
+            spline_stations = np.linspace(0, stations.iloc[-1], 10)
+            spline_dip = np.interp(spline_stations, stations, tool_dip)
+
+            self.dip_spline = InteractiveSpline(self.dip_ax, zip(spline_stations, spline_dip),
+                                                line_color='blue')
+
+            self.toggle_dip_spline()
+
+        def plot_tool_values():
+            """
+            Plot all the tool values (azimuth, dip, map and roll angles)
+            """
+            global tool_az, tool_dip, stations
+            tool_az = self.df.RAD_tool.map(lambda x: x.get_azimuth() + self.mag_dec_sbox.value())
+            tool_dip = self.df.RAD_tool.map(lambda x: x.get_dip())
             mag = self.df.RAD_tool.map(lambda x: x.get_mag_strength())
             acc_roll = self.df.RAD_tool.map(lambda x: x.get_acc_roll())
             mag_roll = self.df.RAD_tool.map(lambda x: x.get_mag_roll())
             stations = self.df.Station.astype(int)
 
             # Plot the tool information
-            self.az_line, = self.az_ax.plot(az, stations, '-r',
-                                            label='Tool Azimuth',
-                                            lw=0.6,
-                                            zorder=2)
+            self.tool_az_line, = self.az_ax.plot(tool_az, stations, '-r',
+                                                 label='Tool Azimuth',
+                                                 lw=0.6,
+                                                 zorder=2)
 
-            tool_mag, = self.mag_ax.plot(mag, stations, '-g',
-                                         label='Total Magnetic Field',
-                                         lw=0.6,
-                                         alpha=0.4,
-                                         zorder=1)
-            tool_dip, = self.dip_ax.plot(dip, stations, '-b',
-                                         label='Tool Dip',
-                                         lw=0.6,
-                                         zorder=1)
+            tool_mag_line, = self.mag_ax.plot(mag, stations, '-g',
+                                              label='Total Magnetic Field',
+                                              lw=0.6,
+                                              alpha=0.4,
+                                              zorder=1)
+            tool_dip_line, = self.dip_ax.plot(tool_dip, stations, '-b',
+                                              label='Tool Dip',
+                                              lw=0.6,
+                                              zorder=1)
 
-            acc_roll_plot, = self.roll_ax.plot(acc_roll, stations, '-b',
+            acc_roll_line, = self.roll_ax.plot(acc_roll, stations, '-b',
                                                label='Accelerometer',
                                                lw=0.6,
                                                zorder=1)
 
-            mag_roll_plot, = self.roll_ax.plot(mag_roll, stations, '-r',
+            mag_roll_line, = self.roll_ax.plot(mag_roll, stations, '-r',
                                                label='Magnetometer',
                                                lw=0.6,
                                                zorder=1)
 
-            az_lines = [self.az_line, tool_mag]
-            dip_lines = [tool_dip]
-            roll_lines = [acc_roll_plot, mag_roll_plot]
+            self.az_lines = [self.tool_az_line, tool_mag_line]
+            self.dip_lines = [tool_dip_line]
+            self.roll_lines = [acc_roll_line, mag_roll_line]
 
-            # Plot the spline, but only show if the checkbox is checked
-            spline_stations = np.linspace(stations.iloc[0], stations.iloc[-1], 5)
-            spline_az = np.interp(spline_stations, stations, az)
+            mag_dec = self.pem_file.get_mag_dec()
+            if mag_dec:
+                self.mag_dec_sbox.setValue(mag_dec)
 
-            self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
-                                               line_color='magenta')
-            az_lines.append(Line2D([], [],
-                                   linestyle='-',
-                                   color='magenta',
-                                   label='Spline'))
+        def plot_seg_values():
+            if self.pem_file.has_geometry():
+                pass
 
-            self.az_ax.legend(az_lines, [l.get_label() for l in az_lines])
-            self.dip_ax.legend(dip_lines, [l.get_label() for l in dip_lines])
-            self.roll_ax.legend(roll_lines, [l.get_label() for l in roll_lines])
-            # self.canvas.draw()
+        self.df = pd.DataFrame({'Station': self.pem_file.data.Station,
+                                'RAD_tool': self.pem_file.data.RAD_tool,
+                                'RAD_ID': self.pem_file.data.RAD_ID})
+        # Only keep unique RAD IDs
+        self.df.drop_duplicates(subset='RAD_ID', inplace=True)
+
+        if self.pem_file.has_d7():
+            plot_tool_values()
+        add_az_spline()
+        add_dip_spline()
+
+        self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
+        self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+        self.roll_ax.legend(self.roll_lines, [l.get_label() for l in self.roll_lines])
+
+        self.az_ax.autoscale_view()
+
+    def add_dad(self, file):
+        pass
+
+    def redraw_az_line(self):
+        """
+        Signal slot, move the tool azimuth line when the magnetic declination value is changed.
+        """
+        v = self.mag_dec_sbox.value()
+        self.tool_az_line.set_data(tool_az + v, stations)
+        self.canvas.draw()
 
     def toggle_az_spline(self):
+        """
+        Signal slot, toggle the azimuth line on and off
+        """
         if self.az_spline_cbox.isChecked():
-            self.az_spline_cbox.set_data()
+            self.az_spline.line.set_visible(True)
+            self.az_spline.spline.set_visible(True)
+        else:
+            self.az_spline.line.set_visible(False)
+            self.az_spline.spline.set_visible(False)
+        self.canvas.draw()
 
+    def toggle_dip_spline(self):
+        """
+        Signal slot, toggle the azimuth line on and off
+        """
+        if self.dip_spline_cbox.isChecked():
+            self.dip_spline.line.set_visible(True)
+            self.dip_spline.spline.set_visible(True)
+        else:
+            self.dip_spline.line.set_visible(False)
+            self.dip_spline.spline.set_visible(False)
+        self.canvas.draw()
 
 
 if __name__ == '__main__':

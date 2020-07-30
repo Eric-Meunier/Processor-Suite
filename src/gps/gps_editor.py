@@ -50,6 +50,7 @@ class BaseGPS:
             return
         elif self.crs.is_latlon():
             return self
+        # TODO Make this work with NAD27
 
         zone_num = self.crs.zone_number
         north = self.crs.north

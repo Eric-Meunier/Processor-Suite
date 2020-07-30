@@ -2922,7 +2922,7 @@ def main():
     pg = PEMGetter()
     pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051')
     # mw.show()
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
     mw.delete_merged_files_cbox.setChecked(False)
     # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()

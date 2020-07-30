@@ -4,6 +4,7 @@ import re
 import time
 import copy
 import natsort
+import geomag
 import numpy as np
 import pandas as pd
 from scipy.spatial.transform import Rotation as R
@@ -293,6 +294,35 @@ class PEMFile:
 
         xmin, xmax, ymin, ymax, zmin, zmax = east.min(), east.max(), north.min(), north.max(), elev.min(), elev.max()
         return xmin, xmax, ymin, ymax, zmin, zmax
+
+    def get_mag_dec(self):
+        """
+        Calculate the magnetic declination for the PEM file.
+        :param pem_file: PEMFile object
+        :param crs: CRS object
+        :return: None
+        """
+        crs = self.get_crs()
+        if not crs.is_valid():
+            print('GPS coordinate system information is incomplete')
+            return
+
+        if self.has_collar_gps():
+            coords = self.geometry.collar
+        elif self.has_loop_gps():
+            coords = self.loop
+        elif self.has_station_gps():
+            coords = self.line
+        else:
+            print('Error - No GPS')
+            return
+
+        coords = coords.to_latlon().df
+        lat, lon, elevation = coords.iloc[0]['Northing'], coords.iloc[0]['Easting'], coords.iloc[0]['Elevation']
+
+        gm = geomag.geomag.GeoMag()
+        mag = gm.GeoMag(lat, lon, elevation)
+        return mag.dec
 
     def get_survey_type(self):
 

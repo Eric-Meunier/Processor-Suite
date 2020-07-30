@@ -6,7 +6,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
 from PyQt5.QtCore import Qt
 from scipy import spatial
-from scipy.interpolate import interp1d, splrep, BSpline
+from scipy.interpolate import interp1d, splrep, BSpline, splev
 
 
 # def dist(x, y):
@@ -79,7 +79,7 @@ class InteractiveSpline:
                                'or canvas before defining the interactor')
         canvas = poly.figure.canvas
         self.poly = poly
-        self.poly.set_visible(True)
+        self.poly.set_visible(False)
         self.background = None
         self._ind = None  # the active vert
         self.method = 'quadratic'
@@ -102,7 +102,7 @@ class InteractiveSpline:
 
         self.ax.add_line(self.spline)
 
-        self.cid = self.poly.add_callback(self.poly_changed)
+        # self.cid = self.poly.add_callback(self.poly_changed)
         canvas.mpl_connect('draw_event', self.draw_callback)
         canvas.mpl_connect('button_press_event', self.button_press_callback)
         canvas.mpl_connect('key_press_event', self.key_press_callback)
@@ -127,6 +127,9 @@ class InteractiveSpline:
 
         xmin, xmax = x.min(), x.max()
         xi = np.linspace(xmin, xmax, 1000)
+
+        # tck = splrep(x, y, s=0)
+        # yi = splev(xi, tck, der=0)
 
         f = interp1d(x, y, kind=method)
         yi = f(xi)
@@ -195,10 +198,12 @@ class InteractiveSpline:
 
             # Find which poly segment the value falls within
             if self.vp:
-                i = np.where(p[1] >= xys[:, 1])[0][0]
+                poly_ys = np.sort(xys[:, 1])
+                i = np.where(poly_ys >= p[1])[0][0]
                 print(f"Poly segment index: {i}")
             else:
-                i = np.where(p[0] >= xys[:, 0])[0][0]
+                poly_xs = np.sort(xys[:, 0])
+                i = np.where(poly_xs >= p[0])[0][0]
                 print(f"Poly segment index: {i}")
 
             if distance <= self.epsilon * 2:
@@ -218,7 +223,7 @@ class InteractiveSpline:
             ind = self.get_ind_under_point(event)
 
             if all([ind is not None, ind != 0, ind != len(self.poly.xy), len(self.poly.xy) > 4]):
-                print(f"Deleting index {ind}")
+                print(f"Deleting index {ind} ({self.poly.xy[ind]})")
                 print(f"Poly XY before delete: \n{self.poly.xy}")
                 self.poly.xy = np.delete(self.poly.xy, ind, axis=0)
                 print(f"Poly XY after delete: \n{self.poly.xy}")
@@ -300,7 +305,7 @@ class InteractiveSpline:
 
 if __name__ == '__main__':
     fig, ax = plt.subplots()
-    xs = (921, 951, 993, 1035, 1065)
+    xs = (921, 951, 993, 1035, 1200)
     ys = (1181, 1230, 1243, 1230, 1181)
 
     ax.set_ylim((800, 1300))
