@@ -1256,14 +1256,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         gps = {
             'Azimuth': [],
             'Dip': [],
-            'Segment length': [],
+            'Segment_length': [],
             'Unit': [],
             'Depth': []
         }
         for row in range(self.segments_table.rowCount()):
             gps['Azimuth'].append(self.segments_table.item(row, 0).text())
             gps['Dip'].append(self.segments_table.item(row, 1).text())
-            gps['Segment length'].append(self.segments_table.item(row, 2).text())
+            gps['Segment_length'].append(self.segments_table.item(row, 2).text())
             gps['Unit'].append(self.segments_table.item(row, 3).text())
             gps['Depth'].append(self.segments_table.item(row, 4).text())
 

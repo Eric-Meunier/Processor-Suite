@@ -877,7 +877,7 @@ class MapPlotter:
 
             if not projection.empty and plot_trace:
                 seg_x, seg_y = projection['Easting'].to_numpy(), projection['Northing'].to_numpy()
-                seg_dist = projection['Relative Depth'].to_numpy()
+                seg_dist = projection['Relative_depth'].to_numpy()
 
                 # Calculating tick indexes. Ticks are placed at evenly spaced depths.
                 # Spaced every 50m, starting from the top
@@ -916,7 +916,7 @@ class MapPlotter:
 
                 if label_depth:
                     # Label the depth at the bottom of the hole
-                    bh_depth = ax.text(seg_x[-1], seg_y[-1], f"  {projection.iloc[-1]['Relative Depth']:.0f} m",
+                    bh_depth = ax.text(seg_x[-1], seg_y[-1], f"  {projection.iloc[-1]['Relative_depth']:.0f} m",
                                        rotation=angle + 90,
                                        fontsize=8,
                                        color=color,
@@ -1868,8 +1868,8 @@ class SectionPlot(MapPlotter):
         segments = geometry.segments.df
 
         # Interpolate the azimuth
-        interp_az = np.interp(proj['Relative Depth'], segments['Depth'], segments['Azimuth'])
-        interp_depths = proj['Relative Depth'].to_numpy()
+        interp_az = np.interp(proj['Relative_depth'], segments['Depth'], segments['Azimuth'])
+        interp_depths = proj['Relative_depth'].to_numpy()
 
         # Find the depths that are 50% to find the center X, Y of the line
         perc_50_depth = np.percentile(interp_depths, 50)

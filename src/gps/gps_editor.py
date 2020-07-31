@@ -363,7 +363,7 @@ class BoreholeSegments(BaseGPS):
         self.df = segments.drop_duplicates()
         self.df.Azimuth = self.df.Azimuth.astype(float)
         self.df.Dip = self.df.Dip.astype(float)
-        self.df['Segment length'] = self.df['Segment length'].astype(float)
+        self.df['Segment_length'] = self.df['Segment_length'].astype(float)
         self.df.Unit = self.df.Unit.astype(str)
         self.df.Depth = self.df.Depth.astype(float)
 
@@ -387,7 +387,7 @@ class BoreholeGeometry:
         :return: pandas DataFrame: Projected easting, northing, elevation, and relative depth from collar
         """
         # Create the data frame
-        projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative Depth'])
+        projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative_depth'])
 
         if self.collar.df.empty or self.segments.df.empty:
             return projection
@@ -410,7 +410,7 @@ class BoreholeGeometry:
             interp_az = np.interp(interp_depths, depths, azimuths)
             interp_dip = np.interp(interp_depths, depths, dips)
             interp_lens = np.subtract(interp_depths[1:], interp_depths[:-1])
-            interp_lens = np.insert(interp_lens, 0, segments.iloc[0]['Segment length'])  # Add the first seg length
+            interp_lens = np.insert(interp_lens, 0, segments.iloc[0]['Segment_length'])  # Add the first seg length
             inter_units = np.full(num_segments, segments.Unit.unique()[0])
 
             # Stack up the arrays and transpose it
@@ -447,7 +447,7 @@ class BoreholeGeometry:
         projection.Easting = pd.Series(eastings, dtype=float)
         projection.Northing = pd.Series(northings, dtype=float)
         projection.Elevation = pd.Series(depths, dtype=float)
-        projection['Relative Depth'] = pd.Series(relative_depth, dtype=float)
+        projection['Relative_depth'] = pd.Series(relative_depth, dtype=float)
         # if crs:
         #     projection = get_latlon(projection, crs)
         return projection
@@ -589,7 +589,7 @@ class GPSParser:
         cols = [
             'Azimuth',
             'Dip',
-            'Segment length',
+            'Segment_length',
             'Unit',
             'Depth'
         ]
@@ -611,12 +611,12 @@ class GPSParser:
 
         seg = pd.DataFrame(matched_seg, columns=cols)
         seg[['Azimuth',
-                 'Dip',
-                 'Segment length',
-                 'Depth']] = seg[['Azimuth',
-                                      'Dip',
-                                      'Segment length',
-                                      'Depth']].astype(float)
+             'Dip',
+             'Segment_length',
+             'Depth']] = seg[['Azimuth',
+                              'Dip',
+                              'Segment_length',
+                              'Depth']].astype(float)
         seg['Unit'] = seg['Unit'].astype(str)
         return seg
 

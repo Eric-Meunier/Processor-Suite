@@ -176,7 +176,7 @@ class Map3DViewer(QMainWindow):
                                                        mode='lines+markers',
                                                        legendgroup='hole',
                                                        name=pem_file.line_name,
-                                                       text=proj['Relative Depth']
+                                                       text=proj['Relative_depth']
                                                        ))
 
                 else:

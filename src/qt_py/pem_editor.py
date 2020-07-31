@@ -36,6 +36,7 @@ from src.qt_py.name_editor import BatchNameEditor
 from src.qt_py.station_splitter import StationSplitter
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, FoliumMap
 from src.qt_py.derotator import Derotator
+from src.qt_py.pem_geometry import PEMGeometry
 
 from src.damp.db_plot import DBPlot
 
@@ -105,6 +106,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_viewer = ContourMapViewer(parent=self)
         self.folium_map = FoliumMap()
+        self.pem_geometry = PEMGeometry(parent=self)
 
         # Project tree
         self.project_dir = None
@@ -583,6 +585,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.table.derotate_action.triggered.connect(self.derotate_xy)
                 self.table.derotate_action.setIcon(QIcon(os.path.join(icons_path, 'derotate.png')))
 
+                self.table.get_geometry_action = QAction("&Geometry", self)
+                self.table.get_geometry_action.triggered.connect(self.get_pem_geometry)
+                self.table.get_geometry_action.setIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
+
                 self.table.share_loop_action = QAction("&Share Loop", self)
                 self.table.share_loop_action.triggered.connect(self.share_loop)
 
@@ -634,6 +640,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                     self.table.menu.addAction(self.table.rename_files_action)
                 self.table.menu.addSeparator()
                 if all([f.is_borehole() for f in selected_pems]):
+                    self.table.menu.addAction(self.table.get_geometry_action)
                     self.table.menu.addAction(self.table.derotate_action)
                     self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.remove_file_action)
@@ -2237,6 +2244,21 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         derotator.accept_sig.connect(accept_file)
         derotator.open(pem_file)
 
+    def get_pem_geometry(self):
+        """
+        Open the PEMGeometry window
+        """
+
+        def accept_geometry(seg):
+            print('seg')
+
+        pem_files, rows = self.get_selected_pem_files()
+        # assert len(pem_files) == 1, 'Can only de-rotate one file at a time.'
+
+        pem_file = self.update_pem_file_from_table(pem_files[0], rows[0])
+        self.pem_geometry.accepted_sig.connect(accept_geometry)
+        self.pem_geometry.open(pem_file)
+
     def reverse_all_data(self, comp):
         """
         Reverse the polarity of all data of a given component for all opened PEM files.
@@ -2920,9 +2942,9 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051')
+    pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # mw.show()
-    # mw.open_pem_files(pem_files)
+    mw.open_pem_files(pem_files)
     mw.delete_merged_files_cbox.setChecked(False)
     # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()

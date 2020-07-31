@@ -58,7 +58,7 @@ class InteractiveSpline:
     showverts = True
     epsilon = 10  # max pixel distance to count as a vertex hit
 
-    def __init__(self, ax, spline_coords, line_color='magenta', vertical_plot=True):
+    def __init__(self, ax, spline_coords, line_color='red', vertical_plot=True):
         """
         :param ax: Matplotlib Axes object
         :param spline_coords: list of tuple, x and y coordinates of the spline to create
@@ -109,6 +109,10 @@ class InteractiveSpline:
         canvas.mpl_connect('button_release_event', self.button_release_callback)
         canvas.mpl_connect('motion_notify_event', self.motion_notify_callback)
         self.canvas = canvas
+
+    def change_alpha(self, alpha):
+        self.line.set_alpha(alpha)
+        self.spline.set_alpha(alpha)
 
     def get_spline_coords(self):
         spline_coords = self.spline.get_transform().transform(self.spline._xy)

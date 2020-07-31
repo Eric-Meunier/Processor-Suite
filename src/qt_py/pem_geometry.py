@@ -1,18 +1,18 @@
-from PyQt5 import (uic)
-from PyQt5.QtWidgets import (QMainWindow)
-
 import copy
-import sys
 import os
-import math
+import sys
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import (QApplication)
+from PyQt5 import (uic, QtGui, QtCore)
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.lines import Line2D
+
 from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
+from src.geometry.segment import Segmenter
 
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
@@ -39,19 +39,35 @@ sys.excepthook = exception_hook
 
 
 class PEMGeometry(QMainWindow, Ui_PemGeometry):
+    # plt.style.use('seaborn-white')
+    accepted_sig = QtCore.pyqtSignal(object)
 
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('PEM Geometry')
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
         self.resize(1100, 800)
+        self.statusBar().hide()
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         self.parent = parent
         self.pem_file = None
+
         self.tool_az_line = None
+        self.tool_mag_line = None
+        self.tool_dip_line = None
         self.az_spline = None
+        self.existing_az_line = None
+        self.existing_dip_line = None
+        self.imported_az_line = None
+        self.imported_dip_line = None
+
         self.background = None
         self.df = None
+
+        self.az_output_combo.addItem('')
+        self.dip_output_combo.addItem('')
 
         self.az_lines = []
         self.dip_lines = []
@@ -66,14 +82,9 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         # self.dip_ax.use_sticky_edges = False
         # self.roll_ax.use_sticky_edges = False
         self.mag_ax.invert_yaxis()
-        # self.mag_ax.autoscale_view()
-
         self.az_ax = self.mag_ax.twiny()
-        # self.az_ax.autoscale_view()
-        # self.az_ax.margins(y=.1, x=.1)
-        # self.az_ax.set_ylim(auto=True)
-        # self.az_ax.set_ylim(ymin=-10)
-        # self.roll_ax.spines["bottom"].set_position(("axes", -0.09))
+
+        self.axes = [self.az_ax, self.mag_ax, self.dip_ax, self.roll_ax]
 
         self.az_ax.set_xlabel('Azimuth (°)', color='r')
         self.dip_ax.set_xlabel('Dip (°)', color='b')
@@ -99,9 +110,45 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.roll_pan = self.zp.pan_factory(self.roll_ax)
 
         # Signals
+        self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
+        self.reset_range_shortcut.activated.connect(self.update_plots)
+        self.reset_range_shortcut.activated.connect(lambda: print("space pressed"))
+
         self.mag_dec_sbox.valueChanged.connect(self.redraw_az_line)
+
         self.az_spline_cbox.toggled.connect(self.toggle_az_spline)
         self.dip_spline_cbox.toggled.connect(self.toggle_dip_spline)
+        self.show_tool_geom_cbox.toggled.connect(self.toggle_tool_geom)
+        self.show_existing_geom_cbox.toggled.connect(self.toggle_existing_geom)
+        self.show_imported_geom_cbox.toggled.connect(self.toggle_imported_geom)
+        self.show_mag_cbox.toggled.connect(self.toggle_mag)
+
+        self.az_output_combo.currentTextChanged.connect(self.az_combo_changed)
+        self.az_output_combo.currentTextChanged.connect(self.toggle_accept)
+        self.dip_output_combo.currentTextChanged.connect(self.dip_combo_changed)
+        self.dip_output_combo.currentTextChanged.connect(self.toggle_accept)
+        self.accept_btn.clicked.connect(self.accept)
+
+    def dragEnterEvent(self, e):
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+
+        if len(urls) > 1:
+            e.ignore()
+        else:
+            file = urls[0]
+            if any([file.endswith('seg'), file.endswith('txt'), file.endswith('dad'), file.endswith('csv'),
+                    file.endswith('xlsx'), file.endswith('xls')]):
+                e.accept()
+            else:
+                e.ignore()
+
+    def dropEvent(self, e):
+        file = [url.toLocalFile() for url in e.mimeData().urls()][0]
+
+        if file.endswith('seg'):
+            self.add_seg(file)
+        else:
+            self.add_dad(file)
 
     def open(self, pem_file):
         if not pem_file.is_borehole():
@@ -114,11 +161,35 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         #     return
 
         self.pem_file = copy.deepcopy(pem_file)
+        self.setWindowTitle(f'PEM Geometry - {self.pem_file.filepath.name}')
         if not self.pem_file.is_averaged():
             self.pem_file = self.pem_file.average()
 
         self.plot_pem()
         self.show()
+
+    def accept(self):
+        segmenter = Segmenter()
+        az_line = self.get_output_az_line()
+        if az_line == self.az_spline:
+            az_line = self.az_spline.spline
+
+        dip_line = self.get_output_dip_line()
+        if dip_line == self.dip_spline:
+            dip_line = self.dip_spline.spline
+
+        # Get the line coordinates
+        az, az_depth = az_line.get_xdata(), az_line.get_ydata()
+        dip, dip_depth = dip_line.get_xdata() * -1, dip_line.get_ydata()
+
+        # Interpolate the data to 1m segment lengths and starting from depth 0
+        xi = np.arange(0, max(az_depth.max(), dip_depth.max()), 1)
+        i_az = np.interp(xi, az_depth, az)
+        i_dip = np.interp(xi, dip_depth, dip)
+        dad_df = pd.DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
+
+        seg = segmenter.dad_to_seg(dad_df, units=self.pem_file.get_gps_units())
+        self.accepted_sig.emit(seg)
 
     def plot_pem(self):
 
@@ -130,23 +201,63 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             spline_az = np.interp(spline_stations, stations, tool_az + self.mag_dec_sbox.value())
 
             self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
-                                               line_color='red')
+                                               line_color='darkred')
 
             self.toggle_az_spline()
-
+            self.az_output_combo.addItem('Spline')
             # self.az_lines.append(Line2D([], [],
             #                             linestyle='-',
             #                             color='magenta',
             #                             label='Spline'))
 
         def add_dip_spline():
+            """
+            Add the dip spline line
+            """
             spline_stations = np.linspace(0, stations.iloc[-1], 10)
             spline_dip = np.interp(spline_stations, stations, tool_dip)
 
             self.dip_spline = InteractiveSpline(self.dip_ax, zip(spline_stations, spline_dip),
-                                                line_color='blue')
+                                                line_color='darkblue')
 
             self.toggle_dip_spline()
+            self.dip_output_combo.addItem('Spline')
+
+        def plot_seg_values():
+            """
+            Plot the azimuth and dip from the P tags section of the pem_file
+            """
+            if self.pem_file.has_geometry():
+                seg = self.pem_file.get_segments()
+                depths = seg.Depth
+                seg_az = seg.Azimuth
+                seg_dip = seg.Dip * -1
+
+                if self.existing_az_line is None:
+                    # Enable the show existing geometry check box
+                    self.show_existing_geom_cbox.setEnabled(True)
+                    # Plot the lines
+                    self.existing_az_line, = self.az_ax.plot(seg_az, depths,
+                                                             color='crimson',
+                                                             linestyle='-.',
+                                                             label='Existing Azimuth',
+                                                             lw=0.8,
+                                                             zorder=1)
+
+                    self.existing_dip_line, = self.dip_ax.plot(seg_dip, depths,
+                                                               color='dodgerblue',
+                                                               linestyle='-.',
+                                                               label='Existing Dip',
+                                                               lw=0.8,
+                                                               zorder=1)
+                    # Add the lines to the legend
+                    self.az_lines.append(self.existing_az_line)
+                    self.dip_lines.append(self.existing_dip_line)
+                    self.az_output_combo.addItem('Existing')
+                    self.dip_output_combo.addItem('Existing')
+
+                    # Ensure the visibility of the lines are correct
+                    self.toggle_existing_geom()
 
         def plot_tool_values():
             """
@@ -163,40 +274,40 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             # Plot the tool information
             self.tool_az_line, = self.az_ax.plot(tool_az, stations, '-r',
                                                  label='Tool Azimuth',
-                                                 lw=0.6,
+                                                 lw=0.9,
                                                  zorder=2)
 
-            tool_mag_line, = self.mag_ax.plot(mag, stations, '-g',
-                                              label='Total Magnetic Field',
-                                              lw=0.6,
-                                              alpha=0.4,
-                                              zorder=1)
-            tool_dip_line, = self.dip_ax.plot(tool_dip, stations, '-b',
-                                              label='Tool Dip',
-                                              lw=0.6,
-                                              zorder=1)
+            self.tool_mag_line, = self.mag_ax.plot(mag, stations,
+                                                   color='green',
+                                                   label='Total Magnetic Field',
+                                                   lw=0.3,
+                                                   zorder=1)
+
+            self.tool_dip_line, = self.dip_ax.plot(tool_dip, stations, '-b',
+                                                   label='Tool Dip',
+                                                   lw=0.9,
+                                                   zorder=1)
 
             acc_roll_line, = self.roll_ax.plot(acc_roll, stations, '-b',
                                                label='Accelerometer',
-                                               lw=0.6,
+                                               lw=0.9,
                                                zorder=1)
 
             mag_roll_line, = self.roll_ax.plot(mag_roll, stations, '-r',
                                                label='Magnetometer',
-                                               lw=0.6,
+                                               lw=0.9,
                                                zorder=1)
 
-            self.az_lines = [self.tool_az_line, tool_mag_line]
-            self.dip_lines = [tool_dip_line]
+            self.az_lines = [self.tool_az_line, self.tool_mag_line]
+            self.dip_lines = [self.tool_dip_line]
             self.roll_lines = [acc_roll_line, mag_roll_line]
+
+            self.az_output_combo.addItem('Tool')
+            self.dip_output_combo.addItem('Tool')
 
             mag_dec = self.pem_file.get_mag_dec()
             if mag_dec:
                 self.mag_dec_sbox.setValue(mag_dec)
-
-        def plot_seg_values():
-            if self.pem_file.has_geometry():
-                pass
 
         self.df = pd.DataFrame({'Station': self.pem_file.data.Station,
                                 'RAD_tool': self.pem_file.data.RAD_tool,
@@ -206,17 +317,81 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         if self.pem_file.has_d7():
             plot_tool_values()
+        plot_seg_values()
         add_az_spline()
         add_dip_spline()
-
-        self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
-        self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+        # Only add the roll axes legend since it won't change
         self.roll_ax.legend(self.roll_lines, [l.get_label() for l in self.roll_lines])
+        self.update_plots()
 
-        self.az_ax.autoscale_view()
+    def plot_df(self, df, source):
+        """
+        Plot a dataframe from a .seg or .dad file.
+        :param df: DataFrame object with an Azimuth, Dip, and Depth column
+        :param source: str, file source of the df, either 'seg' or 'dad'
+        """
+        if df.empty:
+            return
 
-    def add_dad(self, file):
-        pass
+        depths = df.Depth
+        az = df.Azimuth
+        dip = df.Dip
+        # Flip the dip if it's coming from a .seg file
+        if source == 'seg':
+            dip = dip * -1
+
+        if self.imported_az_line is None:
+            # Enable the check box
+            self.show_imported_geom_cbox.setEnabled(True)
+            # Plot the lines
+            self.imported_az_line, = self.az_ax.plot(az, depths,
+                                                     color='crimson',
+                                                     ls='dashed',
+                                                     label='Imported Azimuth',
+                                                     lw=0.8,
+                                                     zorder=1)
+
+            self.imported_dip_line, = self.dip_ax.plot(dip, depths,
+                                                       color='dodgerblue',
+                                                       ls='dashed',
+                                                       label='Imported Dip',
+                                                       lw=0.8,
+                                                       zorder=1)
+            # Add the lines to the legend
+            self.az_lines.append(self.imported_az_line)
+            self.dip_lines.append(self.imported_dip_line)
+
+            self.az_output_combo.addItem('Imported')
+            self.dip_output_combo.addItem('Imported')
+        else:
+            # Update the data
+            self.imported_az_line.set_data(az, depths)
+            self.imported_dip_line.set_data(dip, depths)
+
+        self.toggle_imported_geom()
+        self.update_plots()
+
+    def add_seg(self, filepath):
+        """
+        Import and plot a .seg file
+        :param filepath: str, filepath of the file to plot
+        """
+        df = pd.read_csv(filepath,
+                         delim_whitespace=True,
+                         usecols=[1, 2, 5],
+                         names=['Azimuth', 'Dip', 'Depth'])
+        self.plot_df(df, source='seg')
+
+    def add_dad(self, filepath):
+        """
+        Import and plot a .dad file
+        :param filepath: str, filepath of the file to plot
+        """
+        df = pd.read_csv(filepath,
+                         delim_whitespace=True,
+                         usecols=[0, 1, 2],
+                         names=['Depth', 'Azimuth', 'Dip'])
+        self.plot_df(df, source='dad')
 
     def redraw_az_line(self):
         """
@@ -224,7 +399,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         """
         v = self.mag_dec_sbox.value()
         self.tool_az_line.set_data(tool_az + v, stations)
-        self.canvas.draw()
+        self.update_plots(self.az_ax)
 
     def toggle_az_spline(self):
         """
@@ -236,7 +411,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         else:
             self.az_spline.line.set_visible(False)
             self.az_spline.spline.set_visible(False)
-        self.canvas.draw()
+        self.canvas.draw_idle()
 
     def toggle_dip_spline(self):
         """
@@ -248,7 +423,221 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         else:
             self.dip_spline.line.set_visible(False)
             self.dip_spline.spline.set_visible(False)
-        self.canvas.draw()
+        self.canvas.draw_idle()
+
+    def toggle_tool_geom(self):
+        """
+        Signal slot, toggle the tool dip and azimuth lines on and off
+        :return:
+        """
+        if self.show_tool_geom_cbox.isChecked():
+            self.tool_az_line.set_visible(True)
+            self.tool_dip_line.set_visible(True)
+            if self.tool_az_line not in self.az_lines:
+                # Add the lines back for the legend
+                self.az_lines.append(self.tool_az_line)
+                self.dip_lines.append(self.tool_dip_line)
+        else:
+            self.tool_az_line.set_visible(False)
+            self.tool_dip_line.set_visible(False)
+            # Remove the lines from the legend
+            self.az_lines.remove(self.tool_az_line)
+            self.dip_lines.remove(self.tool_dip_line)
+
+        # Update the legends
+        self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
+        self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+
+        self.canvas.draw_idle()
+
+    def toggle_existing_geom(self):
+        """
+        Signal slot, toggle the segment dip and azimuth lines on and off
+        :return:
+        """
+        if not self.existing_az_line:
+            return
+
+        if self.show_existing_geom_cbox.isChecked():
+            self.existing_az_line.set_visible(True)
+            self.existing_dip_line.set_visible(True)
+            if self.existing_az_line not in self.az_lines:
+                # Add the lines back for the legend
+                self.az_lines.append(self.existing_az_line)
+                self.dip_lines.append(self.existing_dip_line)
+        else:
+            self.existing_az_line.set_visible(False)
+            self.existing_dip_line.set_visible(False)
+            # Remove the lines from the legend
+            self.az_lines.remove(self.existing_az_line)
+            self.dip_lines.remove(self.existing_dip_line)
+
+        # Update the legends
+        self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
+        self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+
+        self.canvas.draw_idle()
+
+    def toggle_imported_geom(self):
+        """
+        Signal slot, toggle the imported dip and azimuth lines on and off
+        """
+        if not self.imported_az_line:
+            return
+
+        if self.show_imported_geom_cbox.isChecked():
+            self.imported_az_line.set_visible(True)
+            self.imported_dip_line.set_visible(True)
+            if self.imported_az_line not in self.az_lines:
+                # Add the lines back for the legend
+                self.az_lines.append(self.imported_az_line)
+                self.dip_lines.append(self.imported_dip_line)
+        else:
+            self.imported_az_line.set_visible(False)
+            self.imported_dip_line.set_visible(False)
+            # Remove the lines from the legend
+            self.az_lines.remove(self.imported_az_line)
+            self.dip_lines.remove(self.imported_dip_line)
+
+        # Update the legends
+        self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
+        self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+
+        self.canvas.draw_idle()
+
+    def toggle_mag(self):
+        """
+        Signal slot, toggle the magnetic field strength line on and off
+        """
+        if not self.tool_mag_line:
+            return
+
+        if self.show_mag_cbox.isChecked():
+            self.tool_mag_line.set_visible(True)
+            if self.tool_mag_line not in self.az_lines:
+                # Add the lines back for the legend
+                self.az_lines.append(self.tool_mag_line)
+        else:
+            self.tool_mag_line.set_visible(False)
+            # Remove the lines from the legend
+            self.az_lines.remove(self.tool_mag_line)
+
+        # Update the legends
+        self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
+
+        self.canvas.draw_idle()
+
+    def toggle_accept(self):
+        if self.az_output_combo.currentText() == '' or self.dip_output_combo.currentText() == '':
+            self.accept_btn.setEnabled(False)
+        else:
+            self.accept_btn.setEnabled(True)
+
+    def az_combo_changed(self):
+        """
+        Make the line selected for export stick out compared to the other lines
+        """
+        # Find which line is selected
+        exempt_line = self.get_output_az_line()
+
+        # Change the alpha for the lines accordingly
+        for line in self.az_lines:
+            if exempt_line is None:
+                line.set_alpha(1.)
+            else:
+                if line is exempt_line:
+                    line.set_alpha(1.)
+                else:
+                    line.set_alpha(0.1)
+
+        # Make the alpha change separately for the InteractiveSpline object since there are two lines to change
+        if exempt_line == self.az_spline or exempt_line is None:
+            self.az_spline.change_alpha(1.)
+        else:
+            self.az_spline.change_alpha(0.1)
+
+        self.canvas.draw_idle()
+
+    def dip_combo_changed(self):
+        """
+         Make the line selected for export stick out compared to the other lines
+         """
+        # Find which line is selected
+        exempt_line = self.get_output_dip_line()
+
+        # Change the alpha for the lines accordingly
+        for line in self.dip_lines:
+            if exempt_line is None:
+                line.set_alpha(1.)
+            else:
+                if line is exempt_line:
+                    line.set_alpha(1.)
+                else:
+                    line.set_alpha(0.1)
+
+        # Make the alpha change separately for the InteractiveSpline object since there are two lines to change
+        if exempt_line == self.dip_spline or exempt_line is None:
+            self.dip_spline.change_alpha(1.)
+        else:
+            self.dip_spline.change_alpha(0.1)
+
+        self.canvas.draw_idle()
+
+    def get_output_az_line(self):
+        """
+        Find the corresponding line object for the text selected in the combo box
+        :return: Line2D object
+        """
+        combo_text = self.az_output_combo.currentText()
+        if combo_text == 'Imported':
+            selected_line = self.imported_az_line
+        elif combo_text == 'Existing':
+            selected_line = self.existing_az_line
+        elif combo_text == 'Tool':
+            selected_line = self.tool_az_line
+        elif combo_text == 'Spline':
+            selected_line = self.az_spline
+        else:
+            selected_line = None
+        return selected_line
+
+    def get_output_dip_line(self):
+        """
+        Find the corresponding line object for the text selected in the combo box
+        :return: Line2D object
+        """
+        combo_text = self.dip_output_combo.currentText()
+        if combo_text == 'Imported':
+            selected_line = self.imported_dip_line
+        elif combo_text == 'Existing':
+            selected_line = self.existing_dip_line
+        elif combo_text == 'Tool':
+            selected_line = self.tool_dip_line
+        elif combo_text == 'Spline':
+            selected_line = self.dip_spline
+        else:
+            selected_line = None
+        return selected_line
+
+    def update_plots(self, ax=None):
+        """
+        Update/redraw and rescale the plots
+        :param ax: Matplotlib Axes object, if given only this axes will be rescaled
+        """
+        if ax:
+            axes = [ax]
+        else:
+            axes = self.axes
+
+        for ax in axes:
+            if ax == self.az_ax:
+                self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
+            elif ax == self.dip_ax:
+                self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+            ax.relim()
+            ax.autoscale_view()
+
+        self.canvas.draw_idle()
 
 
 if __name__ == '__main__':
@@ -260,5 +649,8 @@ if __name__ == '__main__':
 
     win = PEMGeometry()
     win.open(files[0])
-
+    win.az_output_combo.setCurrentIndex(1)
+    win.dip_output_combo.setCurrentIndex(1)
+    win.accept()
+    # win.add_dad(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\BR01.dad')
     app.exec_()

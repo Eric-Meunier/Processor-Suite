@@ -631,7 +631,7 @@ class PEMFile:
                         seg_azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Azimuth)
 
                         # Find the location in 3D space of the station
-                        filt = proj.loc[:, 'Relative Depth'] == float(group.Station.iloc[0])
+                        filt = proj.loc[:, 'Relative_depth'] == float(group.Station.iloc[0])
                         x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
                                               proj[filt].iloc[0]['Northing'], \
                                               proj[filt].iloc[0]['Elevation']
