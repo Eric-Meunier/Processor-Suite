@@ -487,11 +487,17 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             :param table: QTableWidget table
             :return: None
             """
+            def series_to_items(x):
+                if isinstance(x, float):
+                    return QTableWidgetItem(f"{x:.2f}")
+                else:
+                    return QTableWidgetItem(str(x))
+
             # Add a new row to the table
             row_pos = table.rowCount()
             table.insertRow(row_pos)
 
-            items = df_row.map(lambda x: QTableWidgetItem(str(x))).to_list()
+            items = df_row.map(series_to_items).to_list()
             # Format each item of the table to be centered
             for m, item in enumerate(items):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
@@ -513,13 +519,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             table.verticalHeader().show()
         elif table == self.segments_table:
             table.verticalHeader().show()
-        #     tags = [f"<L{n:02}>" for n in range(len(data.index))]
-        # elif table == self.segments_table:
-        #     tags = [f"<P{n + 1:02}>" for n in range(len(data.index))]
-        # else:
-        #     tags = [f"<P{n:02}>" for n in range(len(data.index))]
-        #
-        # data.insert(0, 'Tag', tags)
+
         data.apply(lambda x: write_row(x, table), axis=1)
 
         if table == self.line_table:

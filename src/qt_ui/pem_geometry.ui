@@ -57,6 +57,9 @@
        </item>
        <item>
         <widget class="QDoubleSpinBox" name="mag_dec_sbox">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="minimum">
           <double>-99.989999999999995</double>
          </property>
@@ -76,6 +79,9 @@
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
            <widget class="QCheckBox" name="az_spline_cbox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>Azimuth Spline</string>
             </property>
@@ -83,6 +89,9 @@
           </item>
           <item>
            <widget class="QCheckBox" name="dip_spline_cbox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>Dip Spline</string>
             </property>
@@ -97,6 +106,9 @@
           </item>
           <item>
            <widget class="QCheckBox" name="show_tool_geom_cbox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>Tool Geometry</string>
             </property>
@@ -133,8 +145,11 @@
           </item>
           <item>
            <widget class="QCheckBox" name="show_mag_cbox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
-             <string>Total Magnetic Field</string>
+             <string>Magnetic Field Strength</string>
             </property>
             <property name="checked">
              <bool>true</bool>

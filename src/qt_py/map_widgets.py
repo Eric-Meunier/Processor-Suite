@@ -162,7 +162,7 @@ class Map3DViewer(QMainWindow):
 
         def plot_hole(pem_file):
             t = time.time()
-            collar = pem_file.get_collar()
+            collar = pem_file.get_collar().dropna()
             geometry = pem_file.get_geometry()
             proj = geometry.get_projection()
 

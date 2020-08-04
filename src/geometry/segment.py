@@ -13,6 +13,7 @@ class Segmenter:
         """
         Create a segment data frame from a DAD data frame
         :param df: pandas DataFrame with Depth, Azimuth, Dip columns
+        :param units: str, units of the segments, either 'm' or 'ft'
         :return: pandas DataFrame with Azimuth, Dip, segment length, unit, and depth columns
         """
         units = 2 if units == 'm' else 0
@@ -51,6 +52,7 @@ class Segmenter:
         seg.reset_index(inplace=True, drop=True)
 
         return BoreholeSegments(seg)
+
 
 # class SegmentCalculator:
 #     """

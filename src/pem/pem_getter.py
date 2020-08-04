@@ -30,7 +30,7 @@ class PEMGetter:
             if subfolder:
                 sample_files_dir = os.path.join(sample_files_dir, subfolder)
 
-        file_names = [f for f in os.listdir(sample_files_dir) if
+        file_names = [f.upper() for f in os.listdir(sample_files_dir) if
                       os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
         pem_files = []
 
@@ -48,7 +48,7 @@ class PEMGetter:
             # pem_files.append((pem_file, None))  # Empty second item for ri_files
             pem_files.append(pem_file)
         elif file is not None:
-            index = file_names.index(file)
+            index = file_names.index(file.upper())
             if index is not None:
                 filepath = os.path.join(sample_files_dir, file_names[index])
                 pem_file = self.parser().parse(filepath)

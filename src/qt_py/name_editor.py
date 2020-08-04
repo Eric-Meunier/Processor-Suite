@@ -70,6 +70,8 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         for pem_file in self.pem_files:
             self.add_to_table(pem_file)
 
+        self.show()
+
     def add_to_table(self, pem_file):
         """
         Add the PEM files to the table.
@@ -125,12 +127,12 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, 1, item)
 
-    def close(self):
-        while self.table.rowCount() > 0:
-            self.table.removeRow(0)
-        self.addEdit.setText('[n]')
-        self.removeEdit.setText('')
-        self.hide()
+    # def close(self):
+    #     while self.table.rowCount() > 0:
+    #         self.table.removeRow(0)
+    #     self.addEdit.setText('[n]')
+    #     self.removeEdit.setText('')
+    #     self.hide()
 
     def accept_changes(self):
         """

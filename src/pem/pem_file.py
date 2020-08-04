@@ -178,6 +178,13 @@ class PEMFile:
     def has_d7(self):
         return self.data.RAD_tool.map(lambda x: x.D == 'D7').all()
 
+    def has_xy(self):
+        components = self.get_components()
+        if 'X' in components and 'Y' in components:
+            return True
+        else:
+            return False
+
     def get_gps_units(self):
         """
         Return the type of units being used for GPS ('m' or 'ft')
@@ -562,15 +569,18 @@ class PEMFile:
                 if method == 'pp':
                     if self.is_fluxgate():
                         roll_angle = rad.measured_pp_roll_angle
+                        rot_type = 'pp_raw'
                     else:
                         roll_angle = rad.cleaned_pp_roll_angle
+                        rot_type = 'pp_cleaned'
+
                     # Update the new_rad with the de-rotation information
                     new_info = {'roll_angle': roll_angle,
                                 'dip': rad.pp_dip,
                                 'R': 'R1',
                                 'angle_used': roll_angle,
                                 'rotated': True,
-                                'rotation_type': 'pp'}
+                                'rotation_type': rot_type}
 
                 # Accelerometer rotation
                 elif method == 'acc':
@@ -1729,24 +1739,51 @@ class RADTool:
         match[1:] = np.array(match[1:])
 
         if self.D == 'D7':
-            self.rotated = False
-            self.Hx = float(match[1])
-            self.gx = float(match[2])
-            self.Hy = float(match[3])
-            self.gy = float(match[4])
-            self.Hz = float(match[5])
-            self.gz = float(match[6])
-            self.T = float(match[7])
+            if len(match) == 8:
+                self.rotated = False
+                self.Hx = float(match[1])
+                self.gx = float(match[2])
+                self.Hy = float(match[3])
+                self.gy = float(match[4])
+                self.Hz = float(match[5])
+                self.gz = float(match[6])
+                self.T = float(match[7])
 
-            self.id = ''.join([
-                str(self.Hx),
-                str(self.gx),
-                str(self.Hy),
-                str(self.gy),
-                str(self.Hz),
-                str(self.gz),
-                str(self.T)
-            ])
+                self.id = ''.join([
+                    str(self.Hx),
+                    str(self.gx),
+                    str(self.Hy),
+                    str(self.gy),
+                    str(self.Hz),
+                    str(self.gz),
+                    str(self.T)
+                ])
+
+            elif len(match) == 11:
+                self.rotated = True
+                self.Hx = float(match[1])
+                self.gx = float(match[2])
+                self.Hy = float(match[3])
+                self.gy = float(match[4])
+                self.Hz = float(match[5])
+                self.gz = float(match[6])
+                self.roll_angle = float(match[7])
+                self.dip = float(match[8])
+                self.R = match[9]
+                self.angle_used = float(match[10])
+
+                self.id = ''.join([
+                    str(self.Hx),
+                    str(self.gx),
+                    str(self.Hy),
+                    str(self.gy),
+                    str(self.Hz),
+                    str(self.gz),
+                    str(self.roll_angle),
+                    str(self.dip),
+                    self.R,
+                    str(self.angle_used),
+                ])
 
         elif self.D == 'D5':
             self.x = float(match[1])
@@ -1923,6 +1960,14 @@ class RADTool:
             raise ValueError('RADTool D value is neither "D5" nor "D7"')
 
         if self.R is not None and self.angle_used is not None:
+            if self.rotation_type == 'acc':
+                result.append(f"{self.acc_roll_angle:g}")
+            elif self.rotation_type == 'mag':
+                result.append(f"{self.mag_roll_angle:g}")
+            elif self.rotation_type == 'pp_raw':
+                result.append(f"{self.measured_pp_roll_angle:g}")
+            else:
+                result.append(f"{self.cleaned_pp_roll_angle:g}")
             result.append(self.R)
             result.append(f"{self.angle_used:g}")
 

@@ -59,7 +59,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="info_tab">
       <attribute name="title">
@@ -833,7 +833,7 @@ Length</string>
          </item>
          <item row="0" column="3">
           <property name="text">
-           <string>0</string>
+           <string/>
           </property>
           <property name="textAlignment">
            <set>AlignCenter</set>

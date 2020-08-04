@@ -44,8 +44,9 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
     accepted_sig = QtCore.pyqtSignal(object)
 
     def __init__(self, parent=None):
-        super().__init__()
+        super().__init__(parent)
         self.setupUi(self)
+
         self.setWindowTitle('PEM Geometry')
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
         self.resize(1100, 800)
@@ -129,6 +130,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.dip_output_combo.currentTextChanged.connect(self.dip_combo_changed)
         self.dip_output_combo.currentTextChanged.connect(self.toggle_accept)
         self.accept_btn.clicked.connect(self.accept)
+        self.cancel_btn.clicked.connect(self.close)
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
@@ -174,6 +176,10 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             print(f"PEM files must have D7 RAD tool objects or P tag geometry.")
             return
 
+        # if not all([f.has_xy() for f in pem_files]):
+        #     print(f"PEM files must have X and Y component data.")
+        #     return
+
         self.pem_file = copy.deepcopy(pem_file)
         self.setWindowTitle(f'PEM Geometry - {self.pem_file.filepath.name}')
 
@@ -198,13 +204,14 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         dip, dip_depth = dip_line.get_xdata() * -1, dip_line.get_ydata()
 
         # Interpolate the data to 1m segment lengths and starting from depth 0
-        xi = np.arange(0, max(az_depth.max(), dip_depth.max()), 1)
+        xi = np.arange(0, max(az_depth.max(), dip_depth.max() + 1), 1)
         i_az = np.interp(xi, az_depth, az)
         i_dip = np.interp(xi, dip_depth, dip)
         dad_df = pd.DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
 
         seg = segmenter.dad_to_seg(dad_df, units=self.pem_file.get_gps_units())
         self.accepted_sig.emit(seg)
+        self.close()
 
     def plot_pem(self):
 
@@ -212,7 +219,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             """
             Add the azimuth spline line
             """
-            spline_stations = np.linspace(0, stations.iloc[-1], 10)
+            spline_stations = np.linspace(0, stations.iloc[-1], 6)
             spline_az = np.interp(spline_stations, stations, tool_az + self.mag_dec_sbox.value())
 
             self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
@@ -220,6 +227,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
             self.toggle_az_spline()
             self.az_output_combo.addItem('Spline')
+            self.az_spline_cbox.setEnabled(True)
             # self.az_lines.append(Line2D([], [],
             #                             linestyle='-',
             #                             color='magenta',
@@ -229,7 +237,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             """
             Add the dip spline line
             """
-            spline_stations = np.linspace(0, stations.iloc[-1], 10)
+            spline_stations = np.linspace(0, stations.iloc[-1], 6)
             spline_dip = np.interp(spline_stations, stations, tool_dip)
 
             self.dip_spline = InteractiveSpline(self.dip_ax, zip(spline_stations, spline_dip),
@@ -237,6 +245,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
             self.toggle_dip_spline()
             self.dip_output_combo.addItem('Spline')
+            self.dip_spline_cbox.setEnabled(True)
 
         def plot_seg_values():
             """
@@ -273,6 +282,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
                     # Ensure the visibility of the lines are correct
                     self.toggle_existing_geom()
+
+                    self.show_existing_geom_cbox.setEnabled(True)
 
         def plot_tool_values():
             """
@@ -320,6 +331,10 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             self.az_output_combo.addItem('Tool')
             self.dip_output_combo.addItem('Tool')
 
+            self.mag_dec_sbox.setEnabled(True)
+            self.show_tool_geom_cbox.setEnabled(True)
+            self.show_mag_cbox.setEnabled(True)
+
             mag_dec = self.pem_file.get_mag_dec()
             if mag_dec:
                 self.mag_dec_sbox.setValue(mag_dec)
@@ -332,30 +347,37 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             def show_annotation(sel):
                 """
                 Change the properties of the annotation box
+                :param sel: selected matplotlib artist
                 """
                 x, y = sel.target
-                label = sel.artist.get_label()
-                sel.annotation.set_text(f"{label}\nx = {x:.1f}\ny = {y:.1f}")
+                # label = sel.artist.get_label()
+                sel.annotation.set_text(f"x = {x:.1f}\ny = {y:.1f}")
                 sel.annotation.get_bbox_patch().set(boxstyle='square', fc="white", ec='k')
                 sel.annotation.arrow_patch.set(arrowstyle="-|>", ec="k", alpha=.5)
 
-            c = mplcursors.cursor(multiple=True)
+            c = mplcursors.cursor(multiple=False, hover=False, bindings={'select': 3, 'deselect': 1})
             c.connect('add', show_annotation)
+            # c.enabled = False
 
-        self.df = pd.DataFrame({'Station': self.pem_file.data.Station.astype(int),
-                                'RAD_tool': self.pem_file.data.RAD_tool,
-                                'RAD_ID': self.pem_file.data.RAD_ID})
+        filt = (self.pem_file.data.Component == 'X') | (self.pem_file.data.Component == 'Y')
+        data = self.pem_file.data[filt]
+
+        self.df = pd.DataFrame({'Station': data.Station.astype(int),
+                                'RAD_tool': data.RAD_tool,
+                                'RAD_ID': data.RAD_ID})
         # Only keep unique RAD IDs and unique stations
         self.df.drop_duplicates(subset=['RAD_ID'], inplace=True)
         self.df.drop_duplicates(subset=['Station'], inplace=True)
 
-        if self.pem_file.has_d7():
+        if self.pem_file.has_d7() and self.pem_file.has_xy():
             plot_tool_values()
+            add_az_spline()
+            add_dip_spline()
+
+            # Only add the roll axes legend since it won't change
+            self.roll_ax.legend(self.roll_lines, [l.get_label() for l in self.roll_lines])
+
         plot_seg_values()
-        add_az_spline()
-        add_dip_spline()
-        # Only add the roll axes legend since it won't change
-        self.roll_ax.legend(self.roll_lines, [l.get_label() for l in self.roll_lines])
 
         # Adds the annotations when a point on a line is clicked
         set_cursor()
@@ -588,11 +610,12 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                 else:
                     line.set_alpha(0.1)
 
-        # Make the alpha change separately for the InteractiveSpline object since there are two lines to change
-        if exempt_line == self.az_spline or exempt_line is None:
-            self.az_spline.change_alpha(1.)
-        else:
-            self.az_spline.change_alpha(0.1)
+        if self.az_spline:
+            # Make the alpha change separately for the InteractiveSpline object since there are two lines to change
+            if exempt_line == self.az_spline or exempt_line is None:
+                self.az_spline.change_alpha(1.)
+            else:
+                self.az_spline.change_alpha(0.1)
 
         self.canvas.draw_idle()
 
@@ -613,11 +636,12 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                 else:
                     line.set_alpha(0.1)
 
-        # Make the alpha change separately for the InteractiveSpline object since there are two lines to change
-        if exempt_line == self.dip_spline or exempt_line is None:
-            self.dip_spline.change_alpha(1.)
-        else:
-            self.dip_spline.change_alpha(0.1)
+        if self.dip_spline:
+            # Make the alpha change separately for the InteractiveSpline object since there are two lines to change
+            if exempt_line == self.dip_spline or exempt_line is None:
+                self.dip_spline.change_alpha(1.)
+            else:
+                self.dip_spline.change_alpha(0.1)
 
         self.canvas.draw_idle()
 
@@ -684,12 +708,11 @@ if __name__ == '__main__':
 
     pg = PEMGetter()
     # files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
 
     win = PEMGeometry()
     win.open(files)
-    win.az_output_combo.setCurrentIndex(1)
-    win.dip_output_combo.setCurrentIndex(1)
-    win.accept()
+    # win.az_output_combo.setCurrentIndex(1)
+    # win.dip_output_combo.setCurrentIndex(1)
     # win.add_dad(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\BR01.dad')
     app.exec_()

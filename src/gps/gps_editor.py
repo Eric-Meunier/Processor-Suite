@@ -388,12 +388,11 @@ class BoreholeGeometry:
         """
         # Create the data frame
         projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative_depth'])
-
-        if self.collar.df.empty or self.segments.df.empty:
-            return projection
-
         collar = self.collar.get_collar().dropna()
         segments = self.segments.get_segments().dropna()
+
+        if collar.empty or segments.empty:
+            return projection
 
         # Interpolate the segments
         if num_segments is not None or stations is not None:

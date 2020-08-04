@@ -49,7 +49,7 @@ class Derotator(QMainWindow, Ui_Derotator):
     accept_sig = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
-        super().__init__()
+        super().__init__(parent)
         self.setupUi(self)
         self.parent = parent
         self.pem_file = None

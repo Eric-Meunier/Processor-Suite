@@ -90,8 +90,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.text_browsers = []
 
         # Widgets
-        self.line_adder = LineAdder(parent=self)
-        self.loop_adder = LoopAdder(parent=self)
         self.gpx_editor = GPXEditor()
         self.station_splitter = StationSplitter(parent=self)
         self.grid_planner = GridPlanner(parent=self)
@@ -99,14 +97,11 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         self.db_plot = DBPlot(parent=self)
         self.unpacker = Unpacker(parent=self)
         self.gpx_creator = GPXCreator(parent=self)
-        self.ri_importer = BatchRIImporter(parent=self)
         self.plan_map_options = PlanMapOptions(parent=self)
-        self.batch_name_editor = BatchNameEditor(parent=self)
         self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_viewer = ContourMapViewer(parent=self)
         self.folium_map = FoliumMap()
-        self.pem_geometry = PEMGeometry(parent=self)
 
         # Project tree
         self.project_dir = None
@@ -994,9 +989,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         crs = self.get_crs()
 
         if current_tab == pem_info_widget.station_gps_tab:
+            line_adder = LineAdder(parent=self)
             line = SurveyLine(file, crs=crs)
-            self.line_adder.write_widget = pem_info_widget
-            self.line_adder.open(line)
+            line_adder.write_widget = pem_info_widget
+            line_adder.open(line)
 
         elif current_tab == pem_info_widget.geometry_tab:
             collar = BoreholeCollar(file, crs=crs)
@@ -1007,9 +1003,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 pem_info_widget.fill_gps_table(segments.df, pem_info_widget.segments_table)
 
         elif current_tab == pem_info_widget.loop_gps_tab:
+            loop_adder = LoopAdder(parent=self)
             loop = TransmitterLoop(file, crs=crs)
-            self.loop_adder.write_widget = pem_info_widget
-            self.loop_adder.open(loop)
+            loop_adder.write_widget = pem_info_widget
+            loop_adder.open(loop)
 
         else:
             pass
@@ -2255,23 +2252,17 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         """
 
         def accept_geometry(seg):
-            print('seg')
+            for file, row in zip(pem_files, rows):
+                piw = self.pem_info_widgets[row]
+                file.geometry.segments = seg
+                piw.fill_gps_table(seg.df, piw.segments_table)
+            self.refresh_rows(rows)
 
         pem_files, rows = self.get_selected_pem_files(updated=False)
-        # Merge the data of selected files
-        if len(pem_files) > 1:
-            pem_file = copy.deepcopy(pem_files[0])
-            pem_file.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
 
-            for file in pem_files:
-                if not file.geometry.segments.df.empty:
-                    pem_file.geometry = file.geometry
-        else:
-            pem_file = pem_files[0]
-
-        # pem_file = self.update_pem_file_from_table(pem_files[0], rows[0])
-        self.pem_geometry.accepted_sig.connect(accept_geometry)
-        self.pem_geometry.open(pem_file)
+        pem_geometry = PEMGeometry(parent=self)
+        pem_geometry.accepted_sig.connect(accept_geometry)
+        pem_geometry.open(pem_files)
 
     def reverse_all_data(self, comp):
         """
@@ -2589,21 +2580,19 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             Retrieve and open the PEM files from the batch_name_editor object
             :return: None
             """
-            if len(self.batch_name_editor.pem_files) > 0:
-                self.batch_name_editor.accept_changes()
+            if len(batch_name_editor.pem_files) > 0:
+                batch_name_editor.accept_changes()
                 for i, row in enumerate(rows):
-                    self.pem_files[row] = self.batch_name_editor.pem_files[i]
+                    self.pem_files[row] = batch_name_editor.pem_files[i]
                 self.refresh_rows(rows=rows)
 
         pem_files, rows = self.get_selected_pem_files()
         if not pem_files:
             pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
 
-        self.batch_name_editor.open(pem_files, type=type)
-        self.batch_name_editor.buttonBox.accepted.connect(rename_pem_files)
-        self.batch_name_editor.acceptChangesSignal.connect(rename_pem_files)
-        self.batch_name_editor.buttonBox.rejected.connect(self.batch_name_editor.close)
-        self.batch_name_editor.show()
+        batch_name_editor = BatchNameEditor(parent=self)
+        batch_name_editor.open(pem_files, type=type)
+        batch_name_editor.acceptChangesSignal.connect(rename_pem_files)
 
     def show_ri_importer(self):
         """
@@ -2612,7 +2601,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         """
 
         def open_ri_files():
-            ri_filepaths = self.ri_importer.ri_files
+            ri_filepaths = ri_importer.ri_files
             if len(ri_filepaths) > 0:
                 for i, ri_filepath in enumerate(ri_filepaths):
                     self.pem_info_widgets[i].open_ri_file(ri_filepath)
@@ -2620,9 +2609,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             else:
                 pass
 
-        self.ri_importer.open_pem_files(self.pem_files)
-        self.ri_importer.acceptImportSignal.connect(open_ri_files)
-        self.ri_importer.show()
+        ri_importer = BatchRIImporter(parent=self)
+        ri_importer.open_pem_files(self.pem_files)
+        ri_importer.acceptImportSignal.connect(open_ri_files)
+        ri_importer.show()
 
 
 class FrequencyConverter(QWidget):
