@@ -628,6 +628,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addAction(self.table.scale_ca_action)
                 if len(self.table.selectionModel().selectedRows()) == 1:
                     self.table.menu.addSeparator()
+                    self.table.menu.addAction(self.table.derotate_action)
+                    self.table.menu.addSeparator()
                     self.table.menu.addAction(self.table.share_loop_action)
                     if all([f.is_borehole() for f in selected_pems]):
                         self.table.menu.addAction(self.table.share_collar_action)
@@ -641,7 +643,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
                 self.table.menu.addSeparator()
                 if all([f.is_borehole() for f in selected_pems]):
                     self.table.menu.addAction(self.table.get_geometry_action)
-                    self.table.menu.addAction(self.table.derotate_action)
                     self.table.menu.addSeparator()
                 self.table.menu.addAction(self.table.remove_file_action)
 
@@ -1987,7 +1988,7 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.reset_crs()
             self.project_dir = self.file_sys_model.rootPath()
 
-    def get_selected_pem_files(self):
+    def get_selected_pem_files(self, updated=False):
         """
         Return the corresponding pem_files and rows which are currently selected in the table
         :return: pem_file objects and corresponding row indexes
@@ -1997,6 +1998,10 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         rows.sort(reverse=True)
         for row in rows:
             selected_pem_files.append(self.pem_files[row])
+
+        if updated is True:
+            selected_pem_files = [self.update_pem_file_from_table(f, r) for f, r in zip(selected_pem_files, rows)]
+
         return selected_pem_files, rows
 
     def get_crs(self):
@@ -2252,10 +2257,19 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
         def accept_geometry(seg):
             print('seg')
 
-        pem_files, rows = self.get_selected_pem_files()
-        # assert len(pem_files) == 1, 'Can only de-rotate one file at a time.'
+        pem_files, rows = self.get_selected_pem_files(updated=False)
+        # Merge the data of selected files
+        if len(pem_files) > 1:
+            pem_file = copy.deepcopy(pem_files[0])
+            pem_file.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
 
-        pem_file = self.update_pem_file_from_table(pem_files[0], rows[0])
+            for file in pem_files:
+                if not file.geometry.segments.df.empty:
+                    pem_file.geometry = file.geometry
+        else:
+            pem_file = pem_files[0]
+
+        # pem_file = self.update_pem_file_from_table(pem_files[0], rows[0])
         self.pem_geometry.accepted_sig.connect(accept_geometry)
         self.pem_geometry.open(pem_file)
 
@@ -2426,114 +2440,6 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
             self.remove_file(rows=rows)
 
         self.open_pem_files(files_to_open)
-
-    # def merge_pem_files_selection(self):
-    #     pem_files, rows = self.get_selected_pem_files()
-    #     if len(pem_files) > 1:
-    #         # First update the PEM Files from the table
-    #         for pem_file, row in zip(pem_files, rows):
-    #             self.update_pem_file_from_table(pem_file, row)
-    #         merged_pem = self.merge_pem_files(pem_files)
-    #         if merged_pem:
-    #             # Backup and remove the old files:
-    #             for row in reversed(rows):
-    #                 pem_file = copy.deepcopy(self.pem_files[row])
-    #                 if self.auto_create_backup_files_cbox.isChecked():
-    #                     self.write_pem_file(pem_file, tag='[-M]', backup=True,
-    #                                         remove_old=self.delete_merged_files_cbox.isChecked())
-    #                 if self.delete_merged_files_cbox.isChecked():
-    #                     self.remove_file(row)
-    #             self.write_pem_file(merged_pem, tag='[M]', remove_old=False)
-    #             self.open_pem_files(merged_pem)
-    #     else:
-    #         self.message.information(self, 'Error', 'Must select multiple PEM Files')
-
-    # def auto_merge_pem_files(self):
-    #     """
-    #     Automatically merge PEM files. Groups surface files up by loop name first, then by line name, then does the merge.
-    #     :return: None
-    #     """
-        # if len(self.pem_files) > 0:
-        #     files_to_open = []
-        #     updated_pem_files = [self.update_pem_file_from_table(pem_file, row) for pem_file, row in
-        #                                               zip(self.pem_files, range(self.table.rowCount()))]
-        #     bh_files = [pem_file for pem_file in updated_pem_files if 'borehole' in pem_file.survey_type.lower()]
-        #     sf_files = [pem_file for pem_file in updated_pem_files if 'surface' in pem_file.survey_type.lower() or 'squid' in pem_file.survey_type.lower()]
-        #
-        #     # Surface lines
-        #     for loop, pem_files in groupby(sf_files, key=lambda x: x.header.get('Loop')):
-        #         print(f"Auto merging loop {loop}")
-        #         pem_files = list(pem_files)
-        #         if any([pem_file.is_split() for pem_file in pem_files]) and any(
-        #                 [not pem_file.is_split() for pem_file in pem_files]):
-        #             response = self.message.question(self, 'Merge PEM Files',
-        #                                              'There is a mix of channel splitting in the selected files. '
-        #                                              'Would you like to split the unsplit file(s) and proceed with merging?',
-        #                                              self.message.Yes | self.message.No)
-        #             if response == self.message.Yes:
-        #                 self.split_pem_channels(pem_files=pem_files)
-        #             else:
-        #                 return
-        #
-        #         for line, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
-        #             pem_files = list(pem_files)
-        #             if len(pem_files) > 1:
-        #                 print(f"Auto merging line {line}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
-        #                 rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
-        #                 merged_pem = self.merge_pem_files(pem_files)
-        #                 if merged_pem:
-        #                     # Backup and remove the old files:
-        #                     for row in reversed(rows):
-        #                         pem_file = updated_pem_files[row]
-        #                         if self.auto_create_backup_files_cbox.isChecked():
-        #                             self.write_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
-        #                                                 remove_old=self.delete_merged_files_cbox.isChecked())
-        #                         if self.delete_merged_files_cbox.isChecked():
-        #                             self.remove_file(row)
-        #                             updated_pem_files.pop(row)
-        #                     self.write_pem_file(merged_pem, tag='[M]')
-        #                     # Open the files later to not deal with changes in index when files are opened.
-        #                     files_to_open.append(merged_pem)
-        #
-        #     # Boreholes
-        #     for loop, pem_files in groupby(bh_files, key=lambda x: x.header.get('Loop')):
-        #         print(f"Loop {loop}")
-        #         pem_files = list(pem_files)
-        #         if any([pem_file.is_split() for pem_file in pem_files]) and any(
-        #                 [not pem_file.is_split() for pem_file in pem_files]):
-        #             response = self.message.question(self, 'Merge PEM Files',
-        #                                              'There is a mix of channel splitting in the selected files. '
-        #                                              'Would you like to split the unsplit file(s) and proceed with merging?',
-        #                                              self.message.Yes | self.message.No)
-        #             if response == self.message.Yes:
-        #                 self.split_pem_channels(pem_files=pem_files)
-        #             else:
-        #                 return
-        #
-        #         for hole, pem_files in groupby(pem_files, key=lambda x: x.header.get('LineHole')):
-        #             print(f"Hole {hole}")
-        #             pem_files = sorted(list(pem_files), key=lambda x: x.get_components())
-        #             for components, pem_files in groupby(pem_files, key=lambda x: x.get_components()):
-        #                 print(f"Components {components}")
-        #                 pem_files = list(pem_files)
-        #                 if len(pem_files) > 1:
-        #                     print(f"Auto merging hole {hole}: {[os.path.basename(pem_file.filepath) for pem_file in pem_files]}")
-        #                     rows = [updated_pem_files.index(pem_file) for pem_file in pem_files]
-        #                     merged_pem = merge_pems(pem_files)
-        #                     if merged_pem:
-        #                         # Backup and remove the old files:
-        #                         for row in reversed(rows):
-        #                             pem_file = updated_pem_files[row]
-        #                             if self.auto_create_backup_files_cbox.isChecked():
-        #                                 self.write_pem_file(copy.deepcopy(pem_file), tag='[-M]', backup=True,
-        #                                                     remove_old=self.delete_merged_files_cbox.isChecked())
-        #                             if self.delete_merged_files_cbox.isChecked():
-        #                                 self.remove_file(row)
-        #                                 updated_pem_files.pop(row)
-        #                         self.write_pem_file(merged_pem, tag='[M]')
-        #                         # Open the files later to not deal with changes in index when files are opened.
-        #                         files_to_open.append(merged_pem)
-        #     self.open_pem_files(files_to_open)
 
     def fill_share_range(self):
         """
@@ -2942,7 +2848,8 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # mw.show()
     mw.open_pem_files(pem_files)
     mw.delete_merged_files_cbox.setChecked(False)

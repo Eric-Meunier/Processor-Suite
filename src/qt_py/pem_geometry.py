@@ -1,6 +1,7 @@
 import copy
 import os
 import sys
+import mplcursors
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -49,7 +50,6 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
         self.resize(1100, 800)
         self.statusBar().hide()
-        self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         self.parent = parent
         self.pem_file = None
@@ -76,6 +76,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.figure, (self.mag_ax, self.dip_ax, self.roll_ax) = plt.subplots(1, 3, sharey=True)
         self.figure.subplots_adjust(left=0.07, bottom=0.08, right=0.94, top=0.92)
         self.canvas = FigureCanvas(self.figure)
+        self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.plots_layout.addWidget(self.canvas)
 
         # self.mag_ax.use_sticky_edges = False
@@ -150,18 +151,32 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         else:
             self.add_dad(file)
 
-    def open(self, pem_file):
-        if not pem_file.is_borehole():
-            print(f"{pem_file.filepath.name} is not a borehole file.")
+    def open(self, pem_files):
+        if not isinstance(pem_files, list):
+            pem_files = list(pem_files)
+
+        pem_file = copy.deepcopy(pem_files[0])
+
+        if not all([f.is_borehole for f in pem_files]):
+            print(f"PEM files must be borehole surveys.")
             return
-        elif not pem_file.has_d7() and not pem_file.has_geometry():
-            print(f"{pem_file.filepath.name} does not have D7 RAD tool objects nor P tag geometry.")
+
+        # Merge the data of the pem files
+        if len(pem_files) > 1:
+            pem_file.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
+
+            # Use the first geometry where the segments aren't empty (if any)
+            for file in pem_files:
+                if not file.geometry.segments.df.empty:
+                    pem_file.geometry = file.geometry
+
+        if not all([f.has_d7() for f in pem_files]) and not pem_file.has_geometry():
+            print(f"PEM files must have D7 RAD tool objects or P tag geometry.")
             return
-        # elif not 'X'in pem_file.data.Component.unique() or not 'Y'in pem_file.data.Component.unique():
-        #     return
 
         self.pem_file = copy.deepcopy(pem_file)
         self.setWindowTitle(f'PEM Geometry - {self.pem_file.filepath.name}')
+
         if not self.pem_file.is_averaged():
             self.pem_file = self.pem_file.average()
 
@@ -309,11 +324,30 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             if mag_dec:
                 self.mag_dec_sbox.setValue(mag_dec)
 
-        self.df = pd.DataFrame({'Station': self.pem_file.data.Station,
+        def set_cursor():
+            """
+            Create the mplcursor object and set some custom properties
+            """
+
+            def show_annotation(sel):
+                """
+                Change the properties of the annotation box
+                """
+                x, y = sel.target
+                label = sel.artist.get_label()
+                sel.annotation.set_text(f"{label}\nx = {x:.1f}\ny = {y:.1f}")
+                sel.annotation.get_bbox_patch().set(boxstyle='square', fc="white", ec='k')
+                sel.annotation.arrow_patch.set(arrowstyle="-|>", ec="k", alpha=.5)
+
+            c = mplcursors.cursor(multiple=True)
+            c.connect('add', show_annotation)
+
+        self.df = pd.DataFrame({'Station': self.pem_file.data.Station.astype(int),
                                 'RAD_tool': self.pem_file.data.RAD_tool,
                                 'RAD_ID': self.pem_file.data.RAD_ID})
-        # Only keep unique RAD IDs
-        self.df.drop_duplicates(subset='RAD_ID', inplace=True)
+        # Only keep unique RAD IDs and unique stations
+        self.df.drop_duplicates(subset=['RAD_ID'], inplace=True)
+        self.df.drop_duplicates(subset=['Station'], inplace=True)
 
         if self.pem_file.has_d7():
             plot_tool_values()
@@ -322,6 +356,10 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         add_dip_spline()
         # Only add the roll axes legend since it won't change
         self.roll_ax.legend(self.roll_lines, [l.get_label() for l in self.roll_lines])
+
+        # Adds the annotations when a point on a line is clicked
+        set_cursor()
+
         self.update_plots()
 
     def plot_df(self, df, source):
@@ -645,10 +683,11 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     pg = PEMGetter()
-    files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    # files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
 
     win = PEMGeometry()
-    win.open(files[0])
+    win.open(files)
     win.az_output_combo.setCurrentIndex(1)
     win.dip_output_combo.setCurrentIndex(1)
     win.accept()

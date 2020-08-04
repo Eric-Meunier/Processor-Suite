@@ -15,6 +15,8 @@ class PEMGetter:
         :param client: str, folder from which to retrieve files
         :param number: int, number of files to selected
         :param selection: int, index of file to select
+        :param subfolder: str, name of the folder within the client folder to look into
+        :param file: str, name the specific to open
         :return: list
         """
         sample_files_dir = os.path.join(

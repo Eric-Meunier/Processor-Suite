@@ -6,35 +6,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
 from PyQt5.QtCore import Qt
 from scipy import spatial
-from scipy.interpolate import interp1d, splrep, BSpline, splev
-
-
-# def dist(x, y):
-#     """
-#     Return the distance between two points.
-#     """
-#     d = x - y
-#     return np.sqrt(np.dot(d, d))
-#
-#
-# def dist_point_to_segment(p, s0, s1):
-#     """
-#     Get the distance of a point to a segment.
-#       *p*, *s0*, *s1* are *xy* sequences
-#     This algorithm from
-#     http://geomalgorithms.com/a02-_lines.html
-#     """
-#     v = s1 - s0
-#     w = p - s0
-#     c1 = np.dot(w, v)
-#     if c1 <= 0:
-#         return dist(p, s0)
-#     c2 = np.dot(v, v)
-#     if c2 <= c1:
-#         return dist(p, s1)
-#     b = c1 / c2
-#     pb = s0 + b * v
-#     return dist(p, pb)
+from scipy.interpolate import interp1d, splrep, BSpline, splev, LSQUnivariateSpline, UnivariateSpline
 
 
 class InteractiveSpline:
@@ -91,21 +63,23 @@ class InteractiveSpline:
                            markerfacecolor=line_color,
                            markeredgecolor='dimgray',
                            animated=True,
-                           zorder=1)
+                           zorder=1,
+                           label='Spline')
         self.ax.add_line(self.line)
 
         xi, yi = self.interpolate(self.method)
         self.spline = Line2D(xi, yi,
                              color=line_color,
                              animated=True,
-                             zorder=5)
+                             zorder=5,
+                             label='Spline')
 
         self.ax.add_line(self.spline)
 
         # self.cid = self.poly.add_callback(self.poly_changed)
         canvas.mpl_connect('draw_event', self.draw_callback)
         canvas.mpl_connect('button_press_event', self.button_press_callback)
-        canvas.mpl_connect('key_press_event', self.key_press_callback)
+        # canvas.mpl_connect('key_press_event', self.key_press_callback)
         canvas.mpl_connect('button_release_event', self.button_release_callback)
         canvas.mpl_connect('motion_notify_event', self.motion_notify_callback)
         self.canvas = canvas
@@ -126,14 +100,13 @@ class InteractiveSpline:
         """
         if self.vp:
             y, x = self.poly.xy.T
+            t = self.line.get_ydata()
         else:
             x, y = self.poly.xy.T
+            t = self.line.get_xdata()
 
         xmin, xmax = x.min(), x.max()
         xi = np.linspace(xmin, xmax, 1000)
-
-        # tck = splrep(x, y, s=0)
-        # yi = splev(xi, tck, der=0)
 
         f = interp1d(x, y, kind=method)
         yi = f(xi)
@@ -148,8 +121,7 @@ class InteractiveSpline:
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
         self.ax.draw_artist(self.spline)
-        # do not need to blit here, this will fire before the screen is
-        # updated
+        # do not need to blit here, this will fire before the screen is updated
 
     def poly_changed(self, poly):
         """
