@@ -69,90 +69,154 @@
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox_2">
+        <widget class="Line" name="line_3">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="az_spline_cbox">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Azimuth Spline</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="dip_spline_cbox">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Dip Spline</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="line">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="show_tool_geom_cbox">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Tool Geometry</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="show_existing_geom_cbox">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Existing Geometry</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="show_imported_geom_cbox">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Imported Geometry</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="show_mag_cbox">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Magnetic Field Strength</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="line_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="collar_az_cbox">
          <property name="title">
-          <string>Visibility</string>
+          <string>Collar Azimuth</string>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
+         <property name="flat">
+          <bool>false</bool>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
-           <widget class="QCheckBox" name="az_spline_cbox">
-            <property name="enabled">
-             <bool>false</bool>
+           <widget class="QDoubleSpinBox" name="collar_az_sbox">
+            <property name="minimum">
+             <double>-360.000000000000000</double>
             </property>
-            <property name="text">
-             <string>Azimuth Spline</string>
+            <property name="maximum">
+             <double>360.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.500000000000000</double>
             </property>
            </widget>
           </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="collar_dip_cbox">
+         <property name="title">
+          <string>Collar Dip</string>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>
-           <widget class="QCheckBox" name="dip_spline_cbox">
-            <property name="enabled">
-             <bool>false</bool>
+           <widget class="QDoubleSpinBox" name="collar_dip_sbox">
+            <property name="minimum">
+             <double>-90.000000000000000</double>
             </property>
-            <property name="text">
-             <string>Dip Spline</string>
+            <property name="maximum">
+             <double>90.000000000000000</double>
             </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="Line" name="line">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="show_tool_geom_cbox">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Tool Geometry</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="show_existing_geom_cbox">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Existing Geometry</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="show_imported_geom_cbox">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Imported Geometry</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="show_mag_cbox">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Magnetic Field Strength</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
+            <property name="singleStep">
+             <double>0.500000000000000</double>
             </property>
            </widget>
           </item>

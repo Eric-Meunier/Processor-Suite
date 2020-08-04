@@ -63,6 +63,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.existing_dip_line = None
         self.imported_az_line = None
         self.imported_dip_line = None
+        self.collar_az_line = None
+        self.collar_dip_line = None
 
         self.background = None
         self.df = None
@@ -117,12 +119,16 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.reset_range_shortcut.activated.connect(lambda: print("space pressed"))
 
         self.mag_dec_sbox.valueChanged.connect(self.redraw_az_line)
+        self.collar_az_sbox.valueChanged.connect(self.redraw_collar_az_line)
+        self.collar_dip_sbox.valueChanged.connect(self.redraw_collar_dip_line)
 
         self.az_spline_cbox.toggled.connect(self.toggle_az_spline)
         self.dip_spline_cbox.toggled.connect(self.toggle_dip_spline)
         self.show_tool_geom_cbox.toggled.connect(self.toggle_tool_geom)
         self.show_existing_geom_cbox.toggled.connect(self.toggle_existing_geom)
         self.show_imported_geom_cbox.toggled.connect(self.toggle_imported_geom)
+        self.collar_az_cbox.toggled.connect(self.toggle_collar_az)
+        self.collar_dip_cbox.toggled.connect(self.toggle_collar_dip)
         self.show_mag_cbox.toggled.connect(self.toggle_mag)
 
         self.az_output_combo.currentTextChanged.connect(self.az_combo_changed)
@@ -149,9 +155,9 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         file = [url.toLocalFile() for url in e.mimeData().urls()][0]
 
         if file.endswith('seg'):
-            self.add_seg(file)
+            self.add_seg_file(file)
         else:
-            self.add_dad(file)
+            self.add_dad_file(file)
 
     def open(self, pem_files):
         if not isinstance(pem_files, list):
@@ -201,7 +207,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         # Get the line coordinates
         az, az_depth = az_line.get_xdata(), az_line.get_ydata()
-        dip, dip_depth = dip_line.get_xdata() * -1, dip_line.get_ydata()
+        dip, dip_depth = np.array(dip_line.get_xdata()) * -1, dip_line.get_ydata()
 
         # Interpolate the data to 1m segment lengths and starting from depth 0
         xi = np.arange(0, max(az_depth.max(), dip_depth.max() + 1), 1)
@@ -215,12 +221,12 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
     def plot_pem(self):
 
-        def add_az_spline():
+        def add_az_spline(az, depth):
             """
             Add the azimuth spline line
             """
-            spline_stations = np.linspace(0, stations.iloc[-1], 6)
-            spline_az = np.interp(spline_stations, stations, tool_az + self.mag_dec_sbox.value())
+            spline_stations = np.linspace(0, depth.iloc[-1], 6)
+            spline_az = np.interp(spline_stations, depth, az + self.mag_dec_sbox.value())
 
             self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
                                                line_color='darkred')
@@ -228,17 +234,13 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             self.toggle_az_spline()
             self.az_output_combo.addItem('Spline')
             self.az_spline_cbox.setEnabled(True)
-            # self.az_lines.append(Line2D([], [],
-            #                             linestyle='-',
-            #                             color='magenta',
-            #                             label='Spline'))
 
-        def add_dip_spline():
+        def add_dip_spline(dip, depth):
             """
             Add the dip spline line
             """
-            spline_stations = np.linspace(0, stations.iloc[-1], 6)
-            spline_dip = np.interp(spline_stations, stations, tool_dip)
+            spline_stations = np.linspace(0, depth.iloc[-1], 6)
+            spline_dip = np.interp(spline_stations, depth, dip)
 
             self.dip_spline = InteractiveSpline(self.dip_ax, zip(spline_stations, spline_dip),
                                                 line_color='darkblue')
@@ -247,43 +249,105 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             self.dip_output_combo.addItem('Spline')
             self.dip_spline_cbox.setEnabled(True)
 
+        def add_collar_az(az, depth):
+            """
+            Add the collar azimuth line
+            :param az: list, azimuths from either the tool values or seg file to use as a starting point
+            :param depth: list, corresponding depths of the az
+            """
+            if self.collar_az_line is None:
+                global collar_az, collar_depths
+                avg_az = int(np.average(az))
+                self.collar_az_sbox.blockSignals(True)
+                self.collar_az_sbox.setValue(avg_az)
+                self.collar_az_sbox.blockSignals(False)
+
+                collar_depths = np.array([0, depth.iloc[-1]])
+                collar_az = np.array([avg_az] * 2)
+
+                # Plot the lines
+                self.collar_az_line, = self.az_ax.plot(collar_az, collar_depths,
+                                                       color='crimson',
+                                                       linestyle='dotted',
+                                                       label='Collar Azimuth',
+                                                       lw=0.8,
+                                                       zorder=1)
+
+                # Add the lines to the legend
+                self.az_lines.append(self.collar_az_line)
+                self.az_output_combo.addItem('Collar')
+
+                # Ensure the visibility of the lines are correct
+                self.toggle_collar_az()
+
+        def add_collar_dip(dip, depth):
+            """
+            Add the collar dip line
+            :param dip: list, dips from either the tool values or seg file to use as a starting point
+            :param depth: list, corresponding depths of the dip
+            """
+            if self.collar_dip_line is None:
+                global collar_dip, collar_depths
+                avg_dip = int(np.average(dip))
+                self.collar_dip_sbox.blockSignals(True)
+                self.collar_dip_sbox.setValue(avg_dip)
+                self.collar_dip_sbox.blockSignals(False)
+
+                collar_depths = np.array([0, depth.iloc[-1]])
+                collar_dip = np.array([avg_dip] * 2)
+
+                # Plot the lines
+                self.collar_dip_line, = self.dip_ax.plot(collar_dip, collar_depths,
+                                                         color='blue',
+                                                         linestyle='dotted',
+                                                         label='Collar Dip',
+                                                         lw=0.8,
+                                                         zorder=1)
+
+                # Add the lines to the legend
+                self.dip_lines.append(self.collar_dip_line)
+                self.dip_output_combo.addItem('Collar')
+
+                # Ensure the visibility of the lines are correct
+                self.toggle_collar_dip()
+
         def plot_seg_values():
             """
             Plot the azimuth and dip from the P tags section of the pem_file
             """
-            if self.pem_file.has_geometry():
-                seg = self.pem_file.get_segments()
-                depths = seg.Depth
-                seg_az = seg.Azimuth
-                seg_dip = seg.Dip * -1
+            global seg_az, seg_dip, seg_depth
+            seg = self.pem_file.get_segments()
+            seg_depth = seg.Depth
+            seg_az = seg.Azimuth
+            seg_dip = seg.Dip * -1
 
-                if self.existing_az_line is None:
-                    # Enable the show existing geometry check box
-                    self.show_existing_geom_cbox.setEnabled(True)
-                    # Plot the lines
-                    self.existing_az_line, = self.az_ax.plot(seg_az, depths,
-                                                             color='crimson',
-                                                             linestyle='-.',
-                                                             label='Existing Azimuth',
-                                                             lw=0.8,
-                                                             zorder=1)
+            if self.existing_az_line is None:
+                # Enable the show existing geometry check box
+                self.show_existing_geom_cbox.setEnabled(True)
+                # Plot the lines
+                self.existing_az_line, = self.az_ax.plot(seg_az, seg_depth,
+                                                         color='crimson',
+                                                         linestyle='-.',
+                                                         label='Existing Azimuth',
+                                                         lw=0.8,
+                                                         zorder=1)
 
-                    self.existing_dip_line, = self.dip_ax.plot(seg_dip, depths,
-                                                               color='dodgerblue',
-                                                               linestyle='-.',
-                                                               label='Existing Dip',
-                                                               lw=0.8,
-                                                               zorder=1)
-                    # Add the lines to the legend
-                    self.az_lines.append(self.existing_az_line)
-                    self.dip_lines.append(self.existing_dip_line)
-                    self.az_output_combo.addItem('Existing')
-                    self.dip_output_combo.addItem('Existing')
+                self.existing_dip_line, = self.dip_ax.plot(seg_dip, seg_depth,
+                                                           color='dodgerblue',
+                                                           linestyle='-.',
+                                                           label='Existing Dip',
+                                                           lw=0.8,
+                                                           zorder=1)
+                # Add the lines to the legend
+                self.az_lines.append(self.existing_az_line)
+                self.dip_lines.append(self.existing_dip_line)
+                self.az_output_combo.addItem('Existing')
+                self.dip_output_combo.addItem('Existing')
 
-                    # Ensure the visibility of the lines are correct
-                    self.toggle_existing_geom()
+                # Ensure the visibility of the lines are correct
+                self.toggle_existing_geom()
 
-                    self.show_existing_geom_cbox.setEnabled(True)
+                self.show_existing_geom_cbox.setEnabled(True)
 
         def plot_tool_values():
             """
@@ -371,13 +435,22 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         if self.pem_file.has_d7() and self.pem_file.has_xy():
             plot_tool_values()
-            add_az_spline()
-            add_dip_spline()
 
             # Only add the roll axes legend since it won't change
             self.roll_ax.legend(self.roll_lines, [l.get_label() for l in self.roll_lines])
 
-        plot_seg_values()
+            az, dip, depth = tool_az, tool_dip, stations
+
+        if self.pem_file.has_geometry():
+            plot_seg_values()
+
+            az, dip, depth = seg_az, seg_dip, seg_depth
+
+        add_az_spline(az, depth)
+        add_dip_spline(dip, depth)
+
+        add_collar_az(az, depth)
+        add_collar_dip(dip, depth)
 
         # Adds the annotations when a point on a line is clicked
         set_cursor()
@@ -431,7 +504,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.toggle_imported_geom()
         self.update_plots()
 
-    def add_seg(self, filepath):
+    def add_seg_file(self, filepath):
         """
         Import and plot a .seg file
         :param filepath: str, filepath of the file to plot
@@ -442,7 +515,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                          names=['Azimuth', 'Dip', 'Depth'])
         self.plot_df(df, source='seg')
 
-    def add_dad(self, filepath):
+    def add_dad_file(self, filepath):
         """
         Import and plot a .dad file
         :param filepath: str, filepath of the file to plot
@@ -460,6 +533,22 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         v = self.mag_dec_sbox.value()
         self.tool_az_line.set_data(tool_az + v, stations)
         self.update_plots(self.az_ax)
+
+    def redraw_collar_az_line(self):
+        """
+        Signal slot, move the tool azimuth line when the magnetic declination value is changed.
+        """
+        v = [self.collar_az_sbox.value()] * 2
+        self.collar_az_line.set_data(v, collar_depths)
+        self.update_plots(self.az_ax)
+
+    def redraw_collar_dip_line(self):
+        """
+        Signal slot, move the tool azimuth line when the magnetic declination value is changed.
+        """
+        v = [self.collar_dip_sbox.value()] * 2
+        self.collar_dip_line.set_data(v, collar_depths)
+        self.update_plots(self.dip_ax)
 
     def toggle_az_spline(self):
         """
@@ -565,6 +654,40 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         self.canvas.draw_idle()
 
+    def toggle_collar_az(self):
+        """
+        Signal slot, toggle the collar azimuth line on and off
+        """
+        if self.collar_az_cbox.isChecked():
+            self.collar_az_line.set_visible(True)
+            if self.collar_az_line not in self.az_lines:
+                # Add the lines back for the legend
+                self.az_lines.append(self.collar_az_line)
+        else:
+            self.collar_az_line.set_visible(False)
+            self.az_lines.remove(self.collar_az_line)
+
+        # Update the legends
+        self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
+        self.canvas.draw_idle()
+
+    def toggle_collar_dip(self):
+        """
+        Signal slot, toggle the collar azimuth line on and off
+        """
+        if self.collar_dip_cbox.isChecked():
+            self.collar_dip_line.set_visible(True)
+            if self.collar_dip_line not in self.dip_lines:
+                # Add the lines back for the legend
+                self.dip_lines.append(self.collar_dip_line)
+        else:
+            self.collar_dip_line.set_visible(False)
+            self.dip_lines.remove(self.collar_dip_line)
+
+        # Update the legends
+        self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+        self.canvas.draw_idle()
+
     def toggle_mag(self):
         """
         Signal slot, toggle the magnetic field strength line on and off
@@ -659,6 +782,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             selected_line = self.tool_az_line
         elif combo_text == 'Spline':
             selected_line = self.az_spline
+        elif combo_text == 'Collar':
+            selected_line = self.collar_az_line
         else:
             selected_line = None
         return selected_line
@@ -677,6 +802,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             selected_line = self.tool_dip_line
         elif combo_text == 'Spline':
             selected_line = self.dip_spline
+        elif combo_text == 'Collar':
+            selected_line = self.collar_dip_line
         else:
             selected_line = None
         return selected_line
