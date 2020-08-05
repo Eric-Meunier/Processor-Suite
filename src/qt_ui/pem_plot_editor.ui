@@ -15,10 +15,10 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
-    <widget class="GraphicsLayoutWidget" name="decay_view"/>
+    <widget class="GraphicsLayoutWidget" name="decay_layout"/>
    </item>
    <item row="0" column="1">
-    <widget class="QTabWidget" name="tabWidget">
+    <widget class="QTabWidget" name="profile_tab_widget">
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -28,7 +28,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <widget class="GraphicsLayoutWidget" name="x_profile_view"/>
+        <widget class="GraphicsLayoutWidget" name="x_profile_layout"/>
        </item>
       </layout>
      </widget>
@@ -38,7 +38,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <widget class="GraphicsLayoutWidget" name="y_profile_view"/>
+        <widget class="GraphicsLayoutWidget" name="y_profile_layout"/>
        </item>
       </layout>
      </widget>
@@ -48,7 +48,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <widget class="GraphicsLayoutWidget" name="z_profile_view"/>
+        <widget class="GraphicsLayoutWidget" name="z_profile_layout"/>
        </item>
       </layout>
      </widget>

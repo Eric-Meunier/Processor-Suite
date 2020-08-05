@@ -31,6 +31,8 @@ class StationConverter:
         Converts a single station name into a number, negative if the stations was S or W
         :return: Integer station number
         """
+        # Ensure station is a string
+        station = str(station)
         if re.match(r"\d+(S|W)", station):
             station = (-int(re.sub(r"[SW]", "", station.upper())))
         else:
