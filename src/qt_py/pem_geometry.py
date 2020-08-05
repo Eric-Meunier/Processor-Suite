@@ -2,13 +2,14 @@ import copy
 import os
 import sys
 import mplcursors
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from PyQt5 import (uic, QtGui, QtCore)
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QShortcut)
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QShortcut, QFileDialog, QMessageBox, QErrorMessage)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from src.mpl.interactive_spline import InteractiveSpline
@@ -51,9 +52,13 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
         self.resize(1100, 800)
         self.statusBar().hide()
+        self.message = QMessageBox()
+        self.error = QErrorMessage()
+        self.error.setWindowTitle('Error')
 
         self.parent = parent
         self.pem_file = None
+        self.dialog = QFileDialog()
 
         self.tool_az_line = None
         self.tool_mag_line = None
@@ -114,6 +119,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.roll_pan = self.zp.pan_factory(self.roll_ax)
 
         # Signals
+        self.actionOpen_Geometry_File.triggered.connect(self.open_file_dialog)
+
         self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.update_plots)
         self.reset_range_shortcut.activated.connect(lambda: print("space pressed"))
@@ -155,9 +162,30 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         file = [url.toLocalFile() for url in e.mimeData().urls()][0]
 
         if file.endswith('seg'):
-            self.add_seg_file(file)
+            self.open_seg_file(file)
         else:
-            self.add_dad_file(file)
+            self.open_dad_file(file)
+
+    def open_file_dialog(self):
+        """
+        Open files through the file dialog
+        """
+        files = self.dialog.getOpenFileNames(self, 'Open File',
+                                             filter='DAD files (*.dad);; '
+                                                    'CSV files (*.csv);; '
+                                                    'SEG files (*.seg);; '
+                                                    'TXT files (*.txt);; '
+                                                    'All files(*.*)')
+        if files[0] != '':
+            for file in files[0]:
+                if file.lower().endswith('dad') or file.lower().endswith('csv'):
+                    self.open_dad_file(file)
+                elif file.lower().endswith('seg'):
+                    self.open_seg_file(file)
+                else:
+                    pass
+        else:
+            pass
 
     def open(self, pem_files):
         if not isinstance(pem_files, list):
@@ -196,6 +224,11 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.show()
 
     def accept(self):
+        """
+        Signal slot, when the accept button is pressed. Create a segment object from the coordinates of the lines
+        selected for output.
+        :return: BoreholeSegments object
+        """
         segmenter = Segmenter()
         az_line = self.get_output_az_line()
         if az_line == self.az_spline:
@@ -220,6 +253,9 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.close()
 
     def plot_pem(self):
+        """
+        Plot the pem file tool values and segment information. One of the two must be present.
+        """
 
         def add_az_spline(az, depth):
             """
@@ -504,7 +540,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.toggle_imported_geom()
         self.update_plots()
 
-    def add_seg_file(self, filepath):
+    def open_seg_file(self, filepath):
         """
         Import and plot a .seg file
         :param filepath: str, filepath of the file to plot
@@ -515,16 +551,32 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                          names=['Azimuth', 'Dip', 'Depth'])
         self.plot_df(df, source='seg')
 
-    def add_dad_file(self, filepath):
+    def open_dad_file(self, filepath):
         """
-        Import and plot a .dad file
+        Import and plot a depth-azimuth-dip format file. Can be extentions xlsx, xls, csv, txt, dad.
         :param filepath: str, filepath of the file to plot
         """
-        df = pd.read_csv(filepath,
-                         delim_whitespace=True,
-                         usecols=[0, 1, 2],
-                         names=['Depth', 'Azimuth', 'Dip'])
-        self.plot_df(df, source='dad')
+        try:
+            if filepath.endswith('xlsx') or filepath.endswith('xls'):
+                df = pd.read_excel(filepath,
+                                   delim_whitespace=True,
+                                   usecols=[0, 1, 2],
+                                   names=['Depth', 'Azimuth', 'Dip'],
+                                   header=None)
+            else:
+                df = pd.read_csv(filepath,
+                                 delim_whitespace=True,
+                                 usecols=[0, 1, 2],
+                                 names=['Depth', 'Azimuth', 'Dip'],
+                                 header=None)
+        except Exception as e:
+            self.error.showMessage(f"The following error occurred trying to read {Path(filepath).name}:{str(e)}")
+
+        else:
+            if all([d == float for d in df.dtypes]):
+                self.plot_df(df, source='dad')
+            else:
+                self.message.information(self, 'Error', 'Data returned is not float. Make sure there is no header row.')
 
     def redraw_az_line(self):
         """
