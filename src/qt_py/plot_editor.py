@@ -249,8 +249,9 @@ class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
 
             decay_line = pg.PlotCurveItem(y=row.Reading,
                                           pen=pg.mkPen('k', width=1.),
+                                          clickable=True
                                           )
-            decay_line.setClickable(True, width=3)
+            # decay_line.setClickable(True, width=4)
             decay_line.sigClicked.connect(self.decay_line_clicked)
 
             ax.addItem(decay_line)

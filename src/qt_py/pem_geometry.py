@@ -287,7 +287,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         def add_collar_az(az, depth):
             """
-            Add the collar azimuth line
+            Add the fixed azimuth line
             :param az: list, azimuths from either the tool values or seg file to use as a starting point
             :param depth: list, corresponding depths of the az
             """
@@ -304,21 +304,21 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                 # Plot the lines
                 self.collar_az_line, = self.az_ax.plot(collar_az, collar_depths,
                                                        color='crimson',
-                                                       linestyle='dotted',
-                                                       label='Collar Azimuth',
+                                                       linestyle=(0, (5, 10)),
+                                                       label='Fixed Azimuth',
                                                        lw=0.8,
                                                        zorder=1)
 
                 # Add the lines to the legend
                 self.az_lines.append(self.collar_az_line)
-                self.az_output_combo.addItem('Collar')
+                self.az_output_combo.addItem('Fixed')
 
                 # Ensure the visibility of the lines are correct
                 self.toggle_collar_az()
 
         def add_collar_dip(dip, depth):
             """
-            Add the collar dip line
+            Add the fixed dip line
             :param dip: list, dips from either the tool values or seg file to use as a starting point
             :param depth: list, corresponding depths of the dip
             """
@@ -335,14 +335,14 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                 # Plot the lines
                 self.collar_dip_line, = self.dip_ax.plot(collar_dip, collar_depths,
                                                          color='blue',
-                                                         linestyle='dotted',
-                                                         label='Collar Dip',
+                                                         linestyle=(0, (5, 10)),
+                                                         label='Fixed Dip',
                                                          lw=0.8,
                                                          zorder=1)
 
                 # Add the lines to the legend
                 self.dip_lines.append(self.collar_dip_line)
-                self.dip_output_combo.addItem('Collar')
+                self.dip_output_combo.addItem('Fixed')
 
                 # Ensure the visibility of the lines are correct
                 self.toggle_collar_dip()
@@ -469,6 +469,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.df.drop_duplicates(subset=['RAD_ID'], inplace=True)
         self.df.drop_duplicates(subset=['Station'], inplace=True)
 
+        az, dip, depth = None, None, None
         if self.pem_file.has_d7() and self.pem_file.has_xy():
             plot_tool_values()
 
@@ -480,7 +481,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         if self.pem_file.has_geometry():
             plot_seg_values()
 
-            az, dip, depth = seg_az, seg_dip, seg_depth
+            if az is None:
+                az, dip, depth = seg_az, seg_dip, seg_depth
 
         add_az_spline(az, depth)
         add_dip_spline(dip, depth)
@@ -708,7 +710,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
     def toggle_collar_az(self):
         """
-        Signal slot, toggle the collar azimuth line on and off
+        Signal slot, toggle the Fixed azimuth line on and off
         """
         if self.collar_az_cbox.isChecked():
             self.collar_az_line.set_visible(True)
@@ -725,7 +727,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
     def toggle_collar_dip(self):
         """
-        Signal slot, toggle the collar azimuth line on and off
+        Signal slot, toggle the Fixed azimuth line on and off
         """
         if self.collar_dip_cbox.isChecked():
             self.collar_dip_line.set_visible(True)
@@ -834,7 +836,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             selected_line = self.tool_az_line
         elif combo_text == 'Spline':
             selected_line = self.az_spline
-        elif combo_text == 'Collar':
+        elif combo_text == 'Fixed':
             selected_line = self.collar_az_line
         else:
             selected_line = None
@@ -854,7 +856,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             selected_line = self.tool_dip_line
         elif combo_text == 'Spline':
             selected_line = self.dip_spline
-        elif combo_text == 'Collar':
+        elif combo_text == 'Fixed':
             selected_line = self.collar_dip_line
         else:
             selected_line = None

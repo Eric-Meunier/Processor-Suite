@@ -164,7 +164,7 @@
        <item>
         <widget class="QGroupBox" name="collar_az_cbox">
          <property name="title">
-          <string>Collar Azimuth</string>
+          <string>Fixed Azimuth</string>
          </property>
          <property name="flat">
           <bool>false</bool>
@@ -195,7 +195,7 @@
        <item>
         <widget class="QGroupBox" name="collar_dip_cbox">
          <property name="title">
-          <string>Collar Dip</string>
+          <string>Fixed Dip</string>
          </property>
          <property name="flat">
           <bool>false</bool>

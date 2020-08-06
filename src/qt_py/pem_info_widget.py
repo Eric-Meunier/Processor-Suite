@@ -58,9 +58,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.error = QErrorMessage()
         self.message = QMessageBox()
         self.message.setIcon(QMessageBox.Information)
-        self.loop_adder = LoopAdder
+        self.loop_adder = LoopAdder(parent=self)
         self.loop_adder.write_widget = self
-        self.line_adder = LineAdder
+        self.line_adder = LineAdder(parent=self)
         self.line_adder.write_widget = self
 
         self.last_stn_gps_shift_amt = 0
@@ -95,8 +95,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.addAction(self.loop_table.remove_row_action)
         self.loop_table.remove_row_action.triggered.connect(lambda: self.remove_table_row(self.loop_table))
         self.loop_table.remove_row_action.triggered.connect(lambda:
-                                                              self.edit_loop_btn.setEnabled(
-                                                                  True if self.loop_table.rowCount() > 0 else False))
+                                                            self.edit_loop_btn.setEnabled(
+                                                                True if self.loop_table.rowCount() > 0 else False))
         self.loop_table.remove_row_action.setShortcut('Del')
         self.loop_table.remove_row_action.setEnabled(False)
 
@@ -104,8 +104,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.addAction(self.line_table.remove_row_action)
         self.line_table.remove_row_action.triggered.connect(lambda: self.remove_table_row(self.line_table))
         self.line_table.remove_row_action.triggered.connect(lambda:
-                                                                 self.edit_line_btn.setEnabled(
-                                                                     True if self.line_table.rowCount() > 0 else False))
+                                                            self.edit_line_btn.setEnabled(
+                                                                True if self.line_table.rowCount() > 0 else False))
         self.line_table.remove_row_action.setShortcut('Del')
         self.line_table.remove_row_action.setEnabled(False)
 
@@ -154,8 +154,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.export_station_gps_btn.clicked.connect(lambda: self.export_gps('station'))
         self.export_loop_gps_btn.clicked.connect(lambda: self.export_gps('loop'))
 
-        self.edit_loop_btn.clicked.connect(lambda: self.loop_adder(parent=self).open(self.get_loop()))
-        self.edit_line_btn.clicked.connect(lambda: self.line_adder(parent=self).open(self.get_line()))
+        self.edit_loop_btn.clicked.connect(lambda: self.loop_adder.open(self.get_loop()))
+        self.edit_line_btn.clicked.connect(lambda: self.line_adder.open(self.get_line()))
 
         # Radio buttons
         self.station_sort_rbtn.clicked.connect(self.fill_data_table)
