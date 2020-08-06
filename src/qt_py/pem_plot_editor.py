@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PyQt5 import uic, QtCore, QtGui
-from PyQt5.QtWidgets import (QApplication, QWidget)
+from PyQt5.QtWidgets import (QApplication, QMainWindow)
+from pyqtgraph.Point import Point
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
 from matplotlib.transforms import Bbox
@@ -32,7 +33,7 @@ pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 
 
-class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
+class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
     def __init__(self):
         super().__init__()
@@ -42,38 +43,31 @@ class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
         self.stations = []
 
         self.selected_station = None
-        self.selected_data = None
-        self.selected_decay_line = None
-        self.decay_lines = []
-        self.plotted_decay_data = None
+        self.selected_data = pd.DataFrame()
+        self.selected_lines = []
 
-        # lr = pg.LinearRegionItem()
-        # lr.hide()
-        self.x_decay_plot = self.decay_layout.addPlot(0, 0)
-        self.y_decay_plot = self.decay_layout.addPlot(1, 0)
-        self.z_decay_plot = self.decay_layout.addPlot(2, 0)
+        self.active_ax = None
+        self.active_ax_ind = None
+        self.plotted_decay_lines = []
+        self.plotted_decay_data = pd.DataFrame()
+
+        self.x_decay_plot = self.decay_layout.addPlot(0, 0, title='X Component', viewBox=DecayViewBox())
+        self.y_decay_plot = self.decay_layout.addPlot(1, 0, title='Y Component', viewBox=DecayViewBox())
+        self.z_decay_plot = self.decay_layout.addPlot(2, 0, title='Z Component', viewBox=DecayViewBox())
         self.decay_layout.ci.layout.setSpacing(10)  # Spacing between plots
-        self.decay_axes = [self.x_decay_plot, self.y_decay_plot, self.z_decay_plot]
+        self.decay_axes = np.array([self.x_decay_plot, self.y_decay_plot, self.z_decay_plot])
 
         # Link the X axis of each axes
         for ax in self.decay_axes[1:]:
             ax.setXLink(self.x_decay_plot)
+            ax.setYLink(self.x_decay_plot)
 
         for ax in self.decay_axes:
+            ax.vb.box_select_signal.connect(self.box_select_decay_lines)
             ax.hideButtons()
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
-
-        # def drag(ev):
-        #     global vb, lr
-        #     if (ev.button() == QtCore.Qt.LeftButton) and (ev.modifiers() & QtCore.Qt.ControlModifier):
-        #         lr.show()
-        #         lr.setRegion([self.x_decay_plot.vb.mapToView(ev.buttonDownPos()).x(),
-        #         self.x_decay_plot.vb.mapToView(ev.pos()).x()])
-        #         ev.accept()
-        #     else:
-        #         pg.ViewBox.mouseDragEvent(self.x_decay_plot.vb, ev)
-        # 
-        # self.x_decay_plot.vb.mouseDragEvent = drag
+            ax.scene().sigMouseMoved.connect(self.decay_mouse_moved)
+            ax.scene().sigMouseClicked.connect(self.decay_plot_clicked)
 
         # Configure the plots
         self.x_profile_layout.ci.layout.setSpacing(10)  # Spacing between plots
@@ -97,11 +91,11 @@ class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
         self.z_ax3 = self.z_profile_layout.addPlot(3, 0)
         self.z_ax4 = self.z_profile_layout.addPlot(4, 0)
 
-        self.x_view_axes = [self.x_ax0, self.x_ax1, self.x_ax2, self.x_ax3, self.x_ax4]
-        self.y_view_axes = [self.y_ax0, self.y_ax1, self.y_ax2, self.y_ax3, self.y_ax4]
-        self.z_view_axes = [self.z_ax0, self.z_ax1, self.z_ax2, self.z_ax3, self.z_ax4]
+        self.x_layout_axes = [self.x_ax0, self.x_ax1, self.x_ax2, self.x_ax3, self.x_ax4]
+        self.y_layout_axes = [self.y_ax0, self.y_ax1, self.y_ax2, self.y_ax3, self.y_ax4]
+        self.z_layout_axes = [self.z_ax0, self.z_ax1, self.z_ax2, self.z_ax3, self.z_ax4]
 
-        self.profile_axes = np.concatenate([self.x_view_axes, self.y_view_axes, self.z_view_axes])
+        self.profile_axes = np.concatenate([self.x_layout_axes, self.y_layout_axes, self.z_layout_axes])
 
         # Link the X axis of each axes
         for ax in self.profile_axes[1:]:
@@ -126,10 +120,19 @@ class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Delete:
-            if self.selected_decay_line:
-                self.decay_lines[self.selected_decay_line].setPen('r')
+            for line in self.selected_lines:
+                self.plotted_decay_lines[line].setPen('r')
+
+        elif event.key() == QtCore.Qt.Key_Space:
+            # Only need to auto range the first axes of each group, since they are all linked.
+            for ax in [self.profile_axes[0], self.decay_axes[0]]:
+                ax.autoRange()
 
     def open(self, pem_file):
+        """
+        Open a PEMFile object and plot the data.
+        :param pem_file: PEMFile object.
+        """
         self.pem_file = copy.deepcopy(pem_file)
         self.stations = self.pem_file.get_stations(converted=True)
 
@@ -203,9 +206,11 @@ class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
             for i, bounds in enumerate(channel_bounds):
                 # Select the correct axes based on the component
                 if component == 'X':
-                    ax = self.x_view_axes[i]
+                    ax = self.x_layout_axes[i]
+                elif component == 'Y':
+                    ax = self.y_layout_axes[i]
                 else:
-                    ax = self.y_view_axes[i]
+                    ax = self.z_layout_axes[i]
 
                 # Set the Y-axis labels
                 if i == 0:
@@ -249,23 +254,26 @@ class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
 
             decay_line = pg.PlotCurveItem(y=row.Reading,
                                           pen=pg.mkPen('k', width=1.),
-                                          clickable=True
                                           )
-            # decay_line.setClickable(True, width=4)
+            decay_line.setClickable(True, width=5)
             decay_line.sigClicked.connect(self.decay_line_clicked)
 
+            # Add the line at y=0
+            ax.addLine(y=0, pen=pg.mkPen('k', width=0.2))
+            # Plot the decay
             ax.addItem(decay_line)
-            self.decay_lines.append(decay_line)
+            self.plotted_decay_lines.append(decay_line)
 
         # Move the selected vertical line
         for ax in self.profile_axes:
             selected_v_line = ax.items[1]
             selected_v_line.setPos(station)
 
-        # Clear the plots
+        # Clear the plots and reset selections
         for ax in self.decay_axes:
             ax.clear()
-        self.decay_lines = []
+        self.selected_lines = []
+        self.plotted_decay_lines = []
 
         # Filter the data
         filt = self.pem_file.data['Station'] == station
@@ -306,21 +314,124 @@ class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
         """
         self.select_station(nearest_station)
 
-    def decay_line_clicked(self, item):
-        curve = item
-        self.selected_data = self.plotted_decay_data.iloc[self.decay_lines.index(curve)]
-        self.selected_decay_line = self.decay_lines.index(curve)
-        print(f"Line {self.selected_decay_line} selected")
-        for i, c in enumerate(self.decay_lines):
-            if c is curve:
-                c.setPen('b', width=2)
-                c.setShadowPen(pg.mkPen('w', width=6, cosmetic=True))
+    def decay_line_clicked(self, line):
+        """
+        Signal slot, select the decay line that was clicked.
+        :param line: PlotItem line
+        """
+        self.selected_data = None
+        self.selected_lines = []
+        self.select_lines(line)
+
+    def decay_plot_clicked(self, evt):
+        """
+        Signal slot, change the profile tab to the same component as the clicked decay plot
+        :param evt: MouseClick event
+        """
+        self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
+
+    def decay_mouse_moved(self, evt):
+        """
+        Signal slot, find the decay_axes plot under the mouse when the mouse is moved to determine which plot is active.
+        :param evt: MouseMovement event
+        """
+        self.active_ax = None
+        for ax in self.decay_axes:
+            if ax.sceneBoundingRect().contains(evt):
+                self.active_ax = ax
+                self.active_ax_ind = np.where(self.decay_axes == self.active_ax)[0][0]
+                break
+
+    def select_lines(self, lines):
+        """
+        Highlight the line selected and un-highlight any previously highlighted line.
+        :param lines: list, PlotItem lines
+        """
+        if not isinstance(lines, list):
+            lines = [lines]
+
+        for line in self.plotted_decay_lines:
+            if line in lines:
+                print(f"Line {self.plotted_decay_lines.index(line)} selected")
+                line.setPen('b', width=2)
+                line.setShadowPen(pg.mkPen('w', width=6, cosmetic=True))
             else:
-                c.setPen('k', width=1)
-                c.setShadowPen(None)
+                line.setPen('k', width=1)
+                line.setShadowPen(None)
+
+    def box_select_decay_lines(self, rect):
+        self.selected_lines = []
+        self.selected_data = None
+
+        lines = [line for line in self.active_ax.curves if line.path.intersects(rect)]
+        self.select_lines(lines)
 
 
-# class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
+class DecayViewBox(pg.ViewBox):
+    box_select_signal = QtCore.pyqtSignal(object)
+
+    def __init__(self, *args, **kwds):
+        pg.ViewBox.__init__(self, *args, **kwds)
+        # self.setMouseMode(self.RectMode)
+
+    def mouseDragEvent(self, ev, axis=None):
+        pos = ev.pos()
+        if ev.button() == QtCore.Qt.LeftButton:
+            ev.accept()
+            if ev.isFinish():  # This is the final move in the drag
+                # Hide the rectangle
+                self.rbScaleBox.hide()
+                # Create a rectangle object from the click-and-drag rectangle
+                rect = QtCore.QRectF(Point(ev.buttonDownPos(ev.button())), Point(pos))
+                # Convert the coordinates to the same as the data
+                rect = self.childGroup.mapRectFromParent(rect)
+                # Emit the signal to select the lines that intersect the rect
+                self.box_select_signal.emit(rect)
+            else:
+                # update shape of scale box
+                self.updateScaleBox(ev.buttonDownPos(), ev.pos())
+        else:
+            pg.ViewBox.mouseDragEvent(self, ev)
+
+    def wheelEvent(self, ev, axis=None):
+
+        def invertQTransform(tr):
+            """Return a QTransform that is the inverse of *tr*.
+            Rasises an exception if tr is not invertible.
+
+            Note that this function is preferred over QTransform.inverted() due to
+            bugs in that method. (specifically, Qt has floating-point precision issues
+            when determining whether a matrix is invertible)
+            """
+            try:
+                import numpy.linalg
+                arr = np.array(
+                    [[tr.m11(), tr.m12(), tr.m13()], [tr.m21(), tr.m22(), tr.m23()], [tr.m31(), tr.m32(), tr.m33()]])
+                inv = numpy.linalg.inv(arr)
+                return QtGui.QTransform(inv[0, 0], inv[0, 1], inv[0, 2], inv[1, 0], inv[1, 1], inv[1, 2], inv[2, 0],
+                                        inv[2, 1])
+            except ImportError:
+                inv = tr.inverted()
+                if inv[1] is False:
+                    raise Exception("Transform is not invertible.")
+                return inv[0]
+
+        if axis in (0, 1):
+            mask = [False, False]
+            mask[axis] = self.state['mouseEnabled'][axis]
+        else:
+            mask = self.state['mouseEnabled'][:]
+        s = 1.02 ** (ev.delta() * self.state['wheelScaleFactor']) # actual scaling factor
+        s = [(None if m is False else s) for m in mask]
+        center = Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
+
+        self._resetTarget()
+        self.scaleBy(s, center)
+        ev.accept()
+        self.sigRangeChangedManually.emit(mask)
+
+
+    # class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
 #
 #     def __init__(self, pem_file):
 #         super().__init__()
@@ -469,7 +580,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='PEM Splitting', number=1)
+    pem_files = pem_getter.get_pems(client='PEM Splitting', number=2)
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])
