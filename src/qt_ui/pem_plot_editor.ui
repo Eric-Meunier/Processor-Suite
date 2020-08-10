@@ -13,6 +13,9 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+  <property name="documentMode">
+   <bool>false</bool>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <property name="leftMargin">
@@ -155,12 +158,32 @@
         </widget>
        </item>
        <item>
+        <widget class="QCheckBox" name="auto_range_cbox">
+         <property name="text">
+          <string>Auto-Range</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="change_component_btn">
          <property name="enabled">
           <bool>false</bool>
          </property>
          <property name="text">
           <string>Change Component</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="change_station_btn">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Change Station</string>
          </property>
         </widget>
        </item>
