@@ -196,19 +196,16 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         elif event.key() == QtCore.Qt.Key_X:
             if self.selected_lines:
                 self.change_component('X')
-                self.plot_profiles()
 
         # Change the component of the readings to Y
         elif event.key() == QtCore.Qt.Key_Y:
             if self.selected_lines:
                 self.change_component('Y')
-                self.plot_profiles()
 
         # Change the component of the readings to Z
         elif event.key() == QtCore.Qt.Key_Z:
             if self.selected_lines:
                 self.change_component('Z')
-                self.plot_profiles()
 
         # Reset the ranges of the plots when the space bar is pressed
         elif event.key() == QtCore.Qt.Key_Space:
@@ -615,13 +612,17 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         global nearest_station
         pos = evt
-        mouse_point = self.active_profile_axes[0].vb.mapSceneToView(pos)
-        nearest_station = find_nearest_station(int(mouse_point.x()))
+        try:
+            mouse_point = self.active_profile_axes[0].vb.mapSceneToView(pos)
+        except np.linalg.LinAlgError:
+            self.profile_tab_widget.setCurrentIndex(0)
+        else:
+            nearest_station = find_nearest_station(int(mouse_point.x()))
 
-        for ax in self.active_profile_axes:
-            ax.items[0].setPos(nearest_station)
-            ax.items[2].setPos(nearest_station, ax.viewRange()[1][1])
-            ax.items[2].setText(str(nearest_station))
+            for ax in self.active_profile_axes:
+                ax.items[0].setPos(nearest_station)
+                ax.items[2].setPos(nearest_station, ax.viewRange()[1][1])
+                ax.items[2].setText(str(nearest_station))
 
     def profile_plot_clicked(self, evt):
         """
@@ -788,18 +789,22 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Change the component of the selected data
         :param component: str
         """
-        components = [component]
         selected_data = self.get_selected_data()
-        if not selected_data.empty:
+        old_comp = selected_data.Component.unique()[0]
+
+        if not selected_data.empty and component != old_comp:
             # Change the deletion flag
             selected_data.loc[:, 'Component'] = selected_data.loc[:, 'Component'].map(lambda x: component.upper())
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.plot_profiles(components=components.extend(selected_data.Component.unique()))
+            self.plot_profiles(components=[old_comp, component])
             self.plot_station(self.selected_station, preserve_selection=True)
 
     def change_station(self):
+        """
+        Opens a input dialog to change the station name of the selected data
+        """
         if self.selected_lines:
             selected_data = self.get_selected_data()
             selected_station = selected_data.Station.unique()[0]
