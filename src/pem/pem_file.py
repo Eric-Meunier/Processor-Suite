@@ -264,6 +264,33 @@ class PEMFile:
         profile.sort_values(by=['Component', 'Station', 'Reading_index', 'Reading_number'], inplace=True)
         return profile
 
+    def get_profile_data2(self, component, averaged=False, converted=False):
+        """
+        Transform the readings in the data in a manner to be plotted as a profile
+        :param component: str, used to filter the profile data and only keep the given component
+        :param averaged: bool, average the readings of the profile
+        :param converted: bool, convert the station names to int
+        :return: pandas DataFrame object with Station as the index, and channels as columns.
+        """
+        def average_profile(station):
+            return station.apply(lambda x: x.mean())
+
+        filt = self.data['Component'] == component.upper()
+
+        profile = pd.DataFrame.from_dict(dict(zip(self.data[filt].Reading.index, self.data[filt].Reading.values))).T
+        if converted is True:
+            stations = self.data.Station.map(self.converter.convert_station)
+        else:
+            stations = self.data.Station
+
+        profile.insert(0, 'Station', stations)
+        profile.set_index('Station', drop=True, inplace=True)
+
+        if averaged is True:
+            profile = profile.groupby('Station').apply(average_profile)
+
+        return profile
+
     def get_components(self):
         components = list(self.data['Component'].unique())
         return components

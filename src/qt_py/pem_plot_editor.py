@@ -68,7 +68,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             ax.hideButtons()
             ax.setMenuEnabled(False)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
-            # ax.showAxis('top')
 
             ax.scene().sigMouseMoved.connect(self.decay_mouse_moved)
             ax.scene().sigMouseClicked.connect(self.decay_plot_clicked)
@@ -108,9 +107,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Configure each axes
         for ax in self.profile_axes:
             ax.hideButtons()
-            ax.setMenuEnabled(False)
+            # ax.setMenuEnabled(False)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
-            # ax.showAxis('top')
 
             # Add the vertical selection line
             hover_v_line = pg.InfiniteLine(angle=90, movable=False)
@@ -148,11 +146,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         if event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_C:
             t = time.time()
             self.delete_lines()
-            self.plot_profiles()
+            # self.plot_profiles()
             print(f"Time to delete and replot: {time.time() - t}")
 
         # Cycle through highlighted decays backwards
-        elif event.key() == QtCore.Qt.Key_A:
+        elif event.key() == QtCore.Qt.Key_A or event.key() == QtCore.Qt.LeftArrow:
             if self.selected_lines:
                 new_selection = []
                 # For each decay axes, find any selected lines and cycle to the next line in that axes
@@ -171,7 +169,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.highlight_lines()
 
         # Cycle through highlighted decays forwards
-        elif event.key() == QtCore.Qt.Key_D:
+        elif event.key() == QtCore.Qt.Key_D or event.key() == QtCore.Qt.RightArrow:
             if self.selected_lines:
                 new_selection = []
                 # For each decay axes, find any selected lines and cycle to the next line in that axes
@@ -193,7 +191,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         elif event.key() == QtCore.Qt.Key_F:
             if self.selected_lines:
                 self.flip_decays()
-                self.plot_profiles()
 
         # Change the component of the readings to X
         elif event.key() == QtCore.Qt.Key_X:
@@ -229,18 +226,28 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
     def wheelEvent(self, evt):
         if not keyboard.is_pressed('shift'):
-            station_index = list(self.stations).index(self.selected_station)
             y = evt.angleDelta().y()
             if y < 0:
-                if station_index == len(self.stations) - 1:
-                    return
-                else:
-                    self.plot_station(self.stations[station_index + 1])
-            elif y > 0:
-                if station_index == 0:
-                    return
-                else:
-                    self.plot_station(self.stations[station_index - 1])
+                self.cycle_station('down')
+            else:
+                self.cycle_station('up')
+
+    def cycle_station(self, direction):
+        """
+        Change the selected station
+        :param direction: str, direction to cycle stations. either 'up' or 'down'.
+        """
+        station_index = list(self.stations).index(self.selected_station)
+        if direction == 'down':
+            if station_index == len(self.stations) - 1:
+                return
+            else:
+                self.plot_station(self.stations[station_index + 1])
+        elif direction == 'up':
+            if station_index == 0:
+                return
+            else:
+                self.plot_station(self.stations[station_index - 1])
 
     def open(self, pem_file):
         """
@@ -250,11 +257,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.pem_file = copy.deepcopy(pem_file)
         # Add the deletion flag column
         self.pem_file.data.insert(13, 'del_flag', False)
-        # self.stations = np.sort(self.pem_file.get_stations(converted=True))
-        #
-        # # Convert the stations in the data
-        # converter = StationConverter()
-        # self.pem_file.data['cStation'] = self.pem_file.data.Station.map(converter.convert_station)
 
         # Set the units of the decay plots
         self.units = self.pem_file.units
@@ -269,13 +271,82 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Plot the first station. This also helps with the linking of the X and Y axes for the decay plots.
         self.plot_station(self.stations.min())
 
-        # Hide plots for which there is no data
-        self.toggle_plot_visibility()
         # Link the X and Y axis of each axes
         self.link_decay_x()
         self.link_decay_y()
 
         self.show()
+
+    def update_file(self):
+
+        def toggle_decay_plots():
+            """
+            Show/hide decay plots and profile plot tabs based on the components in the pem file
+            """
+
+            components = self.pem_file.get_components()
+
+            x_ax = self.x_decay_plot
+            y_ax = self.y_decay_plot
+            z_ax = self.z_decay_plot
+
+            if 'X' in components:
+                x_ax.show()
+                self.profile_tab_widget.setTabEnabled(0, True)
+            else:
+                x_ax.hide()
+                self.profile_tab_widget.setTabEnabled(0, False)
+
+            if 'Y' in components:
+                y_ax.show()
+                self.profile_tab_widget.setTabEnabled(1, True)
+            else:
+                y_ax.hide()
+                self.profile_tab_widget.setTabEnabled(1, False)
+
+            if 'Z' in components:
+                z_ax.show()
+                self.profile_tab_widget.setTabEnabled(2, True)
+            else:
+                z_ax.hide()
+                self.profile_tab_widget.setTabEnabled(2, False)
+
+        def toggle_profile_plots():
+            """
+            Update which profile axes are active based on what components are present and update the axis links.
+            """
+
+            def link_profile_axes():
+                if len(self.active_profile_axes) > 1:
+                    for ax in self.active_profile_axes[1:]:
+                        ax.setXLink(self.active_profile_axes[0])
+
+            # Update the profile axes
+            tt = time.time()
+            self.active_profile_axes = []
+            for component in self.pem_file.get_components():
+                # Add the profile axes to the list of active profile axes
+                if component == 'X':
+                    if self.x_layout_axes not in self.active_profile_axes:
+                        self.active_profile_axes.extend(self.x_layout_axes)
+                elif component == 'Y':
+                    if self.y_layout_axes not in self.active_profile_axes:
+                        self.active_profile_axes.extend(self.y_layout_axes)
+                elif component == 'Z':
+                    if self.z_layout_axes not in self.active_profile_axes:
+                        self.active_profile_axes.extend(self.z_layout_axes)
+
+                link_profile_axes()
+            print(f"Time linking profile axes: {time.time() - tt}")
+
+        self.stations = np.sort(self.pem_file.get_stations(converted=True))
+
+        # Convert the stations in the data
+        converter = StationConverter()
+        self.pem_file.data['cStation'] = self.pem_file.data.Station.map(converter.convert_station)
+
+        toggle_profile_plots()
+        toggle_decay_plots()
 
     def link_decay_x(self):
         """
@@ -299,33 +370,67 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 else:
                     ax.setYLink(None)
 
-    def plot_profiles(self):
+    def plot_profiles(self, components=None):
         """
         Plot the PEM file in a LIN plot style, with both components in separate plots
+        :param components: list of str, components to plot. If None it will plot every component in the file.
         """
 
-        def clear_plots():
-            for ax in self.active_profile_axes:
+        def clear_plots(components):
+            """
+            Clear the plots of the given components
+            :param components: list of str
+            """
+            axes = []
+
+            if 'X' in components:
+                axes.extend(self.x_layout_axes)
+            if 'Y' in components:
+                axes.extend(self.y_layout_axes)
+            if 'Z' in components:
+                axes.extend(self.z_layout_axes)
+
+            for ax in axes:
                 ax.clearPlots()
 
-        def link_profile_axes():
-            if len(self.active_profile_axes) > 1:
-                for ax in self.active_profile_axes[1:]:
-                    ax.setXLink(self.active_profile_axes[0])
+        def calc_channel_bounds():
+            """
+            Create tuples of start and end channels to be plotted per axes
+            :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
+            """
+            channel_bounds = [None] * 4
+            num_channels_per_plot = int((file.number_of_channels - 1) // 4)
+            remainder_channels = int((file.number_of_channels - 1) % 4)
 
-        def plot_lin(component):
+            for k in range(0, len(channel_bounds)):
+                channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
 
-            def plot_lines(df, ax, channel):
+            for i in range(0, remainder_channels):
+                channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
+                for k in range(i + 1, len(channel_bounds)):
+                    channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+
+            channel_bounds.insert(0, (0, 0))
+            return channel_bounds
+
+        def plot_lin(profile_data, axes):
+
+            def plot_lines(df, ax):
                 """
                 Plot the lines on the pyqtgraph ax for a given channel
                 :param df: DataFrame of filtered data
                 :param ax: pyqtgraph PlotItem
                 :param channel: int, channel to plot
                 """
-                x, y = df['Station'], df[channel]
-                # interp_x = np.linspace(x.min(), x.max() + 1, num=1000)
-                # interp_y = np.interp(interp_x, x, y)
+                global lin_plotting_time, averaging_time
 
+                t = time.time()
+                df_avg = df.groupby('Station').apply(lambda x: np.average(x, axis=0))
+                averaging_time += time.time() - t
+
+                x, y = df_avg.index, df_avg
+
+                t2 = time.time()
                 ax.plot(x=x, y=y,
                         pen=pg.mkPen('k', width=1.),
                         symbol='o',
@@ -333,44 +438,25 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                         symbolBrush='k',
                         symbolPen='k',
                         )
-                # profile_line = pg.PlotCurveItem(x=interp_x, y=interp_y,
-                #                                 pen=pg.mkPen('k', width=1.),
-                #                                 # clickable=True,
-                #                                 )
-                # profile_line.sigClicked.connect(self.profile_line_clicked)
-                # ax.addItem(profile_line)
-                # self.profile_lines.append(profile_line)
+                lin_plotting_time += time.time() - t2
 
-            def calc_channel_bounds():
-                """
-                Create tuples of start and end channels to be plotted per axes
-                :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
-                """
-                channel_bounds = [None] * 4
-                num_channels_per_plot = int((file.number_of_channels - 1) // 4)
-                remainder_channels = int((file.number_of_channels - 1) % 4)
+            def plot_scatters(df, ax):
+                global scatter_plotting_time
+                t = time.time()
+                x, y = df.index, df
 
-                for k in range(0, len(channel_bounds)):
-                    channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
+                scatter = pg.ScatterPlotItem(x=x, y=y,
+                                             # pen=pg.mkPen('k', width=1.),
+                                             symbol='o',
+                                             size=2,
+                                             brush='k',
+                                             pen='k',
+                                             )
+                ax.addItem(scatter)
+                scatter_plotting_time += time.time() - t
 
-                for i in range(0, remainder_channels):
-                    channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
-                    for k in range(i + 1, len(channel_bounds)):
-                        channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
-
-                channel_bounds.insert(0, (0, 0))
-                return channel_bounds
-
-            filt = profile_data['Component'] == component.upper()
-            channel_bounds = calc_channel_bounds()
             for i, bounds in enumerate(channel_bounds):
-                # Select the correct axes based on the component
-                if component == 'X':
-                    ax = self.x_layout_axes[i]
-                elif component == 'Y':
-                    ax = self.y_layout_axes[i]
-                else:
-                    ax = self.z_layout_axes[i]
+                ax = axes[i]
 
                 # Set the Y-axis labels
                 if i == 0:
@@ -380,47 +466,57 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
                 # Plot the data
                 for ch in range(bounds[0], bounds[1] + 1):
-                    data = profile_data[filt].loc[:, ['Station', ch]]
-                    plot_lines(data, ax, ch)
+                    data = profile_data.iloc[:, ch]
 
-        self.stations = np.sort(self.pem_file.get_stations(converted=True))
+                    plot_lines(data, ax)
+                    plot_scatters(data, ax)
 
-        # Convert the stations in the data
-        converter = StationConverter()
-        self.pem_file.data['cStation'] = self.pem_file.data.Station.map(converter.convert_station)
+        self.update_file()
 
-        clear_plots()
         file = copy.deepcopy(self.pem_file)
         file.data = file.data.loc[file.data.del_flag == False]
 
-        if not file.is_averaged():
-            file = file.average()
+        if components is None:
+            components = file.get_components()
 
-        if not file.is_split():
-            file = file.split()
-
-        profile_data = file.get_profile_data()
-        if profile_data.empty:
-            return
+        clear_plots(components)
 
         t = time.time()
-        for component in file.get_components():
-            plot_lin(component)
+        global averaging_time, lin_plotting_time, scatter_plotting_time
+        averaging_time = 0
+        lin_plotting_time = 0
+        scatter_plotting_time = 0
 
-            # Add the profile axes to the list of active profile axes
+        ts = time.time()
+        if not file.is_split():
+            file = file.split()
+        print(f"Time to deal with splitting: {time.time() - ts}")
+
+        # Calculate the lin plot axes channel bounds
+        channel_bounds = calc_channel_bounds()
+
+        for component in components:
+            print(f"Plotting profile for {component} component")
+            # Select the correct axes based on the component
             if component == 'X':
-                if self.x_layout_axes not in self.active_profile_axes:
-                    self.active_profile_axes.extend(self.x_layout_axes)
+                axes = self.x_layout_axes
             elif component == 'Y':
-                if self.y_layout_axes not in self.active_profile_axes:
-                    self.active_profile_axes.extend(self.y_layout_axes)
-            elif component == 'Z':
-                if self.z_layout_axes not in self.active_profile_axes:
-                    self.active_profile_axes.extend(self.z_layout_axes)
+                axes = self.y_layout_axes
+            else:
+                axes = self.z_layout_axes
 
-            link_profile_axes()
+            tp = time.time()
+            profile_data = file.get_profile_data2(component, averaged=False, converted=True)
+            if profile_data.empty:
+                return
+            print(f"Time getting profile data: {time.time() - tp}")
 
-        print(f"Time to make plots: {time.time() - t}")
+            plot_lin(profile_data, axes)
+
+        print(f"Time to make lin plots: {lin_plotting_time}")
+        print(f"Time to make scatter plots: {scatter_plotting_time}")
+        print(f"Averaging time: {averaging_time}")
+        print(f"Time to make profile plots: {time.time() - t}")
 
     def plot_station(self, station, preserve_selection=False):
         """
@@ -456,11 +552,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             decay_line = pg.PlotCurveItem(y=row.Reading,
                                           pen=pen,
                                           )
-            decay_line.setClickable(True, width=7)
+            decay_line.setClickable(True, width=6)
             decay_line.sigClicked.connect(self.decay_line_clicked)
 
             # Add the line at y=0
-            ax.addLine(y=0, pen=pg.mkPen('k', width=0.1))
+            ax.addLine(y=0, pen=pg.mkPen('k', width=0.15))
             # Plot the decay
             ax.addItem(decay_line)
             # Add the plot item to the list of plotted items
@@ -493,6 +589,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Plot the decays
         self.plotted_decay_data.apply(plot_decay, axis=1)
 
+        # Re-select lines that were selected
         if preserve_selection is True:
             self.selected_lines = [self.plotted_decay_lines[i] for i in index_of_selected]
             self.highlight_lines()
@@ -500,40 +597,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         if self.auto_range_cbox.isChecked() and preserve_selection is False:
             for ax in self.active_decay_axes:
                 ax.autoRange()
-
-        self.toggle_plot_visibility()
-
-    def toggle_plot_visibility(self):
-        """
-        Signal slot, show/hide decay plots and profile plot tabs
-        """
-
-        components = self.pem_file.get_components()
-
-        x_ax = self.x_decay_plot
-        y_ax = self.y_decay_plot
-        z_ax = self.z_decay_plot
-
-        if 'X' in components:
-            x_ax.show()
-            self.profile_tab_widget.setTabEnabled(0, True)
-        else:
-            x_ax.hide()
-            self.profile_tab_widget.setTabEnabled(0, False)
-
-        if 'Y' in components:
-            y_ax.show()
-            self.profile_tab_widget.setTabEnabled(1, True)
-        else:
-            y_ax.hide()
-            self.profile_tab_widget.setTabEnabled(1, False)
-
-        if 'Z' in components:
-            z_ax.show()
-            self.profile_tab_widget.setTabEnabled(2, True)
-        else:
-            z_ax.hide()
-            self.profile_tab_widget.setTabEnabled(2, False)
 
     def profile_mouse_moved(self, evt):
         """
@@ -717,6 +780,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.plot_profiles(components=selected_data.Component.unique())
             self.plot_station(self.selected_station, preserve_selection=True)
 
     def change_component(self, component):
@@ -724,6 +788,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Change the component of the selected data
         :param component: str
         """
+        components = [component]
         selected_data = self.get_selected_data()
         if not selected_data.empty:
             # Change the deletion flag
@@ -731,6 +796,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.plot_profiles(components=components.extend(selected_data.Component.unique()))
             self.plot_station(self.selected_station, preserve_selection=True)
 
     def change_station(self):
@@ -749,7 +815,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     self.pem_file.data.iloc[selected_data.index] = selected_data
 
                     # Update the plots
-                    self.plot_profiles()
+                    self.plot_profiles(components=selected_data.Component.unique())
                     self.plot_station(self.selected_station)
 
     def flip_decays(self):
@@ -763,6 +829,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.plot_profiles(components=selected_data.Component.unique())
             self.plot_station(self.selected_station, preserve_selection=True)
 
 
@@ -863,7 +930,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='PEM Splitting', selection=1)
+    pem_files = pem_getter.get_pems(client='PEM Splitting', selection=0)
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])
