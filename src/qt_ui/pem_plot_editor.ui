@@ -138,33 +138,45 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
-        <widget class="QCheckBox" name="link_y_cbox">
-         <property name="text">
-          <string>Link Y-axes</string>
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>View</string>
          </property>
-         <property name="checked">
-          <bool>true</bool>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="link_x_cbox">
-         <property name="text">
-          <string>Link X-axes</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="auto_range_cbox">
-         <property name="text">
-          <string>Auto-Range</string>
-         </property>
-         <property name="checked">
-          <bool>false</bool>
-         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <widget class="QCheckBox" name="link_y_cbox">
+            <property name="text">
+             <string>Link Y-axes</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="link_x_cbox">
+            <property name="text">
+             <string>Link X-axes</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="auto_range_cbox">
+            <property name="text">
+             <string>Auto-Range</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>

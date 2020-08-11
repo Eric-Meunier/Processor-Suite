@@ -1,5 +1,6 @@
 import copy
 import os
+import re
 import sys
 import time
 import keyboard
@@ -9,7 +10,7 @@ import pandas as pd
 import pyqtgraph as pg
 import pylineclip as lc
 from PyQt5 import uic, QtCore, QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit)
 from pyqtgraph.Point import Point
 
 # from matplotlib.figure import Figure
@@ -40,7 +41,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.pem_file = None
         self.units = None
-        self.stations = []
+        self.stations = np.array([])
 
         self.line_selected = False
         self.selected_station = None
@@ -50,6 +51,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         self.active_ax = None
         self.active_ax_ind = None
+        self.last_active_ax = None  # last_active_ax is always a plotitem object, and never None after the init.
+        self.last_active_ax_ind = None  # last_active_ax is always a plotitem object, and never None after the init.
         self.plotted_decay_lines = []
         self.plotted_decay_data = pd.DataFrame()
 
@@ -138,6 +141,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.link_y_cbox.toggled.connect(self.link_decay_y)
         self.link_x_cbox.toggled.connect(self.link_decay_x)
 
+        self.change_station_btn.clicked.connect(self.change_station)
+
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
         if event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_C:
@@ -184,6 +189,30 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.selected_lines = new_selection
                 self.highlight_lines()
 
+        # Flip the decay when the F key is pressed
+        elif event.key() == QtCore.Qt.Key_F:
+            if self.selected_lines:
+                self.flip_decays()
+                self.plot_profiles()
+
+        # Change the component of the readings to X
+        elif event.key() == QtCore.Qt.Key_X:
+            if self.selected_lines:
+                self.change_component('X')
+                self.plot_profiles()
+
+        # Change the component of the readings to Y
+        elif event.key() == QtCore.Qt.Key_Y:
+            if self.selected_lines:
+                self.change_component('Y')
+                self.plot_profiles()
+
+        # Change the component of the readings to Z
+        elif event.key() == QtCore.Qt.Key_Z:
+            if self.selected_lines:
+                self.change_component('Z')
+                self.plot_profiles()
+
         # Reset the ranges of the plots when the space bar is pressed
         elif event.key() == QtCore.Qt.Key_Space:
             # Only need to auto range the first axes, since they are all linked.
@@ -202,12 +231,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         if not keyboard.is_pressed('shift'):
             station_index = list(self.stations).index(self.selected_station)
             y = evt.angleDelta().y()
-            if y > 0:
+            if y < 0:
                 if station_index == len(self.stations) - 1:
                     return
                 else:
                     self.plot_station(self.stations[station_index + 1])
-            elif y < 0:
+            elif y > 0:
                 if station_index == 0:
                     return
                 else:
@@ -221,11 +250,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.pem_file = copy.deepcopy(pem_file)
         # Add the deletion flag column
         self.pem_file.data.insert(13, 'del_flag', False)
-        self.stations = self.pem_file.get_stations(converted=True)
-
-        # Convert the stations in the data
-        converter = StationConverter()
-        self.pem_file.data['cStation'] = self.pem_file.data.Station.map(converter.convert_station)
+        # self.stations = np.sort(self.pem_file.get_stations(converted=True))
+        #
+        # # Convert the stations in the data
+        # converter = StationConverter()
+        # self.pem_file.data['cStation'] = self.pem_file.data.Station.map(converter.convert_station)
 
         # Set the units of the decay plots
         self.units = self.pem_file.units
@@ -294,11 +323,15 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 :param channel: int, channel to plot
                 """
                 x, y = df['Station'], df[channel]
-                interp_x = np.linspace(x.min(), x.max() + 1, num=1000)
-                interp_y = np.interp(interp_x, x, y)
+                # interp_x = np.linspace(x.min(), x.max() + 1, num=1000)
+                # interp_y = np.interp(interp_x, x, y)
 
-                ax.plot(x=interp_x, y=interp_y,
-                        pen=pg.mkPen('k', width=1.)
+                ax.plot(x=x, y=y,
+                        pen=pg.mkPen('k', width=1.),
+                        symbol='o',
+                        symbolSize=2,
+                        symbolBrush='k',
+                        symbolPen='k',
                         )
                 # profile_line = pg.PlotCurveItem(x=interp_x, y=interp_y,
                 #                                 pen=pg.mkPen('k', width=1.),
@@ -350,8 +383,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     data = profile_data[filt].loc[:, ['Station', ch]]
                     plot_lines(data, ax, ch)
 
+        self.stations = np.sort(self.pem_file.get_stations(converted=True))
+
+        # Convert the stations in the data
+        converter = StationConverter()
+        self.pem_file.data['cStation'] = self.pem_file.data.Station.map(converter.convert_station)
+
         clear_plots()
-        global file
         file = copy.deepcopy(self.pem_file)
         file.data = file.data.loc[file.data.del_flag == False]
 
@@ -555,12 +593,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Signal slot, change the profile tab to the same component as the clicked decay plot
         :param evt: MouseClick event
         """
-        # print(f"Decay plot clicked")
         self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
-        # if self.line_selected is False:
-        #     self.clear_selection()
-        # else:
-        #     self.line_selected = False
 
     def decay_mouse_moved(self, evt):
         """
@@ -571,7 +604,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         for ax in self.decay_axes:
             if ax.sceneBoundingRect().contains(evt):
                 self.active_ax = ax
+                self.last_active_ax = ax
                 self.active_ax_ind = np.where(self.decay_axes == self.active_ax)[0][0]
+                self.last_active_ax_ind = self.active_ax_ind
                 break
 
     def highlight_lines(self):
@@ -624,9 +659,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         :param rect: QRectF object
         """
 
+        def change_profile_tab():
+            self.profile_tab_widget.setCurrentIndex(self.last_active_ax_ind)
+
         def intersects_rect(line):
             """
-            Uses cohens-utherland algorithm to find if a line intersects the rectangle at any point.
+            Uses cohen-sutherland algorithm to find if a line intersects the rectangle at any point.
             :param line: PlotCurveItem
             :return: bool
             """
@@ -641,10 +679,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 if any([x3, y3, x4, y4]):
                     return True
 
+        # Change the profile tab to the same component as the decay plot that was clicked
+        change_profile_tab()
+
         # Create the clip window for the line clipping algorithm.
         left, top, right, bottom = min(rect.left(), rect.right()), max(rect.top(), rect.bottom()), \
                                    max(rect.left(), rect.right()), min(rect.top(), rect.bottom())
-        lines = [line for line in self.active_ax.curves if intersects_rect(line)]
+        lines = [line for line in self.last_active_ax.curves if intersects_rect(line)]
 
         if keyboard.is_pressed('ctrl'):
             self.selected_lines.extend(lines)
@@ -678,14 +719,51 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.pem_file.data.iloc[selected_data.index] = selected_data
             self.plot_station(self.selected_station, preserve_selection=True)
 
-    def change_component(self):
-        pass
+    def change_component(self, component):
+        """
+        Change the component of the selected data
+        :param component: str
+        """
+        selected_data = self.get_selected_data()
+        if not selected_data.empty:
+            # Change the deletion flag
+            selected_data.loc[:, 'Component'] = selected_data.loc[:, 'Component'].map(lambda x: component.upper())
+
+            # Update the data in the pem file object
+            self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.plot_station(self.selected_station, preserve_selection=True)
 
     def change_station(self):
-        pass
+        if self.selected_lines:
+            selected_data = self.get_selected_data()
+            selected_station = selected_data.Station.unique()[0]
 
-    def flip_lines(self):
-        pass
+            new_station, ok_pressed = QInputDialog.getText(self, "Change Station", "New Station:", QLineEdit.Normal,
+                                                           selected_station)
+            if ok_pressed:
+                new_station = new_station.upper()
+                if re.match('-?\d+', new_station):
+                    # Update the station number in the selected data
+                    selected_data.loc[:, 'Station'] = new_station
+                    # Update the data in the pem file object
+                    self.pem_file.data.iloc[selected_data.index] = selected_data
+
+                    # Update the plots
+                    self.plot_profiles()
+                    self.plot_station(self.selected_station)
+
+    def flip_decays(self):
+        """
+        Flip the polarity of the decays of the selected data.
+        """
+        selected_data = self.get_selected_data()
+        if not selected_data.empty:
+            # Change the deletion flag
+            selected_data.loc[:, 'Reading'] = selected_data.loc[:, 'Reading'].map(lambda x: x * -1)
+
+            # Update the data in the pem file object
+            self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.plot_station(self.selected_station, preserve_selection=True)
 
 
 class DecayViewBox(pg.ViewBox):
@@ -702,22 +780,44 @@ class DecayViewBox(pg.ViewBox):
 
     def mouseDragEvent(self, ev, axis=None):
         pos = ev.pos()
-        if ev.button() == QtCore.Qt.LeftButton:
-            ev.accept()
-            if ev.isFinish():  # This is the final move in the drag
-                # Hide the rectangle
+
+        if keyboard.is_pressed('shift'):
+            ev.accept()  # we accept all buttons
+
+            lastPos = ev.lastPos()
+            dif = pos - lastPos
+            dif = dif * -1
+
+            if ev.isFinish():  # This is the final move in the drag; change the view scale now
+                # print "finish"
                 self.rbScaleBox.hide()
-                # Create a rectangle object from the click-and-drag rectangle
-                rect = QtCore.QRectF(Point(ev.buttonDownPos(ev.button())), Point(pos))
-                # Convert the coordinates to the same as the data
-                rect = self.childGroup.mapRectFromParent(rect)
-                # Emit the signal to select the lines that intersect the rect
-                self.box_select_signal.emit(rect)
+                ax = QtCore.QRectF(Point(ev.buttonDownPos(ev.button())), Point(pos))
+                ax = self.childGroup.mapRectFromParent(ax)
+                self.showAxRect(ax)
+                self.axHistoryPointer += 1
+                self.axHistory = self.axHistory[:self.axHistoryPointer] + [ax]
             else:
                 # update shape of scale box
                 self.updateScaleBox(ev.buttonDownPos(), ev.pos())
+
         else:
-            pg.ViewBox.mouseDragEvent(self, ev)
+
+            if ev.button() == QtCore.Qt.LeftButton:
+                ev.accept()
+                if ev.isFinish():  # This is the final move in the drag
+                    # Hide the rectangle
+                    self.rbScaleBox.hide()
+                    # Create a rectangle object from the click-and-drag rectangle
+                    rect = QtCore.QRectF(Point(ev.buttonDownPos(ev.button())), Point(pos))
+                    # Convert the coordinates to the same as the data
+                    rect = self.childGroup.mapRectFromParent(rect)
+                    # Emit the signal to select the lines that intersect the rect
+                    self.box_select_signal.emit(rect)
+                else:
+                    # update shape of scale box
+                    self.updateScaleBox(ev.buttonDownPos(), ev.pos())
+            else:
+                pg.ViewBox.mouseDragEvent(self, ev)
 
     def wheelEvent(self, ev, axis=None):
 
@@ -756,152 +856,6 @@ class DecayViewBox(pg.ViewBox):
             self.scaleBy(s, center)
             ev.accept()
             self.sigRangeChangedManually.emit(mask)
-
-
-    # class PEMPlotEditor(QWidget, Ui_PlotEditorWindow):
-
-
-#
-#     def __init__(self, pem_file):
-#         super().__init__()
-#         self.setupUi(self)
-#         self.pem_file = pem_file
-#         self.decay_cleaner = PEMDecayCleaner(self.pem_file)
-#         # self.canvas = FigureCanvas(self.decay_cleaner.fig)
-#         self.toolbar = NavigationToolbar(self.decay_cleaner.canvas, self)
-#         self.toolbar_layout.addWidget(self.toolbar)
-#         self.toolbar.setFixedHeight(30)
-#         self.decay_layout.addWidget(self.decay_cleaner.canvas)
-#     # def plot(self):
-#     #     roi = pg.PolyLineROI(zip(np.arange(100), np.random.normal(size=100)), pen=(5,9), closed=False, removable=True,
-#     #                          movable=False)
-#     #     p2 = self.win.addItem(roi)
-#     #     p3 = None
-#
-#
-# class PEMDecayCleaner:
-#
-#     def __init__(self, pem_file):#, component, station):
-#         self.pem_file = pem_file
-#         # self.
-#         self.selected_line_color = 'magenta'
-#         self.x = np.linspace(0, 10, 100)
-#
-#         self.fig, self.ax = plt.subplots()
-#         self.canvas = FigureCanvas(self.fig)
-#         self.lines = []
-#
-#         for i in range(1, 10):
-#             self.lines.append(self.ax.plot(self.x, i * self.x + self.x, picker=5, color='dimgray', alpha=0.75))
-#         self.lines = [line[0] for line in self.lines]  # Because appending ax.plot appends a list
-#
-#         rectprops = dict(facecolor='magenta', edgecolor='black',
-#                          alpha=0.2, fill=True)
-#         self.rs = RectangleSelector(self.ax, self.on_rect_select,
-#                                     drawtype='box', useblit=False,
-#                                     button=[1],  # don't use middle button or right-click
-#                                     minspanx=5, minspany=5,
-#                                     spancoords='pixels',
-#                                     interactive=False,
-#                                     rectprops=rectprops)
-#
-#         self.fig.canvas.callbacks.connect('pick_event', self.on_pick)
-#         self.fig.canvas.callbacks.connect('button_press_event', self.on_btn_press)
-#         self.fig.canvas.callbacks.connect('key_press_event', self.on_key_press)
-#         # plt.show()
-#
-#     # def plot_decay(self, component, station):
-#     def get_plot(self):
-#         return self.fig
-#
-#     def select_line(self, line):
-#         line._color = self.selected_line_color
-#         line._alpha = 1.
-#         # self.selected_lines.append(line)
-#         print(f"Selected line {self.lines.index(line)}")
-#         self.fig.canvas.draw()
-#
-#     def deselect_line(self, line):
-#         line._color = 'dimgray'
-#         line._alpha = 0.75
-#         # self.selected_lines.remove(line)
-#         print(f"De-selected line {self.lines.index(line)}")
-#         self.fig.canvas.draw()
-#
-#     def delete_line(self, line):
-#         """
-#         Delete a line
-#         :param line: Line2D object
-#         :return: None
-#         """
-#         # line.remove()  # Remvoes the line from the plot, but not from the list
-#         # self.selected_lines.remove(line)  # Removes the object from the selected lines list
-#         # self.lines.remove(line)  # Removes the object from the selected lines list
-#
-#         def is_deleted():
-#             if line._color == 'red':
-#                 return True
-#             else:
-#                 return False
-#
-#         if is_deleted():
-#             line._color = self.selected_line_color
-#             line._alpha = 1
-#         else:
-#             line._color = 'red'
-#             line._alpha = 0.5
-#
-#         self.fig.canvas.draw()
-#
-#     def on_rect_select(self, eclick, erelease):
-#         """
-#         What happens when a rectangle is drawn
-#         :param eclick: event mouse click
-#         :param erelease: event mouse click release
-#         :return: None
-#         """
-#         x1, y1 = eclick.xdata, eclick.ydata
-#         x2, y2 = erelease.xdata, erelease.ydata
-#         bbox = Bbox.from_bounds(x1, y1, x2-x1, y2-y1)
-#
-#         # Reset all lines
-#         for line in self.lines:
-#             self.deselect_line(line)
-#         self.fig.canvas.draw()
-#
-#         for line in self.lines:
-#             if line._path.intersects_bbox(bbox):
-#                 self.select_line(line)
-#
-#     def on_pick(self, event):
-#         # When a plotted line is clicked
-#
-#         def is_selected(line):
-#             if line._color == self.selected_line_color:
-#                 return True
-#             else:
-#                 return False
-#
-#         line = event.artist
-#         index = self.lines.index(line)
-#
-#         if is_selected(line):
-#             self.deselect_line(line)
-#         else:
-#             self.select_line(line)
-#
-#     def on_key_press(self, event):
-#         # What happens when a key is pressed
-#         if event.key == 'delete':
-#             if self.selected_lines:
-#                 for line in reversed(self.selected_lines):
-#                     self.delete_line(line)
-#                 # self.fig.canvas.draw()
-#
-#     def on_btn_press(self, event):
-#         if not event.inaxes:
-#             for line in self.lines:
-#                 self.deselect_line(line)
 
 
 if __name__ == '__main__':
