@@ -39,6 +39,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         super().__init__()
         self.setupUi(self)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.setWindowTitle('PEM Plot Editor')
+        self.resize(1300, 850)
+
         self.pem_file = None
         self.units = None
         self.stations = np.array([])
@@ -48,6 +51,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.selected_data = pd.DataFrame()
         self.selected_lines = []
         self.deleted_lines = []
+        self.statusBar().showMessage('')
 
         self.active_ax = None
         self.active_ax_ind = None
@@ -59,7 +63,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.x_decay_plot = self.decay_layout.addPlot(0, 0, title='X Component', viewBox=DecayViewBox())
         self.y_decay_plot = self.decay_layout.addPlot(1, 0, title='Y Component', viewBox=DecayViewBox())
         self.z_decay_plot = self.decay_layout.addPlot(2, 0, title='Z Component', viewBox=DecayViewBox())
-        self.decay_layout.ci.layout.setSpacing(1)  # Spacing between plots
+        self.decay_layout.ci.layout.setSpacing(2)  # Spacing between plots
         self.decay_axes = np.array([self.x_decay_plot, self.y_decay_plot, self.z_decay_plot])
         self.active_decay_axes = []
 
@@ -121,21 +125,27 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             hover_v_line_text.setParentItem(ax.vb)
             hover_v_line_text.setPos(0, 0)
             hover_v_line_text.setColor((102, 178, 255, 100))
-            selected_v_line_text = pg.TextItem("", anchor=(0, 0))
-            selected_v_line_text.setParentItem(ax.vb)
-            selected_v_line_text.setPos(0, 0)
-            selected_v_line_text.setColor((51, 51, 255, 100))
+            # selected_v_line_text = pg.TextItem("", anchor=(0, 0))
+            # selected_v_line_text.setParentItem(ax.vb)
+            # selected_v_line_text.setPos(0, 0)
+            # selected_v_line_text.setColor((51, 51, 255, 100))
 
             ax.addItem(hover_v_line, ignoreBounds=True)
             ax.addItem(selected_v_line, ignoreBounds=True)
             ax.addItem(hover_v_line_text, ignoreBounds=True)
-            ax.addItem(selected_v_line_text, ignoreBounds=True)
+            # ax.addItem(selected_v_line_text, ignoreBounds=True)
 
             # Connect the mouse moved signal
             ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
             ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
 
         # Signals
+        self.show_average_cbox.toggled.connect(lambda: self.plot_profiles('all'))
+        self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles('all'))
+        self.plot_ontime_decays_cbox.toggled.connect(lambda: self.plot_station(self.selected_station,
+                                                                               preserve_selection=True))
+        self.plot_ontime_decays_cbox.toggled.connect(lambda: self.active_decay_axes[0].autoRange())
+
         self.link_y_cbox.toggled.connect(self.link_decay_y)
         self.link_x_cbox.toggled.connect(self.link_decay_x)
 
@@ -255,13 +265,15 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Add the deletion flag column
         self.pem_file.data.insert(13, 'del_flag', False)
 
+        if self.pem_file.is_split():
+            self.plot_ontime_decays_cbox.setEnabled(False)
+
         # Set the units of the decay plots
         self.units = self.pem_file.units
 
         for ax in self.decay_axes:
             ax.setLabel('left', f"Response", units=self.units)
-            ax.setLimits(minXRange=0, maxXRange=self.pem_file.number_of_channels,
-                         xMin=0, xMax=self.pem_file.number_of_channels)
+            ax.setLabel('bottom', 'Channel number')
 
         # Plot the LIN profiles
         self.plot_profiles()
@@ -395,8 +407,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
             """
             channel_bounds = [None] * 4
-            num_channels_per_plot = int((file.number_of_channels - 1) // 4)
-            remainder_channels = int((file.number_of_channels - 1) % 4)
+
+            # Only plot off-time channels
+            number_of_channels = len(file.channel_times[file.channel_times.Remove == False]) - 1
+
+            num_channels_per_plot = int((number_of_channels - 1) // 4)
+            remainder_channels = int((number_of_channels - 1) % 4)
 
             for k in range(0, len(channel_bounds)):
                 channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
@@ -413,15 +429,14 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             def plot_lines(df, ax):
                 """
-                Plot the lines on the pyqtgraph ax for a given channel
+                Plot the lines on the pyqtgraph ax
                 :param df: DataFrame of filtered data
                 :param ax: pyqtgraph PlotItem
-                :param channel: int, channel to plot
                 """
                 global lin_plotting_time, averaging_time
 
                 t = time.time()
-                df_avg = df.groupby('Station').mean()  # Vertorized
+                df_avg = df.groupby('Station').mean()
                 averaging_time += time.time() - t
 
                 x, y = df_avg.index, df_avg
@@ -437,25 +452,31 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 lin_plotting_time += time.time() - t2
 
             def plot_scatters(df, ax):
+                """
+                Plot the scatter plot markers
+                :param df: DataFrame of filtered data
+                :param ax: pyqtgraph PlotItem
+                :return:
+                """
                 global scatter_plotting_time
                 t = time.time()
                 x, y = df.index, df
 
                 scatter = pg.ScatterPlotItem(x=x, y=y,
-                                             # pen=pg.mkPen('k', width=1.),
+                                             pen=pg.mkPen('k', width=1.),
                                              symbol='o',
                                              size=2,
-                                             brush='k',
-                                             pen='k',
+                                             brush='w',
                                              )
                 ax.addItem(scatter)
                 scatter_plotting_time += time.time() - t
 
-            for i, bounds in enumerate(channel_bounds):
-                ax = axes[i]
+            # Plotting
+            for channel, bounds in enumerate(channel_bounds):
+                ax = axes[channel]
 
                 # Set the Y-axis labels
-                if i == 0:
+                if channel == 0:
                     ax.setLabel('left', f"PP channel", units=self.units)
                 else:
                     ax.setLabel('left', f"Channel {bounds[0]} to {bounds[1]}", units=self.units)
@@ -464,15 +485,19 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 for ch in range(bounds[0], bounds[1] + 1):
                     data = profile_data.iloc[:, ch]
 
-                    plot_lines(data, ax)
-                    plot_scatters(data, ax)
+                    if self.show_average_cbox.isChecked():
+                        plot_lines(data, ax)
+                    if self.show_scatter_cbox.isChecked():
+                        plot_scatters(data, ax)
 
+        t = time.time()
         self.update_file()
+        print(f"Time to update file: {time.time() - t}")
 
         file = copy.deepcopy(self.pem_file)
         file.data = file.data.loc[file.data.del_flag == False]
 
-        if components is None:
+        if components is None or components == 'all':
             components = file.get_components()
 
         clear_plots(components)
@@ -482,11 +507,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         averaging_time = 0
         lin_plotting_time = 0
         scatter_plotting_time = 0
-
-        ts = time.time()
-        if not file.is_split():
-            file = file.split()
-        print(f"Time to deal with splitting: {time.time() - ts}")
 
         # Calculate the lin plot axes channel bounds
         channel_bounds = calc_channel_bounds()
@@ -529,10 +549,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             # Select which axes to plot on
             if row.Component == 'X':
                 ax = self.x_decay_plot
+                ax.setTitle(f"Station {row.Station} - X Component")
             elif row.Component == 'Y':
                 ax = self.y_decay_plot
+                ax.setTitle(f"Station {row.Station} - Y Component")
             else:
                 ax = self.z_decay_plot
+                ax.setTitle(f"Station {row.Station} - Z Component")
 
             # Add the ax to the list of active decay axes
             if ax not in self.active_decay_axes:
@@ -544,11 +567,23 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             else:
                 pen = pg.mkPen('r', width=1.)
 
+            # Remove the on-time channels if the checkbox is checked
+            if self.plot_ontime_decays_cbox.isChecked():
+                y = row.Reading
+                # Update the limits of the decay plot
+                ax.setLimits(minXRange=0, maxXRange=len(y),
+                             xMin=0, xMax=len(y))
+            else:
+                y = row.Reading[~self.pem_file.channel_times.Remove]
+                # Update the limits of the decay plot
+                ax.setLimits(minXRange=0, maxXRange=len(y),
+                             xMin=0, xMax=len(y))
+
             # Create and configure the line item
-            decay_line = pg.PlotCurveItem(y=row.Reading,
+            decay_line = pg.PlotCurveItem(y=y,
                                           pen=pen,
                                           )
-            decay_line.setClickable(True, width=6)
+            decay_line.setClickable(True, width=5)
             decay_line.sigClicked.connect(self.decay_line_clicked)
 
             # Add the line at y=0
@@ -558,6 +593,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             # Add the plot item to the list of plotted items
             self.plotted_decay_lines.append(decay_line)
 
+        self.statusBar().clearMessage()
         self.selected_station = station
 
         # Move the selected vertical line
@@ -611,17 +647,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         global nearest_station
         pos = evt
-        try:
-            mouse_point = self.active_profile_axes[0].vb.mapSceneToView(pos)
-        except np.linalg.LinAlgError:
-            self.profile_tab_widget.setCurrentIndex(0)
-        else:
-            nearest_station = find_nearest_station(int(mouse_point.x()))
+        mouse_point = self.active_profile_axes[0].vb.mapSceneToView(pos)
+        nearest_station = find_nearest_station(int(mouse_point.x()))
 
-            for ax in self.active_profile_axes:
-                ax.items[0].setPos(nearest_station)  # Move the click vertical line
-                ax.items[2].setPos(nearest_station, ax.viewRange()[1][1])  # Move the hover vertical like
-                ax.items[2].setText(str(nearest_station))
+        for ax in self.active_profile_axes:
+            ax.items[0].setPos(nearest_station)  # Move the click vertical line
+            ax.items[2].setPos(nearest_station, ax.viewRange()[1][1])  # Move the hover vertical like
+            ax.items[2].setText(str(nearest_station))
 
     def profile_plot_clicked(self, evt):
         """
@@ -631,9 +663,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         :param evt: pyqtgraph MouseClickEvent (not used)
         """
         self.selected_station = nearest_station
-        for ax in self.active_profile_axes:
-            ax.items[3].setPos(nearest_station, ax.viewRange()[1][1])
-            ax.items[3].setText(str(nearest_station))
+        # for ax in self.active_profile_axes:
+        #     ax.items[3].setPos(nearest_station, ax.viewRange()[1][1])
+        #     ax.items[3].setText(str(nearest_station))
 
         self.plot_station(nearest_station)
 
@@ -677,8 +709,28 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Highlight the line selected and un-highlight any previously highlighted line.
         :param lines: list, PlotItem lines
         """
-        if self.plotted_decay_lines:
 
+        def set_selection_text():
+            selected_data = self.get_selected_data()
+            if len(selected_data) > 1:
+                self.statusBar().showMessage(f"{len(selected_data)} selected")
+            elif len(selected_data) == 1:
+                decay = selected_data.iloc[0]
+                station = f"Station {decay.Station}"
+                component = f"Component {decay.Component}"
+                reading_number = f"Reading Number {decay.Reading_number}"
+                reading_index = f"Reading Index {decay.Reading_index}"
+
+                if self.pem_file.is_borehole():
+                    azimuth = f"Azimuth {decay.RAD_tool.get_azimuth():.2f}"
+                    dip = f"Dip {decay.RAD_tool.get_dip():.2f}"
+                    roll = f"Roll angle {decay.RAD_tool.get_acc_roll():.2f}"
+                    text = '    '.join([station, component, reading_number, reading_index, azimuth, dip, roll])
+                else:
+                    text = '    '.join([station, component, reading_number, reading_index])
+                self.statusBar().showMessage(text)
+
+        if self.plotted_decay_lines:
             # Enable decay editing buttons
             if len(self.selected_lines) > 0:
                 self.change_component_btn.setEnabled(True)
@@ -711,10 +763,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     line.setPen(pen_color, width=1)
                     line.setShadowPen(None)
 
+            set_selection_text()
+
     def clear_selection(self):
         self.selected_data = None
         self.selected_lines = []
         self.highlight_lines()
+        self.statusBar().clearMessage()
 
     def box_select_decay_lines(self, rect):
         """
@@ -934,7 +989,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='PEM Splitting', selection=0)
+    pem_files = pem_getter.get_pems(client='PEM Splitting', selection=2)
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])

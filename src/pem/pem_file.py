@@ -1900,7 +1900,10 @@ class RADTool:
         if not self.D == 'D7':
             return None
 
-        dip = math.degrees(math.acos(self.gx / math.sqrt((self.gx ** 2) + (self.gy ** 2) + (self.gz ** 2)))) - 90
+        try:
+            dip = math.degrees(math.acos(self.gx / math.sqrt((self.gx ** 2) + (self.gy ** 2) + (self.gz ** 2)))) - 90
+        except ZeroDivisionError:
+            dip = None
         return dip
 
     def get_acc_roll(self):
