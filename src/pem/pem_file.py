@@ -269,22 +269,28 @@ class PEMFile:
     #     profile.sort_values(by=['Component', 'Station', 'Reading_index', 'Reading_number'], inplace=True)
     #     return profile
 
-    def get_profile_data(self, component, averaged=False, converted=False):
+    def get_profile_data(self, component, averaged=False, converted=False, ontime=True):
         """
         Transform the readings in the data in a manner to be plotted as a profile
         :param component: str, used to filter the profile data and only keep the given component
         :param averaged: bool, average the readings of the profile
         :param converted: bool, convert the station names to int
+        :param ontime: bool, keep the on-time channels
         :return: pandas DataFrame object with Station as the index, and channels as columns.
         """
         t = time.time()
-        filt = self.data['Component'] == component.upper()
+        comp_filt = self.data['Component'] == component.upper()
+        data = self.data[comp_filt]
 
-        profile = pd.DataFrame.from_dict(dict(zip(self.data[filt].Reading.index, self.data[filt].Reading.values))).T
+        if ontime is False:
+            data.Reading = data.Reading.map(lambda x: x[~self.channel_times.Remove])
+
+        profile = pd.DataFrame.from_dict(dict(zip(data.Reading.index, data.Reading.values))).T
+
         if converted is True:
-            stations = self.data.Station.map(self.converter.convert_station)
+            stations = data.Station.map(self.converter.convert_station)
         else:
-            stations = self.data.Station
+            stations = data.Station
 
         profile.insert(0, 'Station', stations)
         profile.set_index('Station', drop=True, inplace=True)
@@ -1903,7 +1909,7 @@ class RADTool:
         try:
             dip = math.degrees(math.acos(self.gx / math.sqrt((self.gx ** 2) + (self.gy ** 2) + (self.gz ** 2)))) - 90
         except ZeroDivisionError:
-            dip = None
+            dip = 0.0
         return dip
 
     def get_acc_roll(self):

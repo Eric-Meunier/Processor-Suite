@@ -10,7 +10,7 @@ import pandas as pd
 import pyqtgraph as pg
 import pylineclip as lc
 from PyQt5 import uic, QtCore, QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QFrame)
 from pyqtgraph.Point import Point
 
 # from matplotlib.figure import Figure
@@ -41,8 +41,20 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setWindowTitle('PEM Plot Editor')
         self.resize(1300, 850)
-        self.statusBar().setStyleSheet("border-top :0.5px solid gray;")
 
+        self.file_info_label = QLabel()
+        # self.file_info_label.setStyleSheet("border: 0px")
+        self.file_info_label.setStyleSheet('border: None')
+
+        self.number_of_readings = QLabel()
+        # self.number_of_readings.setStyleSheet("border: 0px")
+        self.number_of_readings.setStyleSheet('border: None')
+
+        self.statusBar().setStyleSheet("border-top :0.5px solid gray;")
+        self.statusBar().addPermanentWidget(self.file_info_label)
+        self.statusBar().addPermanentWidget(self.number_of_readings)
+
+        self.converter = StationConverter()
         self.pem_file = None
         self.units = None
         self.stations = np.array([])
@@ -112,7 +124,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Configure each axes
         for ax in self.profile_axes:
             ax.hideButtons()
-            # ax.setMenuEnabled(False)
+            ax.setMenuEnabled(False)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
             # Add the vertical selection line
@@ -198,8 +210,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Reset the ranges of the plots when the space bar is pressed
         elif event.key() == QtCore.Qt.Key_Space:
             # Only need to auto range the first axes, since they are all linked.
-            if self.active_profile_axes:
-                self.active_profile_axes[0].autoRange()
+            for ax in self.active_profile_axes:
+                ax.autoRange()
+            # if self.active_profile_axes:
+            #     self.active_profile_axes[0].autoRange()
 
             if self.active_decay_axes:
                 for ax in self.active_decay_axes:
@@ -223,6 +237,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         :param pem_file: PEMFile object.
         """
         self.pem_file = copy.deepcopy(pem_file)
+        self.file_info_label.setText(f"{self.pem_file.line_name}    Loop {self.pem_file.loop_name}     {self.pem_file.get_survey_type()} survey")
+
         # Add the deletion flag column
         self.pem_file.data.insert(13, 'del_flag', False)
 
@@ -290,7 +306,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             # Update the profile axes
             tt = time.time()
-            # Add the profile axes to the list of active profile axes
+            # Add or remove axes from the list of active profile axes
             if 'X' in components:
                 if all([ax not in self.active_profile_axes for ax in self.x_layout_axes]):
                     self.active_profile_axes.extend(self.x_layout_axes)
@@ -315,21 +331,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     if ax in self.active_profile_axes:
                         self.active_profile_axes.remove(ax)
 
-            # # Update the profile axes
-            # tt = time.time()
-            # # self.active_profile_axes = []
-            # for component in components:
-            #     # Add the profile axes to the list of active profile axes
-            #     if component == 'X':
-            #         if self.x_layout_axes not in self.active_profile_axes:
-            #             self.active_profile_axes.extend(self.x_layout_axes)
-            #     elif component == 'Y':
-            #         if self.y_layout_axes not in self.active_profile_axes:
-            #             self.active_profile_axes.extend(self.y_layout_axes)
-            #     elif component == 'Z':
-            #         if self.z_layout_axes not in self.active_profile_axes:
-            #             self.active_profile_axes.extend(self.z_layout_axes)
-
             link_profile_axes()
             print(f"Number of active profile axes: {len(self.active_profile_axes)}")
 
@@ -337,8 +338,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.stations = np.sort(self.pem_file.get_stations(converted=True))
 
         # Re-calculate the converted station numbers
-        converter = StationConverter()
-        self.pem_file.data['cStation'] = self.pem_file.data.Station.map(converter.convert_station)
+        self.pem_file.data['cStation'] = self.pem_file.data.Station.map(self.converter.convert_station)
 
         components = self.pem_file.get_components()
         toggle_profile_plots()
@@ -485,9 +485,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         file = copy.deepcopy(self.pem_file)
         file.data = file.data.loc[file.data.del_flag == False]
 
+        self.number_of_readings.setText(f"{len(file.data)} readings")
+
+        # Get the components
         if components is None or components == 'all':
             components = file.get_components()
 
+        # Clear the plots of the components that are to be plotted only
         clear_plots(components)
 
         t = time.time()
@@ -501,7 +505,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         for component in components:
             tp = time.time()
-            profile_data = file.get_profile_data(component, averaged=False, converted=True)
+            profile_data = file.get_profile_data(component, averaged=False, converted=True, ontime=False)
             print(f"Time getting profile data: {time.time() - tp}")
             if profile_data.empty:
                 continue
@@ -520,7 +524,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         print(f"Time to make lin plots: {lin_plotting_time}")
         print(f"Time to make scatter plots: {scatter_plotting_time}")
         print(f"Averaging time: {averaging_time}")
-        # print(f"Time to make profile plots: {time.time() - t}")
+        print(f"Total plotting time for profile plots: {time.time() - t}")
 
     def plot_station(self, station, preserve_selection=False):
         """
@@ -528,6 +532,14 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         :param station: int, station number
         :param preserve_selection: bool, re-select the selected lines after plotting
         """
+
+        def set_status_text(data):
+            global station, component, number_of_readings
+            station = f"Station {data.Station.unique()[0]}"
+            component = f"{data.Component.unique()[0]} Component"
+            number_of_readings = f"{len(data.index)} Readings"
+            text = '    '.join([station, component, number_of_readings])
+            self.statusBar().showMessage(text)
 
         def plot_decay(row):
             """
@@ -537,13 +549,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             # Select which axes to plot on
             if row.Component == 'X':
                 ax = self.x_decay_plot
-                ax.setTitle(f"Station {row.Station} - X Component")
             elif row.Component == 'Y':
                 ax = self.y_decay_plot
-                ax.setTitle(f"Station {row.Station} - Y Component")
             else:
                 ax = self.z_decay_plot
-                ax.setTitle(f"Station {row.Station} - Z Component")
 
             # Add the ax to the list of active decay axes
             if ax not in self.active_decay_axes:
@@ -605,6 +614,15 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Filter the data
         filt = self.pem_file.data['cStation'] == station
         self.plotted_decay_data = self.pem_file.data[filt]
+
+        # Update the status bar text
+        set_status_text(self.plotted_decay_data)
+
+        # Update the titles of each decay axes
+        station = self.plotted_decay_data.Station.unique()[0]
+        self.x_decay_plot.setTitle(f"Station {station} - X Component")
+        self.y_decay_plot.setTitle(f"Station {station} - Y Component")
+        self.z_decay_plot.setTitle(f"Station {station} - Z Component")
 
         # Plot the decays
         self.plotted_decay_data.apply(plot_decay, axis=1)
@@ -706,9 +724,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             if len(selected_data) > 1:
                 self.statusBar().showMessage(f"{len(selected_data)} selected")
             elif len(selected_data) == 1:
+                global station, component, number_of_readings
                 decay = selected_data.iloc[0]
-                station = f"Station {decay.Station}"
-                component = f"Component {decay.Component}"
                 reading_number = f"Reading Number {decay.Reading_number}"
                 reading_index = f"Reading Index {decay.Reading_index}"
 
@@ -716,9 +733,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     azimuth = f"Azimuth {decay.RAD_tool.get_azimuth():.2f}"
                     dip = f"Dip {decay.RAD_tool.get_dip():.2f}"
                     roll = f"Roll angle {decay.RAD_tool.get_acc_roll():.2f}"
-                    text = '    '.join([station, component, reading_number, reading_index, azimuth, dip, roll])
+                    text = '    '.join([station, component, number_of_readings, reading_number, reading_index, azimuth, dip, roll])
                 else:
-                    text = '    '.join([station, component, reading_number, reading_index])
+                    text = '    '.join([station, component, number_of_readings, reading_number, reading_index])
                 self.statusBar().showMessage(text)
 
         if self.plotted_decay_lines:
@@ -1041,7 +1058,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='PEM Splitting', selection=2)
+    pem_files = pem_getter.get_pems(client='PEM Splitting', selection=4)
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])
