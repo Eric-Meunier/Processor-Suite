@@ -41,6 +41,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setWindowTitle('PEM Plot Editor')
         self.resize(1300, 850)
+        self.statusBar().setStyleSheet("border-top :0.5px solid gray;")
 
         self.pem_file = None
         self.units = None
@@ -156,46 +157,23 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         if event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_C:
             t = time.time()
             self.delete_lines()
-            # self.plot_profiles()
             print(f"Time to delete and replot: {time.time() - t}")
-
-        # Cycle through highlighted decays backwards
-        elif event.key() == QtCore.Qt.Key_A or event.key() == QtCore.Qt.LeftArrow:
-            if self.selected_lines:
-                new_selection = []
-                # For each decay axes, find any selected lines and cycle to the next line in that axes
-                for ax in self.active_decay_axes:
-                    num_plotted = len(ax.curves)
-                    # Find the index of any lines in the current ax that is selected
-                    index_of_selected = [ax.curves.index(line) for line in self.selected_lines if line in ax.curves]
-                    if index_of_selected:
-                        old_index = index_of_selected[0]  # Only take the first selected decay
-                        if old_index == 0:
-                            new_index = num_plotted - 1
-                        else:
-                            new_index = old_index - 1
-                        new_selection.append(ax.curves[new_index])
-                self.selected_lines = new_selection
-                self.highlight_lines()
 
         # Cycle through highlighted decays forwards
         elif event.key() == QtCore.Qt.Key_D or event.key() == QtCore.Qt.RightArrow:
-            if self.selected_lines:
-                new_selection = []
-                # For each decay axes, find any selected lines and cycle to the next line in that axes
-                for ax in self.active_decay_axes:
-                    num_plotted = len(ax.curves)
-                    # Find the index of any lines in the current ax that is selected
-                    index_of_selected = [ax.curves.index(line) for line in self.selected_lines if line in ax.curves]
-                    if index_of_selected:
-                        old_index = index_of_selected[0]  # Only take the first selected decay
-                        if old_index < num_plotted - 1:
-                            new_index = old_index + 1
-                        else:
-                            new_index = 0
-                        new_selection.append(ax.curves[new_index])
-                self.selected_lines = new_selection
-                self.highlight_lines()
+            self.cycle_selection('up')
+
+        # Cycle through highlighted decays backwards
+        elif event.key() == QtCore.Qt.Key_A or event.key() == QtCore.Qt.LeftArrow:
+            self.cycle_selection('down')
+
+        # Cycle through the selection station forwards
+        elif event.key() == QtCore.Qt.Key_W:
+            self.cycle_station('up')
+
+        # Cycle through the selection station backwards
+        elif event.key() == QtCore.Qt.Key_S:
+            self.cycle_station('down')
 
         # Flip the decay when the F key is pressed
         elif event.key() == QtCore.Qt.Key_F:
@@ -238,23 +216,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.cycle_station('down')
             else:
                 self.cycle_station('up')
-
-    def cycle_station(self, direction):
-        """
-        Change the selected station
-        :param direction: str, direction to cycle stations. either 'up' or 'down'.
-        """
-        station_index = list(self.stations).index(self.selected_station)
-        if direction == 'down':
-            if station_index == len(self.stations) - 1:
-                return
-            else:
-                self.plot_station(self.stations[station_index + 1])
-        elif direction == 'up':
-            if station_index == 0:
-                return
-            else:
-                self.plot_station(self.stations[station_index - 1])
 
     def open(self, pem_file):
         """
@@ -329,21 +290,48 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             # Update the profile axes
             tt = time.time()
-            # self.active_profile_axes = []
-            for component in components:
-                # Add the profile axes to the list of active profile axes
-                if component == 'X':
-                    if self.x_layout_axes not in self.active_profile_axes:
-                        self.active_profile_axes.extend(self.x_layout_axes)
-                elif component == 'Y':
-                    if self.y_layout_axes not in self.active_profile_axes:
-                        self.active_profile_axes.extend(self.y_layout_axes)
-                elif component == 'Z':
-                    if self.z_layout_axes not in self.active_profile_axes:
-                        self.active_profile_axes.extend(self.z_layout_axes)
+            # Add the profile axes to the list of active profile axes
+            if 'X' in components:
+                if all([ax not in self.active_profile_axes for ax in self.x_layout_axes]):
+                    self.active_profile_axes.extend(self.x_layout_axes)
+            else:
+                for ax in self.x_layout_axes:
+                    if ax in self.active_profile_axes:
+                        self.active_profile_axes.remove(ax)
+
+            if 'Y' in components:
+                if all([ax not in self.active_profile_axes for ax in self.y_layout_axes]):
+                    self.active_profile_axes.extend(self.y_layout_axes)
+            else:
+                for ax in self.y_layout_axes:
+                    if ax in self.active_profile_axes:
+                        self.active_profile_axes.remove(ax)
+
+            if 'Z' in components:
+                if all([ax not in self.active_profile_axes for ax in self.z_layout_axes]):
+                    self.active_profile_axes.extend(self.z_layout_axes)
+            else:
+                for ax in self.z_layout_axes:
+                    if ax in self.active_profile_axes:
+                        self.active_profile_axes.remove(ax)
+
+            # # Update the profile axes
+            # tt = time.time()
+            # # self.active_profile_axes = []
+            # for component in components:
+            #     # Add the profile axes to the list of active profile axes
+            #     if component == 'X':
+            #         if self.x_layout_axes not in self.active_profile_axes:
+            #             self.active_profile_axes.extend(self.x_layout_axes)
+            #     elif component == 'Y':
+            #         if self.y_layout_axes not in self.active_profile_axes:
+            #             self.active_profile_axes.extend(self.y_layout_axes)
+            #     elif component == 'Z':
+            #         if self.z_layout_axes not in self.active_profile_axes:
+            #             self.active_profile_axes.extend(self.z_layout_axes)
 
             link_profile_axes()
-            print(f"Time linking profile axes: {time.time() - tt}")
+            print(f"Number of active profile axes: {len(self.active_profile_axes)}")
 
         # Update the list of stations
         self.stations = np.sort(self.pem_file.get_stations(converted=True))
@@ -472,18 +460,18 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 scatter_plotting_time += time.time() - t
 
             # Plotting
-            for channel, bounds in enumerate(channel_bounds):
-                ax = axes[channel]
+            for i, bounds in enumerate(channel_bounds):
+                ax = axes[i]
 
                 # Set the Y-axis labels
-                if channel == 0:
+                if i == 0:
                     ax.setLabel('left', f"PP channel", units=self.units)
                 else:
                     ax.setLabel('left', f"Channel {bounds[0]} to {bounds[1]}", units=self.units)
 
                 # Plot the data
-                for ch in range(bounds[0], bounds[1] + 1):
-                    data = profile_data.iloc[:, ch]
+                for channel in range(bounds[0], bounds[1] + 1):
+                    data = profile_data.iloc[:, channel]
 
                     if self.show_average_cbox.isChecked():
                         plot_lines(data, ax)
@@ -512,6 +500,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         channel_bounds = calc_channel_bounds()
 
         for component in components:
+            tp = time.time()
+            profile_data = file.get_profile_data(component, averaged=False, converted=True)
+            print(f"Time getting profile data: {time.time() - tp}")
+            if profile_data.empty:
+                continue
+
             print(f"Plotting profile for {component} component")
             # Select the correct axes based on the component
             if component == 'X':
@@ -521,18 +515,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             else:
                 axes = self.z_layout_axes
 
-            tp = time.time()
-            profile_data = file.get_profile_data(component, averaged=False, converted=True)
-            if profile_data.empty:
-                return
-            print(f"Time getting profile data: {time.time() - tp}")
-
             plot_lin(profile_data, axes)
 
         print(f"Time to make lin plots: {lin_plotting_time}")
         print(f"Time to make scatter plots: {scatter_plotting_time}")
         print(f"Averaging time: {averaging_time}")
-        print(f"Time to make profile plots: {time.time() - t}")
+        # print(f"Time to make profile plots: {time.time() - t}")
 
     def plot_station(self, station, preserve_selection=False):
         """
@@ -711,6 +699,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         """
 
         def set_selection_text():
+            """
+            Update the status bar with information about the selected lines
+            """
             selected_data = self.get_selected_data()
             if len(selected_data) > 1:
                 self.statusBar().showMessage(f"{len(selected_data)} selected")
@@ -890,6 +881,67 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.pem_file.data.iloc[selected_data.index] = selected_data
             self.plot_profiles(components=selected_data.Component.unique())
             self.plot_station(self.selected_station, preserve_selection=True)
+
+    def cycle_station(self, direction):
+        """
+        Change the selected station
+        :param direction: str, direction to cycle stations. Either 'up' or 'down'.
+        """
+        station_index = list(self.stations).index(self.selected_station)
+        if direction == 'down':
+            if station_index == len(self.stations) - 1:
+                return
+            else:
+                self.plot_station(self.stations[station_index + 1])
+        elif direction == 'up':
+            if station_index == 0:
+                return
+            else:
+                self.plot_station(self.stations[station_index - 1])
+
+    def cycle_selection(self, direction):
+        """
+        Change the selected decay
+        :param direction: str, direction to cycle decays. Either 'up' or 'down'.
+        """
+        if not self.selected_lines:
+            return
+
+        # Cycle through highlighted decays backwards
+        if direction == 'down':
+            new_selection = []
+            # For each decay axes, find any selected lines and cycle to the next line in that axes
+            for ax in self.active_decay_axes:
+                num_plotted = len(ax.curves)
+                # Find the index of any lines in the current ax that is selected
+                index_of_selected = [ax.curves.index(line) for line in self.selected_lines if line in ax.curves]
+                if index_of_selected:
+                    old_index = index_of_selected[0]  # Only take the first selected decay
+                    if old_index == 0:
+                        new_index = num_plotted - 1
+                    else:
+                        new_index = old_index - 1
+                    new_selection.append(ax.curves[new_index])
+            self.selected_lines = new_selection
+            self.highlight_lines()
+
+        # Cycle through highlighted decays forwards
+        elif direction == 'up':
+            new_selection = []
+            # For each decay axes, find any selected lines and cycle to the next line in that axes
+            for ax in self.active_decay_axes:
+                num_plotted = len(ax.curves)
+                # Find the index of any lines in the current ax that is selected
+                index_of_selected = [ax.curves.index(line) for line in self.selected_lines if line in ax.curves]
+                if index_of_selected:
+                    old_index = index_of_selected[0]  # Only take the first selected decay
+                    if old_index < num_plotted - 1:
+                        new_index = old_index + 1
+                    else:
+                        new_index = 0
+                    new_selection.append(ax.curves[new_index])
+            self.selected_lines = new_selection
+            self.highlight_lines()
 
 
 class DecayViewBox(pg.ViewBox):
