@@ -502,7 +502,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 axes = self.z_layout_axes
 
             tp = time.time()
-            profile_data = file.get_profile_data2(component, averaged=False, converted=True)
+            profile_data = file.get_profile_data(component, averaged=False, converted=True)
             if profile_data.empty:
                 return
             print(f"Time getting profile data: {time.time() - tp}")

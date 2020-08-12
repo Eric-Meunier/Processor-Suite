@@ -372,16 +372,17 @@ class LINPlotter(ProfilePlotter):
             channel_bounds.insert(0, (0, 0))
             return channel_bounds
 
-        profile = self.pem_file.get_profile_data(component=component)
+        t = time.time()
+        profile = self.pem_file.get_profile_data2(component, converted=True)
         channel_bounds = calc_channel_bounds()
         for i, group in enumerate(channel_bounds):
             # Starting offset used for channel annotations
             offset = 100
             ax = self.figure.axes[i]
 
-            for j in range(group[0], group[1] + 1):
-                stations = profile.loc[:, 'Station']
-                data = profile.loc[:, j].to_numpy()
+            for ch in range(group[0], group[1] + 1):
+                stations = profile.index.values
+                data = profile.loc[:, ch].to_numpy()
 
                 # Interpolate the X and Y data and mask gaps
                 interp_stations, interp_data = self.get_interp_data(stations, data)
@@ -390,7 +391,7 @@ class LINPlotter(ProfilePlotter):
                 ax.plot(interp_stations, interp_data, color=line_color)
 
                 # Annotate the lines
-                self.annotate_line(ax, 'PP' if j == 0 else str(j), interp_stations, interp_data, offset)
+                self.annotate_line(ax, 'PP' if ch == 0 else str(ch), interp_stations, interp_data, offset)
 
                 # Increase the offset for the next annotation
                 offset += len(interp_stations) * 0.15
@@ -401,6 +402,7 @@ class LINPlotter(ProfilePlotter):
 
         add_ylabels()
         self.format_figure(component)
+        print(f"Time to create LINPlotter plot: {time.time() - t}")
         return self.figure
 
 
@@ -425,14 +427,15 @@ class LOGPlotter(ProfilePlotter):
             units = 'nT/s' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
             ax.set_ylabel(f"Primary Pulse to Channel {str(self.pem_file.number_of_channels - 1)}\n({units})")
 
+        t = time.time()
         ax = self.figure.axes[0]
         # Starting offset used for channel annotations
         offset = 100
-        profile = self.pem_file.get_profile_data(component=component)
+        profile = self.pem_file.get_profile_data2(component, converted=True)
 
-        for j in range(self.pem_file.number_of_channels + 1):
-            stations = profile.loc[:, 'Station']
-            data = profile.loc[:, j].to_numpy()
+        for ch in range(self.pem_file.number_of_channels + 1):
+            stations = profile.index.values
+            data = profile.loc[:, ch].to_numpy()
 
             # Interpolate the X and Y data and mask gaps
             interp_stations, interp_data = self.get_interp_data(stations, data)
@@ -441,7 +444,7 @@ class LOGPlotter(ProfilePlotter):
             ax.plot(interp_stations, interp_data, color=line_color)
 
             # Annotate the lines
-            self.annotate_line(ax, 'PP' if j == 0 else str(j), interp_stations, interp_data, offset)
+            self.annotate_line(ax, 'PP' if ch == 0 else str(ch), interp_stations, interp_data, offset)
 
             # Increase the offset for the next annotation
             offset += len(interp_stations) * 0.15
@@ -452,6 +455,7 @@ class LOGPlotter(ProfilePlotter):
 
         add_ylabels()
         self.format_figure(component)
+        print(f"Time to create LOGPLotter plot: {time.time() - t}")
         return self.figure
 
 
@@ -588,6 +592,7 @@ class STEPPlotter(ProfilePlotter):
                 if offset >= len(x_intervals) * 0.85:
                     offset = len(x_intervals) * 0.10
 
+        t = time.time()
         ri_profile = self.ri_file.get_ri_profile(component)
         off_time_channel_data = [ri_profile[key] for key in ri_profile if re.match('Ch', key)]
         num_off_time_channels = len(off_time_channel_data) + 10
@@ -599,6 +604,7 @@ class STEPPlotter(ProfilePlotter):
 
         add_ylabel()
         self.format_figure(component)
+        print(f"Time to create STEPPlotter plot: {time.time() - t}")
         return self.figure
 
 
@@ -4715,34 +4721,34 @@ if __name__ == '__main__':
     # planner = LoopPlanner()
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
-    fig = plt.figure(figsize=(8.5, 11), dpi=100)
-    sp = SectionPlot()
-    sp.plot(pem_files[0], figure=fig)
-    plt.show()
+    # fig = plt.figure(figsize=(8.5, 11), dpi=100)
+    # sp = SectionPlot()
+    # sp.plot(pem_files[0], figure=fig)
+    # plt.show()
 
     # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
     # ax6 = ax5.twiny()
     # ax6.get_shared_x_axes().join(ax5, ax6)
     # lin_plot = LINPlotter(pem_files[0], lin_fig)
     # lin_plot.plot('X')
-    # lin_fig.show()
+    # plt.show()
 
     # log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
     # ax2 = ax.twiny()
     # ax2.get_shared_x_axes().join(ax, ax2)
-    # plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
+    # plt.yscale('symlog', linthresh=10, linscale=1. / math.log(10), subs=list(np.arange(2, 10, 1)))
     # log_plot = LOGPlotter(pem_files[0], log_fig)
     # log_plot.plot('X')
-    # log_fig.show()
+    # plt.show()
 
-    # step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    # ax5 = ax4.twiny()
-    # ax5.get_shared_x_axes().join(ax4, ax5)
-    # pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01NAv.PEM'
-    # ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01N.RI2'
-    # step_plot = STEPPlotter(pem, ri, step_fig)
-    # step_plot.plot('X')
-    # step_fig.show()
+    step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    ax5 = ax4.twiny()
+    ax5.get_shared_x_axes().join(ax4, ax5)
+    pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01NAv.PEM'
+    ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01N.RI2'
+    step_plot = STEPPlotter(pem, ri, step_fig)
+    step_plot.plot('X')
+    plt.show()
 
     # map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
     # map_plot = PlanMap(pem_files, map_fig).plot()

@@ -250,26 +250,26 @@ class PEMFile:
             data = self.data
         return data
 
-    def get_profile_data(self, component=None):
-        """
-        Transform the readings in the data in a manner to be plotted as a profile
-        :param component: str, used to filter the profile data and only keep the given component
-        :return: pandas DataFrame object with Station, Component and all channels as columns.
-        """
-        profile = pd.DataFrame.from_dict(dict(zip(self.data.Reading.index, self.data.Reading.values))).T
-        profile.insert(0, 'Station', self.data.Station.map(self.converter.convert_station))
-        profile.insert(1, 'Component', self.data.Component)
-        profile.insert(2, 'Reading_number', self.data['Reading_number'])
-        profile.insert(3, 'Reading_index', self.data['Reading_index'])
+    # def get_profile_data(self, component=None):
+    #     """
+    #     Transform the readings in the data in a manner to be plotted as a profile
+    #     :param component: str, used to filter the profile data and only keep the given component
+    #     :return: pandas DataFrame object with Station, Component and all channels as columns.
+    #     """
+    #     profile = pd.DataFrame.from_dict(dict(zip(self.data.Reading.index, self.data.Reading.values))).T
+    #     profile.insert(0, 'Station', self.data.Station.map(self.converter.convert_station))
+    #     profile.insert(1, 'Component', self.data.Component)
+    #     profile.insert(2, 'Reading_number', self.data['Reading_number'])
+    #     profile.insert(3, 'Reading_index', self.data['Reading_index'])
+    #
+    #     if component:
+    #         filt = profile['Component'] == component.upper()
+    #         profile = profile[filt]
+    #
+    #     profile.sort_values(by=['Component', 'Station', 'Reading_index', 'Reading_number'], inplace=True)
+    #     return profile
 
-        if component:
-            filt = profile['Component'] == component.upper()
-            profile = profile[filt]
-
-        profile.sort_values(by=['Component', 'Station', 'Reading_index', 'Reading_number'], inplace=True)
-        return profile
-
-    def get_profile_data2(self, component, averaged=False, converted=False):
+    def get_profile_data(self, component, averaged=False, converted=False):
         """
         Transform the readings in the data in a manner to be plotted as a profile
         :param component: str, used to filter the profile data and only keep the given component
@@ -2020,7 +2020,7 @@ if __name__ == '__main__':
     # files = pg.get_pems(client='Raglan', number=1)
     file = files[0]
 
-    file.get_profile_data2('X', averaged=False)
+    file.get_profile_data('X', averaged=False)
 
     # file.rotate(method='mag', soa=0)
     #

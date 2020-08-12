@@ -243,7 +243,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                         symbolPen='k',
                         )
 
-            profile_data = processed_pem.get_profile_data2(component, converted=True)
+            profile_data = processed_pem.get_profile_data(component, converted=True)
             for i, bounds in enumerate(channel_bounds):
                 # Select the correct axes based on the component
                 if component == 'X':
