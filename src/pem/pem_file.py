@@ -39,6 +39,10 @@ class StationConverter:
             station = (int(re.sub(r"[EN]", "", station.upper())))
         return station
 
+    def convert_stations(self, stations):
+        converted_stations = stations.map(self.convert_station)
+        return converted_stations
+
 
 class PEMFile:
     """
@@ -121,6 +125,7 @@ class PEMFile:
             return True
 
     def is_split(self):
+        t = time.time()
         if self.channel_times.Remove.any():
             return False
         else:
@@ -272,9 +277,7 @@ class PEMFile:
         :param converted: bool, convert the station names to int
         :return: pandas DataFrame object with Station as the index, and channels as columns.
         """
-        def average_profile(station):
-            return station.apply(lambda x: x.mean())
-
+        t = time.time()
         filt = self.data['Component'] == component.upper()
 
         profile = pd.DataFrame.from_dict(dict(zip(self.data[filt].Reading.index, self.data[filt].Reading.values))).T
@@ -287,8 +290,9 @@ class PEMFile:
         profile.set_index('Station', drop=True, inplace=True)
 
         if averaged is True:
-            profile = profile.groupby('Station').apply(average_profile)
+            profile = profile.groupby('Station').mean()
 
+        print(f"Time to get profile data: {time.time() - t}")
         return profile
 
     def get_components(self):
@@ -427,6 +431,7 @@ class PEMFile:
         Remove the on-time channels of the PEM file object
         :return: PEM file object with split data
         """
+        t = time.time()
         if self.is_split():
             print(f"{self.filepath.name} is already split.")
             return
@@ -438,6 +443,8 @@ class PEMFile:
         self.channel_times = self.channel_times[filt]
         # Update the PEM file's number of channels attribute
         self.number_of_channels = len(self.channel_times.index) - 1
+
+        print(f"Time to split PEM file: {time.time() - t}")
         return self
 
     def scale_coil_area(self, coil_area):
@@ -451,7 +458,8 @@ class PEMFile:
         old_coil_area = self.coil_area
 
         scale_factor = float(old_coil_area / new_coil_area)
-        self.data.Reading = self.data.Reading.map(lambda x: x * scale_factor)
+        # self.data.Reading = self.data.Reading.map(lambda x: x * scale_factor)
+        self.data.Reading = self.data.Reading * scale_factor  # Vertorized
         print(f"{self.filepath.name} coil area scaled to {new_coil_area} from {old_coil_area}")
 
         self.coil_area = new_coil_area
@@ -469,7 +477,8 @@ class PEMFile:
         old_current = self.current
 
         scale_factor = float(new_current / old_current)
-        self.data.Reading = self.data.Reading.map(lambda x: x * scale_factor)
+        # self.data.Reading = self.data.Reading.map(lambda x: x * scale_factor)
+        self.data.Reading = self.data.Reading * scale_factor  # Vertorized
         print(f"{self.filepath.name} current scaled to {new_current}A from {old_current}A")
 
         self.current = new_current
@@ -2010,16 +2019,11 @@ if __name__ == '__main__':
     files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # files = pg.get_pems(client='Raglan', number=1)
     file = files[0]
-    # p = PEMParser()
-    # file = p.parse(file)
-    # file.get_profile_data()
 
-    # file.split()
+    file.get_profile_data2('X', averaged=False)
 
-    file.rotate(method='mag', soa=0)
-
-    # file.average()
-    # file.scale_current(10)
-    out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filepath.name} - test rotation.pem')
-    print(file.to_string(), file=open(out, 'w'))
-    os.startfile(out)
+    # file.rotate(method='mag', soa=0)
+    #
+    # out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filepath.name} - test rotation.pem')
+    # print(file.to_string(), file=open(out, 'w'))
+    # os.startfile(out)

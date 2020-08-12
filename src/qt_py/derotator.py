@@ -204,39 +204,46 @@ class Derotator(QMainWindow, Ui_Derotator):
                 if ax not in [self.pp_ax, self.rot_ax]:
                     ax.clear()
 
+        def calc_channel_bounds():
+            """
+            Create tuples of start and end channels to be plotted per axes
+            :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
+            """
+            channel_bounds = [None] * 4
+            num_channels_per_plot = int((processed_pem.number_of_channels - 1) // 4)
+            remainder_channels = int((processed_pem.number_of_channels - 1) % 4)
+
+            for k in range(0, len(channel_bounds)):
+                channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
+
+            for i in range(0, remainder_channels):
+                channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
+                for k in range(i + 1, len(channel_bounds)):
+                    channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+
+            channel_bounds.insert(0, (0, 0))
+            return channel_bounds
+
         def plot_lin(component):
 
-            def plot_lines(df, ax, channel):
+            def plot_lines(df, ax):
                 """
                 Plot the lines on the pyqtgraph ax for a given channel
                 :param df: DataFrame of filtered data
                 :param ax: pyqtgraph PlotItem
-                :param channel: int, channel to plot
                 """
-                ax.plot(x=df['Station'], y=df[channel], pen=pg.mkPen((54, 55, 55), width=1.))
+                df = df.groupby('Station').mean()
+                x, y = df.index, df
 
-            def calc_channel_bounds():
-                """
-                Create tuples of start and end channels to be plotted per axes
-                :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
-                """
-                channel_bounds = [None] * 4
-                num_channels_per_plot = int((processed_pem.number_of_channels - 1) // 4)
-                remainder_channels = int((processed_pem.number_of_channels - 1) % 4)
+                ax.plot(x=x, y=y,
+                        pen=pg.mkPen('k', width=1.),
+                        symbol='o',
+                        symbolSize=2,
+                        symbolBrush='k',
+                        symbolPen='k',
+                        )
 
-                for k in range(0, len(channel_bounds)):
-                    channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
-
-                for i in range(0, remainder_channels):
-                    channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
-                    for k in range(i + 1, len(channel_bounds)):
-                        channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
-
-                channel_bounds.insert(0, (0, 0))
-                return channel_bounds
-
-            filt = profile_data['Component'] == component.upper()
-            channel_bounds = calc_channel_bounds()
+            profile_data = processed_pem.get_profile_data2(component, converted=True)
             for i, bounds in enumerate(channel_bounds):
                 # Select the correct axes based on the component
                 if component == 'X':
@@ -252,8 +259,8 @@ class Derotator(QMainWindow, Ui_Derotator):
 
                 # Plot the data
                 for ch in range(bounds[0], bounds[1] + 1):
-                    data = profile_data[filt].loc[:, ['Station', ch]]
-                    plot_lines(data, ax, ch)
+                    data = profile_data.iloc[:, ch]
+                    plot_lines(data, ax)
 
         def plot_rotation():
             """
@@ -374,11 +381,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             processed_pem = processed_pem.average()
 
         clear_plots()
-
-        # Get the profile data
-        profile_data = processed_pem.get_profile_data()
-        if profile_data.empty:
-            return
+        channel_bounds = calc_channel_bounds()
 
         t = time.time()
         plot_lin('X')

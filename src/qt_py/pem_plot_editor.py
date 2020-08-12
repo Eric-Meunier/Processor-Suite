@@ -280,9 +280,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             """
             Show/hide decay plots and profile plot tabs based on the components in the pem file
             """
-
-            components = self.pem_file.get_components()
-
             x_ax = self.x_decay_plot
             y_ax = self.y_decay_plot
             z_ax = self.z_decay_plot
@@ -320,8 +317,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             # Update the profile axes
             tt = time.time()
-            self.active_profile_axes = []
-            for component in self.pem_file.get_components():
+            # self.active_profile_axes = []
+            for component in components:
                 # Add the profile axes to the list of active profile axes
                 if component == 'X':
                     if self.x_layout_axes not in self.active_profile_axes:
@@ -333,15 +330,17 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     if self.z_layout_axes not in self.active_profile_axes:
                         self.active_profile_axes.extend(self.z_layout_axes)
 
-                link_profile_axes()
+            link_profile_axes()
             print(f"Time linking profile axes: {time.time() - tt}")
 
+        # Update the list of stations
         self.stations = np.sort(self.pem_file.get_stations(converted=True))
 
-        # Convert the stations in the data
+        # Re-calculate the converted station numbers
         converter = StationConverter()
         self.pem_file.data['cStation'] = self.pem_file.data.Station.map(converter.convert_station)
 
+        components = self.pem_file.get_components()
         toggle_profile_plots()
         toggle_decay_plots()
 
@@ -422,7 +421,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 global lin_plotting_time, averaging_time
 
                 t = time.time()
-                df_avg = df.groupby('Station').apply(lambda x: np.average(x, axis=0))
+                df_avg = df.groupby('Station').mean()  # Vertorized
                 averaging_time += time.time() - t
 
                 x, y = df_avg.index, df_avg
@@ -620,8 +619,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             nearest_station = find_nearest_station(int(mouse_point.x()))
 
             for ax in self.active_profile_axes:
-                ax.items[0].setPos(nearest_station)
-                ax.items[2].setPos(nearest_station, ax.viewRange()[1][1])
+                ax.items[0].setPos(nearest_station)  # Move the click vertical line
+                ax.items[2].setPos(nearest_station, ax.viewRange()[1][1])  # Move the hover vertical like
                 ax.items[2].setText(str(nearest_station))
 
     def profile_plot_clicked(self, evt):
