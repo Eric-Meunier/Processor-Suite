@@ -1889,7 +1889,7 @@ class RADTool:
         Calculate the azimuth of the RAD tool object. Must be D7.
         :return: float, azimuth
         """
-        if not self.D == 'D7':
+        if not self.D == 'D7' or not self.has_tool_values():
             return None
 
         g = math.sqrt(sum([self.gx ** 2, self.gy ** 2, self.gz ** 2]))
@@ -1903,13 +1903,13 @@ class RADTool:
         Calculate the dip of the RAD tool object. Must be D7.
         :return: float, dip
         """
-        if not self.D == 'D7':
+        if not self.D == 'D7' or not self.has_tool_values():
             return None
 
         try:
             dip = math.degrees(math.acos(self.gx / math.sqrt((self.gx ** 2) + (self.gy ** 2) + (self.gz ** 2)))) - 90
         except ZeroDivisionError:
-            dip = 0.0
+            dip = None
         return dip
 
     def get_acc_roll(self):
@@ -1917,7 +1917,7 @@ class RADTool:
         Calculate the roll angle as measured by the accelerometer. Must be D7.
         :return: float, roll angle
         """
-        if not self.D == 'D7':
+        if not self.D == 'D7' or not self.has_tool_values():
             return None
 
         x, y, z = self.gx, self.gy, self.gz
@@ -1937,7 +1937,7 @@ class RADTool:
         Calculate the roll angle as measured by the magnetometer. Must be D7.
         :return: float, roll angle
         """
-        if not self.D == 'D7':
+        if not self.D == 'D7' or not self.has_tool_values():
             return None
 
         x, y, z = self.Hx, self.Hy, self.Hz
@@ -1957,12 +1957,18 @@ class RADTool:
         Calculate and return the magnetic field strength (total field) in units of nT
         :return: float
         """
-        if not self.D == 'D7':
+        if not self.D == 'D7' or not self.has_tool_values():
             return None
 
         x, y, z = self.Hx, self.Hy, self.Hz
         mag_strength = math.sqrt(sum([x ** 2, y ** 2, z ** 2])) * (10 ** 5)
         return mag_strength
+
+    def has_tool_values(self):
+        if all([self.Hx, self.gx, self.Hy, self.gy, self.Hz, self.gz]):
+            return True
+        else:
+            return False
 
     def is_rotated(self):
         return True if self.angle_used is not None else False

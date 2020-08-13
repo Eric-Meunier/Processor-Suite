@@ -10,11 +10,14 @@ import pandas as pd
 import pyqtgraph as pg
 import pylineclip as lc
 from PyQt5 import uic, QtCore, QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QFrame)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox)
 from pyqtgraph.Point import Point
+from pyod.models.abod import ABOD
+from pyod.models.knn import KNN
+from pyod.utils.data import get_outliers_inliers
 
 # from matplotlib.figure import Figure
-from src.pem.pem_file import StationConverter
+from src.pem.pem_file import StationConverter, PEMParser
 
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
@@ -41,13 +44,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setWindowTitle('PEM Plot Editor')
         self.resize(1300, 850)
+        self.setAcceptDrops(True)
+        self.message = QMessageBox()
 
         self.file_info_label = QLabel()
-        # self.file_info_label.setStyleSheet("border: 0px")
         self.file_info_label.setStyleSheet('border: None')
 
         self.number_of_readings = QLabel()
-        # self.number_of_readings.setStyleSheet("border: 0px")
         self.number_of_readings.setStyleSheet('border: None')
 
         self.statusBar().setStyleSheet("border-top :0.5px solid gray;")
@@ -77,6 +80,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.y_decay_plot = self.decay_layout.addPlot(1, 0, title='Y Component', viewBox=DecayViewBox())
         self.z_decay_plot = self.decay_layout.addPlot(2, 0, title='Z Component', viewBox=DecayViewBox())
         self.decay_layout.ci.layout.setSpacing(2)  # Spacing between plots
+        self.decay_layout.ci.layout.setRowStretchFactor(1, 1)
         self.decay_axes = np.array([self.x_decay_plot, self.y_decay_plot, self.z_decay_plot])
         self.active_decay_axes = []
 
@@ -163,6 +167,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.link_x_cbox.toggled.connect(self.link_decay_x)
 
         self.change_station_btn.clicked.connect(self.change_station)
+        self.auto_clean_btn.clicked.connect(self.auto_clean)
+        self.save_btn.clicked.connect(self.save)
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
@@ -209,15 +215,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Reset the ranges of the plots when the space bar is pressed
         elif event.key() == QtCore.Qt.Key_Space:
-            # Only need to auto range the first axes, since they are all linked.
-            for ax in self.active_profile_axes:
-                ax.autoRange()
-            # if self.active_profile_axes:
-            #     self.active_profile_axes[0].autoRange()
-
-            if self.active_decay_axes:
-                for ax in self.active_decay_axes:
-                    ax.autoRange()
+            self.reset_range()
 
         # Clear the selected decays when the Escape key is pressed
         elif event.key() == QtCore.Qt.Key_Escape:
@@ -231,23 +229,42 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             else:
                 self.cycle_station('up')
 
+    def dragEnterEvent(self, e):
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        if all([url.lower().endswith('pem') for url in urls]):
+            e.accept()
+
+    def dropEvent(self, e):
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        self.open(urls[0])
+
     def open(self, pem_file):
         """
         Open a PEMFile object and plot the data.
         :param pem_file: PEMFile object.
         """
+        if isinstance(pem_file, str):
+            parser = PEMParser()
+            pem_file = parser.parse(pem_file)
+
         self.pem_file = copy.deepcopy(pem_file)
-        self.file_info_label.setText(f"{self.pem_file.line_name}    Loop {self.pem_file.loop_name}     {self.pem_file.get_survey_type()} survey")
+        self.file_info_label.setText(f"Timebase {self.pem_file.timebase:.2f}ms    {self.pem_file.get_survey_type()} Survey")
 
         # Add the deletion flag column
         self.pem_file.data.insert(13, 'del_flag', False)
 
         if self.pem_file.is_split():
+            # self.plot_ontime_decays_cbox.setChecked(False)  # Triggers the signal
             self.plot_ontime_decays_cbox.setEnabled(False)
 
         # Set the units of the decay plots
         self.units = self.pem_file.units
 
+        # Add the line name and loop name as the title for the profile plots
+        for ax in [self.x_ax0, self.y_ax0, self.z_ax0]:
+            ax.setTitle(f"{self.pem_file.line_name}\t\tLoop {self.pem_file.loop_name}")
+
+        # Set the X and Y axis labels for the decay axes
         for ax in self.decay_axes:
             ax.setLabel('left', f"Response", units=self.units)
             ax.setLabel('bottom', 'Channel number')
@@ -260,8 +277,14 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Link the X and Y axis of each axes
         self.link_decay_x()
         self.link_decay_y()
+        # self.reset_range()
 
         self.show()
+
+    def save(self):
+        self.pem_file.data = self.pem_file.data[self.pem_file.data.del_flag == False]
+        self.plot_profiles('all')
+        self.plot_station(self.selected_station, preserve_selection=True)
 
     def update_file(self):
 
@@ -534,12 +557,22 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         """
 
         def set_status_text(data):
-            global station, component, number_of_readings
-            station = f"Station {data.Station.unique()[0]}"
-            component = f"{data.Component.unique()[0]} Component"
-            number_of_readings = f"{len(data.index)} Readings"
-            text = '    '.join([station, component, number_of_readings])
-            self.statusBar().showMessage(text)
+            """
+            Set the status bar text with information about the station
+            :param data: dataFrame of plotted decays
+            """
+            global station_text
+            station_number_text = f"Station {data.Station.unique()[0]}"
+            reading_numbers = data.Reading_number.unique()
+            if len(reading_numbers) > 1:
+                r_numbers_range = f"Reading numbers {reading_numbers.min()} - {reading_numbers.max()}"
+            else:
+                r_numbers_range = f"Reading number {reading_numbers.min()}"
+
+            station_readings = f"{len(data.index)} {'Reading' if len(data.index) == 1 else 'Readings'}"
+
+            station_text = '    '.join([station_number_text, station_readings, r_numbers_range])
+            self.statusBar().showMessage(station_text)
 
         def plot_decay(row):
             """
@@ -567,14 +600,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             # Remove the on-time channels if the checkbox is checked
             if self.plot_ontime_decays_cbox.isChecked():
                 y = row.Reading
-                # Update the limits of the decay plot
-                ax.setLimits(minXRange=0, maxXRange=len(y),
-                             xMin=0, xMax=len(y))
             else:
                 y = row.Reading[~self.pem_file.channel_times.Remove]
-                # Update the limits of the decay plot
-                ax.setLimits(minXRange=0, maxXRange=len(y),
-                             xMin=0, xMax=len(y))
 
             # Create and configure the line item
             decay_line = pg.PlotCurveItem(y=y,
@@ -626,6 +653,16 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Plot the decays
         self.plotted_decay_data.apply(plot_decay, axis=1)
+
+        # Update the plot limits
+        for ax in self.decay_axes:
+            if self.plot_ontime_decays_cbox.isChecked():
+                y = len(self.pem_file.channel_times)
+            else:
+                y = len(self.pem_file.channel_times[self.pem_file.channel_times.Remove == False])
+
+            ax.setLimits(minXRange=0, maxXRange=y - 1,
+                         xMin=0, xMax=y - 1)
 
         # Re-select lines that were selected
         if preserve_selection is True:
@@ -710,33 +747,76 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.last_active_ax_ind = self.active_ax_ind
                 break
 
+    def reset_range(self):
+        """
+        Auto range all axes
+        """
+        # # Unlink all the axes
+        # for ax in np.concatenate([self.decay_axes, self.profile_axes]):
+        #     ax.setXLink(None)
+        #     ax.setYLink(None)
+        #
+        # for ax in self.profile_axes:
+        #     ax.autoRange()
+        #
+        # for ax in self.decay_axes:
+        #     ax.autoRange()
+
+        # # Reset the links in the profile axes
+        # for ax in self.profile_axes[1:]:
+        #     ax.setXLink(self.profile_axes[0])
+        #
+        # # Reset the links in the decay axes
+        # self.link_decay_x()
+        # self.link_decay_y()
+
+        self.active_decay_axes[0].autoRange()
+        self.active_profile_axes[0].autoRange()
+
     def highlight_lines(self):
         """
         Highlight the line selected and un-highlight any previously highlighted line.
         :param lines: list, PlotItem lines
         """
 
-        def set_selection_text():
+        def set_selection_text(selected_data):
             """
             Update the status bar with information about the selected lines
             """
-            selected_data = self.get_selected_data()
-            if len(selected_data) > 1:
-                self.statusBar().showMessage(f"{len(selected_data)} selected")
-            elif len(selected_data) == 1:
-                global station, component, number_of_readings
-                decay = selected_data.iloc[0]
-                reading_number = f"Reading Number {decay.Reading_number}"
-                reading_index = f"Reading Index {decay.Reading_index}"
+            if self.selected_lines:
 
-                if self.pem_file.is_borehole():
-                    azimuth = f"Azimuth {decay.RAD_tool.get_azimuth():.2f}"
-                    dip = f"Dip {decay.RAD_tool.get_dip():.2f}"
-                    roll = f"Roll angle {decay.RAD_tool.get_acc_roll():.2f}"
-                    text = '    '.join([station, component, number_of_readings, reading_number, reading_index, azimuth, dip, roll])
+                # Show the range of reading numbers and reading indexes if multiple decays are selected
+                if len(selected_data) > 1:
+                    r_numbers = selected_data.Reading_number.unique()
+                    r_indexes = selected_data.Reading_index.unique()
+                    if len(r_numbers) > 1:
+                        r_number_text = f"Reading numbers: {r_numbers.min()} - {r_numbers.max()}"
+                    else:
+                        r_number_text = f"Reading number: {r_numbers.min()}"
+
+                    if len(r_indexes) > 1:
+                        r_index_text = f"Reading indexes: {r_indexes.min()} - {r_indexes.max()}"
+                    else:
+                        r_index_text = f"Reading index: {r_indexes.min()}"
+
+                    selection_text = f"[ {len(selected_data)} selected    {r_number_text}    {r_index_text} ]"
+
+                # Show the reading number, reading index for the selected decay, plus azimuth, dip, and roll for bh
                 else:
-                    text = '    '.join([station, component, number_of_readings, reading_number, reading_index])
-                self.statusBar().showMessage(text)
+                    global station_text
+                    selected_decay = selected_data.iloc[0]
+                    r_number_text = f"Reading Number {selected_decay.Reading_number}"
+                    r_index_text = f"Reading Index {selected_decay.Reading_index}"
+
+                    if self.pem_file.is_borehole() and selected_decay.RAD_tool.has_tool_values():
+                        azimuth = f"Azimuth {selected_decay.RAD_tool.get_azimuth():.2f}"
+                        dip = f"Dip {selected_decay.RAD_tool.get_dip():.2f}"
+                        roll = f"Roll angle {selected_decay.RAD_tool.get_acc_roll():.2f}"
+                        selection_text = f"[ {'    '.join([r_number_text, r_index_text, azimuth, dip, roll])} ]"
+                    else:
+                        selection_text = f"[ {'    '.join([r_number_text, r_index_text])} ]"
+
+                self.statusBar().showMessage(station_text + '        ' + selection_text)
 
         if self.plotted_decay_lines:
             # Enable decay editing buttons
@@ -759,9 +839,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
                 if line in self.selected_lines:
                     if del_flag is False:
-                        # pen_color = (102, 102, 255)
-                        pen_color = (80, 80, 255)
-                        # pen_color = (127, 0, 255)
+                        pen_color = (85, 85, 255)  # Blue
+                        # pen_color = (204, 0, 204)  # Magenta ish
+                        # pen_color = (153, 51, 255)  # Puple
 
                     print(f"Line {self.plotted_decay_lines.index(line)} selected")
                     line.setPen(pen_color, width=2)
@@ -771,13 +851,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     line.setPen(pen_color, width=1)
                     line.setShadowPen(None)
 
-            set_selection_text()
+            set_selection_text(self.get_selected_data())
 
     def clear_selection(self):
         self.selected_data = None
         self.selected_lines = []
         self.highlight_lines()
-        self.statusBar().clearMessage()
+        self.statusBar().showMessage(station_text)
 
     def box_select_decay_lines(self, rect):
         """
@@ -960,6 +1040,49 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.selected_lines = new_selection
             self.highlight_lines()
 
+    def auto_clean(self):
+        """
+        Automatically detect and delete readings with outlier values.
+        """
+
+        def clean_group(group):
+
+            def eval_decay(reading, min_cutoff, max_cutoff):
+                if any(reading[mask] < min_cutoff) or any(reading[mask] > max_cutoff):
+                    global count
+                    count += 1
+                    return True
+                else:
+                    return False
+
+            readings = np.array(group.Reading.to_list())
+            data_std = np.std(readings, axis=0)[mask]
+            data_median = np.median(readings, axis=0)[mask]
+            min_cutoff = data_median - data_std * 3
+            max_cutoff = data_median + data_std * 3
+
+            if len(group.loc[group.del_flag == False]) > 3:
+                group.del_flag = group.Reading.map(lambda x: eval_decay(x, min_cutoff, max_cutoff))
+
+            return group
+
+        global count, mask
+        count = 0
+
+        # Filter the data to only see readings that aren't already flagged for deletion
+        data = self.pem_file.data[self.pem_file.data.del_flag == False]
+        mask = np.asarray(self.pem_file.channel_times.Remove == False)
+        # Clean the data
+        cleaned_data = data.groupby(['Station', 'Component']).apply(clean_group)
+        # Update the data
+        self.pem_file.data[self.pem_file.data.del_flag == False] = cleaned_data
+
+        # Plot the new data
+        self.plot_profiles()
+        self.plot_station(self.selected_station)
+
+        self.message.information(self, 'Auto-clean results', f"{count} reading(s) automatically deleted.")
+
 
 class DecayViewBox(pg.ViewBox):
     box_select_signal = QtCore.pyqtSignal(object)
@@ -1058,9 +1181,10 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='PEM Splitting', selection=4)
+    pem_files = pem_getter.get_pems(client='Minera', subfolder='CPA-5051', selection=3)
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])
+    editor.auto_clean()
 
     app.exec_()
