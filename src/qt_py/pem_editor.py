@@ -1202,8 +1202,8 @@ class PEMEditor(QMainWindow, Ui_PEMEditorWindow):
 
         pem_file.filepath = Path(os.path.join(file_dir, file_name + extension))
         print(f"Saving file {file_name}")
-        save_file = pem_file.to_string()
-        print(save_file, file=open(str(pem_file.filepath), 'w+'))
+        pem_text = pem_file.to_string()
+        print(pem_text, file=open(str(pem_file.filepath), 'w+'))
 
         # Remove the old filepath if the filename was changed.
         if pem_file.old_filepath and remove_old is True:

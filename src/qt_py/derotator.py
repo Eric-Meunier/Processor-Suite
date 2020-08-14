@@ -164,6 +164,13 @@ class Derotator(QMainWindow, Ui_Derotator):
         Open, rotate, and plot the PEMFile.
         :param pem_file: borehole PEMFile object
         """
+
+        def fill_table(stations):
+            self.list.clear()
+            for s in stations.itertuples():
+                result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
+                self.list.addItem(result)
+
         assert pem_file, 'Invalid PEM file'
 
         while isinstance(pem_file, list):
@@ -190,8 +197,21 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.pp_btn.setEnabled(False)
 
         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
-        self.show()
+
+        global ineligible_stations
+        self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
+
+        # Fill the table with the ineligible stations
+        if not ineligible_stations.empty:
+            fill_table(ineligible_stations)
+            self.bad_stations_label.show()
+            self.list.show()
+        else:
+            self.bad_stations_label.hide()
+            self.list.hide()
         self.rotate()
+
+        self.show()
 
     def plot_pem(self, pem_file):
         """
@@ -396,31 +416,15 @@ class Derotator(QMainWindow, Ui_Derotator):
         Rotate and plot the data, always using the original PEMFile
         """
 
-        def fill_table(stations):
-            self.list.clear()
-            for s in stations.itertuples():
-                result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
-                self.list.addItem(result)
-
         method = self.get_method()
-        ineligible_stations = None
         self.soa = self.soa_sbox.value()
         # Create a copy of the pem_file so it is never changed
         pem_file = copy.deepcopy(self.pem_file)
 
         if method is not None:
-            self.rotated_file, ineligible_stations = pem_file.rotate(method=method, soa=self.soa)
+            self.rotated_file = pem_file.rotate(method=method, soa=self.soa)
         else:
             self.rotated_file = pem_file
-
-        # Fill the table with the ineligible stations
-        if ineligible_stations is not None and not ineligible_stations.empty:
-            fill_table(ineligible_stations)
-            self.bad_stations_label.show()
-            self.list.show()
-        else:
-            self.bad_stations_label.hide()
-            self.list.hide()
 
         self.plot_pem(self.rotated_file)
 
@@ -438,127 +442,6 @@ class Derotator(QMainWindow, Ui_Derotator):
             method = None
             self.rotation_note = None
         return method
-
-
-# # Works with Maptlotlib
-# class Derotator(QMainWindow, Ui_Derotator):
-#
-#     def __init__(self, parent=None):
-#         super().__init__()
-#         self.setupUi(self)
-#         self.parent = parent
-#         self.pem_file = None
-#
-#         self.setWindowTitle('XY De-rotation')
-#         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'derotate.png')))
-#
-#         self.message = QMessageBox()
-#
-#         self.lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True)
-#         ax6 = ax5.twiny()
-#         ax6.get_shared_x_axes().join(ax5, ax6)
-#
-#         self.log_fig, ax = plt.subplots(1, 1, num=2, clear=True)
-#
-#         self.lin_canvas = FigureCanvas(self.lin_fig)
-#         self.log_canvas = FigureCanvas(self.log_fig)
-#         self.lin_canvas.setMinimumSize(816, 1056)
-#         self.log_canvas.setMinimumSize(816, 1056)
-#
-#         self.lin_scroll_area.setWidget(self.lin_canvas)
-#         self.log_scroll_area.setWidget(self.log_canvas)
-#
-#         self.button_box.accepted.connect(self.rotate)
-#         self.button_box.rejected.connect(self.close)
-#
-#         self.acc_btn.clicked.connect(self.rotate)
-#         self.mag_btn.clicked.connect(self.rotate)
-#         self.pp_btn.clicked.connect(self.rotate)
-#         self.soa_sbox.editingFinished.connect(self.rotate)
-#
-#         self.bad_stations_label.hide()
-#         self.bad_stations_list.hide()
-#
-#         # int_validator = QtGui.QIntValidator()
-#         # self.soa_edit.setValidator(int_validator)
-#
-#     def open(self, pem_file):
-#         while isinstance(pem_file, list):
-#             pem_file = pem_file[0]
-#
-#         if all([pem_file.is_borehole(), 'X' in pem_file.get_components(), 'Y' in pem_file.get_components()]):
-#             self.pem_file = pem_file
-#         else:
-#             self.message.information(self, 'Ineligible File',
-#                                      'File must be a borehole survey with X and Y component data.')
-#             return
-#
-#         if self.pem_file.is_rotated():
-#             response = self.message.question(self, 'File already de-rotated',
-#                                              f"{pem_file.filepath.name} is already de-rotated. " +
-#                                              'Do you wish to de-rotate again?',
-#                                              self.message.Yes | self.message.No)
-#             if response == self.message.No:
-#                 return
-#
-#         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
-#         self.plot_pem(self.pem_file)
-#         self.show()
-#
-#     def plot_pem(self, pem_file):
-#
-#         def configure_lin_fig():
-#             """
-#             Add the subplots for a lin plot
-#             """
-#             t = time.time()
-#             self.portrait_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True)
-#             ax6 = ax5.twiny()
-#             ax6.get_shared_x_axes().join(ax5, ax6)
-#             print(f"Time to configure lin plot: {time.time() - t}")
-#
-#         def configure_log_fig():
-#             """
-#             Configure the log plot axes
-#             """
-#             t = time.time()
-#             self.portrait_fig, ax = plt.subplots(1, 1, num=2, clear=True)
-#             ax2 = ax.twiny()
-#             ax2.get_shared_x_axes().join(ax, ax2)
-#             plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
-#             print(f"Time to configure log plot: {time.time() - t}")
-#
-#         t = time.time()
-#         self.lin_fig.clear()
-#         self.log_fig.clear()
-#         configure_lin_fig()
-#         configure_log_fig()
-#
-#         # LIN plot
-#         lin_plotter = LINPlotter(pem_file, self.lin_fig)
-#         self.lin_fig = lin_plotter.plot('X')
-#         self.lin_canvas.draw()
-#
-#         # LOG plot
-#         log_plotter = LOGPlotter(pem_file, self.log_fig)
-#         self.log_fig = log_plotter.plot('X')
-#         self.log_canvas.draw()
-#         print(f"Time to make plots: {time.time() - t}")
-#
-#     def rotate(self):
-#         if self.acc_btn.isChecked():
-#             method = 'acc'
-#         elif self.mag_btn.isChecked():
-#             method = 'mag'
-#         else:
-#             method = 'pp'
-#
-#         soa = self.soa_sbox.value()
-#
-#         # Create a copy of the pem_file so it is never changed
-#         pem_file = copy.deepcopy(self.pem_file)
-#         rotated_file = pem_file.rotate(method=method, soa=soa)
-#         self.plot_pem(rotated_file)
 
 
 def main():

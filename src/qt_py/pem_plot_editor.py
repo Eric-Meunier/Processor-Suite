@@ -10,13 +10,12 @@ import pandas as pd
 import pyqtgraph as pg
 import pylineclip as lc
 from PyQt5 import uic, QtCore, QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog)
 from pyqtgraph.Point import Point
-from pyod.models.abod import ABOD
-from pyod.models.knn import KNN
-from pyod.utils.data import get_outliers_inliers
+# from pyod.models.abod import ABOD
+# from pyod.models.knn import KNN
+# from pyod.utils.data import get_outliers_inliers
 
-# from matplotlib.figure import Figure
 from src.pem.pem_file import StationConverter, PEMParser
 
 if getattr(sys, 'frozen', False):
@@ -80,7 +79,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.y_decay_plot = self.decay_layout.addPlot(1, 0, title='Y Component', viewBox=DecayViewBox())
         self.z_decay_plot = self.decay_layout.addPlot(2, 0, title='Z Component', viewBox=DecayViewBox())
         self.decay_layout.ci.layout.setSpacing(2)  # Spacing between plots
-        self.decay_layout.ci.layout.setRowStretchFactor(1, 1)
+        # self.decay_layout.ci.layout.setRowStretchFactor(1, 1)
         self.decay_axes = np.array([self.x_decay_plot, self.y_decay_plot, self.z_decay_plot])
         self.active_decay_axes = []
 
@@ -168,7 +167,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         self.change_station_btn.clicked.connect(self.change_station)
         self.auto_clean_btn.clicked.connect(self.auto_clean)
-        self.save_btn.clicked.connect(self.save)
+        self.actionOpen.triggered.connect(self.open_file_dialog)
+        self.actionSave.triggered.connect(self.save)
+        self.actionSave_As.triggered.connect(self.save_as)
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
@@ -256,6 +257,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         if self.pem_file.is_split():
             # self.plot_ontime_decays_cbox.setChecked(False)  # Triggers the signal
             self.plot_ontime_decays_cbox.setEnabled(False)
+        else:
+            self.plot_ontime_decays_cbox.setEnabled(True)
 
         # Set the units of the decay plots
         self.units = self.pem_file.units
@@ -277,14 +280,44 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Link the X and Y axis of each axes
         self.link_decay_x()
         self.link_decay_y()
-        # self.reset_range()
+        self.reset_range()
 
         self.show()
 
+    def open_file_dialog(self):
+        """
+        Open files through the file dialog
+        """
+        files = QFileDialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem)')
+        if files[0] != '':
+            file = files[0][0]
+            if file.lower().endswith('.pem'):
+                self.open(file)
+
     def save(self):
+        """
+        Save the PEM file
+        """
+        self.statusBar().showMessage('Saving file...')
         self.pem_file.data = self.pem_file.data[self.pem_file.data.del_flag == False]
+        self.pem_file.save()
         self.plot_profiles('all')
-        self.plot_station(self.selected_station, preserve_selection=True)
+        self.plot_station(self.selected_station, preserve_selection=False)
+
+        self.statusBar().showMessage('File saved.', 2000)
+        QtCore.QTimer.singleShot(2000, lambda: self.statusBar().showMessage(station_text))
+
+    def save_as(self):
+        """
+        Save the PEM file to a new file name
+        """
+        file_path = QFileDialog.getSaveFileName(self, '', str(self.pem_file.filepath), 'PEM Files (*.PEM)')[0]
+        if file_path:
+            text = self.pem_file.to_string()
+            print(text, file=open(str(file_path), 'w+'))
+
+            self.statusBar().showMessage(f'File saved to {file_path}', 2000)
+            QtCore.QTimer.singleShot(2000, lambda: self.statusBar().showMessage(station_text))
 
     def update_file(self):
 
@@ -299,23 +332,44 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             if 'X' in components:
                 x_ax.show()
                 self.profile_tab_widget.setTabEnabled(0, True)
+
+                if x_ax not in self.active_decay_axes:
+                    self.active_decay_axes.append(x_ax)
             else:
                 x_ax.hide()
                 self.profile_tab_widget.setTabEnabled(0, False)
 
+                if x_ax in self.active_decay_axes:
+                    self.active_decay_axes.remove(x_ax)
+
             if 'Y' in components:
                 y_ax.show()
                 self.profile_tab_widget.setTabEnabled(1, True)
+
+                if y_ax not in self.active_decay_axes:
+                    self.active_decay_axes.append(y_ax)
             else:
                 y_ax.hide()
                 self.profile_tab_widget.setTabEnabled(1, False)
 
+                if y_ax in self.active_decay_axes:
+                    self.active_decay_axes.remove(y_ax)
+
             if 'Z' in components:
                 z_ax.show()
                 self.profile_tab_widget.setTabEnabled(2, True)
+
+                if z_ax not in self.active_decay_axes:
+                    self.active_decay_axes.append(z_ax)
             else:
                 z_ax.hide()
                 self.profile_tab_widget.setTabEnabled(2, False)
+
+                if z_ax in self.active_decay_axes:
+                    self.active_decay_axes.remove(z_ax)
+
+            self.link_decay_x()
+            self.link_decay_y()
 
         def toggle_profile_plots():
             """
@@ -508,7 +562,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         file = copy.deepcopy(self.pem_file)
         file.data = file.data.loc[file.data.del_flag == False]
 
-        self.number_of_readings.setText(f"{len(file.data)} readings")
+        self.number_of_readings.setText(f"{len(file.data)} readings ")
 
         # Get the components
         if components is None or components == 'all':
@@ -593,8 +647,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             # Change the pen if the data is flagged for deletion
             if row.del_flag is False:
+                z_value = 1
                 pen = pg.mkPen((96, 96, 96), width=1.)
             else:
+                z_value = 2
                 pen = pg.mkPen('r', width=1.)
 
             # Remove the on-time channels if the checkbox is checked
@@ -608,6 +664,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                                           pen=pen,
                                           )
             decay_line.setClickable(True, width=5)
+            decay_line.setZValue(z_value)
             decay_line.sigClicked.connect(self.decay_line_clicked)
 
             # Add the line at y=0
@@ -834,8 +891,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 # Make the line red if it is flagged for deletion
                 if del_flag is True:
                     pen_color = 'r'
+                    z_value = 4
                 else:
                     pen_color = (96, 96, 96)
+                    z_value = 3
 
                 if line in self.selected_lines:
                     if del_flag is False:
@@ -845,6 +904,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
                     print(f"Line {self.plotted_decay_lines.index(line)} selected")
                     line.setPen(pen_color, width=2)
+                    line.setZValue(z_value)
                     if len(self.selected_lines) == 1:
                         line.setShadowPen(pg.mkPen('w', width=2.5, cosmetic=True))
                 else:
@@ -922,7 +982,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             selected_data.loc[:, 'del_flag'] = selected_data.loc[:, 'del_flag'].map(lambda x: not x)
 
             # Update the data in the pem file object
-            self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.pem_file.data.loc[selected_data.index] = selected_data
             self.plot_profiles(components=selected_data.Component.unique())
             self.plot_station(self.selected_station, preserve_selection=True)
 
@@ -1066,11 +1126,15 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             return group
 
+        if self.pem_file.is_averaged():
+            return
+
         global count, mask
         count = 0
 
         # Filter the data to only see readings that aren't already flagged for deletion
         data = self.pem_file.data[self.pem_file.data.del_flag == False]
+        # Filter the readings to only consider off-time channels
         mask = np.asarray(self.pem_file.channel_times.Remove == False)
         # Clean the data
         cleaned_data = data.groupby(['Station', 'Component']).apply(clean_group)
@@ -1181,10 +1245,10 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Minera', subfolder='CPA-5051', selection=3)
+    pem_files = pem_getter.get_pems(file='PP.PEM')
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])
-    editor.auto_clean()
+    # editor.auto_clean()
 
     app.exec_()
