@@ -17,7 +17,7 @@ print('src directory: '+src_dir)
 # os.chdir(src_dir)
 # sys.path.append(src_dir)
 
-from src.qt_py.pem_editor import PEMEditor
+from src.qt_py.pem_hub import PEMHub
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QTimer
 
@@ -25,7 +25,7 @@ from PyQt5.QtCore import QTimer
 def main():
     # TODO Make dedicated Application class
     app = QApplication(sys.argv)
-    window = PEMEditor()
+    window = PEMHub()
     window.show()
     timer = QTimer()
     timer.timeout.connect(lambda: None)

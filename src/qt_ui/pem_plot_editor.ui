@@ -200,7 +200,7 @@
       </layout>
      </widget>
     </item>
-    <item row="0" column="2">
+    <item row="0" column="1">
      <widget class="QFrame" name="frame_3">
       <property name="frameShape">
        <enum>QFrame::NoFrame</enum>
@@ -402,7 +402,10 @@
    </widget>
    <addaction name="menuFile"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar">
+  <widget class="QStatusBar" name="status_bar">
+   <property name="styleSheet">
+    <string notr="true">QStatusBar::item{border:None}</string>
+   </property>
    <property name="sizeGripEnabled">
     <bool>false</bool>
    </property>

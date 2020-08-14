@@ -344,7 +344,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_shift_amt = 0
         spinbox.blockSignals(False)
 
-    def open_file(self, pem_file, parent):
+    def open_file(self, pem_file, parent=None):
         """
         Action of opening a PEM file.
         :param pem_file: PEMFile object.

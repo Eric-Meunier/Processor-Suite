@@ -10,7 +10,8 @@ import pandas as pd
 import pyqtgraph as pg
 import pylineclip as lc
 from PyQt5 import uic, QtCore, QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
+                             QFrame)
 from pyqtgraph.Point import Point
 # from pyod.models.abod import ABOD
 # from pyod.models.knn import KNN
@@ -21,9 +22,11 @@ from src.pem.pem_file import StationConverter, PEMParser
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
     plotEditorCreatorFile = 'qt_ui\\pem_plot_editor.ui'
+    icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     plotEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_plot_editor.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PlotEditorWindow, QtBaseClass = uic.loadUiType(plotEditorCreatorFile)
@@ -36,25 +39,37 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 
 class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
+    save_sig = QtCore.pyqtSignal(object)
+    close_sig = QtCore.pyqtSignal(object)
 
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
         self.setupUi(self)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setWindowTitle('PEM Plot Editor')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'cleaner.png')))
         self.resize(1300, 850)
         self.setAcceptDrops(True)
         self.message = QMessageBox()
 
+        # Status bar formatting
+        self.station_text = QLabel()
+        self.station_text.setIndent(5)
+        self.selection_text = QLabel()
+        self.selection_text.setIndent(5)
         self.file_info_label = QLabel()
-        self.file_info_label.setStyleSheet('border: None')
-
+        self.file_info_label.setIndent(5)
         self.number_of_readings = QLabel()
-        self.number_of_readings.setStyleSheet('border: None')
+        self.number_of_readings.setIndent(5)
 
-        self.statusBar().setStyleSheet("border-top :0.5px solid gray;")
-        self.statusBar().addPermanentWidget(self.file_info_label)
-        self.statusBar().addPermanentWidget(self.number_of_readings)
+        self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray;}")
+        self.status_bar.setStyleSheet("border-top: 1px solid gray;")
+
+        self.status_bar.addWidget(self.station_text, 0)
+        self.status_bar.addWidget(self.selection_text, 1)
+        self.status_bar.addPermanentWidget(self.file_info_label, 0)
+        self.status_bar.addPermanentWidget(self.number_of_readings, 0)
 
         self.converter = StationConverter()
         self.pem_file = None
@@ -66,7 +81,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.selected_data = pd.DataFrame()
         self.selected_lines = []
         self.deleted_lines = []
-        self.statusBar().showMessage('')
 
         self.active_ax = None
         self.active_ax_ind = None
@@ -248,11 +262,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             parser = PEMParser()
             pem_file = parser.parse(pem_file)
 
-        self.pem_file = copy.deepcopy(pem_file)
+        self.pem_file = pem_file
         self.file_info_label.setText(f"Timebase {self.pem_file.timebase:.2f}ms    {self.pem_file.get_survey_type()} Survey")
 
         # Add the deletion flag column
-        self.pem_file.data.insert(13, 'del_flag', False)
+        if 'del_flag' not in self.pem_file.data.columns:
+            self.pem_file.data.insert(13, 'del_flag', False)
 
         if self.pem_file.is_split():
             # self.plot_ontime_decays_cbox.setChecked(False)  # Triggers the signal
@@ -294,18 +309,25 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             if file.lower().endswith('.pem'):
                 self.open(file)
 
+    def closeEvent(self, e):
+        self.close_sig.emit(self)
+        # for ax in np.concatenate([self.decay_axes, self.profile_axes]):
+        #     ax.vb.close()
+        e.accept()
+
     def save(self):
         """
         Save the PEM file
         """
-        self.statusBar().showMessage('Saving file...')
+        self.status_bar.showMessage('Saving file...')
         self.pem_file.data = self.pem_file.data[self.pem_file.data.del_flag == False]
         self.pem_file.save()
         self.plot_profiles('all')
         self.plot_station(self.selected_station, preserve_selection=False)
 
-        self.statusBar().showMessage('File saved.', 2000)
-        QtCore.QTimer.singleShot(2000, lambda: self.statusBar().showMessage(station_text))
+        self.status_bar.showMessage('File saved.', 2000)
+        QtCore.QTimer.singleShot(2000, lambda: self.station_text.setText(station_text))
+        self.save_sig.emit(self.pem_file)
 
     def save_as(self):
         """
@@ -316,8 +338,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             text = self.pem_file.to_string()
             print(text, file=open(str(file_path), 'w+'))
 
-            self.statusBar().showMessage(f'File saved to {file_path}', 2000)
-            QtCore.QTimer.singleShot(2000, lambda: self.statusBar().showMessage(station_text))
+            self.status_bar.showMessage(f'File saved to {file_path}', 2000)
+            QtCore.QTimer.singleShot(2000, lambda: self.station_text.setText(station_text))
 
     def update_file(self):
 
@@ -413,6 +435,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Update the list of stations
         self.stations = np.sort(self.pem_file.get_stations(converted=True))
+
+        # Select a new selected station if it no longer exists
+        if self.selected_station not in self.stations:
+            self.selected_station = self.stations[0]
 
         # Re-calculate the converted station numbers
         self.pem_file.data['cStation'] = self.pem_file.data.Station.map(self.converter.convert_station)
@@ -616,17 +642,21 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             :param data: dataFrame of plotted decays
             """
             global station_text
-            station_number_text = f"Station {data.Station.unique()[0]}"
-            reading_numbers = data.Reading_number.unique()
-            if len(reading_numbers) > 1:
-                r_numbers_range = f"Reading numbers {reading_numbers.min()} - {reading_numbers.max()}"
+            stn = data.Station.unique()
+            if stn:
+                station_number_text = f"Station {stn[0]}"
+                reading_numbers = data.Reading_number.unique()
+                if len(reading_numbers) > 1:
+                    r_numbers_range = f"Reading numbers {reading_numbers.min()} - {reading_numbers.max()}"
+                else:
+                    r_numbers_range = f"Reading number {reading_numbers.min()}"
+
+                station_readings = f"{len(data.index)} {'Reading' if len(data.index) == 1 else 'Readings'}"
+
+                station_text = '    '.join([station_number_text, station_readings, r_numbers_range])
             else:
-                r_numbers_range = f"Reading number {reading_numbers.min()}"
-
-            station_readings = f"{len(data.index)} {'Reading' if len(data.index) == 1 else 'Readings'}"
-
-            station_text = '    '.join([station_number_text, station_readings, r_numbers_range])
-            self.statusBar().showMessage(station_text)
+                station_text = ''
+            self.station_text.setText(station_text)
 
         def plot_decay(row):
             """
@@ -674,7 +704,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             # Add the plot item to the list of plotted items
             self.plotted_decay_lines.append(decay_line)
 
-        self.statusBar().clearMessage()
         self.selected_station = station
 
         # Move the selected vertical line
@@ -725,6 +754,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         if preserve_selection is True:
             self.selected_lines = [self.plotted_decay_lines[i] for i in index_of_selected]
             self.highlight_lines()
+        else:
+            self.selection_text.setText('')
 
         if self.auto_range_cbox.isChecked() and preserve_selection is False:
             for ax in self.active_decay_axes:
@@ -860,7 +891,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
                 # Show the reading number, reading index for the selected decay, plus azimuth, dip, and roll for bh
                 else:
-                    global station_text
                     selected_decay = selected_data.iloc[0]
                     r_number_text = f"Reading Number {selected_decay.Reading_number}"
                     r_index_text = f"Reading Index {selected_decay.Reading_index}"
@@ -873,7 +903,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     else:
                         selection_text = f"[ {'    '.join([r_number_text, r_index_text])} ]"
 
-                self.statusBar().showMessage(station_text + '        ' + selection_text)
+                self.selection_text.setText(selection_text)
 
         if self.plotted_decay_lines:
             # Enable decay editing buttons
@@ -917,7 +947,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.selected_data = None
         self.selected_lines = []
         self.highlight_lines()
-        self.statusBar().showMessage(station_text)
+        self.status_bar.showMessage(station_text)
 
     def box_select_decay_lines(self, rect):
         """
@@ -1245,7 +1275,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(file='PP.PEM')
+    pem_files = pem_getter.get_pems(file='7600N.PEM')
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])

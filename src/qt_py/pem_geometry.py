@@ -51,7 +51,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.setWindowTitle('PEM Geometry')
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
         self.resize(1100, 800)
-        self.statusBar().hide()
+        self.status_bar.setStyleSheet("border-top :0.5px solid gray;")
+
         self.message = QMessageBox()
         self.error = QErrorMessage()
         self.error.setWindowTitle('Error')
@@ -210,16 +211,13 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             print(f"PEM files must have D7 RAD tool objects or P tag geometry.")
             return
 
-        # if not all([f.has_xy() for f in pem_files]):
-        #     print(f"PEM files must have X and Y component data.")
-        #     return
-
         self.pem_file = copy.deepcopy(pem_file)
         self.setWindowTitle(f'PEM Geometry - {self.pem_file.filepath.name}')
 
         if not self.pem_file.is_averaged():
             self.pem_file = self.pem_file.average()
 
+        self.status_bar.showMessage(f"Opened file(s): {', '.join([f.filepath.name for f in pem_files])}")
         self.plot_pem()
         self.show()
 
@@ -468,6 +466,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         # Only keep unique RAD IDs and unique stations
         self.df.drop_duplicates(subset=['RAD_ID'], inplace=True)
         self.df.drop_duplicates(subset=['Station'], inplace=True)
+        self.df.sort_values(by='Station', inplace=True)
 
         az, dip, depth = None, None, None
         if self.pem_file.has_d7() and self.pem_file.has_xy():

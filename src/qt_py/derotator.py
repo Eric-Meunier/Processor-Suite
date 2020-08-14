@@ -46,7 +46,7 @@ class Derotator(QMainWindow, Ui_Derotator):
     """
     Class that de-rotates XY data of a PEMFile
     """
-    accept_sig = QtCore.pyqtSignal()
+    accept_sig = QtCore.pyqtSignal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -63,7 +63,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         self.message = QMessageBox()
 
-        self.button_box.accepted.connect(lambda: self.accept_sig.emit())
+        self.button_box.accepted.connect(lambda: self.accept_sig.emit(self.rotated_file))
         self.button_box.rejected.connect(self.close)
 
         self.acc_btn.clicked.connect(self.rotate)
@@ -418,13 +418,13 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         method = self.get_method()
         self.soa = self.soa_sbox.value()
-        # Create a copy of the pem_file so it is never changed
-        pem_file = copy.deepcopy(self.pem_file)
+        # # Create a copy of the pem_file so it is never changed
+        # pem_file = copy.deepcopy(self.pem_file)
 
         if method is not None:
-            self.rotated_file = pem_file.rotate(method=method, soa=self.soa)
+            self.rotated_file = self.pem_file.rotate(method=method, soa=self.soa)
         else:
-            self.rotated_file = pem_file
+            self.rotated_file = self.pem_file
 
         self.plot_pem(self.rotated_file)
 

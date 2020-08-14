@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QDesktopWidget, QMessage
 
 from src.damp.db_plot import DBPlot
 from src.qt_py.unpacker import Unpacker
-from src.qt_py.pem_editor import PEMEditor
+from src.qt_py.pem_hub import PEMHub
 from src.gps.gpx_creator import GPXCreator
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -244,7 +244,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def open_editor(self):
         if self.editor is None:
-            self.editor = PEMEditor(parent=self)
+            self.editor = PEMHub(parent=self)
             self.editor_subwindow = CustomMdiSubWindow(parent=self.editor)
             self.editor_subwindow.setWidget(self.editor)
             self.editor_subwindow.closeWindow.connect(self.editor.clear_files)
