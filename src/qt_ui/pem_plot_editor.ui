@@ -195,6 +195,9 @@
          <property name="frameShape">
           <enum>QFrame::Box</enum>
          </property>
+         <property name="lineWidth">
+          <number>1</number>
+         </property>
         </widget>
        </item>
       </layout>
@@ -228,6 +231,9 @@
         <widget class="QTabWidget" name="profile_tab_widget">
          <property name="tabPosition">
           <enum>QTabWidget::East</enum>
+         </property>
+         <property name="tabShape">
+          <enum>QTabWidget::Rounded</enum>
          </property>
          <property name="currentIndex">
           <number>0</number>

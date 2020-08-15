@@ -92,15 +92,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.pg = CustomProgressBar()
         self.text_browsers = []
 
-        self.delete_merged_files_cbox = QCheckBox('Delete Files After Merge')
-        self.delete_merged_files_cbox.setFixedHeight(20)
-        self.auto_create_backup_files_cbox = QCheckBox('Create Backup Files')
-        self.auto_create_backup_files_cbox.setChecked(True)
-        self.auto_create_backup_files_cbox.setFixedHeight(20)
-        self.auto_sort_files_cbox = QCheckBox('Sort Table on Import')
-        self.auto_sort_files_cbox.setChecked(True)
-        self.auto_sort_files_cbox.setFixedHeight(20)
-
         # Status bar formatting
         self.selection_label = QLabel()
         self.selection_label.setIndent(5)
@@ -111,9 +102,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
 
         self.status_bar.insertWidget(0, self.selection_label, 1)
-        self.status_bar.insertWidget(1, self.delete_merged_files_cbox, 0)
-        self.status_bar.insertWidget(2, self.auto_create_backup_files_cbox, 0)
-        self.status_bar.insertWidget(3, self.auto_sort_files_cbox, 0)
         self.status_bar.insertWidget(4, self.project_dir_label, 0)
 
         # Widgets

@@ -1013,8 +1013,8 @@ Stations</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>227</width>
-                <height>489</height>
+                <width>222</width>
+                <height>506</height>
                </rect>
               </property>
               <layout class="QGridLayout" name="gridLayout_8">
@@ -1231,7 +1231,8 @@ Stations</string>
                      </sizepolicy>
                     </property>
                     <property name="text">
-                     <string>Automatically Sort Table on Import</string>
+                     <string>Automatically Sort
+Table on Import</string>
                     </property>
                     <property name="checked">
                      <bool>true</bool>
@@ -1247,7 +1248,8 @@ Stations</string>
                      </sizepolicy>
                     </property>
                     <property name="text">
-                     <string>Automatically Create Backup Files</string>
+                     <string>Automatically Create
+Backup Files</string>
                     </property>
                     <property name="checked">
                      <bool>true</bool>

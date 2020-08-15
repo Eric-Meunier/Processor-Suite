@@ -58,6 +58,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.station_text.setIndent(5)
         self.selection_text = QLabel()
         self.selection_text.setIndent(5)
+        self.selection_text.setStyleSheet('color: blue')
         self.file_info_label = QLabel()
         self.file_info_label.setIndent(5)
         self.number_of_readings = QLabel()
@@ -81,6 +82,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.selected_data = pd.DataFrame()
         self.selected_lines = []
         self.deleted_lines = []
+        self.selected_profile_stations = np.array([])
 
         self.active_ax = None
         self.active_ax_ind = None
@@ -109,27 +111,27 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Configure the plots
         # X axis lin plots
         self.x_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
-        self.x_ax0 = self.x_profile_layout.addPlot(0, 0)
-        self.x_ax1 = self.x_profile_layout.addPlot(1, 0)
-        self.x_ax2 = self.x_profile_layout.addPlot(2, 0)
-        self.x_ax3 = self.x_profile_layout.addPlot(3, 0)
-        self.x_ax4 = self.x_profile_layout.addPlot(4, 0)
+        self.x_ax0 = self.x_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
+        self.x_ax1 = self.x_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
+        self.x_ax2 = self.x_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
+        self.x_ax3 = self.x_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
+        self.x_ax4 = self.x_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
 
         # Y axis lin plots
         self.y_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
-        self.y_ax0 = self.y_profile_layout.addPlot(0, 0)
-        self.y_ax1 = self.y_profile_layout.addPlot(1, 0)
-        self.y_ax2 = self.y_profile_layout.addPlot(2, 0)
-        self.y_ax3 = self.y_profile_layout.addPlot(3, 0)
-        self.y_ax4 = self.y_profile_layout.addPlot(4, 0)
+        self.y_ax0 = self.y_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
+        self.y_ax1 = self.y_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
+        self.y_ax2 = self.y_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
+        self.y_ax3 = self.y_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
+        self.y_ax4 = self.y_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
 
         # Z axis lin plots
         self.z_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
-        self.z_ax0 = self.z_profile_layout.addPlot(0, 0)
-        self.z_ax1 = self.z_profile_layout.addPlot(1, 0)
-        self.z_ax2 = self.z_profile_layout.addPlot(2, 0)
-        self.z_ax3 = self.z_profile_layout.addPlot(3, 0)
-        self.z_ax4 = self.z_profile_layout.addPlot(4, 0)
+        self.z_ax0 = self.z_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
+        self.z_ax1 = self.z_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
+        self.z_ax2 = self.z_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
+        self.z_ax3 = self.z_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
+        self.z_ax4 = self.z_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
 
         self.x_layout_axes = [self.x_ax0, self.x_ax1, self.x_ax2, self.x_ax3, self.x_ax4]
         self.y_layout_axes = [self.y_ax0, self.y_ax1, self.y_ax2, self.y_ax3, self.y_ax4]
@@ -140,6 +142,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Configure each axes
         for ax in self.profile_axes:
+            ax.vb.box_select_signal.connect(self.box_select_profile_plot)
             ax.hideButtons()
             ax.setMenuEnabled(False)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
@@ -170,6 +173,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
 
         # Signals
+        self.profile_tab_widget.currentChanged.connect(self.profile_tab_changed)
         self.show_average_cbox.toggled.connect(lambda: self.plot_profiles('all'))
         self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles('all'))
         self.plot_ontime_decays_cbox.toggled.connect(lambda: self.plot_station(self.selected_station,
@@ -559,6 +563,22 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                                              size=2,
                                              brush='w',
                                              )
+
+                # Color the scatters of the highlighted stations a different color
+                if self.selected_profile_stations.any():
+                    selected_df = df.where((df.index >= self.selected_profile_stations.min()) &
+                                           (df.index <= self.selected_profile_stations.max())).dropna()
+                    sx, sy = selected_df.index, selected_df
+
+                    selected_scatter = pg.ScatterPlotItem(x=sx, y=sy,
+                                                          pen=pg.mkPen('b', width=1.5),
+                                                          symbol='o',
+                                                          size=2.5,
+                                                          brush='w',
+                                                          )
+                    selected_scatter.setZValue(10)
+                    ax.addItem(selected_scatter)
+
                 ax.addItem(scatter)
                 scatter_plotting_time += time.time() - t
 
@@ -761,6 +781,116 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             for ax in self.active_decay_axes:
                 ax.autoRange()
 
+    def reset_range(self):
+        """
+        Auto range all axes
+        """
+        if self.link_y_cbox.isChecked():
+            filt = self.pem_file.data.cStation == self.selected_station
+            min_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x.min()).min()
+            max_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x.max()).max()
+            self.active_decay_axes[0].setYRange(min_y, max_y)
+        else:
+            for ax in self.decay_axes:
+                ax.autoRange()
+
+        self.active_profile_axes[0].autoRange()
+
+    def highlight_lines(self):
+        """
+        Highlight the line selected and un-highlight any previously highlighted line.
+        :param lines: list, PlotItem lines
+        """
+
+        def set_selection_text(selected_data):
+            """
+            Update the status bar with information about the selected lines
+            """
+            if self.selected_lines:
+
+                # Show the range of reading numbers and reading indexes if multiple decays are selected
+                if len(selected_data) > 1:
+                    r_numbers = selected_data.Reading_number.unique()
+                    r_indexes = selected_data.Reading_index.unique()
+                    if len(r_numbers) > 1:
+                        r_number_text = f"Reading numbers: {r_numbers.min()} - {r_numbers.max()}"
+                    else:
+                        r_number_text = f"Reading number: {r_numbers.min()}"
+
+                    if len(r_indexes) > 1:
+                        r_index_text = f"Reading indexes: {r_indexes.min()} - {r_indexes.max()}"
+                    else:
+                        r_index_text = f"Reading index: {r_indexes.min()}"
+
+                    selection_text = f"{len(selected_data)} selected    {r_number_text}    {r_index_text}"
+
+                # Show the reading number, reading index for the selected decay, plus azimuth, dip, and roll for bh
+                else:
+                    selected_decay = selected_data.iloc[0]
+                    r_number_text = f"Reading Number {selected_decay.Reading_number}"
+                    r_index_text = f"Reading Index {selected_decay.Reading_index}"
+
+                    if self.pem_file.is_borehole() and selected_decay.RAD_tool.has_tool_values():
+                        azimuth = f"Azimuth {selected_decay.RAD_tool.get_azimuth():.2f}"
+                        dip = f"Dip {selected_decay.RAD_tool.get_dip():.2f}"
+                        roll = f"Roll angle {selected_decay.RAD_tool.get_acc_roll():.2f}"
+                        selection_text = f"{'    '.join([r_number_text, r_index_text, azimuth, dip, roll])}"
+                    else:
+                        selection_text = f"{'    '.join([r_number_text, r_index_text])}"
+
+                self.selection_text.setText(selection_text)
+
+            # Reset the selection text if nothing is selected
+            else:
+                self.selection_text.setText('')
+
+        if self.plotted_decay_lines:
+            # Enable decay editing buttons
+            if len(self.selected_lines) > 0:
+                self.change_component_btn.setEnabled(True)
+                self.change_station_btn.setEnabled(True)
+                self.flip_decay_btn.setEnabled(True)
+            else:
+                self.change_component_btn.setEnabled(False)
+                self.change_station_btn.setEnabled(False)
+                self.flip_decay_btn.setEnabled(False)
+
+            # Change the color and width of the plotted lines
+            for line, del_flag in zip(self.plotted_decay_lines, self.plotted_decay_data.del_flag):
+                # Make the line red if it is flagged for deletion
+                if del_flag is True:
+                    pen_color = 'r'
+                    z_value = 4
+                else:
+                    pen_color = (96, 96, 96)
+                    z_value = 3
+
+                if line in self.selected_lines:
+                    if del_flag is False:
+                        pen_color = (85, 85, 255)  # Blue
+                        # pen_color = (204, 0, 204)  # Magenta ish
+                        # pen_color = (153, 51, 255)  # Puple
+
+                    print(f"Line {self.plotted_decay_lines.index(line)} selected")
+                    line.setPen(pen_color, width=2)
+                    line.setZValue(z_value)
+                    if len(self.selected_lines) == 1:
+                        line.setShadowPen(pg.mkPen('w', width=2.5, cosmetic=True))
+                else:
+                    line.setPen(pen_color, width=1)
+                    line.setShadowPen(None)
+
+            set_selection_text(self.get_selected_data())
+
+    def clear_selection(self):
+        self.selected_data = None
+        self.selected_lines = []
+        self.highlight_lines()
+        self.selected_profile_stations = np.array([])
+        # Hide the LinearRegionItem in each axes
+        for ax in self.profile_axes:
+            ax.vb.lr.hide()
+
     def profile_mouse_moved(self, evt):
         """
         Signal slot, when the mouse is moved in one of the axes. Calculates and plots a light blue vertical line at the
@@ -835,120 +965,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.last_active_ax_ind = self.active_ax_ind
                 break
 
-    def reset_range(self):
-        """
-        Auto range all axes
-        """
-        # # Unlink all the axes
-        # for ax in np.concatenate([self.decay_axes, self.profile_axes]):
-        #     ax.setXLink(None)
-        #     ax.setYLink(None)
-        #
-        # for ax in self.profile_axes:
-        #     ax.autoRange()
-        #
-        # for ax in self.decay_axes:
-        #     ax.autoRange()
-
-        # # Reset the links in the profile axes
-        # for ax in self.profile_axes[1:]:
-        #     ax.setXLink(self.profile_axes[0])
-        #
-        # # Reset the links in the decay axes
-        # self.link_decay_x()
-        # self.link_decay_y()
-
-        self.active_decay_axes[0].autoRange()
-        self.active_profile_axes[0].autoRange()
-
-    def highlight_lines(self):
-        """
-        Highlight the line selected and un-highlight any previously highlighted line.
-        :param lines: list, PlotItem lines
-        """
-
-        def set_selection_text(selected_data):
-            """
-            Update the status bar with information about the selected lines
-            """
-            if self.selected_lines:
-
-                # Show the range of reading numbers and reading indexes if multiple decays are selected
-                if len(selected_data) > 1:
-                    r_numbers = selected_data.Reading_number.unique()
-                    r_indexes = selected_data.Reading_index.unique()
-                    if len(r_numbers) > 1:
-                        r_number_text = f"Reading numbers: {r_numbers.min()} - {r_numbers.max()}"
-                    else:
-                        r_number_text = f"Reading number: {r_numbers.min()}"
-
-                    if len(r_indexes) > 1:
-                        r_index_text = f"Reading indexes: {r_indexes.min()} - {r_indexes.max()}"
-                    else:
-                        r_index_text = f"Reading index: {r_indexes.min()}"
-
-                    selection_text = f"[ {len(selected_data)} selected    {r_number_text}    {r_index_text} ]"
-
-                # Show the reading number, reading index for the selected decay, plus azimuth, dip, and roll for bh
-                else:
-                    selected_decay = selected_data.iloc[0]
-                    r_number_text = f"Reading Number {selected_decay.Reading_number}"
-                    r_index_text = f"Reading Index {selected_decay.Reading_index}"
-
-                    if self.pem_file.is_borehole() and selected_decay.RAD_tool.has_tool_values():
-                        azimuth = f"Azimuth {selected_decay.RAD_tool.get_azimuth():.2f}"
-                        dip = f"Dip {selected_decay.RAD_tool.get_dip():.2f}"
-                        roll = f"Roll angle {selected_decay.RAD_tool.get_acc_roll():.2f}"
-                        selection_text = f"[ {'    '.join([r_number_text, r_index_text, azimuth, dip, roll])} ]"
-                    else:
-                        selection_text = f"[ {'    '.join([r_number_text, r_index_text])} ]"
-
-                self.selection_text.setText(selection_text)
-
-        if self.plotted_decay_lines:
-            # Enable decay editing buttons
-            if len(self.selected_lines) > 0:
-                self.change_component_btn.setEnabled(True)
-                self.change_station_btn.setEnabled(True)
-                self.flip_decay_btn.setEnabled(True)
-            else:
-                self.change_component_btn.setEnabled(False)
-                self.change_station_btn.setEnabled(False)
-                self.flip_decay_btn.setEnabled(False)
-
-            # Change the color and width of the plotted lines
-            for line, del_flag in zip(self.plotted_decay_lines, self.plotted_decay_data.del_flag):
-                # Make the line red if it is flagged for deletion
-                if del_flag is True:
-                    pen_color = 'r'
-                    z_value = 4
-                else:
-                    pen_color = (96, 96, 96)
-                    z_value = 3
-
-                if line in self.selected_lines:
-                    if del_flag is False:
-                        pen_color = (85, 85, 255)  # Blue
-                        # pen_color = (204, 0, 204)  # Magenta ish
-                        # pen_color = (153, 51, 255)  # Puple
-
-                    print(f"Line {self.plotted_decay_lines.index(line)} selected")
-                    line.setPen(pen_color, width=2)
-                    line.setZValue(z_value)
-                    if len(self.selected_lines) == 1:
-                        line.setShadowPen(pg.mkPen('w', width=2.5, cosmetic=True))
-                else:
-                    line.setPen(pen_color, width=1)
-                    line.setShadowPen(None)
-
-            set_selection_text(self.get_selected_data())
-
-    def clear_selection(self):
-        self.selected_data = None
-        self.selected_lines = []
-        self.highlight_lines()
-        self.status_bar.showMessage(station_text)
-
     def box_select_decay_lines(self, rect):
         """
         Signal slot, select all lines that intersect the drawn rectangle.
@@ -991,6 +1007,23 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         self.highlight_lines()
         self.get_selected_data()
+
+    def box_select_profile_plot(self, range):
+        """
+        Signal slot, select stations from the profile plot when click-and-dragged
+        :param range: tuple, range of the linearRegionItem
+        """
+        # Update the LinearRegionItem for each axes
+        for ax in self.profile_axes:
+            ax.vb.lr.setRegion((range[0], range[1]))
+            ax.vb.lr.show()
+
+            # Find the stations that fall within the selection range
+            self.selected_profile_stations = self.stations[
+                np.where((self.stations < range[0]) & (self.stations > range[1]))]
+
+    def profile_tab_changed(self, ind):
+        pass
 
     def get_selected_data(self):
         """
@@ -1179,6 +1212,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
 
 class DecayViewBox(pg.ViewBox):
+    """
+    Custom ViewBox for the decay plots. Allows box selecting, box-zoom when shift is held, and mouse wheel when shift
+    is held does mouse wheel zoom
+    """
     box_select_signal = QtCore.pyqtSignal(object)
 
     def __init__(self, *args, **kwds):
@@ -1213,7 +1250,6 @@ class DecayViewBox(pg.ViewBox):
                 self.updateScaleBox(ev.buttonDownPos(), ev.pos())
 
         else:
-
             if ev.button() == QtCore.Qt.LeftButton:
                 ev.accept()
                 if ev.isFinish():  # This is the final move in the drag
@@ -1230,6 +1266,81 @@ class DecayViewBox(pg.ViewBox):
                     self.updateScaleBox(ev.buttonDownPos(), ev.pos())
             else:
                 pg.ViewBox.mouseDragEvent(self, ev)
+
+    def wheelEvent(self, ev, axis=None):
+
+        def invertQTransform(tr):
+            """Return a QTransform that is the inverse of *tr*.
+            Rasises an exception if tr is not invertible.
+
+            Note that this function is preferred over QTransform.inverted() due to
+            bugs in that method. (specifically, Qt has floating-point precision issues
+            when determining whether a matrix is invertible)
+            """
+            try:
+                import numpy.linalg
+                arr = np.array(
+                    [[tr.m11(), tr.m12(), tr.m13()], [tr.m21(), tr.m22(), tr.m23()], [tr.m31(), tr.m32(), tr.m33()]])
+                inv = numpy.linalg.inv(arr)
+                return QtGui.QTransform(inv[0, 0], inv[0, 1], inv[0, 2], inv[1, 0], inv[1, 1], inv[1, 2], inv[2, 0],
+                                        inv[2, 1])
+            except ImportError:
+                inv = tr.inverted()
+                if inv[1] is False:
+                    raise Exception("Transform is not invertible.")
+                return inv[0]
+
+        if keyboard.is_pressed('shift'):
+            if axis in (0, 1):
+                mask = [False, False]
+                mask[axis] = self.state['mouseEnabled'][axis]
+            else:
+                mask = self.state['mouseEnabled'][:]
+            s = 1.02 ** (ev.delta() * self.state['wheelScaleFactor'])  # actual scaling factor
+            s = [(None if m is False else s) for m in mask]
+            center = Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
+
+            self._resetTarget()
+            self.scaleBy(s, center)
+            ev.accept()
+            self.sigRangeChangedManually.emit(mask)
+
+
+class ProfileViewBox(pg.ViewBox):
+    """
+    Custom ViewBox for profile plots. Click and drag creates a linear region selector.
+    """
+    box_select_signal = QtCore.pyqtSignal(object)
+
+    def __init__(self, *args, **kwds):
+        pg.ViewBox.__init__(self, *args, **kwds)
+        brush = QtGui.QBrush(QtGui.QColor('blue'))
+        pen = QtGui.QPen(brush, 1)
+
+        self.lr = pg.LinearRegionItem([-100, 100], movable=False)
+        self.lr.setZValue(-10)
+        self.lr.hide()
+        self.addItem(self.lr)
+
+        # self.lr.setBrush(brush)
+        # self.lr.setOpacity(0.2)
+
+    def mouseDragEvent(self, ev, axis=None):
+        if ev.button() == QtCore.Qt.LeftButton:
+            ev.accept()
+            range = [self.mapToView(ev.buttonDownPos()).x(), self.mapToView(ev.pos()).x()]
+
+            if ev.isFinish():  # This is the final move in the drag
+                # self.lr.hide()
+                self.box_select_signal.emit(range)
+            else:
+                # update region of the LinearRegionItem
+                self.lr.show()
+                # self.lr.setRegion([self.mapToView(ev.buttonDownPos()).x(), self.mapToView(ev.pos()).x()])
+                self.box_select_signal.emit(range)
+                ev.accept()
+        else:
+            pg.ViewBox.mouseDragEvent(self, ev)
 
     def wheelEvent(self, ev, axis=None):
 
