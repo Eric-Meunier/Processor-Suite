@@ -2,7 +2,11 @@ from PyQt5 import (QtCore, QtGui)
 from PyQt5.QtWidgets import (QTableWidgetItem, QTableWidget)
 
 
+# Must be in a different file than unpacker.py since it will create circular imports
 class UnpackerTable(QTableWidget):
+    """
+    Re-implement a QTableWidget object to customize it
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -45,13 +49,3 @@ class UnpackerTable(QTableWidget):
             return True
         # noinspection PyTypeChecker
         return rect.contains(pos, True) and not (int(self.model().flags(index)) & QtCore.Qt.ItemIsDropEnabled) and pos.y() >= rect.center().y()
-
-
-class CustomTableWidgetItem(QTableWidgetItem):
-    def __init__(self, text, sortKey):
-            QTableWidgetItem.__init__(self, text, QTableWidgetItem.UserType)
-            self.sortKey = sortKey
-
-    #Qt uses a simple < check for sorting items, override this to use the sortKey
-    def __lt__(self, other):
-            return self.sortKey < other.sortKey

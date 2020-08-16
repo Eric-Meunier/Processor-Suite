@@ -23,6 +23,12 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
+      <property name="maximumSize">
+       <size>
+        <width>300</width>
+        <height>16777215</height>
+       </size>
+      </property>
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
       </property>
@@ -46,7 +52,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QGroupBox" name="groupBox_2">
+        <widget class="QGroupBox" name="tx_loop_gbox">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
            <horstretch>0</horstretch>
@@ -61,6 +67,9 @@
          </property>
          <property name="title">
           <string>Tx Loop</string>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
           <item row="3" column="0">
@@ -95,6 +104,13 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Height</string>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="0">
            <widget class="QLabel" name="label_2">
             <property name="text">
@@ -102,10 +118,16 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_3">
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="loop_height_edit">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
-             <string>Height</string>
+             <string>1000</string>
             </property>
            </widget>
           </item>
@@ -134,23 +156,17 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="loop_height_edit">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>1000</string>
-            </property>
-           </widget>
-          </item>
           <item row="5" column="0">
            <widget class="QLabel" name="label_12">
             <property name="text">
              <string>Name</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="Line" name="line">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -161,10 +177,10 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="0" colspan="2">
-           <widget class="Line" name="line">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+          <item row="6" column="0" colspan="2">
+           <widget class="QCheckBox" name="include_loop_cbox">
+            <property name="text">
+             <string>Include Loop on Save</string>
             </property>
            </widget>
           </item>
@@ -491,6 +507,9 @@ of Lines</string>
     </property>
     <addaction name="actionSave_as_KMZ"/>
     <addaction name="actionSave_as_GPX"/>
+    <addaction name="separator"/>
+    <addaction name="actionCopy_Grid_to_Clipboard"/>
+    <addaction name="actionCopy_Loop_to_Clipboard"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -515,6 +534,16 @@ of Lines</string>
   <action name="view_map_action">
    <property name="text">
     <string>Map</string>
+   </property>
+  </action>
+  <action name="actionCopy_Grid_to_Clipboard">
+   <property name="text">
+    <string>Copy Grid to Clipboard</string>
+   </property>
+  </action>
+  <action name="actionCopy_Loop_to_Clipboard">
+   <property name="text">
+    <string>Copy Loop to Clipboard</string>
    </property>
   </action>
  </widget>

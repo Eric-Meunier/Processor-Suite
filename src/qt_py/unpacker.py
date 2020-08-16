@@ -1,13 +1,16 @@
-import sys
 import os
-import src.qt_py.custom_tables
-from pyunpack import Archive
-from shutil import copyfile, rmtree
+import sys
 from pathlib import Path
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction,
-                             QFileSystemModel, QAbstractItemView, QErrorMessage, QMenu, QDialogButtonBox)
+from shutil import copyfile, rmtree
 
+import numpy as np
+from PyQt5 import (QtCore, QtGui, uic)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QTableWidget,
+                             QFileSystemModel, QAbstractItemView, QErrorMessage, QMenu, QDialogButtonBox)
+from pyunpack import Archive
+
+# This must be placed after the custom table or else there are issues with class promotion in Qt Designer.
+# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
     unpackerCreatorFile = 'qt_ui\\unpacker.ui'
@@ -20,26 +23,12 @@ else:
 # Load Qt ui file into a class
 Ui_UnpackerCreator, QtBaseClass = uic.loadUiType(unpackerCreatorFile)
 
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
-
-icons_lib = {
-    'cor': QtGui.QIcon(os.path.join(icons_path, 'pathfinder_cor.ico'))
-}
-
 
 class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
         self.setupUi(self)
         self.setWindowTitle('Unpacker')
         self.setWindowIcon(
@@ -390,6 +379,14 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             rmtree(self.path)
         self.statusBar().showMessage('Complete.', 2000)
 
+        if self.open_damp_files_cbox.isChecked():
+            db_files = []
+            for row in np.arange(self.damp_table.rowCount()):
+                filepath = os.path.join(self.damp_table.item(row, 0).text(), self.damp_table.item(row, 1).text())
+                db_files.append(filepath)
+            self.parent.db_plot.open(db_files)
+            self.parent.db_plot.show()
+
 
 def main():
     app = QApplication(sys.argv)
@@ -397,9 +394,9 @@ def main():
     up = Unpacker()
     up.move(app.desktop().screen().rect().center() - up.rect().center())
     up.show()
-    folder = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19'
-    zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
-    up.open_folder(folder)
+    # folder = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19'
+    # zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
+    # up.open_folder(folder)
 
     sys.exit(app.exec())
 

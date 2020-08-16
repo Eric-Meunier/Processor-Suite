@@ -1,4 +1,4 @@
-from src.pem.pem_parser import PEMParser
+from src.pem.pem_file import PEMParser
 import os
 
 
@@ -9,7 +9,16 @@ class PEMGetter:
     def __init__(self):
         self.parser = PEMParser
 
-    def get_pems(self, client='', number=None):
+    def get_pems(self, client=None, number=None, selection=None, subfolder=None, file=None):
+        """
+        Retrieve a list of PEMFiles
+        :param client: str, folder from which to retrieve files
+        :param number: int, number of files to selected
+        :param selection: int, index of file to select
+        :param subfolder: str, name of the folder within the client folder to look into
+        :param file: str, name the specific to open
+        :return: list
+        """
         sample_files_dir = os.path.join(
             os.path.dirname(
                 os.path.dirname(
@@ -18,15 +27,41 @@ class PEMGetter:
             'sample_files/PEMGetter files')
         if client:
             sample_files_dir = os.path.join(sample_files_dir, client)
-        file_names = [f for f in os.listdir(sample_files_dir) if
+            if subfolder:
+                sample_files_dir = os.path.join(sample_files_dir, subfolder)
+
+        file_names = [f.upper() for f in os.listdir(sample_files_dir) if
                       os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
         pem_files = []
 
-        for file in file_names[:number]:
-            filepath = os.path.join(sample_files_dir, file)
+        if number:
+            for file in file_names[:number]:
+                filepath = os.path.join(sample_files_dir, file)
+                pem_file = self.parser().parse(filepath)
+                print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
+                # pem_files.append((pem_file, None))  # Empty second item for ri_files
+                pem_files.append(pem_file)
+        elif selection is not None and not selection > len(file_names):
+            filepath = os.path.join(sample_files_dir, file_names[selection])
             pem_file = self.parser().parse(filepath)
             print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
             # pem_files.append((pem_file, None))  # Empty second item for ri_files
             pem_files.append(pem_file)
+        elif file is not None:
+            index = file_names.index(file.upper())
+            if index is not None:
+                filepath = os.path.join(sample_files_dir, file_names[index])
+                pem_file = self.parser().parse(filepath)
+                print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
+                pem_files.append(pem_file)
+            else:
+                raise ValueError(f"Could not find file {file}")
+        else:
+            for file in file_names:
+                filepath = os.path.join(sample_files_dir, file)
+                pem_file = self.parser().parse(filepath)
+                print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
+                # pem_files.append((pem_file, None))  # Empty second item for ri_files
+                pem_files.append(pem_file)
 
         return pem_files
