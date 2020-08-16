@@ -17,6 +17,7 @@ def exception_hook(exctype, value, traceback):
     sys.exit(1)
 sys.excepthook = exception_hook
 
+
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)

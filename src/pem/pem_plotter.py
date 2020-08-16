@@ -28,7 +28,7 @@ import six
 import utm
 from PIL import Image
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import (QProgressBar, QErrorMessage, QApplication)
+from PyQt5.QtWidgets import (QProgressBar, QApplication)
 from cartopy.feature import NaturalEarthFeature
 from matplotlib import patches
 from matplotlib import patheffects
@@ -373,7 +373,7 @@ class LINPlotter(ProfilePlotter):
             return channel_bounds
 
         t = time.time()
-        profile = self.pem_file.get_profile_data2(component, converted=True)
+        profile = self.pem_file.get_profile_data(component, converted=True)
         channel_bounds = calc_channel_bounds()
         for i, group in enumerate(channel_bounds):
             # Starting offset used for channel annotations
@@ -431,7 +431,7 @@ class LOGPlotter(ProfilePlotter):
         ax = self.figure.axes[0]
         # Starting offset used for channel annotations
         offset = 100
-        profile = self.pem_file.get_profile_data2(component, converted=True)
+        profile = self.pem_file.get_profile_data(component, converted=True)
 
         for ch in range(self.pem_file.number_of_channels + 1):
             stations = profile.index.values
@@ -1412,6 +1412,9 @@ class PlanMap(MapPlotter):
                     f"{pem_file.filepath.name} is not the correct survey type: {pem_file.get_survey_type()} vs {survey_type}")
                 self.pem_files.pop(pem_file)
                 break
+
+            # elif not pem_file.has_any_gps():
+            #     break
 
             # Plot the surface lines
             if not pem_file.is_borehole() and self.draw_lines is True and pem_file.has_station_gps():
@@ -4334,7 +4337,7 @@ class ContourMap(MapPlotter):
 #         return self.fig
 
 
-class PEMPrinter:
+class PEMPrinter(QtCore.QObject):
     """
     Class for printing PEMPLotter plots to PDF.
     Creates a single portrait and a single landscape figure object and re-uses them for all plots.
@@ -4342,8 +4345,10 @@ class PEMPrinter:
     :param save_path: Desired save location for the PDFs
     :param kwargs: Plotting kwargs such as hide_gaps, gaps, and x limits used in PEMPlotter.
     """
+    update_pb_sig = QtCore.pyqtSignal(object)
 
     def __init__(self, **kwargs):
+        super().__init__()
         self.pb = CustomProgressBar()
         self.pb_count = 0
         self.pb_end = 0
@@ -4401,7 +4406,7 @@ class PEMPrinter:
             :param kwargs: dict, dictionary of additional arguments
             """
             # Saving the Plan Map. Must have a valid CRS.
-            if self.crs and self.print_plan_maps is True:
+            if self.crs.is_valid() and self.print_plan_maps is True:
                 if any([pem_file.has_any_gps() for pem_file in pem_files]):
                     self.pb.setText(f"Saving plan map for {', '.join([f.line_name for f in pem_files])}")
                     # Plot the plan map
@@ -4429,6 +4434,7 @@ class PEMPrinter:
 
                     self.pb_count += 1
                     self.pb.setValue(self.pb_count)
+                    QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                     self.landscape_fig.clf()
                 else:
                     print('No PEM file has any GPS to plot on the plan map.')
@@ -4450,6 +4456,7 @@ class PEMPrinter:
 
                     self.pb_count += 1
                     self.pb.setValue(self.pb_count)
+                    QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                     self.portrait_fig.clear()
                 else:
                     print('No PEM file has the GPS required to make a section plot.')
@@ -4481,6 +4488,7 @@ class PEMPrinter:
 
                         self.pb_count += 1
                         self.pb.setValue(self.pb_count)
+                        QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                         self.portrait_fig.clear()
 
             # Saving the LOG plots
@@ -4510,6 +4518,7 @@ class PEMPrinter:
 
                         self.pb_count += 1
                         self.pb.setValue(self.pb_count)
+                        QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                         self.portrait_fig.clear()
 
             # Saving the STEP plots. Must have RI files associated with the PEM file.
@@ -4535,6 +4544,7 @@ class PEMPrinter:
 
                             self.pb_count += 1
                             self.pb.setValue(self.pb_count)
+                            QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                             self.portrait_fig.clear()
 
         def set_pb_max(unique_bhs, unique_grids):
@@ -4652,6 +4662,10 @@ class PEMPrinter:
         plt.close(self.portrait_fig)
         plt.close(self.landscape_fig)
         os.startfile(save_path + '.PDF')
+
+    def update_pb(self):
+        self.pb.setText(self.pb_text)
+        self.pb.setValue(self.pb_count)
 
     def configure_lin_fig(self):
         """

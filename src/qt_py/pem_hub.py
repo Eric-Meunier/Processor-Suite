@@ -15,9 +15,9 @@ from itertools import chain, groupby
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
-                             QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,
-                             QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView, QCheckBox,
-                             QHBoxLayout)
+                             QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,QProgressBar,
+                             QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
+                             QVBoxLayout)
 # from pyqtspinner.spinner import WaitingSpinner
 import geomag
 
@@ -60,16 +60,19 @@ if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
     pemhubWindowCreatorFile = 'qt_ui\\pem_hub.ui'
     planMapOptionsCreatorFile = 'qt_ui\\plan_map_options.ui'
+    pdfPrintOptionsCreatorFile = 'qt_ui\\pdf_plot_printer.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     pemhubWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_hub.ui')
     planMapOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\plan_map_options.ui')
+    pdfPrintOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pdf_plot_printer.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PEMHubWindow, QtBaseClass = uic.loadUiType(pemhubWindowCreatorFile)
 Ui_PlanMapOptionsWidget, QtBaseClass = uic.loadUiType(planMapOptionsCreatorFile)
+Ui_PDFPlotPrinterWidget, QtBaseClass = uic.loadUiType(pdfPrintOptionsCreatorFile)
 
 
 class PEMHub(QMainWindow, Ui_PEMHubWindow):
@@ -112,7 +115,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.db_plot = DBPlot(parent=self)
         self.unpacker = Unpacker(parent=self)
         self.gpx_creator = GPXCreator(parent=self)
-        self.plan_map_options = PlanMapOptions(parent=self)
+        self.pdf_plot_printer = PDFPlotPrinter(parent=self)
         self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_viewer = ContourMapViewer(parent=self)
@@ -166,11 +169,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for datum in self.gps_datums:
             self.gps_datum_cbox.addItem(datum)
 
-        # Set validations
-        int_validator = QtGui.QIntValidator()
-        self.max_range_edit.setValidator(int_validator)
-        self.min_range_edit.setValidator(int_validator)
-        self.section_depth_edit.setValidator(int_validator)
+        # # Set validations
+        # int_validator = QtGui.QIntValidator()
+        # # self.max_range_edit.setValidator(int_validator)
+        # # self.min_range_edit.setValidator(int_validator)
+        # self.section_depth_edit.setValidator(int_validator)
 
         # Actions
         self.actionDel_File = QAction("&Remove File", self)
@@ -254,7 +257,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionPrint_Plots_to_PDF.setShortcut("F12")
         self.actionPrint_Plots_to_PDF.setStatusTip("Print plots to a PDF file")
         self.actionPrint_Plots_to_PDF.setToolTip("Print plots to a PDF file")
-        self.actionPrint_Plots_to_PDF.triggered.connect(self.print_plots)
+        self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
 
         self.actionBackup_Files.setStatusTip("Backup all files in the table.")
         self.actionBackup_Files.setToolTip("Backup all files in the table.")
@@ -499,8 +502,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.itemSelectionChanged.connect(update_selection_text)
         self.table.cellChanged.connect(self.table_value_changed)
 
-        self.plan_map_options_btn.clicked.connect(self.plan_map_options.show)
-        self.print_plots_btn.clicked.connect(self.print_plots)
+        # self.print_plots_btn.clicked.connect(self.print_plots)
 
         self.share_client_cbox.stateChanged.connect(
             lambda: self.client_edit.setEnabled(self.share_client_cbox.isChecked()))
@@ -517,13 +519,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
         self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
-        self.share_range_cbox.toggled.connect(
-            lambda: self.min_range_edit.setEnabled(self.share_range_cbox.isChecked()))
-        self.share_range_cbox.toggled.connect(
-            lambda: self.max_range_edit.setEnabled(self.share_range_cbox.isChecked()))
+        # self.share_range_cbox.toggled.connect(
+        #     lambda: self.min_range_edit.setEnabled(self.share_range_cbox.isChecked()))
+        # self.share_range_cbox.toggled.connect(
+        #     lambda: self.max_range_edit.setEnabled(self.share_range_cbox.isChecked()))
         # self.share_range_cbox.stateChanged.connect(self.refresh_table)
-
-        self.reset_range_btn.clicked.connect(self.fill_share_range)
 
         # self.min_range_edit.editingFinished.connect(lambda: self.refresh_table(single_row=False))
         # self.max_range_edit.editingFinished.connect(lambda: self.refresh_table(single_row=False))
@@ -585,7 +585,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 print_plots_action = QAction("&Print Plots", self)
                 print_plots_action.setIcon(QIcon(os.path.join(icons_path, 'pdf.png')))
-                print_plots_action.triggered.connect(lambda: self.print_plots(selected_files=True))
+                print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected_files=True))
 
                 extract_stations_action = QAction("&Extract Stations", self)
                 extract_stations_action.triggered.connect(
@@ -992,8 +992,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.pg.setValue(count)
                 print(f"Time to open PEM file: {time.time() - t3}")
 
-        # Set the shared range boxes
-        self.fill_share_range()
         self.table.setUpdatesEnabled(True)
 
         # # Move the project directory tree
@@ -1187,6 +1185,27 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_geometry = PEMGeometry(parent=self)
         pem_geometry.accepted_sig.connect(accept_geometry)
         pem_geometry.open(pem_files)
+
+    def open_pdf_plot_printer(self, selected_files=False):
+        """
+        Open an instance of PDFPlotPrinter, which has all the options for printing plots.
+        :param selected_files: bool, False will pass all opened PEM files, True will only pass selected PEM files
+        """
+
+        if not self.pem_files:
+            return
+
+        if selected_files is True:
+            pem_files, rows = self.get_selected_pem_files(updated=True)
+        else:
+            pem_files, rows = self.updated_pem_files(), range(0, len(self.pem_files))
+
+        # Gather the RI files
+        ri_files = []
+        for row, pem_file in zip(rows, pem_files):
+            ri_files.append(self.pem_info_widgets[row].ri_file)
+
+        self.pdf_plot_printer.open(pem_files, ri_files=ri_files, crs=self.get_crs())
 
     # def get_project_path(self):
     #     """
@@ -2129,109 +2148,109 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         crs = CRS().from_dict(crs_dict)
         return crs
 
-    def print_plots(self, selected_files=False):
-        """
-        Save the final plots as PDFs for the selected PEM files. If no PEM files are selected, it saves it for all open
-        PEM files
-        :param selected_files: Bool, whether to only use the PEM files that are currently selected.
-        :return: None
-        """
-
-        def get_save_file():
-            default_path = self.pem_files[-1].filepath.parent
-            self.dialog.setDirectory(str(default_path))
-            save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', str(default_path))[0])[0]
-            # Returns full filepath. For single PDF file
-            print(f"Saving PDFs to {save_dir}")
-            return save_dir
-
-        if not self.pem_files:
-            return
-
-        if selected_files is True:
-            input_pem_files, rows = self.get_selected_pem_files()
-        else:
-            input_pem_files = self.pem_files
-            rows = range(0, len(input_pem_files))
-
-        # Needs to be deepcopied or else it changes the pem files in self.pem_files
-        pem_files = copy.deepcopy(input_pem_files)
-        self.status_bar.showMessage('Saving plots...', 2000)
-        crs = self.get_crs()
-
-        plot_kwargs = {
-            'CRS': crs,
-            'share_range': self.share_range_cbox.isChecked(),
-            'hide_gaps': self.hide_gaps_cbox.isChecked(),
-            'annotate_loop': self.show_loop_anno_cbox.isChecked(),
-            'is_moving_loop': self.moving_loop_cbox.isChecked(),
-            'draw_title_box': self.plan_map_options.title_box_cbox.isChecked(),
-            'draw_grid': self.plan_map_options.grid_cbox.isChecked(),
-            'draw_scale_bar': self.plan_map_options.scale_bar_cbox.isChecked(),
-            'draw_north_arrow': self.plan_map_options.north_arrow_cbox.isChecked(),
-            'draw_legend': self.plan_map_options.legend_cbox.isChecked(),
-            'draw_loops': self.plan_map_options.draw_loops_cbox.isChecked(),
-            'draw_lines': self.plan_map_options.draw_lines_cbox.isChecked(),
-            'draw_collars': self.plan_map_options.draw_hole_collars_cbox.isChecked(),
-            'draw_hole_traces': self.plan_map_options.draw_hole_traces_cbox.isChecked(),
-            'make_lin_plots': self.output_lin_cbox.isChecked(),
-            'make_log_plots': self.output_log_cbox.isChecked(),
-            'make_step_plots': self.output_step_cbox.isChecked(),
-            'make_plan_map': self.output_plan_map_cbox.isChecked(),
-            'make_section_plot': self.output_section_cbox.isChecked(),
-            'label_loops': self.plan_map_options.loop_labels_cbox.isChecked(),
-            'label_lines': self.plan_map_options.line_labels_cbox.isChecked(),
-            'label_collars': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
-            'label_hole_depths': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
-            'label_segments': self.label_section_depths_cbox.isChecked(),
-            'section_depth': self.section_depth_edit.text()
-        }
-
-        if self.share_range_cbox.isChecked():
-            plot_kwargs['x_min'] = int(self.min_range_edit.text())
-            plot_kwargs['x_max'] = int(self.max_range_edit.text())
-        else:
-            plot_kwargs['x_min'] = None
-            plot_kwargs['x_max'] = None
-
-        ri_files = []
-        for row, pem_file in zip(rows, pem_files):
-            ri_files.append(self.pem_info_widgets[row].ri_file)
-            self.update_pem_file_from_table(pem_file, row)
-            if not pem_file.is_averaged():
-                pem_file = pem_file.average()
-            if not pem_file.is_split():
-                pem_file = pem_file.split()
-
-        if self.output_plan_map_cbox.isChecked():
-            if not crs.is_valid():
-                response = self.message.question(self, 'No CRS',
-                                                 'No CRS has been selected. ' +
-                                                 'Do you wish to proceed without a plan map?',
-                                                 self.message.Yes | self.message.No)
-                if response == self.message.No:
-                    return
-
-        # if __name__ == '__main__':
-        #     save_dir = str(Path(__file__).parent.parent.parent/'sample_files'/'test')
-        # else:
-        save_dir = get_save_file()
-        if save_dir:
-            printer = PEMPrinter(**plot_kwargs)
-            self.status_bar.addPermanentWidget(printer.pb)
-            try:
-                # PEM Files and RI files zipped together for when they get sorted
-                printer.print_files(save_dir, files=list(zip(pem_files, ri_files)))
-            except FileNotFoundError:
-                self.message.information(self, 'Error', f'{save_dir} does not exist')
-            except IOError:
-                self.message.information(self, 'Error', f'{save_dir} is currently opened')
-            else:
-                self.status_bar.showMessage('Plots saved', 2000)
-            finally:
-                printer.pb.hide()
-        else:
-            self.status_bar.showMessage('Cancelled', 2000)
+    # def print_plots(self, selected_files=False):
+    #     """
+    #     Save the final plots as PDFs for the selected PEM files. If no PEM files are selected, it saves it for all open
+    #     PEM files
+    #     :param selected_files: Bool, whether to only use the PEM files that are currently selected.
+    #     :return: None
+    #     """
+    # 
+    #     def get_save_file():
+    #         default_path = self.pem_files[-1].filepath.parent
+    #         self.dialog.setDirectory(str(default_path))
+    #         save_dir = os.path.splitext(QFileDialog.getSaveFileName(self, '', str(default_path))[0])[0]
+    #         # Returns full filepath. For single PDF file
+    #         print(f"Saving PDFs to {save_dir}")
+    #         return save_dir
+    # 
+    #     if not self.pem_files:
+    #         return
+    # 
+    #     if selected_files is True:
+    #         input_pem_files, rows = self.get_selected_pem_files()
+    #     else:
+    #         input_pem_files = self.pem_files
+    #         rows = range(0, len(input_pem_files))
+    # 
+    #     # Needs to be deepcopied or else it changes the pem files in self.pem_files
+    #     pem_files = copy.deepcopy(input_pem_files)
+    #     self.status_bar.showMessage('Saving plots...', 2000)
+    #     crs = self.get_crs()
+    # 
+    #     plot_kwargs = {
+    #         'CRS': crs,
+    #         'share_range': self.share_range_cbox.isChecked(),
+    #         'hide_gaps': self.hide_gaps_cbox.isChecked(),
+    #         'annotate_loop': self.show_loop_anno_cbox.isChecked(),
+    #         'is_moving_loop': self.moving_loop_cbox.isChecked(),
+    #         'draw_title_box': self.pdf_plot_printer.title_box_cbox.isChecked(),
+    #         'draw_grid': self.pdf_plot_printer.grid_cbox.isChecked(),
+    #         'draw_scale_bar': self.pdf_plot_printer.scale_bar_cbox.isChecked(),
+    #         'draw_north_arrow': self.pdf_plot_printer.north_arrow_cbox.isChecked(),
+    #         'draw_legend': self.pdf_plot_printer.legend_cbox.isChecked(),
+    #         'draw_loops': self.pdf_plot_printer.draw_loops_cbox.isChecked(),
+    #         'draw_lines': self.pdf_plot_printer.draw_lines_cbox.isChecked(),
+    #         'draw_collars': self.pdf_plot_printer.draw_hole_collars_cbox.isChecked(),
+    #         'draw_hole_traces': self.pdf_plot_printer.draw_hole_traces_cbox.isChecked(),
+    #         'make_lin_plots': self.output_lin_cbox.isChecked(),
+    #         'make_log_plots': self.output_log_cbox.isChecked(),
+    #         'make_step_plots': self.output_step_cbox.isChecked(),
+    #         'make_plan_map': self.output_plan_map_cbox.isChecked(),
+    #         'make_section_plot': self.output_section_cbox.isChecked(),
+    #         'label_loops': self.pdf_plot_printer.loop_labels_cbox.isChecked(),
+    #         'label_lines': self.pdf_plot_printer.line_labels_cbox.isChecked(),
+    #         'label_collars': self.pdf_plot_printer.hole_collar_labels_cbox.isChecked(),
+    #         'label_hole_depths': self.pdf_plot_printer.hole_depth_labels_cbox.isChecked(),
+    #         'label_segments': self.label_section_depths_cbox.isChecked(),
+    #         'section_depth': self.section_depth_edit.text()
+    #     }
+    # 
+    #     if self.share_range_cbox.isChecked():
+    #         plot_kwargs['x_min'] = int(self.min_range_edit.text())
+    #         plot_kwargs['x_max'] = int(self.max_range_edit.text())
+    #     else:
+    #         plot_kwargs['x_min'] = None
+    #         plot_kwargs['x_max'] = None
+    # 
+    #     ri_files = []
+    #     for row, pem_file in zip(rows, pem_files):
+    #         ri_files.append(self.pem_info_widgets[row].ri_file)
+    #         self.update_pem_file_from_table(pem_file, row)
+    #         if not pem_file.is_averaged():
+    #             pem_file = pem_file.average()
+    #         if not pem_file.is_split():
+    #             pem_file = pem_file.split()
+    # 
+    #     if self.output_plan_map_cbox.isChecked():
+    #         if not crs.is_valid():
+    #             response = self.message.question(self, 'No CRS',
+    #                                              'No CRS has been selected. ' +
+    #                                              'Do you wish to proceed without a plan map?',
+    #                                              self.message.Yes | self.message.No)
+    #             if response == self.message.No:
+    #                 return
+    # 
+    #     # if __name__ == '__main__':
+    #     #     save_dir = str(Path(__file__).parent.parent.parent/'sample_files'/'test')
+    #     # else:
+    #     save_dir = get_save_file()
+    #     if save_dir:
+    #         printer = PEMPrinter(**plot_kwargs)
+    #         self.status_bar.addPermanentWidget(printer.pb)
+    #         try:
+    #             # PEM Files and RI files zipped together for when they get sorted
+    #             printer.print_files(save_dir, files=list(zip(pem_files, ri_files)))
+    #         except FileNotFoundError:
+    #             self.message.information(self, 'Error', f'{save_dir} does not exist')
+    #         except IOError:
+    #             self.message.information(self, 'Error', f'{save_dir} is currently opened')
+    #         else:
+    #             self.status_bar.showMessage('Plots saved', 2000)
+    #         finally:
+    #             printer.pb.hide()
+    #     else:
+    #         self.status_bar.showMessage('Cancelled', 2000)
 
     def average_pem_data(self, selected=False):
         """
@@ -2506,22 +2525,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.open_pem_files(files_to_open)
 
-    def fill_share_range(self):
-        """
-        Calculates the minimum and maximum station numbers between all opened PEM files, and uses this to fill out the
-        shared range values
-        :return: None
-        """
-        if self.pem_files:
-            min_stations = [f.get_stations(converted=True).min() for f in self.pem_files]
-            max_stations = [f.get_stations(converted=True).max() for f in self.pem_files]
-            min_range, max_range = min(min_stations), max(max_stations)
-            self.min_range_edit.setText(str(min_range))
-            self.max_range_edit.setText(str(max_range))
-        else:
-            self.min_range_edit.setText('')
-            self.max_range_edit.setText('')
-
     def share_loop(self):
         """
         Share the loop GPS of one file with all other opened PEM files.
@@ -2751,13 +2754,155 @@ class FrequencyConverter(QWidget):
             self.close()
 
 
+class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
+    """
+    Widget to handle printing PDF plots for PEM/RI files.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.setupUi(self)
+        self.setWindowTitle("Print PDF Options")
+
+        self.pem_files = []
+        self.ri_files = []
+        self.crs = CRS()
+
+        self.plan_map_options = PlanMapOptions(parent=self)
+        self.message = QMessageBox()
+        self.pb_win = QWidget()  # Progress bar window
+        self.pb_win.resize(500, 100)
+        self.pb_win.setLayout(QVBoxLayout())
+        self.pb_text = QLabel('')
+        self.pb_win.layout().addWidget(self.pb_text)
+
+        # Set validations
+        int_validator = QtGui.QIntValidator()
+        self.max_range_edit.setValidator(int_validator)
+        self.min_range_edit.setValidator(int_validator)
+        self.section_depth_edit.setValidator(int_validator)
+
+        # Signals
+        self.print_btn.clicked.connect(self.print_pdfs)
+        self.cancel_btn.clicked.connect(self.close)
+        self.plan_map_options_btn.clicked.connect(self.plan_map_options.show)
+
+    def open(self, pem_files, ri_files=None, crs=None):
+
+        def fill_share_range():
+            """
+            Calculates the minimum and maximum station numbers between all opened PEM files, and uses this to fill out
+            the shared range values
+            """
+            if self.pem_files:
+                min_stations = [f.get_stations(converted=True).min() for f in self.pem_files]
+                max_stations = [f.get_stations(converted=True).max() for f in self.pem_files]
+                min_range, max_range = min(min_stations), max(max_stations)
+                self.min_range_edit.setText(str(min_range))
+                self.max_range_edit.setText(str(max_range))
+            else:
+                self.min_range_edit.setText('')
+                self.max_range_edit.setText('')
+
+        self.pem_files = copy.deepcopy(pem_files)
+        self.ri_files = ri_files
+        self.crs = crs
+
+        for pem_file in self.pem_files:
+            if not pem_file.is_averaged():
+                pem_file = pem_file.average()
+            if not pem_file.is_split():
+                pem_file = pem_file.split()
+
+        fill_share_range()
+
+        self.show()
+
+    def print_pdfs(self):
+
+        def get_save_file():
+            default_path = self.pem_files[-1].filepath.parent
+            # self.dialog.setDirectory(str(default_path))
+            save_dir = QFileDialog.getSaveFileName(self, '', str(default_path))[0]
+            print(f"Saving PDFs to {save_dir}")
+            return save_dir
+
+        plot_kwargs = {
+            'CRS': self.crs,
+            'share_range': self.share_range_cbox.isChecked(),
+            'hide_gaps': self.hide_gaps_cbox.isChecked(),
+            'annotate_loop': self.show_loop_anno_cbox.isChecked(),
+            'is_moving_loop': self.moving_loop_cbox.isChecked(),
+            'draw_title_box': self.plan_map_options.title_box_cbox.isChecked(),
+            'draw_grid': self.plan_map_options.grid_cbox.isChecked(),
+            'draw_scale_bar': self.plan_map_options.scale_bar_cbox.isChecked(),
+            'draw_north_arrow': self.plan_map_options.north_arrow_cbox.isChecked(),
+            'draw_legend': self.plan_map_options.legend_cbox.isChecked(),
+            'draw_loops': self.plan_map_options.draw_loops_cbox.isChecked(),
+            'draw_lines': self.plan_map_options.draw_lines_cbox.isChecked(),
+            'draw_collars': self.plan_map_options.draw_hole_collars_cbox.isChecked(),
+            'draw_hole_traces': self.plan_map_options.draw_hole_traces_cbox.isChecked(),
+            'make_lin_plots': bool(self.make_profile_plots_gbox.isChecked() and self.output_lin_cbox.isChecked()),
+            'make_log_plots': bool(self.make_profile_plots_gbox.isChecked() and self.output_log_cbox.isChecked()),
+            'make_step_plots': bool(self.make_profile_plots_gbox.isChecked() and self.output_step_cbox.isChecked()),
+            'make_plan_map': self.make_plan_maps_gbox.isChecked(),
+            'make_section_plot': self.make_section_plots_gbox.isChecked(),
+            'label_loops': self.plan_map_options.loop_labels_cbox.isChecked(),
+            'label_lines': self.plan_map_options.line_labels_cbox.isChecked(),
+            'label_collars': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
+            'label_hole_depths': self.plan_map_options.hole_depth_labels_cbox.isChecked(),
+            'label_segments': self.label_section_depths_cbox.isChecked(),
+            'section_depth': self.section_depth_edit.text()
+        }
+
+        # Fill the shared range boxes
+        if self.share_range_cbox.isChecked():
+            plot_kwargs['x_min'] = int(self.min_range_edit.text())
+            plot_kwargs['x_max'] = int(self.max_range_edit.text())
+        else:
+            plot_kwargs['x_min'] = None
+            plot_kwargs['x_max'] = None
+
+        # Make sure CRS is passed and valid if making a plan map
+        if self.make_plan_maps_gbox.isChecked():
+            if not self.crs.is_valid():
+                response = self.message.question(self, 'No CRS',
+                                                 'No CRS has been selected. ' +
+                                                 'Do you wish to proceed without a plan map?',
+                                                 self.message.Yes | self.message.No)
+                if response == self.message.No:
+                    self.close()
+
+        save_dir = get_save_file()
+        if save_dir:
+            save_dir = os.path.splitext(save_dir)[0]
+            printer = PEMPrinter(**plot_kwargs)
+            self.pb_win.layout().insertWidget(0, printer.pb)
+            self.pb_win.show()
+            QApplication.processEvents()
+            try:
+                # PEM Files and RI files zipped together for when they get sorted
+                printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
+            except FileNotFoundError:
+                self.message.information(self, 'Error', f'{save_dir} does not exist')
+            except IOError:
+                self.message.information(self, 'Error', f'{save_dir} is currently opened')
+            # else:
+            #     self.status_bar.showMessage('Plots saved', 2000)
+            finally:
+                self.pb_win.layout().removeWidget(printer.pb)
+                self.pb_win.hide()
+                self.close()
+        else:
+            self.close()
+
+
 class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
     """
     GUI to display checkboxes for display options when creating the final Plan Map PDF. Buttons aren't attached
     to any signals. The state of the checkboxes are read from PEMEditor.
     """
-
-    # acceptImportSignal = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__()
@@ -2913,20 +3058,17 @@ def main():
 
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    pem_files = pg.get_pems(client='PEM Rotation', number=4)
+    # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # mw.show()
     mw.open_pem_files(pem_files)
     mw.delete_merged_files_cbox.setChecked(False)
+
     # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
     mw.show()
-
-    mw.output_lin_cbox.setChecked(False)
-    mw.output_log_cbox.setChecked(False)
-    mw.output_step_cbox.setChecked(False)
-    mw.output_section_cbox.setChecked(False)
-    # mw.print_plots()
+    mw.open_pdf_plot_printer(selected_files=False)
 
     app.exec_()
 

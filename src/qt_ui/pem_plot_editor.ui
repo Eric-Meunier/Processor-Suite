@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1126</width>
-    <height>865</height>
+    <height>867</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -138,40 +138,45 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="change_component_btn">
-            <property name="enabled">
-             <bool>false</bool>
+           <widget class="QGroupBox" name="groupBox_4">
+            <property name="title">
+             <string>Selection</string>
             </property>
-            <property name="text">
-             <string>Change Component</string>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
             </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="change_station_btn">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Change Station</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="flip_decay_btn">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Flip</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="auto_clean_btn">
-            <property name="text">
-             <string>Auto-Clean</string>
-            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_9">
+             <item>
+              <widget class="QPushButton" name="change_comp_decay_btn">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Change Component</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="change_station_decay_btn">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Change Station</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="flip_decay_btn">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Flip</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
           <item>
@@ -368,6 +373,58 @@
            </widget>
           </item>
           <item>
+           <widget class="QGroupBox" name="groupBox_3">
+            <property name="title">
+             <string>Selection</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_8">
+             <item>
+              <widget class="QPushButton" name="change_comp_profile_btn">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Change Components</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="shift_station_profile_btn">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Shift Stations</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="flip_profile_btn">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Flip</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="remove_profile_btn">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Remove</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
            <spacer name="verticalSpacer_2">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -379,6 +436,13 @@
              </size>
             </property>
            </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="auto_clean_btn">
+            <property name="text">
+             <string>Auto-Clean</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

@@ -134,7 +134,7 @@ class PEMFile:
 
     def has_collar_gps(self):
         if self.is_borehole():
-            if not self.geometry.collar.df.empty and all(self.geometry.collar.df):
+            if not self.geometry.collar.df.dropna().empty and all(self.geometry.collar.df):
                 return True
             else:
                 return False
@@ -143,7 +143,7 @@ class PEMFile:
 
     def has_geometry(self):
         if self.is_borehole():
-            if not self.geometry.segments.df.empty and all(self.geometry.segments.df):
+            if not self.geometry.segments.df.dropna().empty and all(self.geometry.segments.df):
                 return True
             else:
                 return False
@@ -151,14 +151,14 @@ class PEMFile:
             return False
 
     def has_loop_gps(self):
-        if not self.loop.df.empty and all(self.loop.df):
+        if not self.loop.df.dropna().empty and all(self.loop.df):
             return True
         else:
             return False
 
     def has_station_gps(self):
         if not self.is_borehole():
-            if not self.line.df.empty and all(self.line.df):
+            if not self.line.df.dropna().empty and all(self.line.df):
                 return True
             else:
                 return False
