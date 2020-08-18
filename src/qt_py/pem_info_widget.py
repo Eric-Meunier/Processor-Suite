@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import time
 from collections import OrderedDict
 from copy import deepcopy
 
@@ -58,10 +59,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.error = QErrorMessage()
         self.message = QMessageBox()
         self.message.setIcon(QMessageBox.Information)
-        self.loop_adder = LoopAdder(parent=self)
-        self.loop_adder.write_widget = self
-        self.line_adder = LineAdder(parent=self)
-        self.line_adder.write_widget = self
 
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
@@ -154,8 +151,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.export_station_gps_btn.clicked.connect(lambda: self.export_gps('station'))
         self.export_loop_gps_btn.clicked.connect(lambda: self.export_gps('loop'))
 
-        self.edit_loop_btn.clicked.connect(lambda: self.loop_adder.open(self.get_loop()))
-        self.edit_line_btn.clicked.connect(lambda: self.line_adder.open(self.get_line()))
+        self.edit_loop_btn.clicked.connect(self.open_loop_adder)
+        self.edit_line_btn.clicked.connect(self.open_line_adder)
 
         # Radio buttons
         self.station_sort_rbtn.clicked.connect(self.fill_data_table)
@@ -351,7 +348,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param parent: parent widget (PEMEditor)
         :return: PEMFileInfoWidget object
         """
-        print(f'PEMFileInfoWidget - Opening PEM File {pem_file.filepath.name}')
+        t = time.time()
         self.pem_file = pem_file
         self.parent = parent
         self.init_tables()
@@ -363,6 +360,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.fill_info_tab()
         self.fill_gps_table(self.pem_file.loop.get_loop(), self.loop_table)
         self.fill_data_table()
+        print(f"Time to open PIW for {self.pem_file.filepath.name}: {time.time() - t}")
         return self
 
     def open_ri_file(self, filepath):
@@ -1305,4 +1303,20 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             os.startfile(selected_path[0])
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
+
+    def open_loop_adder(self):
+        """
+        Open the LoopAdder widget and open the current loop into it.
+        """
+        loop_adder = LoopAdder(parent=self)
+        loop_adder.write_widget = self
+        loop_adder.open(self.get_loop())
+
+    def open_line_adder(self):
+        """
+        Open the LineAdder widget and open the current line into it.
+        """
+        line_adder = LineAdder(parent=self)
+        line_adder.write_widget = self
+        line_adder.open(self.get_loop())
 

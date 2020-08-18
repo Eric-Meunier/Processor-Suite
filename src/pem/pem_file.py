@@ -372,6 +372,10 @@ class PEMFile:
         return mag.dec
 
     def get_survey_type(self):
+        """
+        Return the survey type in title format
+        :return: str
+        """
 
         if self.survey_type.casefold() == 's-coil' or self.survey_type.casefold() == 'surface':
             survey_type = 'Surface Induction'
@@ -401,10 +405,57 @@ class PEMFile:
         text = ps.serialize(copy.deepcopy(self))
         return text
 
+    def to_xyz(self):
+        """
+        Create a str in XYZ format of the pem file's data
+        :return: str
+        """
+
+        def get_station_gps(row):
+            """
+            Add the GPS information for each station
+            :param row: pandas DataFrame row
+            :return: pandas DataFrame row
+            """
+            value = row.c_Station
+            filt = gps['Station'] == value
+
+            if filt.any() or filt.all():
+                row['Easting'] = gps[filt]['Easting'].iloc[0]
+                row['Northing'] = gps[filt]['Northing'].iloc[0]
+                row['Elevation'] = gps[filt]['Elevation'].iloc[0]
+            return row
+
+        df = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Component', 'Station', 'c_Station'])
+        pem_data = self.get_data(sorted=True).dropna()
+        gps = self.line.get_line(sorted=True).drop_duplicates('Station')
+
+        assert not self.is_borehole(), 'Can only create XYZ file with surface PEM files.'
+        assert not gps.empty, 'No GPS found.'
+        print(f'Converting {self.filepath.name} to XYZ')
+        t = time.time()
+
+        df['Component'] = pem_data.Component.copy()
+        df['Station'] = pem_data.Station.copy()
+        df['c_Station'] = df.Station.map(self.converter.convert_station)
+        # Add the GPS
+        df = df.apply(get_station_gps, axis=1)
+
+        # Create a dataframe of the readings with channel number as columns
+        channel_data = pd.DataFrame(columns=range(int(self.number_of_channels)))
+        channel_data = pem_data.apply(lambda x: pd.Series(x.Reading), axis=1)
+        # Merge the two data frames
+        df = pd.concat([df, channel_data], axis=1).drop('c_Station', axis=1)
+        str_df = df.apply(lambda x: x.astype(str).str.cat(sep=' '), axis=1)
+        str_df = '\n'.join(str_df.to_list())
+        print(f"Time to convert {self.filepath.name} to XYZ: {time.time() - t}")
+        return str_df
+
     def save(self):
         """
         Save the PEM file to the .PEM file with the same filepath it currently has.
         """
+        print(f"Saving {self.filepath.name} to .PEM")
         text = self.to_string()
         print(text, file=open(str(self.filepath), 'w+'))
 
@@ -413,6 +464,8 @@ class PEMFile:
         Averages the data of the PEM file object. Uses a weighted average.
         :return: PEM file object
         """
+        print(f"Averaging {self.filepath.name}")
+        t = time.time()
         if self.is_averaged():
             print(f"{self.filepath.name} is already averaged")
             return
@@ -438,6 +491,7 @@ class PEMFile:
         # Sort the data frame
         df = sort_data(df)
         self.data = df
+        print(f"Time to average {self.filepath.name}: {time.time() - t}")
         return self
 
     def split(self):
@@ -445,6 +499,7 @@ class PEMFile:
         Remove the on-time channels of the PEM file object
         :return: PEM file object with split data
         """
+        print(f"Splitting channels for {self.filepath.name}")
         t = time.time()
         if self.is_split():
             print(f"{self.filepath.name} is already split.")
@@ -467,6 +522,9 @@ class PEMFile:
         :param coil_area: int: new coil area
         :return: PEMFile object: self with data scaled
         """
+        t = time.time()
+        print(f"Scaling coil area of {self.filepath.name}")
+
         new_coil_area = coil_area
         assert isinstance(new_coil_area, int), "New coil area is not type int"
         old_coil_area = self.coil_area
@@ -478,6 +536,7 @@ class PEMFile:
 
         self.coil_area = new_coil_area
         self.notes.append(f'<HE3> Data scaled by coil area change of {old_coil_area}/{new_coil_area}')
+        print(f"Time to scale by coil area: {time.time() - t}")
         return self
 
     def scale_current(self, current):
@@ -486,6 +545,9 @@ class PEMFile:
         :param current: int: new current
         :return: PEMFile object: self with data scaled
         """
+        t = time.time()
+        print(f"Scaling current of {self.filepath.name}")
+
         new_current = current
         assert isinstance(new_current, float), "New current is not type float"
         old_current = self.current
@@ -497,6 +559,7 @@ class PEMFile:
 
         self.current = new_current
         self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{old_current}A')
+        print(f"Time to scale by current: {time.time() - t}")
         return self
 
     def rotate(self, method='acc', soa=0):
@@ -509,6 +572,7 @@ class PEMFile:
         """
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
         assert self.prepped_for_rotation, f"{self.filepath.name} has not been prepped for rotation."
+        print(f"Derotating data of {self.filepath.name}")
 
         def rotate_data(group, method, soa):
             """
@@ -664,6 +728,7 @@ class PEMFile:
         """
 
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
+        print(f"Preparing for XY-derotation for {self.filepath.name}")
 
         def filter_data(df):
             """
@@ -1259,6 +1324,8 @@ class PEMParser:
             df['ZTS'] = df['ZTS'].astype(float)
             return df
 
+        print(f'Parsing {Path(filepath).name}')
+
         t = time.time()
         file = None
         with open(filepath, "rt") as in_file:
@@ -1286,7 +1353,7 @@ class PEMParser:
         data = parse_data(file)
         print(f"Time to parse data: {time.time() - t7}")
 
-        print(f"Time to parse PEM file: {time.time() - t}")
+        print(f"Time to parse {Path(filepath).name}: {time.time() - t}")
 
         return PEMFile(tags, loop_coords, line_coords, notes, header, channel_table, data, filepath)
 

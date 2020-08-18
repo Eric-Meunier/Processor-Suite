@@ -1067,6 +1067,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         return data
 
     def get_selected_profile_data(self):
+        """
+        Return the corresponding data of the currently selected stations from the profile plots
+        :return: pandas DataFrame
+        """
         tab_ind = self.profile_tab_widget.currentIndex()
         if tab_ind == 0:
             comp = 'X'

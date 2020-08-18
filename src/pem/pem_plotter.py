@@ -4432,7 +4432,6 @@ class PEMPrinter:
 
                     self.pb_count += 1
                     self.pb.setValue(self.pb_count)
-                    QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                     self.landscape_fig.clf()
                 else:
                     print('No PEM file has any GPS to plot on the plan map.')
@@ -4454,7 +4453,7 @@ class PEMPrinter:
 
                     self.pb_count += 1
                     self.pb.setValue(self.pb_count)
-                    QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
+                    # QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                     self.portrait_fig.clear()
                 else:
                     print('No PEM file has the GPS required to make a section plot.')
@@ -4486,7 +4485,6 @@ class PEMPrinter:
 
                         self.pb_count += 1
                         self.pb.setValue(self.pb_count)
-                        QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                         self.portrait_fig.clear()
 
             # Saving the LOG plots
@@ -4516,7 +4514,6 @@ class PEMPrinter:
 
                         self.pb_count += 1
                         self.pb.setValue(self.pb_count)
-                        QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                         self.portrait_fig.clear()
 
             # Saving the STEP plots. Must have RI files associated with the PEM file.
@@ -4542,7 +4539,6 @@ class PEMPrinter:
 
                             self.pb_count += 1
                             self.pb.setValue(self.pb_count)
-                            QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                             self.portrait_fig.clear()
 
         def set_pb_max(unique_bhs, unique_grids):
@@ -4712,11 +4708,20 @@ class CustomProgressBar(QProgressBar):
         # '#37DA7E' for green
         self.setStyleSheet(COMPLETED_STYLE)
 
+        self.valueChanged.connect(self.on_change)
+
     def setText(self, text):
         self._text = text
+        self.on_change()
 
     def text(self):
         return self._text
+
+    def on_change(self):
+        """
+        Signal slot, force Qt to update when the text or progress bar value are changed.
+        """
+        QApplication.processEvents()
 
 
 if __name__ == '__main__':
