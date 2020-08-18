@@ -106,6 +106,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Status bar formatting
         self.selection_label = QLabel()
         self.selection_label.setIndent(5)
+        self.spacer_label = QLabel()
         self.project_dir_label = QLabel()
         self.project_dir_label.setIndent(5)
 
@@ -113,8 +114,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
         self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
 
-        self.status_bar.insertWidget(0, self.selection_label, 1)
-        self.status_bar.insertWidget(4, self.project_dir_label, 0)
+        self.status_bar.addWidget(self.selection_label, 0)
+        self.status_bar.addWidget(self.spacer_label, 1)
+        self.status_bar.addWidget(self.project_dir_label, 0)
 
         # Widgets
         # self.gpx_editor = GPXEditor()

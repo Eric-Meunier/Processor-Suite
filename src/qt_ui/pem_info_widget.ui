@@ -59,7 +59,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="info_tab">
       <attribute name="title">
@@ -144,10 +144,10 @@
           </size>
          </property>
          <property name="frameShape">
-          <enum>QFrame::Panel</enum>
+          <enum>QFrame::StyledPanel</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
+          <enum>QFrame::Plain</enum>
          </property>
          <layout class="QGridLayout" name="gridLayout_8">
           <property name="leftMargin">
@@ -272,10 +272,10 @@
           </size>
          </property>
          <property name="frameShape">
-          <enum>QFrame::Panel</enum>
+          <enum>QFrame::StyledPanel</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
+          <enum>QFrame::Plain</enum>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout">
           <property name="leftMargin">
@@ -925,10 +925,10 @@ Number</string>
           </sizepolicy>
          </property>
          <property name="frameShape">
-          <enum>QFrame::Panel</enum>
+          <enum>QFrame::StyledPanel</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
+          <enum>QFrame::Plain</enum>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <property name="leftMargin">
@@ -1034,6 +1034,9 @@ Suffix</string>
           </item>
           <item>
            <widget class="Line" name="line_7">
+            <property name="frameShadow">
+             <enum>QFrame::Plain</enum>
+            </property>
             <property name="orientation">
              <enum>Qt::Vertical</enum>
             </property>
@@ -1121,6 +1124,9 @@ Number</string>
           </item>
           <item>
            <widget class="Line" name="line_8">
+            <property name="frameShadow">
+             <enum>QFrame::Plain</enum>
+            </property>
             <property name="orientation">
              <enum>Qt::Vertical</enum>
             </property>
