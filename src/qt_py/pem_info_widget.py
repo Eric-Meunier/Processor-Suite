@@ -1318,5 +1318,5 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         line_adder = LineAdder(parent=self)
         line_adder.write_widget = self
-        line_adder.open(self.get_loop())
+        line_adder.open(self.get_line())
 

@@ -86,11 +86,11 @@
          <attribute name="verticalHeaderVisible">
           <bool>false</bool>
          </attribute>
-         <attribute name="verticalHeaderDefaultSectionSize">
-          <number>23</number>
-         </attribute>
          <attribute name="verticalHeaderMinimumSectionSize">
           <number>0</number>
+         </attribute>
+         <attribute name="verticalHeaderDefaultSectionSize">
+          <number>23</number>
          </attribute>
          <attribute name="verticalHeaderStretchLastSection">
           <bool>false</bool>
@@ -123,60 +123,6 @@
        <string>Loop GPS</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
-       <item row="1" column="0" colspan="3">
-        <widget class="QTableWidget" name="loop_table">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>400</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>400</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="selectionBehavior">
-          <enum>QAbstractItemView::SelectRows</enum>
-         </property>
-         <property name="showGrid">
-          <bool>false</bool>
-         </property>
-         <attribute name="horizontalHeaderHighlightSections">
-          <bool>false</bool>
-         </attribute>
-         <attribute name="verticalHeaderVisible">
-          <bool>false</bool>
-         </attribute>
-         <column>
-          <property name="text">
-           <string>Easting</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Northing</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Elevation</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Unit</string>
-          </property>
-         </column>
-        </widget>
-       </item>
        <item row="2" column="0" colspan="3">
         <widget class="QFrame" name="frame_3">
          <property name="sizePolicy">
@@ -248,6 +194,60 @@
            </widget>
           </item>
          </layout>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="3">
+        <widget class="QTableWidget" name="loop_table">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>400</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>400</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+         <property name="showGrid">
+          <bool>false</bool>
+         </property>
+         <attribute name="horizontalHeaderHighlightSections">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <column>
+          <property name="text">
+           <string>Easting</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Northing</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Elevation</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Unit</string>
+          </property>
+         </column>
         </widget>
        </item>
       </layout>

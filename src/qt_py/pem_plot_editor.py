@@ -11,7 +11,7 @@ import pyqtgraph as pg
 import pylineclip as lc
 from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                             )
+                             QDesktopWidget)
 from pyqtgraph.Point import Point
 # from pyod.models.abod import ABOD
 # from pyod.models.knn import KNN
@@ -48,8 +48,17 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.setupUi(self)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setWindowTitle('PEM Plot Editor')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'cleaner.png')))
-        self.resize(1300, 850)
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'plot_editor.png')))
+
+        # Resize and position window
+        # available_size = QDesktopWidget().availableGeometry()
+        # self.resize(1300, available_size.height())
+        self.resize(1300, 900)
+        # qt_rectangle = self.frameGeometry()
+        # center_point = QDesktopWidget().availableGeometry().center()
+        # qt_rectangle.moveCenter(center_point)
+        # self.move(qt_rectangle.topLeft())
+
         self.setAcceptDrops(True)
         self.message = QMessageBox()
 
@@ -206,7 +215,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
-        if event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_C:
+        if event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_R:
             t = time.time()
             self.delete_lines()
             print(f"Time to delete and replot: {time.time() - t}")

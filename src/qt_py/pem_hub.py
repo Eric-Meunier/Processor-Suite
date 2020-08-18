@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 import simplekml
 import natsort
+import stopit
+import multiprocessing
 from threading import Event
 from pathlib import Path
 from shutil import copyfile
@@ -175,12 +177,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for datum in self.gps_datums:
             self.gps_datum_cbox.addItem(datum)
 
-        # # Set validations
-        # int_validator = QtGui.QIntValidator()
-        # # self.max_range_edit.setValidator(int_validator)
-        # # self.min_range_edit.setValidator(int_validator)
-        # self.section_depth_edit.setValidator(int_validator)
-
         # Actions
         self.actionDel_File = QAction("&Remove File", self)
         self.actionDel_File.setShortcut("Del")
@@ -188,11 +184,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.addAction(self.actionDel_File)
         self.actionDel_File.setEnabled(False)
 
-        self.actionClear_Files = QAction("&Clear All Files", self)
-        self.actionClear_Files.setShortcut("Shift+Del")
-        self.actionClear_Files.setStatusTip("Clear all files")
-        self.actionClear_Files.setToolTip("Clear all files")
-        self.actionClear_Files.triggered.connect(lambda: self.remove_file(rows=np.arange(self.table.rowCount())))
+        # self.actionClear_Files = QAction("&Clear All Files", self)
+        # self.actionClear_Files.setShortcut("Shift+Del")
+        # self.actionClear_Files.setStatusTip("Clear all files")
+        # self.actionClear_Files.setToolTip("Clear all files")
+        # self.actionClear_Files.triggered.connect(lambda: self.remove_file(rows=np.arange(self.table.rowCount())))
 
         self.merge_action = QAction("&Merge", self)
         self.merge_action.triggered.connect(lambda: self.merge_pem_files(selected=True))
@@ -203,19 +199,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Initializing the UI.
         :return: None
         """
-        def center_window(win):
-            qt_rectangle = win.frameGeometry()
-            center_point = QDesktopWidget().availableGeometry().center()
-            qt_rectangle.moveCenter(center_point)
-            win.move(qt_rectangle.topLeft())
 
         self.setupUi(self)
         self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(
             QIcon(os.path.join(icons_path, 'conder.png')))
-        self.setGeometry(500, 300, 1700, 900)
-        center_window(self)
+        self.resize(1700, 900)
+        self.center_window()
 
         self.refresh_pem_list_btn.setIcon(QIcon(os.path.join(icons_path, 'refresh.png')))
         self.refresh_gps_list_btn.setIcon(QIcon(os.path.join(icons_path, 'refresh.png')))
@@ -223,7 +214,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.refresh_gps_list_btn.setText('')
 
         # self.stackedWidget.hide()
-        self.frame.hide()
+        self.piw_frame.hide()
         self.table.horizontalHeader().hide()
         # self.pemInfoDockWidget.hide()
 
@@ -556,6 +547,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.remove_pem_btn.clicked.connect(remove_pem_list_files)
         self.remove_gps_btn.clicked.connect(remove_gps_list_files)
 
+    def center_window(self):
+        qt_rectangle = self.frameGeometry()
+        center_point = QDesktopWidget().availableGeometry().center()
+        qt_rectangle.moveCenter(center_point)
+        self.move(qt_rectangle.topLeft())
+
     def contextMenuEvent(self, event):
         """
         Right-click context menu items.
@@ -607,7 +604,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 open_plot_editor_action = QAction("&Plot", self)
                 open_plot_editor_action.triggered.connect(self.open_pem_plot_editor)
-                open_plot_editor_action.setIcon(QIcon(os.path.join(icons_path, 'cleaner.png')))
+                open_plot_editor_action.setIcon(QIcon(os.path.join(icons_path, 'plot_editor.png')))
 
                 average_action = QAction("&Average", self)
                 average_action.triggered.connect(lambda: self.average_pem_data(selected=True))
@@ -779,14 +776,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                              self.stackedWidget.currentWidget().geometry_tab]
 
             gps_conditions = bool(all([
-                e.answerRect().intersects(self.frame.geometry()),
+                e.answerRect().intersects(self.piw_frame.geometry()),
                 text_files is True or gpx_files is True,
                 self.stackedWidget.currentWidget().tabs.currentWidget() in eligible_tabs,
                 len(self.pem_files) > 0
             ]))
 
             ri_conditions = bool(all([
-                e.answerRect().intersects(self.frame.geometry()),
+                e.answerRect().intersects(self.piw_frame.geometry()),
                 ri_files is True,
                 self.stackedWidget.currentWidget().tabs.currentWidget() == self.stackedWidget.currentWidget().ri_tab,
                 len(self.pem_files) > 0
@@ -869,6 +866,37 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.gps_system_cbox.setCurrentIndex(0)
         self.gps_zone_cbox.setCurrentIndex(0)
         self.gps_datum_cbox.setCurrentIndex(0)
+
+    def remove_file(self, rows=None):
+        """
+        Removes PEM files from the main table, along with any associated widgets.
+        :param rows: list: Table rows of the PEM files.
+        :return: None
+        """
+        if not rows:
+            pem_files, rows = self.get_selected_pem_files()
+
+        if not isinstance(rows, list):
+            rows = [rows]
+
+        self.setUpdatesEnabled(False)
+        for row in rows:
+            self.table.removeRow(row)
+            self.stackedWidget.removeWidget(self.stackedWidget.widget(row))
+            del self.pem_files[row]
+            del self.pem_info_widgets[row]
+
+        if len(self.pem_files) == 0:
+            # if not self.isMaximized():
+            #     self.resize(self.width() - 425, self.height())
+            self.piw_frame.hide()
+            self.table.horizontalHeader().hide()
+            self.client_edit.setText('')
+            self.grid_edit.setText('')
+            self.loop_edit.setText('')
+            self.reset_crs()
+            # self.project_dir = self.file_sys_model.rootPath()
+        self.setUpdatesEnabled(True)
 
     def open_pem_files(self, pem_files):
         """
@@ -960,7 +988,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         t1 = time.time()
         parser = PEMParser()
-        self.table.setUpdatesEnabled(False)
+        self.setUpdatesEnabled(False)
+        # self.table.setUpdatesEnabled(False)
 
         # Start the progress bar
         self.start_pb(start=0, end=len(pem_files), title='Opening PEM Files...')
@@ -978,15 +1007,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.pb.setText(f"Opening {pem_file.filepath.name}")
                 # Create the PEMInfoWidget
                 pem_widget = add_info_widget(pem_file)
-                # Fill the shared header text boxes for the first file opened
+
+                # Fill the shared header text boxes and move the project directory
                 if not self.pem_files:
                     share_header(pem_file)
+                    self.piw_frame.show()
+                    self.move_dir_tree_to(pem_file.filepath.parent)
+
                 # Fill CRS from the file if project CRS currently empty
                 if self.gps_system_cbox.currentText() == '' and self.gps_datum_cbox.currentText() == '':
                     fill_crs(pem_file)
-
-                if self.project_dir is None:
-                    self.move_dir_tree_to(pem_file.filepath.parent)
 
                 i = get_insertion_point(pem_file)
                 self.pem_files.insert(i, pem_file)
@@ -999,9 +1029,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 count += 1
                 self.pb.setValue(count)
 
-        self.table.setUpdatesEnabled(True)
+        self.setUpdatesEnabled(True)
+        # self.table.setUpdatesEnabled(True)
         self.end_pb()
-        self.frame.show()
         self.table.horizontalHeader().show()
         print(f"Time to open all PEM files: {time.time() - t1}")
 
@@ -1318,6 +1348,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Populate the GPS files list based on the files found in the nearest 'GPS' folder in the project directory
         """
 
+        @stopit.threading_timeoutable()
         def find_gps_dir():
             # Try to find the 'GPS' folder in the current directory
             search_result = list(self.project_dir.rglob('GPS'))
@@ -1326,31 +1357,50 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 print(f"GPS dir found: {str(gps_dir)}")
                 return gps_dir
 
+        if not self.project_dir:
+            self.message.information(self, 'Error', 'No project directory has been selected.')
+            return
+
         self.gps_list.clear()
-        t = time.time()
-        gps_dir = find_gps_dir()
+        # Try to find a GPS folder, but time out after 3 seconds
+        gps_dir = find_gps_dir(timeout=3)
+        if gps_dir is None:
+            self.message.information(self, 'Timeout', 'Searching for the GPS folder timed out.')
+            return
+        else:
+            if gps_dir:
+                self.available_gps = list(gps_dir.rglob('*.txt'))
+                self.available_gps.extend(gps_dir.rglob('*.csv'))
+                self.available_gps.extend(gps_dir.rglob('*.gpx'))
 
-        if gps_dir:
-            self.available_gps = list(gps_dir.rglob('*.txt'))
-            self.available_gps.extend(gps_dir.rglob('*.csv'))
-            self.available_gps.extend(gps_dir.rglob('*.gpx'))
-            print(f'Time to find gps files: {time.time() - t}')
-
-            for file in self.available_gps:
-                self.gps_list.addItem(f"{file.parent.name}/{file.name}")
+                for file in self.available_gps:
+                    self.gps_list.addItem(f"{file.parent.name}/{file.name}")
 
     def fill_pem_list(self):
         """
         Populate the pem_list with all *.pem files found in the project_dir.
         """
-        self.pem_list.clear()
-        # Find the nearest 'GPS' folder
-        t = time.time()
-        self.available_pems = list(self.project_dir.rglob('*.PEM'))
-        print(f'Time to find pem files: {time.time() - t}')
 
-        for file in self.available_pems:
-            self.pem_list.addItem(f"{file.parent.name}/{file.name}")
+        @stopit.threading_timeoutable()
+        def find_pem_files():
+            # Find all .PEM files in the project directory
+            return list(self.project_dir.rglob('*.PEM'))
+
+        if not self.project_dir:
+            self.message.information(self, 'Error', 'No project directory has been selected.')
+            return
+
+        self.pem_list.clear()
+
+        # Try to find .PEM files, but time out after 3 seconds
+        self.available_pems = find_pem_files(timeout=3)
+
+        if self.available_pems is None:
+            self.message.information(self, 'Timeout', 'Searching for PEM files timed out.')
+            return
+        else:
+            for file in self.available_pems:
+                self.pem_list.addItem(f"{file.parent.name}/{file.name}")
 
     def move_dir_tree_to(self, dir_path):
         """
@@ -2093,33 +2143,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             pem_file = copy.deepcopy(pem_file)
             self.save_pem_file(pem_file, backup=True, tag='[B]', remove_old=False)
         self.status_bar.showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
-
-    def remove_file(self, rows=None):
-        """
-        Removes PEM files from the main table, along with any associated widgets.
-        :param rows: list: Table rows of the PEM files.
-        :return: None
-        """
-        if not rows:
-            pem_files, rows = self.get_selected_pem_files()
-
-        if not isinstance(rows, list):
-            rows = [rows]
-
-        for row in rows:
-            self.table.removeRow(row)
-            self.stackedWidget.removeWidget(self.stackedWidget.widget(row))
-            del self.pem_files[row]
-            del self.pem_info_widgets[row]
-
-        if len(self.pem_files) == 0:
-            self.frame.hide()
-            self.table.horizontalHeader().hide()
-            self.client_edit.setText('')
-            self.grid_edit.setText('')
-            self.loop_edit.setText('')
-            self.reset_crs()
-            self.project_dir = self.file_sys_model.rootPath()
 
     def get_selected_pem_files(self, updated=False):
         """

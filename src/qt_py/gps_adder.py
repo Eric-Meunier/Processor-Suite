@@ -235,19 +235,19 @@ class GPSAdder(QWidget):
         if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
             return
         index = event.ind[0]
-        print(f"Point {index} clicked")
+        # print(f"Point {index} clicked")
 
         # Swap two points when CTRL is pressed when selecting two points
         if keyboard.is_pressed('ctrl'):
-            print('CTRL is pressed')
+            # print('CTRL is pressed')
             # Reset the selection if two were already selected
             if len(self.selection) == 2:
                 self.selection = []
             self.selection.append(index)
-            print(f'Selected points: {self.selection}')
+            # print(f'Selected points: {self.selection}')
 
             if len(self.selection) == 2:
-                print(f"Two points are selected, swapping them...")
+                # print(f"Two points are selected, swapping them...")
                 swap_points()
                 index = self.selection[0]
         else:
@@ -326,12 +326,18 @@ class LineAdder(GPSAdder):
         elif isinstance(o, SurveyLine):
             self.line = o
 
-        self.show()
+        if not self.line:
+            return
+
+        if self.line.df.empty:
+            return
+
         self.clear_table()
         self.df = self.line.get_line(sorted=self.auto_sort_cbox.isChecked())
         self.df_to_table(self.df)
         self.plot_table()
         self.check_table()
+        self.show()
 
     def accept(self):
         """
@@ -436,7 +442,7 @@ class LineAdder(GPSAdder):
         if row is None:
             row = self.table.selectionModel().selectedRows()[0].row()
 
-        print(f"Row {row} selected")
+        # print(f"Row {row} selected")
         # Remove previously plotted selection
         if self.plan_highlight:
             reset_highlight()
@@ -496,12 +502,18 @@ class LoopAdder(GPSAdder):
         else:
             raise ValueError(f"{o} is not a valid input.")
 
-        self.show()
+        if not self.loop:
+            return
+
+        if self.loop.df.empty:
+            return
+
         self.clear_table()
         self.df = self.loop.get_loop(closed=True, sorted=self.auto_sort_cbox.isChecked())
         self.df_to_table(self.df)
         self.plot_table()
         self.check_table()
+        self.show()
 
     def accept(self):
         """
@@ -602,7 +614,7 @@ class LoopAdder(GPSAdder):
 
         if row is None:
             row = self.table.selectionModel().selectedRows()[0].row()
-        print(f"Row {row} selected")
+        # print(f"Row {row} selected")
 
         # Remove previously plotted selection
         if self.plan_highlight:
