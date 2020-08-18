@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>283</width>
-    <height>608</height>
+    <height>385</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,26 +15,13 @@
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
    <item row="3" column="0">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="4" column="0">
     <widget class="QPushButton" name="print_btn">
      <property name="text">
       <string>Print</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="1">
+   <item row="3" column="1">
     <widget class="QPushButton" name="cancel_btn">
      <property name="text">
       <string>Cancel</string>
@@ -48,6 +35,9 @@
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
+     </property>
+     <property name="statusTip">
+      <string>Create section plots</string>
      </property>
      <property name="title">
       <string>Section Plots</string>
@@ -67,6 +57,9 @@
         <property name="toolTip">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The azimuth of the section plot will be the azimuth at this hole depth.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
+        <property name="statusTip">
+         <string>The depth of the hole to use as the intersection of the section plot</string>
+        </property>
         <property name="text">
          <string>Hole Depth (Optional):</string>
         </property>
@@ -74,6 +67,9 @@
       </item>
       <item row="1" column="0" colspan="2">
        <widget class="QCheckBox" name="label_section_depths_cbox">
+        <property name="statusTip">
+         <string>Add depth labels down the hole</string>
+        </property>
         <property name="text">
          <string>Label Ticks</string>
         </property>
@@ -97,6 +93,9 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="statusTip">
+      <string>Create plan maps</string>
+     </property>
      <property name="title">
       <string>Plan Map</string>
      </property>
@@ -109,6 +108,9 @@
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
        <widget class="QCheckBox" name="moving_loop_cbox">
+        <property name="statusTip">
+         <string>If the survey is a moving-loop survey</string>
+        </property>
         <property name="text">
          <string>Moving Loop</string>
         </property>
@@ -129,6 +131,9 @@
       </item>
       <item row="0" column="1">
        <widget class="QCheckBox" name="show_loop_anno_cbox">
+        <property name="statusTip">
+         <string>Show loop annotation numbers</string>
+        </property>
         <property name="text">
          <string>Loop Annotations</string>
         </property>
@@ -144,6 +149,9 @@
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
+     </property>
+     <property name="statusTip">
+      <string>Create profile (LIN, LOG, STEP) plots</string>
      </property>
      <property name="title">
       <string>Profile Plots</string>
@@ -163,6 +171,9 @@
      <layout class="QGridLayout" name="gridLayout_5">
       <item row="0" column="0">
        <widget class="QCheckBox" name="output_log_cbox">
+        <property name="statusTip">
+         <string>Create LOG plots</string>
+        </property>
         <property name="text">
          <string>LOG Plot</string>
         </property>
@@ -176,6 +187,9 @@
       </item>
       <item row="0" column="1">
        <widget class="QCheckBox" name="output_lin_cbox">
+        <property name="statusTip">
+         <string>Create LIN plots</string>
+        </property>
         <property name="text">
          <string>LIN Plot</string>
         </property>
@@ -186,6 +200,9 @@
       </item>
       <item row="0" column="2">
        <widget class="QCheckBox" name="output_step_cbox">
+        <property name="statusTip">
+         <string>Create STEP plots (only if RI files are included)</string>
+        </property>
         <property name="text">
          <string>STEP Plot</string>
         </property>
@@ -196,6 +213,9 @@
       </item>
       <item row="3" column="0" colspan="3">
        <widget class="QGroupBox" name="share_range_cbox">
+        <property name="statusTip">
+         <string>All profile plots will have the same X-axis range</string>
+        </property>
         <property name="title">
          <string>Share Range</string>
         </property>
@@ -277,6 +297,9 @@
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="statusTip">
+         <string>Don't plot anything where there are large gaps in data</string>
         </property>
         <property name="text">
          <string>Hide Data Gaps</string>

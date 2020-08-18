@@ -140,7 +140,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_4">
             <property name="title">
-             <string>Selection</string>
+             <string>Edit</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
@@ -375,7 +375,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_3">
             <property name="title">
-             <string>Selection</string>
+             <string>Edit</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>

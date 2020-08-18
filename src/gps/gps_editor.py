@@ -46,28 +46,66 @@ class BaseGPS:
         Convert the data frame coordinates to Lat Lon in decimal format
         :return: GPS object
         """
-        if any([not self.crs, self.df.empty, not self.crs.is_valid()]):
-            return
+
+        if any([not self.crs, self.df.empty, not self.crs.is_valid(), self.crs.get_epsg() is None]):
+            print('GPS dataframe is empty or there is something wrong with the CRS')
+            return None
+        elif self.crs.zone_number is None or self.crs.north is None:
+            print('Cannot convert to latlon because of missing zone number or north value')
+            return None
         elif self.crs.is_latlon():
             return self
-        # TODO Make this work with NAD27
 
-        zone_num = self.crs.zone_number
-        north = self.crs.north
-        latlon_df = self.df.apply(lambda x: utm.to_latlon(x.Easting, x.Northing, zone_num, northern=north),
-                                  axis=1)
-        self.df['Northing'] = latlon_df.map(lambda x: x[0])
-        self.df['Easting'] = latlon_df.map(lambda x: x[1])
+        df = copy.deepcopy(self.df)
 
-        # Create a new CRS for Lat Lon
+        # Create point objects for each coordinate
+        mpoints = asMultiPoint(df.loc[:, ['Easting', 'Northing']].to_numpy())
+        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs.get_epsg())
+
+        # Convert the point objects to WGS 1984
+        wgs84_gdf = gdf.to_crs('EPSG:4326')
+
+        # Conver the points to Lat Lon
+        latlon_gdf = wgs84_gdf.map(lambda p: utm.to_latlon(p.x, p.y,
+                                                           zone_number=self.crs.zone_number,
+                                                           northern=self.crs.north))
+
+        # Assign the latlon UTM columns to the data frame
+        self.df['Easting'], self.df['Northing'] = latlon_gdf.map(lambda x: x[1]), latlon_gdf.map(lambda x: x[0])
+
+        # Create the new CRS object for latlon
         latlon_crs = CRS().from_dict({'System': 'Lat/Lon',
-                                      'Datum': self.crs.datum})
+                                      'Datum': 'WGS 1984'})
         self.crs = latlon_crs
         return self
 
+    # def to_latlon(self):
+    #     """
+    #     Convert the data frame coordinates to Lat Lon in decimal format
+    #     :return: GPS object
+    #     """
+    #     if any([not self.crs, self.df.empty, not self.crs.is_valid()]):
+    #         return
+    #     elif self.crs.is_latlon():
+    #         return self
+    #     # TODO Make this work with NAD27
+    #
+    #     zone_num = self.crs.zone_number
+    #     north = self.crs.north
+    #     latlon_df = self.df.apply(lambda x: utm.to_latlon(x.Easting, x.Northing, zone_num, northern=north),
+    #                               axis=1)
+    #     self.df['Northing'] = latlon_df.map(lambda x: x[0])
+    #     self.df['Easting'] = latlon_df.map(lambda x: x[1])
+    #
+    #     # Create a new CRS for Lat Lon
+    #     latlon_crs = CRS().from_dict({'System': 'Lat/Lon',
+    #                                   'Datum': self.crs.datum})
+    #     self.crs = latlon_crs
+    #     return self
+
     def to_nad27(self):
         """
-        Convert the data frame coordinates to NAD 27
+        Convert the data frame coordinates to NAD 1927. Converts the GPS to latlon then to the desired system.
         :return: GPS object
         """
         if any([not self.crs, self.df.empty, not self.crs.is_valid()]):
@@ -82,27 +120,27 @@ class BaseGPS:
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs={'init': self.crs.get_epsg()})
+        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs.get_epsg())
 
-        # Convert the point objects to NAD 27
-        nad27_gdf = gdf.to_crs({'init': 'EPSG:4267'})
+        # Convert the point objects to NAD 1927
+        nad27_gdf = gdf.to_crs('EPSG:4267')
         # Convert the point objects back to UTM coordinates
         utm_gdf = nad27_gdf.map(lambda p: utm.from_latlon(p.y, p.x))
 
         # Assign the converted UTM columns to the data frame
         self.df['Easting'], self.df['Northing'] = utm_gdf.map(lambda x: x[0]), utm_gdf.map(lambda x: x[1])
 
-        # Create the new CRS object for NAD 27
+        # Create the new CRS object for NAD 1927
         nad27_crs = CRS().from_dict({'System': 'UTM',
                                      'Zone Number': utm_gdf.loc[0][2],
                                      'Zone Letter': utm_gdf.loc[0][3],
-                                     'Datum': 'NAD 27'})
+                                     'Datum': 'NAD 1927'})
         self.crs = nad27_crs
         return self
 
     def to_nad83(self):
         """
-        Convert the data frame coordinates to NAD 83
+        Convert the data frame coordinates to NAD 1983. Converts the GPS to latlon then to the desired system.
         :return: GPS object
         """
         if any([not self.crs, self.df.empty, not self.crs.is_valid()]):
@@ -117,27 +155,27 @@ class BaseGPS:
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs={'init': self.crs.get_epsg()})
+        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs.get_epsg())
 
-        # Convert the point objects to NAD 83
-        nad83_gdf = gdf.to_crs({'init': 'EPSG:4269'})
+        # Convert the point objects to NAD 1983
+        nad83_gdf = gdf.to_crs('EPSG:4269')
         # Convert the point objects back to UTM coordinates
         utm_gdf = nad83_gdf.map(lambda p: utm.from_latlon(p.y, p.x))
 
         # Assign the converted UTM columns to the data frame
         self.df['Easting'], self.df['Northing'] = utm_gdf.map(lambda x: x[0]), utm_gdf.map(lambda x: x[1])
 
-        # Create the new CRS object for NAD 27
+        # Create the new CRS object for NAD 1927
         nad83_crs = CRS().from_dict({'System': 'UTM',
                                      'Zone Number': utm_gdf.loc[0][2],
                                      'Zone Letter': utm_gdf.loc[0][3],
-                                     'Datum': 'NAD 83'})
+                                     'Datum': 'NAD 1983'})
         self.crs = nad83_crs
         return self
 
     def to_wgs84(self):
         """
-        Convert the data frame coordinates to WGS 84
+        Convert the data frame coordinates to WGS 1984. Converts the GPS to latlon then to the desired system.
         :return: GPS object
         """
         if any([not self.crs, self.df.empty, not self.crs.is_valid()]):
@@ -152,21 +190,21 @@ class BaseGPS:
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs={'init': self.crs.get_epsg()})
+        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs.get_epsg())
 
-        # Convert the point objects to WGS 84
-        wgs84_gdf = gdf.to_crs({'init': 'EPSG:4326'})
+        # Convert the point objects to WGS 1984
+        wgs84_gdf = gdf.to_crs('EPSG:4326')
         # Convert the point objects back to UTM coordinates
         utm_gdf = wgs84_gdf.map(lambda p: utm.from_latlon(p.y, p.x))
 
         # Assign the converted UTM columns to the data frame
         self.df['Easting'], self.df['Northing'] = utm_gdf.map(lambda x: x[0]), utm_gdf.map(lambda x: x[1])
 
-        # Create the new CRS object for WGS 84
+        # Create the new CRS object for WGS 1984
         wgs84_crs = CRS().from_dict({'System': 'UTM',
                                      'Zone Number': utm_gdf.loc[0][2],
                                      'Zone Letter': utm_gdf.loc[0][3],
-                                     'Datum': 'WGS 84'})
+                                     'Datum': 'WGS 1984'})
         self.crs = wgs84_crs
         return self
 
@@ -703,7 +741,7 @@ class CRS:
 
     def is_nad27(self):
         if self.datum:
-            if self.datum == 'NAD 27':
+            if self.datum == 'NAD 1927':
                 return True
             else:
                 return False
@@ -712,7 +750,7 @@ class CRS:
 
     def is_nad83(self):
         if self.datum:
-            if self.datum == 'NAD 83':
+            if self.datum == 'NAD 1983':
                 return True
             else:
                 return False
@@ -721,7 +759,7 @@ class CRS:
 
     def is_wgs84(self):
         if self.datum:
-            if self.datum == 'WGS 84':
+            if self.datum == 'WGS 1984':
                 return True
             else:
                 return False
@@ -758,11 +796,11 @@ class CRS:
         :return: str
         """
 
-        if self.datum == 'WGS 84':
+        if self.datum == 'WGS 1984':
             return 'EPSG:4326'
-        elif self.datum == 'NAD 27':
+        elif self.datum == 'NAD 1927':
             return 'EPSG:4267'
-        elif self.datum == 'NAD 83':
+        elif self.datum == 'NAD 1983':
             return 'EPSG:4269'
         else:
             return None
@@ -823,7 +861,7 @@ if __name__ == '__main__':
     pem_files = pg.get_pems(client='Raglan', number=1)
     # gps_parser = GPSParser()
     # gpx_editor = GPXEditor()
-    crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 83'})
+    crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\src\gps\sample_files\45-1.csv'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\AF19003 loop and collar.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'

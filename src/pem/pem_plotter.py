@@ -3,18 +3,15 @@ import itertools
 import os
 import re
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime
-from statistics import mean
 
 import cartopy
-import time
 import cartopy.crs as ccrs  # import projections
-import cartopy.io.shapereader as shpreader
 import cartopy.io.img_tiles as cimgt
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+import cartopy.io.shapereader as shpreader
 import math
-import natsort
 # import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib as mpl
 import matplotlib.lines as mlines
@@ -22,7 +19,7 @@ import matplotlib.pyplot as plt
 import matplotlib.text as mtext
 import matplotlib.ticker as ticker
 import matplotlib.transforms as mtransforms
-from matplotlib.figure import Figure
+import natsort
 import numpy as np
 import six
 import utm
@@ -30,23 +27,19 @@ from PIL import Image
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import (QProgressBar, QApplication)
 from cartopy.feature import NaturalEarthFeature
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from matplotlib import patches
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
-    NavigationToolbar2QT as NavigationToolbar
-from matplotlib.transforms import Bbox
-# from matplotlib.figure import Figure
-from matplotlib.widgets import RectangleSelector
-
+from matplotlib.figure import Figure
 from scipy import interpolate as interp
 from scipy import stats
 from shapely.geometry import Point
 
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.qt_py.ri_importer import RIFile
 from src.pem.pem_file import PEMParser, StationConverter
-from src.gps.gps_editor import CRS
+from src.qt_py.ri_importer import RIFile
+
 
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
@@ -1374,7 +1367,7 @@ class PlanMap(MapPlotter):
         self.annotate_loop = annotate_loop
         self.is_moving_loop = is_moving_loop
         self.draw_title_box = draw_title_box
-        self.draw_grid = draw_grid 
+        self.draw_grid = draw_grid
         self.draw_scale_bar = draw_scale_bar
         self.draw_north_arrow = draw_north_arrow
         self.draw_legend = draw_legend
@@ -1528,7 +1521,7 @@ class PlanMap(MapPlotter):
                          transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.020, f"{'Hole' if self.pem_files[0].is_borehole() else 'Line'}"
-                         f" and Loop Location Map",
+            f" and Loop Location Map",
                          family='cursive',
                          fontname='Century Gothic',
                          fontsize=10,
@@ -1546,7 +1539,7 @@ class PlanMap(MapPlotter):
                          transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
-                         f"{survey_text}",
+            f"{survey_text}",
                          fontname='Century Gothic',
                          fontsize=10,
                          va='top',
@@ -4337,7 +4330,7 @@ class ContourMap(MapPlotter):
 #         return self.fig
 
 
-class PEMPrinter(QtCore.QObject):
+class PEMPrinter:
     """
     Class for printing PEMPLotter plots to PDF.
     Creates a single portrait and a single landscape figure object and re-uses them for all plots.
@@ -4345,10 +4338,12 @@ class PEMPrinter(QtCore.QObject):
     :param save_path: Desired save location for the PDFs
     :param kwargs: Plotting kwargs such as hide_gaps, gaps, and x limits used in PEMPlotter.
     """
-    update_pb_sig = QtCore.pyqtSignal(object)
 
-    def __init__(self, **kwargs):
+    def __init__(self, parent=None, **kwargs):
         super().__init__()
+        self.parent = parent
+        self.stop = False
+
         self.pb = CustomProgressBar()
         self.pb_count = 0
         self.pb_end = 0
@@ -4363,7 +4358,7 @@ class PEMPrinter(QtCore.QObject):
         self.print_lin_plots = kwargs.get('make_lin_plots')
         self.print_log_plots = kwargs.get('make_log_plots')
         self.print_step_plots = kwargs.get('make_step_plots')
-        
+
         self.crs = kwargs.get('CRS')
         self.share_range = kwargs.get('share_range')
         self.x_min = kwargs.get('x_min')
@@ -4405,6 +4400,9 @@ class PEMPrinter(QtCore.QObject):
             :param x_max: float, maximum x-axis limit to be shared between all profile plots
             :param kwargs: dict, dictionary of additional arguments
             """
+            if self.stop is True:
+                return
+
             # Saving the Plan Map. Must have a valid CRS.
             if self.crs.is_valid() and self.print_plan_maps is True:
                 if any([pem_file.has_any_gps() for pem_file in pem_files]):
@@ -4427,7 +4425,7 @@ class PEMPrinter(QtCore.QObject):
                                        label_collars=self.label_collars,
                                        label_hole_depth=self.label_hole_depths,
                                        )
-                    
+
                     plan_fig = plan_map.plot()
                     # Save the plot to the PDF file
                     pdf.savefig(plan_fig, orientation='landscape')
@@ -4628,6 +4626,8 @@ class PEMPrinter(QtCore.QObject):
         set_pb_max(unique_bhs, unique_grids)  # Set the maximum for the progress bar
 
         with PdfPages(save_path + '.PDF') as pdf:
+
+            # Save the borehole PDFs
             for survey, files in unique_bhs.items():
                 pem_files = [pair[0] for pair in files]
                 ri_files = [pair[1] for pair in files]
@@ -4642,8 +4642,8 @@ class PEMPrinter(QtCore.QObject):
                     x_max = self.x_max
 
                 save_plots(pem_files, ri_files, x_min, x_max)
-                self.pb.setText('Complete')
 
+            # Save the surface PDFs
             for loop, files in unique_grids.items():
                 pem_files = [pair[0] for pair in files]
                 ri_files = [pair[1] for pair in files]
@@ -4657,15 +4657,10 @@ class PEMPrinter(QtCore.QObject):
                     x_max = self.x_max
 
                 save_plots(pem_files, ri_files, x_min, x_max)
-                self.pb.setText('Complete')
 
         plt.close(self.portrait_fig)
         plt.close(self.landscape_fig)
         os.startfile(save_path + '.PDF')
-
-    def update_pb(self):
-        self.pb.setText(self.pb_text)
-        self.pb.setValue(self.pb_count)
 
     def configure_lin_fig(self):
         """
@@ -4700,6 +4695,7 @@ class CustomProgressBar(QProgressBar):
         self.setMinimum(0)
         self.setAlignment(QtCore.Qt.AlignCenter)
         self._text = None
+        self.setFixedHeight(40)
 
         COMPLETED_STYLE = """
         QProgressBar {

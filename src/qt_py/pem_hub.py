@@ -9,9 +9,10 @@ import pandas as pd
 import numpy as np
 import simplekml
 import natsort
+from threading import Event
 from pathlib import Path
 from shutil import copyfile
-from itertools import chain, groupby
+from itertools import groupby
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
@@ -2763,7 +2764,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         super().__init__()
         self.parent = parent
         self.setupUi(self)
-        self.setWindowTitle("Print PDF Options")
+        self.setWindowTitle("PDF Printing Options")
 
         self.pem_files = []
         self.ri_files = []
@@ -2772,10 +2773,12 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.plan_map_options = PlanMapOptions(parent=self)
         self.message = QMessageBox()
         self.pb_win = QWidget()  # Progress bar window
-        self.pb_win.resize(500, 100)
+        self.pb_win.resize(400, 45)
         self.pb_win.setLayout(QVBoxLayout())
-        self.pb_text = QLabel('')
-        self.pb_win.layout().addWidget(self.pb_text)
+        self.pb_win.setWindowTitle('Saving PDF Plots...')
+
+        # self.pb_text = QLabel('')
+        # self.pb_win.layout().addWidget(self.pb_text)
 
         # Set validations
         int_validator = QtGui.QIntValidator()
@@ -2847,7 +2850,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
             'make_log_plots': bool(self.make_profile_plots_gbox.isChecked() and self.output_log_cbox.isChecked()),
             'make_step_plots': bool(self.make_profile_plots_gbox.isChecked() and self.output_step_cbox.isChecked()),
             'make_plan_map': self.make_plan_maps_gbox.isChecked(),
-            'make_section_plot': self.make_section_plots_gbox.isChecked(),
+            'make_section_plots': self.make_section_plots_gbox.isChecked(),
             'label_loops': self.plan_map_options.loop_labels_cbox.isChecked(),
             'label_lines': self.plan_map_options.line_labels_cbox.isChecked(),
             'label_collars': self.plan_map_options.hole_collar_labels_cbox.isChecked(),
@@ -2876,10 +2879,21 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
 
         save_dir = get_save_file()
         if save_dir:
+
+            def pb_close(e):
+                # Tell the printer to stop printing
+                printer.stop = True
+                print(f"Printing cancelled")
+
             save_dir = os.path.splitext(save_dir)[0]
-            printer = PEMPrinter(**plot_kwargs)
+            printer = PEMPrinter(parent=self, **plot_kwargs)
+            # Connect the closing of the progress bar window to the pb_close function, which stops the running function
+            self.pb_win.closeEvent = pb_close
+            # Add the printer's progress bar to the progress bar window
             self.pb_win.layout().insertWidget(0, printer.pb)
             self.pb_win.show()
+
+            # Update the progress bar window
             QApplication.processEvents()
             try:
                 # PEM Files and RI files zipped together for when they get sorted
@@ -2888,8 +2902,6 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
                 self.message.information(self, 'Error', f'{save_dir} does not exist')
             except IOError:
                 self.message.information(self, 'Error', f'{save_dir} is currently opened')
-            # else:
-            #     self.status_bar.showMessage('Plots saved', 2000)
             finally:
                 self.pb_win.layout().removeWidget(printer.pb)
                 self.pb_win.hide()
@@ -2967,7 +2979,7 @@ class MagDeclinationCalculator(QMainWindow):
         self.setWindowTitle('Magnetic Declination')
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'mag_field.png')))
         self.setGeometry(600, 300, 300, 200)
-        self.status_bar.showMessage('', 10)
+        self.statusBar().showMessage('', 10)
 
         self.message = QMessageBox()
         self.layout = QGridLayout()
@@ -3009,7 +3021,7 @@ class MagDeclinationCalculator(QMainWindow):
         cb = QtGui.QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
         cb.setText(str_value, mode=cb.Clipboard)
-        self.status_bar.showMessage(f"{str_value} copied to clipboard", 1000)
+        self.statusBar().showMessage(f"{str_value} copied to clipboard", 1000)
 
     def calc_mag_dec(self, pem_file, crs):
         """
@@ -3021,11 +3033,11 @@ class MagDeclinationCalculator(QMainWindow):
         if not pem_file:
             return
 
-        if crs.is_nad27():
-            self.message.information(self, 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
-            return
+        # if crs.is_nad27():
+        #     self.message.information(self, 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
+        #     return
         if not crs.is_valid():
-            self.message.information(self, 'GPS coordinate system information is incomplete')
+            self.message.information(self, 'Error', 'GPS coordinate system information is invalid')
             return
 
         if pem_file.has_collar_gps():
@@ -3038,6 +3050,7 @@ class MagDeclinationCalculator(QMainWindow):
             self.message.information(self, 'Error', 'No GPS')
             return
 
+        coords.crs = crs
         coords = coords.to_latlon().df
         lat, lon, elevation = coords.iloc[0]['Northing'], coords.iloc[0]['Easting'], coords.iloc[0]['Elevation']
 
@@ -3068,7 +3081,7 @@ def main():
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
     mw.show()
-    mw.open_pdf_plot_printer(selected_files=False)
+    # mw.open_pdf_plot_printer(selected_files=False)
 
     app.exec_()
 
