@@ -1358,6 +1358,12 @@ class PEMParser:
         return PEMFile(tags, loop_coords, line_coords, notes, header, channel_table, data, filepath)
 
 
+class DMPParser:
+
+    def __init__(self):
+        pass
+
+
 class PEMSerializer:
     """
     Class for serializing PEM files to be saved
