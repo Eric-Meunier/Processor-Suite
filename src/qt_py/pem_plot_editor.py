@@ -50,14 +50,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.setWindowTitle('PEM Plot Editor')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'plot_editor.png')))
 
-        # Resize and position window
-        # available_size = QDesktopWidget().availableGeometry()
-        # self.resize(1300, available_size.height())
         self.resize(1300, 900)
-        # qt_rectangle = self.frameGeometry()
-        # center_point = QDesktopWidget().availableGeometry().center()
-        # qt_rectangle.moveCenter(center_point)
-        # self.move(qt_rectangle.topLeft())
 
         self.setAcceptDrops(True)
         self.message = QMessageBox()
@@ -83,7 +76,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         self.status_bar.addWidget(self.station_text, 0)
         self.status_bar.addWidget(self.decay_selection_text, 0)
-        self.status_bar.addWidget(QLabel(), 1)
+        self.status_bar.addWidget(QLabel(), 1)  # Spacer
         self.status_bar.addWidget(self.profile_selection_text, 0)
         self.status_bar.addPermanentWidget(self.file_info_label, 0)
         self.status_bar.addPermanentWidget(self.number_of_readings, 0)
@@ -201,8 +194,15 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.link_x_cbox.toggled.connect(self.link_decay_x)
 
         # Buttons
-        self.change_comp_decay_btn.clicked.connect(self.change_decay_component_dialog)
+        self.change_comp_decay_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='decay'))
         self.change_station_decay_btn.clicked.connect(self.change_station)
+        self.flip_decay_btn.clicked.connect(lambda: self.flip_decays(source='decay'))
+
+        self.change_comp_profile_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='profile'))
+        self.flip_profile_btn.clicked.connect(lambda: self.flip_decays(source='profile'))
+        self.shift_station_profile_btn.clicked.connect(self.shift_stations)
+        self.remove_profile_btn.clicked.connect(self.remove_stations)
+
         self.auto_clean_btn.clicked.connect(self.auto_clean)
 
         # Menu
@@ -244,17 +244,17 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Change the component of the readings to X
         elif event.key() == QtCore.Qt.Key_X:
             if self.selected_lines:
-                self.change_component('X')
+                self.change_component('X', source='decay')
 
         # Change the component of the readings to Y
         elif event.key() == QtCore.Qt.Key_Y:
             if self.selected_lines:
-                self.change_component('Y')
+                self.change_component('Y', source='decay')
 
         # Change the component of the readings to Z
         elif event.key() == QtCore.Qt.Key_Z:
             if self.selected_lines:
-                self.change_component('Z')
+                self.change_component('Z', source='decay')
 
         # Reset the ranges of the plots when the space bar is pressed
         elif event.key() == QtCore.Qt.Key_Space:
@@ -307,8 +307,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.units = self.pem_file.units
 
         # Add the line name and loop name as the title for the profile plots
-        for ax in [self.x_ax0, self.y_ax0, self.z_ax0]:
-            ax.setTitle(f"{self.pem_file.line_name}\t\tLoop {self.pem_file.loop_name}")
+        self.x_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name} [X Component]")
+        self.y_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name} [Y Component]")
+        self.z_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name} [Z Component]")
 
         # Set the X and Y axis labels for the decay axes
         for ax in self.decay_axes:
@@ -381,39 +382,40 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             if 'X' in components:
                 x_ax.show()
-                self.profile_tab_widget.setTabEnabled(0, True)
+                # self.profile_tab_widget.setTabEnabled(0, True)
+                # self.profile_tab_widget.insertWidget(0, self.x_profile_widget)
 
                 if x_ax not in self.active_decay_axes:
                     self.active_decay_axes.append(x_ax)
             else:
                 x_ax.hide()
-                self.profile_tab_widget.setTabEnabled(0, False)
+                # self.profile_tab_widget.setTabEnabled(0, False)
 
                 if x_ax in self.active_decay_axes:
                     self.active_decay_axes.remove(x_ax)
 
             if 'Y' in components:
                 y_ax.show()
-                self.profile_tab_widget.setTabEnabled(1, True)
+                # self.profile_tab_widget.setTabEnabled(1, True)
 
                 if y_ax not in self.active_decay_axes:
                     self.active_decay_axes.append(y_ax)
             else:
                 y_ax.hide()
-                self.profile_tab_widget.setTabEnabled(1, False)
+                # self.profile_tab_widget.setTabEnabled(1, False)
 
                 if y_ax in self.active_decay_axes:
                     self.active_decay_axes.remove(y_ax)
 
             if 'Z' in components:
                 z_ax.show()
-                self.profile_tab_widget.setTabEnabled(2, True)
+                # self.profile_tab_widget.setTabEnabled(2, True)
 
                 if z_ax not in self.active_decay_axes:
                     self.active_decay_axes.append(z_ax)
             else:
                 z_ax.hide()
-                self.profile_tab_widget.setTabEnabled(2, False)
+                # self.profile_tab_widget.setTabEnabled(2, False)
 
                 if z_ax in self.active_decay_axes:
                     self.active_decay_axes.remove(z_ax)
@@ -891,7 +893,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     line.setPen(pen_color, width=1)
                     line.setShadowPen(None)
 
-            set_decay_selection_text(self.get_selected_data())
+            set_decay_selection_text(self.get_selected_decay_data())
 
     def clear_selection(self):
         """
@@ -915,25 +917,26 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Hide the profile selection text. Decay selection text is taken care of in self.highlight_lines
         self.profile_selection_text.hide()
 
+    def find_nearest_station(self, x):
+        """
+        Calculate the nearest station from the position x
+        :param x: int, mouse x location
+        :return: int, station number
+        """
+        idx = (np.abs(self.stations - x)).argmin()
+        return self.stations[idx]
+
     def profile_mouse_moved(self, evt):
         """
         Signal slot, when the mouse is moved in one of the axes. Calculates and plots a light blue vertical line at the
         nearest station where the mouse is.
         :param evt: pyqtgraph MouseClickEvent
         """
-        def find_nearest_station(x):
-            """
-            Calculate the nearest station from the position x
-            :param x: int, mouse x location
-            :return: int, station number
-            """
-            idx = (np.abs(self.stations - x)).argmin()
-            return self.stations[idx]
 
         global nearest_station
         pos = evt
         mouse_point = self.active_profile_axes[0].vb.mapSceneToView(pos)
-        nearest_station = find_nearest_station(int(mouse_point.x()))
+        nearest_station = self.find_nearest_station(int(mouse_point.x()))
 
         for ax in self.active_profile_axes:
             ax.items[0].setPos(nearest_station)  # Move the click vertical line
@@ -1030,7 +1033,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.selected_data = None
 
         self.highlight_lines()
-        self.get_selected_data()
+        self.get_selected_decay_data()
 
     def box_select_profile_plot(self, range):
         """
@@ -1038,15 +1041,18 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         :param range: tuple, range of the linearRegionItem
         """
         range = (min(range), max(range))
+        # Force the range to use existing stations
+        x0 = self.find_nearest_station(range[0])
+        x1 = self.find_nearest_station(range[1])
 
         # Update the LinearRegionItem for each axes
         for ax in self.profile_axes:
-            ax.vb.lr.setRegion((range[0], range[1]))
+            ax.vb.lr.setRegion((x0, x1))
             ax.vb.lr.show()
 
         # Find the stations that fall within the selection range
         self.selected_profile_stations = self.stations[
-            np.where((self.stations < range[1]) & (self.stations > range[0]))]
+            np.where((self.stations <= x1) & (self.stations >= x0))]
 
         if self.selected_profile_stations.any():
             self.change_comp_profile_btn.setEnabled(True)
@@ -1066,7 +1072,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
     def profile_tab_changed(self, ind):
         pass
 
-    def get_selected_data(self):
+    def get_selected_decay_data(self):
         """
         Return the corresponding data of the decay lines that are currently selected
         :return: pandas DataFrame
@@ -1088,10 +1094,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         else:
             comp = 'Z'
 
-        filt = self.pem_file.data.Component == comp
-        df = self.pem_file.data[filt]
-        data = df.where((df.Station >= self.selected_profile_stations.min()) &
-                        (df.Station <= self.selected_profile_stations.max())).dropna()
+        df = self.pem_file.data
+        filt = ((df.Component == comp) &
+                (df.cStation >= self.selected_profile_stations.min()) &
+                (df.cStation <= self.selected_profile_stations.max()))
+        data = self.pem_file.data[filt]
         return data
 
     def delete_lines(self):
@@ -1099,7 +1106,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Delete the selected lines. The data corresponding to the selected lines have their deletion flags flipped
         (i.e. from True > False or False > True). The station is then re-plotted. Line highlight is preserved.
         """
-        selected_data = self.get_selected_data()
+        selected_data = self.get_selected_decay_data()
         if not selected_data.empty:
             # Change the deletion flag
             selected_data.loc[:, 'del_flag'] = selected_data.loc[:, 'del_flag'].map(lambda x: not x)
@@ -1109,7 +1116,15 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.plot_profiles(components=selected_data.Component.unique())
             self.plot_station(self.selected_station, preserve_selection=True)
 
-    def change_decay_component_dialog(self):
+    def change_decay_component_dialog(self, source=None):
+        """
+        Open a user input window to select the new component to change to.
+        :param source: str, either 'decay' or 'profile' to signify which data to modify
+        """
+        if not source:
+            print(f"No source selected")
+            return
+
         new_comp, ok_pressed = QInputDialog.getText(self, "Change Component", "New Component:", QLineEdit.Normal)
         if ok_pressed:
             new_comp = new_comp.upper()
@@ -1117,31 +1132,36 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.message.information(self, 'Invalid Component', 'The component must be one of X, Y, Z.')
                 return
             else:
-                self.change_component(new_comp)
+                self.change_component(new_comp, source=source)
 
-    def change_component(self, component):
+    def change_component(self, new_component, source=None):
         """
         Change the component of the selected data
-        :param component: str
+        :param new_component: str
+        :param source: str, either 'decay' or 'profile' to know which selected data to modify
         """
-        selected_data = self.get_selected_data()
+        if source == 'decay':
+            selected_data = self.get_selected_decay_data()
+        else:
+            selected_data = self.get_selected_profile_data()
+
         old_comp = selected_data.Component.unique()[0]
 
-        if not selected_data.empty and component != old_comp:
+        if not selected_data.empty and new_component != old_comp:
             # Change the deletion flag
-            selected_data.loc[:, 'Component'] = selected_data.loc[:, 'Component'].map(lambda x: component.upper())
+            selected_data.loc[:, 'Component'] = selected_data.loc[:, 'Component'].map(lambda x: new_component.upper())
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.plot_profiles(components=[old_comp, component])
+            self.plot_profiles(components=[old_comp, new_component])
             self.plot_station(self.selected_station, preserve_selection=True)
 
     def change_station(self):
         """
-        Opens a input dialog to change the station name of the selected data
+        Opens a input dialog to change the station name of the selected data.
         """
         if self.selected_lines:
-            selected_data = self.get_selected_data()
+            selected_data = self.get_selected_decay_data()
             selected_station = selected_data.Station.unique()[0]
 
             new_station, ok_pressed = QInputDialog.getText(self, "Change Station", "New Station:", QLineEdit.Normal,
@@ -1158,14 +1178,65 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     self.plot_profiles(components=selected_data.Component.unique())
                     self.plot_station(self.selected_station)
 
-    def flip_decays(self):
+    def shift_stations(self):
+        """
+        Shift the station numbers of the selected profile data
+        """
+
+        def shift(station):
+            # Find the numbers in the station name
+            station_num = re.match('-?\d+', station).group()
+            if station_num:
+                new_num = int(station_num) + shift_amount
+                new_station = re.sub('-?\d+', str(new_num), station)
+                return new_station
+
+        selected_data = self.get_selected_profile_data()
+        if selected_data.empty:
+            return
+
+        global shift_amount
+        shift_amount, ok_pressed = QInputDialog.getInt(self, "Change Station", "New Station:",
+                                                       value=0,
+                                                       min=-9999,
+                                                       max=9999)
+        if ok_pressed and shift_amount != 0:
+            # Update the station number in the selected data
+            selected_data.loc[:, 'Station'] = selected_data.loc[:, 'Station'].map(shift)
+            # Update the data in the pem file object
+            self.pem_file.data.iloc[selected_data.index] = selected_data
+
+            # Update the plots
+            self.plot_profiles(components=selected_data.Component.unique())
+            self.plot_station(self.selected_station)
+
+    def flip_decays(self, source=None):
         """
         Flip the polarity of the decays of the selected data.
+        :param source: str, either 'decay' or 'profile' to know which selected data to modify
         """
-        selected_data = self.get_selected_data()
+        if source == 'decay':
+            selected_data = self.get_selected_decay_data()
+        else:
+            selected_data = self.get_selected_profile_data()
+
+        if not selected_data.empty:
+            # Reverse the reading
+            selected_data.loc[:, 'Reading'] = selected_data.loc[:, 'Reading'].map(lambda x: x * -1)
+
+            # Update the data in the pem file object
+            self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.plot_profiles(components=selected_data.Component.unique())
+            self.plot_station(self.selected_station, preserve_selection=True)
+
+    def remove_stations(self):
+        """
+        Set each reading in the selected stations to be flagged for deletion.
+        """
+        selected_data = self.get_selected_profile_data()
         if not selected_data.empty:
             # Change the deletion flag
-            selected_data.loc[:, 'Reading'] = selected_data.loc[:, 'Reading'].map(lambda x: x * -1)
+            selected_data.loc[:, 'del_flag'] = True
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data

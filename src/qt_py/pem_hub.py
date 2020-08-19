@@ -1366,6 +1366,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.gps_list.clear()
         # Try to find a GPS folder, but time out after 3 seconds
         gps_dir = find_gps_dir(timeout=3)
+
         if gps_dir is None:
             self.message.information(self, 'Timeout', 'Searching for the GPS folder timed out.')
             return
@@ -1477,35 +1478,23 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param selected: Bool: if True, saves all opened PEM files instead of only the selected ones.
         :return: None
         """
-        if self.pem_files:
-            if selected is True:
-                pem_files, rows = self.get_selected_pem_files()
-            else:
-                pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
+        pem_files = self.get_updated_pem_files(selected=selected)
+        self.start_pb(0, len(pem_files), title='Saving PEM Files...')
 
-            self.start_pb(0, len(pem_files), title='Saving PEM Files...')
+        count = 0
+        for pem_file in pem_files:
+            self.pb.setText(f"Saving {pem_file.filepath.name}")
+            self.save_pem_file(pem_file)
+            self.refresh_pem(pem_file)
+            # Block the signals because it only updates the row corresponding to the current stackedWidget.
+            # self.pem_info_widgets[row].blockSignals(True)
+            # self.pem_info_widgets[row].open_file(pem_file, parent=self)  # Updates the PEMInfoWidget tables
+            # self.pem_info_widgets[row].blockSignals(False)
+            count += 1
+            self.pb.setValue(count)
 
-            # Update all the PEM files in memory first.
-            for row, pem_file in zip(rows, pem_files):
-                pem_file = self.update_pem_from_table(pem_file, row)
-
-            # This is split from the above for loop because the table is refreshed when pem_info_widget opens a file, /
-            # and it would cause changes in the table to be ignored.
-            count = 0
-            for row, pem_file in zip(rows, pem_files):
-                self.pb.setText(f"Saving {pem_file.filepath.name}")
-                self.save_pem_file(pem_file)
-                self.refresh_pem(pem_file)
-                # Block the signals because it only updates the row corresponding to the current stackedWidget.
-                # self.pem_info_widgets[row].blockSignals(True)
-                # self.pem_info_widgets[row].open_file(pem_file, parent=self)  # Updates the PEMInfoWidget tables
-                # self.pem_info_widgets[row].blockSignals(False)
-                count += 1
-                self.pb.setValue(count)
-
-            # self.refresh_rows(rows='all')
-            self.end_pb()
-            self.status_bar.showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
+        self.end_pb()
+        self.status_bar.showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
 
     def save_pem_file_as(self):
         """
@@ -2162,6 +2151,18 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         return selected_pem_files, rows
 
+    def get_updated_pem_files(self, selected=False):
+        """
+        Return the updated version of the opened PEM files
+        :return: list, updated PEM files
+        """
+        if selected is True:
+            updated_files = self.get_selected_pem_files(updated=True)
+        else:
+            files, rows = self.pem_files, np.arange(self.table.rowCount())
+            updated_files = [self.update_pem_from_table(copy.deepcopy(file), row) for file, row in zip(files, rows)]
+        return updated_files
+
     def get_crs(self):
         """
         Return a CRS object based on the CRS information in the PEM Editor window
@@ -2174,15 +2175,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         crs_dict = {'System': system, 'Zone': zone, 'Datum': datum}
         crs = CRS().from_dict(crs_dict)
         return crs
-
-    def get_updated_pem_files(self):
-        """
-        Return the updated version of the opened PEM files
-        :return: list, updated PEM files
-        """
-        files, rows = self.pem_files, np.arange(self.table.rowCount())
-        updated_files = [self.update_pem_from_table(copy.deepcopy(file), row) for file, row in zip(files, rows)]
-        return updated_files
 
     def average_pem_data(self, selected=False):
         """
