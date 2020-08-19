@@ -1,0 +1,164 @@
+name: pp
+description: 
+title: 
+author: 
+datetime:
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+
+Client_Name: raglan mine
+Coil_Area: 4000.000000
+Crone_Digital_PEM_Receiver: #303
+Current: 14.00
+Date: 3/5/2019
+File_Name: pp
+File_Notes: 
+Grid_Name: z2
+Last_Group: 0
+Last_Reading: 4
+Line_Hole_Name: 2fx7046l1-1
+Loop_Height: 1000
+Loop_Name: 19z201
+Loop_Width: 1000
+Off_Time_Last_Channel: 20
+Operator_Name: morgan glynn
+Ramp_Length: 1500
+Rejection_Threshold_Base_[pT]: 500.000000
+Released: Feb22,2018
+Sample: 60000
+Sensor_Number: 158
+Software_Version: 1.10.7
+Survey_Type: SF_Coil
+Survey_Type_Index: 0
+Sync_Type: Crystal
+Time_Base: 150 ms
+Time_Base_Index: 7
+Tool_Number: 0
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Total_Readings:4
+$$ 
+NI_ChannelLength:
+NI_DataType:
+name: 0E,-,R1
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 3/5/2019,20:02:16
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 4
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 1
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+isDeleted: F
+dataZ: -8.116649E-5	-8.094803E-5	-8.070735E-5	-8.043990E-5	-8.012890E-5	-7.974808E-5	-7.923321E-5	-7.841423E-5	-7.686318E-5	-7.393302E-5	-6.911469E-5	-6.232555E-5	-5.396621E-5	-4.478539E-5	-3.564317E-5	-2.728836E-5	-2.020147E-5	-1.457119E-5	-1.034321E-5
+
+NI_ChannelLength:
+NI_DataType:
+name: 0E,-,R2
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 3/5/2019,20:02:45
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 4
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 2
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+isDeleted: F
+dataZ: -8.117158E-5	-8.095401E-5	-8.071793E-5	-8.045295E-5	-8.014062E-5	-7.975756E-5	-7.924305E-5	-7.843504E-5	-7.690906E-5	-7.401121E-5	-6.922354E-5	-6.246006E-5	-5.411805E-5	-4.494291E-5	-3.579475E-5	-2.742137E-5	-2.031357E-5	-1.465810E-5	-1.040589E-5
+
+NI_ChannelLength:
+NI_DataType:
+name: 0E,-,R3
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 3/5/2019,20:03:03
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 4
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 3
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+isDeleted: F
+dataZ: -8.117544E-5	-8.096263E-5	-8.072897E-5	-8.046282E-5	-8.015329E-5	-7.977259E-5	-7.926475E-5	-7.846209E-5	-7.694422E-5	-7.406247E-5	-6.929515E-5	-6.254942E-5	-5.421677E-5	-4.504099E-5	-3.588280E-5	-2.749288E-5	-2.036699E-5	-1.469659E-5	-1.043872E-5
+
+NI_ChannelLength:
+NI_DataType:
+name: 10E,-,R1
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 4.719019
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 3/6/2019,2:24:53
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 4
+Number_of_Readings: 1
+Overload: F
+RAD: 0.085270	0.286400	0.561510	0.951070	-0.030250	0.006560
+Reading_Notes: 
+Reading_Number: 4
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+isDeleted: F
+dataZ: -8.194332E-5	-8.174301E-5	-8.153451E-5	-8.131270E-5	-8.107141E-5	-8.080175E-5	-8.048718E-5	-8.009957E-5	-7.957662E-5	-7.875300E-5	-7.720292E-5	-7.428422E-5	-6.948281E-5	-6.271050E-5	-5.435841E-5	-4.516844E-5	-3.600060E-5	-2.760518E-5	-2.046791E-5
+
