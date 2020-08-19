@@ -593,7 +593,7 @@ class LoopAdder(GPSAdder):
 
     def highlight_point(self, row=None):
         """
-        Highlight a scatter point when it's row is selected in the table
+        Highlight a scatter point when it's row is selected in the table.
         :param row: Int: table row to highlight
         :return: None
         """
@@ -657,7 +657,7 @@ def main():
 
     pg = PEMGetter()
     # file = r'C:\Users\kajth\PycharmProjects\Crone\sample_files\Loop GPS\LOOP 3.txt'
-    file = r'C:\Users\kajth\PycharmProjects\Crone\sample_files\Line GPS\LINE 0S.txt'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
     loop = TransmitterLoop(file)
     line = SurveyLine(file)
     mw.open(file)

@@ -66,8 +66,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.profile_selection_text.setIndent(5)
         self.profile_selection_text.setStyleSheet('color: purple')
         self.profile_selection_text.hide()
-        self.file_info_label = QLabel()
-        self.file_info_label.setIndent(5)
+        self.timebase_label = QLabel()
+        self.timebase_label.setIndent(5)
+        self.survey_type_label = QLabel()
+        self.survey_type_label.setIndent(5)
+        self.operator_label = QLabel()
+        self.operator_label.setIndent(5)
         self.number_of_readings = QLabel()
         self.number_of_readings.setIndent(5)
 
@@ -78,7 +82,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.status_bar.addWidget(self.decay_selection_text, 0)
         self.status_bar.addWidget(QLabel(), 1)  # Spacer
         self.status_bar.addWidget(self.profile_selection_text, 0)
-        self.status_bar.addPermanentWidget(self.file_info_label, 0)
+        self.status_bar.addPermanentWidget(self.survey_type_label, 0)
+        self.status_bar.addPermanentWidget(self.timebase_label, 0)
+        self.status_bar.addPermanentWidget(self.operator_label, 0)
         self.status_bar.addPermanentWidget(self.number_of_readings, 0)
 
         self.converter = StationConverter()
@@ -167,15 +173,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             hover_v_line_text.setParentItem(ax.vb)
             hover_v_line_text.setPos(0, 0)
             hover_v_line_text.setColor((102, 178, 255, 100))
-            # selected_v_line_text = pg.TextItem("", anchor=(0, 0))
-            # selected_v_line_text.setParentItem(ax.vb)
-            # selected_v_line_text.setPos(0, 0)
-            # selected_v_line_text.setColor((51, 51, 255, 100))
 
             ax.addItem(hover_v_line, ignoreBounds=True)
             ax.addItem(selected_v_line, ignoreBounds=True)
             ax.addItem(hover_v_line_text, ignoreBounds=True)
-            # ax.addItem(selected_v_line_text, ignoreBounds=True)
 
             # Connect the mouse moved signal
             ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
@@ -219,6 +220,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             t = time.time()
             self.delete_lines()
             print(f"Time to delete and replot: {time.time() - t}")
+
+        elif event.key() == QtCore.Qt.Key_C:
+            self.cycle_profile_component()
 
         # Cycle through highlighted decays forwards
         elif event.key() == QtCore.Qt.Key_D or event.key() == QtCore.Qt.RightArrow:
@@ -291,7 +295,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             pem_file = parser.parse(pem_file)
 
         self.pem_file = pem_file
-        self.file_info_label.setText(f"Timebase {self.pem_file.timebase:.2f}ms    {self.pem_file.get_survey_type()} Survey")
+        self.timebase_label.setText(f"Timebase: {self.pem_file.timebase:.2f}ms")
+        self.survey_type_label.setText(f"{self.pem_file.get_survey_type()} Survey")
+        self.operator_label.setText(f"Operator: {self.pem_file.operator}")
 
         # Add the deletion flag column
         if 'del_flag' not in self.pem_file.data.columns:
@@ -307,9 +313,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.units = self.pem_file.units
 
         # Add the line name and loop name as the title for the profile plots
-        self.x_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name} [X Component]")
-        self.y_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name} [Y Component]")
-        self.z_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name} [Z Component]")
+        self.x_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[X Component]")
+        self.y_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[Y Component]")
+        self.z_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[Z Component]")
 
         # Set the X and Y axis labels for the decay axes
         for ax in self.decay_axes:
@@ -1054,6 +1060,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.selected_profile_stations = self.stations[
             np.where((self.stations <= x1) & (self.stations >= x0))]
 
+        # Enable the edit buttons and set the profile selection text
         if self.selected_profile_stations.any():
             self.change_comp_profile_btn.setEnabled(True)
             self.shift_station_profile_btn.setEnabled(True)
@@ -1061,7 +1068,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.remove_profile_btn.setEnabled(True)
             self.profile_selection_text.show()
             self.profile_selection_text.setText(
-                f"{self.selected_profile_stations.min()} - {self.selected_profile_stations.max()}")
+                f"Station {self.selected_profile_stations.min()} - {self.selected_profile_stations.max()}")
         else:
             self.change_comp_profile_btn.setEnabled(False)
             self.shift_station_profile_btn.setEnabled(False)
@@ -1242,6 +1249,37 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.pem_file.data.iloc[selected_data.index] = selected_data
             self.plot_profiles(components=selected_data.Component.unique())
             self.plot_station(self.selected_station, preserve_selection=True)
+
+    def cycle_profile_component(self):
+        """
+        Signal slot, cycle through the profile plots
+        """
+
+        def get_comp_indexes():
+            """
+            Return the index of the stacked widget of each component present in the PEM file
+            :return: list of int
+            """
+            indexes = []
+            components = self.pem_file.get_components()
+            if 'X' in components:
+                indexes.append(0)
+            if 'Y' in components:
+                indexes.append(1)
+            if 'Z' in components:
+                indexes.append(2)
+            return indexes
+
+        comp_indexes = get_comp_indexes()
+        current_ind = self.profile_tab_widget.currentIndex()
+        if len(comp_indexes) > 1:
+            if current_ind + 1 > max(comp_indexes):
+                new_ind = min(comp_indexes)
+            else:
+                new_ind = comp_indexes[comp_indexes.index(current_ind) + 1]
+        else:
+            return
+        self.profile_tab_widget.setCurrentIndex(new_ind)
 
     def cycle_station(self, direction):
         """
