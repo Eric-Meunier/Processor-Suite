@@ -297,7 +297,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.pem_file = pem_file
         self.timebase_label.setText(f"Timebase: {self.pem_file.timebase:.2f}ms")
         self.survey_type_label.setText(f"{self.pem_file.get_survey_type()} Survey")
-        self.operator_label.setText(f"Operator: {self.pem_file.operator}")
+        self.operator_label.setText(f"Operator: {self.pem_file.operator.title()}")
 
         # Add the deletion flag column
         if 'del_flag' not in self.pem_file.data.columns:
@@ -382,12 +382,15 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             """
             Show/hide decay plots and profile plot tabs based on the components in the pem file
             """
+            profile_set = False
             x_ax = self.x_decay_plot
             y_ax = self.y_decay_plot
             z_ax = self.z_decay_plot
 
             if 'X' in components:
                 x_ax.show()
+                self.profile_tab_widget.setCurrentIndex(0)
+                profile_set = True
                 # self.profile_tab_widget.setTabEnabled(0, True)
                 # self.profile_tab_widget.insertWidget(0, self.x_profile_widget)
 
@@ -402,6 +405,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             if 'Y' in components:
                 y_ax.show()
+                if profile_set is False:
+                    self.profile_tab_widget.setCurrentIndex(1)
+                    profile_set = True
                 # self.profile_tab_widget.setTabEnabled(1, True)
 
                 if y_ax not in self.active_decay_axes:
@@ -415,6 +421,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             if 'Z' in components:
                 z_ax.show()
+                if profile_set is False:
+                    self.profile_tab_widget.setCurrentIndex(2)
                 # self.profile_tab_widget.setTabEnabled(2, True)
 
                 if z_ax not in self.active_decay_axes:
@@ -439,8 +447,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     for ax in self.active_profile_axes[1:]:
                         ax.setXLink(self.active_profile_axes[0])
 
-            # Update the profile axes
-            tt = time.time()
             # Add or remove axes from the list of active profile axes
             if 'X' in components:
                 if all([ax not in self.active_profile_axes for ax in self.x_layout_axes]):

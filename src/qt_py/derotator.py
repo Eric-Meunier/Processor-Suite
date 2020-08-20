@@ -166,6 +166,10 @@ class Derotator(QMainWindow, Ui_Derotator):
         """
 
         def fill_table(stations):
+            """
+            Fill the stations list with the ineligible readings
+            :param stations: DataFrame of ineligible readings
+            """
             self.list.clear()
             for s in stations.itertuples():
                 result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
@@ -198,7 +202,6 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
 
-        global ineligible_stations
         self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
 
         # Fill the table with the ineligible stations
@@ -209,8 +212,8 @@ class Derotator(QMainWindow, Ui_Derotator):
         else:
             self.bad_stations_label.hide()
             self.list.hide()
-        self.rotate()
 
+        self.rotate()
         self.show()
 
     def plot_pem(self, pem_file):
@@ -418,13 +421,13 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         method = self.get_method()
         self.soa = self.soa_sbox.value()
-        # # Create a copy of the pem_file so it is never changed
-        # pem_file = copy.deepcopy(self.pem_file)
+        # Create a copy of the pem_file so it is never changed
+        pem_file = copy.deepcopy(self.pem_file)
 
         if method is not None:
-            self.rotated_file = self.pem_file.rotate(method=method, soa=self.soa)
+            self.rotated_file = pem_file.rotate(method=method, soa=self.soa)
         else:
-            self.rotated_file = self.pem_file
+            self.rotated_file = pem_file
 
         self.plot_pem(self.rotated_file)
 

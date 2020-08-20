@@ -18,7 +18,7 @@ from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 def sort_data(data):
     # Sort the data frame
     df = data.reindex(index=natsort.order_by_index(
-        data.index, natsort.index_humansorted(zip(data.Component, data.Station, data['Reading_number']))))
+        data.index, natsort.index_humansorted(zip(data.Component, data.Station, data['Reading_index'], data['Reading_number']))))
     # Reset the index
     df.reset_index(drop=True, inplace=True)
     return df
@@ -488,6 +488,8 @@ class PEMFile:
         elif self.survey_type.casefold() == 'b-rad':
             survey_type = 'Borehole Induction'
         elif self.survey_type.casefold() == 'b-otool':
+            survey_type = 'Borehole Induction'
+        elif self.survey_type.casefold() == 'radtool':
             survey_type = 'Borehole Induction'
         elif self.survey_type.casefold() == 's-flux':
             survey_type = 'Surface Fluxgate'
@@ -1176,6 +1178,7 @@ class PEMParser:
         """
 
         def parse_tags(file):
+            t = time.time()
             cols = [
                 'Format',
                 'Units',
@@ -1199,9 +1202,9 @@ class PEMParser:
                     # Remove ~ from the operator name if it exists
                     match = match.split('~')[0].strip()
                 elif cols[i] == 'Units':
-                    if match == 'nanoTesla/sec':
+                    if match == 'nanoTesla/sec' or match == 'nT/s':
                         match = 'nT/s'
-                    elif match == 'picoTesla':
+                    elif match == 'picoTesla' or match == 'pT':
                         match = 'pT'
                 elif cols[i] == 'Probes':
                     probe_cols = ['XY probe number', 'SOA', 'Tool number', 'Tool ID']
@@ -1211,33 +1214,40 @@ class PEMParser:
                 elif cols[i] == 'Loop dimensions':
                     match = match.strip()
                 tags[cols[i]] = match
+            print(f"Time to parse tags of {self.filepath.name}: {time.time() - t}")
             return tags
 
         def parse_loop(file):
             # Find all re matches
+            t = time.time()
             matches = re.findall(self.re_loop_coords, file)
             if matches:
                 return matches
             else:
                 print(f"No loop coordinates found in {os.path.basename(filepath)}")
+            print(f"Time to parse loop of {self.filepath.name}: {time.time() - t}")
 
         def parse_line(file):
+            t = time.time()
             # Find all re matches
             matches = re.findall(self.re_line_coords, file)
             if matches:
                 return matches
             else:
                 print(f"No line coordinates found in {os.path.basename(filepath)}")
+            print(f"Time to parse line of {self.filepath.name}: {time.time() - t}")
 
         def parse_notes(file):
+            t = time.time()
             notes = []
             for match in self.re_notes.finditer(file):
                 for group, index in self.re_notes.groupindex.items():
                     notes.append(match.group(index))
-
+            print(f"Time to parse notes of {self.filepath.name}: {time.time() - t}")
             return notes
 
         def parse_header(file):
+            t = time.time()
 
             header_cols = [
                 'Client',
@@ -1305,6 +1315,7 @@ class PEMParser:
                     match = int(match)
                 header[receiver_param_cols[k]] = match
 
+            print(f"Time to parse header of {self.filepath.name}: {time.time() - t}")
             return header
 
         def parse_channel_times(file, units=None):
@@ -1370,25 +1381,30 @@ class PEMParser:
                 table.drop(1, inplace=True)
                 table.reset_index(drop=True, inplace=True)
 
-                # Configure which channels to remove for the first on-time
-                table['Remove'] = table.apply(check_removable, axis=1)
+                # If the file is a PP file
+                if table.Width.max() < 10 ** -5:
+                    table['Remove'] = False
+                else:
+                    # Configure which channels to remove for the first on-time
+                    table['Remove'] = table.apply(check_removable, axis=1)
 
-                # Configure each channel after the last off-time channel (only for full waveform)
-                last_off_time_channel = find_last_off_time()
-                if last_off_time_channel:
-                    table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(lambda x: True)
+                    # Configure each channel after the last off-time channel (only for full waveform)
+                    last_off_time_channel = find_last_off_time()
+                    if last_off_time_channel:
+                        table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(lambda x: True)
                 return table
 
             t = time.time()
             matches = self.re_channel_times.search(file)
-            print(f"Time to find channel time matches: {time.time() - t}")
             if not matches:
                 raise ValueError('Error parsing channel times. No matches were found.')
 
             table = channel_table(np.array(matches.group(1).split(), dtype=float))
+            print(f"Time to parse channel table of {self.filepath.name}: {time.time() - t}")
             return table
 
         def parse_data(file):
+            t = time.time()
 
             cols = [
                 'Station',
@@ -1427,6 +1443,7 @@ class PEMParser:
                                          'Readings_per_set',
                                          'Reading_number']].astype(int)
             df['ZTS'] = df['ZTS'].astype(float)
+            print(f"Time to parse data of {self.filepath.name}: {time.time() - t}")
             return df
 
         assert Path(filepath).is_file(), f"{filepath.name} is not a file"
@@ -1438,27 +1455,13 @@ class PEMParser:
         with open(filepath, "rt") as in_file:
             file = in_file.read()
 
-        t1 = time.time()
         tags = parse_tags(file)
-        print(f"Time to parse tags of {self.filepath.name}: {time.time() - t1}")
-        t2 = time.time()
         loop_coords = parse_loop(file)
-        print(f"Time to parse loop of {self.filepath.name}: {time.time() - t2}")
-        t3 = time.time()
         line_coords = parse_line(file)
-        print(f"Time to parse line of {self.filepath.name}: {time.time() - t3}")
-        t4 = time.time()
         notes = parse_notes(file)
-        print(f"Time to parse notes of {self.filepath.name}: {time.time() - t4}")
-        t5 = time.time()
         header = parse_header(file)
-        print(f"Time to parse header of {self.filepath.name}: {time.time() - t5}")
-        t6 = time.time()
         channel_table = parse_channel_times(file, units=tags.get('Units'))
-        print(f"Time to parse channel table of {self.filepath.name}: {time.time() - t5}")
-        t7 = time.time()
         data = parse_data(file)
-        print(f"Time to parse data of {self.filepath.name}: {time.time() - t7}")
 
         print(f"Time to parse {self.filepath.name}: {time.time() - t}")
 
@@ -1472,6 +1475,7 @@ class DMPParser:
         Class that parses .DMP and .DMP2 files into PEMFile objects.
         """
         self.filepath = None
+        self.pp_file = False
 
     def parse_dmp(self, filepath):
         """
@@ -1484,7 +1488,7 @@ class DMPParser:
             """
             Convert the channel table in the .DMP file to a PEM channel times table DataFrame
             :param text: str or list, raw channel table information in the .DMP file
-            :param units: str, 'nT/s', 'nT/sec', or 'pT'
+            :param units: str, 'nT/s' or 'pT'
             :return: DataFrame
             """
 
@@ -1502,7 +1506,7 @@ class DMPParser:
                     :param row: pandas row from the channel table
                     :return: bool: True if the channel should be removed, else False.
                     """
-                    if units == 'nT/s' or units == 'nT/sec':
+                    if units == 'nT/s':
                         if row.Start == -0.0002:
                             return False
                         elif row.Start > 0:
@@ -1543,18 +1547,16 @@ class DMPParser:
                 table['Width'] = table['End'] - table['Start']
                 table['Center'] = (table['Width'] / 2) + table['Start']
 
-                # PEM files seem to always have a repeating channel time as the third number, so the second row
-                # must be removed.
-                # table.drop(1, inplace=True)
-                # table.reset_index(drop=True, inplace=True)
+                if self.pp_file is False:
+                    # Configure which channels to remove for the first on-time
+                    table['Remove'] = table.apply(check_removable, axis=1)
 
-                # Configure which channels to remove for the first on-time
-                table['Remove'] = table.apply(check_removable, axis=1)
-
-                # Configure each channel after the last off-time channel (only for full waveform)
-                last_off_time_channel = find_last_off_time()
-                if last_off_time_channel:
-                    table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(lambda x: True)
+                    # Configure each channel after the last off-time channel (only for full waveform)
+                    last_off_time_channel = find_last_off_time()
+                    if last_off_time_channel:
+                        table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(lambda x: True)
+                else:
+                    table['Remove'] = False
                 return table
 
             if not text:
@@ -1569,8 +1571,13 @@ class DMPParser:
 
             # Reshape the channel times to be 3 columns (channel number, start-time, end-time)
             times = text.flatten().reshape((len(text) * 2, 3))
-            # Find the index of the gap 0 channel
-            ind_of_0 = list(times[:, 0]).index(-1)
+
+            if self.pp_file is False:
+                # Find the index of the gap 0 channel
+                global ind_of_0  # global index since the 0 value must be inserted into the decays
+                ind_of_0 = list(times[:, 0]).index(1)
+                # Add the gap channel
+                times = np.insert(times, ind_of_0, [0., times[ind_of_0-1][2], 0.], axis=0)
             # Remove the channel number
             times = np.delete(times, 0, axis=1)
 
@@ -1619,9 +1626,14 @@ class DMPParser:
                 readings_per_set = int(head[4])
                 reading_number = int(head[5])
 
+                # Create a RADTool object
                 rad_tool = RADTool().from_dmp(contents[1])
 
-                decay = np.array(''.join(contents[2:]).split(), dtype=float) * 10 ** 9  # Convert to nT
+                if self.pp_file is True:
+                    decay = np.array(''.join(contents[2:]).split(), dtype=float) * 10 ** 9
+                else:
+                    # Convert the decays to nT and add the 0 gap
+                    decay = np.insert(np.array(''.join(contents[2:]).split(), dtype=float) * 10 ** 9, ind_of_0, 0.0)
 
                 return pd.Series([station,
                                  comp,
@@ -1705,6 +1717,10 @@ class DMPParser:
             assert len(text) == 29, f'Incorrect number of lines found in the header of {self.filepath.name}'
 
             t = time.time()
+
+            if text[-1] == 'ZTS - Narrow':
+                self.pp_file = True
+
             date = np.array(text[14].split('/'), dtype=int)
             try:
                 date_str = datetime.datetime(date[2] + 2000, date[0], date[1]).strftime('%B %d, %Y')
@@ -1713,7 +1729,7 @@ class DMPParser:
 
             header = dict()
             header['Format'] = str(210)
-            header['Units'] = 'pT' if 'flux' in text[6].lower() or 'squid' in text[6].lower() else 'nT/sec'
+            header['Units'] = 'pT' if 'flux' in text[6].lower() or 'squid' in text[6].lower() else 'nT/s'
             header['Operator'] = text[11]
             header['Probes'] = {'XY probe number': '0', 'SOA': '0', 'Tool number': '0', 'Tool ID': '0'}
             header['Current'] = float(text[12])
@@ -2294,10 +2310,10 @@ if __name__ == '__main__':
     # file.get_profile_data('X', averaged=False)
     global answer_pem
     answer_pem = pemparse.parse(
-        r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.PEM')
+        r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.PEM')
 
     t2 = time.time()
-    file = r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'
     file = dparse.parse_dmp(file)
     print(f"Time to parse DMP: {time.time() - t2}")
 

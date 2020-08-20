@@ -10,8 +10,6 @@ import numpy as np
 import simplekml
 import natsort
 import stopit
-import multiprocessing
-from threading import Event
 from pathlib import Path
 from shutil import copyfile
 from itertools import groupby
@@ -28,7 +26,7 @@ from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, Bor
                                 GPXEditor, CRS)
 from src.gps.gpx_creator import GPXCreator
 
-from src.pem.pem_file import PEMFile, PEMParser, StationConverter
+from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
 from src.pem.pem_plotter import PEMPrinter, CustomProgressBar
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 
@@ -740,6 +738,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
         pem_files = False
+        dmp_files = False
         text_files = False
         ri_files = False
         inf_files = False
@@ -748,6 +747,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Files must all be the same extension
         if all([url.lower().endswith('pem') for url in urls]):
             pem_files = True
+        elif all([url.lower().endswith('dmp') or url.lower().endswith('dmp2') for url in urls]):
+            dmp_files = True
         elif all([url.lower().endswith('txt') or url.lower().endswith('csv') or url.lower().endswith(
                 'seg') or url.lower().endswith('xyz') for url in
                   urls]):
@@ -762,7 +763,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         pem_conditions = bool(all([
             bool(e.answerRect().intersects(self.table.geometry())),
-            pem_files,
+            bool(pem_files or dmp_files),
         ]))
 
         # When no PEM files are open, only open PEM files and not any other kind of file
@@ -796,7 +797,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 inf_files is True or gpx_files is True,
             ]))
 
-            if pem_conditions is True or gps_conditions is True or ri_conditions is True or inf_conditions is True:
+            if any([pem_conditions, gps_conditions, ri_conditions, inf_conditions]):
                 e.acceptProposedAction()
             else:
                 e.ignore()
@@ -805,6 +806,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
 
         pem_files = [file for file in urls if file.lower().endswith('pem')]
+        dmp_files = [file for file in urls if file.lower().endswith('dmp') or file.lower().endswith('dmp2')]
         gps_files = [file for file in urls if
                      file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith(
                          'seg') or file.lower().endswith('xyz') or file.lower().endswith('gpx')]
@@ -815,13 +817,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if pem_files:
             self.open_pem_files(pem_files)
 
-        if gps_files:
+        elif dmp_files:
+            self.open_dmp_files(dmp_files)
+
+        elif gps_files:
             self.open_gps_files(gps_files)
 
-        if ri_files:
+        elif ri_files:
             self.open_ri_file(ri_files)
 
-        if inf_files:
+        elif inf_files:
             self.open_inf_file(inf_files)
 
     def change_pem_info_tab(self, tab_num):
@@ -899,6 +904,22 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.reset_crs()
             # self.project_dir = self.file_sys_model.rootPath()
         self.setUpdatesEnabled(True)
+
+    def open_dmp_files(self, dmp_files):
+        """
+        Convert and open a .DMP or .DMP2 file
+        :param dmp_files: list of str, filepaths of .DMP or .DMP2 files
+        """
+        if not isinstance(dmp_files, list):
+            dmp_files = [dmp_files]
+
+        parser = DMPParser()
+        pem_files = []
+        for file in dmp_files:
+            pem_file = parser.parse_dmp(file)
+            pem_files.append(pem_file)
+
+        self.open_pem_files(pem_files)
 
     def open_pem_files(self, pem_files):
         """
@@ -2922,14 +2943,18 @@ def main():
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     pem_files = pg.get_pems(client='PEM Rotation', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'
+    # mw.open_dmp_files(file)
+    mw.show()
+
     # mw.show()
     # mw.open_pem_files(pem_files)
-    mw.delete_merged_files_cbox.setChecked(False)
+    # mw.delete_merged_files_cbox.setChecked(False)
 
     # mw.merge_pem_files(pem_files)
     # mw.average_pem_data()
     # mw.split_pem_channels(pem_files[0])
-    mw.show()
     # mw.open_pdf_plot_printer(selected_files=False)
 
     app.exec_()
