@@ -219,7 +219,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         if event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_R:
             t = time.time()
             self.delete_lines()
-            print(f"Time to delete and replot: {time.time() - t}")
+            print(f"PEMPlotEditor - Time to delete and replot: {time.time() - t}")
 
         elif event.key() == QtCore.Qt.Key_C:
             self.cycle_profile_component()
@@ -382,54 +382,54 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             """
             Show/hide decay plots and profile plot tabs based on the components in the pem file
             """
-            profile_set = False
             x_ax = self.x_decay_plot
             y_ax = self.y_decay_plot
             z_ax = self.z_decay_plot
 
             if 'X' in components:
                 x_ax.show()
-                self.profile_tab_widget.setCurrentIndex(0)
-                profile_set = True
-                # self.profile_tab_widget.setTabEnabled(0, True)
-                # self.profile_tab_widget.insertWidget(0, self.x_profile_widget)
 
                 if x_ax not in self.active_decay_axes:
                     self.active_decay_axes.append(x_ax)
             else:
                 x_ax.hide()
-                # self.profile_tab_widget.setTabEnabled(0, False)
+
+                # Cycle to the next profile plot component if this component is no longer in the data but it's
+                # the current profile selected
+                if self.profile_tab_widget.currentIndex == 0:
+                    print(f"X profile selected but there's no X data, cycling to the next component")
+                    self.cycle_profile_component()
 
                 if x_ax in self.active_decay_axes:
                     self.active_decay_axes.remove(x_ax)
 
             if 'Y' in components:
                 y_ax.show()
-                if profile_set is False:
-                    self.profile_tab_widget.setCurrentIndex(1)
-                    profile_set = True
                 # self.profile_tab_widget.setTabEnabled(1, True)
 
                 if y_ax not in self.active_decay_axes:
                     self.active_decay_axes.append(y_ax)
             else:
                 y_ax.hide()
-                # self.profile_tab_widget.setTabEnabled(1, False)
+
+                if self.profile_tab_widget.currentIndex == 1:
+                    print(f"Y profile selected but there's no Y data, cycling to the next component")
+                    self.cycle_profile_component()
 
                 if y_ax in self.active_decay_axes:
                     self.active_decay_axes.remove(y_ax)
 
             if 'Z' in components:
                 z_ax.show()
-                if profile_set is False:
-                    self.profile_tab_widget.setCurrentIndex(2)
-                # self.profile_tab_widget.setTabEnabled(2, True)
 
                 if z_ax not in self.active_decay_axes:
                     self.active_decay_axes.append(z_ax)
             else:
                 z_ax.hide()
-                # self.profile_tab_widget.setTabEnabled(2, False)
+
+                if self.profile_tab_widget.currentIndex == 2:
+                    print(f"Z profile selected but there's no Z data, cycling to the next component")
+                    self.cycle_profile_component()
 
                 if z_ax in self.active_decay_axes:
                     self.active_decay_axes.remove(z_ax)
@@ -473,7 +473,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                         self.active_profile_axes.remove(ax)
 
             link_profile_axes()
-            print(f"Number of active profile axes: {len(self.active_profile_axes)}")
 
         # Update the list of stations
         self.stations = np.sort(self.pem_file.get_stations(converted=True))
@@ -626,7 +625,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         t = time.time()
         self.update_file()
-        print(f"Time to update file: {time.time() - t}")
+        print(f"PEMPlotEditor - Time to update file: {time.time() - t}")
 
         file = copy.deepcopy(self.pem_file)
         file.data = file.data.loc[file.data.del_flag == False]
@@ -667,8 +666,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             plot_lin(profile_data, axes)
 
-        print(f"Time to make lin plots: {lin_plotting_time}")
-        print(f"Time to make scatter plots: {scatter_plotting_time}")
+        print(f"PEMPlotEditor - Time to make lin plots: {lin_plotting_time}")
+        print(f"PEMPlotEditor - Time to make scatter plots: {scatter_plotting_time}")
         print(f"Averaging time: {averaging_time}")
         print(f"Total plotting time for profile plots: {time.time() - t}")
 
@@ -810,6 +809,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         """
         # If the y axes are linked, manually set the Y limit
         if self.link_y_cbox.isChecked():
+            # Auto range the X, then manually set the Y.
+            self.active_decay_axes[0].autoRange()  
             filt = self.pem_file.data.cStation == self.selected_station
             min_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x.min()).min()
             max_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x.max()).max()
@@ -988,6 +989,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Signal slot, change the profile tab to the same component as the clicked decay plot
         :param evt: MouseClick event
         """
+        print(f"Decay plot clicked, last active axes: {self.active_ax_ind}")
         self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
 
     def decay_mouse_moved(self, evt):
@@ -997,11 +999,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         """
         self.active_ax = None
         for ax in self.decay_axes:
-            if ax.sceneBoundingRect().contains(evt):
+            if ax.vb.childGroup.sceneBoundingRect().contains(evt):
                 self.active_ax = ax
                 self.last_active_ax = ax
                 self.active_ax_ind = np.where(self.decay_axes == self.active_ax)[0][0]
                 self.last_active_ax_ind = self.active_ax_ind
+                print(f"Active axes: {self.active_ax_ind}")
                 break
 
     def box_select_decay_lines(self, rect):

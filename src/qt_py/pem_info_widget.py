@@ -360,7 +360,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.fill_info_tab()
         self.fill_gps_table(self.pem_file.loop.get_loop(), self.loop_table)
         self.fill_data_table()
-        print(f"Time to open PIW for {self.pem_file.filepath.name}: {time.time() - t}")
+        print(f"PEMInfoWidget - Time to open PIW for {self.pem_file.filepath.name}: {time.time() - t}")
         return self
 
     def open_ri_file(self, filepath):

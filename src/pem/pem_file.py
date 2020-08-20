@@ -403,7 +403,7 @@ class PEMFile:
         if averaged is True:
             profile = profile.groupby('Station').mean()
 
-        print(f"Time to get profile data: {time.time() - t}")
+        print(f"PEMFile - Time to get profile data: {time.time() - t}")
         return profile
 
     def get_components(self):
@@ -554,7 +554,7 @@ class PEMFile:
         df = pd.concat([df, channel_data], axis=1).drop('c_Station', axis=1)
         str_df = df.apply(lambda x: x.astype(str).str.cat(sep=' '), axis=1)
         str_df = '\n'.join(str_df.to_list())
-        print(f"Time to convert {self.filepath.name} to XYZ: {time.time() - t}")
+        print(f"PEMFile - Time to convert {self.filepath.name} to XYZ: {time.time() - t}")
         return str_df
 
     def save(self):
@@ -597,7 +597,7 @@ class PEMFile:
         # Sort the data frame
         df = sort_data(df)
         self.data = df
-        print(f"Time to average {self.filepath.name}: {time.time() - t}")
+        print(f"PEMFile - Time to average {self.filepath.name}: {time.time() - t}")
         return self
 
     def split(self):
@@ -619,7 +619,7 @@ class PEMFile:
         # Update the PEM file's number of channels attribute
         self.number_of_channels = len(self.channel_times.index) - 1
 
-        print(f"Time to split PEM file: {time.time() - t}")
+        print(f"PEMFile - Time to split PEM file: {time.time() - t}")
         return self
 
     def scale_coil_area(self, coil_area):
@@ -642,7 +642,7 @@ class PEMFile:
 
         self.coil_area = new_coil_area
         self.notes.append(f'<HE3> Data scaled by coil area change of {old_coil_area}/{new_coil_area}')
-        print(f"Time to scale by coil area: {time.time() - t}")
+        print(f"PEMFile - Time to scale by coil area: {time.time() - t}")
         return self
 
     def scale_current(self, current):
@@ -665,7 +665,7 @@ class PEMFile:
 
         self.current = new_current
         self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{old_current}A')
-        print(f"Time to scale by current: {time.time() - t}")
+        print(f"PEMFile - Time to scale by current: {time.time() - t}")
         return self
 
     def rotate(self, method='acc', soa=0):
@@ -818,7 +818,7 @@ class PEMFile:
         rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
                                              group_keys=False,
                                              as_index=False).apply(lambda l: rotate_data(l, method, soa))
-        print(f"Time to rotate data: {time.time() - st}")
+        print(f"PEMFile - Time to rotate data: {time.time() - st}")
 
         self.data[filt] = rotated_data
         # Remove the rows that were filtered out in filtered_data
@@ -1087,13 +1087,13 @@ class PEMFile:
         filtered_data = self.data[filt].groupby(['Station', 'RAD_ID'],
                                                 group_keys=False,
                                                 as_index=False).apply(lambda k: filter_data(k)).dropna(axis=0)
-        print(f"Time to filter data for rotation preparation: {time.time() - st}")
+        print(f"PEMFile - Time to filter data for rotation preparation: {time.time() - st}")
 
         # Calculate the RAD tool angles
         prepped_data = filtered_data.groupby(['Station', 'RAD_ID'],
                                              group_keys=False,
                                              as_index=False).apply(lambda l: prepare_rad(l))
-        print(f"Time to prepare RAD tools: {time.time() - st}")
+        print(f"PEMFile - Time to prepare RAD tools: {time.time() - st}")
 
         self.data[filt] = prepped_data
         # Remove the rows that were filtered out in filtered_data
@@ -1214,7 +1214,7 @@ class PEMParser:
                 elif cols[i] == 'Loop dimensions':
                     match = match.strip()
                 tags[cols[i]] = match
-            print(f"Time to parse tags of {self.filepath.name}: {time.time() - t}")
+            print(f"PEMParser - Time to parse tags of {self.filepath.name}: {time.time() - t}")
             return tags
 
         def parse_loop(file):
@@ -1225,7 +1225,7 @@ class PEMParser:
                 return matches
             else:
                 print(f"No loop coordinates found in {os.path.basename(filepath)}")
-            print(f"Time to parse loop of {self.filepath.name}: {time.time() - t}")
+            print(f"PEMParser - Time to parse loop of {self.filepath.name}: {time.time() - t}")
 
         def parse_line(file):
             t = time.time()
@@ -1235,7 +1235,7 @@ class PEMParser:
                 return matches
             else:
                 print(f"No line coordinates found in {os.path.basename(filepath)}")
-            print(f"Time to parse line of {self.filepath.name}: {time.time() - t}")
+            print(f"PEMParser - Time to parse line of {self.filepath.name}: {time.time() - t}")
 
         def parse_notes(file):
             t = time.time()
@@ -1243,7 +1243,7 @@ class PEMParser:
             for match in self.re_notes.finditer(file):
                 for group, index in self.re_notes.groupindex.items():
                     notes.append(match.group(index))
-            print(f"Time to parse notes of {self.filepath.name}: {time.time() - t}")
+            print(f"PEMParser - Time to parse notes of {self.filepath.name}: {time.time() - t}")
             return notes
 
         def parse_header(file):
@@ -1315,7 +1315,7 @@ class PEMParser:
                     match = int(match)
                 header[receiver_param_cols[k]] = match
 
-            print(f"Time to parse header of {self.filepath.name}: {time.time() - t}")
+            print(f"PEMParser - Time to parse header of {self.filepath.name}: {time.time() - t}")
             return header
 
         def parse_channel_times(file, units=None):
@@ -1400,7 +1400,7 @@ class PEMParser:
                 raise ValueError('Error parsing channel times. No matches were found.')
 
             table = channel_table(np.array(matches.group(1).split(), dtype=float))
-            print(f"Time to parse channel table of {self.filepath.name}: {time.time() - t}")
+            print(f"PEMParser - Time to parse channel table of {self.filepath.name}: {time.time() - t}")
             return table
 
         def parse_data(file):
@@ -1443,7 +1443,7 @@ class PEMParser:
                                          'Readings_per_set',
                                          'Reading_number']].astype(int)
             df['ZTS'] = df['ZTS'].astype(float)
-            print(f"Time to parse data of {self.filepath.name}: {time.time() - t}")
+            print(f"PEMParser - Time to parse data of {self.filepath.name}: {time.time() - t}")
             return df
 
         assert Path(filepath).is_file(), f"{filepath.name} is not a file"
@@ -1463,7 +1463,7 @@ class PEMParser:
         channel_table = parse_channel_times(file, units=tags.get('Units'))
         data = parse_data(file)
 
-        print(f"Time to parse {self.filepath.name}: {time.time() - t}")
+        print(f"PEMParser - Time to parse {self.filepath.name}: {time.time() - t}")
 
         return PEMFile().from_pem(tags, loop_coords, line_coords, notes, header, channel_table, data, filepath=filepath)
 
@@ -1582,7 +1582,7 @@ class DMPParser:
             times = np.delete(times, 0, axis=1)
 
             table = channel_table(times)
-            print(f"Time to parse channel times of {self.filepath.name}: {time.time() - t}")
+            print(f"DMPParser - Time to parse channel times of {self.filepath.name}: {time.time() - t}")
             return table
 
         def parse_notes(text):
@@ -1620,7 +1620,7 @@ class DMPParser:
                 head = contents[0].split()
                 station = head[0]
                 comp = head[1][0]
-                reading_index = int(head[1][2:])
+                reading_index = int(re.search('\d+', head[1]).group())
                 zts = float(head[2]) + ramp
                 number_of_stacks = int(head[3])
                 readings_per_set = int(head[4])
@@ -1666,7 +1666,7 @@ class DMPParser:
             if not text:
                 raise ValueError(f'No data found in {self.filepath.name}.')
 
-            t = time.time()
+            t1 = time.time()
             df = pd.DataFrame(columns=cols)
 
             # Reading variables that are sourced from outside the data section of the .DMP file
@@ -1676,15 +1676,16 @@ class DMPParser:
             coil_delay = header.get('Coil delay')
             ramp = header.get('Ramp')
 
-            # Each reading in the .DMP file is separated by 5 spaces
-            text = text.strip().split('     ')
+            # Replace the spaces infront of station names with a tab character, to more easily split after
+            text = re.sub(r'\s{3,}(?P<station>[\w]{1,5}\s[XYZ])', r'\t\g<station>', text.strip())
+            text = text.split('\t')
 
             for reading in text:
                 # Parse the data row and create a Series object to be inserted in the data frame
                 series = parse_row(reading)
                 df = df.append(series, ignore_index=True)
 
-            t = time.time()
+            t2 = time.time()
             # Convert the columns to their correct data types
             df['Reading_index'] = df['Reading_index'].astype(int)
             df['Gain'] = df['Gain'].astype(int)
@@ -1693,12 +1694,12 @@ class DMPParser:
             df['Number_of_stacks'] = df['Number_of_stacks'].astype(int)
             df['Readings_per_set'] = df['Readings_per_set'].astype(int)
             df['Reading_number'] = df['Reading_number'].astype(int)
-            print(f"Time to convert data columns of {self.filepath.name}: {time.time() - t}")
+            print(f"DMPParser - Time to convert data columns of {self.filepath.name}: {time.time() - t2}")
 
             # Add the RAD_ID column
             df['RAD_ID'] = df['RAD_tool'].map(lambda x: x.id)
 
-            print(f"Time to parse data of {self.filepath.name} file: {time.time() - t}")
+            print(f"DMPParser - Time to parse data of {self.filepath.name} file: {time.time() - t1}")
             return df
 
         def parse_header(text):
@@ -1707,8 +1708,7 @@ class DMPParser:
             :param text: str or list, header section of the .DMP file.
             :return: dict
             """
-            if not text:
-                raise ValueError(f'No header found in {self.filepath.name}.')
+            assert text, f'No header found in {self.filepath.name}.'
 
             if isinstance(text, str):
                 text = text.strip().split('\n')
@@ -1725,7 +1725,7 @@ class DMPParser:
             try:
                 date_str = datetime.datetime(date[2] + 2000, date[0], date[1]).strftime('%B %d, %Y')
             except Exception as e:
-                print(f"Error parsing the date of {self.filepath.name}: {str(e)}")
+                raise ValueError(f"Error parsing the date of {self.filepath.name}: {str(e)}")
 
             header = dict()
             header['Format'] = str(210)
@@ -1743,7 +1743,7 @@ class DMPParser:
             header['Survey type'] = text[6]
             header['Convention'] = text[15]
             header['Sync'] = text[18]
-            header['Timebase'] = float(text[16].split()[0])
+            header['Timebase'] = float(text[16].split('ms')[0])
             header['Ramp'] = float(text[17])
             header['Number of channels'] = int(text[25])
             header['Number of readings'] = int(text[24])
@@ -1757,7 +1757,7 @@ class DMPParser:
             header['Coil area'] = int(text[20])
             header['Coil delay'] = int(text[21])
             header['Loop polarity'] = '+'
-            print(f"Time to parse header of {self.filepath.name}: {time.time() - t}")
+            print(f"DMPParser - Time to parse header of {self.filepath.name}: {time.time() - t}")
 
             return header
 
@@ -1765,6 +1765,7 @@ class DMPParser:
         self.filepath = Path(filepath)
         print(f"Parsing {self.filepath.name}")
 
+        t = time.time()
         # Read the contents of the file
         with open(filepath, 'rt') as file:
             contents = file.read()
@@ -1781,7 +1782,11 @@ class DMPParser:
         channel_table = parse_channel_times(raw_channel_table, units=header.get('Units'))
         data = parse_data(raw_data, header)
 
+        assert len(data) == header.get('Number of readings'), \
+            f"Not all readings found in {self.filepath.name}"
+
         pem_file = PEMFile().from_dmp(header, channel_table, notes, data, self.filepath)
+        print(f"DMPParser - Time to create PEMFile: {time.time() - t}")
         return pem_file
 
 
@@ -2313,7 +2318,7 @@ if __name__ == '__main__':
         r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.PEM')
 
     t2 = time.time()
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\MO-246\5.DMP'
     file = dparse.parse_dmp(file)
     print(f"Time to parse DMP: {time.time() - t2}")
 

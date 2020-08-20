@@ -251,10 +251,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionExport_Final_PEM_Files.triggered.connect(lambda: self.export_pem_files(selected=False,
                                                                                           export_final=True))
 
-        self.actionPrint_Plots_to_PDF.setShortcut("F12")
-        self.actionPrint_Plots_to_PDF.setStatusTip("Print plots to a PDF file")
-        self.actionPrint_Plots_to_PDF.setToolTip("Print plots to a PDF file")
-        self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
+        # self.actionPrint_Plots_to_PDF.setShortcut("F12")
+        # self.actionPrint_Plots_to_PDF.setStatusTip("Print plots to a PDF file")
+        # self.actionPrint_Plots_to_PDF.setToolTip("Print plots to a PDF file")
+        # self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
 
         self.actionBackup_Files.setStatusTip("Backup all files in the table.")
         self.actionBackup_Files.setToolTip("Backup all files in the table.")
@@ -499,7 +499,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.itemSelectionChanged.connect(update_selection_text)
         self.table.cellChanged.connect(self.table_value_changed)
 
-        # self.print_plots_btn.clicked.connect(self.print_plots)
+        self.print_plots_btn.clicked.connect(self.open_pdf_plot_printer)
 
         self.share_client_cbox.stateChanged.connect(
             lambda: self.client_edit.setEnabled(self.share_client_cbox.isChecked()))
@@ -915,10 +915,24 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         parser = DMPParser()
         pem_files = []
-        for file in dmp_files:
-            pem_file = parser.parse_dmp(file)
-            pem_files.append(pem_file)
+        count = 0
+        self.start_pb(start=count, end=len(dmp_files), title='Converting DMP Files...')
 
+        for file in dmp_files:
+            self.pb.setText(f"Converting {Path(file).name}")
+            try:
+                pem_file = parser.parse_dmp(file)
+            except Exception as e:
+                self.error.setWindowTitle('Error converting DMP file')
+                self.error.showMessage(str(e))
+                self.end_pb()
+                return
+            else:
+                pem_files.append(pem_file)
+                count += 1
+                self.pb.setValue(count)
+
+        self.end_pb()
         self.open_pem_files(pem_files)
 
     def open_pem_files(self, pem_files):
@@ -1021,7 +1035,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for pem_file in pem_files:
             # Create a PEMFile object if a filepath was passed
             if not isinstance(pem_file, PEMFile):
-                pem_file = parser.parse(pem_file)
+                try:
+                    pem_file = parser.parse(pem_file)
+                except Exception as e:
+                    self.error.setWindowTitle('Error parsing PEM file')
+                    self.error.showMessage(str(e))
+                    self.end_pb()
+                    return
 
             # Check if the file is already opened in the table. Won't open if it is.
             if is_opened(pem_file):
@@ -1056,7 +1076,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # self.table.setUpdatesEnabled(True)
         self.end_pb()
         self.table.horizontalHeader().show()
-        print(f"Time to open all PEM files: {time.time() - t1}")
+        print(f"PEMHub - Time to open all PEM files: {time.time() - t1}")
 
     def open_gps_files(self, gps_files):
         """
@@ -1212,7 +1232,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             rotation_note = derotator.rotation_note
             if rotation_note is not None:
                 rotated_pem.notes.append(rotation_note)
-            self.refresh_pem(row)
+
+            self.pem_files[row] = rotated_pem
+            self.refresh_pem(rotated_pem)
 
             derotator.close()
 
@@ -2662,6 +2684,10 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.cancel_btn.clicked.connect(self.close)
         self.plan_map_options_btn.clicked.connect(self.plan_map_options.show)
 
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
+
     def open(self, pem_files, ri_files=None, crs=None):
 
         def fill_share_range():
@@ -2941,7 +2967,7 @@ def main():
 
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    pem_files = pg.get_pems(client='PEM Rotation', number=4)
+    # pem_files = pg.get_pems(client='PEM Rotation', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
 
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'
