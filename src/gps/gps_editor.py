@@ -221,6 +221,17 @@ class TransmitterLoop(BaseGPS):
         super().__init__()
         self.crs = crs
         self.parser = GPSParser()
+
+        # Empty loop object
+        if loop is None:
+            self.df = pd.DataFrame(columns=[
+                'Easting',
+                'Northing',
+                'Elevation',
+                'Unit'
+            ])
+            return
+
         if isinstance(loop, list) or isinstance(loop, str):
             loop = self.parser.parse_loop_gps(loop)
 
@@ -302,6 +313,18 @@ class SurveyLine(BaseGPS):
         super().__init__()
         self.crs = crs
         self.parser = GPSParser()
+
+        # Empty line object
+        if line is None:
+            self.df = pd.DataFrame(columns=[
+                'Easting',
+                'Northing',
+                'Elevation',
+                'Unit',
+                'Station'
+            ])
+            return
+
         if isinstance(line, list) or isinstance(line, str):
             line = self.parser.parse_station_gps(line)
 
@@ -363,11 +386,22 @@ class BoreholeCollar(BaseGPS):
 
     def __init__(self, hole, crs=None):
         """
-        :param line: str filepath of a text file OR a pandas data frame containing collar GPS
+        :param hole: str filepath of a text file OR a pandas data frame containing collar GPS
         """
         super().__init__()
         self.crs = crs
         self.parser = GPSParser()
+
+        # Empty loop object
+        if hole is None:
+            self.df = pd.DataFrame(columns=[
+                'Easting',
+                'Northing',
+                'Elevation',
+                'Unit',
+            ])
+            return
+
         if isinstance(hole, list) or isinstance(hole, str):
             hole = self.parser.parse_collar_gps(hole)
 
@@ -391,10 +425,22 @@ class BoreholeSegments(BaseGPS):
 
     def __init__(self, segments):
         """
-        :param hole: str filepath of a text file OR a pandas data frame containing hole geometry
+        :param segments: str filepath of a text file OR a pandas data frame containing hole geometry
         """
         super().__init__()
         self.parser = GPSParser()
+
+        # Empty loop object
+        if segments is None:
+            self.df = pd.DataFrame(columns=[
+                'Azimuth',
+                'Dip',
+                'Segment_length',
+                'Unit',
+                'Depth'
+            ])
+            return
+
         if isinstance(segments, list) or isinstance(segments, str):
             segments = self.parser.parse_segments(segments)
 
