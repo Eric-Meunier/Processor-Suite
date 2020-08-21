@@ -1343,7 +1343,6 @@ Stations</string>
     <property name="title">
      <string>Map</string>
     </property>
-    <addaction name="actionPlan_Map"/>
     <addaction name="action3D_Map"/>
     <addaction name="actionContour_Map"/>
    </widget>

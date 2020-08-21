@@ -36,7 +36,7 @@ from src.qt_py.ri_importer import BatchRIImporter
 from src.qt_py.gps_adder import LineAdder, LoopAdder
 from src.qt_py.name_editor import BatchNameEditor
 from src.qt_py.station_splitter import StationSplitter
-from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, FoliumMap
+from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer  #, FoliumMap
 from src.qt_py.derotator import Derotator
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.pem_plot_editor import PEMPlotEditor
@@ -127,7 +127,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_viewer = ContourMapViewer(parent=self)
-        self.folium_map = FoliumMap()
+        # self.folium_map = FoliumMap()
 
         # Project tree
         self.project_dir = None
@@ -312,16 +312,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionExport_All_GPS.triggered.connect(self.export_all_gps)
 
         # Map menu
-        self.actionPlan_Map.setStatusTip("Plot all PEM files on an interactive plan map")
-        self.actionPlan_Map.setToolTip("Plot all PEM files on an interactive plan map")
-        self.actionPlan_Map.setIcon(QIcon(os.path.join(icons_path, 'folium.png')))
-        self.actionPlan_Map.triggered.connect(lambda: self.folium_map.open(self.get_updated_pem_files(), self.get_crs()))
+        # self.actionPlan_Map.setStatusTip("Plot all PEM files on an interactive plan map")
+        # self.actionPlan_Map.setToolTip("Plot all PEM files on an interactive plan map")
+        # self.actionPlan_Map.setIcon(QIcon(os.path.join(icons_path, 'folium.png')))
+        # self.actionPlan_Map.triggered.connect(lambda: self.folium_map.open(self.get_updated_pem_files(), self.get_crs()))
 
         self.action3D_Map.setStatusTip("Show 3D map of all PEM files")
         self.action3D_Map.setToolTip("Show 3D map of all PEM files")
         self.action3D_Map.setShortcut('Ctrl+M')
         self.action3D_Map.setIcon(QIcon(os.path.join(icons_path, '3d_map2.png')))
-        self.action3D_Map.triggered.connect(lambda: self.map_viewer_3d.open(self.get_updated_pem_files()))
+        self.action3D_Map.triggered.connect(self.open_3d_map)
 
         self.actionContour_Map.setIcon(QIcon(os.path.join(icons_path, 'contour_map3.png')))
         self.actionContour_Map.setStatusTip("Show a contour map of surface PEM files")
@@ -415,7 +415,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() else file.loop_name
 
                     item = QTableWidgetItem(str(loop))
-                    if loop != file.loop:
+                    if loop != file.loop_name:
                         item.setFont(bold_font)
                     else:
                         item.setFont(normal_font)
@@ -1367,6 +1367,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         ri_importer.acceptImportSignal.connect(open_ri_files)
         ri_importer.show()
 
+    def open_3d_map(self):
+        """
+        Open the Map3DViewer if there's any GPS in any of the opened PEM files.
+        """
+        pem_files = self.get_updated_pem_files()
+        if any([f.has_any_gps() for f in pem_files]):
+            self.map_viewer_3d.open(pem_files)
+        else:
+            self.message.information(self, 'Error', 'No file has any GPS to plot.')
+
     # def get_project_path(self):
     #     """
     #     Return the path of the selected directory tree item.
@@ -2056,6 +2066,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         info_widget = self.pem_info_widgets[self.pem_files.index(pem_file)]
 
+        # Get the original information in the PEM file
         row_info = [
             pem_file.filepath.name,
             pem_file.date,
@@ -2073,6 +2084,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             str(info_widget.num_repeat_stations)
         ]
 
+        # If the value in the table is different then in the PEM file, make the value bold.
         for column in range(self.table.columnCount()):
             if self.table.item(row, column):
                 original_value = str(row_info[column])

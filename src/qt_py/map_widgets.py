@@ -4,7 +4,7 @@ import re
 import sys
 import time
 
-import folium
+# import folium
 # import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib.pyplot as plt
 import numpy as np
@@ -97,9 +97,12 @@ class Map3DViewer(QMainWindow):
     def open(self, pem_files):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
-        self.pem_files = pem_files
-        self.plot_pems()
-        self.show()
+        if any([f.has_any_gps() for f in pem_files]):
+            self.pem_files = pem_files
+            self.plot_pems()
+            self.show()
+        else:
+            print(f"No GPS to plot.")
 
     def plot_pems(self):
         if not self.pem_files:
@@ -627,168 +630,168 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                 os.startfile(path)
 
 
-class FoliumMap(QMainWindow):
-
-    def __init__(self):
-        super().__init__()
-        self.pem_files = None
-        self.crs = None
-        self.map = None
-        self.win = None
-        # start_location is used as the zoom-point when the map is opened
-        self.start_location = None
-
-        self.error = QErrorMessage()
-        layout = QGridLayout()
-        self.setLayout(layout)
-        self.setWindowTitle('Map')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
-
-        self.save_img_action = QAction('Save Image')
-        self.save_img_action.setShortcut("Ctrl+S")
-        self.save_img_action.triggered.connect(self.save_img)
-        self.copy_image_action = QAction('Copy Image')
-        self.copy_image_action.setShortcut("Ctrl+C")
-        self.copy_image_action.triggered.connect(self.copy_img)
-
-        self.file_menu = self.menuBar().addMenu('&File')
-        self.file_menu.addAction(self.save_img_action)
-        self.file_menu.addAction(self.copy_image_action)
-
-        # create an instance of QWebEngineView and set the html code
-        self.web_engine_widget = QWebEngineView()
-        self.setCentralWidget(self.web_engine_widget)
-
-    def open(self, pem_files, crs):
-        self.pem_files = pem_files
-        self.crs = crs
-        self.error = QErrorMessage()
-
-        if self.crs.is_valid():
-            self.plot_pems()
-
-            # Add the map to a QWebEngineView
-            data = io.BytesIO()
-            self.map.save(data, close_file=False)
-            self.web_engine_widget.setHtml(data.getvalue().decode())
-
-            self.show()
-
-    def plot_pems(self):
-
-        def plot_borehole(pem_file):
-            if pem_file.has_collar_gps():
-                # Add the CRS to the collar and retrieve the lat lon coordinates
-                pem_file.geometry.collar.crs = self.crs
-                collar = pem_file.geometry.collar.to_latlon().df
-
-                if collar.to_string() not in collars:
-                    collars.append(collar.to_string())
-                    if self.start_location is None:
-                        self.start_location = collar.loc[0, ['Northing', 'Easting']]
-
-                    # Plot the collar
-                    folium.Marker(collar.loc[0, ['Northing', 'Easting']],
-                                  popup=pem_file.line_name,
-                                  tooltip=pem_file.line_name
-                                  ).add_to(collar_group)
-
-        def plot_line(pem_file):
-            if pem_file.has_station_gps():
-                # Add the CRS to the line and retrieve the lat lon coordinates
-                pem_file.line.crs = self.crs
-                line = pem_file.line.to_latlon().df
-
-                if line.to_string() not in lines:
-                    lines.append(line.to_string())
-                    if self.start_location is None:
-                        self.start_location = line.loc[0, ['Northing', 'Easting']]
-
-                    # Plot the line
-                    folium.PolyLine(locations=line.loc[:, ['Northing', 'Easting']],
-                                    popup=pem_file.line_name,
-                                    tooltip=pem_file.line_name,
-                                    line_opacity=0.5,
-                                    color='blue'
-                                    ).add_to(line_group)
-
-                    # Plot the stations markers
-                    for row in line.itertuples():
-                        folium.Marker((row.Northing, row.Easting),
-                                      popup=row.Station,
-                                      tooltip=row.Station,
-                                      size=10
-                                      ).add_to(station_group)
-
-        def plot_loop(pem_file):
-            if pem_file.has_loop_gps():
-                # Add the CRS to the loop and retrieve the lat lon coordinates
-                pem_file.loop.crs = self.crs
-                loop = pem_file.loop.to_latlon().get_loop(closed=True)
-
-                if loop.to_string() not in loops:
-                    loops.append(loop.to_string())
-                    if self.start_location is None:
-                        self.start_location = loop.loc[0, ['Northing', 'Easting']]
-                    # Plot loop
-                    folium.PolyLine(locations=loop.loc[:, ['Northing', 'Easting']],
-                                    popup=pem_file.loop_name,
-                                    tooltip=pem_file.loop_name,
-                                    line_opacity=0.5,
-                                    color='magenta'
-                                    ).add_to(loop_group)
-
-        station_group = folium.FeatureGroup(name='Stations')
-        line_group = folium.FeatureGroup(name='Lines')
-        loop_group = folium.FeatureGroup(name='Loop')
-        collar_group = folium.FeatureGroup(name='Collars')
-        loops = []
-        collars = []
-        lines = []
-
-        for pem_file in self.pem_files:
-            if pem_file.is_borehole():
-                plot_borehole(pem_file)
-            else:
-                plot_line(pem_file)
-
-            plot_loop(pem_file)
-
-        self.map = folium.Map(location=self.start_location,
-                              zoom_start=15,
-                              zoom_control=False,
-                              control_scale=True,
-                              tiles='OpenStreetMap',
-                              attr='testing attr'
-                              )
-
-        folium.raster_layers.TileLayer('OpenStreetMap').add_to(self.map)
-        folium.raster_layers.TileLayer('Stamen Toner').add_to(self.map)
-        folium.raster_layers.TileLayer('Stamen Terrain').add_to(self.map)
-        folium.raster_layers.TileLayer('Cartodb positron').add_to(self.map)
-        station_group.add_to(self.map)
-        line_group.add_to(self.map)
-        loop_group.add_to(self.map)
-        collar_group.add_to(self.map)
-        folium.LayerControl().add_to(self.map)
-
-    def save_img(self):
-        save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
-
-        if save_file:
-            size = self.contentsRect()
-            img = QtGui.QPixmap(size.width(), size.height())
-            self.render(img)
-            img.save(save_file)
-        else:
-            pass
-
-    def copy_img(self):
-        size = self.contentsRect()
-        img = QtGui.QPixmap(size.width(), size.height())
-        self.render(img)
-        img.copy(size)
-        QApplication.clipboard().setPixmap(img)
+# class FoliumMap(QMainWindow):
+#
+#     def __init__(self):
+#         super().__init__()
+#         self.pem_files = None
+#         self.crs = None
+#         self.map = None
+#         self.win = None
+#         # start_location is used as the zoom-point when the map is opened
+#         self.start_location = None
+#
+#         self.error = QErrorMessage()
+#         layout = QGridLayout()
+#         self.setLayout(layout)
+#         self.setWindowTitle('Map')
+#         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+#
+#         self.save_img_action = QAction('Save Image')
+#         self.save_img_action.setShortcut("Ctrl+S")
+#         self.save_img_action.triggered.connect(self.save_img)
+#         self.copy_image_action = QAction('Copy Image')
+#         self.copy_image_action.setShortcut("Ctrl+C")
+#         self.copy_image_action.triggered.connect(self.copy_img)
+#
+#         self.file_menu = self.menuBar().addMenu('&File')
+#         self.file_menu.addAction(self.save_img_action)
+#         self.file_menu.addAction(self.copy_image_action)
+#
+#         # create an instance of QWebEngineView and set the html code
+#         self.web_engine_widget = QWebEngineView()
+#         self.setCentralWidget(self.web_engine_widget)
+#
+#     def open(self, pem_files, crs):
+#         self.pem_files = pem_files
+#         self.crs = crs
+#         self.error = QErrorMessage()
+#
+#         if self.crs.is_valid():
+#             self.plot_pems()
+#
+#             # Add the map to a QWebEngineView
+#             data = io.BytesIO()
+#             self.map.save(data, close_file=False)
+#             self.web_engine_widget.setHtml(data.getvalue().decode())
+#
+#             self.show()
+#
+#     def plot_pems(self):
+#
+#         def plot_borehole(pem_file):
+#             if pem_file.has_collar_gps():
+#                 # Add the CRS to the collar and retrieve the lat lon coordinates
+#                 pem_file.geometry.collar.crs = self.crs
+#                 collar = pem_file.geometry.collar.to_latlon().df
+#
+#                 if collar.to_string() not in collars:
+#                     collars.append(collar.to_string())
+#                     if self.start_location is None:
+#                         self.start_location = collar.loc[0, ['Northing', 'Easting']]
+#
+#                     # Plot the collar
+#                     folium.Marker(collar.loc[0, ['Northing', 'Easting']],
+#                                   popup=pem_file.line_name,
+#                                   tooltip=pem_file.line_name
+#                                   ).add_to(collar_group)
+#
+#         def plot_line(pem_file):
+#             if pem_file.has_station_gps():
+#                 # Add the CRS to the line and retrieve the lat lon coordinates
+#                 pem_file.line.crs = self.crs
+#                 line = pem_file.line.to_latlon().df
+#
+#                 if line.to_string() not in lines:
+#                     lines.append(line.to_string())
+#                     if self.start_location is None:
+#                         self.start_location = line.loc[0, ['Northing', 'Easting']]
+#
+#                     # Plot the line
+#                     folium.PolyLine(locations=line.loc[:, ['Northing', 'Easting']],
+#                                     popup=pem_file.line_name,
+#                                     tooltip=pem_file.line_name,
+#                                     line_opacity=0.5,
+#                                     color='blue'
+#                                     ).add_to(line_group)
+#
+#                     # Plot the stations markers
+#                     for row in line.itertuples():
+#                         folium.Marker((row.Northing, row.Easting),
+#                                       popup=row.Station,
+#                                       tooltip=row.Station,
+#                                       size=10
+#                                       ).add_to(station_group)
+#
+#         def plot_loop(pem_file):
+#             if pem_file.has_loop_gps():
+#                 # Add the CRS to the loop and retrieve the lat lon coordinates
+#                 pem_file.loop.crs = self.crs
+#                 loop = pem_file.loop.to_latlon().get_loop(closed=True)
+#
+#                 if loop.to_string() not in loops:
+#                     loops.append(loop.to_string())
+#                     if self.start_location is None:
+#                         self.start_location = loop.loc[0, ['Northing', 'Easting']]
+#                     # Plot loop
+#                     folium.PolyLine(locations=loop.loc[:, ['Northing', 'Easting']],
+#                                     popup=pem_file.loop_name,
+#                                     tooltip=pem_file.loop_name,
+#                                     line_opacity=0.5,
+#                                     color='magenta'
+#                                     ).add_to(loop_group)
+#
+#         station_group = folium.FeatureGroup(name='Stations')
+#         line_group = folium.FeatureGroup(name='Lines')
+#         loop_group = folium.FeatureGroup(name='Loop')
+#         collar_group = folium.FeatureGroup(name='Collars')
+#         loops = []
+#         collars = []
+#         lines = []
+#
+#         for pem_file in self.pem_files:
+#             if pem_file.is_borehole():
+#                 plot_borehole(pem_file)
+#             else:
+#                 plot_line(pem_file)
+#
+#             plot_loop(pem_file)
+#
+#         self.map = folium.Map(location=self.start_location,
+#                               zoom_start=15,
+#                               zoom_control=False,
+#                               control_scale=True,
+#                               tiles='OpenStreetMap',
+#                               attr='testing attr'
+#                               )
+#
+#         folium.raster_layers.TileLayer('OpenStreetMap').add_to(self.map)
+#         folium.raster_layers.TileLayer('Stamen Toner').add_to(self.map)
+#         folium.raster_layers.TileLayer('Stamen Terrain').add_to(self.map)
+#         folium.raster_layers.TileLayer('Cartodb positron').add_to(self.map)
+#         station_group.add_to(self.map)
+#         line_group.add_to(self.map)
+#         loop_group.add_to(self.map)
+#         collar_group.add_to(self.map)
+#         folium.LayerControl().add_to(self.map)
+#
+#     def save_img(self):
+#         save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
+#
+#         if save_file:
+#             size = self.contentsRect()
+#             img = QtGui.QPixmap(size.width(), size.height())
+#             self.render(img)
+#             img.save(save_file)
+#         else:
+#             pass
+#
+#     def copy_img(self):
+#         size = self.contentsRect()
+#         img = QtGui.QPixmap(size.width(), size.height())
+#         self.render(img)
+#         img.copy(size)
+#         QApplication.clipboard().setPixmap(img)
 
 
 class ContourMapToolbar(NavigationToolbar):
@@ -810,9 +813,6 @@ if __name__ == '__main__':
     # map = Map3DViewer()
     # map.show()
     # map.open(files)
-
-    fmap = FoliumMap()
-    fmap.open(files, files[0].get_crs())
 
     # cmap = ContourMapViewer()
     # cmap.open(files)

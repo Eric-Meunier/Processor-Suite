@@ -113,8 +113,8 @@ class PEMFile:
 
         self.client = header.get('Client')
         self.grid = header.get('Grid')
-        self.line_name = header.get('Line')
-        self.loop_name = header.get('Loop')
+        self.line_name = header.get('Line_name')
+        self.loop_name = header.get('Loop_name')
         self.date = header.get('Date')
         self.survey_type = header.get('Survey type')
         self.convention = header.get('Convention')
@@ -1555,7 +1555,12 @@ class PEMParser:
             :return: list of notes
             """
             t = time.time()
-            notes = re.findall(r'^(?P<Notes><GEN>.*|<HE\d>.*)', file)
+            notes = re.findall(r'<GEN>.*|<HE\d>.*', file)
+            # Remove the 'xxxxxxxxxxxxxxxx' notes
+            for note in reversed(notes):
+                if 'xxx' in note.lower() or re.match('<GEN> NOTES', note):
+                    notes.remove(note)
+
             print(f"PEMParser - Time to parse notes of {self.filepath.name}: {time.time() - t}")
             return notes
 
@@ -1567,9 +1572,14 @@ class PEMParser:
             """
 
             assert text, f'Error parsing the tags. No matches were found in {self.filepath.name}.'
-            t = time.time()
+            t1 = time.time()
 
             text = text.strip().split('\n')
+            # Remove any Note tags
+            for t in reversed(text):
+                if t.startswith('<'):
+                    text.remove(t)
+
             assert len(text) == 7, f"{len(text)} header lines were found instead of 7 in {self.filepath.name}"
 
             header_cols = [
@@ -1636,7 +1646,7 @@ class PEMParser:
             if len(receiver_param) > 7:
                 header['Loop polarity'] = receiver_param[7]
 
-            print(f"PEMParser - Time to parse header of {self.filepath.name}: {time.time() - t}")
+            print(f"PEMParser - Time to parse header of {self.filepath.name}: {time.time() - t1}")
             return header
 
         def parse_channel_times(text, units=None, num_channels=None):
@@ -1727,7 +1737,6 @@ class PEMParser:
             assert text, f'Error parsing the channel times. No matches were found in {self.filepath.name}.'
             t = time.time()
 
-            # np.array(text.split()).reshape((int((len(text.split()) - 1) / 2), 2))
             table = channel_table(np.array(text.split(), dtype=float))
             assert len(table) == num_channels or len(table) == num_channels + 1, \
                 f"{len(table)} channels found in channel times section instead of {num_channels} found in header of {self.filepath.name}"
@@ -1820,8 +1829,21 @@ class PEMParser:
 
         t = time.time()
         with open(filepath, "rt") as file:
-            contents = file.read()
+            contents = file.readlines()
 
+        # Remove the ~ comments from files converted with Bill's software, makes breaking up the file for parsing easier
+        for i, line in enumerate(contents[:100]):
+            if '~' in line:
+                # Don't remove the transmitter and hole tag lines
+                if re.match('~ Transmitter.*', line) or re.match('~ Hole.*', line) or re.match('~\n', line):
+                    continue
+                # Keep one last ~ for sectioning the header
+                elif re.match('~Tags for headings.*', line):
+                    contents[i] = re.sub('(~.*)', '~', line)
+                else:
+                    contents[i] = re.sub('(~.*)', '', line)
+
+        contents = ''.join(contents)
         # Break the file up into sections
         scontents = contents.split('~')
         raw_tags = scontents[0]
@@ -2707,9 +2729,9 @@ if __name__ == '__main__':
     # files = pg.get_pems(client='Raglan', number=1)
     # file = files[0]
 
-    # t1 = time.time()
-    # pem_old = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\test results\718-2941xy - test conversion.pem')
-    # print(f"Old time to parse PEM: {time.time() - t1}")
+    t1 = time.time()
+    pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\e110xy.pem')
+    print(f"Old time to parse PEM: {time.time() - t1}")
 
     t2 = time.time()
     file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\OCLT01\L2E.DMP'
