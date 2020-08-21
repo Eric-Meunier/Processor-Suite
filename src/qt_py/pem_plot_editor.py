@@ -196,10 +196,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Buttons
         self.change_comp_decay_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='decay'))
+        self.change_decay_suffix_btn.clicked.connect(lambda: self.change_suffix_dialog(source='decay'))
         self.change_station_decay_btn.clicked.connect(self.change_station)
         self.flip_decay_btn.clicked.connect(lambda: self.flip_decays(source='decay'))
 
         self.change_comp_profile_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='profile'))
+        self.change_profile_suffix_btn.clicked.connect(lambda: self.change_suffix_dialog(source='profile'))
         self.flip_profile_btn.clicked.connect(lambda: self.flip_decays(source='profile'))
         self.shift_station_profile_btn.clicked.connect(self.shift_stations)
         self.remove_profile_btn.clicked.connect(self.remove_stations)
@@ -382,6 +384,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             """
             Show/hide decay plots and profile plot tabs based on the components in the pem file
             """
+            self.profile_tab_widget.setCurrentIndex(0)
             x_ax = self.x_decay_plot
             y_ax = self.y_decay_plot
             z_ax = self.z_decay_plot
@@ -396,7 +399,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
                 # Cycle to the next profile plot component if this component is no longer in the data but it's
                 # the current profile selected
-                if self.profile_tab_widget.currentIndex == 0:
+                if self.profile_tab_widget.currentIndex() == 0:
                     print(f"X profile selected but there's no X data, cycling to the next component")
                     self.cycle_profile_component()
 
@@ -412,7 +415,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             else:
                 y_ax.hide()
 
-                if self.profile_tab_widget.currentIndex == 1:
+                if self.profile_tab_widget.currentIndex() == 1:
                     print(f"Y profile selected but there's no Y data, cycling to the next component")
                     self.cycle_profile_component()
 
@@ -427,7 +430,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             else:
                 z_ax.hide()
 
-                if self.profile_tab_widget.currentIndex == 2:
+                if self.profile_tab_widget.currentIndex() == 2:
                     print(f"Z profile selected but there's no Z data, cycling to the next component")
                     self.cycle_profile_component()
 
@@ -649,9 +652,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         channel_bounds = calc_channel_bounds()
 
         for component in components:
-            tp = time.time()
             profile_data = file.get_profile_data(component, averaged=False, converted=True, ontime=False)
-            print(f"Time getting profile data: {time.time() - tp}")
             if profile_data.empty:
                 continue
 
@@ -668,8 +669,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         print(f"PEMPlotEditor - Time to make lin plots: {lin_plotting_time}")
         print(f"PEMPlotEditor - Time to make scatter plots: {scatter_plotting_time}")
-        print(f"Averaging time: {averaging_time}")
-        print(f"Total plotting time for profile plots: {time.time() - t}")
+        print(f"PEMPlotEditor - Averaging time: {averaging_time}")
+        print(f"PEMPlotEditor - Total plotting time for profile plots: {time.time() - t}")
 
     def plot_station(self, station, preserve_selection=False):
         """
@@ -798,6 +799,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.highlight_lines()
         else:
             self.decay_selection_text.hide()
+            self.change_comp_decay_btn.setEnabled(False)
+            self.change_decay_suffix_btn.setEnabled(False)
+            self.change_station_decay_btn.setEnabled(False)
+            self.flip_decay_btn.setEnabled(False)
 
         if self.auto_range_cbox.isChecked() and preserve_selection is False:
             for ax in self.active_decay_axes:
@@ -874,10 +879,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             # Enable decay editing buttons
             if len(self.selected_lines) > 0:
                 self.change_comp_decay_btn.setEnabled(True)
+                self.change_decay_suffix_btn.setEnabled(True)
                 self.change_station_decay_btn.setEnabled(True)
                 self.flip_decay_btn.setEnabled(True)
             else:
                 self.change_comp_decay_btn.setEnabled(False)
+                self.change_decay_suffix_btn.setEnabled(False)
                 self.change_station_decay_btn.setEnabled(False)
                 self.flip_decay_btn.setEnabled(False)
 
@@ -923,6 +930,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Disable the profile editing buttons
         self.change_comp_profile_btn.setEnabled(False)
+        self.change_profile_suffix_btn.setEnabled(False)
         self.shift_station_profile_btn.setEnabled(False)
         self.flip_profile_btn.setEnabled(False)
         self.remove_profile_btn.setEnabled(False)
@@ -989,7 +997,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Signal slot, change the profile tab to the same component as the clicked decay plot
         :param evt: MouseClick event
         """
-        print(f"Decay plot clicked, last active axes: {self.active_ax_ind}")
         self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
 
     def decay_mouse_moved(self, evt):
@@ -1004,7 +1011,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.last_active_ax = ax
                 self.active_ax_ind = np.where(self.decay_axes == self.active_ax)[0][0]
                 self.last_active_ax_ind = self.active_ax_ind
-                print(f"Active axes: {self.active_ax_ind}")
                 break
 
     def box_select_decay_lines(self, rect):
@@ -1072,6 +1078,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Enable the edit buttons and set the profile selection text
         if self.selected_profile_stations.any():
             self.change_comp_profile_btn.setEnabled(True)
+            self.change_profile_suffix_btn.setEnabled(True)
             self.shift_station_profile_btn.setEnabled(True)
             self.flip_profile_btn.setEnabled(True)
             self.remove_profile_btn.setEnabled(True)
@@ -1080,6 +1087,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 f"Station {self.selected_profile_stations.min()} - {self.selected_profile_stations.max()}")
         else:
             self.change_comp_profile_btn.setEnabled(False)
+            self.change_profile_suffix_btn.setEnabled(False)
             self.shift_station_profile_btn.setEnabled(False)
             self.flip_profile_btn.setEnabled(False)
             self.remove_profile_btn.setEnabled(False)
@@ -1171,6 +1179,44 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.pem_file.data.iloc[selected_data.index] = selected_data
             self.plot_profiles(components=[old_comp, new_component])
             self.plot_station(self.selected_station, preserve_selection=True)
+
+    def change_suffix_dialog(self, source=None):
+        """
+        Open a user input window to select the new station suffix to change to.
+        :param source: str, must be in ['N', 'E', 'S', 'W']
+        """
+        if not source:
+            print(f"No source selected")
+            return
+
+        new_suffix, ok_pressed = QInputDialog.getText(self, "Change Suffix", "New Suffix:")
+        if ok_pressed:
+            new_suffix = new_suffix.upper()
+            if new_suffix not in ['N', 'E', 'S', 'W']:
+                self.message.information(self, 'Invalid Suffix', 'The suffix must be one of N, E, S, W.')
+                return
+            else:
+                self.change_suffix(new_suffix, source=source)
+
+    def change_suffix(self, new_suffix, source=None):
+        """
+        Change the station's suffix of the selected data
+        :param new_suffix: str, must be in ['N', 'E', 'S', 'W']
+        :param source: str, either 'decay' or 'profile' based on which data is to be changed
+        """
+        assert new_suffix.upper() in ['N', 'E', 'S', 'W'], f"{new_suffix} is not a valid suffix."
+        if source == 'decay':
+            selected_data = self.get_selected_decay_data()
+        else:
+            selected_data = self.get_selected_profile_data()
+
+        selected_data.loc[:, 'Station'] = selected_data.loc[:, 'Station'].map(
+            lambda x: re.sub('[NESW]', new_suffix.upper(), x))
+
+        # Update the data in the pem file object
+        self.pem_file.data.iloc[selected_data.index] = selected_data
+        self.plot_profiles(components='all')
+        self.plot_station(self.selected_station, preserve_selection=True)
 
     def change_station(self):
         """
@@ -1286,6 +1332,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 new_ind = min(comp_indexes)
             else:
                 new_ind = comp_indexes[comp_indexes.index(current_ind) + 1]
+        elif comp_indexes[0] != current_ind:
+            new_ind = comp_indexes[0]
         else:
             return
         self.profile_tab_widget.setCurrentIndex(new_ind)
@@ -1300,12 +1348,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             if station_index == len(self.stations) - 1:
                 return
             else:
-                self.plot_station(self.stations[station_index + 1])
+                self.plot_station(self.stations[station_index + 1], preserve_selection=False)
         elif direction == 'up':
             if station_index == 0:
                 return
             else:
-                self.plot_station(self.stations[station_index - 1])
+                self.plot_station(self.stations[station_index - 1], preserve_selection=False)
 
     def cycle_selection(self, direction):
         """

@@ -168,7 +168,17 @@
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>Change Component</string>
+             <string>Edit Component</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="change_decay_suffix_btn">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Edit Suffix</string>
             </property>
            </widget>
           </item>
@@ -178,7 +188,7 @@
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>Change Station</string>
+             <string>Edit Station</string>
             </property>
            </widget>
           </item>
@@ -232,19 +242,6 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item>
-        <widget class="GraphicsLayoutWidget" name="decay_layout">
-         <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Plain</enum>
-         </property>
-         <property name="lineWidth">
-          <number>1</number>
-         </property>
-        </widget>
-       </item>
       </layout>
      </widget>
     </item>
@@ -269,8 +266,51 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="frame_3">
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="GraphicsLayoutWidget" name="decay_layout">
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Plain</enum>
+         </property>
+         <property name="lineWidth">
+          <number>1</number>
+         </property>
+        </widget>
+       </item>
        <item>
         <widget class="QStackedWidget" name="profile_tab_widget">
+         <property name="currentIndex">
+          <number>1</number>
+         </property>
          <widget class="QWidget" name="x_profile_widget" native="true">
           <layout class="QVBoxLayout" name="verticalLayout">
            <property name="leftMargin">
@@ -463,7 +503,17 @@
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>Change Components</string>
+             <string>Edit Components</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="change_profile_suffix_btn">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Edit Suffixes</string>
             </property>
            </widget>
           </item>

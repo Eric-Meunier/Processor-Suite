@@ -202,19 +202,22 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
 
-        self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
-
-        # Fill the table with the ineligible stations
-        if not ineligible_stations.empty:
-            fill_table(ineligible_stations)
-            self.bad_stations_label.show()
-            self.list.show()
+        try:
+            self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
+        except Exception as e:
+            self.message.information(self, 'Error', str(e))
         else:
-            self.bad_stations_label.hide()
-            self.list.hide()
+            # Fill the table with the ineligible stations
+            if not ineligible_stations.empty:
+                fill_table(ineligible_stations)
+                self.bad_stations_label.show()
+                self.list.show()
+            else:
+                self.bad_stations_label.hide()
+                self.list.hide()
 
-        self.rotate()
-        self.show()
+            self.rotate()
+            self.show()
 
     def plot_pem(self, pem_file):
         """
@@ -267,6 +270,9 @@ class Derotator(QMainWindow, Ui_Derotator):
                         )
 
             profile_data = processed_pem.get_profile_data(component, converted=True)
+            if profile_data.empty:
+                raise ValueError(f'Profile data for {self.pem_file.filepath.name} is empty.')
+
             for i, bounds in enumerate(channel_bounds):
                 # Select the correct axes based on the component
                 if component == 'X':
@@ -449,11 +455,14 @@ class Derotator(QMainWindow, Ui_Derotator):
 
 def main():
     from src.pem.pem_getter import PEMGetter
+    from src.pem.pem_file import PEMParser
     app = QApplication(sys.argv)
     mw = Derotator()
 
     pg = PEMGetter()
-    pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
+    parser = PEMParser()
+    # pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
+    pem_files = parser.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\test results\718-2941xy - test conversion.pem')
     mw.open(pem_files)
 
     app.exec_()

@@ -925,10 +925,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             except Exception as e:
                 self.error.setWindowTitle('Error converting DMP file')
                 self.error.showMessage(str(e))
-                self.end_pb()
-                return
+                # break
+                # self.end_pb()
+                # return
             else:
                 pem_files.append(pem_file)
+            finally:
                 count += 1
                 self.pb.setValue(count)
 
@@ -1040,8 +1042,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 except Exception as e:
                     self.error.setWindowTitle('Error parsing PEM file')
                     self.error.showMessage(str(e))
-                    self.end_pb()
-                    return
+                    # Progress the progress bar
+                    count += 1
+                    self.pb.setValue(count)
+                    continue
+                    # self.end_pb()
+                    # return
 
             # Check if the file is already opened in the table. Won't open if it is.
             if is_opened(pem_file):
@@ -1393,7 +1399,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Populate the GPS files list based on the files found in the nearest 'GPS' folder in the project directory
         """
 
-        @stopit.threading_timeoutable()
+        @stopit.threading_timeoutable(default='timeout')
         def find_gps_dir():
             # Try to find the 'GPS' folder in the current directory
             search_result = list(self.project_dir.rglob('GPS'))
@@ -1411,6 +1417,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         gps_dir = find_gps_dir(timeout=3)
 
         if gps_dir is None:
+            return
+        elif gps_dir == 'timeout':
             self.message.information(self, 'Timeout', 'Searching for the GPS folder timed out.')
             return
         else:
@@ -1427,7 +1435,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Populate the pem_list with all *.pem files found in the project_dir.
         """
 
-        @stopit.threading_timeoutable()
+        @stopit.threading_timeoutable(default='timeout')
         def find_pem_files():
             # Find all .PEM files in the project directory
             return list(self.project_dir.rglob('*.PEM'))
@@ -1442,6 +1450,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.available_pems = find_pem_files(timeout=3)
 
         if self.available_pems is None:
+            return
+        elif self.available_pems == 'timeout':
             self.message.information(self, 'Timeout', 'Searching for PEM files timed out.')
             return
         else:

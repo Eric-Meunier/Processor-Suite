@@ -633,7 +633,7 @@ class GPSParser:
     def parse_loop_gps(self, file):
         """
         Parse a text file for loop GPS.
-        :param filepath: str: filepath of the text file containing GPS data
+        :param file: str or list, filepath of the text file containing GPS data or list of loop coordinates
         :return: Pandas DataFrame of the GPS.
         """
         cols = [
