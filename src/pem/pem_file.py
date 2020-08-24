@@ -5,7 +5,7 @@ import time
 import copy
 import natsort
 import geomag
-import datetime
+from datetime import datetime
 import numpy as np
 import pandas as pd
 from scipy.spatial.transform import Rotation as R
@@ -167,8 +167,8 @@ class PEMFile:
 
         self.client = header.get('Client')
         self.grid = header.get('Grid')
-        self.line_name = header.get('Line')
-        self.loop_name = header.get('Loop')
+        self.line_name = header.get('Line_name')
+        self.loop_name = header.get('Loop_name')
         self.date = header.get('Date')
         self.survey_type = header.get('Survey type')
         self.convention = header.get('Convention')
@@ -187,7 +187,10 @@ class PEMFile:
         self.loop_polarity = header.get('Loop polarity')
         self.channel_times = channel_table
 
-        self.notes = notes
+        if notes:
+            self.notes = notes
+        else:
+            self.notes = []
         self.data = sort_data(data)
         self.filepath = filepath.with_suffix('.PEM')
 
@@ -487,24 +490,26 @@ class PEMFile:
         :return: str
         """
 
-        if 's-coil' in self.survey_type.casefold() or 'surface' in self.survey_type.casefold():
+        file_survey_type = re.sub('_', ' ', self.survey_type.casefold())
+
+        if 's-coil' in file_survey_type or 'surface' in file_survey_type or 'sf coil' in file_survey_type:
             survey_type = 'Surface Induction'
-        elif 'borehole' in self.survey_type.casefold():
+        elif 'borehole' in file_survey_type:
             survey_type = 'Borehole Induction'
-        elif 'b-rad' in self.survey_type.casefold():
+        elif 'b-rad' in file_survey_type:
             survey_type = 'Borehole Induction'
-        elif 'otool' in self.survey_type.casefold():
+        elif 'otool' in file_survey_type:
             survey_type = 'Borehole Induction'
-        elif 'radtool' in self.survey_type.casefold():
+        elif 'radtool' in file_survey_type:
             survey_type = 'Borehole Induction'
-        elif 's-flux' in self.survey_type.casefold():
+        elif 's-flux' in file_survey_type or 'sf fluxgate' in file_survey_type:
             survey_type = 'Surface Fluxgate'
-        elif 'bh-flux' in self.survey_type.casefold():
+        elif 'bh-flux' in file_survey_type or 'bh fast fluxgate' in file_survey_type:
             survey_type = 'Borehole Fluxgate'
-        elif 's-squid' in self.survey_type.casefold():
+        elif 's-squid' in file_survey_type:
             survey_type = 'SQUID'
         else:
-            raise ValueError(f"Invalid survey type: {self.survey_type}")
+            raise ValueError(f"Invalid survey type: {file_survey_type}")
 
         return survey_type
 
@@ -1508,7 +1513,7 @@ class PEMParser:
             # Format the units
             if tags['Units'] == 'nanoTesla/sec':
                 tags['Units'] = 'nT/s'
-            elif tags['Units'] == 'picoTesla':
+            elif tags['Units'] == 'picoTesla' or tags['Units'] == 'picoTeslas':
                 tags['Units'] = 'pT'
 
             # Format the operator name, removing the '~'
@@ -1879,12 +1884,83 @@ class DMPParser:
         self.filepath = None
         self.pp_file = False
 
+        self.data_columns = [
+            'Station',
+            'Component',
+            'Reading_index',
+            'Gain',
+            'Rx_type',
+            'ZTS',
+            'Coil_delay',
+            'Number_of_stacks',
+            'Readings_per_set',
+            'Reading_number',
+            'RAD_tool',
+            'Reading'
+        ]
+
     def parse_dmp(self, filepath):
         """
         Create a PEMFile object by parsing a .DMP file.
         :param filepath: str, filepath of the .DMP file
         :return: PEMFile object
         """
+
+        def parse_header(text, old_dmp=False):
+            """
+            Create the header dictionary that is found in PEM files from the contents of the .DMP file.
+            :param text: str or list, header section of the .DMP file.
+            :return: dict
+            """
+            assert text, f'No header found in {self.filepath.name}.'
+
+            if isinstance(text, str):
+                text = text.strip().split('\n')
+            text = [t.strip() for t in text]
+
+            if old_dmp is True:
+                assert len(text) == 27, f'Incorrect number of lines found in the header of {self.filepath.name}'
+            else:
+                assert len(text) == 29, f'Incorrect number of lines found in the header of {self.filepath.name}'
+
+            t = time.time()
+
+            if text[-1] == 'ZTS - Narrow':
+                self.pp_file = True
+
+            header = dict()
+            header['Format'] = str(210)
+            header['Units'] = 'pT' if 'flux' in text[6].lower() or 'squid' in text[6].lower() else 'nT/s'
+            header['Operator'] = text[11]
+            header['Probes'] = {'XY probe number': '0', 'SOA': '0', 'Tool number': '0', 'Tool ID': '0'}
+            header['Current'] = float(text[12])
+            header['Loop dimensions'] = ' '.join(re.split('\D', text[13])) + ' 0'
+
+            header['Client'] = text[8]
+            header['Grid'] = text[9]
+            header['Line_name'] = text[7]
+            header['Loop_name'] = text[10]
+            header['Date'] = datetime.strptime(text[14], '%m/%d/%y').strftime('%B %d, %Y')
+            header['Survey type'] = text[6].split()[0]
+            header['Convention'] = text[15]
+            header['Sync'] = text[18]
+            header['Timebase'] = float(text[16].split('ms')[0]) if 'ms' in text[16] else float(text[16].split()[0])
+            header['Ramp'] = float(text[17])
+            header['Number of channels'] = int(text[25])
+            header['Number of readings'] = int(text[24])
+            header['Receiver number'] = text[1].split()[-1]
+            header['Rx software version'] = text[2].split()[-1]
+            header['Rx software version date'] = re.sub('\s', '',
+                                                        re.sub('Released: ', '', text[3])) + f"s{text[26]}"
+            header['Rx file name'] = text[5]
+            header['Normalized'] = 'N' if text[19] == 'Norm.' else 'Normalized??'
+            header['Primary field value'] = text[23]
+            header['Coil area'] = int(text[20])
+            header['Coil delay'] = int(text[21])
+            header['Loop polarity'] = '+'
+            print(f"DMPParser - Time to parse header of {self.filepath.name}: {time.time() - t}")
+
+            return header
 
         def parse_channel_times(text, units=None):
             """
@@ -1943,9 +2019,9 @@ class DMPParser:
                 times = channel_times
 
                 # The first number to the second last number are the start times
-                table['Start'] = times[:, 0] / 10 ** 6  # Convert to miliseconds
+                table['Start'] = times[:, 0] / 10 ** 6  # Convert to seconds
                 # The second number to the last number are the end times
-                table['End'] = times[:, 1] / 10 ** 6  # Convert to miliseconds
+                table['End'] = times[:, 1] / 10 ** 6  # Convert to seconds
                 table['Width'] = table['End'] - table['Start']
                 table['Center'] = (table['Width'] / 2) + table['Start']
 
@@ -1982,7 +2058,7 @@ class DMPParser:
             #     # Add the gap channel
             #     times = np.insert(times, ind_of_0, [0., times[ind_of_0-1][2], 0.], axis=0)
 
-            # Remove the channel number
+            # Remove the channel number column
             times = np.delete(times, 0, axis=1)
 
             table = channel_table(times)
@@ -2041,21 +2117,6 @@ class DMPParser:
                 return [station, comp, reading_index, gain, rx_type, zts, coil_delay, number_of_stacks,
                         readings_per_set, reading_number, rad_tool, decay]
 
-            cols = [
-                'Station',
-                'Component',
-                'Reading_index',
-                'Gain',
-                'Rx_type',
-                'ZTS',
-                'Coil_delay',
-                'Number_of_stacks',
-                'Readings_per_set',
-                'Reading_number',
-                'RAD_tool',
-                'Reading'
-            ]
-
             assert text, f'No data found in {self.filepath.name}.'
 
             if isinstance(text, list):
@@ -2081,12 +2142,15 @@ class DMPParser:
                 # series = parse_row(reading)
                 data.append(format_data(reading))
 
-            df = pd.DataFrame(data, columns=cols)
+            df = pd.DataFrame(data, columns=self.data_columns)
 
             # Convert the columns to their correct data types
             df['RAD_tool'] = df['RAD_tool'].map(lambda x: RADTool().from_dmp(x))
             df['RAD_ID'] = df['RAD_tool'].map(lambda x: x.id)
-            df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float) * 10 ** 9)
+
+            # Convert the decay units to nT/s or pT
+            factor = 10 ** 12 if header.get('Units') == 'pT' else 10 ** 9
+            df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float) * factor)
             df[['Reading_index',
                 'Gain',
                 'Coil_delay',
@@ -2102,68 +2166,6 @@ class DMPParser:
             print(f"DMPParser - Time to parse data of {self.filepath.name} file: {time.time() - t1}")
             return df
 
-        def parse_header(text, old_dmp=False):
-            """
-            Create the header dictionary that is found in PEM files from the contents of the .DMP file.
-            :param text: str or list, header section of the .DMP file.
-            :return: dict
-            """
-            assert text, f'No header found in {self.filepath.name}.'
-
-            if isinstance(text, str):
-                text = text.strip().split('\n')
-            text = [t.strip() for t in text]
-
-            if old_dmp is True:
-                assert len(text) == 27, f'Incorrect number of lines found in the header of {self.filepath.name}'
-            else:
-                assert len(text) == 29, f'Incorrect number of lines found in the header of {self.filepath.name}'
-
-            t = time.time()
-
-            if text[-1] == 'ZTS - Narrow':
-                self.pp_file = True
-
-            date = np.array(text[14].split('/'), dtype=int)
-            try:
-                date_str = datetime.datetime(date[2] + 2000, date[0], date[1]).strftime('%B %d, %Y')
-            except Exception as e:
-                raise ValueError(f"Error parsing the date of {self.filepath.name}: {str(e)}")
-
-            header = dict()
-            header['Format'] = str(210)
-            header['Units'] = 'pT' if 'flux' in text[6].lower() or 'squid' in text[6].lower() else 'nT/s'
-            header['Operator'] = text[11]
-            header['Probes'] = {'XY probe number': '0', 'SOA': '0', 'Tool number': '0', 'Tool ID': '0'}
-            header['Current'] = float(text[12])
-            header['Loop dimensions'] = ' '.join(re.split('\D', text[13])) + ' 0'
-
-            header['Client'] = text[8]
-            header['Grid'] = text[9]
-            header['Line'] = text[7]
-            header['Loop'] = text[10]
-            header['Date'] = date_str
-            header['Survey type'] = text[6].split()[0]
-            header['Convention'] = text[15]
-            header['Sync'] = text[18]
-            header['Timebase'] = float(text[16].split('ms')[0]) if 'ms' in text[16] else float(text[16].split()[0])
-            header['Ramp'] = float(text[17])
-            header['Number of channels'] = int(text[25])
-            header['Number of readings'] = int(text[24])
-            header['Receiver number'] = text[1].split()[-1]
-            header['Rx software version'] = text[2].split()[-1]
-            header['Rx software version date'] = re.sub('\s', '',
-                                                        re.sub('Released: ', '', text[3])) + f"s{text[26]}"
-            header['Rx file name'] = text[5]
-            header['Normalized'] = 'N' if text[19] == 'Norm.' else 'Normalized??'
-            header['Primary field value'] = text[23]
-            header['Coil area'] = int(text[20])
-            header['Coil delay'] = int(text[21])
-            header['Loop polarity'] = '+'
-            print(f"DMPParser - Time to parse header of {self.filepath.name}: {time.time() - t}")
-
-            return header
-
         assert Path(filepath).is_file(), f"{filepath.name} is not a file"
         self.filepath = Path(filepath)
         print(f"Parsing {self.filepath.name}")
@@ -2174,6 +2176,7 @@ class DMPParser:
             contents = file.read()
 
         # Split the content up into sections
+        # Splitting new .DMP files
         if '&&' in contents:
             old_dmp = False
             raw_header = re.split('&&', contents)[0]
@@ -2183,6 +2186,7 @@ class DMPParser:
 
             # Don't see any notes in old .DMP files so only included here
             notes = parse_notes(raw_notes)
+        # Splitting old .DMP files
         else:
             old_dmp = True
             scontents = contents.split('\n')
@@ -2204,6 +2208,267 @@ class DMPParser:
 
         pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath, notes=notes)
         print(f"DMPParser - Time to convert PEMFile: {time.time() - t}")
+        return pem_file
+
+    def parse_dmp2(self, filepath):
+        """
+        Create a PEMFile object by parsing a .DMP2 file.
+        :param filepath: str, filepath of the .DMP2 file
+        :return: PEMFile object
+        """
+        def parse_channel_times(header_dict, units=None):
+            """
+            Convert the channel table in the .DMP file to a PEM channel times table DataFrame
+            :param header_dict: dict, parsed header section of the .DMP file
+            :param units: str, 'nT/s' or 'pT'
+            :return: DataFrame
+            """
+
+            def channel_table(channel_times):
+                """
+                Channel times table data frame with channel start, end, center, width, and whether the channel is
+                to be removed when the file is split
+                :param channel_times: pandas Series, float of each channel time read from a PEM file header.
+                :return: pandas DataFrame
+                """
+
+                def check_removable(row):
+                    """
+                    Return True if the passed channel times is a channel that should be removed when the file is split.
+                    :param row: pandas row from the channel table
+                    :return: bool: True if the channel should be removed, else False.
+                    """
+                    if units == 'nT/s':
+                        if row.Start == -0.0002:
+                            return False
+                        elif row.Start > 0:
+                            return False
+                        else:
+                            return True
+
+                    elif units == 'pT':
+                        if row.Start == -0.002:
+                            return False
+                        elif row.Start > 0:
+                            return False
+                        else:
+                            return True
+                    else:
+                        raise ValueError('Units parsed from tags is invalid')
+
+                def find_last_off_time():
+                    """
+                    Find where the next channel width is less than half the previous channel width, which indicates
+                    the start of the next on-time.
+                    :return: int: Row index of the last off-time channel
+                    """
+                    filt = table['Remove'] == False
+                    for index, row in table[filt][1:-1].iterrows():
+                        next_row = table.loc[index + 1]
+                        if row.Width > (next_row.Width * 2):
+                            return index + 1
+
+                # Create the channel times table
+                table = pd.DataFrame(columns=['Start', 'End', 'Center', 'Width', 'Remove'])
+                # Convert the times to miliseconds
+                times = channel_times
+
+                # The first number to the second last number are the start times
+                table['Start'] = list(times[:-1])
+                # The second number to the last number are the end times
+                table['End'] = list(times[1:])
+                table['Width'] = table['End'] - table['Start']
+                table['Center'] = (table['Width'] / 2) + table['Start']
+
+                # If the file is a PP file
+                if table.Width.max() < 10 ** -5:
+                    table['Remove'] = False
+                else:
+                    # Configure which channels to remove for the first on-time
+                    table['Remove'] = table.apply(check_removable, axis=1)
+
+                    # Configure each channel after the last off-time channel (only for full waveform)
+                    last_off_time_channel = find_last_off_time()
+                    if last_off_time_channel:
+                        table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(
+                            lambda x: True)
+                return table
+
+            t = time.time()
+
+            table = channel_table(header['Channel_times'] / 10 ** 6)  # Convert to seconds
+            assert len(table) == int(header['Number of channels']) or len(table) == int(header['Number of channels']) + 1, \
+                f"{len(table)} channels found in channel times section instead of {int(header['Number of channels'])} found in header of {self.filepath.name}"
+            print(f"PEMParser - Time to parse channel table of {self.filepath.name}: {time.time() - t}")
+            return table
+
+        def parse_header(header_content):
+            """
+            Parse the header section of the DMP File
+            :param header_content: list of str of the header section of the .DMP2 file
+            :return: dict
+            """
+            t1 = time.time()
+            header_content = header_content.split('\n')
+            # Remove blank lines
+            [header_content.remove(h) for h in reversed(header_content) if h == '']
+            ind, val = [h.split(':')[0].strip() for h in header_content], [h.split(':')[1].strip() for h in header_content]
+
+            # Create a Series object
+            s = pd.Series(val, index=ind)
+            s['Channel_Number'] = np.array(s['Channel_Number'].split(), dtype=int)
+            s['Channel_Time'] = np.array(s['Channel_Time'].split(), dtype=float)
+
+            # Create the header dictionary
+            header = dict()
+            header['Format'] = '210'
+            header['Units'] = 'pT' if 'flux' in s['Survey_Type'].lower() or 'squid' in s['Survey_Type'].lower() else 'nT/s'
+            header['Operator'] = s['Operator_Name'].title()
+            header['Probes'] = {'XY probe number': s['Sensor_Number'],
+                                'SOA': '0',
+                                'Tool number': s['Tool_Number'],
+                                'Tool ID': '0'}
+            header['Current'] = float(s['Current'])
+
+            header['Channel_times'] = s['Channel_Time']
+            header['Channel_numbers'] = s['Channel_Number']
+            header['Loop dimensions'] = f"{s['Loop_Length']} {s['Loop_Width']} 0"
+
+            header['Client'] = s['Client_Name']
+            header['Grid'] = s['Grid_Name']
+            header['Line_name'] = s['name']
+            header['Loop_name'] = s['Loop_Name']
+            header['Date'] = datetime.strptime(s['Date'], '%m/%d/%Y').strftime('%B %d, %Y')
+
+            header['Survey type'] = s['Survey_Type']
+            header['Convention'] = 'Metric'
+            header['Sync'] = s['Sync_Type']
+            header['Timebase'] = float(s['Time_Base'].split()[0])
+            header['Ramp'] = int(s['Ramp_Length'])
+            header['Number of channels'] = len(s['Channel_Time']) - 1
+            header['Number of readings'] = int(s['Total_Readings'])
+
+            header['Receiver number'] = s['Crone_Digital_PEM_Receiver']
+            header['Rx software version'] = s['Software_Version']
+            header['Rx software version date'] = s['Software_Release_Date']
+            header['Rx file name'] = s['File_Name']
+            header['Normalized'] = 'N'
+            header['Primary field value'] = '1000'
+            header['Coil area'] = float(s['Coil_Area']) / 10 ** 3
+            header['Loop polarity'] = '+'
+            # header['Notes'] = [note for note in s['File_Notes'].split('\n')]
+
+            print(f"PEMParser - Time to parse header of {self.filepath.name}: {time.time() - t1}")
+            return header
+
+        def parse_data(data_content, units=None):
+            """
+            Create a PEM file data frame from the contents of the .DMP2 file
+            :param data_content: list of str of the data section of the .DMP2 file
+            :param units: str, 'nT/s' or 'pT'
+            :return: DataFrame
+            """
+
+            def str_to_datetime(date_string):
+                if 'AM' in date_string or 'PM' in date_string:
+                    format = '%m/%d/%Y,%I:%M:%S %p'
+                else:
+                    format = '%m/%d/%Y,%H:%M:%S'
+                date_object = datetime.strptime(date_string, format)
+                return date_object
+
+            data_section = data_content.strip()
+            sdata = data_section.split('\n\n')
+
+            # Create a data frame out of the readings
+            df_data = []
+            for reading in sdata:
+                split_reading = reading.split('\n')
+
+                # Take the array that doesn't change per reading
+                arr = [re.split(':\s?', d, maxsplit=1) for d in split_reading if
+                       not d.lower().startswith('data') and
+                       not d.lower().startswith('overload') and
+                       not d.lower().startswith('deleted')]
+
+                # Separate the decay reading, overload and deleted status that should be their own readings
+                datas = [x for x in split_reading if x.startswith('data')]
+                overloads = [x for x in split_reading if x.lower().startswith('overload')]
+                deletes = list(filter(lambda x: x.startswith('Deleted'), split_reading))[0].split(': ')[1].split(',')
+
+                # Iterate over each actual decay reading and create their own dictionary to be added to the df
+                for data, overload, deleted in zip(datas, overloads, deletes):
+                    entry = dict(arr)  # The base information that is true for each reading
+                    entry['Component'] = data[4].upper()  # The component is the 4th character in the 'data' title
+                    entry['data'] = data.split(': ')[1]
+                    entry['Overload'] = overload.split(': ')[1]
+                    entry['Deleted'] = deleted.strip()
+
+                    df_data.append(entry)
+
+            # Create a data frame from the DMP file
+            df = pd.DataFrame(df_data)
+            # Convert the columns to the correct data type
+            df[['Number_of_Readings',
+                'Number_of_Stacks',
+                'Reading_Number',
+                'ZTS_Offset']] = df[['Number_of_Readings',
+                                     'Number_of_Stacks',
+                                     'Reading_Number',
+                                     'ZTS_Offset']].astype(int)
+
+            # Convert the decays from Teslas to either nT or pT
+            factor = 10 ** 12 if units == 'pT' else 10 ** 9
+            df['data'] = df['data'].map(lambda x: np.array(x.split(), dtype=float) * factor)
+            if 'RAD' in df.columns.values:
+                df['RAD'] = df['RAD'].map(lambda x: RADTool().from_dmp(x))
+            else:
+                df['RAD'] = RADTool().from_dmp('0. 0. 0. 0. 0. 0. 0.')
+
+            # Create the PEM file data frame
+            pem_df = pd.DataFrame(columns=self.data_columns)
+            pem_df['Station'] = df['name'].map(lambda x: x.split(',')[0])
+            pem_df['Component'] = df['Component']
+            pem_df['Reading_index'] = df['name'].map(lambda x: x.split(',')[-1][1:]).astype(int)
+            pem_df['Gain'] = 0
+            pem_df['Rx_type'] = 'A'
+            pem_df['ZTS'] = df['ZTS_Offset']
+            pem_df['Coil_delay'] = 0
+            pem_df['Number_of_stacks'] = df['Number_of_Stacks']
+            pem_df['Readings_per_set'] = df['Number_of_Readings']
+            pem_df['Reading_number'] = df['Reading_Number']
+            pem_df['RAD_tool'] = df['RAD']
+            pem_df['Reading'] = df['data']
+            pem_df['RAD_ID'] = pem_df['RAD_tool'].map(lambda x: x.id)
+            pem_df['del_flag'] = df['Deleted'].map(lambda x: False if x.strip() == 'F' else True)
+            pem_df['Overload'] = df['Overload'].map(lambda x: False if x.strip() == 'F' else True)
+            pem_df['datetime'] = df['Date_Time'].map(str_to_datetime)
+            print(f"DMPParser - Time to parse data of {self.filepath.name}: {time.time() - t1}")
+            return pem_df
+
+        assert Path(filepath).is_file(), f"{filepath.name} is not a file"
+        self.filepath = Path(filepath)
+        print(f"Parsing {self.filepath.name}")
+
+        t1 = time.time()
+        # Read the contents of the file
+        with open(filepath, 'rt') as file:
+            contents = file.read()
+            # Change the different occurences of header titles between DMP2 file versions so they are the same.
+            contents = re.sub('isDeleted', 'Deleted', contents)
+            contents = re.sub('Loop_Height', 'Loop_Length', contents)
+            contents = re.sub('Released', 'Software_Release_Date', contents)
+
+        # Split the file up into the header and data sections
+        scontents = contents.split('$$')
+
+        header = parse_header(scontents[0])
+        data = parse_data(scontents[1], units=header.get('Units'))
+        channel_table = parse_channel_times(header, units=header.get('Units'))
+        # notes = header['Notes']
+
+        print(f'DMPParser - Time to parse {self.filepath.name} file: {time.time() - t1}')
+        pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath)
         return pem_file
 
 
@@ -2562,7 +2827,8 @@ class RADTool:
         self.gy = float(text[3])
         self.Hz = float(text[4])
         self.gz = float(text[5])
-        self.T = float(text[6])
+        if len(text) > 6:
+            self.T = float(text[6])
 
         self.id = ''.join([
             str(self.Hx),
@@ -2571,7 +2837,6 @@ class RADTool:
             str(self.gy),
             str(self.Hz),
             str(self.gz),
-            str(self.T)
         ])
 
         return self
@@ -2690,6 +2955,17 @@ class RADTool:
             result.append(f"{self.roll_angle:g}")
             result.append(f"{self.dip:g}")
 
+        elif self.D == 'D6':
+            result = [
+                self.D,
+                f"{self.Hx:g}",
+                f"{self.gx:g}",
+                f"{self.Hy:g}",
+                f"{self.gy:g}",
+                f"{self.Hz:g}",
+                f"{self.gz:g}",
+            ]
+
         elif self.D == 'D7':
             result = [
                 self.D,
@@ -2702,7 +2978,7 @@ class RADTool:
                 f"{self.T:g}"
             ]
         else:
-            raise ValueError('RADTool D value is neither "D5" nor "D7"')
+            raise ValueError('RADTool D value is neither "D5", "D6", nor "D7"')
 
         if self.R is not None and self.angle_used is not None:
             if self.rotation_type == 'acc':
@@ -2729,13 +3005,13 @@ if __name__ == '__main__':
     # files = pg.get_pems(client='Raglan', number=1)
     # file = files[0]
 
-    t1 = time.time()
-    pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\e110xy.pem')
-    print(f"Old time to parse PEM: {time.time() - t1}")
+    # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\e110xy.pem')
 
     t2 = time.time()
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\OCLT01\L2E.DMP'
-    file = dparse.parse_dmp(file)
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\2EX7046L1-1\2ex7046l1-1.DMP2'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\Surface\1400e.DMP2'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2 New\BR-01\br01.DMP2'
+    file = dparse.parse_dmp2(file)
     print(f"Time to parse DMP: {time.time() - t2}")
 
     out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filepath.stem} - test conversion.pem')

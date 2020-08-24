@@ -921,13 +921,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for file in dmp_files:
             self.pb.setText(f"Converting {Path(file).name}")
             try:
-                pem_file = parser.parse_dmp(file)
+                if file.endswith('dmp'):
+                    pem_file = parser.parse_dmp(file)
+                elif file.endswith('dmp2'):
+                    pem_file = parser.parse_dmp2(file)
             except Exception as e:
                 self.error.setWindowTitle('Error converting DMP file')
                 self.error.showMessage(str(e))
-                # break
-                # self.end_pb()
-                # return
             else:
                 pem_files.append(pem_file)
             finally:
