@@ -74,7 +74,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="info_tab">
       <attribute name="title">
@@ -180,7 +180,7 @@
           <item row="1" column="1">
            <widget class="QPushButton" name="edit_loop_btn">
             <property name="text">
-             <string>Edit Loop</string>
+             <string>View Loop</string>
             </property>
            </widget>
           </item>
@@ -386,7 +386,7 @@
                 </sizepolicy>
                </property>
                <property name="text">
-                <string>Edit Line</string>
+                <string>View Line</string>
                </property>
               </widget>
              </item>

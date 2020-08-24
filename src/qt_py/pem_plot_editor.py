@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 import pylineclip as lc
+from datetime import datetime
 from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
                              QDesktopWidget)
@@ -301,10 +302,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.survey_type_label.setText(f"{self.pem_file.get_survey_type()} Survey")
         self.operator_label.setText(f"Operator: {self.pem_file.operator.title()}")
 
-        # Add the deletion flag column
-        if 'del_flag' not in self.pem_file.data.columns:
-            self.pem_file.data.insert(13, 'del_flag', False)
-
         if self.pem_file.is_split():
             # self.plot_ontime_decays_cbox.setChecked(False)  # Triggers the signal
             self.plot_ontime_decays_cbox.setEnabled(False)
@@ -486,6 +483,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Re-calculate the converted station numbers
         self.pem_file.data['cStation'] = self.pem_file.data.Station.map(self.converter.convert_station)
+
+        # Re-set the limits of the profile plots
+        for ax in self.profile_axes:
+            ax.setLimits(xMin=self.pem_file.data.cStation.min(), xMax=self.pem_file.data.cStation.max())
 
         components = self.pem_file.get_components()
         toggle_profile_plots()
@@ -686,7 +687,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             """
             global station_text
             stn = data.Station.unique()
-            if stn:
+            if stn.any():
                 station_number_text = f"Station {stn[0]}"
                 reading_numbers = data.Reading_number.unique()
                 if len(reading_numbers) > 1:
@@ -718,13 +719,20 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             if ax not in self.active_decay_axes:
                 self.active_decay_axes.append(ax)
 
-            # Change the pen if the data is flagged for deletion
+            # Change the pen if the data is flagged for deletion or overload
             if row.del_flag is False:
+                color = (96, 96, 96)
                 z_value = 1
-                pen = pg.mkPen((96, 96, 96), width=1.)
             else:
+                color = 'r'
                 z_value = 2
-                pen = pg.mkPen('r', width=1.)
+
+            if row.Overload is True:
+                style = QtCore.Qt.DashDotDotLine
+            else:
+                style = QtCore.Qt.SolidLine
+
+            pen = pg.mkPen(color, width=1.5, style=style)
 
             # Remove the on-time channels if the checkbox is checked
             if self.plot_ontime_decays_cbox.isChecked():
@@ -824,6 +832,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             for ax in self.decay_axes:
                 ax.autoRange()
 
+        for ax in self.profile_axes[1:]:
+            ax.autoRange()
         self.active_profile_axes[0].autoRange()
 
     def highlight_lines(self):
@@ -842,6 +852,14 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 if len(selected_data) > 1:
                     r_numbers = selected_data.Reading_number.unique()
                     r_indexes = selected_data.Reading_index.unique()
+                    # if 'datetime' in selected_data.columns.values:
+                    #     date_times = selected_data.datetime.unique()
+                    #     date_times_str = f"Timestamps: " \
+                    #         f"{pd.Timestamp(date_times.min()).strftime('%b %d - %H:%M:%S')} - " \
+                    #         f"{pd.Timestamp(date_times.max()).strftime('%b %d - %H:%M:%S')}"
+                    # else:
+                    #     date_times_str = ''
+
                     if len(r_numbers) > 1:
                         r_number_text = f"Reading numbers: {r_numbers.min()} - {r_numbers.max()}"
                     else:
@@ -859,14 +877,17 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     selected_decay = selected_data.iloc[0]
                     r_number_text = f"Reading Number {selected_decay.Reading_number}"
                     r_index_text = f"Reading Index {selected_decay.Reading_index}"
-
+                    if 'datetime' in selected_decay.index.values:
+                        date_time = f"Timestamp: {selected_decay.datetime.strftime('%b %d - %H:%M:%S')}"
+                    else:
+                        date_time = ''
                     if self.pem_file.is_borehole() and selected_decay.RAD_tool.has_tool_values():
                         azimuth = f"Azimuth {selected_decay.RAD_tool.get_azimuth():.2f}"
                         dip = f"Dip {selected_decay.RAD_tool.get_dip():.2f}"
                         roll = f"Roll angle {selected_decay.RAD_tool.get_acc_roll():.2f}"
-                        decay_selection_text = f"{'    '.join([r_number_text, r_index_text, azimuth, dip, roll])}"
+                        decay_selection_text = f"{'    '.join([r_number_text, r_index_text, date_time, azimuth, dip, roll])}"
                     else:
-                        decay_selection_text = f"{'    '.join([r_number_text, r_index_text])}"
+                        decay_selection_text = f"{'    '.join([r_number_text, r_index_text, date_time])}"
 
                 self.decay_selection_text.setText(decay_selection_text)
                 self.decay_selection_text.show()
@@ -889,28 +910,35 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.flip_decay_btn.setEnabled(False)
 
             # Change the color and width of the plotted lines
-            for line, del_flag in zip(self.plotted_decay_lines, self.plotted_decay_data.del_flag):
-                # Make the line red if it is flagged for deletion
-                if del_flag is True:
-                    pen_color = 'r'
-                    z_value = 4
-                else:
-                    pen_color = (96, 96, 96)
+            for line, del_flag, overload in zip(self.plotted_decay_lines, self.plotted_decay_data.del_flag, self.plotted_decay_data.Overload):
+
+                # Change the pen if the data is flagged for deletion or overload
+                if del_flag is False:
+                    color = (96, 96, 96)
                     z_value = 3
+                else:
+                    color = 'r'
+                    z_value = 4
+
+                # Change the line style if the reading is overloaded
+                if overload is True:
+                    style = QtCore.Qt.DashDotDotLine
+                else:
+                    style = QtCore.Qt.SolidLine
 
                 if line in self.selected_lines:
                     if del_flag is False:
-                        pen_color = (85, 85, 255)  # Blue
+                        color = (85, 85, 255)  # Blue
                         # pen_color = (204, 0, 204)  # Magenta ish
                         # pen_color = (153, 51, 255)  # Puple
 
-                    print(f"Line {self.plotted_decay_lines.index(line)} selected")
-                    line.setPen(pen_color, width=2)
+                    # print(f"Line {self.plotted_decay_lines.index(line)} selected")
+                    line.setPen(color, width=2, style=style)
                     line.setZValue(z_value)
                     if len(self.selected_lines) == 1:
                         line.setShadowPen(pg.mkPen('w', width=2.5, cosmetic=True))
                 else:
-                    line.setPen(pen_color, width=1)
+                    line.setPen(color, width=1, style=style)
                     line.setShadowPen(None)
 
             set_decay_selection_text(self.get_selected_decay_data())
@@ -1348,12 +1376,20 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             if station_index == len(self.stations) - 1:
                 return
             else:
-                self.plot_station(self.stations[station_index + 1], preserve_selection=False)
+                # Force the new index to be a different station then the one selected
+                new_ind = station_index
+                while self.stations[new_ind] == self.selected_station and new_ind < len(self.stations) - 1:
+                    new_ind += 1
+                self.plot_station(self.stations[new_ind], preserve_selection=False)
         elif direction == 'up':
             if station_index == 0:
                 return
             else:
-                self.plot_station(self.stations[station_index - 1], preserve_selection=False)
+                # Force the new index to be a different station then the one selected
+                new_ind = station_index
+                while self.stations[new_ind] == self.selected_station and new_ind > 0:
+                    new_ind -= 1
+                self.plot_station(self.stations[new_ind], preserve_selection=False)
 
     def cycle_selection(self, direction):
         """

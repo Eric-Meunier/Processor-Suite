@@ -134,7 +134,20 @@ class PEMFile:
         self.channel_times = channel_table
 
         self.notes = notes
+
         self.data = sort_data(data)
+        # Add the deletion flag column
+        if 'del_flag' not in self.data.columns:
+            self.data.insert(13, 'del_flag', False)
+
+        # Add the overload column
+        if 'Overload' not in self.data.columns:
+            self.data.insert(14, 'Overload', False)
+
+        # Add the datetime column
+        if 'datetime' not in self.data.columns:
+            self.data.insert(15, 'datetime', False)
+
         self.filepath = Path(filepath)
 
         crs = self.get_crs()
@@ -191,7 +204,20 @@ class PEMFile:
             self.notes = notes
         else:
             self.notes = []
+
         self.data = sort_data(data)
+        # Add the deletion flag column
+        if 'del_flag' not in self.data.columns:
+            self.data.insert(13, 'del_flag', False)
+
+        # Add the overload column
+        if 'Overload' not in self.data.columns:
+            self.data.insert(14, 'Overload', False)
+
+        # Add the datetime column
+        if 'datetime' not in self.data.columns:
+            self.data.insert(15, 'datetime', False)
+
         self.filepath = filepath.with_suffix('.PEM')
 
         crs = self.get_crs()
@@ -1587,35 +1613,6 @@ class PEMParser:
 
             assert len(text) == 7, f"{len(text)} header lines were found instead of 7 in {self.filepath.name}"
 
-            header_cols = [
-                'Client',
-                'Grid',
-                'Line',
-                'Loop',
-                'Date'
-            ]
-
-            survey_param_cols = [
-                'Survey type',
-                'Convention',
-                'Sync',
-                'Timebase',
-                'Ramp',
-                'Number of channels',
-                'Number of readings'
-            ]
-
-            receiver_param_cols = [
-                'Receiver number',
-                'Rx software version',
-                'Rx software version date',
-                'Rx file name',
-                'Normalized',
-                'Primary field value',
-                'Coil area',
-                'Loop polarity'
-            ]
-
             header = dict()
 
             header['Client'] = text[0]
@@ -1647,7 +1644,7 @@ class PEMParser:
             header['Rx file name'] = receiver_param[3]
             header['Normalized'] = receiver_param[4]
             header['Primary field value'] = receiver_param[5]
-            header['Coil area'] = int(receiver_param[6])
+            header['Coil area'] = float(receiver_param[6])
             if len(receiver_param) > 7:
                 header['Loop polarity'] = receiver_param[7]
 
@@ -1824,7 +1821,7 @@ class PEMParser:
                                          'Number_of_stacks',
                                          'Readings_per_set',
                                          'Reading_number']].astype(int)
-            df['ZTS'] = df['ZTS'].astype(float)
+            df['ZTS'] = df['ZTS'].astype(int)
             print(f"PEMParser - Time to parse data of {self.filepath.name}: {time.time() - t}")
             return df
 
@@ -1955,7 +1952,7 @@ class DMPParser:
             header['Rx file name'] = text[5]
             header['Normalized'] = 'N' if text[19] == 'Norm.' else 'Normalized??'
             header['Primary field value'] = text[23]
-            header['Coil area'] = int(text[20])
+            header['Coil area'] = float(text[20])
             header['Coil delay'] = int(text[21])
             header['Loop polarity'] = '+'
             print(f"DMPParser - Time to parse header of {self.filepath.name}: {time.time() - t}")
@@ -2101,7 +2098,7 @@ class DMPParser:
                 station = head[0]
                 comp = head[1][0]
                 reading_index = re.search('\d+', head[1]).group()
-                zts = int(head[2]) + ramp
+                zts = float(head[2]) + ramp
                 number_of_stacks = head[3]
                 readings_per_set = head[4]
                 reading_number = head[5]
@@ -2344,7 +2341,7 @@ class DMPParser:
             header['Convention'] = 'Metric'
             header['Sync'] = s['Sync_Type']
             header['Timebase'] = float(s['Time_Base'].split()[0])
-            header['Ramp'] = int(s['Ramp_Length'])
+            header['Ramp'] = float(s['Ramp_Length'])
             header['Number of channels'] = len(s['Channel_Time']) - 1
             header['Number of readings'] = int(s['Total_Readings'])
 
@@ -2370,6 +2367,11 @@ class DMPParser:
             """
 
             def str_to_datetime(date_string):
+                """
+                Convert the timestamp string to a datetime object
+                :param date_string: str of the timestamp from the .DMP2 file.
+                :return: datetime object
+                """
                 if 'AM' in date_string or 'PM' in date_string:
                     format = '%m/%d/%Y,%I:%M:%S %p'
                 else:
@@ -2442,6 +2444,11 @@ class DMPParser:
             pem_df['RAD_ID'] = pem_df['RAD_tool'].map(lambda x: x.id)
             pem_df['del_flag'] = df['Deleted'].map(lambda x: False if x.strip() == 'F' else True)
             pem_df['Overload'] = df['Overload'].map(lambda x: False if x.strip() == 'F' else True)
+
+            # Find the overload readings and set them to be deleted
+            overload_filt = pem_df.loc[:, 'Overload'] == True
+            pem_df.loc[overload_filt, 'del_flag'] = True
+
             pem_df['datetime'] = df['Date_Time'].map(str_to_datetime)
             print(f"DMPParser - Time to parse data of {self.filepath.name}: {time.time() - t1}")
             return pem_df
@@ -2458,6 +2465,12 @@ class DMPParser:
             contents = re.sub('isDeleted', 'Deleted', contents)
             contents = re.sub('Loop_Height', 'Loop_Length', contents)
             contents = re.sub('Released', 'Software_Release_Date', contents)
+
+            # Find the year of the date of the file, and if necessary convert the year format to %Y instead of %y
+            year = re.search('Date: (\d+\/\d+\/)(\d+)', contents).group(2)
+            if len(year) < 4:
+                Y = int(year) + 2000
+                contents = re.sub(r'(\d+\/\d+\/)(\d+)', f'\g<1>{Y}', contents)
 
         # Split the file up into the header and data sections
         scontents = contents.split('$$')

@@ -372,18 +372,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             :param header: str, either 'client', 'grid', or 'loop'.
             """
 
-            def color_cell(row, column, color, alpha=50):
-                """
-                Color an entire table row
-                :param row: Int, Row of the table to color
-                :param column: Int, Column of the table to color
-                :param color: str, The desired color
-                :return: None
-                """
-                color = QtGui.QColor(color)
-                color.setAlpha(alpha)
-                self.table.item(row, column).setBackground(color)
-
             self.table.blockSignals(True)
 
             bold_font, normal_font = QtGui.QFont(), QtGui.QFont()
@@ -427,7 +415,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.table.setItem(row, column, item)
-                color_cell(row, column, 'white' if file.has_all_gps() else 'magenta')
 
             self.table.blockSignals(False)
 
@@ -659,11 +646,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     menu.addAction(save_as_xyz_action)
                     menu.addAction(export_pem_action)
                 menu.addSeparator()
+                menu.addAction(open_plot_editor_action)
                 menu.addAction(print_plots_action)
                 menu.addSeparator()
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     menu.addAction(self.merge_action)
-                menu.addAction(open_plot_editor_action)
                 menu.addAction(average_action)
                 menu.addAction(split_action)
                 menu.addAction(scale_current_action)
@@ -921,9 +908,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for file in dmp_files:
             self.pb.setText(f"Converting {Path(file).name}")
             try:
-                if file.endswith('dmp'):
+                if file.lower().endswith('dmp'):
                     pem_file = parser.parse_dmp(file)
-                elif file.endswith('dmp2'):
+                elif file.lower().endswith('dmp2'):
                     pem_file = parser.parse_dmp2(file)
             except Exception as e:
                 self.error.setWindowTitle('Error converting DMP file')
@@ -1401,8 +1388,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             print(f"New project dir: {str(path)}")
             self.project_dir_label.setText(f"Project directory: {str(path)}")
 
-            # self.fill_gps_list()
-            # self.fill_pem_list()
+            self.fill_gps_list()
+            self.fill_pem_list()
 
     def fill_gps_list(self):
         """
@@ -1447,8 +1434,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         @stopit.threading_timeoutable(default='timeout')
         def find_pem_files():
-            # Find all .PEM files in the project directory
-            return list(self.project_dir.rglob('*.PEM'))
+            files = []
+            # Find all .PEM, .DMP, and .DMP2 files in the project directory
+            files.extend(list(self.project_dir.rglob('*.PEM')))
+            files.extend(list(self.project_dir.rglob('*.DMP')))
+            files.extend(list(self.project_dir.rglob('*.DMP2')))
+            return files
 
         if not self.project_dir:
             self.message.information(self, 'Error', 'No project directory has been selected.')
@@ -1936,7 +1927,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                             item.setForeground(QtGui.QColor('black'))
 
             if not pem_has_gps:
-                color_row(row, 'magenta')
+                color_row(row, 'darkBlue')
 
             if self.allow_signals:
                 self.table.blockSignals(False)

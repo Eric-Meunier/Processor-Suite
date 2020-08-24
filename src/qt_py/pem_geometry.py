@@ -483,11 +483,12 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             if az is None:
                 az, dip, depth = seg_az, seg_dip, seg_depth
 
-        add_az_spline(az, depth)
-        add_dip_spline(dip, depth)
+        if az and depth:
+            add_az_spline(az, depth)
+            add_dip_spline(dip, depth)
 
-        add_collar_az(az, depth)
-        add_collar_dip(dip, depth)
+            add_collar_az(az, depth)
+            add_collar_dip(dip, depth)
 
         # Adds the annotations when a point on a line is clicked
         set_cursor()
