@@ -146,7 +146,7 @@ class PEMFile:
 
         # Add the datetime column
         if 'datetime' not in self.data.columns:
-            self.data.insert(15, 'datetime', False)
+            self.data.insert(15, 'datetime', None)
 
         self.filepath = Path(filepath)
 
@@ -216,7 +216,7 @@ class PEMFile:
 
         # Add the datetime column
         if 'datetime' not in self.data.columns:
-            self.data.insert(15, 'datetime', False)
+            self.data.insert(15, 'datetime', None)
 
         self.filepath = filepath.with_suffix('.PEM')
 
@@ -1124,7 +1124,7 @@ class PEMFile:
         filtered_data = self.data[filt].groupby(['Station', 'RAD_ID'],
                                                 group_keys=False,
                                                 as_index=False).apply(lambda k: filter_data(k)).dropna(axis=0)
-        assert not filtered_data.empty, f"No eligdible data found for probe de-rotation in {self.filepath.name}"
+        assert not filtered_data.empty, f"No eligible data found for probe de-rotation in {self.filepath.name}"
         print(f"PEMFile - Time to filter data for rotation preparation: {time.time() - st}")
 
         # Calculate the RAD tool angles
@@ -1821,7 +1821,7 @@ class PEMParser:
                                          'Number_of_stacks',
                                          'Readings_per_set',
                                          'Reading_number']].astype(int)
-            df['ZTS'] = df['ZTS'].astype(int)
+            df['ZTS'] = df['ZTS'].astype(float)
             print(f"PEMParser - Time to parse data of {self.filepath.name}: {time.time() - t}")
             return df
 
@@ -1834,7 +1834,7 @@ class PEMParser:
             contents = file.readlines()
 
         # Remove the ~ comments from files converted with Bill's software, makes breaking up the file for parsing easier
-        for i, line in enumerate(contents[:100]):
+        for i, line in enumerate(contents):
             if '~' in line:
                 # Don't remove the transmitter and hole tag lines
                 if re.match('~ Transmitter.*', line) or re.match('~ Hole.*', line) or re.match('~\n', line):
@@ -1938,7 +1938,7 @@ class DMPParser:
             header['Line_name'] = text[7]
             header['Loop_name'] = text[10]
             header['Date'] = datetime.strptime(text[14], '%m/%d/%y').strftime('%B %d, %Y')
-            header['Survey type'] = text[6].split()[0]
+            header['Survey type'] = text[6]
             header['Convention'] = text[15]
             header['Sync'] = text[18]
             header['Timebase'] = float(text[16].split('ms')[0]) if 'ms' in text[16] else float(text[16].split()[0])

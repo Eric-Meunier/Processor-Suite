@@ -214,7 +214,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.refresh_gps_list_btn.setText('')
 
         # self.stackedWidget.hide()
-        self.piw_frame.hide()
+        # self.piw_frame.hide()
         self.table.horizontalHeader().hide()
         # self.pemInfoDockWidget.hide()
 
@@ -414,11 +414,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 column = self.table_columns.index(header.title())
 
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
+                item.setBackground(self.table.itemAt(column, row).background())
+                item.setForeground(self.table.itemAt(column, row).foreground())
                 self.table.setItem(row, column, item)
 
             self.table.blockSignals(False)
 
         def toggle_pem_list_buttons():
+            """
+            Signal slot, enable and disable the add/remove buttons tied to the PEM list based on whether any list items
+            are currently selected.
+            """
             if self.pem_list.selectedItems():
                 self.add_pem_btn.setEnabled(True)
                 self.remove_pem_btn.setEnabled(True)
@@ -427,6 +433,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.remove_pem_btn.setEnabled(False)
 
         def toggle_gps_list_buttons():
+            """
+            Signal slot, enable and disable the add/remove buttons tied to the GPS list based on whether any list items
+            are currently selected.
+            """
             if self.gps_list.selectedItems():
                 self.add_gps_btn.setEnabled(True)
                 self.remove_gps_btn.setEnabled(True)
@@ -435,22 +445,39 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.remove_gps_btn.setEnabled(False)
 
         def add_pem_list_files():
+            """
+            Signal slot, open the selected PEM files in to the PEM list
+            """
             selected_rows = [self.pem_list.row(i) for i in self.pem_list.selectedItems()]
-            filepaths = [str(self.available_pems[j]) for j in selected_rows]
-            self.open_pem_files(filepaths)
+            pem_filepaths = [str(self.available_pems[j]) for j in selected_rows if
+                             str(self.available_pems[j]).lower().endswith('pem')]
+            dmp_filepaths = [str(self.available_pems[j]) for j in selected_rows if
+                             str(self.available_pems[j]).lower().endswith('dmp') or
+                             str(self.available_pems[j]).lower().endswith('dmp2')]
+            self.open_pem_files(pem_filepaths)
+            self.open_dmp_files(dmp_filepaths)
 
         def add_gps_list_files():
+            """
+            Signal slot, open the selected GPS files in to the GPS list
+            """
             selected_rows = [self.gps_list.row(i) for i in self.gps_list.selectedItems()]
             filepaths = [str(self.available_gps[j]) for j in selected_rows]
             self.open_gps_files(filepaths)
 
         def remove_pem_list_files():
+            """
+            Signal slot, remove the selected items from the list. Can be brought back by refreshing.
+            """
             selected_rows = [self.pem_list.row(i) for i in self.pem_list.selectedItems()]
             for row in sorted(selected_rows, reverse=True):
                 self.pem_list.takeItem(row)
                 self.available_pems.pop(row)
 
         def remove_gps_list_files():
+            """
+            Signal slot, remove the selected items from the list. Can be brought back by refreshing.
+            """
             selected_rows = [self.gps_list.row(i) for i in self.gps_list.selectedItems()]
             for row in sorted(selected_rows, reverse=True):
                 self.gps_list.takeItem(row)
@@ -502,15 +529,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.client_edit.textChanged.connect(lambda: set_shared_header('client'))
         self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
         self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
-
-        # self.share_range_cbox.toggled.connect(
-        #     lambda: self.min_range_edit.setEnabled(self.share_range_cbox.isChecked()))
-        # self.share_range_cbox.toggled.connect(
-        #     lambda: self.max_range_edit.setEnabled(self.share_range_cbox.isChecked()))
-        # self.share_range_cbox.stateChanged.connect(self.refresh_table)
-
-        # self.min_range_edit.editingFinished.connect(lambda: self.refresh_table(single_row=False))
-        # self.max_range_edit.editingFinished.connect(lambda: self.refresh_table(single_row=False))
 
         self.auto_name_line_btn.clicked.connect(self.auto_name_lines)
         self.auto_merge_files_btn.clicked.connect(lambda: self.merge_pem_files(auto_select=True))
@@ -677,13 +695,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 menu.popup(QtGui.QCursor.pos())
 
     def eventFilter(self, source, event):
-        # Clear the selection when clicking away from any file
-        if (event.type() == QtCore.QEvent.MouseButtonPress and
-                source is self.table.viewport() and
-                self.table.itemAt(event.pos()) is None):
-            self.table.clearSelection()
+        # # Clear the selection when clicking away from any file
+        # if (event.type() == QtCore.QEvent.MouseButtonPress and
+        #         source is self.table.viewport() and
+        #         self.table.itemAt(event.pos()) is None):
+        #     self.table.clearSelection()
+
         # Change the focus to the table so the 'Del' key works
-        elif source == self.table and event.type() == QtCore.QEvent.FocusIn:
+        if source == self.table and event.type() == QtCore.QEvent.FocusIn:
             self.actionDel_File.setEnabled(True)
         elif source == self.table and event.type() == QtCore.QEvent.FocusOut:
             self.actionDel_File.setEnabled(False)
@@ -883,7 +902,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if len(self.pem_files) == 0:
             # if not self.isMaximized():
             #     self.resize(self.width() - 425, self.height())
-            self.piw_frame.hide()
+            # self.piw_frame.hide()
             self.table.horizontalHeader().hide()
             self.client_edit.setText('')
             self.grid_edit.setText('')
@@ -897,6 +916,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Convert and open a .DMP or .DMP2 file
         :param dmp_files: list of str, filepaths of .DMP or .DMP2 files
         """
+        if not dmp_files:
+            return
+
         if not isinstance(dmp_files, list):
             dmp_files = [dmp_files]
 
@@ -910,7 +932,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             try:
                 if file.lower().endswith('dmp'):
                     pem_file = parser.parse_dmp(file)
-                elif file.lower().endswith('dmp2'):
+                else:
                     pem_file = parser.parse_dmp2(file)
             except Exception as e:
                 self.error.setWindowTitle('Error converting DMP file')
@@ -1006,11 +1028,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if self.loop_edit.text() == '':
                 self.loop_edit.setText(pem_file.loop_name)
 
-        if not isinstance(pem_files, list):
-            pem_files = [pem_files]
-
         if not pem_files:
             return
+
+        if not isinstance(pem_files, list):
+            pem_files = [pem_files]
 
         t1 = time.time()
         parser = PEMParser()
@@ -1039,6 +1061,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             # Check if the file is already opened in the table. Won't open if it is.
             if is_opened(pem_file):
                 self.status_bar.showMessage(f"{pem_file.filepath.name} is already opened", 2000)
+                count += 1
+                self.pb.setValue(count)
             else:
                 self.pb.setText(f"Opening {pem_file.filepath.name}")
                 # Create the PEMInfoWidget
@@ -1047,7 +1071,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # Fill the shared header text boxes and move the project directory
                 if not self.pem_files:
                     share_header(pem_file)
-                    self.piw_frame.show()
+                    # self.piw_frame.show()
                     self.move_dir_tree_to(pem_file.filepath.parent)
 
                 # Fill CRS from the file if project CRS currently empty
@@ -1410,13 +1434,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return
 
         self.gps_list.clear()
-        # Try to find a GPS folder, but time out after 3 seconds
-        gps_dir = find_gps_dir(timeout=3)
+        # Try to find a GPS folder, but time out after 0.3 seconds
+        gps_dir = find_gps_dir(timeout=0.3)
 
         if gps_dir is None:
             return
         elif gps_dir == 'timeout':
-            self.message.information(self, 'Timeout', 'Searching for the GPS folder timed out.')
+            # self.message.information(self, 'Timeout', 'Searching for the GPS folder timed out.')
             return
         else:
             if gps_dir:
@@ -1447,13 +1471,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.pem_list.clear()
 
-        # Try to find .PEM files, but time out after 3 seconds
-        self.available_pems = find_pem_files(timeout=3)
+        # Try to find .PEM files, but time out after 0.3 seconds
+        self.available_pems = find_pem_files(timeout=0.3)
 
         if self.available_pems is None:
             return
         elif self.available_pems == 'timeout':
-            self.message.information(self, 'Timeout', 'Searching for PEM files timed out.')
+            # self.message.information(self, 'Timeout', 'Searching for PEM files timed out.')
             return
         else:
             for file in self.available_pems:
@@ -1927,7 +1951,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                             item.setForeground(QtGui.QColor('black'))
 
             if not pem_has_gps:
-                color_row(row, 'darkBlue')
+                color_row(row, 'blue')
 
             if self.allow_signals:
                 self.table.blockSignals(False)
@@ -2982,13 +3006,15 @@ def main():
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    # mw.open_pem_files(pem_files)
 
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'
     # mw.open_dmp_files(file)
+
     mw.show()
 
     # mw.show()
-    # mw.open_pem_files(pem_files)
+
     # mw.delete_merged_files_cbox.setChecked(False)
 
     # mw.merge_pem_files(pem_files)

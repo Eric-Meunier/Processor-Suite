@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 import pylineclip as lc
-from datetime import datetime
+from scipy import spatial
 from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
                              QDesktopWidget)
@@ -99,6 +99,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.selected_lines = []
         self.deleted_lines = []
         self.selected_profile_stations = np.array([])
+        self.nearest_decay = None
 
         self.active_ax = None
         self.active_ax_ind = None
@@ -200,6 +201,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.change_decay_suffix_btn.clicked.connect(lambda: self.change_suffix_dialog(source='decay'))
         self.change_station_decay_btn.clicked.connect(self.change_station)
         self.flip_decay_btn.clicked.connect(lambda: self.flip_decays(source='decay'))
+        self.zoom_to_offtime_btn.clicked.connect(self.zoom_to_offtime)
 
         self.change_comp_profile_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='profile'))
         self.change_profile_suffix_btn.clicked.connect(lambda: self.change_suffix_dialog(source='profile'))
@@ -265,7 +267,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Reset the ranges of the plots when the space bar is pressed
         elif event.key() == QtCore.Qt.Key_Space:
-            self.reset_range()
+            if keyboard.is_pressed('Shift'):
+                self.zoom_to_offtime()
+            else:
+                self.reset_range()
 
         # Clear the selected decays when the Escape key is pressed
         elif event.key() == QtCore.Qt.Key_Escape:
@@ -322,7 +327,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             ax.setLabel('bottom', 'Channel number')
 
         # Plot the LIN profiles
-        self.plot_profiles()
+        self.plot_profiles(components='all')
         # Plot the first station. This also helps with the linking of the X and Y axes for the decay plots.
         self.plot_station(self.stations.min())
 
@@ -514,6 +519,45 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 else:
                     ax.setYLink(None)
 
+    def reset_range(self):
+        """
+        Auto range all axes
+        """
+        # If the y axes are linked, manually set the Y limit
+        if self.link_y_cbox.isChecked():
+            # Auto range the X, then manually set the Y.
+            self.active_decay_axes[0].autoRange()
+            filt = self.pem_file.data.cStation == self.selected_station
+            min_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x.min()).min()
+            max_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x.max()).max()
+            self.active_decay_axes[0].setYRange(min_y, max_y)
+        else:
+            for ax in self.decay_axes:
+                ax.autoRange()
+
+        for ax in self.profile_axes[1:]:
+            ax.autoRange()
+        self.active_profile_axes[0].autoRange()
+
+    def zoom_to_offtime(self):
+        """
+        Change the Y limits of the decay plots to be zoomed on the late off-time channels.
+        """
+        filt = self.pem_file.data.cStation == self.selected_station
+        channel_mask = self.pem_file.channel_times.Remove == False
+        min_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x[channel_mask][-3:].min()).min() - 1
+        max_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x[channel_mask][-3:].max()).max() + 1
+
+        # If the y axes are linked, manually set the Y limit
+        if self.link_y_cbox.isChecked():
+            # Auto range the X, then manually set the Y.
+            self.active_decay_axes[0].autoRange()
+
+            self.active_decay_axes[0].setYRange(min_y, max_y)
+        else:
+            for ax in self.decay_axes:
+                ax.setYRange(min_y, max_y)
+
     def plot_profiles(self, components=None):
         """
         Plot the PEM file in a LIN plot style, with both components in separate plots
@@ -636,9 +680,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         self.number_of_readings.setText(f"{len(file.data)} readings ")
 
-        # Get the components
-        if components is None or components == 'all':
-            components = file.get_components()
+        if not isinstance(components, np.ndarray):
+            # Get the components
+            if components is None or components == 'all':
+                components = file.get_components()
 
         # Clear the plots of the components that are to be plotted only
         clear_plots(components)
@@ -732,7 +777,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             else:
                 style = QtCore.Qt.SolidLine
 
-            pen = pg.mkPen(color, width=1.5, style=style)
+            pen = pg.mkPen(color, width=1., style=style)
 
             # Remove the on-time channels if the checkbox is checked
             if self.plot_ontime_decays_cbox.isChecked():
@@ -766,6 +811,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Keep the same lines highlighted after data modification
         if preserve_selection is False:
             self.selected_lines = []
+            self.nearest_decay = None
         else:
             index_of_selected = [self.plotted_decay_lines.index(line) for line in self.selected_lines]
 
@@ -816,26 +862,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             for ax in self.active_decay_axes:
                 ax.autoRange()
 
-    def reset_range(self):
-        """
-        Auto range all axes
-        """
-        # If the y axes are linked, manually set the Y limit
-        if self.link_y_cbox.isChecked():
-            # Auto range the X, then manually set the Y.
-            self.active_decay_axes[0].autoRange()  
-            filt = self.pem_file.data.cStation == self.selected_station
-            min_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x.min()).min()
-            max_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x.max()).max()
-            self.active_decay_axes[0].setYRange(min_y, max_y)
-        else:
-            for ax in self.decay_axes:
-                ax.autoRange()
-
-        for ax in self.profile_axes[1:]:
-            ax.autoRange()
-        self.active_profile_axes[0].autoRange()
-
     def highlight_lines(self):
         """
         Highlight the line selected and un-highlight any previously highlighted line.
@@ -877,7 +903,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     selected_decay = selected_data.iloc[0]
                     r_number_text = f"Reading Number {selected_decay.Reading_number}"
                     r_index_text = f"Reading Index {selected_decay.Reading_index}"
-                    if 'datetime' in selected_decay.index.values:
+                    timestamp = selected_decay.datetime
+                    if timestamp is not None:
                         date_time = f"Timestamp: {selected_decay.datetime.strftime('%b %d - %H:%M:%S')}"
                     else:
                         date_time = ''
@@ -912,7 +939,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             # Change the color and width of the plotted lines
             for line, del_flag, overload in zip(self.plotted_decay_lines, self.plotted_decay_data.del_flag, self.plotted_decay_data.Overload):
 
-                # Change the pen if the data is flagged for deletion or overload
+                # Change the pen if the data is flagged for deletion
                 if del_flag is False:
                     color = (96, 96, 96)
                     z_value = 3
@@ -935,11 +962,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     # print(f"Line {self.plotted_decay_lines.index(line)} selected")
                     line.setPen(color, width=2, style=style)
                     line.setZValue(z_value)
-                    if len(self.selected_lines) == 1:
-                        line.setShadowPen(pg.mkPen('w', width=2.5, cosmetic=True))
+                    # if len(self.selected_lines) == 1:
+                    #     line.setShadowPen(pg.mkPen('w', width=2.5, cosmetic=True))
                 else:
                     line.setPen(color, width=1, style=style)
-                    line.setShadowPen(None)
+                    # line.setShadowPen(None)
 
             set_decay_selection_text(self.get_selected_decay_data())
 
@@ -1011,21 +1038,34 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Signal slot, select the decay line that was clicked. If control is held, it extends the current selection.
         :param line: clicked PlotItem line
         """
-        self.line_selected = True
-        if keyboard.is_pressed('ctrl'):
-            self.selected_lines.append(line)
-            self.highlight_lines()
-        else:
-            self.selected_data = None
-            self.selected_lines = [line]
-            self.highlight_lines()
+        pass
+        # self.line_selected = True
+        # if keyboard.is_pressed('ctrl'):
+        #     self.selected_lines.append(line)
+        #     self.highlight_lines()
+        # else:
+        #     self.selected_data = None
+        #     self.selected_lines = [line]
+        #     self.highlight_lines()
 
     def decay_plot_clicked(self, evt):
         """
-        Signal slot, change the profile tab to the same component as the clicked decay plot
+        Signal slot, change the profile tab to the same component as the clicked decay plot, and select the neareset
+        decay line. If control is held, it extends the current selection.
         :param evt: MouseClick event
         """
         self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
+
+        if self.nearest_decay:
+
+            self.line_selected = True
+            if keyboard.is_pressed('ctrl'):
+                self.selected_lines.append(self.nearest_decay)
+                self.highlight_lines()
+            else:
+                self.selected_data = None
+                self.selected_lines = [self.nearest_decay]
+                self.highlight_lines()
 
     def decay_mouse_moved(self, evt):
         """
@@ -1040,6 +1080,39 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.active_ax_ind = np.where(self.decay_axes == self.active_ax)[0][0]
                 self.last_active_ax_ind = self.active_ax_ind
                 break
+
+        if self.active_ax is not None:
+            line_distances = []
+            ax_lines = self.active_ax.curves
+
+            # Change the mouse coordinates to be relative to the plot coordinates
+            m_pos = self.active_ax.vb.mapSceneToView(evt)
+            xm, ym = m_pos.x(), m_pos.y()
+
+            for line in ax_lines:
+                xi, yi = line.xData, line.yData
+
+                # Calcualte the distance between each point of the line and the mouse position
+                distances = spatial.distance.cdist(np.array([[xm, ym]]), np.array([xi, yi]).T,
+                                                   metric='euclidean')
+                # distances = np.array([np.linalg.norm(np.array([x, y]) - np.array([xm, ym])) for x, y in zip(xi, yi)])
+                line_distances.append(distances)
+
+            # Find the index of the smallest overall distance
+            ind_of_min = np.array([l.min() for l in line_distances]).argmin()
+            self.nearest_decay = ax_lines[ind_of_min]
+            for line in ax_lines:
+                if line == self.nearest_decay:
+                    line_color = line.opts.get('pen').color()
+                    line.setShadowPen(pg.mkPen(line_color, width=2.5, cosmetic=True))
+                else:
+                    line.setShadowPen(None)
+
+        # Reset everything when the mouse is moved outside of an axes
+        else:
+            self.nearest_decay = None
+            for line in self.plotted_decay_lines:
+                line.setShadowPen(None)
 
     def box_select_decay_lines(self, rect):
         """
@@ -1477,7 +1550,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.pem_file.data[self.pem_file.data.del_flag == False] = cleaned_data
 
         # Plot the new data
-        self.plot_profiles()
+        self.plot_profiles(components='all')
         self.plot_station(self.selected_station)
 
         self.message.information(self, 'Auto-clean results', f"{count} reading(s) automatically deleted.")
@@ -1657,7 +1730,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(file='7600N.PEM')
+    pem_files = pem_getter.get_pems(client='Minera', file='L10000N_8.PEM')
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])

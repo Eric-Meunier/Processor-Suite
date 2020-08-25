@@ -207,6 +207,12 @@ class Derotator(QMainWindow, Ui_Derotator):
         except Exception as e:
             self.message.information(self, 'Error', str(e))
         else:
+            # Disable the PP values tab if there's no PP information
+            if all([self.pem_file.has_loop_gps(), self.pem_file.has_geometry(), self.pem_file.ramp > 0]):
+                self.tabWidget.setTabEnabled(1, True)
+            else:
+                self.tabWidget.setTabEnabled(1, False)
+
             # Fill the table with the ineligible stations
             if not ineligible_stations.empty:
                 fill_table(ineligible_stations)
@@ -461,8 +467,8 @@ def main():
 
     pg = PEMGetter()
     parser = PEMParser()
-    # pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
-    pem_files = parser.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\test results\718-2941xy - test conversion.pem')
+    pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
+    # pem_files = parser.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\test results\718-2941xy - test conversion.pem')
     mw.open(pem_files)
 
     app.exec_()

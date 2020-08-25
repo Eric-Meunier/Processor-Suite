@@ -1285,7 +1285,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             gps = self.get_loop()
 
-        default_path = self.pem_file.filepath.parent
+        if gps.df.empty:
+            return
+
+        default_path = str(self.pem_file.filepath.parent)
         selected_path = self.dialog.getSaveFileName(self, 'Save File', directory=default_path,
                                                     filter='Text files (*.txt);; CSV files (*.csv);; All files(*.*)')
         if selected_path[0]:
