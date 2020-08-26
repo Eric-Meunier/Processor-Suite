@@ -144,7 +144,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
         self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
+        self.flip_station_signs_button.clicked.connect(self.check_missing_gps)
         self.stations_from_data_btn.clicked.connect(self.stations_from_data)
+        self.stations_from_data_btn.clicked.connect(self.check_missing_gps)
         self.reversePolarityButton.clicked.connect(self.reverse_polarity)
         self.rename_repeat_stations_btn.clicked.connect(self.rename_repeat_stations)
 
@@ -642,7 +644,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         def bolden_repeat_stations():
             """
-            Makes the station number cell bold if it ends with either 1, 4, 5, 9.
+            Makes the station number cell bold if it ends with either 1, 4, 6, 9.
             """
             repeats = 0
             boldFont = QtGui.QFont()
@@ -717,22 +719,18 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def check_missing_gps(self):
         """
-        Find stations that are in the Data but aren't in the GPS. Missing GPS are added to the missing_gps_table.
+        Find stations that are in the EM data but aren't in the GPS. Missing GPS are added to the missing_gps_list.
         :return: None
         """
-        self.clear_table(self.missing_gps_table)
+        self.missing_gps_list.clear()
         data_stations = self.pem_file.get_stations(converted=True)
         gps_stations = self.get_line().df.Station.astype(int).unique()
         filt = np.isin(data_stations, gps_stations, invert=True)
         missing_gps = data_stations[filt]
 
-        # Add the missing GPS stations to the missing_gps_table
+        # Add the missing GPS stations to the missing_gps_list
         for i, station in enumerate(missing_gps):
-            self.missing_gps_table.insertRow(i)
-            item = QTableWidgetItem(str(station))
-            item.setTextAlignment(QtCore.Qt.AlignCenter)
-            item.setForeground(QtGui.QColor('red'))
-            self.missing_gps_table.setItem(i, 0, item)
+            self.missing_gps_list.addItem(str(station))
 
     def update_pem_from_table(self, table_row, table_col):
         """
@@ -826,62 +824,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         gps = gps.df.loc[filt]
 
         self.fill_gps_table(gps, self.line_table)
-
-    # def sort_station_gps(self):
-    #     line = self.get_line()
-    #     sorted_line = line.get_line(sorted=True)
-    #     self.fill_station_table(sorted_line)
-    #
-    # def sort_loop_gps(self):
-    #     loop = self.get_loop()
-    #     sorted_loop = loop.get_loop(sorted=True)
-    #     self.fill_loop_table(sorted_loop)
-
-    # def move_table_row_up(self):
-    #     """
-    #     Move selected rows of the LoopGPSTable up.
-    #     :return: None
-    #     """
-    #     rows = self.get_selected_rows(self.loop_table)
-    #     loop_gps = self.get_loop()
-    #
-    #     for row in rows:
-    #         removed_row = loop_gps.pop(row)
-    #         loop_gps.insert(row-1, removed_row)
-    #
-    #     self.fill_loop_table(loop_gps)
-    #     self.loop_table.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
-    #     [self.loop_table.selectRow(row-1) for row in rows]
-    #     self.loop_table.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-    #
-    # def move_table_row_down(self):
-    #     """
-    #     Move selected rows of the LoopGPSTable down.
-    #     :return: None
-    #     """
-    #     rows = self.get_selected_rows(self.loop_table)
-    #     loop_gps = self.get_loop()
-    #
-    #     for row in rows:
-    #         removed_row = loop_gps.pop(row)
-    #         loop_gps.insert(row + 1, removed_row)
-    #
-    #     self.fill_loop_table(loop_gps)
-    #     self.loop_table.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
-    #     [self.loop_table.selectRow(row + 1) for row in rows]
-    #     self.loop_table.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-    #
-    # def toggle_loop_move_buttons(self):
-    #     """
-    #     Slot: Enables or disables the loopGPS arrow buttons whenever a row in the table is selected or de-selected.
-    #     :return: None
-    #     """
-    #     if self.loop_table.selectionModel().selectedRows():
-    #         self.moveUpButton.setEnabled(True)
-    #         self.moveDownButton.setEnabled(True)
-    #     else:
-    #         self.moveUpButton.setEnabled(False)
-    #         self.moveDownButton.setEnabled(False)
 
     def shift_gps_station_numbers(self):
         """
@@ -988,9 +930,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         self.line_table.blockSignals(True)
+        station_column = self.line_table_columns.index('Station')
 
         def flip_stn_num(row):
-            station_column = 5
             station_item = self.line_table.item(row, station_column)
             if station_item:
                 station = int(station_item.text())
@@ -1012,8 +954,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def reverse_polarity(self, component=None):
         """
         Reverse the polarity of selected readings
-        :param selected_rows: Selected rows from the data_table to be changed. If none is selected, it will reverse
-        the polarity for all rows.
         :param component: Selected component to be changed. If none is selected, it will reverse the polarity for
         all rows.
         :return: None

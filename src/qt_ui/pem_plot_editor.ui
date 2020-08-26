@@ -164,6 +164,12 @@
             <property name="shortcut">
              <string>Shift+Space</string>
             </property>
+            <property name="default">
+             <bool>false</bool>
+            </property>
+            <property name="flat">
+             <bool>false</bool>
+            </property>
            </widget>
           </item>
          </layout>
@@ -199,7 +205,7 @@
              <enum>Qt::NoFocus</enum>
             </property>
             <property name="text">
-             <string>Edit Component</string>
+             <string>Component</string>
             </property>
            </widget>
           </item>
@@ -212,7 +218,7 @@
              <enum>Qt::NoFocus</enum>
             </property>
             <property name="text">
-             <string>Edit Suffix</string>
+             <string>Suffix</string>
             </property>
            </widget>
           </item>
@@ -225,7 +231,7 @@
              <enum>Qt::NoFocus</enum>
             </property>
             <property name="text">
-             <string>Edit Station</string>
+             <string>Station</string>
             </property>
            </widget>
           </item>
@@ -238,7 +244,7 @@
              <enum>Qt::NoFocus</enum>
             </property>
             <property name="text">
-             <string>Flip</string>
+             <string>+/-</string>
             </property>
            </widget>
           </item>
@@ -351,7 +357,7 @@
          <property name="currentIndex">
           <number>1</number>
          </property>
-         <widget class="QWidget" name="x_profile_widget" native="true">
+         <widget class="QWidget" name="x_profile_widget">
           <layout class="QVBoxLayout" name="verticalLayout">
            <property name="leftMargin">
             <number>0</number>
@@ -377,7 +383,7 @@
            </item>
           </layout>
          </widget>
-         <widget class="QWidget" name="y_profile_widget" native="true">
+         <widget class="QWidget" name="y_profile_widget">
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <property name="leftMargin">
             <number>0</number>
@@ -400,7 +406,7 @@
            </item>
           </layout>
          </widget>
-         <widget class="QWidget" name="z_profile_widget" native="true">
+         <widget class="QWidget" name="z_profile_widget">
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <property name="leftMargin">
             <number>0</number>
@@ -552,7 +558,7 @@
              <enum>Qt::NoFocus</enum>
             </property>
             <property name="text">
-             <string>Edit Components</string>
+             <string>Components</string>
             </property>
            </widget>
           </item>
@@ -565,7 +571,7 @@
              <enum>Qt::NoFocus</enum>
             </property>
             <property name="text">
-             <string>Edit Suffixes</string>
+             <string>Suffixes</string>
             </property>
            </widget>
           </item>
@@ -578,7 +584,7 @@
              <enum>Qt::NoFocus</enum>
             </property>
             <property name="text">
-             <string>Shift Stations</string>
+             <string>Stations</string>
             </property>
            </widget>
           </item>
@@ -591,7 +597,14 @@
              <enum>Qt::NoFocus</enum>
             </property>
             <property name="text">
-             <string>Flip</string>
+             <string>+/-</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="Line" name="line">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -604,7 +617,49 @@
              <enum>Qt::NoFocus</enum>
             </property>
             <property name="text">
-             <string>Remove</string>
+             <string>Del</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="title">
+          <string>Cleaning</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_12">
+          <item>
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Threshold Value</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="auto_clean_std_sbox">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>10</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="auto_clean_btn">
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
+            </property>
+            <property name="text">
+             <string>Auto-Clean</string>
             </property>
            </widget>
           </item>
@@ -623,16 +678,6 @@
           </size>
          </property>
         </spacer>
-       </item>
-       <item>
-        <widget class="QPushButton" name="auto_clean_btn">
-         <property name="focusPolicy">
-          <enum>Qt::NoFocus</enum>
-         </property>
-         <property name="text">
-          <string>Auto-Clean</string>
-         </property>
-        </widget>
        </item>
       </layout>
      </widget>
@@ -656,6 +701,8 @@
     <addaction name="separator"/>
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
+    <addaction name="separator"/>
+    <addaction name="actionReset_File"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -688,6 +735,14 @@
     <string>Open</string>
    </property>
   </action>
+  <action name="actionReset_File">
+   <property name="text">
+    <string>Reset File</string>
+   </property>
+   <property name="toolTip">
+    <string>Revert all changes made to the PEM file</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -709,7 +764,6 @@
   <tabstop>shift_station_profile_btn</tabstop>
   <tabstop>flip_profile_btn</tabstop>
   <tabstop>remove_profile_btn</tabstop>
-  <tabstop>auto_clean_btn</tabstop>
   <tabstop>z_profile_layout</tabstop>
   <tabstop>x_profile_layout</tabstop>
  </tabstops>

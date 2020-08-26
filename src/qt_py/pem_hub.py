@@ -3005,9 +3005,9 @@ def main():
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', number=4)
-    # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
-    # mw.open_pem_files(pem_files)
-
+    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    mw.open_pem_files(pem_files)
+    #
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'
     # mw.open_dmp_files(file)
 

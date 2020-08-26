@@ -539,6 +539,24 @@ class PEMFile:
 
         return survey_type
 
+    def get_repeats(self):
+        """
+        Return a mask of which stations may be repeat stations.
+        :return: np.array mask
+        """
+
+        def find_repeats(station):
+            station_num = re.search('\d+', station).group()
+            if station_num[-1] == '1' or station_num[-1] == '4' or station_num[-1] == '6' or station_num[-1] == '9':
+                return True
+            else:
+                return False
+
+        # Set the number of repeat stations
+        repeat_mask = self.data.Station.map(find_repeats)
+        repeat_data = self.data[repeat_mask]
+        return repeat_data
+
     def to_string(self):
         """
         Return the text format of the PEM file

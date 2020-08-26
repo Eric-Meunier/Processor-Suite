@@ -12,7 +12,7 @@ import pylineclip as lc
 from scipy import spatial
 from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                             QDesktopWidget)
+                             QPushButton, QTableWidget, QTableWidgetItem, QWidget, QHBoxLayout, QAbstractItemView)
 from pyqtgraph.Point import Point
 # from pyod.models.abod import ABOD
 # from pyod.models.knn import KNN
@@ -75,6 +75,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.operator_label.setIndent(5)
         self.number_of_readings = QLabel()
         self.number_of_readings.setIndent(5)
+        self.number_of_repeats = QPushButton('')
+        self.number_of_repeats.setFlat(True)
+        self.number_of_repeats.setFixedHeight(21)
+        # self.number_of_repeats.hide()
 
         self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray;}")
         self.status_bar.setStyleSheet("border-top: 1px solid gray;")
@@ -87,9 +91,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.status_bar.addPermanentWidget(self.timebase_label, 0)
         self.status_bar.addPermanentWidget(self.operator_label, 0)
         self.status_bar.addPermanentWidget(self.number_of_readings, 0)
+        self.status_bar.addPermanentWidget(self.number_of_repeats, 0)
 
         self.converter = StationConverter()
         self.pem_file = None
+        self.fallback_file = None
         self.units = None
         self.stations = np.array([])
 
@@ -210,14 +216,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.remove_profile_btn.clicked.connect(self.remove_stations)
 
         self.auto_clean_btn.clicked.connect(self.auto_clean)
+        self.actionReset_File.triggered.connect(self.reset_file)
+        self.number_of_repeats.clicked.connect(self.rename_repeats)
 
         # Menu
         self.actionOpen.triggered.connect(self.open_file_dialog)
         self.actionSave.triggered.connect(self.save)
         self.actionSave_As.triggered.connect(self.save_as)
-
-        # Other
-        self.profile_tab_widget.currentChanged.connect(self.profile_tab_changed)
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
@@ -302,6 +307,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             parser = PEMParser()
             pem_file = parser.parse(pem_file)
 
+        self.fallback_file = copy.deepcopy(pem_file)
         self.pem_file = pem_file
         self.timebase_label.setText(f"Timebase: {self.pem_file.timebase:.2f}ms")
         self.survey_type_label.setText(f"{self.pem_file.get_survey_type()} Survey")
@@ -315,6 +321,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Set the units of the decay plots
         self.units = self.pem_file.units
+        if self.units == 'pT':
+            self.auto_clean_std_sbox.setValue(100)
+        else:
+            self.auto_clean_std_sbox.setValue(10)
 
         # Add the line name and loop name as the title for the profile plots
         self.x_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[X Component]")
@@ -491,7 +501,14 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Re-set the limits of the profile plots
         for ax in self.profile_axes:
-            ax.setLimits(xMin=self.pem_file.data.cStation.min(), xMax=self.pem_file.data.cStation.max())
+            ax.setLimits(xMin=self.pem_file.data.cStation.min() - 1, xMax=self.pem_file.data.cStation.max() + 1)
+
+        repeats = self.pem_file.get_repeats()
+        self.number_of_repeats.setText(f'{len(repeats)} repeat(s)')
+        # if num_repeats > 0:
+        #     self.number_of_repeats.setStyleSheet('background-color: red;')
+        # else:
+        #     self.number_of_repeats.setStyleSheet('background-color: black;')
 
         components = self.pem_file.get_components()
         toggle_profile_plots()
@@ -766,11 +783,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             # Change the pen if the data is flagged for deletion or overload
             if row.del_flag is False:
-                color = (96, 96, 96)
-                z_value = 1
-            else:
-                color = 'r'
+                color = (96, 96, 96, 150)
                 z_value = 2
+            else:
+                color = (255, 0, 0, 50)
+                z_value = 1
 
             if row.Overload is True:
                 style = QtCore.Qt.DashDotDotLine
@@ -873,18 +890,14 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             Update the status bar with information about the selected lines
             """
             if self.selected_lines:
-
+                decay_selection_text = []
                 # Show the range of reading numbers and reading indexes if multiple decays are selected
                 if len(selected_data) > 1:
+                    num_deleted = len(selected_data[selected_data.del_flag == True])
+                    num_selected = f"{len(selected_data)} selected ({num_deleted} deleted)"
                     r_numbers = selected_data.Reading_number.unique()
                     r_indexes = selected_data.Reading_index.unique()
-                    # if 'datetime' in selected_data.columns.values:
-                    #     date_times = selected_data.datetime.unique()
-                    #     date_times_str = f"Timestamps: " \
-                    #         f"{pd.Timestamp(date_times.min()).strftime('%b %d - %H:%M:%S')} - " \
-                    #         f"{pd.Timestamp(date_times.max()).strftime('%b %d - %H:%M:%S')}"
-                    # else:
-                    #     date_times_str = ''
+                    ztses = selected_data.ZTS.unique()
 
                     if len(r_numbers) > 1:
                         r_number_text = f"Reading numbers: {r_numbers.min()} - {r_numbers.max()}"
@@ -896,79 +909,102 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     else:
                         r_index_text = f"Reading index: {r_indexes.min()}"
 
-                    decay_selection_text = f"{len(selected_data)} selected    {r_number_text}    {r_index_text}"
+                    if len(ztses) > 1:
+                        ztses_text = f"ZTS: {ztses.min():g} - {ztses.max():g}"
+                    else:
+                        ztses_text = f"ZTS: {ztses.min():g}"
+
+                    # decay_selection_text = f"{len(selected_data)} selected    {r_number_text}    {r_index_text}"
+                    decay_selection_text.extend([num_selected, r_number_text, r_index_text, ztses_text])
 
                 # Show the reading number, reading index for the selected decay, plus azimuth, dip, and roll for bh
                 else:
                     selected_decay = selected_data.iloc[0]
+
                     r_number_text = f"Reading Number {selected_decay.Reading_number}"
                     r_index_text = f"Reading Index {selected_decay.Reading_index}"
+                    zts = f"ZTS: {selected_decay.ZTS:g}"
+                    stack_number = f"{selected_decay.Number_of_stacks} stacks"
+
+                    decay_selection_text.append(r_number_text)
+                    decay_selection_text.append(r_index_text)
+                    decay_selection_text.append(zts)
+                    decay_selection_text.append(stack_number)
+
+                    # Add the time stamp if it exists
                     timestamp = selected_decay.datetime
                     if timestamp is not None:
                         date_time = f"Timestamp: {selected_decay.datetime.strftime('%b %d - %H:%M:%S')}"
-                    else:
-                        date_time = ''
+                        decay_selection_text.append(date_time)
+
+                    # Add the RAD tool information if the PEM file is a borehole with all tool values present
                     if self.pem_file.is_borehole() and selected_decay.RAD_tool.has_tool_values():
                         azimuth = f"Azimuth {selected_decay.RAD_tool.get_azimuth():.2f}"
                         dip = f"Dip {selected_decay.RAD_tool.get_dip():.2f}"
                         roll = f"Roll angle {selected_decay.RAD_tool.get_acc_roll():.2f}"
-                        decay_selection_text = f"{'    '.join([r_number_text, r_index_text, date_time, azimuth, dip, roll])}"
-                    else:
-                        decay_selection_text = f"{'    '.join([r_number_text, r_index_text, date_time])}"
 
-                self.decay_selection_text.setText(decay_selection_text)
+                        decay_selection_text.append(azimuth)
+                        decay_selection_text.append(dip)
+                        decay_selection_text.append(roll)
+
+                self.decay_selection_text.setText('     '.join(decay_selection_text))
                 self.decay_selection_text.show()
 
             # Reset the selection text if nothing is selected
             else:
                 self.decay_selection_text.hide()
 
-        if self.plotted_decay_lines:
-            # Enable decay editing buttons
-            if len(self.selected_lines) > 0:
-                self.change_comp_decay_btn.setEnabled(True)
-                self.change_decay_suffix_btn.setEnabled(True)
-                self.change_station_decay_btn.setEnabled(True)
-                self.flip_decay_btn.setEnabled(True)
+        if not self.plotted_decay_lines:
+            return
+
+        # Enable decay editing buttons
+        if len(self.selected_lines) > 0:
+            self.change_comp_decay_btn.setEnabled(True)
+            self.change_decay_suffix_btn.setEnabled(True)
+            self.change_station_decay_btn.setEnabled(True)
+            self.flip_decay_btn.setEnabled(True)
+        else:
+            self.change_comp_decay_btn.setEnabled(False)
+            self.change_decay_suffix_btn.setEnabled(False)
+            self.change_station_decay_btn.setEnabled(False)
+            self.flip_decay_btn.setEnabled(False)
+
+        # Change the color of the plotted lines
+        for line, del_flag, overload in zip(self.plotted_decay_lines, self.plotted_decay_data.del_flag, self.plotted_decay_data.Overload):
+
+            # Change the pen if the data is flagged for deletion
+            if del_flag is False:
+                color = (96, 96, 96, 150)
+                z_value = 2
             else:
-                self.change_comp_decay_btn.setEnabled(False)
-                self.change_decay_suffix_btn.setEnabled(False)
-                self.change_station_decay_btn.setEnabled(False)
-                self.flip_decay_btn.setEnabled(False)
+                color = (255, 0, 0, 100)
+                z_value = 1
 
-            # Change the color and width of the plotted lines
-            for line, del_flag, overload in zip(self.plotted_decay_lines, self.plotted_decay_data.del_flag, self.plotted_decay_data.Overload):
+            # Change the line style if the reading is overloaded
+            if overload is True:
+                style = QtCore.Qt.DashDotDotLine
+            else:
+                style = QtCore.Qt.SolidLine
 
-                # Change the pen if the data is flagged for deletion
+            # Colors for the lines if they selected
+            if line in self.selected_lines:
                 if del_flag is False:
-                    color = (96, 96, 96)
-                    z_value = 3
-                else:
-                    color = 'r'
+                    color = (85, 85, 255, 200)  # Blue
                     z_value = 4
-
-                # Change the line style if the reading is overloaded
-                if overload is True:
-                    style = QtCore.Qt.DashDotDotLine
                 else:
-                    style = QtCore.Qt.SolidLine
+                    color = (255, 0, 0, 150)
+                    z_value = 3
+                    # pen_color = (204, 0, 204)  # Magenta ish
+                    # pen_color = (153, 51, 255)  # Puple
 
-                if line in self.selected_lines:
-                    if del_flag is False:
-                        color = (85, 85, 255)  # Blue
-                        # pen_color = (204, 0, 204)  # Magenta ish
-                        # pen_color = (153, 51, 255)  # Puple
+                line.setPen(color, width=2, style=style)
+                line.setZValue(z_value)
+            # Color the lines that aren't selected
+            else:
+                line.setPen(color, width=1, style=style)
+                line.setZValue(z_value)
 
-                    # print(f"Line {self.plotted_decay_lines.index(line)} selected")
-                    line.setPen(color, width=2, style=style)
-                    line.setZValue(z_value)
-                    # if len(self.selected_lines) == 1:
-                    #     line.setShadowPen(pg.mkPen('w', width=2.5, cosmetic=True))
-                else:
-                    line.setPen(color, width=1, style=style)
-                    # line.setShadowPen(None)
-
-            set_decay_selection_text(self.get_selected_decay_data())
+        set_decay_selection_text(self.get_selected_decay_data())
 
     def clear_selection(self):
         """
@@ -1085,15 +1121,20 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             line_distances = []
             ax_lines = self.active_ax.curves
 
+            if not ax_lines:
+                return
+
             # Change the mouse coordinates to be relative to the plot coordinates
             m_pos = self.active_ax.vb.mapSceneToView(evt)
             xm, ym = m_pos.x(), m_pos.y()
 
             for line in ax_lines:
                 xi, yi = line.xData, line.yData
+                interp_xi = np.linspace(xi.min(), xi.max(), 1000)
+                interp_yi = np.interp(interp_xi, xi, yi)
 
                 # Calcualte the distance between each point of the line and the mouse position
-                distances = spatial.distance.cdist(np.array([[xm, ym]]), np.array([xi, yi]).T,
+                distances = spatial.distance.cdist(np.array([[xm, ym]]), np.array([interp_xi, interp_yi]).T,
                                                    metric='euclidean')
                 # distances = np.array([np.linalg.norm(np.array([x, y]) - np.array([xm, ym])) for x, y in zip(xi, yi)])
                 line_distances.append(distances)
@@ -1162,19 +1203,33 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Signal slot, select stations from the profile plot when click-and-dragged
         :param range: tuple, range of the linearRegionItem
         """
+
+        def get_comp_profile(comp):
+            if comp == 'X':
+                return self.x_layout_axes
+            elif comp == 'Y':
+                return self.y_layout_axes
+            else:
+                return self.z_layout_axes
+
         range = (min(range), max(range))
         # Force the range to use existing stations
         x0 = self.find_nearest_station(range[0])
         x1 = self.find_nearest_station(range[1])
 
-        # Update the LinearRegionItem for each axes
-        for ax in self.profile_axes:
+        ind, comp = self.get_active_component()
+        comp_profile_axes = get_comp_profile(comp)
+        comp_stations = self.pem_file.data[self.pem_file.data.Component == comp].Station
+        comp_stations = np.array([self.converter.convert_station(s) for s in comp_stations])
+
+        # Update the LinearRegionItem for each axes of the current component
+        for ax in comp_profile_axes:
             ax.vb.lr.setRegion((x0, x1))
             ax.vb.lr.show()
 
         # Find the stations that fall within the selection range
-        self.selected_profile_stations = self.stations[
-            np.where((self.stations <= x1) & (self.stations >= x0))]
+        self.selected_profile_stations = comp_stations[
+            np.where((comp_stations <= x1) & (comp_stations >= x0))]
 
         # Enable the edit buttons and set the profile selection text
         if self.selected_profile_stations.any():
@@ -1194,9 +1249,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.remove_profile_btn.setEnabled(False)
             self.profile_selection_text.hide()
 
-    def profile_tab_changed(self, ind):
-        pass
-
     def get_selected_decay_data(self):
         """
         Return the corresponding data of the decay lines that are currently selected
@@ -1211,13 +1263,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Return the corresponding data of the currently selected stations from the profile plots
         :return: pandas DataFrame
         """
-        tab_ind = self.profile_tab_widget.currentIndex()
-        if tab_ind == 0:
-            comp = 'X'
-        elif tab_ind == 1:
-            comp = 'Y'
-        else:
-            comp = 'Z'
+        ind, comp = self.get_active_component()
 
         df = self.pem_file.data
         filt = ((df.Component == comp) &
@@ -1225,6 +1271,20 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 (df.cStation <= self.selected_profile_stations.max()))
         data = self.pem_file.data[filt]
         return data
+
+    def get_active_component(self):
+        """
+        Return the active profile index and component
+        :return: tuple, int index and str component
+        """
+        tab_ind = self.profile_tab_widget.currentIndex()
+        if tab_ind == 0:
+            comp = 'X'
+        elif tab_ind == 1:
+            comp = 'Y'
+        else:
+            comp = 'Z'
+        return tab_ind, comp
 
     def delete_lines(self):
         """
@@ -1359,10 +1419,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             return
 
         global shift_amount
-        shift_amount, ok_pressed = QInputDialog.getInt(self, "Change Station", "New Station:",
+        shift_amount, ok_pressed = QInputDialog.getInt(self, "Shift Stations", "Shift Amount:",
                                                        value=0,
                                                        min=-9999,
-                                                       max=9999)
+                                                       max=9999,
+                                                       )
         if ok_pressed and shift_amount != 0:
             # Update the station number in the selected data
             selected_data.loc[:, 'Station'] = selected_data.loc[:, 'Station'].map(shift)
@@ -1515,30 +1576,68 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         def clean_group(group):
 
-            def eval_decay(reading, min_cutoff, max_cutoff):
-                if any(reading[mask] < min_cutoff) or any(reading[mask] > max_cutoff):
-                    global count
-                    count += 1
-                    return True
+            def eval_decay(reading, std, median, max_removable):
+                """
+                Evaluate the reading and calculate if it should be flagged for deletion. Will stop deleting when
+                only 2 readings are left. Evaluates in two passes, the first pass is a large sweep of every channel
+                using a high confidence interval, and the second only looks at the last 3 channels and uses a low
+                confidence interval.
+                :param reading: list, decay values for each channel
+                :param std: int, a fixed standard deviation number to be used as a basis for calculating the data cutoff
+                limits
+                :param median: list, the median value of each channel decay value for the given group.
+                :param max_removable: int, the maximum number of readings that can be removed before reaching the
+                limit
+                :return: bool, True if the reading should be deleted.
+                """
+                global count, local_count
+                if local_count < max_removable:
+                    # First pass, using 99.5% confidence interval
+                    min_cutoff = median[mask] - std[mask] * 3
+                    max_cutoff = median[mask] + std[mask] * 3
+                    if any(reading[mask] < min_cutoff) or any(reading[mask] > max_cutoff):
+                        count += 1
+                        local_count += 1
+                        return True
                 else:
-                    return False
+                    print(f"Max removable limit reached.")
+                if local_count < max_removable:
+                    # Second pass, looking at the last 3 off-time channels, and using 68% confidence interval
+                    min_cutoff = median[mask][-3:] - std[mask][-3:]
+                    max_cutoff = median[mask][-3:] + std[mask][-3:]
+                    if any(reading[mask][-3:] < min_cutoff) or any(reading[mask][-3:] > max_cutoff):
+                        count += 1
+                        local_count += 1
+                        return True
+                else:
+                    print(f"Max removable limit reached.")
 
+                return False
+
+            # First pass cleaning
             readings = np.array(group.Reading.to_list())
-            data_std = np.std(readings, axis=0)[mask]
-            data_median = np.median(readings, axis=0)[mask]
-            min_cutoff = data_median - data_std * 3
-            max_cutoff = data_median + data_std * 3
+            # data_std = np.std(readings, axis=0)[mask]
+            data_std = np.array([std] * len(readings[0]))
+            data_median = np.median(readings, axis=0)
+            # min_cutoff = data_median - data_std * 3
+            # max_cutoff = data_median + data_std * 3
 
-            if len(group.loc[group.del_flag == False]) > 3:
-                group.del_flag = group.Reading.map(lambda x: eval_decay(x, min_cutoff, max_cutoff))
+            if len(group.loc[group.del_flag == False]) > 2:
+                global local_count
+                local_count = 0  # The number of readings that have been deleted so far for this group.
+                max_removable = len(group) - 2  # Maximum number of readings that are allowed to be deleted.
+                group.del_flag = group.Reading.map(lambda x: eval_decay(x, data_std, data_median, max_removable))
 
             return group
 
         if self.pem_file.is_averaged():
             return
 
-        global count, mask
+        global count, mask, std
         count = 0
+
+        # Use a fixed standard deviation value for cleaning across all channels
+        std = self.auto_clean_std_sbox.value()
 
         # Filter the data to only see readings that aren't already flagged for deletion
         data = self.pem_file.data[self.pem_file.data.del_flag == False]
@@ -1554,6 +1653,52 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.plot_station(self.selected_station)
 
         self.message.information(self, 'Auto-clean results', f"{count} reading(s) automatically deleted.")
+
+    def rename_repeats(self):
+        """
+        Automatically renames the repeat stations in the data.
+        """
+
+        def auto_rename_repeats(station):
+            """
+            Automatically rename a repeat station
+            :param station: str, station number
+            :return: str
+            """
+            station_num = re.search('\d+', station).group()
+            if station_num[-1] == '1' or station_num[-1] == '6':
+                station_num = str(int(station_num) - 1)
+            elif station_num[-1] == '4' or station_num[-1] == '9':
+                station_num = str(int(station_num) + 1)
+
+            new_station = re.sub('\d+', station_num, station)
+            return new_station
+
+        repeats = self.pem_file.get_repeats()
+        if repeats.empty:
+            return
+
+        # Rename the stations
+        repeats.Station = repeats.Station.map(auto_rename_repeats)
+        self.pem_file.data.loc[repeats.index] = repeats
+
+        # Plot the new data
+        self.plot_profiles(components='all')
+        self.plot_station(self.selected_station, preserve_selection=False)
+
+        self.message.information(self, 'Auto-rename results', f"{len(repeats)} reading(s) automatically renamed.")
+
+    def reset_file(self):
+        """
+        Revert all changes made to the PEM file.
+        """
+        response = self.message.question(self, 'Reset File',
+                                         'Resetting the file will revert all changes made. '
+                                         'Are you sure you wish to continue?',
+                                         self.message.Yes | self.message.No)
+        if response == self.message.Yes:
+            self.open(self.fallback_file)
+            self.status_bar.showMessage('File reset.', 1000)
 
 
 class DecayViewBox(pg.ViewBox):
@@ -1730,7 +1875,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Minera', file='L10000N_8.PEM')
+    pem_files = pem_getter.get_pems(client='Minera', selection=1)
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])
