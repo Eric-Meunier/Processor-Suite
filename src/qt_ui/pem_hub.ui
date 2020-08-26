@@ -39,7 +39,7 @@
     <item row="0" column="0" rowspan="2">
      <widget class="QFrame" name="frame_4">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
         <horstretch>1</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -48,6 +48,12 @@
        <size>
         <width>0</width>
         <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>200</width>
+        <height>16777215</height>
        </size>
       </property>
       <property name="baseSize">
@@ -65,7 +71,7 @@
       <property name="frameShadow">
        <enum>QFrame::Sunken</enum>
       </property>
-      <layout class="QGridLayout" name="gridLayout_2">
+      <layout class="QVBoxLayout" name="verticalLayout">
        <property name="leftMargin">
         <number>6</number>
        </property>
@@ -78,7 +84,7 @@
        <property name="bottomMargin">
         <number>6</number>
        </property>
-       <item row="0" column="0" colspan="2">
+       <item>
         <widget class="QGroupBox" name="groupBox_6">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
@@ -234,20 +240,7 @@
          </layout>
         </widget>
        </item>
-       <item row="5" column="0" colspan="2">
-        <widget class="QPushButton" name="print_plots_btn">
-         <property name="statusTip">
-          <string>Print plots to a PDF file</string>
-         </property>
-         <property name="text">
-          <string>Print Plots</string>
-         </property>
-         <property name="shortcut">
-          <string>F12</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="2">
+       <item>
         <widget class="QGroupBox" name="project_crs_box">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
@@ -388,7 +381,7 @@
          </layout>
         </widget>
        </item>
-       <item row="2" column="0" colspan="2">
+       <item>
         <widget class="QGroupBox" name="groupBox_8">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -468,184 +461,7 @@ Backup Files</string>
          </layout>
         </widget>
        </item>
-       <item row="3" column="0" colspan="2">
-        <widget class="QGroupBox" name="groupBox_9">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="title">
-          <string>Edit Files</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_10">
-          <item row="0" column="0">
-           <widget class="QPushButton" name="auto_name_line_btn">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Auto-Name Lines/Holes</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="auto_merge_files_btn">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Auto-Merge Files</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="4" column="0" colspan="2">
-        <widget class="QGroupBox" name="groupBox_2">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="title">
-          <string>Edit Data</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-         <property name="flat">
-          <bool>false</bool>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_11">
-          <item row="3" column="0" colspan="3">
-           <widget class="QPushButton" name="rename_all_repeat_stations_btn">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Auto-Rename All Repeat Stations</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0" colspan="3">
-           <widget class="QPushButton" name="reverse_all_x_btn">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>23</height>
-             </size>
-            </property>
-            <property name="toolTip">
-             <string>Reverse the polarity of all X component data.</string>
-            </property>
-            <property name="text">
-             <string>Reverse X Data</string>
-            </property>
-            <property name="checkable">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="3">
-           <widget class="QPushButton" name="reverse_all_y_btn">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>23</height>
-             </size>
-            </property>
-            <property name="toolTip">
-             <string>Reverse the polarity of all Y component data.</string>
-            </property>
-            <property name="text">
-             <string>Reverse Y Data</string>
-            </property>
-            <property name="checkable">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="3">
-           <widget class="QPushButton" name="reverse_all_z_btn">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>23</height>
-             </size>
-            </property>
-            <property name="toolTip">
-             <string>Reverse the polarity of all Z component data.</string>
-            </property>
-            <property name="text">
-             <string>Reverse Z Data</string>
-            </property>
-            <property name="checkable">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="6" column="0">
+       <item>
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -1308,8 +1124,17 @@ Stations</string>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
+    <property name="tearOffEnabled">
+     <bool>false</bool>
+    </property>
     <property name="title">
      <string>File</string>
+    </property>
+    <property name="separatorsCollapsible">
+     <bool>false</bool>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
     </property>
     <addaction name="actionOpenFile"/>
     <addaction name="separator"/>
@@ -1326,18 +1151,45 @@ Stations</string>
     <property name="title">
      <string>PEM</string>
     </property>
-    <addaction name="actionRename_All_Files"/>
-    <addaction name="actionRename_All_Lines_Holes"/>
-    <addaction name="separator"/>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
+    <widget class="QMenu" name="menuRename">
+     <property name="title">
+      <string>Rename</string>
+     </property>
+     <addaction name="actionRename_Files"/>
+     <addaction name="actionRename_Lines_Holes"/>
+     <addaction name="separator"/>
+     <addaction name="actionAuto_Name_Lines_Holes"/>
+    </widget>
+    <widget class="QMenu" name="menuReverse_Polarity">
+     <property name="title">
+      <string>Reverse Polarity</string>
+     </property>
+     <addaction name="actionReverseX_Component"/>
+     <addaction name="actionReverseY_Component"/>
+     <addaction name="actionReverseZ_Component"/>
+    </widget>
     <addaction name="actionAverage_All_PEM_Files"/>
     <addaction name="actionSplit_All_PEM_Files"/>
     <addaction name="separator"/>
     <addaction name="actionScale_All_Currents"/>
     <addaction name="actionChange_All_Coil_Areas"/>
+    <addaction name="separator"/>
+    <addaction name="menuReverse_Polarity"/>
+    <addaction name="separator"/>
+    <addaction name="menuRename"/>
+    <addaction name="separator"/>
+    <addaction name="actionAuto_Merge_All_Files"/>
+    <addaction name="actionAuto_Name_Repeat_Stations"/>
    </widget>
    <widget class="QMenu" name="menuGPS">
     <property name="title">
      <string>GPS</string>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
     </property>
     <addaction name="actionSave_as_KMZ"/>
     <addaction name="actionExport_All_GPS"/>
@@ -1346,12 +1198,18 @@ Stations</string>
     <property name="title">
      <string>Map</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="action3D_Map"/>
     <addaction name="actionContour_Map"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
      <string>Tools</string>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
     </property>
     <addaction name="actionUnpacker"/>
     <addaction name="actionDamping_Box_Plotter"/>
@@ -1399,45 +1257,85 @@ Stations</string>
    <property name="text">
     <string>Open PEM Files...</string>
    </property>
+   <property name="toolTip">
+    <string>Open PEM files</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+   <property name="shortcutVisibleInContextMenu">
+    <bool>true</bool>
+   </property>
   </action>
   <action name="actionSaveFiles">
    <property name="text">
     <string>Save Files</string>
+   </property>
+   <property name="toolTip">
+    <string>Save all PEM files</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
   <action name="actionSave_Files_as_XYZ">
    <property name="text">
     <string>Save Files as XYZ</string>
    </property>
+   <property name="toolTip">
+    <string>Save all PEM files as XYZ files (only for surface surveys)</string>
+   </property>
   </action>
   <action name="actionExport_Files">
    <property name="text">
     <string>Export Files...</string>
+   </property>
+   <property name="toolTip">
+    <string>Export all PEM files to a specified location</string>
    </property>
   </action>
   <action name="actionExport_Final_PEM_Files">
    <property name="text">
     <string>Export Final PEM Files...</string>
    </property>
+   <property name="toolTip">
+    <string>Export all PEM files as deliverable files</string>
+   </property>
+   <property name="shortcut">
+    <string>F11</string>
+   </property>
   </action>
   <action name="actionBackup_Files">
    <property name="text">
     <string>Backup Files</string>
+   </property>
+   <property name="toolTip">
+    <string>Create backup files of each opened PEM files</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+B</string>
    </property>
   </action>
   <action name="actionImport_RI_Files">
    <property name="text">
     <string>Import RI Files</string>
    </property>
+   <property name="toolTip">
+    <string>Import RI files</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
   </action>
   <action name="actionPrint_Plots_to_PDF">
    <property name="text">
     <string>Print Plots to PDF</string>
    </property>
-  </action>
-  <action name="actionRename_All_Files">
-   <property name="text">
-    <string>Rename All Files</string>
+   <property name="toolTip">
+    <string>Create PDF plots</string>
+   </property>
+   <property name="shortcut">
+    <string>F12</string>
    </property>
   </action>
   <action name="actionRename_All_Lines_Holes">
@@ -1449,30 +1347,60 @@ Stations</string>
    <property name="text">
     <string>Average All PEM Files</string>
    </property>
+   <property name="toolTip">
+    <string>Average all PEM files</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
+   </property>
   </action>
   <action name="actionSplit_All_PEM_Files">
    <property name="text">
     <string>Split All PEM Files</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove on-time channels for all PEM files</string>
+   </property>
+   <property name="shortcut">
+    <string>F6</string>
    </property>
   </action>
   <action name="actionScale_All_Currents">
    <property name="text">
     <string>Scale All Currents</string>
    </property>
+   <property name="toolTip">
+    <string>Scale the current of all PEM Files to the same value</string>
+   </property>
+   <property name="shortcut">
+    <string>F7</string>
+   </property>
   </action>
   <action name="actionChange_All_Coil_Areas">
    <property name="text">
     <string>Change All Coil Areas</string>
+   </property>
+   <property name="toolTip">
+    <string>Scale all coil areas of all PEM files to the same value</string>
+   </property>
+   <property name="shortcut">
+    <string>F8</string>
    </property>
   </action>
   <action name="actionSave_as_KMZ">
    <property name="text">
     <string>Save as KMZ</string>
    </property>
+   <property name="toolTip">
+    <string>Create a KMZ file using the GPS of the PEM files</string>
+   </property>
   </action>
   <action name="actionExport_All_GPS">
    <property name="text">
     <string>Export All GPS</string>
+   </property>
+   <property name="toolTip">
+    <string>Export all GPS in the PEM files to separate CSV files</string>
    </property>
   </action>
   <action name="actionPlan_Map">
@@ -1484,40 +1412,141 @@ Stations</string>
    <property name="text">
     <string>3D Map</string>
    </property>
+   <property name="toolTip">
+    <string>Plot all PEM files in a 3D map</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
+   </property>
   </action>
   <action name="actionContour_Map">
    <property name="text">
     <string>Contour Map</string>
+   </property>
+   <property name="toolTip">
+    <string>Show a contour map of surface PEM files</string>
    </property>
   </action>
   <action name="actionLoop_Planner">
    <property name="text">
     <string>Loop Planner</string>
    </property>
+   <property name="toolTip">
+    <string>Loop planning tool</string>
+   </property>
   </action>
   <action name="actionGrid_Planner">
    <property name="text">
     <string>Grid Planner</string>
+   </property>
+   <property name="toolTip">
+    <string>Surface grid planning tool</string>
    </property>
   </action>
   <action name="actionConvert_Timebase_Frequency">
    <property name="text">
     <string>Convert Timebase/Frequency</string>
    </property>
+   <property name="toolTip">
+    <string>Two way conversion between timebase and frequency</string>
+   </property>
   </action>
   <action name="actionDamping_Box_Plotter">
    <property name="text">
     <string>Damping Box Plotter</string>
+   </property>
+   <property name="toolTip">
+    <string>Plot damping box data</string>
    </property>
   </action>
   <action name="actionUnpacker">
    <property name="text">
     <string>Unpacker</string>
    </property>
+   <property name="toolTip">
+    <string>Unpack and organize a raw folder</string>
+   </property>
   </action>
   <action name="actionGPX_Creator">
    <property name="text">
     <string>GPX Creator</string>
+   </property>
+   <property name="toolTip">
+    <string>GPX file creator</string>
+   </property>
+  </action>
+  <action name="actionAuto_name_Lines_Holes">
+   <property name="text">
+    <string>Auto-Name Lines/Holes</string>
+   </property>
+  </action>
+  <action name="actionAuto_Merge_All_Files">
+   <property name="text">
+    <string>Auto-Merge All Files</string>
+   </property>
+   <property name="toolTip">
+    <string>Automatically merge all PEM files</string>
+   </property>
+  </action>
+  <action name="actionReverseX_Component">
+   <property name="text">
+    <string>X Component</string>
+   </property>
+   <property name="toolTip">
+    <string>Reverse the polarity of all X component data</string>
+   </property>
+  </action>
+  <action name="actionReverseY_Component">
+   <property name="text">
+    <string>Y Component</string>
+   </property>
+   <property name="toolTip">
+    <string>Reverse the polarity of all Y component data</string>
+   </property>
+  </action>
+  <action name="actionReverseZ_Component">
+   <property name="text">
+    <string>Z Component</string>
+   </property>
+   <property name="toolTip">
+    <string>Reverse the polarity of all Z component data</string>
+   </property>
+  </action>
+  <action name="actionRename_Files">
+   <property name="text">
+    <string>File Names</string>
+   </property>
+   <property name="toolTip">
+    <string>Rename all file names</string>
+   </property>
+  </action>
+  <action name="actionRename_Lines_Holes">
+   <property name="text">
+    <string>Lines/Hole Names</string>
+   </property>
+   <property name="toolTip">
+    <string>Re-name all line/hole names</string>
+   </property>
+  </action>
+  <action name="actionAuto_Name_Lines_Holes">
+   <property name="text">
+    <string>Auto-Name Lines/Holes</string>
+   </property>
+   <property name="toolTip">
+    <string>Automatically re-name line/hole names based on their file names</string>
+   </property>
+  </action>
+  <action name="actionAuto_Name_Repeat_Stations">
+   <property name="text">
+    <string>Auto-Name Repeat Stations</string>
+   </property>
+   <property name="toolTip">
+    <string>Automatically rename all repeat stations</string>
+   </property>
+  </action>
+  <action name="actionSort_Table_on_Import">
+   <property name="text">
+    <string>Sort Table on Import</string>
    </property>
   </action>
  </widget>

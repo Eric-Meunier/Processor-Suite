@@ -1,6 +1,7 @@
 import copy
 import os
 import sys
+from pathlib import Path
 
 from PyQt5 import (QtCore, uic)
 from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QHeaderView)
@@ -84,8 +85,8 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
             item = QTableWidgetItem(pem_file.line_name)
             item2 = QTableWidgetItem(pem_file.line_name)
         elif self.type == 'File':
-            item = QTableWidgetItem(pem_file.filename)
-            item2 = QTableWidgetItem(pem_file.filename)
+            item = QTableWidgetItem(pem_file.filepath.name)
+            item2 = QTableWidgetItem(pem_file.filepath.name)
         else:
             raise ValueError('Invalid type in BatchNameEditor')
 
@@ -158,12 +159,11 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
                 if self.type == 'Line':
                     pem_file.line_name = new_name
                 else:
-                    old_path = copy.deepcopy(os.path.abspath(pem_file.filepath))
+                    old_path = Path(copy.deepcopy(os.path.abspath(pem_file.filepath)))
                     new_path = os.path.join(os.path.dirname(pem_file.filepath), new_name)
                     if pem_file.old_filepath is None:
                         pem_file.old_filepath = old_path
-                    pem_file.filepath = new_path
-                    pem_file.filename = os.path.basename(new_path)
+                    pem_file.filepath = Path(new_path)
 
             refresh_table()
 

@@ -94,6 +94,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.message = QMessageBox()
         self.error = QErrorMessage()
         self.text_browsers = []
+
+        # Progress bar window
         self.pb = CustomProgressBar()
         self.pb_win = QWidget()  # Progress bar window
         self.pb_win.resize(400, 45)
@@ -137,6 +139,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.project_tree.setColumnHidden(1, True)
         self.project_tree.setColumnHidden(2, True)
         self.project_tree.setColumnHidden(3, True)
+        self.project_tree.setHeaderHidden(True)
         self.project_tree.clicked.connect(self.project_dir_changed)
         # self.move_dir_tree_to(self.file_sys_model.rootPath())
         self.available_pems = []
@@ -184,12 +187,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.addAction(self.actionDel_File)
         self.actionDel_File.setEnabled(False)
 
-        # self.actionClear_Files = QAction("&Clear All Files", self)
-        # self.actionClear_Files.setShortcut("Shift+Del")
-        # self.actionClear_Files.setStatusTip("Clear all files")
-        # self.actionClear_Files.setToolTip("Clear all files")
-        # self.actionClear_Files.triggered.connect(lambda: self.remove_file(rows=np.arange(self.table.rowCount())))
-
         self.merge_action = QAction("&Merge", self)
         self.merge_action.triggered.connect(lambda: self.merge_pem_files(selected=True))
         self.merge_action.setShortcut("Shift+M")
@@ -224,90 +221,47 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
         # 'File' menu
-        self.actionOpenFile.setShortcut("Ctrl+O")
-        self.actionOpenFile.setStatusTip('Open file')
-        self.actionOpenFile.setToolTip('Open file')
         self.actionOpenFile.setIcon(QIcon(os.path.join(icons_path, 'open.png')))
         self.actionOpenFile.triggered.connect(self.open_file_dialog)
 
-        self.actionSaveFiles.setShortcut("Ctrl+S")
         self.actionSaveFiles.setIcon(QIcon(os.path.join(icons_path, 'save.png')))
-        self.actionSaveFiles.setStatusTip("Save all files")
-        self.actionSaveFiles.setToolTip("Save all files")
         self.actionSaveFiles.triggered.connect(lambda: self.save_pem_files(selected=False))
 
-        self.actionSave_Files_as_XYZ.setStatusTip("Save all files as XYZ files. Only for surface surveys.")
         self.actionSave_Files_as_XYZ.triggered.connect(lambda: self.save_as_xyz(selected=False))
 
-        self.actionExport_Files.setShortcut("F11")
-        self.actionExport_Files.setStatusTip("Export all files to a specified location.")
-        self.actionExport_Files.setToolTip("Export all files to a specified location.")
         self.actionExport_Files.triggered.connect(lambda: self.export_pem_files(selected=False,
                                                                                 export_final=False))
 
-        self.actionExport_Final_PEM_Files.setShortcut("F9")
-        self.actionExport_Final_PEM_Files.setStatusTip("Export the final PEM files")
-        self.actionExport_Final_PEM_Files.setToolTip("Export the final PEM files")
         self.actionExport_Final_PEM_Files.triggered.connect(lambda: self.export_pem_files(selected=False,
                                                                                           export_final=True))
 
-        # self.actionPrint_Plots_to_PDF.setShortcut("F12")
-        # self.actionPrint_Plots_to_PDF.setStatusTip("Print plots to a PDF file")
-        # self.actionPrint_Plots_to_PDF.setToolTip("Print plots to a PDF file")
-        # self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
-
-        self.actionBackup_Files.setStatusTip("Backup all files in the table.")
-        self.actionBackup_Files.setToolTip("Backup all files in the table.")
         self.actionBackup_Files.triggered.connect(self.backup_files)
 
-        self.actionImport_RI_Files.setShortcut("Ctrl+I")
-        self.actionImport_RI_Files.setStatusTip("Import multiple RI files")
-        self.actionImport_RI_Files.setToolTip("Import multiple RI files")
         self.actionImport_RI_Files.triggered.connect(self.open_ri_importer)
 
+        self.actionPrint_Plots_to_PDF.setIcon(QIcon(os.path.join(icons_path, 'pdf.png')))
+
         # PEM menu
-        self.actionRename_All_Lines_Holes.setStatusTip("Rename all line/hole names")
-        self.actionRename_All_Lines_Holes.setToolTip("Rename all line/hole names")
-        self.actionRename_All_Lines_Holes.triggered.connect(lambda: self.open_batch_renamer(type='Line'))
+        self.actionRename_Lines_Holes.triggered.connect(lambda: self.open_batch_renamer(type='Line'))
 
-        self.actionRename_All_Files.setStatusTip("Rename all file names")
-        self.actionRename_All_Files.setToolTip("Rename all file names")
-        self.actionRename_All_Files.triggered.connect(lambda: self.open_batch_renamer(type='File'))
+        self.actionRename_Files.triggered.connect(lambda: self.open_batch_renamer(type='File'))
 
-        self.actionAverage_All_PEM_Files.setStatusTip("Average all PEM files")
-        self.actionAverage_All_PEM_Files.setToolTip("Average all PEM files")
         self.actionAverage_All_PEM_Files.setIcon(QIcon(os.path.join(icons_path, 'average.png')))
-        self.actionAverage_All_PEM_Files.setShortcut("F5")
         self.actionAverage_All_PEM_Files.triggered.connect(lambda: self.average_pem_data(selected=False))
-        # self.actionAverage_All_PEM_Files.triggered.connect(self.refresh_table)
 
-        self.actionSplit_All_PEM_Files.setStatusTip("Remove on-time channels for all PEM files")
-        self.actionSplit_All_PEM_Files.setToolTip("Remove on-time channels for all PEM files")
         self.actionSplit_All_PEM_Files.setIcon(QIcon(os.path.join(icons_path, 'split.png')))
-        self.actionSplit_All_PEM_Files.setShortcut("F6")
         self.actionSplit_All_PEM_Files.triggered.connect(lambda: self.split_pem_channels(selected=False))
-        # self.actionSplit_All_PEM_Files.triggered.connect(self.refresh_table)
 
-        self.actionScale_All_Currents.setStatusTip("Scale the current of all PEM Files to the same value")
-        self.actionScale_All_Currents.setToolTip("Scale the current of all PEM Files to the same value")
         self.actionScale_All_Currents.setIcon(QIcon(os.path.join(icons_path, 'current.png')))
-        self.actionScale_All_Currents.setShortcut("F7")
         self.actionScale_All_Currents.triggered.connect(lambda: self.scale_pem_current(selected=False))
 
-        self.actionChange_All_Coil_Areas.setStatusTip("Scale all coil areas to the same value")
-        self.actionChange_All_Coil_Areas.setToolTip("Scale all coil areas to the same value")
         self.actionChange_All_Coil_Areas.setIcon(QIcon(os.path.join(icons_path, 'coil.png')))
-        self.actionChange_All_Coil_Areas.setShortcut("F8")
         self.actionChange_All_Coil_Areas.triggered.connect(lambda: self.scale_pem_coil_area(selected=False))
 
         # GPS menu
-        self.actionSave_as_KMZ.setStatusTip("Create a KMZ file using all GPS in the opened PEM file(s)")
-        self.actionSave_as_KMZ.setToolTip("Create a KMZ file using all GPS in the opened PEM file(s)")
         self.actionSave_as_KMZ.setIcon(QIcon(os.path.join(icons_path, 'google_earth.png')))
         self.actionSave_as_KMZ.triggered.connect(self.save_as_kmz)
 
-        self.actionExport_All_GPS.setStatusTip("Export all GPS in the opened PEM file(s) to separate CSV files")
-        self.actionExport_All_GPS.setToolTip("Export all GPS in the opened PEM file(s) to separate CSV files")
         self.actionExport_All_GPS.setIcon(QIcon(os.path.join(icons_path, 'csv.png')))
         self.actionExport_All_GPS.triggered.connect(self.export_all_gps)
 
@@ -317,45 +271,28 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # self.actionPlan_Map.setIcon(QIcon(os.path.join(icons_path, 'folium.png')))
         # self.actionPlan_Map.triggered.connect(lambda: self.folium_map.open(self.get_updated_pem_files(), self.get_crs()))
 
-        self.action3D_Map.setStatusTip("Show 3D map of all PEM files")
-        self.action3D_Map.setToolTip("Show 3D map of all PEM files")
-        self.action3D_Map.setShortcut('Ctrl+M')
         self.action3D_Map.setIcon(QIcon(os.path.join(icons_path, '3d_map2.png')))
         self.action3D_Map.triggered.connect(self.open_3d_map)
 
         self.actionContour_Map.setIcon(QIcon(os.path.join(icons_path, 'contour_map3.png')))
-        self.actionContour_Map.setStatusTip("Show a contour map of surface PEM files")
-        self.actionContour_Map.setToolTip("Show a contour map of surface PEM files")
         self.actionContour_Map.triggered.connect(lambda: self.contour_viewer.open(self.get_updated_pem_files()))
 
         # Tools menu
-        self.actionLoop_Planner.setStatusTip("Loop planner")
-        self.actionLoop_Planner.setToolTip("Loop planner")
         self.actionLoop_Planner.setIcon(QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.actionLoop_Planner.triggered.connect(lambda: self.loop_planner.show())
 
-        self.actionGrid_Planner.setStatusTip("Grid planner")
-        self.actionGrid_Planner.setToolTip("Grid planner")
         self.actionGrid_Planner.setIcon(QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.actionGrid_Planner.triggered.connect(lambda: self.grid_planner.show())
 
-        self.actionConvert_Timebase_Frequency.setStatusTip("Two way conversion between timebase and frequency")
-        self.actionConvert_Timebase_Frequency.setToolTip("Two way conversion between timebase and frequency")
         self.actionConvert_Timebase_Frequency.setIcon(QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
         self.actionConvert_Timebase_Frequency.triggered.connect(lambda: self.freq_con.show())
 
-        self.actionDamping_Box_Plotter.setStatusTip("Plot damping box data")
-        self.actionDamping_Box_Plotter.setToolTip("Plot damping box data")
         self.actionDamping_Box_Plotter.setIcon(QIcon(os.path.join(icons_path, 'db_plot 32.png')))
         self.actionDamping_Box_Plotter.triggered.connect(lambda: self.db_plot.show())
 
-        self.actionUnpacker.setStatusTip("Unpack and organize a raw folder")
-        self.actionUnpacker.setToolTip("Unpack and organize a raw folder")
         self.actionUnpacker.setIcon(QIcon(os.path.join(icons_path, 'unpacker_1.png')))
         self.actionUnpacker.triggered.connect(lambda: self.unpacker.show())
 
-        self.actionGPX_Creator.setStatusTip("GPX file creator")
-        self.actionGPX_Creator.setToolTip("GPX file creator")
         self.actionGPX_Creator.setIcon(QIcon(os.path.join(icons_path, 'gpx_creator_4.png')))
         self.actionGPX_Creator.triggered.connect(lambda: self.gpx_creator.show())
 
@@ -513,7 +450,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.itemSelectionChanged.connect(update_selection_text)
         self.table.cellChanged.connect(self.table_value_changed)
 
-        self.print_plots_btn.clicked.connect(self.open_pdf_plot_printer)
+        self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
 
         self.share_client_cbox.stateChanged.connect(
             lambda: self.client_edit.setEnabled(self.share_client_cbox.isChecked()))
@@ -530,13 +467,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
         self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
-        self.auto_name_line_btn.clicked.connect(self.auto_name_lines)
-        self.auto_merge_files_btn.clicked.connect(lambda: self.merge_pem_files(auto_select=True))
+        self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
+        self.actionAuto_Merge_All_Files.triggered.connect(lambda: self.merge_pem_files(auto_select=True))
 
-        self.reverse_all_z_btn.clicked.connect(lambda: self.reverse_all_data(comp='Z'))
-        self.reverse_all_x_btn.clicked.connect(lambda: self.reverse_all_data(comp='X'))
-        self.reverse_all_y_btn.clicked.connect(lambda: self.reverse_all_data(comp='Y'))
-        self.rename_all_repeat_stations_btn.clicked.connect(self.rename_all_repeat_stations)
+        self.actionReverseX_Component.triggered.connect(lambda: self.reverse_all_data(comp='Z'))
+        self.actionReverseY_Component.triggered.connect(lambda: self.reverse_all_data(comp='X'))
+        self.actionReverseZ_Component.triggered.connect(lambda: self.reverse_all_data(comp='Y'))
+        self.actionAuto_Name_Repeat_Stations.triggered.connect(self.rename_all_repeat_stations)
 
         self.gps_system_cbox.currentIndexChanged.connect(
             lambda: self.gps_zone_cbox.setEnabled(True if self.gps_system_cbox.currentText() == 'UTM' else False))
@@ -665,7 +602,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     menu.addAction(export_pem_action)
                 menu.addSeparator()
                 menu.addAction(open_plot_editor_action)
-                menu.addAction(print_plots_action)
                 menu.addSeparator()
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     menu.addAction(self.merge_action)
@@ -689,6 +625,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     menu.addSeparator()
                     menu.addAction(rename_lines_action)
                     menu.addAction(rename_files_action)
+                menu.addSeparator()
+                menu.addAction(print_plots_action)
                 menu.addSeparator()
                 menu.addAction(remove_file_action)
 
@@ -1126,24 +1064,32 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         if current_tab == pem_info_widget.station_gps_tab:
             line_adder = LineAdder(parent=self)
-            line = SurveyLine(file, crs=crs)
-            line_adder.write_widget = pem_info_widget
-            line_adder.open(line)
+            try:
+                line = SurveyLine(file, crs=crs)
+                line_adder.write_widget = pem_info_widget
+                line_adder.open(line)
+            except Exception as e:
+                self.error.showMessage(f"Error adding line: {str(e)}")
 
         elif current_tab == pem_info_widget.geometry_tab:
-            collar = BoreholeCollar(file, crs=crs)
-            segments = BoreholeSegments(file)
-            if not collar.df.empty:
-                pem_info_widget.fill_gps_table(collar.df, pem_info_widget.collar_table)
-            if not segments.df.empty:
-                pem_info_widget.fill_gps_table(segments.df, pem_info_widget.segments_table)
+            try:
+                collar = BoreholeCollar(file, crs=crs)
+                segments = BoreholeSegments(file)
+                if not collar.df.empty:
+                    pem_info_widget.fill_gps_table(collar.df, pem_info_widget.collar_table)
+                if not segments.df.empty:
+                    pem_info_widget.fill_gps_table(segments.df, pem_info_widget.segments_table)
+            except Exception as e:
+                self.error.showMessage(f"Error adding borehole geometry: {str(e)}")
 
         elif current_tab == pem_info_widget.loop_gps_tab:
             loop_adder = LoopAdder(parent=self)
-            loop = TransmitterLoop(file, crs=crs)
-            loop_adder.write_widget = pem_info_widget
-            loop_adder.open(loop)
-
+            try:
+                loop = TransmitterLoop(file, crs=crs)
+                loop_adder.write_widget = pem_info_widget
+                loop_adder.open(loop)
+            except Exception as e:
+                self.error.showMessage(f"Error adding loop: {str(e)}")
         else:
             pass
 
@@ -3004,8 +2950,8 @@ def main():
 
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    # pem_files = pg.get_pems(client='PEM Rotation', number=4)
-    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    pem_files = pg.get_pems(client='Kazzinc', number=4)
+    # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     mw.open_pem_files(pem_files)
     #
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'

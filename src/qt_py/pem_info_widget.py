@@ -68,7 +68,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Units', 'Station']
         self.loop_table_columns = ['Easting', 'Northing', 'Elevation', 'Units']
-        self.data_table_columns = ['index', 'Station', 'Comp.', 'Reading_index', 'Reading_number', 'Number_of_stacks', 'ZTS']
+        # self.data_table_columns = ['index', 'Station', 'Comp.', 'Reading_index', 'Reading_number', 'Number_of_stacks', 'ZTS']
 
         self.setupUi(self)
         self.init_actions()
@@ -79,13 +79,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table.installEventFilter(self)
         self.collar_table.installEventFilter(self)
         self.segments_table.installEventFilter(self)
-        self.data_table.installEventFilter(self)
+        # self.data_table.installEventFilter(self)
         self.ri_table.installEventFilter(self)
         self.loop_table.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.line_table.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.collar_table.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.segments_table.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.data_table.setFocusPolicy(QtCore.Qt.StrongFocus)
+        # self.data_table.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.ri_table.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         self.loop_table.remove_row_action = QAction("&Remove", self)
@@ -120,14 +120,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.segments_table.remove_row_action.setShortcut('Del')
         self.segments_table.remove_row_action.setEnabled(False)
 
-        self.data_table.remove_data_row_action = QAction("&Remove", self)
-        self.addAction(self.data_table.remove_data_row_action)
-        self.data_table.remove_data_row_action.triggered.connect(self.remove_data_row)
-        self.data_table.remove_data_row_action.setShortcut('Del')
-        self.data_table.remove_data_row_action.setEnabled(False)
-
-        self.data_table.reverse_polarity_action = QAction("&Reverse Polarity", self)
-        self.data_table.reverse_polarity_action.triggered.connect(self.reverse_polarity)
+        # self.data_table.remove_data_row_action = QAction("&Remove", self)
+        # self.addAction(self.data_table.remove_data_row_action)
+        # self.data_table.remove_data_row_action.triggered.connect(self.remove_data_row)
+        # self.data_table.remove_data_row_action.setShortcut('Del')
+        # self.data_table.remove_data_row_action.setEnabled(False)
+        #
+        # self.data_table.reverse_polarity_action = QAction("&Reverse Polarity", self)
+        # self.data_table.reverse_polarity_action.triggered.connect(self.reverse_polarity)
 
         self.ri_table.remove_ri_file_action = QAction("&Remove RI File", self)
         self.addAction(self.ri_table.remove_ri_file_action)
@@ -139,16 +139,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def init_signals(self):
         # Buttons
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
-        self.changeStationSuffixButton.clicked.connect(self.change_station_suffix)
-        self.changeComponentButton.clicked.connect(self.change_component)
+        # self.changeStationSuffixButton.clicked.connect(self.change_station_suffix)
+        # self.changeComponentButton.clicked.connect(self.change_component)
 
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
         self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
         self.flip_station_signs_button.clicked.connect(self.check_missing_gps)
         self.stations_from_data_btn.clicked.connect(self.stations_from_data)
         self.stations_from_data_btn.clicked.connect(self.check_missing_gps)
-        self.reversePolarityButton.clicked.connect(self.reverse_polarity)
-        self.rename_repeat_stations_btn.clicked.connect(self.rename_repeat_stations)
+        # self.reversePolarityButton.clicked.connect(self.reverse_polarity)
+        # self.rename_repeat_stations_btn.clicked.connect(self.rename_repeat_stations)
 
         self.export_station_gps_btn.clicked.connect(lambda: self.export_gps('station'))
         self.export_loop_gps_btn.clicked.connect(lambda: self.export_gps('loop'))
@@ -156,10 +156,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.edit_loop_btn.clicked.connect(self.open_loop_adder)
         self.edit_line_btn.clicked.connect(self.open_line_adder)
 
-        # Radio buttons
-        self.station_sort_rbtn.clicked.connect(self.fill_data_table)
-        self.component_sort_rbtn.clicked.connect(self.fill_data_table)
-        self.reading_num_sort_rbtn.clicked.connect(self.fill_data_table)
+        self.open_station_gps_btn.clicked.connect(self.open_gps_file)
+        self.open_loop_gps_btn.clicked.connect(self.open_gps_file)
+        # self.share_gps_btn.clicked.connect(pass)
+
+        # # Radio buttons
+        # self.station_sort_rbtn.clicked.connect(self.fill_data_table)
+        # self.component_sort_rbtn.clicked.connect(self.fill_data_table)
+        # self.reading_num_sort_rbtn.clicked.connect(self.fill_data_table)
 
         # Table changes
         self.line_table.cellChanged.connect(self.check_station_duplicates)
@@ -170,27 +174,28 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.loop_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shift_elevation_spinbox))
 
-        self.data_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationSpinbox))
-        self.data_table.itemSelectionChanged.connect(self.toggle_change_station_btn)
-        self.data_table.cellChanged.connect(self.update_pem_from_table)
+        # self.data_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationSpinbox))
+        # self.data_table.itemSelectionChanged.connect(self.toggle_change_station_btn)
+        # self.data_table.cellChanged.connect(self.update_pem_from_table)
 
         # Spinboxes
         self.shiftStationGPSSpinbox.valueChanged.connect(self.shift_gps_station_numbers)
         self.shift_elevation_spinbox.valueChanged.connect(self.shift_loop_elevation)
-        self.shiftStationSpinbox.valueChanged.connect(self.shift_station_numbers)
+        # self.shiftStationSpinbox.valueChanged.connect(self.shift_station_numbers)
 
-    def toggle_change_station_btn(self):
-        selected_rows = self.get_selected_rows(self.data_table)
-        if selected_rows:
-            self.changeStationSuffixButton.setEnabled(True)
-        else:
-            self.changeStationSuffixButton.setEnabled(False)
+    # def toggle_change_station_btn(self):
+    #     selected_rows = self.get_selected_rows(self.data_table)
+    #     if selected_rows:
+    #         self.changeStationSuffixButton.setEnabled(True)
+    #     else:
+    #         self.changeStationSuffixButton.setEnabled(False)
 
     def init_tables(self):
         """
         Adds the columns and formats each table.
         :return: None
         """
+        self.tabs.removeTab(4)
         if not self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.geometry_tab))
             self.line_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -201,61 +206,59 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.collar_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         self.loop_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.data_table.setColumnHidden(0, True)
+        # self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.data_table.setColumnHidden(0, True)
 
-    def contextMenuEvent(self, event):
-        if self.line_table.underMouse():
-            if self.line_table.selectionModel().selectedIndexes():
-                self.line_table.menu = QMenu(self.line_table)
-                self.line_table.menu.addAction(self.line_table.remove_row_action)
-                self.line_table.menu.popup(QtGui.QCursor.pos())
-                self.line_table.remove_row_action.setEnabled(True)
-            else:
-                pass
-        elif self.loop_table.underMouse():
-            if self.loop_table.selectionModel().selectedIndexes():
-                self.loop_table.menu = QMenu(self.loop_table)
-                self.loop_table.menu.addAction(self.loop_table.remove_row_action)
-                self.loop_table.menu.addAction(self.loop_table.move_row_up_action)
-                self.loop_table.menu.addAction(self.loop_table.move_row_down_action)
-                self.loop_table.menu.popup(QtGui.QCursor.pos())
-                self.loop_table.remove_row_action.setEnabled(True)
-            else:
-                pass
-        elif self.collar_table.underMouse():
-            if self.collar_table.selectionModel().selectedIndexes():
-                self.collar_table.menu = QMenu(self.collar_table)
-                self.collar_table.menu.addAction(self.collar_table.remove_row_action)
-                self.collar_table.menu.popup(QtGui.QCursor.pos())
-                self.collar_table.remove_row_action.setEnabled(True)
-            else:
-                pass
-        elif self.segments_table.underMouse():
-            if self.segments_table.selectionModel().selectedIndexes():
-                self.segments_table.menu = QMenu(self.segments_table)
-                self.segments_table.menu.addAction(self.segments_table.remove_row_action)
-                self.segments_table.menu.popup(QtGui.QCursor.pos())
-                self.segments_table.remove_row_action.setEnabled(True)
-        elif self.data_table.underMouse():
-            if self.data_table.selectionModel().selectedIndexes():
-                self.data_table.menu = QMenu(self.data_table)
-                self.data_table.menu.addAction(self.data_table.reverse_polarity_action)
-                self.data_table.menu.addSeparator()
-                self.data_table.menu.addAction(self.data_table.remove_data_row_action)
-                self.data_table.menu.popup(QtGui.QCursor.pos())
-                self.data_table.remove_data_row_action.setEnabled(True)
-                # self.data_table.remove_row_action.setEnabled(True)
-            else:
-                pass
-        elif self.ri_table.underMouse():
-            if self.ri_table.selectionModel().selectedIndexes():
-                self.ri_table.menu = QMenu(self.ri_table)
-                self.ri_table.menu.addAction(self.ri_table.remove_ri_file_action)
-                self.ri_table.menu.popup(QtGui.QCursor.pos())
-                self.ri_table.remove_ri_file_action.setEnabled(True)
-        else:
-            pass
+    # def contextMenuEvent(self, event):
+    #     if self.line_table.underMouse():
+    #         if self.line_table.selectionModel().selectedIndexes():
+    #             self.line_table.menu = QMenu(self.line_table)
+    #             self.line_table.menu.addAction(self.line_table.remove_row_action)
+    #             self.line_table.menu.popup(QtGui.QCursor.pos())
+    #             self.line_table.remove_row_action.setEnabled(True)
+    #         else:
+    #             pass
+    #     elif self.loop_table.underMouse():
+    #         if self.loop_table.selectionModel().selectedIndexes():
+    #             self.loop_table.menu = QMenu(self.loop_table)
+    #             self.loop_table.menu.addAction(self.loop_table.remove_row_action)
+    #             self.loop_table.menu.popup(QtGui.QCursor.pos())
+    #             self.loop_table.remove_row_action.setEnabled(True)
+    #         else:
+    #             pass
+    #     elif self.collar_table.underMouse():
+    #         if self.collar_table.selectionModel().selectedIndexes():
+    #             self.collar_table.menu = QMenu(self.collar_table)
+    #             self.collar_table.menu.addAction(self.collar_table.remove_row_action)
+    #             self.collar_table.menu.popup(QtGui.QCursor.pos())
+    #             self.collar_table.remove_row_action.setEnabled(True)
+    #         else:
+    #             pass
+    #     elif self.segments_table.underMouse():
+    #         if self.segments_table.selectionModel().selectedIndexes():
+    #             self.segments_table.menu = QMenu(self.segments_table)
+    #             self.segments_table.menu.addAction(self.segments_table.remove_row_action)
+    #             self.segments_table.menu.popup(QtGui.QCursor.pos())
+    #             self.segments_table.remove_row_action.setEnabled(True)
+    #     elif self.data_table.underMouse():
+    #         if self.data_table.selectionModel().selectedIndexes():
+    #             self.data_table.menu = QMenu(self.data_table)
+    #             self.data_table.menu.addAction(self.data_table.reverse_polarity_action)
+    #             self.data_table.menu.addSeparator()
+    #             self.data_table.menu.addAction(self.data_table.remove_data_row_action)
+    #             self.data_table.menu.popup(QtGui.QCursor.pos())
+    #             self.data_table.remove_data_row_action.setEnabled(True)
+    #             # self.data_table.remove_row_action.setEnabled(True)
+    #         else:
+    #             pass
+    #     elif self.ri_table.underMouse():
+    #         if self.ri_table.selectionModel().selectedIndexes():
+    #             self.ri_table.menu = QMenu(self.ri_table)
+    #             self.ri_table.menu.addAction(self.ri_table.remove_ri_file_action)
+    #             self.ri_table.menu.popup(QtGui.QCursor.pos())
+    #             self.ri_table.remove_ri_file_action.setEnabled(True)
+    #     else:
+    #         pass
 
     def eventFilter(self, source, event):
         if source is self.line_table:  # Makes the 'Del' shortcut work when the table is in focus
@@ -294,21 +297,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 if event.key() == QtCore.Qt.Key_Escape:
                     self.segments_table.clearSelection()
                     return True
-        elif source is self.data_table:
-            if event.type() == QtCore.QEvent.KeyPress:
-                if event.key() == QtCore.Qt.Key_F and event.modifiers() == QtCore.Qt.ShiftModifier:
-                    self.reverse_polarity()
-                    return True
-                elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ShiftModifier:
-                    self.change_component()
-                    return True
-                elif event.key() == QtCore.Qt.Key_Escape:
-                    self.data_table.clearSelection()
-                    return True
-            elif event.type() == QtCore.QEvent.FocusIn:
-                self.data_table.remove_data_row_action.setEnabled(True)
-            elif event.type() == QtCore.QEvent.FocusOut:
-                self.data_table.remove_data_row_action.setEnabled(False)
+        # elif source is self.data_table:
+        #     if event.type() == QtCore.QEvent.KeyPress:
+        #         if event.key() == QtCore.Qt.Key_F and event.modifiers() == QtCore.Qt.ShiftModifier:
+        #             self.reverse_polarity()
+        #             return True
+        #         elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ShiftModifier:
+        #             self.change_component()
+        #             return True
+        #         elif event.key() == QtCore.Qt.Key_Escape:
+        #             self.data_table.clearSelection()
+        #             return True
+        #     elif event.type() == QtCore.QEvent.FocusIn:
+        #         self.data_table.remove_data_row_action.setEnabled(True)
+        #     elif event.type() == QtCore.QEvent.FocusOut:
+        #         self.data_table.remove_data_row_action.setEnabled(False)
         elif source is self.ri_table:
             if event.type() == QtCore.QEvent.Wheel:
                 # TODO Make sideways scrolling work correctly. Won't scroll sideways without also going vertically
@@ -361,7 +364,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_gps_table(self.pem_file.line.get_line(), self.line_table)
         self.fill_info_tab()
         self.fill_gps_table(self.pem_file.loop.get_loop(), self.loop_table)
-        self.fill_data_table()
+        # self.fill_data_table()
         print(f"PEMInfoWidget - Time to open PIW for {self.pem_file.filepath.name}: {time.time() - t}")
         return self
 
@@ -404,6 +407,33 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         make_ri_table()
         fill_ri_table()
         add_header_from_pem()
+
+    def open_gps_file(self):
+        """
+        Open GPS files through the file dialog
+        """
+        files = self.dialog.getOpenFileNames(self, 'Open GPS File', filter='TXT files (*.txt);; CSV files (*.csv);; '
+                                                                           'GPX files (*.gpx);; All files(*.*)')[0]
+        if not files:
+            return
+
+        self.parent.open_gps_files(files)
+
+    def open_loop_adder(self):
+        """
+        Open the LoopAdder widget and open the current loop into it.
+        """
+        loop_adder = LoopAdder(parent=self)
+        loop_adder.write_widget = self
+        loop_adder.open(self.get_loop())
+
+    def open_line_adder(self):
+        """
+        Open the LineAdder widget and open the current line into it.
+        """
+        line_adder = LineAdder(parent=self)
+        line_adder.write_widget = self
+        line_adder.open(self.get_line())
 
     def clear_table(self, table):
         """
@@ -529,148 +559,148 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # table.resizeColumnsToContents()
         table.blockSignals(False)
 
-    def fill_data_table(self):
-        """
-        Fill the data_table with given PEMFile data
-        :param data: PEMFile data
-        """
+    # def fill_data_table(self):
+    #     """
+    #     Fill the data_table with given PEMFile data
+    #     :param data: PEMFile data
+    #     """
+    #
+    #     def get_sorted_data():
+    #         """
+    #         Returns the sorted data in the PEMFile
+    #         :return: PEMFile Data data frame
+    #         """
+    #         data = self.pem_file.data
+    #
+    #         if self.station_sort_rbtn.isChecked():
+    #             data = data.reindex(index=natsort.order_by_index(
+    #                 data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading_number']))))
+    #             # data.reset_index(drop=True, inplace=True)
+    #
+    #         elif self.component_sort_rbtn.isChecked():
+    #             data = data.reindex(index=natsort.order_by_index(
+    #                 data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading_number']))))
+    #             # data.reset_index(drop=True, inplace=True)
+    #
+    #         elif self.reading_num_sort_rbtn.isChecked():
+    #             data = data.reindex(index=natsort.order_by_index(
+    #                 data.index, natsort.index_natsorted(zip(data['Reading_number'], data['Reading_index']))))
+    #             # data.reset_index(drop=True, inplace=True)
+    #
+    #         return data
+    #
+    #     def write_data_row(df_row):
+    #         # Add a new row to the table
+    #         row_pos = self.data_table.rowCount()
+    #         self.data_table.insertRow(row_pos)
+    #
+    #         items = df_row.map(lambda x: QTableWidgetItem(str(x))).to_list()
+    #         items.insert(0, QTableWidgetItem(str(df_row.name)))
+    #         # Format each item of the table to be centered
+    #         for m, item in enumerate(items):
+    #             item.setTextAlignment(QtCore.Qt.AlignCenter)
+    #             self.data_table.setItem(row_pos, m, item)
+    #
+    #     data = get_sorted_data()
+    #     if data.empty:
+    #         return
+    #     else:
+    #         self.clear_table(self.data_table)
+    #         self.data_table.blockSignals(True)
+    #
+    #         data.loc[:, ['Station', 'Component', 'Reading_index', 'Reading_number', 'Number_of_stacks', 'ZTS']].apply(
+    #             write_data_row, axis=1)
+    #
+    #         self.color_data_table()
+    #         # self.data_table.resizeColumnsToContents()
+    #         self.data_table.blockSignals(False)
 
-        def get_sorted_data():
-            """
-            Returns the sorted data in the PEMFile
-            :return: PEMFile Data data frame
-            """
-            data = self.pem_file.data
-
-            if self.station_sort_rbtn.isChecked():
-                data = data.reindex(index=natsort.order_by_index(
-                    data.index, natsort.index_natsorted(zip(data.Station, data.Component, data['Reading_number']))))
-                # data.reset_index(drop=True, inplace=True)
-
-            elif self.component_sort_rbtn.isChecked():
-                data = data.reindex(index=natsort.order_by_index(
-                    data.index, natsort.index_natsorted(zip(data.Component, data.Station, data['Reading_number']))))
-                # data.reset_index(drop=True, inplace=True)
-
-            elif self.reading_num_sort_rbtn.isChecked():
-                data = data.reindex(index=natsort.order_by_index(
-                    data.index, natsort.index_natsorted(zip(data['Reading_number'], data['Reading_index']))))
-                # data.reset_index(drop=True, inplace=True)
-
-            return data
-
-        def write_data_row(df_row):
-            # Add a new row to the table
-            row_pos = self.data_table.rowCount()
-            self.data_table.insertRow(row_pos)
-
-            items = df_row.map(lambda x: QTableWidgetItem(str(x))).to_list()
-            items.insert(0, QTableWidgetItem(str(df_row.name)))
-            # Format each item of the table to be centered
-            for m, item in enumerate(items):
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.data_table.setItem(row_pos, m, item)
-
-        data = get_sorted_data()
-        if data.empty:
-            return
-        else:
-            self.clear_table(self.data_table)
-            self.data_table.blockSignals(True)
-
-            data.loc[:, ['Station', 'Component', 'Reading_index', 'Reading_number', 'Number_of_stacks', 'ZTS']].apply(
-                write_data_row, axis=1)
-
-            self.color_data_table()
-            # self.data_table.resizeColumnsToContents()
-            self.data_table.blockSignals(False)
-
-    def color_data_table(self):
-        """
-        Colors the rows and cells of the data_table based on several criteria.
-        :return: None
-        """
-
-        def color_rows_by_component():
-            """
-            Color the rows in data_table by component
-            """
-
-            def color_row(row, color):
-                for col in range(self.data_table.columnCount()):
-                    item = self.data_table.item(row, col)
-                    item.setBackground(color)
-
-            z_color = QtGui.QColor('cyan')
-            z_color.setAlpha(50)
-            x_color = QtGui.QColor('magenta')
-            x_color.setAlpha(50)
-            y_color = QtGui.QColor('yellow')
-            y_color.setAlpha(50)
-            white_color = QtGui.QColor('white')
-            for row in range(self.data_table.rowCount()):
-                item = self.data_table.item(row, self.data_table_columns.index('Comp.'))
-                if item:
-                    component = item.text()
-                    if component == 'Z':
-                        color_row(row, z_color)
-                    elif component == 'X':
-                        color_row(row, x_color)
-                    elif component == 'Y':
-                        color_row(row, y_color)
-                    else:
-                        color_row(row, white_color)
-
-        def color_wrong_suffix():
-            """
-            Color the data_table rows where the station suffix is different from the mode
-            """
-
-            if not self.pem_file.is_borehole():
-                correct_suffix = self.pem_file.data.Station.map(lambda x: re.findall('[NSEW]', x.upper())).mode().to_list()
-                while not isinstance(correct_suffix, str):
-                    correct_suffix = correct_suffix[0]
-                count = 0
-                for row in range(self.data_table.rowCount()):
-                    item = self.data_table.item(row, self.data_table_columns.index('Station'))
-                    if item:
-                        station_suffix = re.findall('[NSEW]', item.text().upper())
-                        if not station_suffix or station_suffix[0] != correct_suffix:
-                            count += 1
-                            item.setForeground(QtGui.QColor('red'))
-                        else:
-                            item.setForeground(QtGui.QColor('black'))
-                self.suffix_warnings = count
-
-        def bolden_repeat_stations():
-            """
-            Makes the station number cell bold if it ends with either 1, 4, 6, 9.
-            """
-            repeats = 0
-            boldFont = QtGui.QFont()
-            boldFont.setBold(True)
-            normalFont = QtGui.QFont()
-            normalFont.setBold(False)
-            for row in range(self.data_table.rowCount()):
-                item = self.data_table.item(row, self.data_table_columns.index('Station'))
-                if item:
-                    station_num = re.findall('\d+', item.text())
-                    if station_num:
-                        station_num = station_num[0]
-                        if station_num[-1] == '1' or station_num[-1] == '4' or station_num[-1] == '6' or station_num[-1] == '9':
-                            repeats += 1
-                            item.setFont(boldFont)
-                        else:
-                            item.setFont(normalFont)
-                    else:
-                        break
-            return repeats
-
-        color_rows_by_component()
-        color_wrong_suffix()
-        self.num_repeat_stations = bolden_repeat_stations()
-        self.refresh_tables_signal.emit()
-        self.lcdRepeats.display(self.num_repeat_stations)
+    # def color_data_table(self):
+    #     """
+    #     Colors the rows and cells of the data_table based on several criteria.
+    #     :return: None
+    #     """
+    #
+    #     def color_rows_by_component():
+    #         """
+    #         Color the rows in data_table by component
+    #         """
+    #
+    #         def color_row(row, color):
+    #             for col in range(self.data_table.columnCount()):
+    #                 item = self.data_table.item(row, col)
+    #                 item.setBackground(color)
+    #
+    #         z_color = QtGui.QColor('cyan')
+    #         z_color.setAlpha(50)
+    #         x_color = QtGui.QColor('magenta')
+    #         x_color.setAlpha(50)
+    #         y_color = QtGui.QColor('yellow')
+    #         y_color.setAlpha(50)
+    #         white_color = QtGui.QColor('white')
+    #         for row in range(self.data_table.rowCount()):
+    #             item = self.data_table.item(row, self.data_table_columns.index('Comp.'))
+    #             if item:
+    #                 component = item.text()
+    #                 if component == 'Z':
+    #                     color_row(row, z_color)
+    #                 elif component == 'X':
+    #                     color_row(row, x_color)
+    #                 elif component == 'Y':
+    #                     color_row(row, y_color)
+    #                 else:
+    #                     color_row(row, white_color)
+    #
+    #     def color_wrong_suffix():
+    #         """
+    #         Color the data_table rows where the station suffix is different from the mode
+    #         """
+    #
+    #         if not self.pem_file.is_borehole():
+    #             correct_suffix = self.pem_file.data.Station.map(lambda x: re.findall('[NSEW]', x.upper())).mode().to_list()
+    #             while not isinstance(correct_suffix, str):
+    #                 correct_suffix = correct_suffix[0]
+    #             count = 0
+    #             for row in range(self.data_table.rowCount()):
+    #                 item = self.data_table.item(row, self.data_table_columns.index('Station'))
+    #                 if item:
+    #                     station_suffix = re.findall('[NSEW]', item.text().upper())
+    #                     if not station_suffix or station_suffix[0] != correct_suffix:
+    #                         count += 1
+    #                         item.setForeground(QtGui.QColor('red'))
+    #                     else:
+    #                         item.setForeground(QtGui.QColor('black'))
+    #             self.suffix_warnings = count
+    #
+    #     def bolden_repeat_stations():
+    #         """
+    #         Makes the station number cell bold if it ends with either 1, 4, 6, 9.
+    #         """
+    #         repeats = 0
+    #         boldFont = QtGui.QFont()
+    #         boldFont.setBold(True)
+    #         normalFont = QtGui.QFont()
+    #         normalFont.setBold(False)
+    #         for row in range(self.data_table.rowCount()):
+    #             item = self.data_table.item(row, self.data_table_columns.index('Station'))
+    #             if item:
+    #                 station_num = re.findall('\d+', item.text())
+    #                 if station_num:
+    #                     station_num = station_num[0]
+    #                     if station_num[-1] == '1' or station_num[-1] == '4' or station_num[-1] == '6' or station_num[-1] == '9':
+    #                         repeats += 1
+    #                         item.setFont(boldFont)
+    #                     else:
+    #                         item.setFont(normalFont)
+    #                 else:
+    #                     break
+    #         return repeats
+    #
+    #     color_rows_by_component()
+    #     color_wrong_suffix()
+    #     self.num_repeat_stations = bolden_repeat_stations()
+    #     self.refresh_tables_signal.emit()
+    #     self.lcdRepeats.display(self.num_repeat_stations)
 
     def check_station_duplicates(self):
         """
@@ -732,23 +762,23 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         for i, station in enumerate(missing_gps):
             self.missing_gps_list.addItem(str(station))
 
-    def update_pem_from_table(self, table_row, table_col):
-        """
-        Signal slot: Update the pem file using the values in the data_table.
-        :param table_row: event row
-        :param table_col: event column
-        """
-        self.data_table.blockSignals(True)
-        data = self.pem_file.data
-        df_col = self.data_table_columns[table_col]
-        df_row = int(self.data_table.item(table_row, self.data_table_columns.index('index')).text())
-
-        table_value = self.data_table.item(table_row, table_col).text()
-        data.loc[df_row, df_col] = table_value
-
-        self.pem_file.data = data
-        self.color_data_table()
-        self.data_table.blockSignals(False)
+    # def update_pem_from_table(self, table_row, table_col):
+    #     """
+    #     Signal slot: Update the pem file using the values in the data_table.
+    #     :param table_row: event row
+    #     :param table_col: event column
+    #     """
+    #     self.data_table.blockSignals(True)
+    #     data = self.pem_file.data
+    #     df_col = self.data_table_columns[table_col]
+    #     df_row = int(self.data_table.item(table_row, self.data_table_columns.index('index')).text())
+    #
+    #     table_value = self.data_table.item(table_row, table_col).text()
+    #     data.loc[df_row, df_col] = table_value
+    #
+    #     self.pem_file.data = data
+    #     self.color_data_table()
+    #     self.data_table.blockSignals(False)
 
     def remove_table_row(self, table):
         """
@@ -771,7 +801,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 tag_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 table.setItem(row, 0, tag_item)
 
-        if table == self.data_table or table == self.collar_table:
+        # if table == self.data_table or table == self.collar_table:
+        if table == self.collar_table:
             return
 
         selected_rows = self.get_selected_rows(table)
@@ -786,21 +817,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # add_tags()
         self.refresh_tables_signal.emit()
 
-    def remove_data_row(self):
-        """
-        Remove a row from the data table.
-        :return: None
-        """
-        selected_rows = self.get_selected_rows(self.data_table)
-
-        for row in reversed(selected_rows):
-            # Find the data frame index of the selected row
-            ind = int(self.data_table.item(row, self.data_table_columns.index('index')).text())
-            self.pem_file.data.drop(index=ind, axis=1, inplace=True)
-            self.data_table.removeRow(row)
-        self.data_table.blockSignals(True)
-        self.color_data_table()
-        self.data_table.blockSignals(False)
+    # def remove_data_row(self):
+    #     """
+    #     Remove a row from the data table.
+    #     :return: None
+    #     """
+    #     selected_rows = self.get_selected_rows(self.data_table)
+    #
+    #     for row in reversed(selected_rows):
+    #         # Find the data frame index of the selected row
+    #         ind = int(self.data_table.item(row, self.data_table_columns.index('index')).text())
+    #         self.pem_file.data.drop(index=ind, axis=1, inplace=True)
+    #         self.data_table.removeRow(row)
+    #     self.data_table.blockSignals(True)
+    #     self.color_data_table()
+    #     self.data_table.blockSignals(False)
 
     def remove_ri_file(self):
         """
@@ -894,34 +925,34 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_loop_elev_shift_amt = shift_amount
         self.loop_table.blockSignals(False)
 
-    def shift_station_numbers(self):
-        """
-        Shift the data station number.
-        :return: None
-        """
-        shift_amount = self.shiftStationSpinbox.value()
-
-        def apply_shift(station, shift_value):
-            # Isolate the numbers only
-            station_num = re.search('\d+', station).group(0)
-            try:
-                station_num = int(station_num)
-            except ValueError:
-                return station
-            else:
-                # Apply the shift to the number and then replace the numbers in the original station with the new number
-                new_value = str(station_num - shift_value)
-                return re.sub('\d+', new_value, station)
-
-        # Find the corresponding data frame rows
-        df_rows = self.get_df_rows()
-        stations = self.pem_file.data.loc[df_rows, 'Station']
-        stations = stations.map(lambda x: apply_shift(x, self.last_stn_shift_amt - shift_amount))
-
-        self.pem_file.data.loc[df_rows, 'Station'] = stations
-        self.fill_data_table()
-        # self.data_table.resizeColumnsToContents()
-        self.last_stn_shift_amt = shift_amount
+    # def shift_station_numbers(self):
+    #     """
+    #     Shift the data station number.
+    #     :return: None
+    #     """
+    #     shift_amount = self.shiftStationSpinbox.value()
+    #
+    #     def apply_shift(station, shift_value):
+    #         # Isolate the numbers only
+    #         station_num = re.search('\d+', station).group(0)
+    #         try:
+    #             station_num = int(station_num)
+    #         except ValueError:
+    #             return station
+    #         else:
+    #             # Apply the shift to the number and then replace the numbers in the original station with the new number
+    #             new_value = str(station_num - shift_value)
+    #             return re.sub('\d+', new_value, station)
+    #
+    #     # Find the corresponding data frame rows
+    #     df_rows = self.get_df_rows()
+    #     stations = self.pem_file.data.loc[df_rows, 'Station']
+    #     stations = stations.map(lambda x: apply_shift(x, self.last_stn_shift_amt - shift_amount))
+    #
+    #     self.pem_file.data.loc[df_rows, 'Station'] = stations
+    #     # self.fill_data_table()
+    #     # self.data_table.resizeColumnsToContents()
+    #     self.last_stn_shift_amt = shift_amount
 
     def flip_station_gps_polarity(self):
         """
@@ -951,38 +982,38 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.line_table.blockSignals(False)
 
-    def reverse_polarity(self, component=None):
-        """
-        Reverse the polarity of selected readings
-        :param component: Selected component to be changed. If none is selected, it will reverse the polarity for
-        all rows.
-        :return: None
-        """
-        self.line_table.blockSignals(True)
-
-        df_rows = self.get_df_rows()
-
-        if component:
-            rows = self.pem_file.data['Component'] == component
-            print(f'Reversing data polarity for {component} component')
-            self.window().statusBar().showMessage(f'Reversing data polarity for {component} component', 2000)
-        else:
-            rows = df_rows
-            print(f'Reversing data polarity for {len(rows)} rows')
-            self.window().statusBar().showMessage(f'Reversing data polarity for {len(rows)} rows', 2000)
-
-        self.pem_file.data.loc[rows, 'Reading'] = self.pem_file.data.loc[rows, 'Reading'].map(lambda x: x * -1)
-
-        # Add the HE tag as a note in the PEM file, or remove it if it was there previously
-        if component and component in self.pem_file.get_components():
-            note = f"<HE3> {component.upper()} component polarity reversed"
-            if note not in self.pem_file.notes:
-                self.pem_file.notes.append(note)
-            else:
-                self.pem_file.notes.remove(note)
-
-        self.fill_data_table()
-        self.data_table.resizeColumnsToContents()
+    # def reverse_polarity(self, component=None):
+    #     """
+    #     Reverse the polarity of selected readings
+    #     :param component: Selected component to be changed. If none is selected, it will reverse the polarity for
+    #     all rows.
+    #     :return: None
+    #     """
+    #     self.line_table.blockSignals(True)
+    #
+    #     df_rows = self.get_df_rows()
+    #
+    #     if component:
+    #         rows = self.pem_file.data['Component'] == component
+    #         print(f'Reversing data polarity for {component} component')
+    #         self.window().statusBar().showMessage(f'Reversing data polarity for {component} component', 2000)
+    #     else:
+    #         rows = df_rows
+    #         print(f'Reversing data polarity for {len(rows)} rows')
+    #         self.window().statusBar().showMessage(f'Reversing data polarity for {len(rows)} rows', 2000)
+    #
+    #     self.pem_file.data.loc[rows, 'Reading'] = self.pem_file.data.loc[rows, 'Reading'].map(lambda x: x * -1)
+    #
+    #     # Add the HE tag as a note in the PEM file, or remove it if it was there previously
+    #     if component and component in self.pem_file.get_components():
+    #         note = f"<HE3> {component.upper()} component polarity reversed"
+    #         if note not in self.pem_file.notes:
+    #             self.pem_file.notes.append(note)
+    #         else:
+    #             self.pem_file.notes.remove(note)
+    #
+    #     # self.fill_data_table()
+    #     # self.data_table.resizeColumnsToContents()
 
         self.line_table.blockSignals(False)
 
@@ -1040,79 +1071,80 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             if first_point and second_point:
                 distance = math.sqrt((first_point[0] - second_point[0]) ** 2 + (first_point[1] - second_point[1]) ** 2)
                 self.lcdDistance.display(f'{distance:.1f}')
+                self.setToolTip(f'{distance:.1f}')
             else:
                 self.lcdDistance.display(0)
         else:
             self.lcdDistance.display(0)
 
-    def change_station_suffix(self):
-        """
-        Change the suffix letter from the station number for selected rows in the data_table. Only for surface files.
-        Input suffix must be either N, S, E, or W, case doesn't matter.
-        :return: None
-        """
-        if self.pem_file.is_borehole():  # Shouldn't be needed since the button is disabled for boreholes
-            return
+    # def change_station_suffix(self):
+    #     """
+    #     Change the suffix letter from the station number for selected rows in the data_table. Only for surface files.
+    #     Input suffix must be either N, S, E, or W, case doesn't matter.
+    #     :return: None
+    #     """
+    #     if self.pem_file.is_borehole():  # Shouldn't be needed since the button is disabled for boreholes
+    #         return
+    #
+    #     suffix, okPressed = QInputDialog.getText(self, "Change Station Suffix", "New Suffix:")
+    #     if okPressed and suffix.upper() in ['N', 'E', 'S', 'W']:
+    #         df_rows = self.get_df_rows()
+    #         stations = self.pem_file.data.loc[df_rows, 'Station']
+    #         stations = stations.map(lambda x: re.sub('[NESW]', suffix.upper(), x))
+    #
+    #         self.pem_file.data.loc[df_rows, 'Station'] = stations
+    #         self.fill_data_table()
+    #
+    #     elif okPressed:
+    #         self.message.information(self, 'Invalid Suffix', 'Suffix must be one of [NSEW]')
 
-        suffix, okPressed = QInputDialog.getText(self, "Change Station Suffix", "New Suffix:")
-        if okPressed and suffix.upper() in ['N', 'E', 'S', 'W']:
-            df_rows = self.get_df_rows()
-            stations = self.pem_file.data.loc[df_rows, 'Station']
-            stations = stations.map(lambda x: re.sub('[NESW]', suffix.upper(), x))
+    # def change_component(self):
+    #     """
+    #     Change the component of selected readings based on user input
+    #     :return: None
+    #     """
+    #     new_comp, okPressed = QInputDialog.getText(self, "Change Component", "New Component:")
+    #     if okPressed and new_comp.upper() in ['Z', 'X', 'Y']:
+    #         df_rows = self.get_df_rows()
+    #         components = self.pem_file.data.loc[df_rows, 'Component']
+    #         components = components.map(lambda x: new_comp)
+    #
+    #         self.pem_file.data.loc[df_rows, 'Component'] = components
+    #         self.fill_data_table()
+    #     elif okPressed:
+    #         self.message.information(self, 'Invalid Component', 'Component must be one of [Z, X, Y]')
 
-            self.pem_file.data.loc[df_rows, 'Station'] = stations
-            self.fill_data_table()
-
-        elif okPressed:
-            self.message.information(self, 'Invalid Suffix', 'Suffix must be one of [NSEW]')
-
-    def change_component(self):
-        """
-        Change the component of selected readings based on user input
-        :return: None
-        """
-        new_comp, okPressed = QInputDialog.getText(self, "Change Component", "New Component:")
-        if okPressed and new_comp.upper() in ['Z', 'X', 'Y']:
-            df_rows = self.get_df_rows()
-            components = self.pem_file.data.loc[df_rows, 'Component']
-            components = components.map(lambda x: new_comp)
-
-            self.pem_file.data.loc[df_rows, 'Component'] = components
-            self.fill_data_table()
-        elif okPressed:
-            self.message.information(self, 'Invalid Component', 'Component must be one of [Z, X, Y]')
-
-    def rename_repeat_stations(self):
-        """
-        Change any station name in the data_table that is a repeat station
-        (i.e. any station ending in 1,4,6,9 to 0,5,5,0 respectively).
-        :return: None
-        """
-        def rename_repeat(station):
-            """
-            Applies the appropriate change to the station number
-            :param station: str, station number
-            :return: str, station number with number changed
-            """
-            station_num = int(re.findall('-?\d+', station)[0])
-            if str(station_num)[-1] in ['1', '4', '6', '9']:
-                if str(station_num)[-1] == '1' or str(station_num)[-1] == '6':
-                    print(f"station {station_num} changed to {station_num-1}")
-                    station_num -= 1
-                elif str(station_num)[-1] == '4' or str(station_num)[-1] == '9':
-                    print(f"station {station_num} changed to {station_num + 1}")
-                    station_num += 1
-                station = re.sub('\d+', str(station_num), station)
-            return station
-
-        if self.num_repeat_stations > 0:
-            self.pem_file.data.Station = self.pem_file.data.Station.map(rename_repeat)
-            self.fill_data_table()
-            self.refresh_tables_signal.emit()
-            self.window().statusBar().showMessage(
-                f'{self.num_repeat_stations} repeat station(s) automatically renamed.', 2000)
-        else:
-            pass
+    # def rename_repeat_stations(self):
+    #     """
+    #     Change any station name in the data_table that is a repeat station
+    #     (i.e. any station ending in 1,4,6,9 to 0,5,5,0 respectively).
+    #     :return: None
+    #     """
+    #     def rename_repeat(station):
+    #         """
+    #         Applies the appropriate change to the station number
+    #         :param station: str, station number
+    #         :return: str, station number with number changed
+    #         """
+    #         station_num = int(re.findall('-?\d+', station)[0])
+    #         if str(station_num)[-1] in ['1', '4', '6', '9']:
+    #             if str(station_num)[-1] == '1' or str(station_num)[-1] == '6':
+    #                 print(f"station {station_num} changed to {station_num-1}")
+    #                 station_num -= 1
+    #             elif str(station_num)[-1] == '4' or str(station_num)[-1] == '9':
+    #                 print(f"station {station_num} changed to {station_num + 1}")
+    #                 station_num += 1
+    #             station = re.sub('\d+', str(station_num), station)
+    #         return station
+    #
+    #     if self.num_repeat_stations > 0:
+    #         self.pem_file.data.Station = self.pem_file.data.Station.map(rename_repeat)
+    #         self.fill_data_table()
+    #         self.refresh_tables_signal.emit()
+    #         self.window().statusBar().showMessage(
+    #             f'{self.num_repeat_stations} repeat station(s) automatically renamed.', 2000)
+    #     else:
+    #         pass
 
     def get_selected_rows(self, table):
         """
@@ -1122,13 +1154,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         return [model.row() for model in table.selectionModel().selectedRows()]
 
-    def get_df_rows(self):
-        rows = self.get_selected_rows(self.data_table)
-        if not rows:
-            rows = range(self.data_table.rowCount())
-
-        df_rows = [int(self.data_table.item(row, self.data_table_columns.index('index')).text()) for row in rows]
-        return df_rows
+    # def get_df_rows(self):
+    #     rows = self.get_selected_rows(self.data_table)
+    #     if not rows:
+    #         rows = range(self.data_table.rowCount())
+    #
+    #     df_rows = [int(self.data_table.item(row, self.data_table_columns.index('index')).text()) for row in rows]
+    #     return df_rows
 
     def get_loop(self):
         """
@@ -1246,20 +1278,4 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             os.startfile(selected_path[0])
         else:
             self.window().statusBar().showMessage('Cancelled.', 2000)
-
-    def open_loop_adder(self):
-        """
-        Open the LoopAdder widget and open the current loop into it.
-        """
-        loop_adder = LoopAdder(parent=self)
-        loop_adder.write_widget = self
-        loop_adder.open(self.get_loop())
-
-    def open_line_adder(self):
-        """
-        Open the LineAdder widget and open the current line into it.
-        """
-        line_adder = LineAdder(parent=self)
-        line_adder.write_widget = self
-        line_adder.open(self.get_line())
 

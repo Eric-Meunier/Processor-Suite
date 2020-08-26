@@ -43,6 +43,9 @@
    </property>
    <item row="1" column="0">
     <widget class="QTabWidget" name="tabs">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
      <property name="sizePolicy">
       <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
        <horstretch>0</horstretch>
@@ -159,10 +162,10 @@
           </size>
          </property>
          <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
+          <enum>QFrame::Box</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Plain</enum>
+          <enum>QFrame::Sunken</enum>
          </property>
          <layout class="QGridLayout" name="gridLayout_8">
           <property name="leftMargin">
@@ -177,13 +180,6 @@
           <property name="bottomMargin">
            <number>6</number>
           </property>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="edit_loop_btn">
-            <property name="text">
-             <string>View Loop</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="0">
            <widget class="QSpinBox" name="shift_elevation_spinbox">
             <property name="minimum">
@@ -194,17 +190,38 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
+          <item row="0" column="0">
+           <widget class="QLabel" name="shiftElevationLabel">
+            <property name="text">
+             <string>Shift Elevation</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="open_loop_gps_btn">
+            <property name="text">
+             <string>Open File</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="edit_loop_btn">
+            <property name="text">
+             <string>View Loop</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
            <widget class="QPushButton" name="export_loop_gps_btn">
             <property name="text">
              <string>Export Loop</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="shiftElevationLabel">
+          <item row="1" column="2">
+           <widget class="QPushButton" name="share_loop_gps_btn">
             <property name="text">
-             <string>Shift Elevation</string>
+             <string>Share Loop</string>
             </property>
            </widget>
           </item>
@@ -287,10 +304,10 @@
           </size>
          </property>
          <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
+          <enum>QFrame::Box</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Plain</enum>
+          <enum>QFrame::Sunken</enum>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout">
           <property name="spacing">
@@ -335,17 +352,20 @@
              <enum>QFrame::Raised</enum>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_2">
-             <property name="leftMargin">
+             <property name="spacing">
               <number>6</number>
+             </property>
+             <property name="leftMargin">
+              <number>9</number>
              </property>
              <property name="topMargin">
-              <number>6</number>
+              <number>9</number>
              </property>
              <property name="rightMargin">
-              <number>6</number>
+              <number>9</number>
              </property>
              <property name="bottomMargin">
-              <number>6</number>
+              <number>9</number>
              </property>
              <item>
               <widget class="QLabel" name="shiftStationLabel">
@@ -395,7 +415,7 @@
                 </sizepolicy>
                </property>
                <property name="text">
-                <string>Open GPS File</string>
+                <string>Open File</string>
                </property>
               </widget>
              </item>
@@ -433,25 +453,12 @@
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="label_2">
+              <widget class="QPushButton" name="share_gps_btn">
+               <property name="toolTip">
+                <string>Share this GPS with all other opened surface files</string>
+               </property>
                <property name="text">
-                <string>Distance</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLCDNumber" name="lcdDistance">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="digitCount">
-                <number>7</number>
-               </property>
-               <property name="segmentStyle">
-                <enum>QLCDNumber::Flat</enum>
+                <string>Share GPS</string>
                </property>
               </widget>
              </item>
@@ -492,6 +499,60 @@
              <enum>QFrame::Raised</enum>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_6">
+             <property name="spacing">
+              <number>6</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>Distance</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLCDNumber" name="lcdDistance">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>22</height>
+                </size>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::Box</enum>
+               </property>
+               <property name="frameShadow">
+                <enum>QFrame::Sunken</enum>
+               </property>
+               <property name="lineWidth">
+                <number>1</number>
+               </property>
+               <property name="midLineWidth">
+                <number>0</number>
+               </property>
+               <property name="smallDecimalPoint">
+                <bool>false</bool>
+               </property>
+               <property name="digitCount">
+                <number>7</number>
+               </property>
+               <property name="segmentStyle">
+                <enum>QLCDNumber::Flat</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="Line" name="line_9">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
              <item>
               <widget class="QPushButton" name="flip_station_signs_button">
                <property name="sizePolicy">
@@ -537,11 +598,10 @@
                 </sizepolicy>
                </property>
                <property name="toolTip">
-                <string>Generate station numbers for the list of GPS stations based on the stations in the EM data</string>
+                <string>Generate station numbers based on the stations in the EM data</string>
                </property>
                <property name="text">
-                <string>Generate Stations
-From Data</string>
+                <string>Generate Stations</string>
                </property>
               </widget>
              </item>
@@ -557,8 +617,7 @@ From Data</string>
                 <string>Remove GPS stations for which there is no EM data</string>
                </property>
                <property name="text">
-                <string>Delete GPS
-Not In Data</string>
+                <string>Cull Stations</string>
                </property>
               </widget>
              </item>
@@ -593,6 +652,9 @@ Not In Data</string>
              <enum>QFrame::Raised</enum>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_4">
+             <property name="spacing">
+              <number>6</number>
+             </property>
              <property name="leftMargin">
               <number>9</number>
              </property>
@@ -623,7 +685,7 @@ Not In Data</string>
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
-                 <height>16777215</height>
+                 <height>160</height>
                 </size>
                </property>
               </widget>
@@ -868,6 +930,9 @@ Length</string>
       </layout>
      </widget>
      <widget class="QWidget" name="data_tab">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <attribute name="title">
        <string>Data</string>
       </attribute>
@@ -952,10 +1017,10 @@ Number</string>
           </sizepolicy>
          </property>
          <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
+          <enum>QFrame::Box</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Plain</enum>
+          <enum>QFrame::Sunken</enum>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <property name="leftMargin">
@@ -1062,7 +1127,7 @@ Suffix</string>
           <item>
            <widget class="Line" name="line_7">
             <property name="frameShadow">
-             <enum>QFrame::Plain</enum>
+             <enum>QFrame::Sunken</enum>
             </property>
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -1152,7 +1217,7 @@ Number</string>
           <item>
            <widget class="Line" name="line_8">
             <property name="frameShadow">
-             <enum>QFrame::Plain</enum>
+             <enum>QFrame::Sunken</enum>
             </property>
             <property name="orientation">
              <enum>Qt::Vertical</enum>

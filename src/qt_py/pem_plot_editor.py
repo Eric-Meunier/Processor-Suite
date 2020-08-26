@@ -396,56 +396,35 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             """
             Show/hide decay plots and profile plot tabs based on the components in the pem file
             """
-            self.profile_tab_widget.setCurrentIndex(0)
             x_ax = self.x_decay_plot
             y_ax = self.y_decay_plot
             z_ax = self.z_decay_plot
 
             if 'X' in components:
                 x_ax.show()
-
                 if x_ax not in self.active_decay_axes:
                     self.active_decay_axes.append(x_ax)
             else:
                 x_ax.hide()
-
-                # Cycle to the next profile plot component if this component is no longer in the data but it's
-                # the current profile selected
-                if self.profile_tab_widget.currentIndex() == 0:
-                    print(f"X profile selected but there's no X data, cycling to the next component")
-                    self.cycle_profile_component()
-
                 if x_ax in self.active_decay_axes:
                     self.active_decay_axes.remove(x_ax)
 
             if 'Y' in components:
                 y_ax.show()
                 # self.profile_tab_widget.setTabEnabled(1, True)
-
                 if y_ax not in self.active_decay_axes:
                     self.active_decay_axes.append(y_ax)
             else:
                 y_ax.hide()
-
-                if self.profile_tab_widget.currentIndex() == 1:
-                    print(f"Y profile selected but there's no Y data, cycling to the next component")
-                    self.cycle_profile_component()
-
                 if y_ax in self.active_decay_axes:
                     self.active_decay_axes.remove(y_ax)
 
             if 'Z' in components:
                 z_ax.show()
-
                 if z_ax not in self.active_decay_axes:
                     self.active_decay_axes.append(z_ax)
             else:
                 z_ax.hide()
-
-                if self.profile_tab_widget.currentIndex() == 2:
-                    print(f"Z profile selected but there's no Z data, cycling to the next component")
-                    self.cycle_profile_component()
-
                 if z_ax in self.active_decay_axes:
                     self.active_decay_axes.remove(z_ax)
 
@@ -471,6 +450,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     if ax in self.active_profile_axes:
                         self.active_profile_axes.remove(ax)
 
+                # Cycle to the next profile plot component if this component is no longer in the data but it's
+                # the current profile selected
+                if self.profile_tab_widget.currentIndex() == 0:
+                    print(f"X profile selected but there's no X data, cycling to the next component")
+                    self.cycle_profile_component()
+
             if 'Y' in components:
                 if all([ax not in self.active_profile_axes for ax in self.y_layout_axes]):
                     self.active_profile_axes.extend(self.y_layout_axes)
@@ -479,6 +464,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     if ax in self.active_profile_axes:
                         self.active_profile_axes.remove(ax)
 
+                if self.profile_tab_widget.currentIndex() == 1:
+                    print(f"Y profile selected but there's no Y data, cycling to the next component")
+                    self.cycle_profile_component()
+
             if 'Z' in components:
                 if all([ax not in self.active_profile_axes for ax in self.z_layout_axes]):
                     self.active_profile_axes.extend(self.z_layout_axes)
@@ -486,6 +475,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 for ax in self.z_layout_axes:
                     if ax in self.active_profile_axes:
                         self.active_profile_axes.remove(ax)
+
+                if self.profile_tab_widget.currentIndex() == 2:
+                    print(f"Z profile selected but there's no Z data, cycling to the next component")
+                    self.cycle_profile_component()
 
             link_profile_axes()
 
@@ -989,7 +982,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             # Colors for the lines if they selected
             if line in self.selected_lines:
                 if del_flag is False:
-                    color = (85, 85, 255, 200)  # Blue
+                    # color = (85, 85, 255, 200)  # Blue
+                    color = (153, 85, 204, 200)  # Blue
                     z_value = 4
                 else:
                     color = (255, 0, 0, 150)
@@ -1498,6 +1492,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             new_ind = comp_indexes[0]
         else:
             return
+        print(f"Cycling profile tab to {new_ind}")
         self.profile_tab_widget.setCurrentIndex(new_ind)
 
     def cycle_station(self, direction):
@@ -1592,9 +1587,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 """
                 global count, local_count
                 if local_count < max_removable:
-                    # First pass, using 99.5% confidence interval
-                    min_cutoff = median[mask] - std[mask] * 3
-                    max_cutoff = median[mask] + std[mask] * 3
+                    # First pass, using 96% confidence interval
+                    min_cutoff = median[mask] - std[mask] * 2
+                    max_cutoff = median[mask] + std[mask] * 2
                     if any(reading[mask] < min_cutoff) or any(reading[mask] > max_cutoff):
                         count += 1
                         local_count += 1
@@ -1614,13 +1609,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
                 return False
 
-            # First pass cleaning
             readings = np.array(group.Reading.to_list())
-            # data_std = np.std(readings, axis=0)[mask]
-            data_std = np.array([std] * len(readings[0]))
+            data_std = np.array([threshold_value] * len(readings[0]))
             data_median = np.median(readings, axis=0)
-            # min_cutoff = data_median - data_std * 3
-            # max_cutoff = data_median + data_std * 3
 
             if len(group.loc[group.del_flag == False]) > 2:
                 global local_count
@@ -1633,11 +1624,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         if self.pem_file.is_averaged():
             return
 
-        global count, mask, std
+        global count, mask, threshold_value
         count = 0
 
         # Use a fixed standard deviation value for cleaning across all channels
-        std = self.auto_clean_std_sbox.value()
+        threshold_value = self.auto_clean_std_sbox.value()
 
         # Filter the data to only see readings that aren't already flagged for deletion
         data = self.pem_file.data[self.pem_file.data.del_flag == False]
@@ -1875,7 +1866,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Minera', selection=1)
+    pem_files = pem_getter.get_pems(client='Minera', selection=4)
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])
