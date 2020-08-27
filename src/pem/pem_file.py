@@ -266,7 +266,7 @@ class PEMFile:
             return True
 
     def is_pp(self):
-        if self.channel_times.Width.max() < 10 ** -5:
+        if self.channel_times.Width.max() < 10 ** -4:
             return True
         else:
             return False
@@ -518,22 +518,33 @@ class PEMFile:
 
         file_survey_type = re.sub('_', ' ', self.survey_type.casefold())
 
-        if 's-coil' in file_survey_type or 'surface' in file_survey_type or 'sf coil' in file_survey_type:
+        if any(['s-coil' in file_survey_type,
+                'surface' in file_survey_type,
+                'sf coil' in file_survey_type]):
             survey_type = 'Surface Induction'
-        elif 'borehole' in file_survey_type:
+
+        elif any(['borehole' in file_survey_type,
+                  'b-rad' in file_survey_type,
+                  'b rad' in file_survey_type,
+                  'bh rad' in file_survey_type,
+                  'otool' in file_survey_type,
+                  'bh z' in file_survey_type,
+                  'bh fast rad' in file_survey_type,
+                  'radtool' in file_survey_type]):
             survey_type = 'Borehole Induction'
-        elif 'b-rad' in file_survey_type:
-            survey_type = 'Borehole Induction'
-        elif 'otool' in file_survey_type:
-            survey_type = 'Borehole Induction'
-        elif 'radtool' in file_survey_type:
-            survey_type = 'Borehole Induction'
-        elif 's-flux' in file_survey_type or 'sf fluxgate' in file_survey_type:
+
+        elif any(['s-flux' in file_survey_type,
+                  'sf fluxgate' in file_survey_type]):
             survey_type = 'Surface Fluxgate'
-        elif 'bh-flux' in file_survey_type or 'bh fast fluxgate' in file_survey_type:
+
+        elif any(['bh-flux' in file_survey_type,
+                  'bh fast fluxgate' in file_survey_type,
+                  'bh fluxgate' in file_survey_type]):
             survey_type = 'Borehole Fluxgate'
+
         elif 's-squid' in file_survey_type:
             survey_type = 'SQUID'
+
         else:
             raise ValueError(f"Invalid survey type: {file_survey_type}")
 
@@ -1808,7 +1819,7 @@ class PEMParser:
                 return [station, comp, reading_index, gain, rx_type, zts, coil_delay, num_stakcs, readings_per_set,
                         reading_number, rad_tool, decay]
 
-            assert text, f'Error parsing the data. No matches were found in {self.filepath.name}.'
+            assert text, f'No data found in {self.filepath.name}.'
             t = time.time()
 
             # Each reading is separated by two return characters
@@ -1871,7 +1882,7 @@ class PEMParser:
         raw_line = scontents[2]
         raw_header = scontents[3].split('\n\n')[0]
         raw_channel_times = scontents[3].split('\n\n')[1].split('$')[0]
-        raw_data = scontents[3].split('$')[1]
+        raw_data = scontents[3].split('$')[1].strip()
 
         tags = parse_tags(raw_tags)
         loop_coords = parse_loop(raw_loop)
@@ -1955,7 +1966,7 @@ class DMPParser:
             header['Grid'] = text[9]
             header['Line_name'] = text[7]
             header['Loop_name'] = text[10]
-            header['Date'] = datetime.strptime(text[14], '%m/%d/%y').strftime('%B %d, %Y')
+            header['Date'] = datetime.strptime(re.sub('\s+', '', text[14]), '%m/%d/%y').strftime('%B %d, %Y')
             header['Survey type'] = text[6]
             header['Convention'] = text[15]
             header['Sync'] = text[18]
@@ -2148,7 +2159,7 @@ class DMPParser:
             ramp = header.get('Ramp')
 
             # Replace the spaces infront of station names with a tab character, to more easily split after
-            text = re.sub(r'\s{3,}(?P<station>[\w]{1,5}\s[XYZ])', r'\t\g<station>', text.strip())
+            text = re.sub(r'\s{3,}(?P<station>[\w]{1,}\s[XYZ])', r'\t\g<station>', text.strip())
             text = text.split('\t')
 
             data = []
@@ -2194,10 +2205,10 @@ class DMPParser:
         # Splitting new .DMP files
         if '&&' in contents:
             old_dmp = False
-            raw_header = re.split('&&', contents)[0]
-            raw_channel_table = re.split('<<', re.split('\$\$', contents)[0])[1]
-            raw_notes = re.split('<<', re.split('&&', contents)[1])[0]  # The content between '&&' and '<<'
-            raw_data = re.split('\$\$', contents)[1]
+            raw_header = re.split('&&', contents)[0].strip()
+            raw_channel_table = re.split('<<', re.split('\$\$', contents)[0])[1].strip()
+            raw_notes = re.split('<<', re.split('&&', contents)[1])[0].strip()  # The content between '&&' and '<<'
+            raw_data = re.split('\$\$', contents)[1].strip()
 
             # Don't see any notes in old .DMP files so only included here
             notes = parse_notes(raw_notes)
@@ -2208,8 +2219,8 @@ class DMPParser:
             num_ch = int(scontents[25].strip())
 
             raw_header = scontents[:27]
-            raw_channel_table = '\n'.join(scontents[27:27 + math.ceil(num_ch / 2)])
-            raw_data = '\n'.join(scontents[27 + math.ceil(num_ch / 2):])
+            raw_channel_table = '\n'.join(scontents[27:27 + math.ceil(num_ch / 2)]).strip()
+            raw_data = '\n'.join(scontents[27 + math.ceil(num_ch / 2):]).strip()
 
             notes = []
 
@@ -2296,7 +2307,7 @@ class DMPParser:
                 table['Center'] = (table['Width'] / 2) + table['Start']
 
                 # If the file is a PP file
-                if table.Width.max() < 10 ** -5:
+                if table.Width.max() < 10 ** -4:
                     table['Remove'] = False
                 else:
                     # Configure which channels to remove for the first on-time
@@ -2396,6 +2407,8 @@ class DMPParser:
                     format = '%m/%d/%Y,%H:%M:%S'
                 date_object = datetime.strptime(date_string, format)
                 return date_object
+
+            assert data_content, f'No data found in {self.filepath.name}.'
 
             data_section = data_content.strip()
             sdata = data_section.split('\n\n')
@@ -2877,7 +2890,7 @@ class RADTool:
         Calculate the azimuth of the RAD tool object. Must be D7.
         :return: float, azimuth
         """
-        if not self.D == 'D7' or not self.has_tool_values():
+        if not self.has_tool_values():
             return None
 
         g = math.sqrt(sum([self.gx ** 2, self.gy ** 2, self.gz ** 2]))
@@ -2891,7 +2904,7 @@ class RADTool:
         Calculate the dip of the RAD tool object. Must be D7.
         :return: float, dip
         """
-        if not self.D == 'D7' or not self.has_tool_values():
+        if not self.has_tool_values():
             return None
 
         try:
@@ -2905,7 +2918,7 @@ class RADTool:
         Calculate the roll angle as measured by the accelerometer. Must be D7.
         :return: float, roll angle
         """
-        if not self.D == 'D7' or not self.has_tool_values():
+        if not self.has_tool_values():
             return None
 
         x, y, z = self.gx, self.gy, self.gz
@@ -2925,7 +2938,7 @@ class RADTool:
         Calculate the roll angle as measured by the magnetometer. Must be D7.
         :return: float, roll angle
         """
-        if not self.D == 'D7' or not self.has_tool_values():
+        if not self.has_tool_values():
             return None
 
         x, y, z = self.Hx, self.Hy, self.Hz
@@ -2945,7 +2958,7 @@ class RADTool:
         Calculate and return the magnetic field strength (total field) in units of nT
         :return: float
         """
-        if not self.D == 'D7' or not self.has_tool_values():
+        if not self.has_tool_values():
             return None
 
         x, y, z = self.Hx, self.Hy, self.Hz

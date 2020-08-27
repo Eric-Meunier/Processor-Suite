@@ -5,26 +5,36 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import matplotlib
 from pathlib import Path
-from PyQt5 import (QtCore, QtGui)
+from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QWidget, QApplication, QMessageBox, QTableWidgetItem, QGridLayout, QCheckBox,
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QGridLayout, QCheckBox,
                              QHeaderView, QTableWidget, QDialogButtonBox, QAbstractItemView, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FixedLocator, FormatStrFormatter
 from src.gps.gps_editor import TransmitterLoop, SurveyLine
+from src.pem.pem_file import StationConverter
 from src.mpl.zoom_pan import ZoomPan
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = sys._MEIPASS
+    lineAdderCreator = 'qt_ui\\line_adder.ui'
+    loopAdderCreator = 'qt_ui\\loop_adder.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
+    lineAdderCreator = os.path.join(os.path.dirname(application_path), 'qt_ui\\line_adder.ui')
+    loopAdderCreator = os.path.join(os.path.dirname(application_path), 'qt_ui\\loop_adder.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 
-class GPSAdder(QWidget):
+# Load Qt ui file into a class
+Ui_LineAdder, _ = uic.loadUiType(lineAdderCreator)
+Ui_LoopAdder, _ = uic.loadUiType(loopAdderCreator)
+
+
+class GPSAdder(QMainWindow):
     """
     Class to help add station GPS to a PEM file. Helps with files that have missing stations numbers or other
     formatting errors.
@@ -52,20 +62,20 @@ class GPSAdder(QWidget):
         self.section_ly = None
         self.selection = []
 
-        self.layout = QGridLayout()
-        self.table = QTableWidget()
-        self.table.setFixedWidth(400)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+        # self.layout = QGridLayout()
+        # self.table = QTableWidget()
+        # self.table.setFixedWidth(400)
+        # self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # self.table.setSelectionMode(QAbstractItemView.SingleSelection)
 
         self.message = QMessageBox()
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.button_box.setCenterButtons(True)
-        self.button_box.accepted.connect(self.accept)
+        # self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        # self.button_box.setCenterButtons(True)
+        # self.button_box.accepted.connect(self.accept)
 
         self.figure = plt.figure()
-        self.figure.subplots_adjust(left=0.17, bottom=0.05, right=0.97, top=0.95)
+        self.figure.subplots_adjust(left=0.20, bottom=0.05, right=0.97, top=0.95)
         self.plan_ax = plt.subplot2grid((30, 1), (0, 0), rowspan=19, colspan=1, fig=self.figure)
         self.plan_ax.set_aspect('equal', adjustable='datalim')
         self.plan_ax.use_sticky_edges = False
@@ -79,32 +89,40 @@ class GPSAdder(QWidget):
         self.section_zoom = self.zp.zoom_factory(self.section_ax)
         self.section_pan = self.zp.pan_factory(self.section_ax)
 
-        self.auto_sort_cbox = QCheckBox("Sort Automatically", self)
-        self.auto_sort_cbox.setChecked(True)
+        # self.auto_sort_cbox = QCheckBox("Sort Automatically", self)
+        # self.auto_sort_cbox.setChecked(True)
 
-        self.setLayout(self.layout)
-        self.layout.addWidget(self.auto_sort_cbox, 0, 0)
-        self.layout.addWidget(self.table, 1, 0)
-        self.layout.addWidget(self.button_box, 2, 0, 1, 2)
-        self.layout.addWidget(self.canvas, 1, 1)
+        # self.setLayout(self.layout)
+        # self.layout.addWidget(self.auto_sort_cbox, 0, 0)
+        # self.layout.addWidget(self.table, 1, 0)
+        # self.layout.addWidget(self.button_box, 2, 0, 1, 2)
+        # self.layout.addWidget(self.canvas, 1, 1)
+        # self.canvas_frame.layout().addWidget(self.canvas)
+        #
+        # self.canvas.mpl_connect('pick_event', self.onpick)
+        #
+        # self.button_box.rejected.connect(self.close)
+        # self.table.cellChanged.connect(self.plot_table)
+        # self.table.cellChanged.connect(self.check_table)
+        # self.table.itemSelectionChanged.connect(self.highlight_point)
 
-        self.canvas.mpl_connect('pick_event', self.onpick)
+        # self.del_action = QShortcut(QtGui.QKeySequence("Del"), self)
+        # self.del_action.activated.connect(self.del_row)
 
-        self.button_box.rejected.connect(self.close)
-        self.table.cellChanged.connect(self.plot_table)
-        self.table.cellChanged.connect(self.check_table)
-        self.table.itemSelectionChanged.connect(self.highlight_point)
-
-        self.del_action = QShortcut(QtGui.QKeySequence("Del"), self)
-        self.del_action.activated.connect(self.del_row)
-
-        self.reset_action = QShortcut(QtGui.QKeySequence(" "), self)
-        self.reset_action.activated.connect(self.plot_table)
-        self.reset_action.activated.connect(self.highlight_point)
+        # self.reset_action = QShortcut(QtGui.QKeySequence(" "), self)
+        # self.reset_action.activated.connect(self.plot_table)
+        # self.reset_action.activated.connect(self.highlight_point)
 
         # self.popMenu = QMenu(self)
         # self.popMenu.addAction(self.move_up_action)
         # self.popMenu.addAction(self.move_down_action)
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Delete:
+            self.del_row()
+        elif e.key() == QtCore.Qt.Key_Space:
+            self.plot_table()
+            self.highlight_point()
 
     def del_row(self):
         if self.table.selectionModel().hasSelection():
@@ -304,14 +322,34 @@ class GPSAdder(QWidget):
         self.table.blockSignals(False)
 
 
-class LineAdder(GPSAdder):
+class LineAdder(GPSAdder, Ui_LineAdder):
 
     def __init__(self, parent=None):
         super().__init__()
+        self.setupUi(self)
         self.parent = parent
         self.line = None
+        self.converter = StationConverter()
         self.setWindowTitle('Line Adder')
+
+        # self.table = QTableWidget()
+        self.table.setFixedWidth(400)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+
+        self.canvas_frame.layout().addWidget(self.canvas)
+        self.canvas.mpl_connect('pick_event', self.onpick)
+
+        self.button_box.rejected.connect(self.close)
+        self.table.cellChanged.connect(self.plot_table)
+        self.table.cellChanged.connect(self.check_table)
+        self.table.cellChanged.connect(self.color_table)
+        self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
+        self.status_bar.hide()
+        # self.status_bar.addPermanentWidget(self.auto_sort_cbox)
+        # self.status_bar.addWidget(self.button_box)
 
     def open(self, o):
         """
@@ -337,6 +375,7 @@ class LineAdder(GPSAdder):
         self.df_to_table(self.df)
         self.plot_table()
         self.check_table()
+        self.color_table()
         self.show()
 
     def accept(self):
@@ -344,7 +383,7 @@ class LineAdder(GPSAdder):
         Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
         :return: None
         """
-        self.write_widget.fill_gps_table(self.table_to_df().dropna(), self.write_widget.line_table)
+        self.write_widget.fill_gps_table(self.table_to_df().dropna(), self.write_widget.table)
         self.hide()
 
     def plot_table(self, preserve_limits=False):
@@ -442,7 +481,6 @@ class LineAdder(GPSAdder):
         if row is None:
             row = self.table.selectionModel().selectedRows()[0].row()
 
-        # print(f"Row {row} selected")
         # Remove previously plotted selection
         if self.plan_highlight:
             reset_highlight()
@@ -477,15 +515,80 @@ class LineAdder(GPSAdder):
         self.section_ly = self.section_ax.axvline(section_x, color=color)
         self.canvas.draw()
 
+    def color_table(self):
+        """
+        Color the foreground of station numbers if they are duplicated, and the background if they are out of order.
+        """
 
-class LoopAdder(GPSAdder):
+        def color_duplicates():
+            """
+            Color the table rows to indicate duplicate station numbers in the GPS.
+            """
+            stations = []
+            for row in range(self.table.rowCount()):
+                if self.table.item(row, stations_column):
+                    station = self.table.item(row, stations_column).text()
+                    if station in stations:
+                        other_station_index = stations.index(station)
+                        self.table.item(row, stations_column).setForeground(QtGui.QColor('red'))
+                        self.table.item(other_station_index, stations_column).setForeground(QtGui.QColor('red'))
+                    else:
+                        self.table.item(row, stations_column).setForeground(QtGui.QColor('black'))
+                    stations.append(station)
+
+        def color_order():
+            """
+            Color the background of the station cells if the station number is out of order
+            """
+            stations = self.converter.convert_stations(self.df.Station).to_list()
+            sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
+
+            blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
+            blue_color.setAlpha(50)
+            red_color.setAlpha(50)
+
+            for row in range(self.table.rowCount()):
+                station = self.table.item(row, stations_column)
+                if station and int(station.text()) > sorted_stations[row]:
+                    station.setBackground(blue_color)
+                elif station and int(station.text()) < sorted_stations[row]:
+                    station.setBackground(red_color)
+                else:
+                    station.setBackground(QtGui.QColor('white'))
+
+        self.table.blockSignals(True)
+
+        stations_column = self.df.columns.to_list().index('Station')
+        color_duplicates()
+        color_order()
+
+        self.table.blockSignals(False)
+
+
+class LoopAdder(GPSAdder, Ui_LoopAdder):
 
     def __init__(self, parent=None):
         super().__init__()
+        self.setupUi(self)
         self.parent = parent
         self.loop = None
         self.setWindowTitle('Loop Adder')
+
+        # self.table = QTableWidget()
+        self.table.setFixedWidth(400)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+
+        self.canvas_frame.layout().addWidget(self.canvas)
+        self.canvas.mpl_connect('pick_event', self.onpick)
+
+        self.button_box.rejected.connect(self.close)
+        self.table.cellChanged.connect(self.plot_table)
+        self.table.cellChanged.connect(self.check_table)
+        self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
+        self.status_bar.hide()
 
     def open(self, o):
         """
@@ -656,10 +759,10 @@ def main():
     mw = LineAdder()
 
     pg = PEMGetter()
-    # file = r'C:\Users\kajth\PycharmProjects\Crone\sample_files\Loop GPS\LOOP 3.txt'
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
-    loop = TransmitterLoop(file)
-    line = SurveyLine(file)
+    # file = r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 3.txt'
+    file = r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
+    # loop = TransmitterLoop(file)
+    # line = SurveyLine(file)
     mw.open(file)
 
     app.exec_()

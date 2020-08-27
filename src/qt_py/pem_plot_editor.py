@@ -322,7 +322,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Set the units of the decay plots
         self.units = self.pem_file.units
         if self.units == 'pT':
-            self.auto_clean_std_sbox.setValue(100)
+            self.auto_clean_std_sbox.setValue(50)
         else:
             self.auto_clean_std_sbox.setValue(10)
 
@@ -688,7 +688,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         file = copy.deepcopy(self.pem_file)
         file.data = file.data.loc[file.data.del_flag == False]
 
-        self.number_of_readings.setText(f"{len(file.data)} readings ")
+        self.number_of_readings.setText(f"{len(file.data)} reading(s)")
 
         if not isinstance(components, np.ndarray):
             # Get the components
@@ -820,16 +820,17 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         index_of_selected = []
         # Keep the same lines highlighted after data modification
         if preserve_selection is False:
-            self.selected_lines = []
-            self.nearest_decay = None
+            self.selected_lines.clear()
         else:
             index_of_selected = [self.plotted_decay_lines.index(line) for line in self.selected_lines]
 
         # Clear the plots
         for ax in self.decay_axes:
             ax.clear()
-        self.plotted_decay_lines = []
+
+        self.plotted_decay_lines.clear()
         self.plotted_decay_data = None  # Not actually necessary
+        self.nearest_decay = None
 
         # Filter the data
         filt = self.pem_file.data['cStation'] == station
@@ -982,8 +983,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             # Colors for the lines if they selected
             if line in self.selected_lines:
                 if del_flag is False:
-                    # color = (85, 85, 255, 200)  # Blue
-                    color = (153, 85, 204, 200)  # Blue
+                    color = (85, 85, 255, 200)  # Blue
+                    # color = (153, 85, 204, 200)  # Purple
                     z_value = 4
                 else:
                     color = (255, 0, 0, 150)
@@ -1057,10 +1058,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         :param evt: pyqtgraph MouseClickEvent (not used)
         """
         self.selected_station = nearest_station
-        # for ax in self.active_profile_axes:
-        #     ax.items[3].setPos(nearest_station, ax.viewRange()[1][1])
-        #     ax.items[3].setText(str(nearest_station))
-
         self.plot_station(nearest_station)
 
     def decay_line_clicked(self, line):
@@ -1096,6 +1093,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.selected_data = None
                 self.selected_lines = [self.nearest_decay]
                 self.highlight_lines()
+        # else:
+        #     print(f"No nearest decay")
 
     def decay_mouse_moved(self, evt):
         """
@@ -1867,6 +1866,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems(client='Minera', selection=4)
+
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])

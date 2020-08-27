@@ -621,8 +621,11 @@ class GPSParser:
         for row in contents:
             match = re.search(self.re_station_gps, row)
             if match:
-                match = re.split("[\s,]+", match.group(0))
-                matched_gps.append(match)
+                match = re.split("[\s,]+", match.group(0).strip())
+                if len(match) == 5:
+                    matched_gps.append(match)
+                else:
+                    print(f"{len(match)} items were found parsing station GPS row, instead of 5.")
 
         gps = pd.DataFrame(matched_gps, columns=cols)
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)

@@ -391,8 +391,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             dmp_filepaths = [str(self.available_pems[j]) for j in selected_rows if
                              str(self.available_pems[j]).lower().endswith('dmp') or
                              str(self.available_pems[j]).lower().endswith('dmp2')]
-            self.open_pem_files(pem_filepaths)
             self.open_dmp_files(dmp_filepaths)
+            self.open_pem_files(pem_filepaths)
 
         def add_gps_list_files():
             """
@@ -1356,7 +1356,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if str(path) != str(self.project_dir):
             self.project_dir = path
             print(f"New project dir: {str(path)}")
-            self.project_dir_label.setText(f"Project directory: {str(path)}")
+            self.project_dir_label.setText(f"Project directory: {str(path)} ")
 
             self.fill_gps_list()
             self.fill_pem_list()
@@ -1380,8 +1380,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return
 
         self.gps_list.clear()
-        # Try to find a GPS folder, but time out after 0.3 seconds
-        gps_dir = find_gps_dir(timeout=0.3)
+        # Try to find a GPS folder, but time out after 1 second
+        gps_dir = find_gps_dir(timeout=1)
 
         if gps_dir is None:
             return
@@ -1417,8 +1417,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.pem_list.clear()
 
-        # Try to find .PEM files, but time out after 0.3 seconds
-        self.available_pems = find_pem_files(timeout=0.3)
+        # Try to find .PEM files, but time out after 1 second
+        self.available_pems = find_pem_files(timeout=1)
 
         if self.available_pems is None:
             return
@@ -2950,9 +2950,9 @@ def main():
 
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    pem_files = pg.get_pems(client='Kazzinc', number=4)
+    # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
     #
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'
     # mw.open_dmp_files(file)
