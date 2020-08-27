@@ -313,13 +313,16 @@ class GPSAdder(QMainWindow):
                         return True
             return False
 
+        error_count = 0
         self.table.blockSignals(True)
         for row in range(self.table.rowCount()):
             if has_na(row):
                 color_row(row, 'pink')
+                error_count += 1
             else:
                 color_row(row, 'white')
         self.table.blockSignals(False)
+        return error_count
 
 
 class LineAdder(GPSAdder, Ui_LineAdder):
@@ -329,6 +332,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.setupUi(self)
         self.parent = parent
         self.line = None
+        self.pre_change_value = None
         self.converter = StationConverter()
         self.setWindowTitle('Line Adder')
 
@@ -342,9 +346,11 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.canvas.mpl_connect('pick_event', self.onpick)
 
         self.button_box.rejected.connect(self.close)
-        self.table.cellChanged.connect(self.plot_table)
-        self.table.cellChanged.connect(self.check_table)
-        self.table.cellChanged.connect(self.color_table)
+        self.table.cellActivated.connect(self.cell_activated)
+        self.table.cellChanged.connect(self.cell_changed)
+        # self.table.cellChanged.connect(self.plot_table)
+        # self.table.cellChanged.connect(self.check_table)
+        # self.table.cellChanged.connect(self.color_table)
         self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
         self.status_bar.hide()
@@ -515,6 +521,37 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.section_ly = self.section_ax.axvline(section_x, color=color)
         self.canvas.draw()
 
+    def cell_activated(self, row, col):
+        """
+        Signal slot, when a cell is activate, save the value of the cell before it gets changed, for backup purposes.
+        :param row: int
+        :param col: int
+        """
+        self.pre_change_value = self.table.item(row, col).text()
+
+    def cell_changed(self, row, col):
+        """
+        Signal slot, when a cell is changed, check if it creates any errors. If it does, replace the changed value
+        with the value saved in "cell_activate".
+        :param row: int
+        :param col: int
+        :return:
+        """
+        errors = self.check_table()
+
+        # Reject the change if it causes an error.
+        if errors > 0:
+            self.message.critical(self, 'Error', "Value cannot be converted to a number")
+
+            item = QTableWidgetItem(self.pre_change_value)
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.table.setItem(row, col, item)
+        else:
+            self.plot_table()
+            self.color_table()
+
+        self.highlight_point(row=row)
+
     def color_table(self):
         """
         Color the foreground of station numbers if they are duplicated, and the background if they are out of order.
@@ -540,8 +577,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             """
             Color the background of the station cells if the station number is out of order
             """
-            stations = self.converter.convert_stations(self.df.Station).to_list()
-            sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
+            df_stations = self.converter.convert_stations(self.df.Station).to_list()
+            sorted_stations = sorted(df_stations, reverse=bool(df_stations[0] > df_stations[-1]))
 
             blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
             blue_color.setAlpha(50)
@@ -549,12 +586,15 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
             for row in range(self.table.rowCount()):
                 station = self.table.item(row, stations_column)
-                if station and int(station.text()) > sorted_stations[row]:
-                    station.setBackground(blue_color)
-                elif station and int(station.text()) < sorted_stations[row]:
-                    station.setBackground(red_color)
+                try:
+                    station_num = int(station.text())
+                except ValueError:
+                    station.setBackground(QtGui.QColor('red'))
                 else:
-                    station.setBackground(QtGui.QColor('white'))
+                    if station_num > sorted_stations[row]:
+                        station.setBackground(blue_color)
+                    elif station_num < sorted_stations[row]:
+                        station.setBackground(red_color)
 
         self.table.blockSignals(True)
 
