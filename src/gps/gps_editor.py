@@ -16,8 +16,9 @@ from scipy import spatial
 class BaseGPS:
 
     def __init__(self):
-        self.df = None
+        self.df = pd.DataFrame()
         self.crs = None
+        self.errors = pd.DataFrame()
 
     def to_string(self, header=False):
         return self.df.to_string(index=False, header=header)
@@ -40,6 +41,9 @@ class BaseGPS:
             return 'm'
         else:
             return 'ft'
+
+    def get_errors(self):
+        return self.errors
 
     def to_latlon(self):
         """
@@ -308,34 +312,20 @@ class SurveyLine(BaseGPS):
 
     def __init__(self, line, crs=None):
         """
-        :param line: str filepath of a text file OR a pandas data frame containing line GPS
+        :param line: Union (str, dataframe, list) filepath of a text file OR a data frame/list containing line GPS
         """
         super().__init__()
         self.crs = crs
         self.parser = GPSParser()
 
-        # Empty line object
-        if line is None:
-            self.df = pd.DataFrame(columns=[
-                'Easting',
-                'Northing',
-                'Elevation',
-                'Unit',
-                'Station'
-            ])
-            return
+        self.df, self.errors = self.parser.parse_station_gps(line)
 
-        if isinstance(line, list) or isinstance(line, str):
-            line = self.parser.parse_station_gps(line)
-
-        self.df = line.drop_duplicates()
-        self.df.Easting = self.df.Easting.astype(float)
-        self.df.Northing = self.df.Northing.astype(float)
-        self.df.Elevation = self.df.Elevation.astype(float)
-        self.df.Unit = self.df.Unit.astype(str)
-        self.df.Station = self.df.Station.astype(str)
-        # if self.df.Station.hasnans:
-        #     raise ValueError('File is missing station numbers.')
+        # self.df = line.drop_duplicates()
+        # self.df.Easting = self.df.Easting.astype(float)
+        # self.df.Northing = self.df.Northing.astype(float)
+        # self.df.Elevation = self.df.Elevation.astype(float)
+        # self.df.Unit = self.df.Unit.astype(str)
+        # self.df.Station = self.df.Station.astype(str)
 
     def get_sorted_line(self):
         """
@@ -558,8 +548,8 @@ class GPSParser:
     """
 
     def __init__(self):
-        self.re_station_gps = re.compile(
-            r'(?P<Easting>-?\d{4,}\.?\d*)[\s,]{1,3}(?P<Northing>-?\d{4,}\.?\d*)[\s,]{1,3}(?P<Elevation>-?\d{1,4}\.?\d*)[\s,]+(?P<Units>0|1)[\s,]*(?P<Station>-?\w+)?')
+        # self.re_station_gps = re.compile(
+        #     r'(?P<Easting>-?\d{4,}\.?\d*)[\s,]{1,3}(?P<Northing>-?\d{4,}\.?\d*)[\s,]{1,3}(?P<Elevation>-?\d{1,4}\.?\d*)[\s,]+(?P<Units>0|1)[\s,]*(?P<Station>-?\w+)?')
         self.re_loop_gps = re.compile(
             r'(?P<Easting>-?\d{4,}\.?\d*)[\s,]+(?P<Northing>-?\d{4,}\.?\d*)[\s,]+(?P<Elevation>-?\d{1,4}\.?\d*)[\s,]*(?P<Units>0|1)?')
         self.re_collar_gps = re.compile(
@@ -580,58 +570,156 @@ class GPSParser:
     def parse_station_gps(self, file):
         """
         Parse a text file for station GPS. Station is returned as 0 if no station is found.
-        :param filepath: str: filepath of the text file containing GPS data
-        :return: Pandas DataFrame of the GPS.
+        :param file: Union (str filepath, list), text containing GPS data
+        :return: DataFrame of the GPS.
         """
 
         def convert_station(station):
             """
-            Convert station to integer (-ve for S, W, +ve for E, N)
-            :param station: str: station str
-            :return: int: converted station as integer number
+            Converts a single station name into a number, negative if the stations was S or W
+            :return: Integer station number
             """
-            if station:
-                station = re.findall('-?\d+[NSEWnsew]?', station)[0]
-                if re.search('[swSW]', station):
-                    return int(re.sub('[swSW]', '', station)) * -1
-                elif re.search('[neNE]', station):
-                    return int(re.sub('[neNE]', '', station))
-                else:
-                    return int(station)
+            # Ensure station is a string
+            station = str(station).upper()
+            if re.match(r"-?\d+(S|W)", station):
+                station = (-int(re.sub(r"[SW]", "", station)))
             else:
-                return np.nan
+                station = (int(re.sub(r"[EN]", "", station)))
+            return station
 
-        cols = [
+        def has_na(series):
+            """
+            Return True if the row has any NaN, else return False.
+            :param series: pandas Series
+            :return: bool
+            """
+            if series.isnull().values.any():
+                return True
+            else:
+                return False
+
+        empty_gps = pd.DataFrame(columns=[
             'Easting',
             'Northing',
             'Elevation',
             'Unit',
             'Station'
-        ]
+        ])
+
         if os.path.isfile(str(file)):
-            contents = self.open(file)
+            gps = pd.read_csv(file, delim_whitespace=True, header=None, dtype=str)
+        # Typically coming from PEM files
+        elif isinstance(file, list):
+            split_file = [f.split() for f in file if isinstance(f, str)]
+            gps = pd.DataFrame(split_file)
+        elif file is None:
+            return empty_gps, pd.DataFrame()
         else:
-            contents = file
+            raise TypeError('Invalid input for Station GPS parsing')
 
-        # Ensure there is no nested-lists
-        while isinstance(contents[0], list):
-            contents = contents[0]
+        # Remove P tags and units columns
+        cols_to_drop = []
+        for i, col in gps.dropna(axis=0).iteritems():
+            # Remove P tag column
+            if col.map(lambda x: x.startswith('<')).all():
+                cols_to_drop.append(i)
+            # Remove units column
+            elif col.map(lambda x: x == '0').all():
+                cols_to_drop.append(i)
 
-        matched_gps = []
-        for row in contents:
-            match = re.search(self.re_station_gps, row)
-            if match:
-                match = re.split("[\s,]+", match.group(0).strip())
-                if len(match) == 5:
-                    matched_gps.append(match)
-                else:
-                    print(f"{len(match)} items were found parsing station GPS row, instead of 5.")
+        gps = gps.drop(cols_to_drop, axis=1)
+        gps.columns = range(gps.shape[1])
 
-        gps = pd.DataFrame(matched_gps, columns=cols)
+        if len(gps.columns) < 4:
+            print("No enough columns found for GPS file.")
+            return empty_gps, gps
+
+        # Find any rows where there is a NaN
+        bad_rows = gps.apply(has_na, axis=1)
+        error_gps = gps.loc[bad_rows].copy()
+
+        # Add the units column
+        gps.insert(3, 'Unit', '0')
+
+        cols = {
+            0: 'Easting',
+            1: 'Northing',
+            2: 'Elevation',
+            3: 'Station'
+        }
+        # Add the column names to the two data frames
+        gps.rename(columns=cols, inplace=True)
+        error_gps.rename(columns=cols, inplace=True)
+
+        # Remove the NaNs from the good data frame
+        gps = gps.dropna(axis=0).drop_duplicates()
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
         gps['Station'] = gps['Station'].map(convert_station)
-        return gps
+
+        return gps, error_gps
+
+    # def parse_station_gps(self, file):
+    #     """
+    #     Parse a text file for station GPS. Station is returned as 0 if no station is found.
+    #     :param filepath: str: filepath of the text file containing GPS data
+    #     :return: Pandas DataFrame of the GPS.
+    #     """
+    #
+        # def convert_station(station):
+        #     """
+        #     Convert station to integer (-ve for S, W, +ve for E, N)
+        #     :param station: str: station str
+        #     :return: int: converted station as integer number
+        #     """
+        #     if station:
+        #         station = re.findall('-?\d+[NSEWnsew]?', station)[0]
+        #         if re.search('[swSW]', station):
+        #             return int(re.sub('[swSW]', '', station)) * -1
+        #         elif re.search('[neNE]', station):
+        #             return int(re.sub('[neNE]', '', station))
+        #         else:
+        #             return int(station)
+        #     else:
+        #         return np.nan
+    #
+    #     cols = [
+    #         'Easting',
+    #         'Northing',
+    #         'Elevation',
+    #         'Unit',
+    #         'Station'
+    #     ]
+    #     if os.path.isfile(str(file)):
+    #         contents = self.open(file)
+    #         df = pd.read_csv(file, delim_whitespace=True)
+    #     else:
+    #         contents = file
+    #
+    #     # Ensure there is no nested-lists
+    #     while isinstance(contents[0], list):
+    #         contents = contents[0]
+    #
+    #     matched_gps = []
+    #     error_gps = []
+    #     for row in contents:
+    #         match = re.search(self.re_station_gps, row.strip())
+    #         if match:
+    #             # match = re.split("[\s,]+", match.group(0))
+    #             match = match.groups()
+    #             if len(match) == 5:
+    #                 matched_gps.append(match)
+    #             else:
+    #                 error_gps.append(match)
+    #                 print(f"{len(match)} items were found parsing station GPS row, instead of 5.")
+    #         else:
+    #             error_gps.append(row)
+    #
+    #     gps = pd.DataFrame(matched_gps, columns=cols)
+    #     gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
+    #     gps['Unit'] = gps['Unit'].astype(str)
+    #     gps['Station'] = gps['Station'].map(convert_station)
+    #     return gps, error_gps
 
     def parse_loop_gps(self, file):
         """

@@ -1167,77 +1167,62 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Create a TransmitterLoop object using the information in the loop_table
         :return: TransmitterLoop object
         """
-        gps = {
-            'Easting': [],
-            'Northing': [],
-            'Elevation': [],
-            'Unit': [],
-        }
+        gps = []
         for row in range(self.loop_table.rowCount()):
-            gps['Easting'].append(self.loop_table.item(row, 0).text())
-            gps['Northing'].append(self.loop_table.item(row, 1).text())
-            gps['Elevation'].append(self.loop_table.item(row, 2).text())
-            gps['Unit'].append(self.loop_table.item(row, 3).text())
-        return TransmitterLoop(pd.DataFrame(gps))
+            gps_row = list()
+            gps_row.append(self.loop_table.item(row, 0).text())  # Easting
+            gps_row.append(self.loop_table.item(row, 1).text())  # Northing
+            gps_row.append(self.loop_table.item(row, 2).text())  # Elevation
+            gps_row.append(self.loop_table.item(row, 3).text())  # Unit
+            gps.append(gps_row)
+        return TransmitterLoop(gps)
 
     def get_line(self):
         """
         Create a SurveyLine object using the information in the line_table
         :return: SurveyLine object
         """
-        gps = {
-            'Easting': [],
-            'Northing': [],
-            'Elevation': [],
-            'Unit': [],
-            'Station': []
-        }
+        gps = []
         for row in range(self.line_table.rowCount()):
-            gps['Easting'].append(self.line_table.item(row, 0).text())
-            gps['Northing'].append(self.line_table.item(row, 1).text())
-            gps['Elevation'].append(self.line_table.item(row, 2).text())
-            gps['Unit'].append(self.line_table.item(row, 3).text())
-            gps['Station'].append(self.line_table.item(row, 4).text())
-        return SurveyLine(pd.DataFrame(gps))
+            gps_row = list()
+            gps_row.append(self.line_table.item(row, 0).text())  # Easting
+            gps_row.append(self.line_table.item(row, 1).text())  # Northing
+            gps_row.append(self.line_table.item(row, 2).text())  # Elevation
+            gps_row.append(self.line_table.item(row, 3).text())  # Units
+            gps_row.append(self.line_table.item(row, 4).text())  # Station
+            gps.append(gps_row)
+        return SurveyLine(gps)
 
     def get_collar(self):
         """
         Create a BoreholeCollar object from the information in the collar_table
         :return: BoreholeCollar object
         """
-        gps = {
-            'Easting': [],
-            'Northing': [],
-            'Elevation': [],
-            'Unit': []
-        }
+        gps = []
         for row in range(self.collar_table.rowCount()):
-            gps['Easting'].append(self.collar_table.item(row, 0).text())
-            gps['Northing'].append(self.collar_table.item(row, 1).text())
-            gps['Elevation'].append(self.collar_table.item(row, 2).text())
-            gps['Unit'].append(self.collar_table.item(row, 3).text())
-        return BoreholeCollar(pd.DataFrame(gps))
+            gps_row = list()
+            gps_row.append(self.collar_table.item(row, 0).text())  # Easting
+            gps_row.append(self.collar_table.item(row, 1).text())  # Northing
+            gps_row.append(self.collar_table.item(row, 2).text())  # Elevation
+            gps_row.append(self.collar_table.item(row, 3).text())  # Units
+            gps.append(gps_row)
+        return BoreholeCollar(gps)
 
     def get_segments(self):
         """
         Create a BoreholeSegments object using the information in the segments_table
         :return: BoreholeSegments object
         """
-        gps = {
-            'Azimuth': [],
-            'Dip': [],
-            'Segment_length': [],
-            'Unit': [],
-            'Depth': []
-        }
+        gps = []
         for row in range(self.segments_table.rowCount()):
-            gps['Azimuth'].append(self.segments_table.item(row, 0).text())
-            gps['Dip'].append(self.segments_table.item(row, 1).text())
-            gps['Segment_length'].append(self.segments_table.item(row, 2).text())
-            gps['Unit'].append(self.segments_table.item(row, 3).text())
-            gps['Depth'].append(self.segments_table.item(row, 4).text())
-
-        return BoreholeSegments(pd.DataFrame(gps))
+            gps_row = list()
+            gps_row.append(self.segments_table.item(row, 0).text())  # Azimuth
+            gps_row.append(self.segments_table.item(row, 1).text())  # Dip
+            gps_row.append(self.segments_table.item(row, 2).text())  # Segment_length
+            gps_row.append(self.segments_table.item(row, 3).text())  # Unit
+            gps_row.append(self.segments_table.item(row, 4).text())  # Depth
+            gps.append(gps_row)
+        return BoreholeSegments(gps)
 
     def get_geometry(self):
         """

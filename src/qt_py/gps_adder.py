@@ -1,5 +1,7 @@
 import sys
 import os
+import re
+import time
 import keyboard
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,7 +10,7 @@ from pathlib import Path
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QGridLayout, QCheckBox,
-                             QHeaderView, QTableWidget, QDialogButtonBox, QAbstractItemView, QShortcut)
+                             QHeaderView, QLabel, QDialogButtonBox, QAbstractItemView, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FixedLocator, FormatStrFormatter
 from src.gps.gps_editor import TransmitterLoop, SurveyLine
@@ -89,7 +91,7 @@ class GPSAdder(QMainWindow):
         self.section_zoom = self.zp.zoom_factory(self.section_ax)
         self.section_pan = self.zp.pan_factory(self.section_ax)
 
-        # self.auto_sort_cbox = QCheckBox("Sort Automatically", self)
+        # self.auto_sort_cbox = QCheckBox("Automatically Sort Line by Position", self)
         # self.auto_sort_cbox.setChecked(True)
 
         # self.setLayout(self.layout)
@@ -192,18 +194,14 @@ class GPSAdder(QMainWindow):
         Return a data frame from the information in the table
         :return: pandas DataFrame
         """
-        df = pd.DataFrame(columns=self.df.columns)
-        for col in range(len(df.columns)):
-            l = []
-            for row in range(self.table.rowCount()):
-                l.append(self.table.item(row, col).text())
-            try:
-                df.iloc[:, col] = pd.Series(l, dtype=self.df.dtypes.iloc[col])
-            except ValueError:
-                self.message.information(self, 'Error', 'Invalid data type')
-                self.error = True
-                return None
-        self.error = False
+        gps = []
+        for row in range(self.table.rowCount()):
+            gps_row = list()
+            for col in range(self.table.columnCount()):
+                gps_row.append(self.table.item(row, col).text())
+            gps.append(gps_row)
+
+        df = pd.DataFrame(gps, columns=self.df.columns).astype(dtype=self.df.dtypes)
         return df
 
     def plot_table(self, preserve_limits=False):
@@ -253,11 +251,9 @@ class GPSAdder(QMainWindow):
         if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
             return
         index = event.ind[0]
-        # print(f"Point {index} clicked")
 
         # Swap two points when CTRL is pressed when selecting two points
         if keyboard.is_pressed('ctrl'):
-            # print('CTRL is pressed')
             # Reset the selection if two were already selected
             if len(self.selection) == 2:
                 self.selection = []
@@ -280,49 +276,49 @@ class GPSAdder(QMainWindow):
     def highlight_point(self, row=None):
         pass
 
-    def check_table(self):
-        """
-        Look for any incorrect data types and create an error if found
-        :return: None
-        """
-
-        def color_row(row, color):
-            """
-            Color the background of each cell of a row in the table
-            :param row: Int: Row to color
-            :param color: str
-            :return: None
-            """
-            for col in range(self.table.columnCount()):
-                self.table.item(row, col).setBackground(QtGui.QColor(color))
-
-        def has_na(row):
-            """
-            Return True if any cell in the row can't be converted to a float
-            :param row: Int: table row to check
-            :return: bool
-            """
-            for col in range(self.table.columnCount()):
-                item = self.table.item(row, col).text()
-                try:
-                    float(item)
-                except ValueError:
-                    return True
-                finally:
-                    if item == 'nan':
-                        return True
-            return False
-
-        error_count = 0
-        self.table.blockSignals(True)
-        for row in range(self.table.rowCount()):
-            if has_na(row):
-                color_row(row, 'pink')
-                error_count += 1
-            else:
-                color_row(row, 'white')
-        self.table.blockSignals(False)
-        return error_count
+    # def check_table(self):
+    #     """
+    #     Look for any incorrect data types and create an error if found
+    #     :return: None
+    #     """
+    #
+    #     def color_row(row, color):
+    #         """
+    #         Color the background of each cell of a row in the table
+    #         :param row: Int: Row to color
+    #         :param color: str
+    #         :return: None
+    #         """
+    #         for col in range(self.table.columnCount()):
+    #             self.table.item(row, col).setBackground(QtGui.QColor(color))
+    #
+    #     def has_na(row):
+    #         """
+    #         Return True if any cell in the row can't be converted to a float
+    #         :param row: Int: table row to check
+    #         :return: bool
+    #         """
+    #         for col in range(self.table.columnCount()):
+    #             item = self.table.item(row, col).text()
+    #             try:
+    #                 float(item)
+    #             except ValueError:
+    #                 return True
+    #             finally:
+    #                 if item == 'nan':
+    #                     return True
+    #         return False
+    #
+    #     error_count = 0
+    #     self.table.blockSignals(True)
+    #     for row in range(self.table.rowCount()):
+    #         if has_na(row):
+    #             color_row(row, 'pink')
+    #             error_count += 1
+    #         else:
+    #             color_row(row, 'white')
+    #     self.table.blockSignals(False)
+    #     return error_count
 
 
 class LineAdder(GPSAdder, Ui_LineAdder):
@@ -332,11 +328,26 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.setupUi(self)
         self.parent = parent
         self.line = None
-        self.pre_change_value = None
+        self.selected_row = None
         self.converter = StationConverter()
         self.setWindowTitle('Line Adder')
 
-        # self.table = QTableWidget()
+        self.auto_sort_cbox = QCheckBox("Automatically Sort Line by Position", self)
+        self.auto_sort_cbox.setChecked(True)
+
+        self.errors_label = QLabel('')
+        self.errors_label.setIndent(5)
+
+        self.spacer_label = QLabel('')
+
+        # Format the borders of the items in the status bar
+        self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
+        self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
+
+        self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
+        self.status_bar.addPermanentWidget(self.spacer_label, 1)
+        self.status_bar.addPermanentWidget(self.errors_label, 0)
+
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -346,15 +357,10 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.canvas.mpl_connect('pick_event', self.onpick)
 
         self.button_box.rejected.connect(self.close)
-        self.table.cellActivated.connect(self.cell_activated)
         self.table.cellChanged.connect(self.cell_changed)
-        # self.table.cellChanged.connect(self.plot_table)
-        # self.table.cellChanged.connect(self.check_table)
-        # self.table.cellChanged.connect(self.color_table)
         self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
-        self.status_bar.hide()
-        # self.status_bar.addPermanentWidget(self.auto_sort_cbox)
+        # self.status_bar.hide()
         # self.status_bar.addWidget(self.button_box)
 
     def open(self, o):
@@ -362,9 +368,11 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
         :param o: Union, filepath; GPS object; DataFrame; Loop to open
         """
+        errors = pd.DataFrame()
         if isinstance(o, str):
             if Path(o).is_file():
                 self.line = SurveyLine(o)
+                errors = self.line.get_errors()
             else:
                 raise ValueError(f"{o} is not a valid file.")
         elif isinstance(o, SurveyLine):
@@ -380,9 +388,12 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.df = self.line.get_line(sorted=self.auto_sort_cbox.isChecked())
         self.df_to_table(self.df)
         self.plot_table()
-        self.check_table()
         self.color_table()
         self.show()
+
+        if not errors.empty:
+            self.message.warning(self, 'Parsing Error',
+                                 f"The following rows could not be parsed:\n\n{errors.to_string()}")
 
     def accept(self):
         """
@@ -487,6 +498,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         if row is None:
             row = self.table.selectionModel().selectedRows()[0].row()
 
+        # Save the information of the row for backup purposes
+        self.selected_row = [self.table.item(row, j).text() for j in range(len(self.df.columns))]
+
         # Remove previously plotted selection
         if self.plan_highlight:
             reset_highlight()
@@ -505,29 +519,21 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.plan_highlight = self.plan_ax.scatter([plan_x], [plan_y],
                                                    color=light_color,
                                                    edgecolors=color,
-                                                   zorder=3
+                                                   zorder=3,
                                                    )
-        self.plan_lx = self.plan_ax.axhline(plan_y, color=color)
-        self.plan_ly = self.plan_ax.axvline(plan_x, color=color)
+        self.plan_lx = self.plan_ax.axhline(plan_y, color=color, alpha=0.5)
+        self.plan_ly = self.plan_ax.axvline(plan_x, color=color, alpha=0.5)
 
         # Plot on the section map
         section_x, section_y = df.loc[row, 'Station'], df.loc[row, 'Elevation']
         self.section_highlight = self.section_ax.scatter([section_x], [section_y],
                                                          color=light_color,
                                                          edgecolors=color,
-                                                         zorder=3
+                                                         zorder=3,
                                                          )
-        self.section_lx = self.section_ax.axhline(section_y, color=color)
-        self.section_ly = self.section_ax.axvline(section_x, color=color)
+        self.section_lx = self.section_ax.axhline(section_y, color=color, alpha=0.5)
+        self.section_ly = self.section_ax.axvline(section_x, color=color, alpha=0.5)
         self.canvas.draw()
-
-    def cell_activated(self, row, col):
-        """
-        Signal slot, when a cell is activate, save the value of the cell before it gets changed, for backup purposes.
-        :param row: int
-        :param col: int
-        """
-        self.pre_change_value = self.table.item(row, col).text()
 
     def cell_changed(self, row, col):
         """
@@ -535,21 +541,54 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         with the value saved in "cell_activate".
         :param row: int
         :param col: int
-        :return:
         """
-        errors = self.check_table()
+
+        def get_errors():
+            """
+            Count any incorrect data types
+            :return: int, number of errors found
+            """
+
+            def has_na(row):
+                """
+                Return True if any cell in the row can't be converted to a float
+                :param row: Int: table row to check
+                :return: bool
+                """
+                for col in range(self.table.columnCount()):
+                    item = self.table.item(row, col).text()
+                    try:
+                        float(item)
+                    except ValueError:
+                        return True
+                    finally:
+                        if item == 'nan':
+                            return True
+                return False
+
+            error_count = 0
+            self.table.blockSignals(True)
+            for row in range(self.table.rowCount()):
+                if has_na(row):
+                    error_count += 1
+            self.table.blockSignals(False)
+            return error_count
+
+        errors = get_errors()
 
         # Reject the change if it causes an error.
         if errors > 0:
+            self.table.blockSignals(True)
             self.message.critical(self, 'Error', "Value cannot be converted to a number")
 
-            item = QTableWidgetItem(self.pre_change_value)
+            item = QTableWidgetItem(self.selected_row[col])
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, col, item)
+            self.table.blockSignals(False)
         else:
             self.plot_table()
-            self.color_table()
 
+        self.color_table()
         self.highlight_point(row=row)
 
     def color_table(self):
@@ -561,6 +600,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             """
             Color the table rows to indicate duplicate station numbers in the GPS.
             """
+            global errors
             stations = []
             for row in range(self.table.rowCount()):
                 if self.table.item(row, stations_column):
@@ -569,6 +609,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                         other_station_index = stations.index(station)
                         self.table.item(row, stations_column).setForeground(QtGui.QColor('red'))
                         self.table.item(other_station_index, stations_column).setForeground(QtGui.QColor('red'))
+                        errors += 1
                     else:
                         self.table.item(row, stations_column).setForeground(QtGui.QColor('black'))
                     stations.append(station)
@@ -577,31 +618,37 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             """
             Color the background of the station cells if the station number is out of order
             """
-            df_stations = self.converter.convert_stations(self.df.Station).to_list()
-            sorted_stations = sorted(df_stations, reverse=bool(df_stations[0] > df_stations[-1]))
+            global errors
+            df_stations = self.table_to_df().Station.map(lambda x: re.search('-?\d+', str(x)).group())
+            table_stations = df_stations.to_list()
+            sorted_stations = df_stations.dropna().astype(int).to_list()
+            sorted_stations = sorted(sorted_stations,
+                                     reverse=bool(sorted_stations[0] > sorted_stations[-1]))
 
             blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
             blue_color.setAlpha(50)
             red_color.setAlpha(50)
 
             for row in range(self.table.rowCount()):
-                station = self.table.item(row, stations_column)
-                try:
-                    station_num = int(station.text())
-                except ValueError:
-                    station.setBackground(QtGui.QColor('red'))
+                station_item = self.table.item(row, stations_column)
+                station_num = re.search('-?\d+', table_stations[row]).group()
+                if not station_num:
+                    station_item.setBackground(QtGui.QColor('dimgray'))
                 else:
-                    if station_num > sorted_stations[row]:
-                        station.setBackground(blue_color)
-                    elif station_num < sorted_stations[row]:
-                        station.setBackground(red_color)
+                    if int(station_num) > sorted_stations[row]:
+                        station_item.setBackground(blue_color)
+                        errors += 1
+                    elif int(station_num) < sorted_stations[row]:
+                        station_item.setBackground(red_color)
+                        errors += 1
 
         self.table.blockSignals(True)
-
+        global errors
+        errors = 0
         stations_column = self.df.columns.to_list().index('Station')
         color_duplicates()
         color_order()
-
+        self.errors_label.setText(f"{str(errors)} error(s) ")
         self.table.blockSignals(False)
 
 
@@ -777,8 +824,8 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
                                                    edgecolors=color,
                                                    zorder=3
                                                    )
-        self.plan_lx = self.plan_ax.axhline(plan_y, color=color)
-        self.plan_ly = self.plan_ax.axvline(plan_x, color=color)
+        self.plan_lx = self.plan_ax.axhline(plan_y, color=color, alpha=0.5)
+        self.plan_ly = self.plan_ax.axvline(plan_x, color=color, alpha=0.5)
 
         # Plot on the section map
         section_x, section_y = row, df.loc[row, 'Elevation']
@@ -787,22 +834,26 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
                                                          edgecolors=color,
                                                          zorder=3
                                                          )
-        self.section_lx = self.section_ax.axhline(section_y, color=color)
-        self.section_ly = self.section_ax.axvline(section_x, color=color)
+        self.section_lx = self.section_ax.axhline(section_y, color=color, alpha=0.5)
+        self.section_ly = self.section_ax.axvline(section_x, color=color, alpha=0.5)
         self.canvas.draw()
 
 
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
+    line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Line GPS'))
+    loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Loop GPS'))
     # mw = LoopAdder()
     mw = LineAdder()
 
     pg = PEMGetter()
-    # file = r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Loop GPS\LOOP 3.txt'
-    file = r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
+    file = str(Path(line_samples_folder).joinpath('PRK-LOOP11LINE10.txt'))
+    # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE14_28.txt'))
+
     # loop = TransmitterLoop(file)
     # line = SurveyLine(file)
+
     mw.open(file)
 
     app.exec_()

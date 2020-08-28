@@ -33,11 +33,11 @@ class StationConverter:
         :return: Integer station number
         """
         # Ensure station is a string
-        station = str(station)
-        if re.match(r"\d+(S|W)", station):
-            station = (-int(re.sub(r"[SW]", "", station.upper())))
+        station = str(station).upper()
+        if re.match(r"-?\d+(S|W)", station):
+            station = (-int(re.sub(r"[SW]", "", station)))
         else:
-            station = (int(re.sub(r"[EN]", "", station.upper())))
+            station = (int(re.sub(r"[EN]", "", station)))
         return station
 
     def convert_stations(self, stations):
@@ -1592,8 +1592,9 @@ class PEMParser:
 
             t = time.time()
             text = text.strip().split('\n')
+            loop_text = [t for t in text if t.startswith('<L')]
             print(f"PEMParser - Time to parse loop of {self.filepath.name}: {time.time() - t}")
-            return text[1:]
+            return loop_text
 
         def parse_line(text):
             """
@@ -1605,8 +1606,9 @@ class PEMParser:
 
             t = time.time()
             text = text.strip().split('\n')
+            line_text = [t for t in text if t.startswith('<P')]
             print(f"PEMParser - Time to parse line of {self.filepath.name}: {time.time() - t}")
-            return text[1:]
+            return line_text
 
         def parse_notes(file):
             """
@@ -3050,9 +3052,11 @@ if __name__ == '__main__':
     # file = files[0]
 
     # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\e110xy.pem')
+    # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM')
+    pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Minera\L10000N_8.PEM')
 
     t2 = time.time()
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\2EX7046L1-1\2ex7046l1-1.DMP2'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\2EX7046L1-1\2ex7046l1-1.DMP2'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\Surface\1400e.DMP2'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2 New\BR-01\br01.DMP2'
     file = dparse.parse_dmp2(file)

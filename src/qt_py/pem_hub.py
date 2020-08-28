@@ -140,8 +140,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.project_tree.setColumnHidden(2, True)
         self.project_tree.setColumnHidden(3, True)
         self.project_tree.setHeaderHidden(True)
-        self.project_tree.clicked.connect(self.project_dir_changed)
         # self.move_dir_tree_to(self.file_sys_model.rootPath())
+        self.pem_dir = None
+        self.gps_dir = None
         self.available_pems = []
         self.available_gps = []
 
@@ -381,6 +382,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.add_gps_btn.setEnabled(False)
                 self.remove_gps_btn.setEnabled(False)
 
+        def open_project_dir_file(item):
+            """
+            Signal slot, open the file that was double clicked in the PEM or GPS lists.
+            :param item: QListWidget item
+            """
+            os.startfile(str(Path(self.project_dir).joinpath(item.text())))
+
         def add_pem_list_files():
             """
             Signal slot, open the selected PEM files in to the PEM list
@@ -442,6 +450,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             self.selection_label.setText(info)
 
+        # Table
         self.table.viewport().installEventFilter(self)
         self.table.installEventFilter(self)
         self.table.setFocusPolicy(QtCore.Qt.StrongFocus)
@@ -450,8 +459,23 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.itemSelectionChanged.connect(update_selection_text)
         self.table.cellChanged.connect(self.table_value_changed)
 
-        self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
+        # Project Tree
+        self.project_tree.clicked.connect(self.project_dir_changed)
 
+        self.refresh_pem_list_btn.clicked.connect(self.fill_pem_list)
+        self.refresh_gps_list_btn.clicked.connect(self.fill_gps_list)
+
+        self.pem_list.itemSelectionChanged.connect(toggle_pem_list_buttons)
+        self.gps_list.itemSelectionChanged.connect(toggle_gps_list_buttons)
+        self.pem_list.itemDoubleClicked.connect(open_project_dir_file)
+        self.gps_list.itemDoubleClicked.connect(open_project_dir_file)
+
+        self.add_pem_btn.clicked.connect(add_pem_list_files)
+        self.add_gps_btn.clicked.connect(add_gps_list_files)
+        self.remove_pem_btn.clicked.connect(remove_pem_list_files)
+        self.remove_gps_btn.clicked.connect(remove_gps_list_files)
+
+        # Project Panel
         self.share_client_cbox.stateChanged.connect(
             lambda: self.client_edit.setEnabled(self.share_client_cbox.isChecked()))
         self.share_grid_cbox.stateChanged.connect(
@@ -467,6 +491,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
         self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
+        self.gps_system_cbox.currentIndexChanged.connect(
+            lambda: self.gps_zone_cbox.setEnabled(True if self.gps_system_cbox.currentText() == 'UTM' else False))
+
+        # Menu
+        self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
         self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
         self.actionAuto_Merge_All_Files.triggered.connect(lambda: self.merge_pem_files(auto_select=True))
 
@@ -474,20 +503,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionReverseY_Component.triggered.connect(lambda: self.reverse_all_data(comp='X'))
         self.actionReverseZ_Component.triggered.connect(lambda: self.reverse_all_data(comp='Y'))
         self.actionAuto_Name_Repeat_Stations.triggered.connect(self.rename_all_repeat_stations)
-
-        self.gps_system_cbox.currentIndexChanged.connect(
-            lambda: self.gps_zone_cbox.setEnabled(True if self.gps_system_cbox.currentText() == 'UTM' else False))
-
-        self.refresh_pem_list_btn.clicked.connect(self.fill_pem_list)
-        self.refresh_gps_list_btn.clicked.connect(self.fill_gps_list)
-
-        self.pem_list.itemSelectionChanged.connect(toggle_pem_list_buttons)
-        self.gps_list.itemSelectionChanged.connect(toggle_gps_list_buttons)
-
-        self.add_pem_btn.clicked.connect(add_pem_list_files)
-        self.add_gps_btn.clicked.connect(add_gps_list_files)
-        self.remove_pem_btn.clicked.connect(remove_pem_list_files)
-        self.remove_gps_btn.clicked.connect(remove_gps_list_files)
 
     def center_window(self):
         qt_rectangle = self.frameGeometry()
@@ -1395,7 +1410,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.available_gps.extend(gps_dir.rglob('*.gpx'))
 
                 for file in self.available_gps:
-                    self.gps_list.addItem(f"{file.parent.name}/{file.name}")
+                    self.gps_list.addItem(f"{str(file.relative_to(self.project_dir))}")
+                    # self.gps_list.addItem(f"{file.parent.name}/{file.name}")
 
     def fill_pem_list(self):
         """
@@ -1427,7 +1443,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return
         else:
             for file in self.available_pems:
-                self.pem_list.addItem(f"{file.parent.name}/{file.name}")
+                # self.pem_list.addItem(f"{file.parent.name}/{file.name}")
+                self.pem_list.addItem(f"{str(file.relative_to(self.project_dir))}")
 
     def move_dir_tree_to(self, dir_path):
         """
@@ -2949,10 +2966,10 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
-    # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
-    # mw.open_pem_files(pem_files)
+    mw.open_pem_files(pem_files)
     #
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'
     # mw.open_dmp_files(file)
