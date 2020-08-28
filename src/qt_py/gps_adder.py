@@ -146,6 +146,17 @@ class GPSAdder(QMainWindow):
             self.table.removeRow(0)
         self.table.blockSignals(True)
 
+    def reset_range(self):
+        """
+        Reset the plot limits automatically
+        """
+        self.plan_ax.relim()
+        self.plan_ax.autoscale()
+
+        self.section_ax.relim()
+        self.section_ax.autoscale()
+        self.canvas.draw()
+
     def open(self, o):
         pass
 
@@ -276,6 +287,64 @@ class GPSAdder(QMainWindow):
     def highlight_point(self, row=None):
         pass
 
+    def cell_changed(self, row, col):
+        """
+        Signal slot, when a cell is changed, check if it creates any errors. If it does, replace the changed value
+        with the value saved in "cell_activate".
+        :param row: int
+        :param col: int
+        """
+
+        def get_errors():
+            """
+            Count any incorrect data types
+            :return: int, number of errors found
+            """
+
+            def has_na(row):
+                """
+                Return True if any cell in the row can't be converted to a float
+                :param row: Int: table row to check
+                :return: bool
+                """
+                for col in range(self.table.columnCount()):
+                    item = self.table.item(row, col).text()
+                    try:
+                        float(item)
+                    except ValueError:
+                        return True
+                    finally:
+                        if item == 'nan':
+                            return True
+                return False
+
+            # Cound how many rows have entries that can't be forced into a float
+            error_count = 0
+            for row in range(self.table.rowCount()):
+                if has_na(row):
+                    error_count += 1
+            return error_count
+
+        errors = get_errors()
+
+        # Reject the change if it causes an error.
+        if errors > 0:
+            self.table.blockSignals(True)
+            self.message.critical(self, 'Error', "Value cannot be converted to a number")
+
+            item = QTableWidgetItem(self.selected_row_info[col])
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.table.setItem(row, col, item)
+            self.table.blockSignals(False)
+        else:
+            self.plot_table()
+            self.highlight_point(row=row)
+
+        # Color the table if it's LineAdder running
+        if 'color_table' in dir(self):
+            self.color_table()
+        # self.highlight_point(row=row)
+
     # def check_table(self):
     #     """
     #     Look for any incorrect data types and create an error if found
@@ -328,16 +397,16 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.setupUi(self)
         self.parent = parent
         self.line = None
-        self.selected_row = None
+        self.selected_row_info = None
         self.converter = StationConverter()
         self.setWindowTitle('Line Adder')
 
+        # Status bar widgets
         self.auto_sort_cbox = QCheckBox("Automatically Sort Line by Position", self)
         self.auto_sort_cbox.setChecked(True)
 
         self.errors_label = QLabel('')
         self.errors_label.setIndent(5)
-
         self.spacer_label = QLabel('')
 
         # Format the borders of the items in the status bar
@@ -355,13 +424,37 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
         self.canvas_frame.layout().addWidget(self.canvas)
         self.canvas.mpl_connect('pick_event', self.onpick)
+        self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
 
+        # Signals
         self.button_box.rejected.connect(self.close)
         self.table.cellChanged.connect(self.cell_changed)
         self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
+
+        self.reset_action = QShortcut(QtGui.QKeySequence(" "), self)
+        self.reset_action.activated.connect(self.reset_range)
+        # self.reset_action.activated.connect(self.highlight_point)
+
         # self.status_bar.hide()
         # self.status_bar.addWidget(self.button_box)
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Delete:
+            self.del_row()
+        # elif e.key() == QtCore.Qt.Key_Space:
+        #     print(f"Space key pressed")
+        #     self.reset_range()
+        #     self.plot_table()
+        #     self.highlight_point()
+
+    def del_row(self):
+        if self.table.selectionModel().hasSelection():
+            row = self.table.selectionModel().selectedRows()[0].row()
+            self.table.removeRow(row)
+            self.plot_table()
+            self.color_table()
+            self.highlight_point(row)
 
     def open(self, o):
         """
@@ -481,6 +574,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         """
 
         def reset_highlight():
+            """
+            Remove the crosshairs
+            """
             self.plan_highlight.remove()
             self.plan_lx.remove()
             self.plan_ly.remove()
@@ -496,18 +592,19 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             self.section_ly = None
 
         if row is None:
-            row = self.table.selectionModel().selectedRows()[0].row()
+            selected_row = self.table.selectionModel().selectedRows()
+            if selected_row:
+                row = self.table.selectionModel().selectedRows()[0].row()
+            else:
+                print(f"No row selected")
+                return
 
         # Save the information of the row for backup purposes
-        self.selected_row = [self.table.item(row, j).text() for j in range(len(self.df.columns))]
+        self.selected_row_info = [self.table.item(row, j).text() for j in range(len(self.df.columns))]
 
         # Remove previously plotted selection
         if self.plan_highlight:
             reset_highlight()
-
-        # Don't do anything if there is a pending error
-        if self.error is True:
-            return
 
         color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
 
@@ -535,61 +632,61 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.section_ly = self.section_ax.axvline(section_x, color=color, alpha=0.5)
         self.canvas.draw()
 
-    def cell_changed(self, row, col):
-        """
-        Signal slot, when a cell is changed, check if it creates any errors. If it does, replace the changed value
-        with the value saved in "cell_activate".
-        :param row: int
-        :param col: int
-        """
-
-        def get_errors():
-            """
-            Count any incorrect data types
-            :return: int, number of errors found
-            """
-
-            def has_na(row):
-                """
-                Return True if any cell in the row can't be converted to a float
-                :param row: Int: table row to check
-                :return: bool
-                """
-                for col in range(self.table.columnCount()):
-                    item = self.table.item(row, col).text()
-                    try:
-                        float(item)
-                    except ValueError:
-                        return True
-                    finally:
-                        if item == 'nan':
-                            return True
-                return False
-
-            error_count = 0
-            self.table.blockSignals(True)
-            for row in range(self.table.rowCount()):
-                if has_na(row):
-                    error_count += 1
-            self.table.blockSignals(False)
-            return error_count
-
-        errors = get_errors()
-
-        # Reject the change if it causes an error.
-        if errors > 0:
-            self.table.blockSignals(True)
-            self.message.critical(self, 'Error', "Value cannot be converted to a number")
-
-            item = QTableWidgetItem(self.selected_row[col])
-            item.setTextAlignment(QtCore.Qt.AlignCenter)
-            self.table.setItem(row, col, item)
-            self.table.blockSignals(False)
-        else:
-            self.plot_table()
-
-        self.color_table()
-        self.highlight_point(row=row)
+    # def cell_changed(self, row, col):
+    #     """
+    #     Signal slot, when a cell is changed, check if it creates any errors. If it does, replace the changed value
+    #     with the value saved in "cell_activate".
+    #     :param row: int
+    #     :param col: int
+    #     """
+    #
+    #     def get_errors():
+    #         """
+    #         Count any incorrect data types
+    #         :return: int, number of errors found
+    #         """
+    #
+    #         def has_na(row):
+    #             """
+    #             Return True if any cell in the row can't be converted to a float
+    #             :param row: Int: table row to check
+    #             :return: bool
+    #             """
+    #             for col in range(self.table.columnCount()):
+    #                 item = self.table.item(row, col).text()
+    #                 try:
+    #                     float(item)
+    #                 except ValueError:
+    #                     return True
+    #                 finally:
+    #                     if item == 'nan':
+    #                         return True
+    #             return False
+    #
+    #         # Cound how many rows have entries that can't be forced into a float
+    #         error_count = 0
+    #         for row in range(self.table.rowCount()):
+    #             if has_na(row):
+    #                 error_count += 1
+    #         return error_count
+    #
+    #     errors = get_errors()
+    #
+    #     # Reject the change if it causes an error.
+    #     if errors > 0:
+    #         self.table.blockSignals(True)
+    #         self.message.critical(self, 'Error', "Value cannot be converted to a number")
+    #
+    #         item = QTableWidgetItem(self.selected_row_info[col])
+    #         item.setTextAlignment(QtCore.Qt.AlignCenter)
+    #         self.table.setItem(row, col, item)
+    #         self.table.blockSignals(False)
+    #     else:
+    #         self.plot_table()
+    #         self.highlight_point(row=row)
+    #
+    #     self.color_table()
+    #     # self.highlight_point(row=row)
 
     def color_table(self):
         """
@@ -620,10 +717,12 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             """
             global errors
             df_stations = self.table_to_df().Station.map(lambda x: re.search('-?\d+', str(x)).group())
-            table_stations = df_stations.to_list()
+
+            table_stations = df_stations.astype(int).to_list()
+
             sorted_stations = df_stations.dropna().astype(int).to_list()
-            sorted_stations = sorted(sorted_stations,
-                                     reverse=bool(sorted_stations[0] > sorted_stations[-1]))
+            reverse = True if (table_stations[0] > table_stations[-1]) else False
+            sorted_stations = sorted(sorted_stations, reverse=reverse)
 
             blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
             blue_color.setAlpha(50)
@@ -631,7 +730,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
             for row in range(self.table.rowCount()):
                 station_item = self.table.item(row, stations_column)
-                station_num = re.search('-?\d+', table_stations[row]).group()
+                station_num = table_stations[row]
+                # station_num = re.search('-?\d+', table_stations[row]).group()
                 if not station_num:
                     station_item.setBackground(QtGui.QColor('dimgray'))
                 else:
@@ -641,6 +741,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                     elif int(station_num) < sorted_stations[row]:
                         station_item.setBackground(red_color)
                         errors += 1
+                    else:
+                        station_item.setBackground(QtGui.QColor('white'))
 
         self.table.blockSignals(True)
         global errors
@@ -655,13 +757,49 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 class LoopAdder(GPSAdder, Ui_LoopAdder):
 
     def __init__(self, parent=None):
+        # super().__init__()
+        # self.setupUi(self)
+        # self.parent = parent
+        # self.loop = None
+        # self.setWindowTitle('Loop Adder')
+        #
+        # # self.table = QTableWidget()
+        # self.table.setFixedWidth(400)
+        # self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+        #
+        # self.canvas_frame.layout().addWidget(self.canvas)
+        # self.canvas.mpl_connect('pick_event', self.onpick)
+        #
+        # self.button_box.rejected.connect(self.close)
+        # self.table.cellChanged.connect(self.plot_table)
+        # self.table.cellChanged.connect(self.check_table)
+        # self.table.itemSelectionChanged.connect(self.highlight_point)
+        # self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
+        # self.status_bar.hide()
+        #
+
         super().__init__()
         self.setupUi(self)
         self.parent = parent
         self.loop = None
+        self.selected_row_info = None
         self.setWindowTitle('Loop Adder')
 
-        # self.table = QTableWidget()
+        # Status bar widgets
+        self.auto_sort_cbox = QCheckBox("Automatically Sort Loop", self)
+        self.auto_sort_cbox.setChecked(True)
+
+        self.spacer_label = QLabel('')
+
+        # Format the borders of the items in the status bar
+        self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
+        self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
+
+        self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
+        self.status_bar.addPermanentWidget(self.spacer_label, 1)
+
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -669,22 +807,27 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 
         self.canvas_frame.layout().addWidget(self.canvas)
         self.canvas.mpl_connect('pick_event', self.onpick)
+        self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
 
+        # Signals
         self.button_box.rejected.connect(self.close)
-        self.table.cellChanged.connect(self.plot_table)
-        self.table.cellChanged.connect(self.check_table)
+        self.table.cellChanged.connect(self.cell_changed)
         self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
-        self.status_bar.hide()
+
+        self.reset_action = QShortcut(QtGui.QKeySequence(" "), self)
+        self.reset_action.activated.connect(self.reset_range)
 
     def open(self, o):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
-        :param o: Union, filepath; GPS object; Loop to open
+        :param o: Union (filepath, dataframe), Loop to open
         """
+        errors = pd.DataFrame()
         if isinstance(o, str):
             if Path(o).is_file():
                 self.loop = TransmitterLoop(o)
+                errors = self.loop.get_errors()
             else:
                 raise ValueError(f"{o} is not a valid file.")
         elif isinstance(o, TransmitterLoop):
@@ -702,8 +845,11 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.df = self.loop.get_loop(closed=True, sorted=self.auto_sort_cbox.isChecked())
         self.df_to_table(self.df)
         self.plot_table()
-        self.check_table()
         self.show()
+
+        if not errors.empty:
+            self.message.warning(self, 'Parsing Error',
+                                 f"The following rows could not be parsed:\n\n{errors.to_string()}")
 
     def accept(self):
         """
@@ -788,6 +934,9 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         :return: None
         """
         def reset_highlight():
+            """
+            Remove the crosshairs
+            """
             self.plan_highlight.remove()
             self.plan_lx.remove()
             self.plan_ly.remove()
@@ -803,16 +952,19 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
             self.section_ly = None
 
         if row is None:
-            row = self.table.selectionModel().selectedRows()[0].row()
-        # print(f"Row {row} selected")
+            selected_row = self.table.selectionModel().selectedRows()
+            if selected_row:
+                row = self.table.selectionModel().selectedRows()[0].row()
+            else:
+                print(f"No row selected")
+                return
+
+        # Save the information of the row for backup purposes
+        self.selected_row_info = [self.table.item(row, j).text() for j in range(len(self.df.columns))]
 
         # Remove previously plotted selection
         if self.plan_highlight:
             reset_highlight()
-
-        # Don't do anything if there is a pending error
-        if self.error is True:
-            return
 
         color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
 
@@ -848,8 +1000,8 @@ def main():
     mw = LineAdder()
 
     pg = PEMGetter()
-    file = str(Path(line_samples_folder).joinpath('PRK-LOOP11LINE10.txt'))
-    # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE14_28.txt'))
+    file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
+    # file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
 
     # loop = TransmitterLoop(file)
     # line = SurveyLine(file)
