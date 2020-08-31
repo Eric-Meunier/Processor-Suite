@@ -468,7 +468,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.df.drop_duplicates(subset=['Station'], inplace=True)
         self.df.sort_values(by='Station', inplace=True)
 
-        az, dip, depth = None, None, None
+        az, dip, depth = pd.Series(dtype=float), pd.Series(dtype=float), pd.Series(dtype=float)
         if self.pem_file.has_d7() and self.pem_file.has_xy():
             plot_tool_values()
 
@@ -480,10 +480,10 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         if self.pem_file.has_geometry():
             plot_seg_values()
 
-            if az is None:
+            if not az.any():
                 az, dip, depth = seg_az, seg_dip, seg_depth
 
-        if az and depth:
+        if az.any() and depth.any():
             add_az_spline(az, depth)
             add_dip_spline(dip, depth)
 
@@ -550,7 +550,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         df = pd.read_csv(filepath,
                          delim_whitespace=True,
                          usecols=[1, 2, 5],
-                         names=['Azimuth', 'Dip', 'Depth'])
+                         names=['Azimuth', 'Dip', 'Depth'],
+                         dtype=float)
         self.plot_df(df, source='seg')
 
     def open_dad_file(self, filepath):
@@ -561,16 +562,18 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         try:
             if filepath.endswith('xlsx') or filepath.endswith('xls'):
                 df = pd.read_excel(filepath,
-                                   delim_whitespace=True,
+                                   # delim_whitespace=True,
                                    usecols=[0, 1, 2],
                                    names=['Depth', 'Azimuth', 'Dip'],
-                                   header=None)
+                                   header=None,
+                                   dtype=float)
             else:
                 df = pd.read_csv(filepath,
-                                 delim_whitespace=True,
+                                 # delim_whitespace=True,
                                  usecols=[0, 1, 2],
                                  names=['Depth', 'Azimuth', 'Dip'],
-                                 header=None)
+                                 header=None,
+                                 dtype=float)
         except Exception as e:
             self.error.showMessage(f"The following error occurred trying to read {Path(filepath).name}:{str(e)}")
 

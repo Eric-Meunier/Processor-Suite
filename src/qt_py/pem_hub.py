@@ -16,7 +16,7 @@ from itertools import groupby
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
-                             QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,QProgressBar,
+                             QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
                              QVBoxLayout)
 # from pyqtspinner.spinner import WaitingSpinner
@@ -1089,13 +1089,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         elif current_tab == pem_info_widget.geometry_tab:
             try:
                 collar = BoreholeCollar(file, crs=crs)
-                segments = BoreholeSegments(file)
+                errors = collar.get_errors()
+                if not errors.empty:
+                    self.message.warning(self, 'Parsing Error',
+                                         f"The following rows could not be parsed:\n\n{errors.to_string()}")
+                # segments = BoreholeSegments(file)
                 if not collar.df.empty:
                     pem_info_widget.fill_gps_table(collar.df, pem_info_widget.collar_table)
-                if not segments.df.empty:
-                    pem_info_widget.fill_gps_table(segments.df, pem_info_widget.segments_table)
+                # if not segments.df.empty:
+                #     pem_info_widget.fill_gps_table(segments.df, pem_info_widget.segments_table)
             except Exception as e:
-                self.error.showMessage(f"Error adding borehole geometry: {str(e)}")
+                self.error.showMessage(f"Error adding borehole collar: {str(e)}")
 
         elif current_tab == pem_info_widget.loop_gps_tab:
             loop_adder = LoopAdder(parent=self)
