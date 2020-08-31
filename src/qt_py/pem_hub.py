@@ -593,17 +593,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 get_geometry_action.triggered.connect(self.open_pem_geometry)
                 get_geometry_action.setIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
 
-                share_loop_action = QAction("&Share Loop", self)
-                share_loop_action.triggered.connect(self.share_loop)
-
-                share_collar_action = QAction("&Share Collar", self)
-                share_collar_action.triggered.connect(self.share_collar)
-
-                share_segments_action = QAction("&Share Geometry", self)
-                share_segments_action.triggered.connect(self.share_segments)
-
-                share_station_gps_action = QAction("&Share Station GPS", self)
-                share_station_gps_action.triggered.connect(self.share_line)
+                # share_loop_action = QAction("&Share Loop", self)
+                # share_loop_action.triggered.connect(self.share_loop)
+                #
+                # share_collar_action = QAction("&Share Collar", self)
+                # share_collar_action.triggered.connect(self.share_collar)
+                #
+                # share_segments_action = QAction("&Share Geometry", self)
+                # share_segments_action.triggered.connect(self.share_segments)
+                #
+                # share_station_gps_action = QAction("&Share Station GPS", self)
+                # share_station_gps_action.triggered.connect(self.share_line)
 
                 rename_lines_action = QAction("&Rename Lines/Holes", self)
                 rename_lines_action.triggered.connect(lambda: self.open_batch_renamer(type='Line'))
@@ -636,12 +636,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         menu.addAction(derotate_action)
                     menu.addAction(get_geometry_action)
                     menu.addSeparator()
-                menu.addAction(share_loop_action)
-                if all([f.is_borehole() for f in selected_pems]):
-                    menu.addAction(share_collar_action)
-                    menu.addAction(share_segments_action)
-                else:
-                    menu.addAction(share_station_gps_action)
+                # menu.addAction(share_loop_action)
+                # if all([f.is_borehole() for f in selected_pems]):
+                #     menu.addAction(share_collar_action)
+                #     menu.addAction(share_segments_action)
+                # else:
+                #     menu.addAction(share_station_gps_action)
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     menu.addSeparator()
                     menu.addAction(rename_lines_action)
