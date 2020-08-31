@@ -131,7 +131,7 @@ class Map3DViewer(QMainWindow):
                                                    name=f"Loop {pem_file.loop_name}",
                                                    text=loop.index))
 
-            print(f"Time to add loop trace: {time.time() - t}")
+            print(f"Map3DViewer - Time to add loop trace: {time.time() - t}")
 
         def plot_line(pem_file):
             t = time.time()
@@ -161,7 +161,7 @@ class Map3DViewer(QMainWindow):
                 #                                      xanchor="center",
                 #                                      yanchor="bottom"))
 
-                print(f"Time to add line trace: {time.time() - t}")
+                print(f"Map3DViewer - Time to add line trace: {time.time() - t}")
 
         def plot_hole(pem_file):
             t = time.time()
@@ -195,7 +195,7 @@ class Map3DViewer(QMainWindow):
                                                    text=pem_file.line_name
                                                    ))
 
-            print(f"Time to add line trace: {time.time() - t}")
+            print(f"Map3DViewer - Time to add line trace: {time.time() - t}")
 
         reset_figure()
 

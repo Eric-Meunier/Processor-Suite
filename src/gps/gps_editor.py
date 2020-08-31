@@ -17,9 +17,9 @@ from scipy import spatial
 class BaseGPS:
 
     def __init__(self):
-        self.df = pd.DataFrame()
+        self.df = gpd.GeoDataFrame()
         self.crs = None
-        self.errors = pd.DataFrame()
+        self.errors = gpd.GeoDataFrame()
 
     def to_string(self, header=False):
         return self.df.to_string(index=False, header=header)
@@ -257,18 +257,18 @@ class TransmitterLoop(BaseGPS):
         ])
 
         if isinstance(file, list):
-            pass
+            # split_file = [r.strip().split() for r in file]
+            gps = pd.DataFrame(file)
         elif isinstance(file, pd.DataFrame):
-            file = file.to_list()
+            gps = file
         elif Path(str(file)).is_file():
             file = open(file, 'rt').readlines()
+            split_file = [r.strip().split() for r in file]
+            gps = pd.DataFrame(split_file)
         elif file is None:
             return empty_gps, pd.DataFrame()
         else:
             raise TypeError('Invalid input for loop GPS parsing')
-
-        split_file = [r.strip().split() for r in file]
-        gps = pd.DataFrame(split_file)
 
         # Remove P tags and units columns
         cols_to_drop = []
@@ -423,18 +423,18 @@ class SurveyLine(BaseGPS):
         ])
 
         if isinstance(file, list):
-            pass
+            # split_file = [r.strip().split() for r in file]
+            gps = pd.DataFrame(file)
         elif isinstance(file, pd.DataFrame):
-            file = file.to_list()
+            gps = file
         elif Path(str(file)).is_file():
             file = open(file, 'rt').readlines()
+            split_file = [r.strip().split() for r in file]
+            gps = pd.DataFrame(split_file)
         elif file is None:
             return empty_gps, pd.DataFrame()
         else:
             raise TypeError('Invalid input for station GPS parsing')
-
-        split_file = [r.strip().split() for r in file]
-        gps = pd.DataFrame(split_file)
 
         # Remove P tags and units columns
         cols_to_drop = []
@@ -561,27 +561,28 @@ class BoreholeCollar(BaseGPS):
         ])
 
         if isinstance(file, list):
-            pass
+            gps = pd.DataFrame(file)
         elif isinstance(file, pd.DataFrame):
-            file = file.to_list()
+            gps = file
         elif Path(str(file)).is_file():
             file = open(file, 'rt').readlines()
+            split_file = [r.strip().split() for r in file]
+            gps = pd.DataFrame(split_file)
         elif file is None:
             return empty_gps, pd.DataFrame()
         else:
             raise TypeError('Invalid input for collar GPS parsing')
 
-        split_file = [r.strip().split() for r in file]
-        gps = pd.DataFrame(split_file)
-
         # Remove P tags and units columns
         cols_to_drop = []
         for i, col in gps.dropna(axis=0).iteritems():
+            if col.empty:
+                continue
             # Remove P tag column
-            if col.map(lambda x: x.startswith('<')).all():
+            if col.map(lambda x: str(x).startswith('<')).all():
                 cols_to_drop.append(i)
             # Remove units column
-            elif col.map(lambda x: x == '0').all():
+            elif col.map(lambda x: str(x) == '0').all():
                 cols_to_drop.append(i)
 
         gps = gps.drop(cols_to_drop, axis=1)
@@ -622,8 +623,7 @@ class BoreholeCollar(BaseGPS):
         return gps, error_gps
 
     def get_collar(self):
-        df = self.df
-        return df
+        return self.df
 
 
 class BoreholeSegments(BaseGPS):
@@ -666,24 +666,24 @@ class BoreholeSegments(BaseGPS):
         ])
 
         if isinstance(file, list):
-            pass
+            # split_file = [r.strip().split() for r in file]
+            gps = pd.DataFrame(file)
         elif isinstance(file, pd.DataFrame):
-            file = file.to_list()
+            gps = file
         elif Path(str(file)).is_file():
             file = open(file, 'rt').readlines()
+            split_file = [r.strip().split() for r in file]
+            gps = pd.DataFrame(split_file)
         elif file is None:
             return empty_gps, pd.DataFrame()
         else:
             raise TypeError('Invalid input for segments parsing')
 
-        split_file = [r.strip().split() for r in file]
-        gps = pd.DataFrame(split_file)
-
         # Remove P tags and units columns
         cols_to_drop = []
         for i, col in gps.dropna(axis=0).iteritems():
             # Remove P tag column
-            if col.map(lambda x: x.startswith('<')).all():
+            if col.map(lambda x: str(x).startswith('<')).all():
                 cols_to_drop.append(i)
 
         gps = gps.drop(cols_to_drop, axis=1)
@@ -728,23 +728,25 @@ class BoreholeSegments(BaseGPS):
         return self.df
 
 
-class BoreholeGeometry:
+class BoreholeGeometry(BaseGPS):
     """
     Class that represents the geometry of a hole, with collar and segments.
     """
     def __init__(self, collar, segments):
+        super().__init__()
         self.collar = collar
         self.segments = segments
 
-    def get_projection(self, num_segments=None, stations=None):
+    def get_projection(self, num_segments=None, stations=None, latlon=False):
         """
         Uses the segments to create a 3D projection of a borehole trace. Can be broken up into segments and interpolated.
         :param num_segments: Desired number of segments to be output
         :param stations: list, stations to use for interpolation to ensure they are in the segments
+        :param latlon: bool, whether to return the projection as latlon
         :return: pandas DataFrame: Projected easting, northing, elevation, and relative depth from collar
         """
         # Create the data frame
-        projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative_depth'])
+        projection = gpd.GeoDataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative_depth'])
         collar = self.collar.get_collar().dropna()
         segments = self.segments.get_segments().dropna()
 
@@ -804,9 +806,10 @@ class BoreholeGeometry:
         projection.Northing = pd.Series(northings, dtype=float)
         projection.Elevation = pd.Series(depths, dtype=float)
         projection['Relative_depth'] = pd.Series(relative_depth, dtype=float)
-        # if crs:
-        #     projection = get_latlon(projection, crs)
-        return projection
+        self.df = projection
+        if latlon:
+            self.df = self.to_latlon().df
+        return self.df
 
     def get_collar(self):
         return self.collar.get_collar()

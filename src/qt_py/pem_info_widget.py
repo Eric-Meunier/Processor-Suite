@@ -47,6 +47,12 @@ sys.excepthook = exception_hook
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     refresh_tables_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to refresh its main table.
+    add_geometry_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to open PEMGeometry
+
+    share_loop_signal = QtCore.pyqtSignal()
+    share_line_signal = QtCore.pyqtSignal()
+    share_collar_signal = QtCore.pyqtSignal()
+    share_segments_signal = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -150,15 +156,23 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # self.reversePolarityButton.clicked.connect(self.reverse_polarity)
         # self.rename_repeat_stations_btn.clicked.connect(self.rename_repeat_stations)
 
+        self.open_station_gps_btn.clicked.connect(self.open_gps_file)
+        self.open_loop_gps_btn.clicked.connect(self.open_gps_file)
+        self.open_collar_gps_btn.clicked.connect(self.open_gps_file)
+        self.add_segments_btn.clicked.connect(lambda: self.add_geometry_signal.emit())
+
         self.export_station_gps_btn.clicked.connect(lambda: self.export_gps('station'))
         self.export_loop_gps_btn.clicked.connect(lambda: self.export_gps('loop'))
+        self.export_collar_gps_btn.clicked.connect(lambda: self.export_gps('collar'))
+        self.export_segments_btn.clicked.connect(lambda: self.export_gps('segments'))
 
         self.edit_loop_btn.clicked.connect(self.open_loop_adder)
         self.edit_line_btn.clicked.connect(self.open_line_adder)
 
-        self.open_station_gps_btn.clicked.connect(self.open_gps_file)
-        self.open_loop_gps_btn.clicked.connect(self.open_gps_file)
-        # self.share_gps_btn.clicked.connect(pass)
+        self.share_loop_gps_btn.clicked.connect(lambda: self.share_loop_signal.emit())
+        self.share_line_gps_btn.clicked.connect(lambda: self.share_line_signal.emit())
+        self.share_collar_gps_btn.clicked.connect(lambda: self.share_collar_signal.emit())
+        self.share_segments_btn.clicked.connect(lambda: self.share_segments_signal.emit())
 
         # # Radio buttons
         # self.station_sort_rbtn.clicked.connect(self.fill_data_table)
@@ -1154,14 +1168,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         return [model.row() for model in table.selectionModel().selectedRows()]
 
-    # def get_df_rows(self):
-    #     rows = self.get_selected_rows(self.data_table)
-    #     if not rows:
-    #         rows = range(self.data_table.rowCount())
-    #
-    #     df_rows = [int(self.data_table.item(row, self.data_table_columns.index('index')).text()) for row in rows]
-    #     return df_rows
-
     def get_loop(self):
         """
         Create a TransmitterLoop object using the information in the loop_table
@@ -1170,10 +1176,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         gps = []
         for row in range(self.loop_table.rowCount()):
             gps_row = list()
-            gps_row.append(self.loop_table.item(row, 0).text())  # Easting
-            gps_row.append(self.loop_table.item(row, 1).text())  # Northing
-            gps_row.append(self.loop_table.item(row, 2).text())  # Elevation
-            gps_row.append(self.loop_table.item(row, 3).text())  # Unit
+            for col in range(self.loop_table.columnCount()):
+                v = self.loop_table.item(row, col).text()
+                if v == '':
+                    v = np.nan
+                gps_row.append(v)
             gps.append(gps_row)
         return TransmitterLoop(gps)
 
@@ -1185,11 +1192,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         gps = []
         for row in range(self.line_table.rowCount()):
             gps_row = list()
-            gps_row.append(self.line_table.item(row, 0).text())  # Easting
-            gps_row.append(self.line_table.item(row, 1).text())  # Northing
-            gps_row.append(self.line_table.item(row, 2).text())  # Elevation
-            gps_row.append(self.line_table.item(row, 3).text())  # Units
-            gps_row.append(self.line_table.item(row, 4).text())  # Station
+            for col in range(self.line_table.columnCount()):
+                v = self.line_table.item(row, col).text()
+                if v == '':
+                    v = np.nan
+                gps_row.append(v)
             gps.append(gps_row)
         return SurveyLine(gps)
 
@@ -1201,10 +1208,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         gps = []
         for row in range(self.collar_table.rowCount()):
             gps_row = list()
-            gps_row.append(self.collar_table.item(row, 0).text())  # Easting
-            gps_row.append(self.collar_table.item(row, 1).text())  # Northing
-            gps_row.append(self.collar_table.item(row, 2).text())  # Elevation
-            gps_row.append(self.collar_table.item(row, 3).text())  # Units
+            for col in range(self.collar_table.columnCount()):
+                v = self.collar_table.item(row, col).text()
+                if v == '':
+                    v = np.nan
+                gps_row.append(v)
             gps.append(gps_row)
         return BoreholeCollar(gps)
 
@@ -1216,11 +1224,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         gps = []
         for row in range(self.segments_table.rowCount()):
             gps_row = list()
-            gps_row.append(self.segments_table.item(row, 0).text())  # Azimuth
-            gps_row.append(self.segments_table.item(row, 1).text())  # Dip
-            gps_row.append(self.segments_table.item(row, 2).text())  # Segment_length
-            gps_row.append(self.segments_table.item(row, 3).text())  # Unit
-            gps_row.append(self.segments_table.item(row, 4).text())  # Depth
+            for col in range(self.segments_table.columnCount()):
+                v = self.segments_table.item(row, col).text()
+                if v == '':
+                    v = np.nan
+                gps_row.append(v)
             gps.append(gps_row)
         return BoreholeSegments(gps)
 
@@ -1234,33 +1242,51 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def export_gps(self, type):
         """
         Export the GPS in the station GPS table to a text or CSV file.
-        :type: str: 'station' or 'loop'
+        :type: type: 'station' or 'loop'
         :return: None
         """
         if type == 'station':
             gps = self.get_line()
-        else:
+        elif type == 'loop':
             gps = self.get_loop()
+        elif type == 'collar':
+            gps = self.get_collar()
+        elif type == 'segments':
+            gps = self.get_segments()
+        else:
+            raise ValueError(f"{type} is not a valid GPS type to export.")
 
         if gps.df.empty:
+            print(f"No GPS to export.")
             return
 
         default_path = str(self.pem_file.filepath.parent)
-        selected_path = self.dialog.getSaveFileName(self, 'Save File', directory=default_path,
-                                                    filter='Text files (*.txt);; CSV files (*.csv);; All files(*.*)')
-        if selected_path[0]:
-            if selected_path[0].endswith('txt'):
-                gps_str = gps.to_string()
-            elif selected_path[0].endswith('csv'):
-                gps_str = gps.to_csv()
+        if type in ['station', 'loop', 'collar']:
+            selected_path = self.dialog.getSaveFileName(self, 'Save File',
+                                                        directory=default_path,
+                                                        filter='Text files (*.txt);; CSV files (*.csv);; All files(*.*)')
+            if selected_path[0]:
+                if selected_path[0].endswith('txt'):
+                    gps_str = gps.to_string()
+                elif selected_path[0].endswith('csv'):
+                    gps_str = gps.to_csv()
+                else:
+                    self.message.information(self, 'Invalid file type', f"Selected file type is invalid. Must be either"
+                    f"'txt' or 'csv'")
+                    return
             else:
-                self.message.information(self, 'Invalid file type', f"Selected file type is invalid. Must be either"
-                f"'txt' or 'csv'")
+                return
+        else:
+            selected_path = self.dialog.getSaveFileName(self, 'Save File',
+                                                        directory=default_path,
+                                                        filter='SEG files (*.seg)')
+            if selected_path[0]:
+                gps_str = gps.to_string()
+            else:
                 return
 
-            with open(selected_path[0], 'w+') as file:
-                file.write(gps_str)
-            os.startfile(selected_path[0])
-        else:
-            self.window().statusBar().showMessage('Cancelled.', 2000)
+        with open(selected_path[0], 'w+') as file:
+            file.write(gps_str)
+        os.startfile(selected_path[0])
+
 

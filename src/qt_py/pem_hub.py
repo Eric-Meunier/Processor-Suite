@@ -352,8 +352,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 column = self.table_columns.index(header.title())
 
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
-                item.setBackground(self.table.itemAt(column, row).background())
-                item.setForeground(self.table.itemAt(column, row).foreground())
+                if not file.has_any_gps():
+                    color = QtGui.QColor('blue')
+                    color.setAlpha(50)
+                else:
+                    color = QtGui.QColor('white')
+                item.setBackground(color)
+                # item.setBackground(self.table.item(column, row).background())
+                # item.setForeground(self.table.itemAt(0, row).foreground().color())
                 self.table.setItem(row, column, item)
 
             self.table.blockSignals(False)
@@ -597,7 +603,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 share_segments_action.triggered.connect(self.share_segments)
 
                 share_station_gps_action = QAction("&Share Station GPS", self)
-                share_station_gps_action.triggered.connect(self.share_station_gps)
+                share_station_gps_action.triggered.connect(self.share_line)
 
                 rename_lines_action = QAction("&Rename Lines/Holes", self)
                 rename_lines_action.triggered.connect(lambda: self.open_batch_renamer(type='Line'))
@@ -936,6 +942,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             # Connect a signal to refresh the main table row when changes are made in the pem_info_widget tables.
             pem_info_widget.refresh_tables_signal.connect(lambda: self.refresh_rows(current_index=True))
+            pem_info_widget.add_geometry_signal.connect(self.open_pem_geometry)
+            pem_info_widget.share_loop_signal.connect(self.share_loop)
+            pem_info_widget.share_line_signal.connect(self.share_line)
+            pem_info_widget.share_collar_signal.connect(self.share_collar)
+            pem_info_widget.share_segments_signal.connect(self.share_segments)
+
             pem_info_widget.blockSignals(False)
             return pem_info_widget
 
@@ -1582,9 +1594,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.message.information(self, 'Missing GPS', 'A file is missing required GPS')
             return
 
-        if crs.is_nad27():
-            self.message.information(self, 'Invalid Datum', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
-            return
+        # if crs.is_nad27():
+        #     self.message.information(self, 'Invalid Datum', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
+        #     return
 
         if not crs.is_valid():
             self.message.information(self, 'Incomplete CRS', 'GPS coordinate system information is incomplete')
@@ -1614,37 +1626,48 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         collar_style.iconstyle.color = simplekml.Color.magenta
 
         loops = []
+        loop_ids = []
         loop_names = []
+
         lines = []
+        line_ids = []
         line_names = []
+
         traces = []
+        trace_ids = []
         hole_names = []
 
         # Grouping up the loops, lines and boreholes into lists.
         for pem_file in pem_files:
-            loop_gps = pem_file.loop.get_loop(closed=True, crs=crs)
-            loop_gps.append(loop_gps)
+            pem_file.loop.crs = crs
+            loop_gps = pem_file.loop.to_latlon().get_loop(closed=True)
             loop_name = pem_file.loop_name
-            if not loop_gps.empty and loop_gps not in loops:
+            if not loop_gps.empty and loop_gps.to_string() not in loop_ids:
                 loops.append(loop_gps)
+                loop_ids.append(loop_gps.to_string())
                 loop_names.append(loop_name)
             if not pem_file.is_borehole():
-                line_gps = pem_file.line.get_line(crs=crs)
+                pem_file.line.crs = crs
+                line_gps = pem_file.line.to_latlon().get_line()
                 line_name = pem_file.line_name
-                if not line_gps.empty and line_gps not in lines:
+                if not line_gps.empty and line_gps.to_string() not in line_ids:
                     lines.append(line_gps)
+                    line_ids.append(line_gps.to_string())
                     line_names.append(line_name)
             else:
-                bh_projection = pem_file.geometry.get_projection(num_segments=100)
-                hole_name = pem_file.line_name
-                if not bh_projection.empty and bh_projection not in traces:
-                    traces.append(bh_projection)
-                    hole_names.append(hole_name)
+                if pem_file.has_collar_gps():
+                    pem_file.geometry.crs = crs
+                    bh_projection = pem_file.geometry.get_projection(num_segments=100, latlon=True)
+                    hole_name = pem_file.line_name
+                    if not bh_projection.empty and bh_projection.to_string() not in trace_ids:
+                        traces.append(bh_projection)
+                        trace_ids.append(bh_projection.to_string())
+                        hole_names.append(hole_name)
 
         # Creates KMZ objects for the loops.
         for loop_gps, name in zip(loops, loop_names):
             ls = kml.newlinestring(name=name)
-            ls.coords = loop_gps.loc[:, ['Longitude', 'Latitude']].to_numpy()
+            ls.coords = loop_gps.loc[:, ['Easting', 'Northing']].to_numpy()
             ls.extrude = 1
             ls.style = loop_style
 
@@ -1652,21 +1675,21 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for line_gps, name in zip(lines, line_names):
             folder = kml.newfolder(name=name)
             new_point = line_gps.apply(
-                lambda x: folder.newpoint(name=str(x.Station), coords=[(x.Longitude, x.Latitude)]), axis=1)
+                lambda x: folder.newpoint(name=str(x.Station), coords=[(x.easting, x.northing)]), axis=1)
             new_point.style = station_style
 
             ls = folder.newlinestring(name=name)
-            ls.coords = line_gps.loc[:, ['Longitude', 'Latitude']].to_numpy()
+            ls.coords = line_gps.loc[:, ['Easting', 'Northing']].to_numpy()
             ls.extrude = 1
             ls.style = trace_style
 
         # Creates KMZ objects for the boreholes.
         for trace_gps, name in zip(traces, hole_names):
             folder = kml.newfolder(name=name)
-            collar = folder.newpoint(name=name, coords=[trace_gps.loc[0, ['Longitude', 'Latitude']].to_numpy()])
+            collar = folder.newpoint(name=name, coords=[trace_gps.loc[0, ['Easting', 'Northing']].to_numpy()])
             collar.style = collar_style
             ls = folder.newlinestring(name=name)
-            ls.coords = trace_gps.loc[:, ['Longitude', 'Latitude']].to_numpy()
+            ls.coords = trace_gps.loc[:, ['Easting', 'Northing']].to_numpy()
             ls.extrude = 1
             ls.style = trace_style
 
@@ -1963,8 +1986,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
     def table_value_changed(self, row, col):
         """
-        Signal Slot: Action taken when a value in the main table was changed. Example: Changing the coil area of the data if the
-        coil area cell is changed, or changing the filepath of a PEM file when the file name cell is changed.
+        Signal Slot: Action taken when a value in the main table was changed.
         :param row: Row of the main table that the change was made.
         :param col: Column of the main table that the change was made.
         :return: None
@@ -2144,7 +2166,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 pem_file.notes.append(f"<GEN> CRS: {system}{zone}, {datum}")
 
         if filepath is None:
-            pem_file.filepath = Path(os.path.join(pem_file.filepath.parent,
+            pem_file.filepath = Path(pem_file.filepath.parent.joinpath(
                                                   self.table.item(table_row, self.table_columns.index('File')).text()))
         else:
             if not isinstance(filepath, Path):
@@ -2189,6 +2211,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         selected_pem_files = []
         rows = [model.row() for model in self.table.selectionModel().selectedRows()]
+
+        # Return row 0 if there are pem files but no rows selected, since the program may have been freshly opened.
+        if self.pem_files and not rows:
+            rows = [0]
+
         rows.sort(reverse=True)
         for row in rows:
             selected_pem_files.append(self.pem_files[row])
@@ -2504,10 +2531,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
         widget = self.pem_info_widgets[self.table.currentRow()]
-        widget_loop = widget.get_loop().df
+        widget_loop = widget.get_loop().df.dropna()
         if not widget_loop.empty:
             for widget in self.pem_info_widgets:
                 widget.fill_gps_table(widget_loop, widget.loop_table)
+        else:
+            print(f"Nothing to share.")
 
     def share_collar(self):
         """
@@ -2515,10 +2544,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
         widget = self.pem_info_widgets[self.table.currentRow()]
-        widget_collar = widget.get_collar().df
+        widget_collar = widget.get_collar().df.dropna()
         if not widget_collar.empty:
             for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
                 widget.fill_gps_table(widget_collar, widget.collar_table)
+        else:
+            print(f"Nothing to share.")
 
     def share_segments(self):
         """
@@ -2526,21 +2557,25 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
         widget = self.pem_info_widgets[self.table.currentRow()]
-        wigdet_segments = widget.get_segments().df
+        wigdet_segments = widget.get_segments().df.dropna()
         if not wigdet_segments.empty:
             for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
                 widget.fill_gps_table(wigdet_segments, widget.segments_table)
+        else:
+            print(f"Nothing to share.")
 
-    def share_station_gps(self):
+    def share_line(self):
         """
         Share the station GPS of one file with all other opened PEM files. Will only do so for surface files.
         :return: None
         """
         widget = self.pem_info_widgets[self.table.currentRow()]
-        widget_line = widget.get_line().df
+        widget_line = widget.get_line().df.dropna()
         if not widget_line.empty:
             for widget in list(filter(lambda x: not x.pem_file.is_borehole(), self.pem_info_widgets)):
                 widget.fill_gps_table(widget_line, widget.line_table)
+        else:
+            print(f"Nothing to share.")
 
     def auto_name_lines(self):
         """
@@ -2970,6 +3005,7 @@ def main():
     # mw.show()
 
     pg = PEMGetter()
+    # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
@@ -2978,6 +3014,7 @@ def main():
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'
     # mw.open_dmp_files(file)
 
+    # mw.open_3d_map()
     mw.show()
 
     # mw.show()

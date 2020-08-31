@@ -212,7 +212,6 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             return
 
         self.pem_file = copy.deepcopy(pem_file)
-        self.setWindowTitle(f'PEM Geometry - {self.pem_file.filepath.name}')
 
         if not self.pem_file.is_averaged():
             self.pem_file = self.pem_file.average()
@@ -388,7 +387,9 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             Plot all the tool values (azimuth, dip, map and roll angles)
             """
             global tool_az, tool_dip, stations
-            tool_az = self.df.RAD_tool.map(lambda x: x.get_azimuth() + self.mag_dec_sbox.value())
+            tool_az = self.df.RAD_tool.map(lambda x: x.get_azimuth())
+            if not tool_az.empty:
+                tool_az = tool_az + self.mag_dec_sbox.value()
             tool_dip = self.df.RAD_tool.map(lambda x: x.get_dip())
             mag = self.df.RAD_tool.map(lambda x: x.get_mag_strength())
             acc_roll = self.df.RAD_tool.map(lambda x: x.get_acc_roll())

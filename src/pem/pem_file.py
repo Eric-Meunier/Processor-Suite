@@ -1592,7 +1592,7 @@ class PEMParser:
 
             t = time.time()
             text = text.strip().split('\n')
-            loop_text = [t for t in text if t.startswith('<L')]
+            loop_text = [t.strip().split() for t in text if t.startswith('<L')]
             print(f"PEMParser - Time to parse loop of {self.filepath.name}: {time.time() - t}")
             return loop_text
 
@@ -1606,7 +1606,7 @@ class PEMParser:
 
             t = time.time()
             text = text.strip().split('\n')
-            line_text = [t for t in text if t.startswith('<P')]
+            line_text = [t.strip().split() for t in text if t.startswith('<P')]
             print(f"PEMParser - Time to parse line of {self.filepath.name}: {time.time() - t}")
             return line_text
 
@@ -1667,7 +1667,7 @@ class PEMParser:
             header['Timebase'] = float(survey_param[3])
             header['Ramp'] = float(survey_param[4])
             header['Number of channels'] = int(survey_param[5])
-            header['Number of readings'] = int(survey_param[5])
+            header['Number of readings'] = int(survey_param[6])
 
             header['Receiver number'] = receiver_param[0]
             header['Rx software version'] = receiver_param[1]
