@@ -171,15 +171,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for i, col in enumerate(self.table_columns[1:]):
             header.setSectionResizeMode(i + 1, QHeaderView.ResizeToContents)
 
-        self.gps_systems = ['', 'UTM']
-        self.gps_zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
-        self.gps_datums = ['', 'NAD 1927', 'NAD 1983', 'WGS 1984']
-        for system in self.gps_systems:
+        gps_systems = ['', 'Lat/Lon', 'UTM']
+        for system in gps_systems:
             self.gps_system_cbox.addItem(system)
-        for zone in self.gps_zones:
-            self.gps_zone_cbox.addItem(zone)
-        for datum in self.gps_datums:
-            self.gps_datum_cbox.addItem(datum)
 
         # Actions
         self.actionDel_File = QAction("&Remove File", self)
@@ -358,11 +352,38 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 else:
                     color = QtGui.QColor('white')
                 item.setBackground(color)
-                # item.setBackground(self.table.item(column, row).background())
-                # item.setForeground(self.table.itemAt(0, row).foreground().color())
                 self.table.setItem(row, column, item)
 
             self.table.blockSignals(False)
+
+        def toggle_gps_boxes():
+
+            def clear_boxes():
+                self.gps_zone_cbox.clear()
+                self.gps_datum_cbox.clear()
+
+            system = self.gps_system_cbox.currentText()
+            if system == '':
+                clear_boxes()
+                self.gps_zone_cbox.setEnabled(False)
+                self.gps_datum_cbox.setEnabled(False)
+            elif system == 'Lat/Lon':
+                self.gps_datum_cbox.setCurrentText('WGS 1984')
+                self.gps_zone_cbox.setEnabled(False)
+                self.gps_datum_cbox.setEnabled(False)
+            else:
+                self.gps_zone_cbox.setEnabled(True)
+                self.gps_datum_cbox.setEnabled(True)
+
+            # self.gps_systems = ['', 'Lat/Lon', 'UTM']
+            # self.gps_zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
+            # self.gps_datums = ['', 'NAD 1927', 'NAD 1983', 'WGS 1984']
+            # for system in self.gps_systems:
+            #     self.gps_system_cbox.addItem(system)
+            # for zone in self.gps_zones:
+            #     self.gps_zone_cbox.addItem(zone)
+            # for datum in self.gps_datums:
+            #     self.gps_datum_cbox.addItem(datum)
 
         def toggle_pem_list_buttons():
             """
@@ -488,7 +509,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             lambda: self.grid_edit.setEnabled(self.share_grid_cbox.isChecked()))
         self.share_loop_cbox.stateChanged.connect(
             lambda: self.loop_edit.setEnabled(self.share_loop_cbox.isChecked()))
-        # single_row must be explicitly stated since stateChanged returns an int based on the state
         self.share_client_cbox.stateChanged.connect(lambda: set_shared_header('client'))
         self.share_grid_cbox.stateChanged.connect(lambda: set_shared_header('grid'))
         self.share_loop_cbox.stateChanged.connect(lambda: set_shared_header('loop'))
@@ -497,8 +517,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
         self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
-        self.gps_system_cbox.currentIndexChanged.connect(
-            lambda: self.gps_zone_cbox.setEnabled(True if self.gps_system_cbox.currentText() == 'UTM' else False))
+        # self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_boxes)
 
         # Menu
         self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
@@ -792,7 +811,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.open_ri_file(ri_files)
 
         elif inf_files:
-            self.open_inf_file(inf_files)
+            self.open_inf_file(inf_files[0])
 
     def change_pem_info_tab(self, tab_num):
         """
@@ -1081,6 +1100,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 else:
                     with open(file, mode='rt') as in_file:
                         contents = in_file.readlines()
+                        contents = [c.strip().split() for c in contents]
                         merged_file.extend(contents)
             return merged_file
 
@@ -1133,34 +1153,30 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_info_widget = self.stackedWidget.currentWidget()
         pem_info_widget.open_ri_file(ri_file)
 
-    def open_inf_file(self, inf_files):
+    def open_inf_file(self, inf_file):
         """
         Parses a .INF file to extract the CRS information in ti and set the CRS drop-down values.
-        :param inf_files: List of .INF files. Will only use the first file.
-        :return: None
+        :param inf_file: str, .INF filepath
         """
         def get_crs(filepath):
-            crs = {}
-            with open(filepath, 'r') as in_file:
-                file = in_file.read()
-
-            crs['System'] = re.findall('Coordinate System:\W+(?P<System>.*)', file)[0]
-            crs['Zone'] = re.findall('Coordinate Zone:\W+(?P<Zone>.*)', file)[0]
-            crs['Datum'] = re.findall('Datum:\W+(?P<Datum>.*)', file)[0]
+            file = open(filepath, 'rt').read()
+            crs = dict()
+            crs['System'] = re.search('Coordinate System:\W+(?P<System>.*)', file).group(1)
+            crs['Zone'] = re.search('Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
+            crs['Datum'] = re.search('Datum:\W+(?P<Datum>.*)', file).group(1)
             return crs
 
-        inf_file = inf_files[0]  # Filepath, only accept the first one
         crs = get_crs(inf_file)
         coord_sys = crs.get('System')
         coord_zone = crs.get('Zone')
         datum = crs.get('Datum')
-        if 'NAD 1983' in datum:
-            datum = 'NAD 1983'
-        elif 'NAD 1927' in datum:
-            datum = 'NAD 1927'
-        self.gps_system_cbox.setCurrentIndex(self.gps_systems.index(coord_sys))
-        self.gps_zone_cbox.setCurrentIndex(self.gps_zones.index(coord_zone))
-        self.gps_datum_cbox.setCurrentIndex(self.gps_datums.index(datum))
+        # if 'NAD 1983' in datum:
+        #     datum = 'NAD 1983'
+        # elif 'NAD 1927' in datum:
+        #     datum = 'NAD 1927'
+        self.gps_system_cbox.setCurrentText(coord_sys)
+        self.gps_zone_cbox.setCurrentText(coord_zone)
+        self.gps_datum_cbox.setCurrentText(datum)
 
     def open_in_text_editor(self):
         """
@@ -1603,7 +1619,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return
 
         kml = simplekml.Kml()
-        pem_files = [pem_file for pem_file in self.pem_files if pem_file.has_any_gps()]
+        pem_files = [pem_file for pem_file in self.get_updated_pem_files(selected=False) if pem_file.has_any_gps()]
 
         line_style = simplekml.Style()
         line_style.linestyle.width = 4
@@ -3006,14 +3022,14 @@ def main():
 
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
-    pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
-    mw.open_pem_files(pem_files)
     #
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\KIS0015\pp.dmp'
+    file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # mw.open_dmp_files(file)
-
+    mw.open_pem_files(file)
+    mw.pem_info_widgets[0].convert_crs()
     # mw.open_3d_map()
     mw.show()
 

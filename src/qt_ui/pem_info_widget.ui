@@ -77,7 +77,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="info_tab">
       <attribute name="title">
@@ -107,11 +107,11 @@
          <attribute name="verticalHeaderVisible">
           <bool>false</bool>
          </attribute>
-         <attribute name="verticalHeaderDefaultSectionSize">
-          <number>23</number>
-         </attribute>
          <attribute name="verticalHeaderMinimumSectionSize">
           <number>0</number>
+         </attribute>
+         <attribute name="verticalHeaderDefaultSectionSize">
+          <number>23</number>
          </attribute>
          <attribute name="verticalHeaderStretchLastSection">
           <bool>false</bool>
@@ -154,7 +154,7 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>0</width>
+           <width>400</width>
            <height>0</height>
           </size>
          </property>
@@ -183,7 +183,14 @@
           <property name="bottomMargin">
            <number>6</number>
           </property>
-          <item row="1" column="0">
+          <item row="0" column="4">
+           <widget class="QLabel" name="shiftElevationLabel">
+            <property name="text">
+             <string>Shift Elevation:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="4">
            <widget class="QSpinBox" name="shift_elevation_spinbox">
             <property name="minimum">
              <number>-10000</number>
@@ -193,21 +200,28 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="shiftElevationLabel">
+          <item row="2" column="4">
+           <widget class="QPushButton" name="convert_loop_crs_btn">
             <property name="text">
-             <string>Shift Elevation</string>
+             <string>Convert CRS</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="open_loop_gps_btn">
+          <item row="2" column="3">
+           <widget class="QPushButton" name="share_loop_gps_btn">
             <property name="text">
-             <string>Open File</string>
+             <string>Share Loop</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
+          <item row="1" column="3">
+           <widget class="QPushButton" name="export_loop_gps_btn">
+            <property name="text">
+             <string>Export Loop</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
            <widget class="QPushButton" name="edit_loop_btn">
             <property name="text">
              <string>View Loop</string>
@@ -215,16 +229,15 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QPushButton" name="export_loop_gps_btn">
-            <property name="text">
-             <string>Export Loop</string>
+           <widget class="QPushButton" name="open_loop_gps_btn">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QPushButton" name="share_loop_gps_btn">
             <property name="text">
-             <string>Share Loop</string>
+             <string>Open File</string>
             </property>
            </widget>
           </item>
@@ -299,6 +312,12 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>400</width>
+           <height>0</height>
+          </size>
          </property>
          <property name="maximumSize">
           <size>
@@ -379,7 +398,7 @@
                 </sizepolicy>
                </property>
                <property name="text">
-                <string>Shift Stations</string>
+                <string>Shift Stations:</string>
                </property>
               </widget>
              </item>
@@ -423,26 +442,6 @@
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="export_station_gps_btn">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="text">
-                <string>Export GPS</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="Line" name="line">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QPushButton" name="edit_line_btn">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -456,12 +455,32 @@
               </widget>
              </item>
              <item>
+              <widget class="Line" name="line">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="export_station_gps_btn">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Export GPS</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QPushButton" name="share_line_gps_btn">
                <property name="toolTip">
                 <string>Share this GPS with all other opened surface files</string>
                </property>
                <property name="text">
-                <string>Share GPS</string>
+                <string>Share Line</string>
                </property>
               </widget>
              </item>
@@ -508,7 +527,7 @@
              <item>
               <widget class="QLabel" name="label_2">
                <property name="text">
-                <string>Distance</string>
+                <string>Distance:</string>
                </property>
               </widget>
              </item>
@@ -673,7 +692,7 @@
              <item>
               <widget class="QLabel" name="label_4">
                <property name="text">
-                <string>Missing Stations</string>
+                <string>Missing Stations:</string>
                </property>
               </widget>
              </item>
@@ -767,6 +786,12 @@
       <layout class="QGridLayout" name="gridLayout_5">
        <item row="5" column="0">
         <widget class="QFrame" name="frame_9">
+         <property name="minimumSize">
+          <size>
+           <width>400</width>
+           <height>0</height>
+          </size>
+         </property>
          <property name="frameShape">
           <enum>QFrame::Box</enum>
          </property>
@@ -774,6 +799,18 @@
           <enum>QFrame::Sunken</enum>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <property name="leftMargin">
+           <number>6</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>6</number>
+          </property>
+          <property name="bottomMargin">
+           <number>6</number>
+          </property>
           <item>
            <widget class="QPushButton" name="add_segments_btn">
             <property name="text">
@@ -798,6 +835,19 @@
          </layout>
         </widget>
        </item>
+       <item row="0" column="0" alignment="Qt::AlignHCenter">
+        <widget class="QLabel" name="label_5">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Collar</string>
+         </property>
+        </widget>
+       </item>
        <item row="4" column="0">
         <widget class="QTableWidget" name="segments_table">
          <property name="sizePolicy">
@@ -817,6 +867,9 @@
            <width>400</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
          </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
@@ -858,6 +911,70 @@ Length</string>
          </column>
         </widget>
        </item>
+       <item row="3" column="0" alignment="Qt::AlignHCenter">
+        <widget class="QLabel" name="label_6">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Segments</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QFrame" name="frame_10">
+         <property name="minimumSize">
+          <size>
+           <width>400</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::Box</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Sunken</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <property name="leftMargin">
+           <number>6</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>6</number>
+          </property>
+          <property name="bottomMargin">
+           <number>6</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="open_collar_gps_btn">
+            <property name="text">
+             <string>Open File</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="export_collar_gps_btn">
+            <property name="text">
+             <string>Export Collar</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="share_collar_gps_btn">
+            <property name="text">
+             <string>Share Collar</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
        <item row="1" column="0">
         <widget class="QTableWidget" name="collar_table">
          <property name="sizePolicy">
@@ -877,6 +994,9 @@ Length</string>
            <width>400</width>
            <height>60</height>
           </size>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
          </property>
          <property name="verticalScrollBarPolicy">
           <enum>Qt::ScrollBarAlwaysOff</enum>
@@ -961,65 +1081,6 @@ Length</string>
            <set>AlignCenter</set>
           </property>
          </item>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QFrame" name="frame_10">
-         <property name="frameShape">
-          <enum>QFrame::Box</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_4">
-          <item>
-           <widget class="QPushButton" name="open_collar_gps_btn">
-            <property name="text">
-             <string>Open File</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="export_collar_gps_btn">
-            <property name="text">
-             <string>Export Collar</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="share_collar_gps_btn">
-            <property name="text">
-             <string>Share Collar</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="0" alignment="Qt::AlignHCenter">
-        <widget class="QLabel" name="label_5">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Collar</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0" alignment="Qt::AlignHCenter">
-        <widget class="QLabel" name="label_6">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Segments</string>
-         </property>
         </widget>
        </item>
       </layout>

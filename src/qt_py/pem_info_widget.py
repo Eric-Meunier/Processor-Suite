@@ -59,6 +59,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.parent = None
         self.pem_file = None
         self.ri_file = None
+        self.selected_row_info = None
+        self.active_table = None
+
         self.converter = StationConverter()
         self.ri_editor = RIFile()
         self.dialog = QFileDialog()
@@ -143,6 +146,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.ri_table.remove_ri_file_action.setEnabled(False)
 
     def init_signals(self):
+
         # Buttons
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
         # self.changeStationSuffixButton.clicked.connect(self.change_station_suffix)
@@ -174,19 +178,73 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.share_collar_gps_btn.clicked.connect(lambda: self.share_collar_signal.emit())
         self.share_segments_btn.clicked.connect(lambda: self.share_segments_signal.emit())
 
+        self.convert_loop_crs_btn.clicked.connect(self.convert_crs)
+
         # # Radio buttons
         # self.station_sort_rbtn.clicked.connect(self.fill_data_table)
         # self.component_sort_rbtn.clicked.connect(self.fill_data_table)
         # self.reading_num_sort_rbtn.clicked.connect(self.fill_data_table)
 
+        def save_selected_row(table):
+            self.active_table = table
+            row = table.selectionModel().selectedRows()[0].row()
+            self.selected_row_info = [table.item(row, j).text() for j in range(table.columnCount())]
+
+        def cell_changed(row, col):
+
+            def get_errors():
+                """
+                Count any incorrect data types
+                :return: int, number of errors found
+                """
+
+                def has_na(row):
+                    """
+                    Return True if any cell in the row can't be converted to a float
+                    :param row: Int: table row to check
+                    :return: bool
+                    """
+                    for col in range(self.active_table.columnCount()):
+                        item = self.active_table.item(row, col).text()
+                        try:
+                            float(item)
+                        except ValueError:
+                            return True
+                        finally:
+                            if item == 'nan':
+                                return True
+                    return False
+
+                # Cound how many rows have entries that can't be forced into a float
+                error_count = 0
+                if has_na(row):
+                    error_count += 1
+                return error_count
+
+            if get_errors() > 0:
+                self.active_table.blockSignals(True)
+                self.message.critical(self, 'Error', "Value cannot be converted to a number")
+
+                item = QTableWidgetItem(self.selected_row_info[col])
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.active_table.setItem(row, col, item)
+                self.active_table.blockSignals(False)
+
         # Table changes
         self.line_table.cellChanged.connect(self.check_station_duplicates)
         self.line_table.cellChanged.connect(self.color_line_table)
         self.line_table.cellChanged.connect(self.check_missing_gps)
+        self.line_table.cellChanged.connect(self.check_missing_gps)
         self.line_table.itemSelectionChanged.connect(self.calc_distance)
         self.line_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
+        self.line_table.itemSelectionChanged.connect(lambda: save_selected_row(self.line_table))
 
+        self.loop_table.cellChanged.connect(cell_changed)
         self.loop_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shift_elevation_spinbox))
+        self.loop_table.itemSelectionChanged.connect(lambda: save_selected_row(self.loop_table))
+
+        self.collar_table.cellChanged.connect(cell_changed)
+        self.collar_table.itemSelectionChanged.connect(lambda: save_selected_row(self.collar_table))
 
         # self.data_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationSpinbox))
         # self.data_table.itemSelectionChanged.connect(self.toggle_change_station_btn)
@@ -715,6 +773,20 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #     self.num_repeat_stations = bolden_repeat_stations()
     #     self.refresh_tables_signal.emit()
     #     self.lcdRepeats.display(self.num_repeat_stations)
+
+    def convert_crs(self):
+        loop = self.get_loop()
+        crs = self.parent.get_crs()
+        if loop.df.empty:
+            print(f"No GPS to convert")
+            return
+        elif not crs.is_valid():
+            self.message.information(self, 'Invalid CRS', 'The project CRS is not valid.')
+            return
+        else:
+            loop.crs = crs
+            nad27loop = loop.to_nad27()
+            self.fill_gps_table(nad27loop.df, self.loop_table)
 
     def check_station_duplicates(self):
         """

@@ -75,6 +75,7 @@ class GPSAdder(QMainWindow):
         # self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         # self.button_box.setCenterButtons(True)
         # self.button_box.accepted.connect(self.accept)
+        # self.button_box.rejected.connect(self.close)
 
         self.figure = plt.figure()
         self.figure.subplots_adjust(left=0.20, bottom=0.05, right=0.97, top=0.95)
@@ -320,9 +321,8 @@ class GPSAdder(QMainWindow):
 
             # Cound how many rows have entries that can't be forced into a float
             error_count = 0
-            for row in range(self.table.rowCount()):
-                if has_na(row):
-                    error_count += 1
+            if has_na(row):
+                error_count += 1
             return error_count
 
         errors = get_errors()
@@ -427,7 +427,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         # Signals
+        self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
+
         self.table.cellChanged.connect(self.cell_changed)
         self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
@@ -810,7 +812,9 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         # Signals
+        self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
+
         self.table.cellChanged.connect(self.cell_changed)
         self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
