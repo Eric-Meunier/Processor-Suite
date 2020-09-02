@@ -1,0 +1,137 @@
+Export Version 5.90-65535  5.90-65535 Started.
+Using Export Setup: Crone Lat/Lon
+The following files in C:\_Data\2019\Trevali Peru\Surface\Loop 3\GPS will be exported:
+    L1410S_22.cor
+    L1410S_23.cor
+    L1420S_23.cor
+    L1420S_24.cor
+    L1430S_12.cor
+    L1430S_24.cor
+    L1440S_12.cor
+    L1450S_16.cor
+    L1460S_5.cor
+    L1460S_6.cor
+    L1470S_5.cor
+    L1470S_6.cor
+    LOOP 3.cor
+    LOOP3.cor
+    LOOP3-1.cor
+
+Reading file L1410S_22.cor
+283 position(s) read.
+A total of 19 feature(s) read or created.
+  19 point feature(s) read.
+File L1410S_22.cor read successfully
+
+Reading file L1410S_23.cor
+503 position(s) read.
+A total of 35 feature(s) read or created.
+  35 point feature(s) read.
+File L1410S_23.cor read successfully
+
+Reading file L1420S_23.cor
+280 position(s) read.
+A total of 22 feature(s) read or created.
+  22 point feature(s) read.
+File L1420S_23.cor read successfully
+
+Reading file L1420S_24.cor
+234 position(s) read.
+A total of 17 feature(s) read or created.
+  17 point feature(s) read.
+File L1420S_24.cor read successfully
+
+Reading file L1430S_12.cor
+204 position(s) read.
+A total of 14 feature(s) read or created.
+  14 point feature(s) read.
+File L1430S_12.cor read successfully
+
+Reading file L1430S_24.cor
+105 position(s) read.
+A total of 7 feature(s) read or created.
+  7 point feature(s) read.
+File L1430S_24.cor read successfully
+
+Reading file L1440S_12.cor
+304 position(s) read.
+A total of 21 feature(s) read or created.
+  21 point feature(s) read.
+File L1440S_12.cor read successfully
+
+Reading file L1450S_16.cor
+247 position(s) read.
+A total of 18 feature(s) read or created.
+  18 point feature(s) read.
+File L1450S_16.cor read successfully
+
+Reading file L1460S_5.cor
+279 position(s) read.
+A total of 25 feature(s) read or created.
+  25 point feature(s) read.
+File L1460S_5.cor read successfully
+
+Reading file L1460S_6.cor
+180 position(s) read.
+A total of 16 feature(s) read or created.
+  16 point feature(s) read.
+File L1460S_6.cor read successfully
+
+Reading file L1470S_5.cor
+167 position(s) read.
+A total of 14 feature(s) read or created.
+  14 point feature(s) read.
+File L1470S_5.cor read successfully
+
+Reading file L1470S_6.cor
+300 position(s) read.
+A total of 26 feature(s) read or created.
+  26 point feature(s) read.
+File L1470S_6.cor read successfully
+
+Reading file LOOP 3.cor
+1458 position(s) read.
+A total of 67 feature(s) read or created.
+  67 point feature(s) read.
+File LOOP 3.cor read successfully
+
+Reading file LOOP3.cor
+1248 position(s) read.
+A total of 61 feature(s) read or created.
+  Of these, 1  feature(s) have no positions.
+  61 point feature(s) read.
+File LOOP3.cor read successfully
+
+Reading file LOOP3-1.cor
+1862 position(s) read.
+A total of 91 feature(s) read or created.
+  91 point feature(s) read.
+File LOOP3-1.cor read successfully
+
+15 input file(s) read.
+7654 position(s) read.
+A total of 453 feature(s) read or created.
+  Of these, 1  feature(s) have no positions.
+  453 point feature(s) read.
+453 feature(s) exported.
+16 output file(s) written to C:\Users\Eric\PycharmProjects\PEMPro\sample_files\latlon GPS\Trevali Peru
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1410s_22.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1410s_23.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1420s_23.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1420s_24.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1430s_12.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1430s_24.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1440s_12.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1450s_16.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1460s_5.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1460s_6.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1470s_5.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\l1470s_6.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\loop 3.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\loop3.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\trevali peru\loop3-1.txt
+
+The file C:\Users\Eric\PycharmProjects\PEMPro\sample_files\latlon GPS\Trevali Peru\L1410S_22.log contains information on the settings used.
+
+The file C:\ProgramData\Trimble\GPS Pathfinder Office\Config\\expfiles.txt contains a list of the files created.
