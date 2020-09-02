@@ -1,0 +1,127 @@
+Export Version 5.90-65535  5.90-65535 Started.
+Using Export Setup: Crone Lat/Lon
+The following files in C:\_Data\2020\Newmont\Surface\Kisad Gaba SW 2\GPS will be exported:
+    KGW1E_27.SSF
+    KGW2_28.SSF
+    KGW2E_27.SSF
+    KGW3_28.SSF
+    KGW4_29.SSF
+    KGW5_29.SSF
+    KGW5_30.SSF
+    KGW6_30.SSF
+    KGW7_30.SSF
+    KGW7_31.SSF
+    KGW8_31.SSF
+    KGW9_01.SSF
+    KGW10_01.SSF
+    KISLOOP2.SSF
+
+Reading file KGW1E_27.SSF
+924 position(s) read.
+A total of 27 feature(s) read or created.
+  27 point feature(s) read.
+File KGW1E_27.SSF read successfully
+
+Reading file KGW2_28.SSF
+971 position(s) read.
+A total of 28 feature(s) read or created.
+  28 point feature(s) read.
+File KGW2_28.SSF read successfully
+
+Reading file KGW2E_27.SSF
+755 position(s) read.
+A total of 21 feature(s) read or created.
+  21 point feature(s) read.
+File KGW2E_27.SSF read successfully
+
+Reading file KGW3_28.SSF
+742 position(s) read.
+A total of 28 feature(s) read or created.
+  28 point feature(s) read.
+File KGW3_28.SSF read successfully
+
+Reading file KGW4_29.SSF
+871 position(s) read.
+A total of 28 feature(s) read or created.
+  28 point feature(s) read.
+File KGW4_29.SSF read successfully
+
+Reading file KGW5_29.SSF
+809 position(s) read.
+A total of 24 feature(s) read or created.
+  24 point feature(s) read.
+File KGW5_29.SSF read successfully
+
+Reading file KGW5_30.SSF
+896 position(s) read.
+A total of 27 feature(s) read or created.
+  27 point feature(s) read.
+File KGW5_30.SSF read successfully
+
+Reading file KGW6_30.SSF
+891 position(s) read.
+A total of 28 feature(s) read or created.
+  28 point feature(s) read.
+File KGW6_30.SSF read successfully
+
+Reading file KGW7_30.SSF
+950 position(s) read.
+A total of 16 feature(s) read or created.
+  16 point feature(s) read.
+File KGW7_30.SSF read successfully
+
+Reading file KGW7_31.SSF
+1338 position(s) read.
+A total of 28 feature(s) read or created.
+  28 point feature(s) read.
+File KGW7_31.SSF read successfully
+
+Reading file KGW8_31.SSF
+990 position(s) read.
+A total of 28 feature(s) read or created.
+  28 point feature(s) read.
+File KGW8_31.SSF read successfully
+
+Reading file KGW9_01.SSF
+1005 position(s) read.
+A total of 28 feature(s) read or created.
+  28 point feature(s) read.
+File KGW9_01.SSF read successfully
+
+Reading file KGW10_01.SSF
+995 position(s) read.
+A total of 28 feature(s) read or created.
+  28 point feature(s) read.
+File KGW10_01.SSF read successfully
+
+Reading file KISLOOP2.SSF
+2933 position(s) read.
+A total of 104 feature(s) read or created.
+  104 point feature(s) read.
+File KISLOOP2.SSF read successfully
+
+14 input file(s) read.
+15070 position(s) read.
+A total of 443 feature(s) read or created.
+  443 point feature(s) read.
+443 feature(s) exported.
+15 output file(s) written to C:\Users\Eric\PycharmProjects\PEMPro\sample_files\latlon GPS
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw1e_27.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw2_28.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw2e_27.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw3_28.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw4_29.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw5_29.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw5_30.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw6_30.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw7_30.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw7_31.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw8_31.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw9_01.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kgw10_01.txt
+    c:\users\eric\pycharmprojects\pempro\sample_files\latlon gps\kisloop2.txt
+
+The file C:\Users\Eric\PycharmProjects\PEMPro\sample_files\latlon GPS\KGW1E_27.log contains information on the settings used.
+
+The file C:\ProgramData\Trimble\GPS Pathfinder Office\Config\\expfiles.txt contains a list of the files created.
