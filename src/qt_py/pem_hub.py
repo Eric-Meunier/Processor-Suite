@@ -171,9 +171,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for i, col in enumerate(self.table_columns[1:]):
             header.setSectionResizeMode(i + 1, QHeaderView.ResizeToContents)
 
+        # Add the GPS system and datum drop box options
         gps_systems = ['', 'Lat/Lon', 'UTM']
         for system in gps_systems:
             self.gps_system_cbox.addItem(system)
+
+        int_valid = QtGui.QIntValidator()
+        self.epsg_edit.setValidator(int_valid)
 
         # Actions
         self.actionDel_File = QAction("&Remove File", self)
@@ -356,34 +360,79 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             self.table.blockSignals(False)
 
-        def toggle_gps_boxes():
-
-            def clear_boxes():
-                self.gps_zone_cbox.clear()
-                self.gps_datum_cbox.clear()
+        def toggle_gps_system():
+            """
+            Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
+            """
 
             system = self.gps_system_cbox.currentText()
-            if system == '':
-                clear_boxes()
-                self.gps_zone_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-            elif system == 'Lat/Lon':
-                self.gps_datum_cbox.setCurrentText('WGS 1984')
-                self.gps_zone_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-            else:
-                self.gps_zone_cbox.setEnabled(True)
-                self.gps_datum_cbox.setEnabled(True)
 
-            # self.gps_systems = ['', 'Lat/Lon', 'UTM']
-            # self.gps_zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
-            # self.gps_datums = ['', 'NAD 1927', 'NAD 1983', 'WGS 1984']
-            # for system in self.gps_systems:
-            #     self.gps_system_cbox.addItem(system)
-            # for zone in self.gps_zones:
-            #     self.gps_zone_cbox.addItem(zone)
-            # for datum in self.gps_datums:
-            #     self.gps_datum_cbox.addItem(datum)
+            if system == '':
+                self.gps_datum_cbox.clear()
+                self.gps_zone_cbox.clear()
+                self.gps_zone_cbox.setEnabled(False)
+                self.gps_datum_cbox.setEnabled(False)
+
+            elif system == 'Lat/Lon':
+                self.gps_datum_cbox.clear()
+
+                datums = ['WGS 1984']
+                for datum in datums:
+                    self.gps_datum_cbox.addItem(datum)
+
+                self.gps_datum_cbox.setCurrentText('WGS 1984')
+                self.gps_datum_cbox.setEnabled(True)
+                self.gps_zone_cbox.setEnabled(False)
+
+            elif system == 'UTM':
+                self.gps_datum_cbox.clear()
+
+                datums = ['NAD 1927', 'NAD 1983', 'WGS 1984']
+                for datum in datums:
+                    self.gps_datum_cbox.addItem(datum)
+
+                self.gps_datum_cbox.setEnabled(True)
+                self.gps_zone_cbox.setEnabled(True)
+
+                self.gps_datum_cbox.setCurrentText('WGS 1984')  # make this the default option
+
+        def toggle_gps_datum():
+            """
+            Change the zone combo box options based on the selected CRS datum.
+            """
+
+            datum = self.gps_datum_cbox.currentText()
+
+            self.gps_zone_cbox.clear()
+            self.gps_zone_cbox.setEnabled(True)
+
+            # NAD 27 and 83 only have zones from 1N to 23N
+            if datum == 'NAD 1927' or datum == 'NAD 1983':
+                zones = [f"{num} North" for num in range(1, 24)]
+            # WGS 84 has zones from 1N and 1S to 60N and 60S
+            else:
+                zones = [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
+
+            for zone in zones:
+                self.gps_zone_cbox.addItem(zone)
+
+        def toggle_crs_rbtn():
+            """
+            Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
+            """
+            if self.crs_rbtn.isChecked():
+                # Enable the CRS drop boxes and disable the EPSG line edit
+                self.gps_system_cbox.setEnabled(True)
+                toggle_gps_system()
+
+                self.epsg_edit.setEnabled(False)
+            else:
+                # Disable the CRS drop boxes and enable the EPSG line edit
+                self.gps_system_cbox.setEnabled(False)
+                self.gps_datum_cbox.setEnabled(False)
+                self.gps_zone_cbox.setEnabled(False)
+
+                self.epsg_edit.setEnabled(True)
 
         def toggle_pem_list_buttons():
             """
@@ -517,7 +566,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
         self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
-        # self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_boxes)
+        self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
+        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_datum)
+
+        self.crs_rbtn.toggled.connect(toggle_crs_rbtn)
+        self.epsg_rbtn.toggled.connect(toggle_crs_rbtn)
 
         # Menu
         self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
@@ -854,9 +907,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.pb_win.hide()
 
     def reset_crs(self):
-        self.gps_system_cbox.setCurrentIndex(0)
-        self.gps_zone_cbox.setCurrentIndex(0)
-        self.gps_datum_cbox.setCurrentIndex(0)
+        self.gps_system_cbox.setCurrentText('')
+        self.gps_zone_cbox.clear()
+        self.gps_datum_cbox.clear()
 
     def remove_file(self, rows=None):
         """
@@ -994,11 +1047,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             """
             crs = pem_file.get_crs()
             if crs and crs.is_valid():
-                self.gps_system_cbox.setCurrentIndex(self.gps_systems.index(crs.system))
+                self.gps_system_cbox.setCurrentText(crs.system)
+                self.gps_datum_cbox.setCurrentText(crs.datum)
                 if crs.system == 'UTM':
                     hemis = 'North' if crs.north is True else 'South'
-                    self.gps_zone_cbox.setCurrentIndex(self.gps_zones.index(f"{crs.zone_number} {hemis}"))
-                self.gps_datum_cbox.setCurrentIndex(self.gps_datums.index(crs.datum))
+                    self.gps_zone_cbox.setCurrentText(f"{crs.zone_number} {hemis}")
 
         def share_header(pem_file):
             """
@@ -1059,7 +1112,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     self.move_dir_tree_to(pem_file.filepath.parent)
 
                 # Fill CRS from the file if project CRS currently empty
-                if self.gps_system_cbox.currentText() == '' and self.gps_datum_cbox.currentText() == '':
+                if self.gps_system_cbox.currentText() == '':
                     fill_crs(pem_file)
 
                 i = get_insertion_point(pem_file)
@@ -1170,13 +1223,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         coord_sys = crs.get('System')
         coord_zone = crs.get('Zone')
         datum = crs.get('Datum')
-        # if 'NAD 1983' in datum:
-        #     datum = 'NAD 1983'
-        # elif 'NAD 1927' in datum:
-        #     datum = 'NAD 1927'
         self.gps_system_cbox.setCurrentText(coord_sys)
-        self.gps_zone_cbox.setCurrentText(coord_zone)
         self.gps_datum_cbox.setCurrentText(datum)
+        self.gps_zone_cbox.setCurrentText(coord_zone)
 
     def open_in_text_editor(self):
         """
@@ -3023,13 +3072,13 @@ def main():
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    # pem_files = pg.get_pems(client='Kazzinc', number=4)
+    pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     #
-    file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
+    # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # mw.open_dmp_files(file)
-    mw.open_pem_files(file)
-    mw.pem_info_widgets[0].convert_crs()
+    mw.open_pem_files(pem_files)
+    # mw.pem_info_widgets[0].convert_crs()
     # mw.open_3d_map()
     mw.show()
 
