@@ -6,12 +6,13 @@ import copy
 import natsort
 import geomag
 from datetime import datetime
+from pyproj import CRS
 import numpy as np
 import pandas as pd
 from scipy.spatial.transform import Rotation as R
 
 from pathlib import Path
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, CRS
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry  #, CRS
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 
 
@@ -354,16 +355,46 @@ class PEMFile:
             raise ValueError(f"{unit} is not 0 or 1")
 
     def get_crs(self):
+        """
+        Create a CRS object from the note in the PEM file if it exists.
+        :return: Proj CRS object
+        """
         for note in self.notes:
-            if 'CRS:' in note:
-                crs = re.split('CRS: ', note)[-1]
-                s = crs.split()
+            if '<CRS>' in note:
+                crs_str = re.split('<CRS>', note)[-1].strip()
+                crs = CRS.from_string(crs_str)
+                print(f"CRS is {crs.name}")
+                return crs
+
+            # For older PEM files that used the <GEN> tag
+            elif 'CRS:' in note:
+                crs_str = re.split('CRS: ', note)[-1]
+                s = crs_str.split()
+
                 system = s[0]
-                zone = f"{s[2]} {s[3]}"
-                datum = f"{s[4]} {s[5]}"
-                # print(f"CRS is {system} Zone {zone} {'North' if north else 'South'}, {datum}")
-                return CRS().from_dict({'System': system, 'Zone': zone, 'Datum': datum})
-        return CRS()
+                if system == 'Lat/Lon':
+                    epsg_code = '4326'
+                else:
+                    zone_number = s[2]
+                    north = True if s[3].strip(',') == 'North' else False
+                    datum = f"{s[4]} {s[5]}"
+
+                    if datum == 'WGS 1984':
+                        if north:
+                            epsg_code = f'326{zone_number}'
+                        else:
+                            epsg_code = f'327{zone_number}'
+                    elif datum == 'NAD 1927':
+                        epsg_code = f'267{zone_number}'
+                    elif datum == 'NAD 1983':
+                        epsg_code = f'269{zone_number}'
+                    else:
+                        print(f"CRS string not implemented.")
+                        return None
+
+                crs = CRS.from_epsg(epsg_code)
+                print(f"CRS is {crs.name}")
+                return crs
 
     def get_loop(self, sorted=False, closed=False):
         return self.loop.get_loop(sorted=sorted, closed=closed)
@@ -489,8 +520,8 @@ class PEMFile:
         :return: None
         """
         crs = self.get_crs()
-        if not crs.is_valid():
-            print('GPS coordinate system information is incomplete')
+        if not crs:
+            print('GPS coordinate system information is invalid')
             return
 
         if self.has_collar_gps():
@@ -503,6 +534,7 @@ class PEMFile:
             print('Error - No GPS')
             return
 
+        coords.crs = crs
         coords = coords.to_latlon().df
         lat, lon, elevation = coords.iloc[0]['Northing'], coords.iloc[0]['Easting'], coords.iloc[0]['Elevation']
 
@@ -1617,7 +1649,7 @@ class PEMParser:
             :return: list of notes
             """
             t = time.time()
-            notes = re.findall(r'<GEN>.*|<HE\d>.*', file)
+            notes = re.findall(r'<GEN>.*|<HE\d>.*|<CRS>.*', file)
             # Remove the 'xxxxxxxxxxxxxxxx' notes
             for note in reversed(notes):
                 if 'xxx' in note.lower() or re.match('<GEN> NOTES', note):
@@ -3059,9 +3091,10 @@ if __name__ == '__main__':
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\2EX7046L1-1\2ex7046l1-1.DMP2'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\Surface\1400e.DMP2'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2 New\BR-01\br01.DMP2'
-    file = dparse.parse_dmp2(file)
-    print(f"Time to parse DMP: {time.time() - t2}")
+    # file = dparse.parse_dmp2(file)
+    # print(f"Time to parse DMP: {time.time() - t2}")
 
-    out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filepath.stem} - test conversion.pem')
-    print(file.to_string(), file=open(out, 'w'))
-    os.startfile(out)
+
+    # out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filepath.stem} - test conversion.pem')
+    # print(file.to_string(), file=open(out, 'w'))
+    # os.startfile(out)

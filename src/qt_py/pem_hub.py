@@ -10,6 +10,7 @@ import numpy as np
 import simplekml
 import natsort
 import stopit
+from pyproj import CRS
 from pathlib import Path
 from shutil import copyfile
 from itertools import groupby
@@ -22,8 +23,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
 # from pyqtspinner.spinner import WaitingSpinner
 import geomag
 
-from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments,
-                                GPXEditor, CRS)
+from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, GPXEditor)
 from src.gps.gpx_creator import GPXCreator
 
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
@@ -107,6 +107,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.selection_label = QLabel()
         self.selection_label.setIndent(5)
         self.spacer_label = QLabel()
+        self.epsg_label = QLabel()
+        self.epsg_label.setIndent(5)
         self.project_dir_label = QLabel()
         self.project_dir_label.setIndent(5)
 
@@ -116,6 +118,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.status_bar.addWidget(self.selection_label, 0)
         self.status_bar.addWidget(self.spacer_label, 1)
+        self.status_bar.addWidget(self.epsg_label, 0)
         self.status_bar.addWidget(self.project_dir_label, 0)
 
         # Widgets
@@ -387,14 +390,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             elif system == 'UTM':
                 self.gps_datum_cbox.clear()
 
-                datums = ['NAD 1927', 'NAD 1983', 'WGS 1984']
+                datums = ['WGS 1984', 'NAD 1927', 'NAD 1983']
                 for datum in datums:
                     self.gps_datum_cbox.addItem(datum)
 
                 self.gps_datum_cbox.setEnabled(True)
                 self.gps_zone_cbox.setEnabled(True)
 
-                self.gps_datum_cbox.setCurrentText('WGS 1984')  # make this the default option
+                # self.gps_datum_cbox.setCurrentText('WGS 1984')  # make this the default option
 
         def toggle_gps_datum():
             """
@@ -433,6 +436,37 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.gps_zone_cbox.setEnabled(False)
 
                 self.epsg_edit.setEnabled(True)
+
+        def check_epsg():
+            """
+            Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
+            """
+            epsg_code = self.epsg_edit.text()
+
+            if epsg_code:
+                try:
+                    crs = CRS.from_epsg(epsg_code)
+                except Exception as e:
+                    self.epsg_edit.blockSignals(True)
+                    self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
+                    self.epsg_edit.setText('')
+                    self.epsg_edit.blockSignals(False)
+                set_epsg_label()
+
+        def set_epsg_label():
+            """
+            Convert the current project CRS combo box values into the EPSG code and set the status bar label.
+            """
+            if self.epsg_rbtn.isChecked():
+                epsg_code = self.epsg_edit.text()
+            else:
+                epsg_code = self.get_epsg()
+
+            if epsg_code:
+                self.epsg_label.show()
+                self.epsg_label.setText(f"EPSG: {epsg_code} ")
+            else:
+                self.epsg_label.hide()
 
         def toggle_pem_list_buttons():
             """
@@ -567,10 +601,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
         self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
+        self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
         self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_datum)
+        self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
+        self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
 
         self.crs_rbtn.toggled.connect(toggle_crs_rbtn)
+        self.crs_rbtn.toggled.connect(set_epsg_label)
         self.epsg_rbtn.toggled.connect(toggle_crs_rbtn)
+        self.epsg_rbtn.toggled.connect(set_epsg_label)
+
+        self.epsg_edit.editingFinished.connect(check_epsg)
 
         # Menu
         self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
@@ -1046,12 +1087,42 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             :param pem_file: PEMFile object
             """
             crs = pem_file.get_crs()
-            if crs and crs.is_valid():
-                self.gps_system_cbox.setCurrentText(crs.system)
-                self.gps_datum_cbox.setCurrentText(crs.datum)
-                if crs.system == 'UTM':
-                    hemis = 'North' if crs.north is True else 'South'
-                    self.gps_zone_cbox.setCurrentText(f"{crs.zone_number} {hemis}")
+            if crs:
+                name = crs.name
+
+                if name == 'WGS 84':
+                    datum = 'WGS 1984'
+                    system = 'Lat/Lon'
+                    zone = None
+
+                elif 'UTM' in name:
+                    system = 'UTM'
+
+                    sc = name.split(' / ')
+
+                    datum = re.sub('\s+', '', sc[0])  # Remove any spaces
+                    if datum == 'WGS84':
+                        datum = 'WGS 1984'
+                    elif datum == 'NAD83':
+                        datum = 'NAD 1983'
+                    elif datum == 'NAD27':
+                        datum = 'NAD 1927'
+                    else:
+                        print(f"{datum} is not a valid datum for PEMPro.")
+                        return
+
+                    zone = sc[1].split(' ')[-1]
+                    zone_number = zone[:-1]
+                    north = 'North' if zone[-1] == 'N' else 'South'
+                    zone = f'{zone_number} {north}'
+                else:
+                    print(f"{name} parsing is not currently implemented.")
+                    return
+
+                self.gps_system_cbox.setCurrentText(system)
+                self.gps_datum_cbox.setCurrentText(datum)
+                if zone:
+                    self.gps_zone_cbox.setCurrentText(zone)
 
         def share_header(pem_file):
             """
@@ -1211,7 +1282,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Parses a .INF file to extract the CRS information in ti and set the CRS drop-down values.
         :param inf_file: str, .INF filepath
         """
-        def get_crs(filepath):
+        def get_inf_crs(filepath):
             file = open(filepath, 'rt').read()
             crs = dict()
             crs['System'] = re.search('Coordinate System:\W+(?P<System>.*)', file).group(1)
@@ -1219,7 +1290,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             crs['Datum'] = re.search('Datum:\W+(?P<Datum>.*)', file).group(1)
             return crs
 
-        crs = get_crs(inf_file)
+        crs = get_inf_crs(inf_file)
         coord_sys = crs.get('System')
         coord_zone = crs.get('Zone')
         datum = crs.get('Datum')
@@ -1351,10 +1422,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param pem_file: PEMFile object
         """
         crs = self.get_crs()
-        if crs.is_nad27():
-            self.message.information(self, 'Error', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
-            return
-        if not crs.is_valid():
+        if not crs:
             self.message.information(self, 'Error', 'GPS coordinate system information is incomplete')
             return
 
@@ -1659,12 +1727,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.message.information(self, 'Missing GPS', 'A file is missing required GPS')
             return
 
-        # if crs.is_nad27():
-        #     self.message.information(self, 'Invalid Datum', 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
-        #     return
-
-        if not crs.is_valid():
-            self.message.information(self, 'Incomplete CRS', 'GPS coordinate system information is incomplete')
+        if not crs:
+            self.message.information(self, 'Invalid CRS', 'GPS coordinate system information is invalid')
             return
 
         kml = simplekml.Kml()
@@ -1809,7 +1873,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
 
         self.status_bar.showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
-        if not crs.is_valid():
+        if not crs:
             response = self.message.question(self, 'Invalid CRS',
                                              'The CRS information is invalid.'
                                              'Do you wish to proceed with no CRS information?',
@@ -1859,14 +1923,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if self.pem_files:
             crs = self.get_crs()
 
-            if not crs.is_valid():
+            if not crs:
                 self.message.information(self, 'Invalid CRS', 'CRS is incomplete and/or invalid.')
                 return
-
-            system = crs.system
-            # zone = ' Zone ' + self.gps_zone_cbox.currentText() if self.gps_zone_cbox.isEnabled() else ''
-            zone = ' Zone ' + crs.zone if self.gps_zone_cbox.isEnabled() else ''
-            datum = crs.datum
 
             loops = []
             lines = []
@@ -1898,7 +1957,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                                             lineterminator='\n',
                                                             quotechar='"',
                                                             quoting=csv.QUOTE_MINIMAL)
-                                    filewriter.writerow([f"Loop {loop_name} - {system} {zone} {datum}"])
+                                    filewriter.writerow([f"Loop {loop_name} - {crs.name}"])
                                     filewriter.writerow(['Easting', 'Northing', 'Elevation'])
                                     loop.apply(lambda x: filewriter.writerow([x.Easting, x.Northing, x.Elevation]),
                                                axis=1)
@@ -1916,7 +1975,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                                             lineterminator='\n',
                                                             quotechar='"',
                                                             quoting=csv.QUOTE_MINIMAL)
-                                    filewriter.writerow([f"Line {line_name} - {system} {zone} {datum}"])
+                                    filewriter.writerow([f"Line {line_name} - {crs.name}"])
                                     filewriter.writerow(['Easting', 'Northing', 'Elevation', 'Station Number'])
                                     line.apply(
                                         lambda x: filewriter.writerow([x.Easting, x.Northing, x.Elevation, x.Station]),
@@ -1935,7 +1994,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                                             lineterminator='\n',
                                                             quotechar='"',
                                                             quoting=csv.QUOTE_MINIMAL)
-                                    filewriter.writerow([f"Hole {hole_name} - {system} {zone} {datum}"])
+                                    filewriter.writerow([f"Hole {hole_name} - {crs.name}"])
                                     filewriter.writerow(['Easting', 'Northing', 'Elevation'])
                                     collar.apply(lambda x: filewriter.writerow([x.Easting, x.Northing, x.Elevation]),
                                                  axis=1)
@@ -2219,16 +2278,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             Add the CRS from the table as a note to the PEM file.
             :return: None
             """
-            system = self.gps_system_cbox.currentText()
-            zone = ' Zone ' + self.gps_zone_cbox.currentText() if self.gps_zone_cbox.isEnabled() else ''
-            datum = self.gps_datum_cbox.currentText()
-
-            if any([system, zone, datum]):
+            if crs:
+                # Remove any existing CRS tag
                 for note in reversed(pem_file.notes):
-                    if '<GEN> CRS' in note:
+                    if '<GEN> CRS' in note or '<CRS>' in note:
                         del pem_file.notes[pem_file.notes.index(note)]
 
-                pem_file.notes.append(f"<GEN> CRS: {system}{zone}, {datum}")
+                pem_file.notes.append(f"<CRS> {crs.name}")
 
         if filepath is None:
             pem_file.filepath = Path(pem_file.filepath.parent.joinpath(
@@ -2238,6 +2294,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 filepath = Path(filepath)
             pem_file.filepath = filepath
 
+        crs = self.get_crs()
+
         add_crs_tag()
         pem_file.date = self.table.item(table_row, self.table_columns.index('Date')).text()
         pem_file.client = self.table.item(table_row, self.table_columns.index('Client')).text()
@@ -2246,7 +2304,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_file.loop_name = self.table.item(table_row, self.table_columns.index('Loop')).text()
         pem_file.current = float(self.table.item(table_row, self.table_columns.index('Current')).text())
 
-        crs = self.get_crs()
         pem_file.loop = self.stackedWidget.widget(table_row).get_loop()
         pem_file.loop.crs = crs
         if pem_file.is_borehole():
@@ -2302,18 +2359,71 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             updated_files = [self.update_pem_from_table(copy.deepcopy(file), row) for file, row in zip(files, rows)]
         return updated_files
 
-    def get_crs(self):
+    def get_epsg(self):
         """
-        Return a CRS object based on the CRS information in the PEM Editor window
-        :return: CRS object
+        Return the EPSG code of the project CRS combo boxes
+        :return: str
         """
         system = self.gps_system_cbox.currentText()
         zone = self.gps_zone_cbox.currentText()
         datum = self.gps_datum_cbox.currentText()
 
-        crs_dict = {'System': system, 'Zone': zone, 'Datum': datum}
-        crs = CRS().from_dict(crs_dict)
-        return crs
+        if system == '':
+            return None
+
+        elif system == 'Lat/Lon':
+            return '4326'
+
+        else:
+            if not zone or not datum:
+                return None
+
+            s = zone.split()
+            zone_number = s[0]
+            north = True if s[1] == 'North' else False
+
+            if datum == 'WGS 1984':
+                if north:
+                    epsg_code = f'326{zone_number}'
+                else:
+                    epsg_code = f'327{zone_number}'
+            elif datum == 'NAD 1927':
+                epsg_code = f'267{zone_number}'
+            elif datum == 'NAD 1983':
+                epsg_code = f'269{zone_number}'
+            else:
+                print(f"CRS string not implemented.")
+                return None
+
+            return epsg_code
+
+    def get_crs(self):
+        """
+        Return a CRS object based on the CRS information in the PEM Editor window
+        :return: CRS object
+        """
+        if self.crs_rbtn.isChecked():
+
+            epsg_code = self.get_epsg()
+            if epsg_code:
+                crs = CRS.from_epsg(epsg_code)
+                print(f"PEMHub project CRS: {crs.name}")
+                return crs
+            else:
+                return None
+
+        else:
+            epsg_code = self.epsg_edit.text()
+            if epsg_code:
+                try:
+                    crs = CRS.from_epsg(epsg_code)
+                except Exception as e:
+                    self.error.showMessage(f"Invalid EPSG code: {str(e)}")
+                else:
+                    print(f"PEMHub project CRS: {crs.name}")
+                    return crs
+            else:
+                return None
 
     def average_pem_data(self, selected=False):
         """
@@ -2765,7 +2875,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
 
         self.pem_files = []
         self.ri_files = []
-        self.crs = CRS()
+        self.crs = None
 
         self.plan_map_options = PlanMapOptions(parent=self)
         self.message = QMessageBox()
@@ -2773,9 +2883,6 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.pb_win.resize(400, 45)
         self.pb_win.setLayout(QVBoxLayout())
         self.pb_win.setWindowTitle('Saving PDF Plots...')
-
-        # self.pb_text = QLabel('')
-        # self.pb_win.layout().addWidget(self.pb_text)
 
         # Set validations
         int_validator = QtGui.QIntValidator()
@@ -2870,7 +2977,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
 
         # Make sure CRS is passed and valid if making a plan map
         if self.make_plan_maps_gbox.isChecked():
-            if not self.crs.is_valid():
+            if not self.crs:
                 response = self.message.question(self, 'No CRS',
                                                  'No CRS has been selected. ' +
                                                  'Do you wish to proceed without a plan map?',
@@ -3033,10 +3140,7 @@ class MagDeclinationCalculator(QMainWindow):
         if not pem_file:
             return
 
-        # if crs.is_nad27():
-        #     self.message.information(self, 'Incompatible datum. Must be either NAD 1983 or WGS 1984')
-        #     return
-        if not crs.is_valid():
+        if not crs:
             self.message.information(self, 'Error', 'GPS coordinate system information is invalid')
             return
 
@@ -3072,17 +3176,17 @@ def main():
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    pem_files = pg.get_pems(client='Kazzinc', number=4)
+    # pem_files = pg.get_pems(client='Iscaycruz', number=1)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     #
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
-    # mw.open_dmp_files(file)
-    mw.open_pem_files(pem_files)
+    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
+    mw.open_dmp_files(file)
+    # mw.open_pem_files(pem_files)
     # mw.pem_info_widgets[0].convert_crs()
     # mw.open_3d_map()
+    # mw.pem_files[0].loop.to_nad27()
     mw.show()
-
-    # mw.show()
 
     # mw.delete_merged_files_cbox.setChecked(False)
 

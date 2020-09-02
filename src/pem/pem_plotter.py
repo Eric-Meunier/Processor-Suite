@@ -23,6 +23,7 @@ import natsort
 import numpy as np
 import six
 import utm
+from pyproj import CRS
 from PIL import Image
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import (QProgressBar, QApplication)
@@ -1033,7 +1034,6 @@ class MapPlotter:
         """
         Re-size the extents to make the axes 11" by 8.5"
         :param figure: Matplotlib Figure object
-        :return: None
         """
         bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
         xmin, xmax, ymin, ymax = ax.get_extent()
@@ -1380,16 +1380,9 @@ class PlanMap(MapPlotter):
         self.label_collars = label_collars
         self.label_hole_depth = label_hole_depth
 
-        # if __name__ == '__main__':
-        #     self.crs = self.pem_files[0].get_crs()
-        #     if not self.crs.is_valid():
-        #         self.crs = CRS().from_dict({'System': 'UTM', 'Zone': '18 North', 'Datum': 'NAD 83'})
-        # else:
-
         assert self.crs, 'No CRS'
-        assert self.crs.is_valid(), 'Invalid CRS'
 
-        self.map_crs = self.crs.to_cartopy_crs()
+        self.map_crs = ccrs.epsg(self.crs.to_epsg())
         self.ax = self.figure.add_subplot(projection=self.map_crs)
 
     def plot(self):
@@ -1405,9 +1398,6 @@ class PlanMap(MapPlotter):
                     f"{pem_file.filepath.name} is not the correct survey type: {pem_file.get_survey_type()} vs {survey_type}")
                 self.pem_files.pop(pem_file)
                 break
-
-            # elif not pem_file.has_any_gps():
-            #     break
 
             # Plot the surface lines
             if not pem_file.is_borehole() and self.draw_lines is True and pem_file.has_station_gps():
@@ -1513,6 +1503,7 @@ class PlanMap(MapPlotter):
 
             scale = f"1:{self.map_scale:,.0f}"
 
+            # Head title
             self.ax.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
                          fontname='Century Gothic',
                          fontsize=11,
@@ -1520,6 +1511,7 @@ class PlanMap(MapPlotter):
                          zorder=10,
                          transform=self.ax.transAxes)
 
+            # Subtitle
             self.ax.text(center_pos, top_pos - 0.020, f"{'Hole' if self.pem_files[0].is_borehole() else 'Line'}"
             f" and Loop Location Map",
                          family='cursive',
@@ -1529,6 +1521,7 @@ class PlanMap(MapPlotter):
                          zorder=10,
                          transform=self.ax.transAxes)
 
+            # Survey type
             self.ax.text(center_pos, top_pos - 0.040, f"{self.pem_files[0].get_survey_type().title()} Pulse EM Survey",
                          family='cursive',
                          style='italic',
@@ -1538,6 +1531,7 @@ class PlanMap(MapPlotter):
                          zorder=10,
                          transform=self.ax.transAxes)
 
+            # Client and grid names
             self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
             f"{survey_text}",
                          fontname='Century Gothic',
@@ -1547,6 +1541,7 @@ class PlanMap(MapPlotter):
                          zorder=10,
                          transform=self.ax.transAxes)
 
+            # Timebase and survey dates
             self.ax.text(center_pos, top_pos - 0.124, f"Timebase: {', '.join(timebases)} ms\n{get_survey_dates()}",
                          fontname='Century Gothic',
                          fontsize=9,
@@ -1555,7 +1550,8 @@ class PlanMap(MapPlotter):
                          zorder=10,
                          transform=self.ax.transAxes)
 
-            self.ax.text(left_pos, top_pos - 0.167, f"{self.crs.to_string()}",
+            # CRS
+            self.ax.text(left_pos, top_pos - 0.167, f"{self.crs.name}",
                          family='cursive',
                          style='italic',
                          color='dimgray',
@@ -1566,6 +1562,7 @@ class PlanMap(MapPlotter):
                          zorder=10,
                          transform=self.ax.transAxes)
 
+            # Map scale
             self.ax.text(right_pos, top_pos - 0.167, f"Scale {scale}",
                          family='cursive',
                          style='italic',
@@ -1630,9 +1627,11 @@ class PlanMap(MapPlotter):
         self.ax.xaxis.set_visible(True)  # Required to actually get the labels to show in UTM
         self.ax.yaxis.set_visible(True)
         self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
-        if self.crs.system == 'UTM':
-            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
-            self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
+        if 'UTM' in self.crs.name:
+            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m'))
+            self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m'))
+            # self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
+            # self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
         self.ax.xaxis.set_ticks_position('top')
         plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
         plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
@@ -4404,7 +4403,7 @@ class PEMPrinter:
                 return
 
             # Saving the Plan Map. Must have a valid CRS.
-            if self.crs.is_valid() and self.print_plan_maps is True:
+            if self.crs and self.print_plan_maps is True:
                 if any([pem_file.has_any_gps() for pem_file in pem_files]):
                     self.pb.setText(f"Saving plan map for {', '.join([f.line_name for f in pem_files])}")
                     # Plot the plan map
@@ -4729,7 +4728,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='PEM Rotation', selection=4)
+    pem_files = pem_getter.get_pems(client='Kazzinc', selection=1)
 
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
@@ -4756,18 +4755,18 @@ if __name__ == '__main__':
     # log_plot.plot('X')
     # plt.show()
 
-    step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    ax5 = ax4.twiny()
-    ax5.get_shared_x_axes().join(ax4, ax5)
-    pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01NAv.PEM'
-    ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01N.RI2'
-    step_plot = STEPPlotter(pem, ri, step_fig)
-    step_plot.plot('X')
-    plt.show()
+    # step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    # ax5 = ax4.twiny()
+    # ax5.get_shared_x_axes().join(ax4, ax5)
+    # pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01NAv.PEM'
+    # ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01N.RI2'
+    # step_plot = STEPPlotter(pem, ri, step_fig)
+    # step_plot.plot('X')
+    # plt.show()
 
-    # map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
-    # map_plot = PlanMap(pem_files, map_fig).plot()
-    # map_plot.show()
+    map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
+    map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
+    map_plot.show()
 
     # map = GeneralMap(pem_files, fig).get_map()
     # map = SectionPlot(pem_files, fig).get_section_plot()

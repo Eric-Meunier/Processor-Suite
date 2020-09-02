@@ -1,17 +1,17 @@
-import math
-import os
-import re
 import copy
-import pandas as pd
-import geopandas as gpd
-from math import hypot
-import gpxpy
-import utm
+import re
 from pathlib import Path
-from shapely.geometry import asMultiPoint
+
+import geopandas as gpd
+import gpxpy
+import math
 import numpy as np
-import cartopy.crs as ccrs
+import pandas as pd
+import utm
+from math import hypot
+from pyproj import CRS
 from scipy import spatial
+from shapely.geometry import asMultiPoint
 
 
 class BaseGPS:
@@ -51,30 +51,22 @@ class BaseGPS:
         Convert the data frame coordinates to Lat Lon in decimal format
         :return: GPS object
         """
-
-        if any([not self.crs, self.df.empty, not self.crs.is_valid(), self.crs.get_epsg() is None]):
+        if any([not self.crs, self.df.empty]):
             print('GPS dataframe is empty or there is something wrong with the CRS')
-            return None
-        elif self.crs.zone_number is None or self.crs.north is None:
-            print('Cannot convert to latlon because of missing zone number or north value')
-            return None
-        elif self.crs.is_latlon():
-            return self
+            return
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs.get_epsg())
+        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
 
-        # Convert the point objects to lat/lon WGS84
-        latlon_gdf = gdf.to_crs('EPSG:4326')
+        # Convert the point objects to WGS 1984 Lat/Lon
+        epsg_code = f'4326'  # Geographic
+
+        converted_gdf = gdf.to_crs(f"EPSG:{epsg_code}")
 
         # Assign the converted UTM columns to the data frame
-        self.df['Easting'], self.df['Northing'] = latlon_gdf.map(lambda p: p.x), latlon_gdf.map(lambda p: p.y)
-
-        # Create the new CRS for lat/lon
-        latlon_crs = CRS().from_dict({'System': 'Lat/Lon',
-                                      'Datum': 'WGS 1984'})
-        self.crs = latlon_crs
+        self.df['Easting'], self.df['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+        self.crs = CRS.from_epsg(epsg_code)
         return self
 
     def to_nad27(self):
@@ -82,30 +74,26 @@ class BaseGPS:
         Convert the data frame coordinates to NAD 1927.
         :return: GPS object
         """
-        if any([not self.crs, self.df.empty, not self.crs.is_valid()]):
+        if any([not self.crs, self.df.empty]):
             print('GPS dataframe is empty or there is something wrong with the CRS')
             return
-        elif self.crs.zone_number is None:
-            print('Cannot convert to NAD 27 because of missing zone number')
-            return
-        elif self.crs.is_nad27():
-            return self
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs.get_epsg())
+        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
 
         # Convert the point objects to NAD 1927
-        nad27_gdf = gdf.to_crs(f'EPSG:267{self.crs.zone_number}')
+        if self.crs.utm_zone:
+            zone_number = self.crs.utm_zone[:-1]
+            epsg_code = f'267{zone_number}'  # Projected
+        else:
+            epsg_code = f'4267'  # Geographic
+
+        converted_gdf = gdf.to_crs(f"EPSG:{epsg_code}")
 
         # Assign the converted UTM columns to the data frame
-        self.df['Easting'], self.df['Northing'] = nad27_gdf.map(lambda p: p.x), nad27_gdf.map(lambda p: p.y)
-
-        # # Create the new CRS object for NAD 1927
-        nad27_crs = CRS().from_dict({'System': 'UTM',
-                                     'Zone Number': self.crs.zone_number,
-                                     'Datum': 'NAD 1927'})
-        self.crs = nad27_crs
+        self.df['Easting'], self.df['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+        self.crs = CRS.from_epsg(epsg_code)
         return self
 
     def to_nad83(self):
@@ -113,30 +101,26 @@ class BaseGPS:
         Convert the data frame coordinates to NAD 1983.
         :return: GPS object
         """
-        if any([not self.crs, self.df.empty, not self.crs.is_valid()]):
+        if any([not self.crs, self.df.empty]):
             print('GPS dataframe is empty or there is something wrong with the CRS')
             return
-        elif self.crs.zone_number is None:
-            print('Cannot convert to NAD 83 because of missing zone number')
-            return
-        elif self.crs.is_nad83():
-            return self
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs.get_epsg())
+        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
 
         # Convert the point objects to NAD 1983
-        nad83_gdf = gdf.to_crs(f'EPSG:269{self.crs.zone_number}')
+        if self.crs.utm_zone:
+            zone_number = self.crs.utm_zone[:-1]
+            epsg_code = f'269{zone_number}'  # Projected
+        else:
+            epsg_code = f'4269'  # Geographic
+
+        converted_gdf = gdf.to_crs(f"EPSG:{epsg_code}")
 
         # Assign the converted UTM columns to the data frame
-        self.df['Easting'], self.df['Northing'] = nad83_gdf.map(lambda p: p.x), nad83_gdf.map(lambda p: p.y)
-
-        # # Create the new CRS object for NAD 1983
-        nad83_crs = CRS().from_dict({'System': 'UTM',
-                                     'Zone Number': self.crs.zone_number,
-                                     'Datum': 'NAD 1983'})
-        self.crs = nad83_crs
+        self.df['Easting'], self.df['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+        self.crs = CRS.from_epsg(epsg_code)
         return self
 
     def to_wgs84(self):
@@ -144,32 +128,56 @@ class BaseGPS:
         Convert the data frame coordinates to WGS 1984.
         :return: GPS object
         """
-        if any([not self.crs, self.df.empty, not self.crs.is_valid()]):
+        if any([not self.crs, self.df.empty]):
             print('GPS dataframe is empty or there is something wrong with the CRS')
             return
-        elif self.crs.zone_number is None or self.crs.north is None:
-            print('Cannot convert to WGS 84 because of missing zone number or north value')
-            return
-        elif self.crs.is_wgs84():
-            return self
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs.get_epsg())
+        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
 
         # Convert the point objects to WGS 1984
-        prefix = '326' if self.crs.north is True else '327'
-        wgs84_gdf = gdf.to_crs(f'EPSG:{prefix}{self.crs.zone_number}')
+        if self.crs.utm_zone:
+            zone_number = self.crs.utm_zone[:-1]
+            if self.crs.utm_zone[-1] == 'N':
+                prefix = '326'
+            else:
+                prefix = '327'
+
+            epsg_code = f'{prefix}{zone_number}'  # Projected
+        else:
+            epsg_code = f'4326'  # Geographic
+
+        converted_gdf = gdf.to_crs(f"EPSG:{epsg_code}")
 
         # Assign the converted UTM columns to the data frame
-        self.df['Easting'], self.df['Northing'] = wgs84_gdf.map(lambda p: p.x), wgs84_gdf.map(lambda p: p.y)
-
-        # # Create the new CRS object for WGS 1984
-        wgs84_crs = CRS().from_dict({'System': 'UTM',
-                                     'Zone Number': self.crs.zone_number,
-                                     'Datum': 'WGS 1984'})
-        self.crs = wgs84_crs
+        self.df['Easting'], self.df['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+        self.crs = CRS.from_epsg(epsg_code)
         return self
+
+    def to_epsg(self, epsg_code):
+        """
+        Convert the data frame coordinates to WGS 1984.
+        :return: GPS object
+        """
+        if any([not self.crs, self.df.empty]):
+            print('GPS dataframe is empty or there is something wrong with the CRS')
+            return
+
+        # Create point objects for each coordinate
+        mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
+        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
+
+        try:
+            converted_gdf = gdf.to_crs(f"EPSG:{epsg_code}")
+        except Exception as e:
+            print(f"Could not convert to {epsg_code}: {str(e)}")
+            return None
+        else:
+            # Assign the converted UTM columns to the data frame
+            self.df['Easting'], self.df['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+            self.crs = CRS.from_epsg(epsg_code)
+            return self
 
 
 class TransmitterLoop(BaseGPS):
@@ -1236,127 +1244,155 @@ class BoreholeGeometry(BaseGPS):
 #         return gps, error_gps
 
 
-class CRS:
-    """
-    Class to represent Coordinate Reference Systems (CRS) information
-    """
-    def __init__(self):
-        self.system = None
-        self.zone = None
-        self.zone_number = None
-        self.zone_letter = None
-        self.north = None
-        self.datum = None
-
-    def from_dict(self, crs_dict):
-        keys = crs_dict.keys()
-
-        self.system = crs_dict['System']
-        if 'Zone' in keys:
-            zone = crs_dict['Zone']
-            if zone:
-                self.zone_number = int(re.search('\d+', zone).group())
-                self.north = True if 'N' in zone.upper() else False
-        if 'Zone Number' in keys:
-            self.zone_number = crs_dict['Zone Number']
-        if 'North' in keys:
-            self.north = crs_dict['North']
-        if 'Zone Letter' in keys:
-            self.zone_letter = crs_dict['Zone Letter']
-            if self.zone_letter.lower() in ['c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm']:
-                self.north = False
-            else:
-                self.north = True
-        self.datum = crs_dict['Datum']
-        return self
-
-    def is_valid(self):
-        """
-        If the CRS object has all information required for coordinate conversions
-        :return: bool
-        """
-        if self.system:
-            if self.system == 'Lat/Lon' and self.datum:
-                return True
-            elif self.system == 'UTM':
-                if all([self.system, self.zone_number, self.north is not None, self.datum]):
-                    return True
-        return False
-
-    def is_nad27(self):
-        if self.datum:
-            if self.datum == 'NAD 1927':
-                return True
-            else:
-                return False
-        else:
-            return None
-
-    def is_nad83(self):
-        if self.datum:
-            if self.datum == 'NAD 1983':
-                return True
-            else:
-                return False
-        else:
-            return None
-
-    def is_wgs84(self):
-        if self.datum:
-            if self.datum == 'WGS 1984':
-                return True
-            else:
-                return False
-        else:
-            return None
-
-    def is_latlon(self):
-        if self.system == 'Lat/Lon':
-            return True
-        else:
-            return False
-
-    def to_cartopy_crs(self):
-        """
-        Return the cartopy ccrs
-        :return: ccrs projection
-        """
-        if self.system == 'UTM':
-            return ccrs.UTM(self.zone_number, southern_hemisphere=not self.north)
-        elif self.system == 'Latitude/Longitude':
-            return ccrs.Geodetic()
-
-    def to_string(self):
-        if self.system == 'UTM':
-            north = 'North' if self.north else 'South'
-            string = f"{self.system} Zone {self.zone_number} {north}, {self.datum.upper()}"
-        else:
-            string = f"{self.system}, {self.datum.upper()}"
-        return string
-
-    def get_epsg(self):
-        """
-        Return the EPSG code for the datum
-        :return: str
-        """
-
-        if self.system == 'Lat/Lon':
-            return 'EPSG:4326'
-        else:
-            if not self.zone_number:
-                return None
-            else:
-                if self.datum == 'WGS 1984':
-                    if self.north:
-                        return f'EPSG:326{self.zone_number}'
-                    else:
-                        return f'EPSG:327{self.zone_number}'
-                elif self.datum == 'NAD 1927':
-                    return f'EPSG:267{self.zone_number}'
-                elif self.datum == 'NAD 1983':
-                    return f'EPSG:269{self.zone_number}'
-                else:
-                    return None
+# class CRS:
+#     """
+#     Class to represent Coordinate Reference Systems (CRS) information
+#     """
+#     def __init__(self):
+#         self.system = None
+#         self.zone = None
+#         self.zone_number = None
+#         self.zone_letter = None
+#         self.north = None
+#         self.datum = None
+#
+#     def from_dict(self, crs_dict):
+#         keys = crs_dict.keys()
+#
+#         self.system = crs_dict['System']
+#         if 'Zone' in keys:
+#             zone = crs_dict['Zone']
+#             if zone:
+#                 self.zone_number = int(re.search('\d+', zone).group())
+#                 self.north = True if 'N' in zone.upper() else False
+#         if 'Zone Number' in keys:
+#             self.zone_number = crs_dict['Zone Number']
+#         if 'North' in keys:
+#             self.north = crs_dict['North']
+#         if 'Zone Letter' in keys:
+#             self.zone_letter = crs_dict['Zone Letter']
+#             if self.zone_letter.lower() in ['c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm']:
+#                 self.north = False
+#             else:
+#                 self.north = True
+#         self.datum = crs_dict['Datum']
+#         return self
+#
+#     # def from_proj(self, proj):
+#     #     c = proj.crs.name
+#     #
+#     #     if c == 'WGS 84':
+#     #         self.datum = 'WGS 1984'
+#     #         self.system = 'Lat/Lon'
+#     #         return self
+#     #
+#     #     elif 'UTM' in c:
+#     #         self.system = 'UTM'
+#     #
+#     #         sc = c.split(' / ')
+#     #
+#     #         datum = re.sub('\s+', '', sc[0])  # Remove any spaces
+#     #         if datum == 'WGS84':
+#     #             datum = 'WGS 1984'
+#     #         elif datum == 'NAD83':
+#     #             datum = 'NAD 1983'
+#     #         elif datum == 'NAD27':
+#     #             datum = 'NAD 1927'
+#     #         else:
+#     #             raise ValueError(f"{datum} is not a valid datum for PEMPro.")
+#     #         self.datum = datum
+#     #         zone = sc[1].split(' ')[-1]
+#     #         self.zone_number = zone[:-1]
+#     #         self.north = 'North' if zone[-1] == 'N' else 'South'
+#     #         return self
+#
+#     def is_valid(self):
+#         """
+#         If the CRS object has all information required for coordinate conversions
+#         :return: bool
+#         """
+#         if self.system:
+#             if self.system == 'Lat/Lon' and self.datum:
+#                 return True
+#             elif self.system == 'UTM':
+#                 if all([self.system, self.zone_number, self.north is not None, self.datum]):
+#                     return True
+#         return False
+#
+#     def is_nad27(self):
+#         if self.datum:
+#             if self.datum == 'NAD 1927':
+#                 return True
+#             else:
+#                 return False
+#         else:
+#             return None
+#
+#     def is_nad83(self):
+#         if self.datum:
+#             if self.datum == 'NAD 1983':
+#                 return True
+#             else:
+#                 return False
+#         else:
+#             return None
+#
+#     def is_wgs84(self):
+#         if self.datum:
+#             if self.datum == 'WGS 1984':
+#                 return True
+#             else:
+#                 return False
+#         else:
+#             return None
+#
+#     def is_latlon(self):
+#         if self.system == 'Lat/Lon':
+#             return True
+#         else:
+#             return False
+#
+#     def to_cartopy_crs(self):
+#         """
+#         Return the cartopy ccrs
+#         :return: ccrs projection
+#         """
+#         if self.system == 'UTM':
+#             return ccrs.UTM(self.zone_number, southern_hemisphere=not self.north)
+#         elif self.system == 'Latitude/Longitude':
+#             return ccrs.Geodetic()
+#
+#     def to_string(self):
+#         if self.system == 'UTM':
+#             north = 'North' if self.north else 'South'
+#             string = f"{self.system} Zone {self.zone_number} {north}, {self.datum.upper()}"
+#         else:
+#             string = f"{self.system}, {self.datum.upper()}"
+#         return string
+#
+#     def get_epsg(self):
+#         """
+#         Return the EPSG code for the datum
+#         :return: str
+#         """
+#
+#         if self.system == 'Lat/Lon':
+#             return 'EPSG:4326'
+#         else:
+#             if not self.zone_number:
+#                 return None
+#             else:
+#                 if self.datum == 'WGS 1984':
+#                     if self.north:
+#                         return f'EPSG:326{self.zone_number}'
+#                     else:
+#                         return f'EPSG:327{self.zone_number}'
+#                 elif self.datum == 'NAD 1927':
+#                     return f'EPSG:267{self.zone_number}'
+#                 elif self.datum == 'NAD 1983':
+#                     return f'EPSG:269{self.zone_number}'
+#                 else:
+#                     return None
 
 
 class GPXEditor:
