@@ -154,9 +154,9 @@ class PEMFile:
         crs = self.get_crs()
         self.loop = TransmitterLoop(loop_coords, crs=crs)
         if self.is_borehole():
-            collar = BoreholeCollar(line_coords, crs=crs)
-            segments = BoreholeSegments(line_coords)
-            self.geometry = BoreholeGeometry(collar, segments)
+            self.collar = BoreholeCollar(line_coords, crs=crs)
+            self.segments = BoreholeSegments(line_coords)
+            self.geometry = BoreholeGeometry(self.collar, self.segments)
         else:
             self.line = SurveyLine(line_coords, crs=crs)
 
@@ -224,9 +224,9 @@ class PEMFile:
         crs = self.get_crs()
         self.loop = TransmitterLoop(None, crs=crs)
         if self.is_borehole():
-            collar = BoreholeCollar(None, crs=crs)
-            segments = BoreholeSegments(None)
-            self.geometry = BoreholeGeometry(collar, segments)
+            self.collar = BoreholeCollar(None, crs=crs)
+            self.segments = BoreholeSegments(None)
+            self.geometry = BoreholeGeometry(self.collar, self.segments)
         else:
             self.line = SurveyLine(None, crs=crs)
 
@@ -403,10 +403,10 @@ class PEMFile:
         return self.line.get_line(sorted=sorted)
 
     def get_collar(self):
-        return self.geometry.get_collar()
+        return self.collar.get_collar()
 
     def get_segments(self):
-        return self.geometry.get_segments()
+        return self.segments.get_segments()
 
     def get_geometry(self):
         return self.geometry
@@ -3059,14 +3059,17 @@ class RADTool:
             raise ValueError('RADTool D value is neither "D5", "D6", nor "D7"')
 
         if self.R is not None and self.angle_used is not None:
-            if self.rotation_type == 'acc':
-                result.append(f"{self.acc_roll_angle:g}")
-            elif self.rotation_type == 'mag':
-                result.append(f"{self.mag_roll_angle:g}")
-            elif self.rotation_type == 'pp_raw':
-                result.append(f"{self.measured_pp_roll_angle:g}")
-            else:
-                result.append(f"{self.cleaned_pp_roll_angle:g}")
+            # if self.rotation_type == 'acc':
+            #     result.append(f"{self.acc_roll_angle:g}")
+            # elif self.rotation_type == 'mag':
+            #     result.append(f"{self.mag_roll_angle:g}")
+            # elif self.rotation_type == 'pp_raw':
+            #     result.append(f"{self.measured_pp_roll_angle:g}")
+            # elif self.rotation_type == 'pp_cleaned':
+            #     result.append(f"{self.cleaned_pp_roll_angle:g}")
+            # # else:
+            # #     result.append(f"{self.roll_angle:g}")
+
             result.append(self.R)
             result.append(f"{self.angle_used:g}")
 

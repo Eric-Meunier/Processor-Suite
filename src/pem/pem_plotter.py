@@ -1382,7 +1382,10 @@ class PlanMap(MapPlotter):
 
         assert self.crs, 'No CRS'
 
-        self.map_crs = ccrs.epsg(self.crs.to_epsg())
+        if self.crs.is_projected:
+            self.map_crs = ccrs.epsg(self.crs.to_epsg())
+        else:
+            self.map_crs = ccrs.PlateCarree()
         self.ax = self.figure.add_subplot(projection=self.map_crs)
 
     def plot(self):
@@ -4403,7 +4406,7 @@ class PEMPrinter:
                 return
 
             # Saving the Plan Map. Must have a valid CRS.
-            if self.crs and self.print_plan_maps is True:
+            if all([self.crs, self.print_plan_maps is True]):
                 if any([pem_file.has_any_gps() for pem_file in pem_files]):
                     self.pb.setText(f"Saving plan map for {', '.join([f.line_name for f in pem_files])}")
                     # Plot the plan map

@@ -15,22 +15,118 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <property name="spacing">
+     <number>0</number>
+    </property>
     <item row="0" column="0">
      <widget class="QFrame" name="frame">
       <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+       <enum>QFrame::Box</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
+       <enum>QFrame::Sunken</enum>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="leftMargin">
+        <number>6</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>6</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Name</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="name_edit">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>10</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
        <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
-          <string>Input Information</string>
+          <string>Input CRS</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
-          <item>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="1" column="2">
+           <widget class="QComboBox" name="gps_system_cbox">
+            <property name="minimumSize">
+             <size>
+              <width>80</width>
+              <height>0</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QComboBox" name="gps_zone_cbox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>80</width>
+              <height>0</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2">
+           <widget class="QComboBox" name="gps_datum_cbox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>80</width>
+              <height>0</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
            <widget class="QLabel" name="label">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -39,100 +135,75 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>Coordinate System</string>
+             <string>System:</string>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QComboBox" name="system_box">
-            <item>
-             <property name="text">
-              <string/>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>UTM</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Lat/Lon</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item>
-           <spacer name="verticalSpacer_2">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeType">
-             <enum>QSizePolicy::Fixed</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
+          <item row="3" column="1">
            <widget class="QLabel" name="zone_number_label">
             <property name="enabled">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <property name="text">
-             <string>UTM Zone Number</string>
+             <string>Zone:</string>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QComboBox" name="zone_number_box">
-            <property name="enabled">
-             <bool>false</bool>
+          <item row="4" column="1">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Datum:</string>
             </property>
            </widget>
           </item>
-          <item>
-           <spacer name="verticalSpacer_5">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
+          <item row="6" column="2">
+           <widget class="QLineEdit" name="epsg_edit">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
-            <property name="sizeType">
-             <enum>QSizePolicy::Fixed</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
+            <property name="maximumSize">
              <size>
-              <width>20</width>
-              <height>10</height>
+              <width>100</width>
+              <height>16777215</height>
              </size>
             </property>
-           </spacer>
+           </widget>
           </item>
-          <item>
-           <widget class="QLabel" name="label_2">
-            <property name="font">
-             <font>
-              <italic>true</italic>
-             </font>
-            </property>
+          <item row="6" column="0">
+           <widget class="QRadioButton" name="epsg_rbtn">
             <property name="text">
-             <string>Input datum must
-be NAD83 or WGS84.</string>
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>EPSG:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QRadioButton" name="crs_rbtn">
+            <property name="text">
+             <string/>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0" colspan="3">
+           <widget class="Line" name="line">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
          </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="auto_name_btn">
-         <property name="text">
-          <string>Append Comment
-to Name</string>
-         </property>
         </widget>
        </item>
        <item>
@@ -161,7 +232,7 @@ to Name</string>
        <item>
         <widget class="QPushButton" name="export_gpx_btn">
          <property name="text">
-          <string>Export GPX</string>
+          <string>Create GPX</string>
          </property>
          <property name="checkable">
           <bool>false</bool>
@@ -176,6 +247,9 @@ to Name</string>
     </item>
     <item row="0" column="1">
      <widget class="QTableWidget" name="table">
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
       <property name="alternatingRowColors">
        <bool>false</bool>
       </property>
@@ -190,22 +264,17 @@ to Name</string>
       </property>
       <column>
        <property name="text">
-        <string>Name</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Comment</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
         <string>Easting</string>
        </property>
       </column>
       <column>
        <property name="text">
         <string>Northing</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Comment</string>
        </property>
       </column>
      </widget>
@@ -225,17 +294,21 @@ to Name</string>
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="importCSV"/>
+    <addaction name="openAction"/>
     <addaction name="exportGPX"/>
     <addaction name="separator"/>
     <addaction name="create_csv_template_action"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
-  <action name="importCSV">
+  <widget class="QStatusBar" name="status_bar">
+   <property name="sizeGripEnabled">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <action name="openAction">
    <property name="text">
-    <string>Import CSV</string>
+    <string>Open File</string>
    </property>
   </action>
   <action name="exportGPX">

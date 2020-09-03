@@ -596,7 +596,7 @@ Backup Files</string>
        <enum>Qt::NoContextMenu</enum>
       </property>
       <property name="toolTip">
-       <string>Print plots to a PDF file</string>
+       <string/>
       </property>
       <property name="frameShape">
        <enum>QFrame::Box</enum>
@@ -1230,6 +1230,8 @@ Stations</string>
     </property>
     <addaction name="actionSave_as_KMZ"/>
     <addaction name="actionExport_All_GPS"/>
+    <addaction name="separator"/>
+    <addaction name="actionConvert_GPS"/>
    </widget>
    <widget class="QMenu" name="menuMap">
     <property name="title">
@@ -1584,6 +1586,11 @@ Stations</string>
   <action name="actionSort_Table_on_Import">
    <property name="text">
     <string>Sort Table on Import</string>
+   </property>
+  </action>
+  <action name="actionConvert_GPS">
+   <property name="text">
+    <string>Convert GPS</string>
    </property>
   </action>
  </widget>

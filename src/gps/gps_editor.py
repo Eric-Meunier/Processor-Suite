@@ -84,8 +84,8 @@ class BaseGPS:
 
         # Convert the point objects to NAD 1927
         if self.crs.utm_zone:
-            zone_number = self.crs.utm_zone[:-1]
-            epsg_code = f'267{zone_number}'  # Projected
+            zone_number = int(self.crs.utm_zone[:-1])
+            epsg_code = f'267{zone_number:02d}'  # Projected
         else:
             epsg_code = f'4267'  # Geographic
 
@@ -111,8 +111,8 @@ class BaseGPS:
 
         # Convert the point objects to NAD 1983
         if self.crs.utm_zone:
-            zone_number = self.crs.utm_zone[:-1]
-            epsg_code = f'269{zone_number}'  # Projected
+            zone_number = int(self.crs.utm_zone[:-1])
+            epsg_code = f'269{zone_number:02d}'  # Projected
         else:
             epsg_code = f'4269'  # Geographic
 
@@ -138,13 +138,13 @@ class BaseGPS:
 
         # Convert the point objects to WGS 1984
         if self.crs.utm_zone:
-            zone_number = self.crs.utm_zone[:-1]
+            zone_number = int(self.crs.utm_zone[:-1])
             if self.crs.utm_zone[-1] == 'N':
                 prefix = '326'
             else:
                 prefix = '327'
 
-            epsg_code = f'{prefix}{zone_number}'  # Projected
+            epsg_code = f'{prefix}{zone_number:02d}'  # Projected
         else:
             epsg_code = f'4326'  # Geographic
 
@@ -527,7 +527,10 @@ class BoreholeCollar(BaseGPS):
         ])
 
         if isinstance(file, list):
-            gps = pd.DataFrame(file)
+            if file:
+                gps = pd.DataFrame(file)
+            else:
+                return empty_gps, pd.DataFrame()
         elif isinstance(file, pd.DataFrame):
             gps = file
         elif Path(str(file)).is_file():

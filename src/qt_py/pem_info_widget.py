@@ -178,8 +178,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.share_collar_gps_btn.clicked.connect(lambda: self.share_collar_signal.emit())
         self.share_segments_btn.clicked.connect(lambda: self.share_segments_signal.emit())
 
-        self.convert_loop_crs_btn.clicked.connect(self.convert_crs)
-
         # # Radio buttons
         # self.station_sort_rbtn.clicked.connect(self.fill_data_table)
         # self.component_sort_rbtn.clicked.connect(self.fill_data_table)
@@ -430,8 +428,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.parent = parent
         self.init_tables()
         if self.pem_file.is_borehole():
-            self.fill_gps_table(self.pem_file.geometry.get_collar(), self.collar_table)
-            self.fill_gps_table(self.pem_file.geometry.get_segments(), self.segments_table)
+            self.fill_gps_table(self.pem_file.get_collar(), self.collar_table)
+            self.fill_gps_table(self.pem_file.get_segments(), self.segments_table)
         else:
             self.fill_gps_table(self.pem_file.line.get_line(), self.line_table)
         self.fill_info_tab()
@@ -591,7 +589,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             """
             def series_to_items(x):
                 if isinstance(x, float):
-                    return QTableWidgetItem(f"{x:.2f}")
+                    # return QTableWidgetItem(f"{x:.2f}")
+                    return QTableWidgetItem(f"{x}")
                 else:
                     return QTableWidgetItem(str(x))
 
@@ -773,20 +772,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #     self.num_repeat_stations = bolden_repeat_stations()
     #     self.refresh_tables_signal.emit()
     #     self.lcdRepeats.display(self.num_repeat_stations)
-
-    def convert_crs(self):
-        loop = self.get_loop()
-        crs = self.parent.get_crs()
-        if loop.df.empty:
-            print(f"No GPS to convert")
-            return
-        elif not crs.is_valid():
-            self.message.information(self, 'Invalid CRS', 'The project CRS is not valid.')
-            return
-        else:
-            loop.crs = crs
-            nad27loop = loop.to_nad27()
-            self.fill_gps_table(nad27loop.df, self.loop_table)
 
     def check_station_duplicates(self):
         """

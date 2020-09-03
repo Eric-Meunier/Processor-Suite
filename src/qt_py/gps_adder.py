@@ -177,7 +177,8 @@ class GPSAdder(QMainWindow):
              """
             def series_to_items(x):
                 if isinstance(x, float):
-                    return QTableWidgetItem(f"{x:.2f}")
+                    return QTableWidgetItem(f"{x}")
+                    # return QTableWidgetItem(f"{x:.2f}")
                 else:
                     return QTableWidgetItem(str(x))
 
@@ -436,19 +437,10 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
         self.reset_action = QShortcut(QtGui.QKeySequence(" "), self)
         self.reset_action.activated.connect(self.reset_range)
-        # self.reset_action.activated.connect(self.highlight_point)
-
-        # self.status_bar.hide()
-        # self.status_bar.addWidget(self.button_box)
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Delete:
             self.del_row()
-        # elif e.key() == QtCore.Qt.Key_Space:
-        #     print(f"Space key pressed")
-        #     self.reset_range()
-        #     self.plot_table()
-        #     self.highlight_point()
 
     def del_row(self):
         if self.table.selectionModel().hasSelection():
@@ -495,7 +487,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
         :return: None
         """
-        self.write_widget.fill_gps_table(self.table_to_df().dropna(), self.write_widget.table)
+        self.write_widget.fill_gps_table(self.table_to_df().dropna(), self.write_widget.line_table)
         self.hide()
 
     def plot_table(self, preserve_limits=False):
@@ -734,7 +726,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                 station_item = self.table.item(row, stations_column)
                 station_num = table_stations[row]
                 # station_num = re.search('-?\d+', table_stations[row]).group()
-                if not station_num:
+                if not station_num and station_num != 0:
                     station_item.setBackground(QtGui.QColor('dimgray'))
                 else:
                     if int(station_num) > sorted_stations[row]:
@@ -759,29 +751,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 class LoopAdder(GPSAdder, Ui_LoopAdder):
 
     def __init__(self, parent=None):
-        # super().__init__()
-        # self.setupUi(self)
-        # self.parent = parent
-        # self.loop = None
-        # self.setWindowTitle('Loop Adder')
-        #
-        # # self.table = QTableWidget()
-        # self.table.setFixedWidth(400)
-        # self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        # self.table.setSelectionMode(QAbstractItemView.SingleSelection)
-        #
-        # self.canvas_frame.layout().addWidget(self.canvas)
-        # self.canvas.mpl_connect('pick_event', self.onpick)
-        #
-        # self.button_box.rejected.connect(self.close)
-        # self.table.cellChanged.connect(self.plot_table)
-        # self.table.cellChanged.connect(self.check_table)
-        # self.table.itemSelectionChanged.connect(self.highlight_point)
-        # self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
-        # self.status_bar.hide()
-        #
-
         super().__init__()
         self.setupUi(self)
         self.parent = parent
