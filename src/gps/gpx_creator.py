@@ -311,7 +311,6 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
     def auto_name(self):
         """
         Append the Comment to the Name to create unique names
-        :return: None
         """
         if self.table.rowCount() > 0:
             for row in range(self.table.rowCount()):
@@ -385,6 +384,10 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
             return df
 
         def row_to_gpx(row):
+            """
+            Create a gpx waypoint object for each data row
+            :param row: series, converted data row
+            """
             waypoint = gpxpy.gpx.GPXWaypoint(latitude=row.Northing,
                                              longitude=row.Easting,
                                              name=name,
@@ -418,19 +421,26 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
 
         gpx = gpxpy.gpx.GPX()
 
+        # Create a data frame from the table
         data = table_to_df()
+
         # Create point objects for each coordinate
         mpoints = asMultiPoint(data.loc[:, ['Easting', 'Northing']].to_numpy())
         gdf = gpd.GeoSeries(list(mpoints), crs=crs)
 
+        # Convert to lat lon
         converted_gdf = gdf.to_crs(epsg=4326)
         data['Easting'], data['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+
+        # Create the GPX waypoints
         data.apply(row_to_gpx, axis=1)
 
+        # Save the file
         with open(file, 'w') as f:
             f.write(gpx.to_xml())
         self.status_bar.showMessage('Save complete.', 2000)
 
+        # Open the file
         if self.open_file_cbox.isChecked():
             os.startfile(file)
 
