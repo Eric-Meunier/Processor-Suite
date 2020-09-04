@@ -82,6 +82,9 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.init_crs()
 
     def init_crs(self):
+        """
+        Populate the CRS drop boxes and connect all their signals
+        """
 
         def toggle_gps_system():
             """

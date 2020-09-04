@@ -293,6 +293,9 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.init_crs()
 
     def init_crs(self):
+        """
+        Populate the CRS drop boxes and connect all their signals
+        """
 
         def toggle_gps_system():
             """
@@ -1054,6 +1057,9 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.init_crs()
 
     def init_crs(self):
+        """
+        Populate the CRS drop boxes and connect all their signals
+        """
 
         def toggle_gps_system():
             """
