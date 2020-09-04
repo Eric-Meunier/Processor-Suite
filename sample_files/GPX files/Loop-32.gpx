@@ -1,91 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="gpx.py -- https://github.com/tkrajina/gpxpy">
-  <wpt lat="15.36217252424978" lon="37.4157584233078">
-    <name>Testing line</name>
-    <cmt>50</cmt>
+  <wpt lat="43.60605004274249" lon="-19.767592347244026">
+    <name>Loop</name>
   </wpt>
-  <wpt lat="15.36217037309662" lon="37.41621866730735">
-    <name>Testing line</name>
-    <cmt>100</cmt>
+  <wpt lat="43.605983091651844" lon="-19.761398213420406">
+    <name>Loop</name>
   </wpt>
-  <wpt lat="15.36218902437098" lon="37.41668117615678">
-    <name>Testing line</name>
-    <cmt>150</cmt>
+  <wpt lat="43.6104841024285" lon="-19.761305836301442">
+    <name>Loop</name>
   </wpt>
-  <wpt lat="15.36215143305463" lon="37.41716553278279">
-    <name>Testing line</name>
-    <cmt>200</cmt>
+  <wpt lat="43.61055106398086" lon="-19.76750043180879">
+    <name>Loop</name>
   </wpt>
-  <wpt lat="15.362179756378692" lon="37.41759033843968">
-    <name>Testing line</name>
-    <cmt>250</cmt>
+  <wpt lat="43.60605004274249" lon="-19.767592347244026">
+    <name>Loop</name>
   </wpt>
-  <wpt lat="15.362177174453107" lon="37.41807955405111">
-    <name>Testing line</name>
-    <cmt>300</cmt>
+  <wpt lat="-19.764449207193664" lon="-19.764449207193664">
+    <name>Hole</name>
   </wpt>
-  <wpt lat="15.362191643966307" lon="37.41852644664116">
-    <name>Testing line</name>
-    <cmt>350</cmt>
-  </wpt>
-  <wpt lat="15.362144190644276" lon="37.41902261387187">
-    <name>Testing line</name>
-    <cmt>400</cmt>
-  </wpt>
-  <wpt lat="15.362155751737962" lon="37.41946747935776">
-    <name>Testing line</name>
-    <cmt>450</cmt>
-  </wpt>
-  <wpt lat="15.36215852334572" lon="37.41993476592517">
-    <name>Testing line</name>
-    <cmt>500</cmt>
-  </wpt>
-  <wpt lat="15.362209699732764" lon="37.420371229790554">
-    <name>Testing line</name>
-    <cmt>550</cmt>
-  </wpt>
-  <wpt lat="15.362157972306365" lon="37.42088978396056">
-    <name>Testing line</name>
-    <cmt>600</cmt>
-  </wpt>
-  <wpt lat="15.362205841244887" lon="37.42133167552205">
-    <name>Testing line</name>
-    <cmt>650</cmt>
-  </wpt>
-  <wpt lat="15.362191956884148" lon="37.4218085886599">
-    <name>Testing line</name>
-    <cmt>700</cmt>
-  </wpt>
-  <wpt lat="15.362209547168629" lon="37.42222500037597">
-    <name>Testing line</name>
-    <cmt>750</cmt>
-  </wpt>
-  <wpt lat="15.36220417843815" lon="37.422730538259124">
-    <name>Testing line</name>
-    <cmt>800</cmt>
-  </wpt>
-  <wpt lat="15.362187673410919" lon="37.4232206978564">
-    <name>Testing line</name>
-    <cmt>850</cmt>
-  </wpt>
-  <wpt lat="15.362198194249633" lon="37.4236857847175">
-    <name>Testing line</name>
-    <cmt>900</cmt>
-  </wpt>
-  <wpt lat="15.362219075243557" lon="37.42412070806471">
-    <name>Testing line</name>
-    <cmt>950</cmt>
-  </wpt>
-  <wpt lat="15.362224264386716" lon="37.42456059295155">
-    <name>Testing line</name>
-    <cmt>1000</cmt>
-  </wpt>
-  <wpt lat="15.362240317042355" lon="37.42502871247886">
-    <name>Testing line</name>
-    <cmt>1050</cmt>
-  </wpt>
-  <wpt lat="15.362222977120688" lon="37.42551655008731">
-    <name>Testing line</name>
-    <cmt>1100</cmt>
-  </wpt>
+  <rte>
+    <rtept lat="43.60605004274249" lon="-19.767592347244026">
+      <name>Loop</name>
+    </rtept>
+    <rtept lat="43.605983091651844" lon="-19.761398213420406">
+      <name>Loop</name>
+    </rtept>
+    <rtept lat="43.6104841024285" lon="-19.761305836301442">
+      <name>Loop</name>
+    </rtept>
+    <rtept lat="43.61055106398086" lon="-19.76750043180879">
+      <name>Loop</name>
+    </rtept>
+    <rtept lat="43.60605004274249" lon="-19.767592347244026">
+      <name>Loop</name>
+    </rtept>
+  </rte>
 </gpx>

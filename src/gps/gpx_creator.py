@@ -3,7 +3,6 @@ import pandas as pd
 import utm
 import sys
 import os
-import re
 import csv
 import gpxpy
 from shapely.geometry import asMultiPoint
@@ -72,73 +71,61 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.del_file.triggered.connect(self.remove_row)
         self.addAction(self.del_file)
 
-        # Add the GPS system and datum drop box options
-        gps_systems = ['', 'Lat/Lon', 'UTM']
-        for system in gps_systems:
-            self.gps_system_cbox.addItem(system)
+        # Signals
+        # Buttons
+        self.openAction.triggered.connect(self.open_file_dialog)
+        self.exportGPX.triggered.connect(self.export_gpx)
+        self.create_csv_template_action.triggered.connect(self.create_csv_template)
+        self.export_gpx_btn.clicked.connect(self.export_gpx)
+        # self.auto_name_btn.clicked.connect(self.auto_name)
 
-        int_valid = QtGui.QIntValidator()
-        self.epsg_edit.setValidator(int_valid)
+        self.init_crs()
 
-        self.init_signals()
-
-    def init_signals(self):
+    def init_crs(self):
 
         def toggle_gps_system():
             """
             Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
             """
-
+            current_zone = self.gps_zone_cbox.currentText()
+            datum = self.gps_datum_cbox.currentText()
             system = self.gps_system_cbox.currentText()
 
             if system == '':
-                self.gps_datum_cbox.clear()
-                self.gps_zone_cbox.clear()
                 self.gps_zone_cbox.setEnabled(False)
                 self.gps_datum_cbox.setEnabled(False)
 
             elif system == 'Lat/Lon':
-                self.gps_datum_cbox.clear()
-
-                datums = ['WGS 1984']
-                for datum in datums:
-                    self.gps_datum_cbox.addItem(datum)
-
                 self.gps_datum_cbox.setCurrentText('WGS 1984')
-                self.gps_datum_cbox.setEnabled(True)
+                self.gps_zone_cbox.setCurrentText('')
+                self.gps_datum_cbox.setEnabled(False)
                 self.gps_zone_cbox.setEnabled(False)
 
             elif system == 'UTM':
-                self.gps_datum_cbox.clear()
-
-                datums = ['WGS 1984', 'NAD 1927', 'NAD 1983']
-                for datum in datums:
-                    self.gps_datum_cbox.addItem(datum)
-
                 self.gps_datum_cbox.setEnabled(True)
-                self.gps_zone_cbox.setEnabled(True)
 
-        def toggle_gps_datum():
-            """
-            Change the zone combo box options based on the selected CRS datum.
-            """
+                if datum == '':
+                    self.gps_zone_cbox.setEnabled(False)
+                    return
+                else:
+                    self.gps_zone_cbox.clear()
+                    self.gps_zone_cbox.setEnabled(True)
 
-            datum = self.gps_datum_cbox.currentText()
+                # NAD 27 and 83 only have zones from 1N to 22N/23N
+                if datum == 'NAD 1927':
+                    zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
+                elif datum == 'NAD 1983':
+                    zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
+                # WGS 84 has zones from 1N and 1S to 60N and 60S
+                else:
+                    zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
+                                                                               range(1, 61)]
 
-            self.gps_zone_cbox.clear()
-            self.gps_zone_cbox.setEnabled(True)
+                for zone in zones:
+                    self.gps_zone_cbox.addItem(zone)
 
-            # NAD 27 and 83 only have zones from 1N to 22N/23N
-            if datum == 'NAD 1927':
-                zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
-            elif datum == 'NAD 1983':
-                zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
-            # WGS 84 has zones from 1N and 1S to 60N and 60S
-            else:
-                zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
-
-            for zone in zones:
-                self.gps_zone_cbox.addItem(zone)
+                # Keep the same zone number if possible
+                self.gps_zone_cbox.setCurrentText(current_zone)
 
         def toggle_crs_rbtn():
             """
@@ -187,10 +174,23 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
             else:
                 self.epsg_label.setText('')
 
+        # Add the GPS system and datum drop box options
+        gps_systems = ['', 'Lat/Lon', 'UTM']
+        for system in gps_systems:
+            self.gps_system_cbox.addItem(system)
+
+        datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
+        for datum in datums:
+            self.gps_datum_cbox.addItem(datum)
+
+        int_valid = QtGui.QIntValidator()
+        self.epsg_edit.setValidator(int_valid)
+
+        # Signals
         # Combo boxes
         self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
         self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_datum)
+        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
         self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
         self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
 
@@ -201,13 +201,6 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.epsg_rbtn.clicked.connect(set_epsg_label)
 
         self.epsg_edit.editingFinished.connect(check_epsg)
-
-        # Buttons
-        self.openAction.triggered.connect(self.open_file_dialog)
-        self.exportGPX.triggered.connect(self.export_gpx)
-        self.create_csv_template_action.triggered.connect(self.create_csv_template)
-        self.export_gpx_btn.clicked.connect(self.export_gpx)
-        # self.auto_name_btn.clicked.connect(self.auto_name)
 
     def open_file_dialog(self):
         """
@@ -390,7 +383,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
             """
             waypoint = gpxpy.gpx.GPXWaypoint(latitude=row.Northing,
                                              longitude=row.Easting,
-                                             name=name,
+                                             name=f"{name}-{row.Comment}",
                                              comment=row.Comment)
             gpx.waypoints.append(waypoint)
 
@@ -442,7 +435,11 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
 
         # Open the file
         if self.open_file_cbox.isChecked():
-            os.startfile(file)
+            try:
+                os.startfile(file)
+            except OSError:
+                print(f'No application to open {file}')
+                pass
 
     def reset(self):
         while self.table.rowCount() > 0:

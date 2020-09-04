@@ -155,6 +155,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.init_menus()
         self.init_signals()
+        self.init_crs()
 
         self.table_columns = [
             'File',
@@ -202,7 +203,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Initializing the UI.
         :return: None
         """
-
         self.setupUi(self)
         self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
@@ -367,121 +367,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             self.table.blockSignals(False)
 
-        def toggle_gps_system(set_warning=True):
-            """
-            Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
-            :param set_warning: bool, whether to show CRS warnings
-            """
-
-            system = self.gps_system_cbox.currentText()
-
-            if system == '':
-                self.gps_datum_cbox.clear()
-                self.gps_zone_cbox.clear()
-                self.gps_zone_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-
-            elif system == 'Lat/Lon':
-                self.gps_datum_cbox.clear()
-
-                datums = ['WGS 1984']
-                for datum in datums:
-                    self.gps_datum_cbox.addItem(datum)
-
-                self.gps_datum_cbox.setCurrentText('WGS 1984')
-                self.gps_datum_cbox.setEnabled(True)
-                self.gps_zone_cbox.setEnabled(False)
-
-                if set_warning:
-                    self.message.warning(self, 'Geographic CRS',
-                                         "Some features such as maps don't work with a geographic CRS.")
-
-            elif system == 'UTM':
-                self.gps_datum_cbox.clear()
-
-                datums = ['WGS 1984', 'NAD 1927', 'NAD 1983']
-                for datum in datums:
-                    self.gps_datum_cbox.addItem(datum)
-
-                self.gps_datum_cbox.setEnabled(True)
-                self.gps_zone_cbox.setEnabled(True)
-
-                # self.gps_datum_cbox.setCurrentText('WGS 1984')  # make this the default option
-
-        def toggle_gps_datum():
-            """
-            Change the zone combo box options based on the selected CRS datum.
-            """
-
-            datum = self.gps_datum_cbox.currentText()
-
-            self.gps_zone_cbox.clear()
-            self.gps_zone_cbox.setEnabled(True)
-
-            # NAD 27 and 83 only have zones from 1N to 23N
-            if datum == 'NAD 1927':
-                zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
-            elif datum == 'NAD 1983':
-                zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
-            # WGS 84 has zones from 1N and 1S to 60N and 60S
-            else:
-                zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
-
-            for zone in zones:
-                self.gps_zone_cbox.addItem(zone)
-
-        def toggle_crs_rbtn():
-            """
-            Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
-            """
-            if self.crs_rbtn.isChecked():
-                # Enable the CRS drop boxes and disable the EPSG line edit
-                self.gps_system_cbox.setEnabled(True)
-                toggle_gps_system(set_warning=False)
-
-                self.epsg_edit.setEnabled(False)
-            else:
-                # Disable the CRS drop boxes and enable the EPSG line edit
-                self.gps_system_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-                self.gps_zone_cbox.setEnabled(False)
-
-                self.epsg_edit.setEnabled(True)
-
-        def check_epsg():
-            """
-            Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
-            """
-            epsg_code = self.epsg_edit.text()
-            self.epsg_edit.blockSignals(True)
-
-            if epsg_code:
-                try:
-                    crs = CRS.from_epsg(epsg_code)
-                except Exception as e:
-                    self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
-                    self.epsg_edit.setText('')
-                else:
-                    if crs.is_geographic:
-                        self.message.warning(self, 'Geographic CRS',
-                                             "Some features such as maps don't work with a geographic CRS.")
-                finally:
-                    set_epsg_label()
-
-            self.epsg_edit.blockSignals(False)
-
-        def set_epsg_label():
-            """
-            Convert the current project CRS combo box values into the EPSG code and set the status bar label.
-            """
-            epsg_code = self.get_epsg()
-            if epsg_code:
-                crs = CRS.from_epsg(epsg_code)
-                self.epsg_label.show()
-                self.epsg_label.setText(f"Project CRS: {crs.name} - EPSG:{epsg_code} ({crs.type_name})")
-            else:
-                self.epsg_label.hide()
-
         def toggle_pem_list_buttons():
             """
             Signal slot, enable and disable the add/remove buttons tied to the PEM list based on whether any list items
@@ -614,19 +499,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
         self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
-        self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
-        self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_datum)
-        self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
-
-        self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
-        self.crs_rbtn.clicked.connect(set_epsg_label)
-        self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
-        self.epsg_rbtn.clicked.connect(set_epsg_label)
-
-        self.epsg_edit.editingFinished.connect(check_epsg)
-
         # Menu
         self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
         self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
@@ -638,6 +510,135 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionAuto_Name_Repeat_Stations.triggered.connect(self.rename_all_repeat_stations)
 
         self.actionConvert_GPS.triggered.connect(self.open_gps_conversion)
+
+    def init_crs(self):
+        """
+        Populate the CRS drop boxes and connect all their signals
+        """
+
+        def toggle_gps_system(set_warning=True):
+            """
+            Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
+            """
+            current_zone = self.gps_zone_cbox.currentText()
+            datum = self.gps_datum_cbox.currentText()
+            system = self.gps_system_cbox.currentText()
+
+            if system == '':
+                self.gps_zone_cbox.setEnabled(False)
+                self.gps_datum_cbox.setEnabled(False)
+
+            elif system == 'Lat/Lon':
+                self.gps_datum_cbox.setCurrentText('WGS 1984')
+                self.gps_zone_cbox.setCurrentText('')
+                self.gps_datum_cbox.setEnabled(False)
+                self.gps_zone_cbox.setEnabled(False)
+
+                if set_warning:
+                    self.message.warning(self, 'Geographic CRS',
+                                         "Some features such as maps don't work with a geographic CRS.")
+
+            elif system == 'UTM':
+                self.gps_datum_cbox.setEnabled(True)
+
+                if datum == '':
+                    self.gps_zone_cbox.setEnabled(False)
+                    return
+                else:
+                    self.gps_zone_cbox.clear()
+                    self.gps_zone_cbox.setEnabled(True)
+
+                # NAD 27 and 83 only have zones from 1N to 22N/23N
+                if datum == 'NAD 1927':
+                    zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
+                elif datum == 'NAD 1983':
+                    zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
+                # WGS 84 has zones from 1N and 1S to 60N and 60S
+                else:
+                    zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
+                                                                               range(1, 61)]
+
+                for zone in zones:
+                    self.gps_zone_cbox.addItem(zone)
+
+                # Keep the same zone number if possible
+                self.gps_zone_cbox.setCurrentText(current_zone)
+
+        def toggle_crs_rbtn():
+            """
+            Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
+            """
+            if self.crs_rbtn.isChecked():
+                # Enable the CRS drop boxes and disable the EPSG line edit
+                self.gps_system_cbox.setEnabled(True)
+                toggle_gps_system(set_warning=False)
+
+                self.epsg_edit.setEnabled(False)
+            else:
+                # Disable the CRS drop boxes and enable the EPSG line edit
+                self.gps_system_cbox.setEnabled(False)
+                self.gps_datum_cbox.setEnabled(False)
+                self.gps_zone_cbox.setEnabled(False)
+
+                self.epsg_edit.setEnabled(True)
+
+        def check_epsg():
+            """
+            Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
+            """
+            epsg_code = self.epsg_edit.text()
+            self.epsg_edit.blockSignals(True)
+
+            if epsg_code:
+                try:
+                    crs = CRS.from_epsg(epsg_code)
+                except Exception as e:
+                    self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
+                    self.epsg_edit.setText('')
+                else:
+                    if crs.is_geographic:
+                        self.message.warning(self, 'Geographic CRS',
+                                             "Some features such as maps don't work with a geographic CRS.")
+                finally:
+                    set_epsg_label()
+
+            self.epsg_edit.blockSignals(False)
+
+        def set_epsg_label():
+            """
+            Convert the current project CRS combo box values into the EPSG code and set the status bar label.
+            """
+            epsg_code = self.get_epsg()
+            if epsg_code:
+                crs = CRS.from_epsg(epsg_code)
+                self.epsg_label.setText(f"Project CRS: {crs.name} - EPSG:{epsg_code} ({crs.type_name})")
+            else:
+                self.epsg_label.setText('')
+
+        # Add the GPS system and datum drop box options
+        gps_systems = ['', 'Lat/Lon', 'UTM']
+        for system in gps_systems:
+            self.gps_system_cbox.addItem(system)
+
+        datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
+        for datum in datums:
+            self.gps_datum_cbox.addItem(datum)
+
+        # Signals
+        # Combo boxes
+        self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
+        self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
+        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
+        self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
+        self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
+
+        # Radio buttons
+        self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
+        self.crs_rbtn.clicked.connect(set_epsg_label)
+        self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
+        self.epsg_rbtn.clicked.connect(set_epsg_label)
+
+        self.epsg_edit.editingFinished.connect(check_epsg)
 
     def center_window(self):
         qt_rectangle = self.frameGeometry()
