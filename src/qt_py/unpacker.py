@@ -262,36 +262,36 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         for root, dir, files in os.walk(self.path):
             for file in files:
                 if any([file.lower().endswith(ext) for ext in pem_extensions]):
-                    print(f"{file} is a PEM file")
+                    # print(f"{file} is a PEM file")
                     ext = os.path.splitext(file)[-1][1:]
                     add_to_table(file, root, self.pem_table, ext)
 
                 elif any([file.lower().endswith(ext) for ext in damp_extensions]) and not os.path.split(root)[
                                                                                               -1].lower() == 'gps':
-                    print(f"{file} is a Damp file")
+                    # print(f"{file} is a Damp file")
                     ext = os.path.splitext(file)[-1][1:]
                     add_to_table(file, root, self.damp_table, ext)
 
                 elif any([file.lower().endswith(ext) for ext in dump_extensions]) and not os.path.split(root)[
                                                                                               -1].lower() == 'gps':
-                    print(f"{file} is a Dump file")
+                    # print(f"{file} is a Dump file")
                     ext = os.path.splitext(file)[-1][1:]
                     add_to_table(file, root, self.dump_table, ext)
 
                 elif any([file.lower().endswith(ext) for ext in gps_extensions]):
 
-                    print(f"{file} is a GPS file")
+                    # print(f"{file} is a GPS file")
                     ext = os.path.splitext(file)[-1][1:]
                     add_to_table(file, root, self.gps_table, ext)
 
                 elif any([file.lower().endswith(ext) for ext in geometry_extensions]) and not os.path.split(root)[
                                                                                                   -1].lower() == 'gps':
-                    print(f"{file} is a Geometry file")
+                    # print(f"{file} is a Geometry file")
                     ext = os.path.splitext(file)[-1][1:]
                     add_to_table(file, root, self.geometry_table, ext)
 
                 else:
-                    print(f"{file} is another file")
+                    # print(f"{file} is another file")
                     ext = os.path.splitext(file)[-1][1:]
                     add_to_table(file, root, self.other_table, ext)
 
