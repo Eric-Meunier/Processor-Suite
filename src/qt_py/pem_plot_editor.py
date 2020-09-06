@@ -250,6 +250,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         elif event.key() == QtCore.Qt.Key_S:
             self.cycle_station('down')
 
+        # TODO Bug here
         # Flip the decay when the F key is pressed
         elif event.key() == QtCore.Qt.Key_F:
             if self.selected_lines:

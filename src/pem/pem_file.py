@@ -559,6 +559,7 @@ class PEMFile:
                   'b-rad' in file_survey_type,
                   'b rad' in file_survey_type,
                   'bh rad' in file_survey_type,
+                  'bh xy rad' in file_survey_type,
                   'otool' in file_survey_type,
                   'bh z' in file_survey_type,
                   'bh fast rad' in file_survey_type,
@@ -2398,7 +2399,7 @@ class DMPParser:
             header['Grid'] = s['Grid_Name']
             header['Line_name'] = s['name']
             header['Loop_name'] = s['Loop_Name']
-            header['Date'] = datetime.strptime(s['Date'], '%m/%d/%Y').strftime('%B %d, %Y')
+            header['Date'] = date_str
 
             header['Survey type'] = s['Survey_Type']
             header['Convention'] = 'Metric'
@@ -2435,10 +2436,16 @@ class DMPParser:
                 :param date_string: str of the timestamp from the .DMP2 file.
                 :return: datetime object
                 """
-                if 'AM' in date_string or 'PM' in date_string:
-                    format = '%m/%d/%Y,%I:%M:%S %p'
+                if '-' in date_string:
+                    if 'AM' in date_string or 'PM' in date_string:
+                        format = '%Y-%m-%d,%I:%M:%S %p'
+                    else:
+                        format = '%Y-%m-%d,%H:%M:%S'
                 else:
-                    format = '%m/%d/%Y,%H:%M:%S'
+                    if 'AM' in date_string or 'PM' in date_string:
+                        format = '%m/%d/%Y,%I:%M:%S %p'
+                    else:
+                        format = '%m/%d/%Y,%H:%M:%S'
                 date_object = datetime.strptime(date_string, format)
                 return date_object
 
@@ -2532,10 +2539,26 @@ class DMPParser:
             contents = re.sub('Released', 'Software_Release_Date', contents)
 
             # Find the year of the date of the file, and if necessary convert the year format to %Y instead of %y
-            year = re.search('Date: (\d+\/\d+\/)(\d+)', contents).group(2)
-            if len(year) < 4:
-                Y = int(year) + 2000
-                contents = re.sub(r'(\d+\/\d+\/)(\d+)', f'\g<1>{Y}', contents)
+            date = re.search('Date: (\d+\W\d+\W\d+)', contents).group(1)
+
+            # If date is separated with hyphens, the date format is Y-m-d instead of m-d-y
+            if '-' in date:
+                date_str = datetime.strptime(date, '%Y-%m-%d').strftime('%B %d, %Y')
+            else:
+                year = re.search('Date: (\d+\W\d+\W)(\d+)', date).group(2)
+
+                # Replace the year to be 20xx
+                if len(year) < 4:
+                    Y = int(year) + 2000
+                    date = re.sub(r'(\d+\W\d+\W)(\d+)', f'\g<1>{Y}', date)
+
+                date_str = datetime.strptime(date, '%m/%d/%Y').strftime('%B %d, %Y')
+
+            # # Replace the year to be 20xx
+            # year = re.search('Date: (\d+\W\d+\W)(\d+)', date).group(2)
+            # if len(year) < 4:
+            #     Y = int(year) + 2000
+            #     contents = re.sub(r'(\d+\W\d+\W)(\d+)', f'\g<1>{Y}', contents)
 
         # Split the file up into the header and data sections
         scontents = contents.split('$$')

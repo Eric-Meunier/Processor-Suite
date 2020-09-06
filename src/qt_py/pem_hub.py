@@ -3501,13 +3501,13 @@ def main():
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    pem_files = pg.get_pems(client='Iscaycruz', selection=0)
+    # pem_files = pg.get_pems(client='Iscaycruz', selection=0)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     #
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
 
     # mw.pem_info_widgets[0].convert_crs()
     # mw.open_3d_map()

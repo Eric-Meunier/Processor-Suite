@@ -444,25 +444,19 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
                 print(f'No application to open {file}')
                 pass
 
-    def reset(self):
-        while self.table.rowCount() > 0:
-            self.table.removeRow(0)
-        self.gps_system_cbox.setCurrentText('')
-        self.gps_zone_cbox.setCurrentText('')
-
 
 def main():
     app = QApplication(sys.argv)
 
     gpx_creator = GPXCreator()
     gpx_creator.show()
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\GPX files\testing file.csv'
+    file = r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\GPX files\testing file.csv'
     gpx_creator.open(file)
     gpx_creator.name_edit.setText('Testing line')
     gpx_creator.gps_system_cbox.setCurrentText('UTM')
     gpx_creator.gps_datum_cbox.setCurrentText('WGS 1984')
     gpx_creator.gps_zone_cbox.setCurrentText('37 North')
-    # gpx_creator.export_gpx()
+    gpx_creator.export_gpx()
 
     sys.exit(app.exec())
 
