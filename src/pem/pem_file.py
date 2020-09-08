@@ -2438,15 +2438,21 @@ class DMPParser:
                 """
                 if '-' in date_string:
                     if 'AM' in date_string or 'PM' in date_string:
-                        format = '%Y-%m-%d,%I:%M:%S %p'
+                        fmt = '%Y-%m-%d,%I:%M:%S %p'
                     else:
-                        format = '%Y-%m-%d,%H:%M:%S'
+                        fmt = '%Y-%m-%d,%H:%M:%S'
                 else:
-                    if 'AM' in date_string or 'PM' in date_string:
-                        format = '%m/%d/%Y,%I:%M:%S %p'
+                    year = re.search('(\d+\W\d+\W)(\d+)', date_string).group(2)
+                    if len(year) == 2:
+                        year_fmt = 'y'
                     else:
-                        format = '%m/%d/%Y,%H:%M:%S'
-                date_object = datetime.strptime(date_string, format)
+                        year_fmt = 'Y'
+
+                    if 'AM' in date_string or 'PM' in date_string:
+                        fmt = f'%m/%d/%{year_fmt},%I:%M:%S %p'
+                    else:
+                        fmt = f'%m/%d/%{year_fmt},%H:%M:%S'
+                date_object = datetime.strptime(date_string, fmt)
                 return date_object
 
             assert data_content, f'No data found in {self.filepath.name}.'
@@ -2545,7 +2551,7 @@ class DMPParser:
             if '-' in date:
                 date_str = datetime.strptime(date, '%Y-%m-%d').strftime('%B %d, %Y')
             else:
-                year = re.search('Date: (\d+\W\d+\W)(\d+)', date).group(2)
+                year = re.search('(\d+\W\d+\W)(\d+)', date).group(2)
 
                 # Replace the year to be 20xx
                 if len(year) < 4:
@@ -2553,12 +2559,6 @@ class DMPParser:
                     date = re.sub(r'(\d+\W\d+\W)(\d+)', f'\g<1>{Y}', date)
 
                 date_str = datetime.strptime(date, '%m/%d/%Y').strftime('%B %d, %Y')
-
-            # # Replace the year to be 20xx
-            # year = re.search('Date: (\d+\W\d+\W)(\d+)', date).group(2)
-            # if len(year) < 4:
-            #     Y = int(year) + 2000
-            #     contents = re.sub(r'(\d+\W\d+\W)(\d+)', f'\g<1>{Y}', contents)
 
         # Split the file up into the header and data sections
         scontents = contents.split('$$')

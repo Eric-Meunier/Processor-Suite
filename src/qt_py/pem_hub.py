@@ -1204,6 +1204,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 if not self.pem_files:
                     share_header(pem_file)
                     # self.piw_frame.show()
+
+                # Only move the dir tree if it hasn't been moved yet
+                if self.project_tree.model() == self.file_sys_model:
                     self.move_dir_tree_to(pem_file.filepath.parent)
 
                 # Fill CRS from the file if project CRS currently empty
