@@ -534,13 +534,15 @@ class PEMFile:
             print('Error - No GPS')
             return
 
+        coords = copy.deepcopy(coords)
+
         coords.crs = crs
         coords = coords.to_latlon().df
         lat, lon, elevation = coords.iloc[0]['Northing'], coords.iloc[0]['Easting'], coords.iloc[0]['Elevation']
 
         gm = geomag.geomag.GeoMag()
         mag = gm.GeoMag(lat, lon, elevation)
-        return mag.dec
+        return mag
 
     def get_survey_type(self):
         """
@@ -548,31 +550,32 @@ class PEMFile:
         :return: str
         """
 
-        file_survey_type = re.sub('_', ' ', self.survey_type.casefold())
+        file_survey_type = re.sub('\s+', '_', self.survey_type.casefold())
 
         if any(['s-coil' in file_survey_type,
                 'surface' in file_survey_type,
-                'sf coil' in file_survey_type]):
+                'sf_coil' in file_survey_type]):
             survey_type = 'Surface Induction'
 
         elif any(['borehole' in file_survey_type,
                   'b-rad' in file_survey_type,
-                  'b rad' in file_survey_type,
-                  'bh rad' in file_survey_type,
-                  'bh xy rad' in file_survey_type,
+                  'b_rad' in file_survey_type,
+                  'bh_rad' in file_survey_type,
+                  'bh_xy_rad' in file_survey_type,
                   'otool' in file_survey_type,
-                  'bh z' in file_survey_type,
-                  'bh fast rad' in file_survey_type,
+                  'bh_z' in file_survey_type,
+                  'bh_fast rad' in file_survey_type,
+                  'bh_z_probe' in file_survey_type,
                   'radtool' in file_survey_type]):
             survey_type = 'Borehole Induction'
 
         elif any(['s-flux' in file_survey_type,
-                  'sf fluxgate' in file_survey_type]):
+                  'sf_fluxgate' in file_survey_type]):
             survey_type = 'Surface Fluxgate'
 
         elif any(['bh-flux' in file_survey_type,
-                  'bh fast fluxgate' in file_survey_type,
-                  'bh fluxgate' in file_survey_type]):
+                  'bh_fast_fluxgate' in file_survey_type,
+                  'bh_fluxgate' in file_survey_type]):
             survey_type = 'Borehole Fluxgate'
 
         elif 's-squid' in file_survey_type:
@@ -921,7 +924,7 @@ class PEMFile:
 
         self.data[filt] = rotated_data
         # Remove the rows that were filtered out in filtered_data
-        self.data.dropna(inplace=True)
+        # self.data.dropna(inplace=True)
         self.probes['SOA'] = str(soa)
         return self
 
@@ -1185,7 +1188,7 @@ class PEMFile:
         # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
         filtered_data = self.data[filt].groupby(['Station', 'RAD_ID'],
                                                 group_keys=False,
-                                                as_index=False).apply(lambda k: filter_data(k)).dropna(axis=0)
+                                                as_index=False).apply(lambda k: filter_data(k))
         assert not filtered_data.empty, f"No eligible data found for probe de-rotation in {self.filepath.name}"
         print(f"PEMFile - Time to filter data for rotation preparation: {time.time() - st}")
 
@@ -1197,7 +1200,7 @@ class PEMFile:
 
         self.data[filt] = prepped_data
         # Remove the rows that were filtered out in filtered_data
-        self.data.dropna(inplace=True)
+        self.data.dropna(subset=['Station'], inplace=True)
         self.prepped_for_rotation = True
         return self, ineligible_stations
 
@@ -2401,9 +2404,9 @@ class DMPParser:
             header['Loop_name'] = s['Loop_Name']
             header['Date'] = date_str
 
-            header['Survey type'] = s['Survey_Type']
+            header['Survey type'] = re.sub('\s+', '_', s['Survey_Type'])
             header['Convention'] = 'Metric'
-            header['Sync'] = s['Sync_Type']
+            header['Sync'] = re.sub('\s+', '-', s['Sync_Type'])
             header['Timebase'] = float(s['Time_Base'].split()[0])
             header['Ramp'] = float(s['Ramp_Length'])
             header['Number of channels'] = len(s['Channel_Time']) - 1
@@ -2411,11 +2414,11 @@ class DMPParser:
 
             header['Receiver number'] = s['Crone_Digital_PEM_Receiver']
             header['Rx software version'] = s['Software_Version']
-            header['Rx software version date'] = s['Software_Release_Date']
+            header['Rx software version date'] = re.sub('\s+', '', s['Software_Release_Date'])
             header['Rx file name'] = s['File_Name']
             header['Normalized'] = 'N'
             header['Primary field value'] = '1000'
-            header['Coil area'] = float(s['Coil_Area']) / 10 ** 3
+            header['Coil area'] = float(s['Coil_Area'])  # / 10 ** 3  # Doesn't work with dB/dt
             header['Loop polarity'] = '+'
             # header['Notes'] = [note for note in s['File_Notes'].split('\n')]
 
@@ -2627,6 +2630,7 @@ class PEMSerializer:
         def serialize_collar_coords():
             result = '~ Hole/Profile Co-ordinates:'
             collar = pem_file.get_collar()
+            collar.reset_index(drop=True, inplace=True)
             if collar.empty:
                 result += '\n<P00>'
             else:
@@ -2639,6 +2643,7 @@ class PEMSerializer:
         def serialize_segments():
             result = ''
             segs = pem_file.get_segments()
+            segs.reset_index(drop=True, inplace=True)
             if segs.empty:
                 result += '\n<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
             else:
@@ -2720,14 +2725,14 @@ class PEMSerializer:
 
         def serialize_reading(reading):
             result = ' '.join([reading['Station'],
-                               reading['Component'] + 'R' + str(reading['Reading_index']),
-                               str(reading['Gain']),
+                               reading['Component'] + 'R' + f"{reading['Reading_index']:g}",
+                               f"{reading['Gain']:g}",
                                reading['Rx_type'],
-                               str(reading['ZTS']),
-                               str(reading['Coil_delay']),
-                               str(reading['Number_of_stacks']),
-                               str(reading['Readings_per_set']),
-                               str(reading['Reading_number'])]) + '\n'
+                               f"{reading['ZTS']:g}",
+                               f"{reading['Coil_delay']:g}",
+                               f"{reading['Number_of_stacks']:g}",
+                               f"{reading['Readings_per_set']:g}",
+                               f"{reading['Reading_number']:g}"]) + '\n'
             rad = reading['RAD_tool'].to_string()
             result += rad + '\n'
 
@@ -3056,7 +3061,18 @@ class RADTool:
             result.append(f"{self.roll_angle:g}")
             result.append(f"{self.dip:g}")
 
-        elif self.D == 'D6':
+        # elif self.D == 'D6':
+        #     result = [
+        #         self.D,
+        #         f"{self.Hx:g}",
+        #         f"{self.gx:g}",
+        #         f"{self.Hy:g}",
+        #         f"{self.gy:g}",
+        #         f"{self.Hz:g}",
+        #         f"{self.gz:g}",
+        #     ]
+
+        elif self.D == 'D7' or self.D == 'D6':
             result = [
                 self.D,
                 f"{self.Hx:g}",
@@ -3067,34 +3083,29 @@ class RADTool:
                 f"{self.gz:g}",
             ]
 
-        elif self.D == 'D7':
-            result = [
-                self.D,
-                f"{self.Hx:g}",
-                f"{self.gx:g}",
-                f"{self.Hy:g}",
-                f"{self.gy:g}",
-                f"{self.Hz:g}",
-                f"{self.gz:g}",
-                f"{self.T:g}"
-            ]
+            if self.R is not None and self.angle_used is not None:
+                if self.rotation_type == 'acc':
+                    result.append(f"{self.acc_roll_angle:g}")
+                elif self.rotation_type == 'mag':
+                    result.append(f"{self.mag_roll_angle:g}")
+                elif self.rotation_type == 'pp_raw':
+                    result.append(f"{self.measured_pp_roll_angle:g}")
+                elif self.rotation_type == 'pp_cleaned':
+                    result.append(f"{self.cleaned_pp_roll_angle:g}")
+                # else:
+                #     result.append(f"{self.roll_angle:g}")
+
+                result.append(f"{self.get_dip():g}")
+                result.append(self.R)
+                result.append(f"{self.angle_used:g}")
+            else:
+                if self.T is not None:
+                    result.append(f"{self.T:g}")
+                else:
+                    result.append('0')
+
         else:
             raise ValueError('RADTool D value is neither "D5", "D6", nor "D7"')
-
-        if self.R is not None and self.angle_used is not None:
-            # if self.rotation_type == 'acc':
-            #     result.append(f"{self.acc_roll_angle:g}")
-            # elif self.rotation_type == 'mag':
-            #     result.append(f"{self.mag_roll_angle:g}")
-            # elif self.rotation_type == 'pp_raw':
-            #     result.append(f"{self.measured_pp_roll_angle:g}")
-            # elif self.rotation_type == 'pp_cleaned':
-            #     result.append(f"{self.cleaned_pp_roll_angle:g}")
-            # # else:
-            # #     result.append(f"{self.roll_angle:g}")
-
-            result.append(self.R)
-            result.append(f"{self.angle_used:g}")
 
         return ' '.join(result)
 
@@ -3111,7 +3122,9 @@ if __name__ == '__main__':
 
     # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\e110xy.pem')
     # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM')
-    pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Minera\L10000N_8.PEM')
+    pem_file = pemparse.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\Eric\XY-Collar.PEM')
+    prep_pem, _ = pem_file.prep_rotation()
+    rotated_pem = prep_pem.rotate('acc')
 
     t2 = time.time()
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\2EX7046L1-1\2ex7046l1-1.DMP2'

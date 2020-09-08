@@ -718,7 +718,7 @@ class MapPlotter:
         ax = figure.axes[0]
         loop = pem_file.loop
         if not loop.df.empty:
-            loop_gps = loop.get_loop(sorted=True, closed=True)
+            loop_gps = loop.get_loop(sorted=False, closed=True)
             eastings, northings = loop_gps.Easting.to_numpy(), loop_gps.Northing.to_numpy()
 
             # Plot the loop
@@ -4349,6 +4349,9 @@ class PEMPrinter:
         self.pb = CustomProgressBar()
         self.pb_count = 0
         self.pb_end = 0
+
+        self.portrait_fig = None
+        self.landscape_fig = None
 
         self.portrait_fig = plt.figure(num=1, clear=True)
         self.portrait_fig.set_size_inches((8.5, 11))

@@ -23,7 +23,7 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
 # from pyqtspinner.spinner import WaitingSpinner
 import geomag
 
-from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, GPXEditor)
+from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeGeometry, GPXEditor)
 from src.gps.gpx_creator import GPXCreator
 
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
@@ -91,6 +91,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.pem_editor_widgets = []
         self.tab_num = 1
         self.allow_signals = True
+        self.total_opened = 0
 
         self.converter = StationConverter()
         self.dialog = QFileDialog()
@@ -179,14 +180,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for i, col in enumerate(self.table_columns[1:]):
             header.setSectionResizeMode(i + 1, QHeaderView.ResizeToContents)
 
-        # Add the GPS system and datum drop box options
-        gps_systems = ['', 'Lat/Lon', 'UTM']
-        for system in gps_systems:
-            self.gps_system_cbox.addItem(system)
-
-        int_valid = QtGui.QIntValidator()
-        self.epsg_edit.setValidator(int_valid)
-
         # Actions
         self.actionDel_File = QAction("&Remove File", self)
         self.actionDel_File.setShortcut("Del")
@@ -203,13 +196,20 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Initializing the UI.
         :return: None
         """
+
+        def center_window():
+            qt_rectangle = self.frameGeometry()
+            center_point = QDesktopWidget().availableGeometry().center()
+            qt_rectangle.moveCenter(center_point)
+            self.move(qt_rectangle.topLeft())
+
         self.setupUi(self)
         self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(
             QIcon(os.path.join(icons_path, 'conder.png')))
         self.resize(1700, 900)
-        self.center_window()
+        center_window()
 
         self.refresh_pem_list_btn.setIcon(QIcon(os.path.join(icons_path, 'refresh.png')))
         self.refresh_gps_list_btn.setIcon(QIcon(os.path.join(icons_path, 'refresh.png')))
@@ -642,12 +642,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.epsg_edit.editingFinished.connect(check_epsg)
 
-    def center_window(self):
-        qt_rectangle = self.frameGeometry()
-        center_point = QDesktopWidget().availableGeometry().center()
-        qt_rectangle.moveCenter(center_point)
-        self.move(qt_rectangle.topLeft())
-
     def contextMenuEvent(self, event):
         """
         Right-click context menu items.
@@ -968,8 +962,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
     def reset_crs(self):
         self.gps_system_cbox.setCurrentText('')
-        self.gps_zone_cbox.clear()
-        self.gps_datum_cbox.clear()
+        self.gps_zone_cbox.setCurrentText('')
+        self.gps_datum_cbox.setCurrentText('')
 
     def remove_file(self, rows=None):
         """
@@ -1204,10 +1198,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 if not self.pem_files:
                     share_header(pem_file)
                     # self.piw_frame.show()
-
-                # Only move the dir tree if it hasn't been moved yet
-                if self.project_tree.model() == self.file_sys_model:
+                if self.total_opened == 0:
                     self.move_dir_tree_to(pem_file.filepath.parent)
+
+                # # Only move the dir tree if it hasn't been moved yet
+                # if self.project_tree.model() == self.file_sys_model:
+                #     print(f"Moving dir tree because model == file_sys_model")
+                #     self.move_dir_tree_to(pem_file.filepath.parent)
 
                 # Fill CRS from the file if project CRS currently empty
                 if self.gps_system_cbox.currentText() == '':
@@ -1223,6 +1220,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # Progress the progress bar
                 count += 1
                 self.pb.setValue(count)
+                self.total_opened += 1
 
         self.setUpdatesEnabled(True)
         # self.table.setUpdatesEnabled(True)
@@ -1775,6 +1773,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             count += 1
             self.pb.setValue(count)
 
+        # self.refresh_rows(rows='all')
         self.end_pb()
         self.status_bar.showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
 
@@ -1798,7 +1797,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             updated_file = self.update_pem_from_table(pem_file, row, filepath=file_path)
 
             self.save_pem_file(updated_file)
-            self.status_bar.showMessage(f'Save Complete. PEM file saved as {file_path.name}', 2000)
+            self.status_bar.showMessage(f'Save Complete. PEM file saved as {pem_file.filepath.name}', 2000)
             # Must open and not update the PEM since it is being copied
             self.open_pem_files(updated_file)
         else:
@@ -2319,7 +2318,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
     def refresh_pem(self, pem_file):
         """
         Refresh the PEM file by re-opening its PIW and refreshing the information in its row in PEMHub.
-        File must be in the list of PEM Files opened in PEMHUb (cannot be a copy).
+        File must be in the list of PEM Files opened in PEMHub (cannot be a copy).
         :param pem_file: PEMFile object
         """
         if pem_file in self.pem_files:
@@ -2410,8 +2409,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_file.loop = self.stackedWidget.widget(table_row).get_loop()
         pem_file.loop.crs = crs
         if pem_file.is_borehole():
-            pem_file.geometry = self.stackedWidget.widget(table_row).get_geometry()
-            pem_file.geometry.collar.crs = crs
+            pem_file.collar = self.stackedWidget.widget(table_row).get_collar()
+            pem_file.collar.crs = crs
+            pem_file.segments = self.stackedWidget.widget(table_row).get_segments()
+            pem_file.geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
         else:
             pem_file.line = self.stackedWidget.widget(table_row).get_line()
             pem_file.line.crs = crs
@@ -2452,7 +2453,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: list, updated PEM files
         """
         if selected is True:
-            updated_files = self.get_selected_pem_files(updated=True)
+            updated_files, rows = self.get_selected_pem_files(updated=True)
         else:
             files, rows = self.pem_files, np.arange(self.table.rowCount())
             updated_files = [self.update_pem_from_table(copy.deepcopy(file), row) for file, row in zip(files, rows)]
@@ -3200,7 +3201,7 @@ class MagDeclinationCalculator(QMainWindow):
         self.parent = parent
         self.setWindowTitle('Magnetic Declination')
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'mag_field.png')))
-        self.setGeometry(600, 300, 300, 200)
+        self.setGeometry(600, 300, 300, 100)
         self.statusBar().showMessage('', 10)
 
         self.message = QMessageBox()
@@ -3211,16 +3212,16 @@ class MagDeclinationCalculator(QMainWindow):
         self.mag_widget = QWidget()
         self.mag_widget.setLayout(self.layout)
         self.setCentralWidget(self.mag_widget)
-        self.layout.addWidget(QLabel(f'Latitude (°)'), 0, 0)
-        self.layout.addWidget(QLabel(f'Longitude (°)'), 1, 0)
-        self.layout.addWidget(QLabel('Declination (°)'), 2, 0)
-        self.layout.addWidget(QLabel('Inclination (°)'), 3, 0)
-        self.layout.addWidget(QLabel('Total Field (nT)'), 4, 0)
+        # self.layout.addWidget(QLabel(f'Latitude (°)'), 0, 0)
+        # self.layout.addWidget(QLabel(f'Longitude (°)'), 1, 0)
+        self.layout.addWidget(QLabel('Declination (°)'), 0, 0)
+        self.layout.addWidget(QLabel('Inclination (°)'), 1, 0)
+        self.layout.addWidget(QLabel('Total Field (nT)'), 2, 0)
 
-        self.lat_edit = QPushButton()
-        self.lat_edit.clicked.connect(lambda: self.copy_text(self.lat_edit.text()))
-        self.lon_edit = QPushButton()
-        self.lon_edit.clicked.connect(lambda: self.copy_text(self.lon_edit.text()))
+        # self.lat_edit = QPushButton()
+        # self.lat_edit.clicked.connect(lambda: self.copy_text(self.lat_edit.text()))
+        # self.lon_edit = QPushButton()
+        # self.lon_edit.clicked.connect(lambda: self.copy_text(self.lon_edit.text()))
         self.dec_edit = QPushButton()
         self.dec_edit.clicked.connect(lambda: self.copy_text(self.dec_edit.text()))
         self.inc_edit = QPushButton()
@@ -3228,11 +3229,11 @@ class MagDeclinationCalculator(QMainWindow):
         self.tf_edit = QPushButton()
         self.tf_edit.clicked.connect(lambda: self.copy_text(self.tf_edit.text()))
 
-        self.layout.addWidget(self.lat_edit, 0, 2)
-        self.layout.addWidget(self.lon_edit, 1, 2)
-        self.layout.addWidget(self.dec_edit, 2, 2)
-        self.layout.addWidget(self.inc_edit, 3, 2)
-        self.layout.addWidget(self.tf_edit, 4, 2)
+        # self.layout.addWidget(self.lat_edit, 0, 2)
+        # self.layout.addWidget(self.lon_edit, 1, 2)
+        self.layout.addWidget(self.dec_edit, 0, 2)
+        self.layout.addWidget(self.inc_edit, 1, 2)
+        self.layout.addWidget(self.tf_edit, 2, 2)
 
     def copy_text(self, str_value):
         """
@@ -3259,24 +3260,10 @@ class MagDeclinationCalculator(QMainWindow):
             self.message.information(self, 'Error', 'GPS coordinate system information is invalid')
             return
 
-        if pem_file.has_collar_gps():
-            coords = pem_file.geometry.collar
-        elif pem_file.has_loop_gps():
-            coords = pem_file.loop
-        elif pem_file.has_line_coords():
-            coords = pem_file.line
-        else:
-            self.message.information(self, 'Error', 'No GPS')
-            return
+        mag = pem_file.get_mag_dec()
 
-        coords.crs = crs
-        coords = coords.to_latlon().df
-        lat, lon, elevation = coords.iloc[0]['Northing'], coords.iloc[0]['Easting'], coords.iloc[0]['Elevation']
-
-        gm = geomag.geomag.GeoMag()
-        mag = gm.GeoMag(lat, lon, elevation)
-        self.lat_edit.setText(f"{lat:.4f}")
-        self.lon_edit.setText(f"{lon:.4f}")
+        # self.lat_edit.setText(f"{lat:.4f}")
+        # self.lon_edit.setText(f"{lon:.4f}")
         self.dec_edit.setText(f"{mag.dec:.2f}")
         self.inc_edit.setText(f"{mag.dip:.2f}")
         self.tf_edit.setText(f"{mag.ti:.2f}")
@@ -3312,59 +3299,45 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
             """
             Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
             """
-
+            current_zone = self.gps_zone_cbox.currentText()
+            datum = self.gps_datum_cbox.currentText()
             system = self.gps_system_cbox.currentText()
 
             if system == '':
-                self.gps_datum_cbox.clear()
-                self.gps_zone_cbox.clear()
                 self.gps_zone_cbox.setEnabled(False)
                 self.gps_datum_cbox.setEnabled(False)
 
             elif system == 'Lat/Lon':
-                self.gps_datum_cbox.clear()
-
-                datums = ['WGS 1984']
-                for datum in datums:
-                    self.gps_datum_cbox.addItem(datum)
-
                 self.gps_datum_cbox.setCurrentText('WGS 1984')
-                self.gps_datum_cbox.setEnabled(True)
+                self.gps_zone_cbox.setCurrentText('')
+                self.gps_datum_cbox.setEnabled(False)
                 self.gps_zone_cbox.setEnabled(False)
 
             elif system == 'UTM':
-                self.gps_datum_cbox.clear()
-
-                datums = ['WGS 1984', 'NAD 1927', 'NAD 1983']
-                for datum in datums:
-                    self.gps_datum_cbox.addItem(datum)
-
                 self.gps_datum_cbox.setEnabled(True)
-                self.gps_zone_cbox.setEnabled(True)
 
-                # self.gps_datum_cbox.setCurrentText('WGS 1984')  # make this the default option
+                if datum == '':
+                    self.gps_zone_cbox.setEnabled(False)
+                    return
+                else:
+                    self.gps_zone_cbox.clear()
+                    self.gps_zone_cbox.setEnabled(True)
 
-        def toggle_gps_datum():
-            """
-            Change the zone combo box options based on the selected CRS datum.
-            """
+                # NAD 27 and 83 only have zones from 1N to 22N/23N
+                if datum == 'NAD 1927':
+                    zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
+                elif datum == 'NAD 1983':
+                    zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
+                # WGS 84 has zones from 1N and 1S to 60N and 60S
+                else:
+                    zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
+                                                                               range(1, 61)]
 
-            datum = self.gps_datum_cbox.currentText()
+                for zone in zones:
+                    self.gps_zone_cbox.addItem(zone)
 
-            self.gps_zone_cbox.clear()
-            self.gps_zone_cbox.setEnabled(True)
-
-            # NAD 27 and 83 only have zones from 1N to 22N/23N
-            if datum == 'NAD 1927':
-                zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
-            elif datum == 'NAD 1983':
-                zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
-            # WGS 84 has zones from 1N and 1S to 60N and 60S
-            else:
-                zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
-
-            for zone in zones:
-                self.gps_zone_cbox.addItem(zone)
+                # Keep the same zone number if possible
+                self.gps_zone_cbox.setCurrentText(current_zone)
 
         def toggle_crs_rbtn():
             """
@@ -3415,7 +3388,7 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
 
         self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
         self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_datum)
+        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
         self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
         self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
 
@@ -3512,7 +3485,8 @@ def main():
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
-    # mw.open_pem_files(pem_files)
+    pem_files = [r'C:\_Data\2020\Generation PGM\__M-20-539\RAW\XY-Collar.PEM']
+    mw.open_pem_files(pem_files)
 
     # mw.pem_info_widgets[0].convert_crs()
     # mw.open_3d_map()

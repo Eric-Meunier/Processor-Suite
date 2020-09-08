@@ -323,7 +323,7 @@ class TransmitterLoop(BaseGPS):
                self.df['Northing'].sum() / self.df.shape[0], \
                self.df['Elevation'].sum() / self.df.shape[0],
 
-    def get_loop(self, sorted=True, closed=False):
+    def get_loop(self, sorted=False, closed=False):
         if sorted:
             df = self.get_sorted_loop()
         else:

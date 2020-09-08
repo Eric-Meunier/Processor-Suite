@@ -434,9 +434,9 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             self.show_tool_geom_cbox.setEnabled(True)
             self.show_mag_cbox.setEnabled(True)
 
-            mag_dec = self.pem_file.get_mag_dec()
-            if mag_dec:
-                self.mag_dec_sbox.setValue(mag_dec)
+            mag = self.pem_file.get_mag_dec()
+            if mag:
+                self.mag_dec_sbox.setValue(mag.dec)
 
         def set_cursor():
             """
