@@ -1,13 +1,14 @@
 import os
 import sys
 from pathlib import Path
-from shutil import copyfile, rmtree
+from shutil import copyfile, rmtree, unpack_archive
 
 import numpy as np
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QLabel,
                              QFileSystemModel, QAbstractItemView, QErrorMessage, QMenu, QDialogButtonBox,  QCheckBox)
 from pyunpack import Archive
+import py7zr
 
 # This must be placed after the custom table or else there are issues with class promotion in Qt Designer.
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -66,6 +67,12 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.reset_action.triggered.connect(self.reset)
 
         # Format the tables and directory tree
+        # self.dump_table.setColumnHidden(1, True)
+        # self.damp_table.setColumnHidden(1, True)
+        # self.pem_table.setColumnHidden(1, True)
+        # self.gps_table.setColumnHidden(1, True)
+        # self.geometry_table.setColumnHidden(1, True)
+        # self.other_table.setColumnHidden(1, True)
         self.dump_table.setColumnWidth(0, 200)
         self.damp_table.setColumnWidth(0, 200)
         self.pem_table.setColumnWidth(0, 200)
@@ -91,21 +98,22 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         e.ignore()
 
     def dropEvent(self, e):
-        url = [url.toLocalFile() for url in e.mimeData().urls()][0]
+        url = [Path(url.toLocalFile()) for url in e.mimeData().urls()][0]
 
-        if os.path.isdir(url):
+        if url.is_dir():
             self.open_folder(url)
 
-        # Open zipped folders
-        elif url.lower().endswith('zip') or url.lower().endswith('7z') or url.lower().endswith('rar'):
-            print(f"Extracting {os.path.basename(url)}")
-            extract_dir = os.path.dirname(url)
-            new_folder_dir = os.path.splitext(url)[0]
+        # Extract zipped files to a folder of the same name as the zipped file
+        elif url.suffix.lower() in ['.zip', '.7z', '.rar']:
+            print(f"Extracting {url.name}")
+            new_folder_dir = url.with_suffix('')
 
-            # extract_dir = self.get_current_path()
-            # new_folder_dir = os.path.join(self.get_current_path(), os.path.splitext(os.path.basename(url))[0])
-
-            Archive(url).extractall(extract_dir)
+            # Use py7zr instead of pyunpack for 7zip files since they don't seem to work with patool
+            if url.suffix == '.7z':
+                with py7zr.SevenZipFile(url, mode='r') as z:
+                    z.extractall(new_folder_dir)
+            else:
+                Archive(url).extractall(new_folder_dir, auto_create_dir=True)
             self.open_folder(new_folder_dir)
 
     def set_current_date(self):
@@ -232,13 +240,22 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             return icon
 
         def add_to_table(file, dir, table, extension):
+            """
+            Add the file to the table.
+            :param file: str, file name with extension
+            :param dir: str, directory of the file, added to the invisible second column
+            :param table: QTableWidget to add it to
+            :param extension: str, extension of the file, to be given an icon.
+            """
             row = table.rowCount()
             table.insertRow(row)
 
+            # Add the icon
             icon = get_icon(extension)
             file_item = QTableWidgetItem(icon, file)
             dir_item = QTableWidgetItem(dir)
 
+            # Set the item flag so the item can be drag-and-dropped
             file_item.setFlags(file_item.flags() ^ QtCore.Qt.ItemIsDropEnabled)
             dir_item.setFlags(dir_item.flags() ^ QtCore.Qt.ItemIsDropEnabled)
 
@@ -333,11 +350,11 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
                     # Skip soa files
                     if 'soa' in file_name.lower():
-                        print(f"Skipping {file_name}")
+                        print(f"Skipping {file}")
                     # Skip all dump files that aren't .DMP
                     elif table == self.dump_table and \
                             os.path.splitext(file)[1].lower() in ['.tdms', '.tdms_index', '.dat', '.xyz', '.csv']:
-                        print(f"Skipping {file_name}")
+                        print(f"Skipping {file}")
 
                     # Copy the rest of the files to their respective folders
                     else:
@@ -361,7 +378,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                     continue
                 else:
                     try:
-                        print(f"Moving \"{old_path}\" to \"{new_path}\"")
+                        # print(f"Moving \"{old_path}\" to \"{new_path}\"")
                         copyfile(old_path, new_path)
                     except FileExistsError:
                         self.error.setWindowTitle('Error - File Exists')
