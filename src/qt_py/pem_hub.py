@@ -307,7 +307,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Initializing all signals.
         :return: None
         """
-
         def set_shared_header(header):
             """
             Signal slot, change the header information for each file in the table when the shared header LineEdits are
@@ -458,6 +457,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 pass
 
             self.selection_label.setText(info)
+
+        # Widgets
+        self.unpacker.open_dmp_sig.connect(self.move_dir_tree_to)
 
         # Table
         self.table.viewport().installEventFilter(self)

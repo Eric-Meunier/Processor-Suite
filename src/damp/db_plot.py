@@ -4,6 +4,7 @@ import sys
 import datetime
 import time
 import codecs
+import pathlib
 import statistics as stats
 import pyqtgraph as pg
 import logging
@@ -200,6 +201,9 @@ class DBPlot(QMainWindow):
         if not isinstance(files, list) and isinstance(files, str):
             files = [files]
         for file in files:
+            if isinstance(file, pathlib.Path):
+                file = str(file)
+
             if os.path.abspath(file) not in self.opened_files:
                 try:
                     damp_data = self.damp_parser.parse(file)

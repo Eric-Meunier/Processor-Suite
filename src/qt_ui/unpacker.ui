@@ -184,7 +184,7 @@
         </widget>
        </item>
        <item row="4" column="0">
-        <widget class="UnpackerTable" name="pem_table">
+        <widget class="UnpackerTable" name="dmp_table">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -199,7 +199,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>200</width>
+           <width>225</width>
            <height>16777215</height>
           </size>
          </property>
@@ -281,7 +281,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>200</width>
+           <width>225</width>
            <height>16777215</height>
           </size>
          </property>
@@ -343,7 +343,7 @@
           </font>
          </property>
          <property name="text">
-          <string>PEM</string>
+          <string>DMP</string>
          </property>
         </widget>
        </item>
@@ -378,7 +378,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>200</width>
+           <width>225</width>
            <height>16777215</height>
           </size>
          </property>
@@ -446,7 +446,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>200</width>
+           <width>225</width>
            <height>16777215</height>
           </size>
          </property>
@@ -514,7 +514,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>200</width>
+           <width>225</width>
            <height>16777215</height>
           </size>
          </property>
@@ -600,7 +600,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>200</width>
+           <width>225</width>
            <height>16777215</height>
           </size>
          </property>

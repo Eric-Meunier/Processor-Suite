@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox
                              QFileSystemModel, QAbstractItemView, QErrorMessage, QMenu, QDialogButtonBox,  QCheckBox)
 from pyunpack import Archive
 import py7zr
+from src.damp.db_plot import DBPlot
 
 # This must be placed after the custom table or else there are issues with class promotion in Qt Designer.
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -26,6 +27,8 @@ Ui_UnpackerCreator, QtBaseClass = uic.loadUiType(unpackerCreatorFile)
 
 
 class Unpacker(QMainWindow, Ui_UnpackerCreator):
+    open_damp_sig = QtCore.pyqtSignal(object)
+    open_dmp_sig = QtCore.pyqtSignal(object)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -36,6 +39,9 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'unpacker_1.png')))
 
+        self.setAcceptDrops(True)
+
+        self.db_plot = DBPlot(parent=self)
         self.dialog = QFileDialog()
         self.message = QMessageBox()
         self.error = QErrorMessage()
@@ -57,8 +63,6 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.move_dir_tree_to(self.model.rootPath())
         self.set_current_date()
 
-        self.setAcceptDrops(True)
-
         # Signals
         self.buttonBox.accepted.connect(self.accept_changes)
         self.buttonBox.button(QDialogButtonBox.Reset).clicked.connect(self.reset)
@@ -67,18 +71,12 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.reset_action.triggered.connect(self.reset)
 
         # Format the tables and directory tree
-        # self.dump_table.setColumnHidden(1, True)
-        # self.damp_table.setColumnHidden(1, True)
-        # self.pem_table.setColumnHidden(1, True)
-        # self.gps_table.setColumnHidden(1, True)
-        # self.geometry_table.setColumnHidden(1, True)
-        # self.other_table.setColumnHidden(1, True)
-        self.dump_table.setColumnWidth(0, 200)
-        self.damp_table.setColumnWidth(0, 200)
-        self.pem_table.setColumnWidth(0, 200)
-        self.gps_table.setColumnWidth(0, 200)
-        self.geometry_table.setColumnWidth(0, 200)
-        self.other_table.setColumnWidth(0, 200)
+        self.dump_table.setColumnWidth(0, 225)
+        self.damp_table.setColumnWidth(0, 225)
+        self.dmp_table.setColumnWidth(0, 225)
+        self.gps_table.setColumnWidth(0, 225)
+        self.geometry_table.setColumnWidth(0, 225)
+        self.other_table.setColumnWidth(0, 225)
 
         self.dir_tree.setColumnHidden(1, True)
         self.dir_tree.setColumnHidden(2, True)
@@ -137,7 +135,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         Reset everything in the window as if it were opened anew.
         :return: None
         """
-        tables = [self.dump_table, self.damp_table, self.pem_table, self.gps_table, self.geometry_table,
+        tables = [self.dump_table, self.damp_table, self.dmp_table, self.gps_table, self.geometry_table,
                   self.other_table]
         for table in tables:
             self.clear_table(table)
@@ -222,7 +220,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             elif ext in ['log', 'txt', 'xyz', 'seg', 'dad']:
                 icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'txt_file.png'))
                 icon = QtGui.QIcon(icon_pix)
-            elif ext in ['pem', 'dmp', 'dmp2']:
+            elif ext in ['pem', 'dmp', 'dmp2', 'dmp3', 'dmp4']:
                 icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'crone_logo.png'))
                 icon = QtGui.QIcon(icon_pix)
             elif ext in ['gpx', 'gdb']:
@@ -269,25 +267,28 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.change_dir_label()
         self.status_bar.showMessage(f"Opened {path}", 2000)
         print(f"Opened {self.path}")
-        pem_extensions = ['pem']
+        dmp_extensions = ['dmp', 'dmp2', 'dmp3', 'dmp4']
         damp_extensions = ['log', 'rtf', 'txt']
-        dump_extensions = ['dmp', 'dmp2', 'dmp3', 'dmp4', 'tdms', 'tdms_index', 'dat', 'xyz', 'csv']
+        dump_extensions = ['pem', 'tdms', 'tdms_index', 'dat', 'xyz', 'csv']
         gps_extensions = ['ssf', 'cor', 'gdb', 'gpx', 'txt', 'csv']
         geometry_extensions = ['xls', 'xlsx', 'dad', 'seg', 'csv']
+
+        damp_files = []
 
         # r=root, d=directories, f = files
         for root, dir, files in os.walk(self.path):
             for file in files:
-                if any([file.lower().endswith(ext) for ext in pem_extensions]):
-                    # print(f"{file} is a PEM file")
+                if any([file.lower().endswith(ext) for ext in dmp_extensions]):
+                    # print(f"{file} is a DMP file")
                     ext = os.path.splitext(file)[-1][1:]
-                    add_to_table(file, root, self.pem_table, ext)
+                    add_to_table(file, root, self.dmp_table, ext)
 
                 elif any([file.lower().endswith(ext) for ext in damp_extensions]) and not os.path.split(root)[
                                                                                               -1].lower() == 'gps':
                     # print(f"{file} is a Damp file")
                     ext = os.path.splitext(file)[-1][1:]
                     add_to_table(file, root, self.damp_table, ext)
+                    damp_files.append(os.path.join(root, file))
 
                 elif any([file.lower().endswith(ext) for ext in dump_extensions]) and not os.path.split(root)[
                                                                                               -1].lower() == 'gps':
@@ -311,6 +312,11 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                     # print(f"{file} is another file")
                     ext = os.path.splitext(file)[-1][1:]
                     add_to_table(file, root, self.other_table, ext)
+
+        # Plot the damping box files
+        if self.open_damp_files_cbox.isChecked():
+            self.db_plot.open(damp_files)
+            self.db_plot.show()
 
     def accept_changes(self):
         """
@@ -351,10 +357,10 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                     # Skip soa files
                     if 'soa' in file_name.lower():
                         print(f"Skipping {file}")
-                    # Skip all dump files that aren't .DMP
-                    elif table == self.dump_table and \
-                            os.path.splitext(file)[1].lower() in ['.tdms', '.tdms_index', '.dat', '.xyz', '.csv']:
-                        print(f"Skipping {file}")
+                    # # Skip all dump files that aren't .DMP
+                    # elif table == self.dump_table and \
+                    #         os.path.splitext(file)[1].lower() in ['.tdms', '.tdms_index', '.dat', '.xyz', '.csv']:
+                    #     print(f"Skipping {file}")
 
                     # Copy the rest of the files to their respective folders
                     else:
@@ -406,28 +412,33 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         else:
             os.mkdir(new_folder)
 
-        make_move('Dump', self.dump_table, additional_folder=Path(self.get_current_path()).parent.joinpath('RAW'))
+        make_move('Dump', self.dump_table)
         make_move('Damp', self.damp_table, additional_folder=Path(self.get_current_path()).parent.joinpath('DAMP'))
-        make_move('PEM', self.pem_table)  #, additional_folder=Path(self.get_current_path()).parent.joinpath('RAW')
+        make_move('DMP', self.dmp_table, additional_folder=Path(self.get_current_path()).parent.joinpath('RAW'))
         make_move('GPS', self.gps_table, additional_folder=Path(self.get_current_path()).parent.joinpath('GPS'))
         make_move('Geometry', self.geometry_table)
         make_move('Other', self.other_table)
 
-        self.reset(tables_only=True)
         if self.path != new_folder and delete_old_folder is True:
             rmtree(self.path)
         self.status_bar.showMessage('Complete.', 2000)
 
-        # Plot the damping box files
-        if not __name__ == '__main__':
-            if self.open_damp_files_cbox.isChecked():
-                db_files = []
-                for row in np.arange(self.damp_table.rowCount()):
-                    filepath = os.path.join(self.damp_table.item(row, 0).text(), self.damp_table.item(row, 1).text())
-                    db_files.append(filepath)
+        # # Plot damping box files
+        # if self.open_damp_files_cbox.isChecked():
+        #     # db_files = []
+        #     # for row in np.arange(self.damp_table.rowCount()):
+        #     #     filepath = os.path.join(self.damp_table.item(row, 0).text(), self.damp_table.item(row, 1).text())
+        #     #     db_files.append(filepath)
+        #     damp_dir = Path(new_folder).joinpath('Damp')
+        #     db_files = list(damp_dir.glob('*.*'))
+        #
+        #     if db_files:
+        #         self.open_damp_sig.emit(db_files)
 
-                self.parent.db_plot.open(db_files)
-                self.parent.db_plot.show()
+        # Change the project directory of PEMPro
+        self.open_dmp_sig.emit(Path(self.path).parents[1])
+
+        self.reset(tables_only=True)
 
 
 def main():
