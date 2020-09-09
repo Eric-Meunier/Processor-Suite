@@ -19,7 +19,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
                              QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
-                             QVBoxLayout, QCalendarWidget)
+                             QVBoxLayout, QCalendarWidget, QSplitter)
 # from pyqtspinner.spinner import WaitingSpinner
 import geomag
 
@@ -222,7 +222,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # self.stackedWidget.hide()
         # self.piw_frame.hide()
         self.table.horizontalHeader().hide()
-        # self.pemInfoDockWidget.hide()
+
+        self.splitter.setStretchFactor(0, 2)
 
     def init_menus(self):
         """
