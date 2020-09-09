@@ -4,6 +4,7 @@ import time
 from collections import OrderedDict
 from copy import deepcopy
 
+import pandas as pd
 import math
 import numpy as np
 from PyQt5 import (QtCore, QtGui, uic)
@@ -474,6 +475,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.add_gps(files)
 
     def open_gps_files(self, files, crs=None):
+        """
+        Open GPS files
+        :param files: list or str, filepath(s) of GPS files
+        :param crs: Proj CRS object for the GPS objects
+        """
 
         def merge_files(files):
             """
@@ -484,16 +490,26 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             merged_file = []
             gpx_editor = GPXEditor()
             for file in files:
-                if file.endswith('gpx'):
+                if file.lower().endswith('gpx'):
                     # Convert the GPX file to string
                     gps, zone, hemisphere = gpx_editor.get_utm(file, as_string=True)
-                    merged_file.append(gps)
+                    merged_file.extend(gps)
                 else:
-                    with open(file, mode='rt') as in_file:
-                        contents = in_file.readlines()
+                    if file.lower().endswith('csv'):
+                        contents = pd.read_csv(file, delim_whitespace=False, header=None).to_numpy()
+
+                    elif file.lower().endswith('xlsx') or file.lower().endswith('xls'):
+                        contents = pd.read_excel(file, delim_whitespace=False, header=None).to_numpy()
+
+                    else:
+                        contents = open(file, mode='rt').readlines()
                         contents = [c.strip().split() for c in contents]
-                        merged_file.extend(contents)
+
+                    merged_file.extend(contents)
             return merged_file
+
+        if not isinstance(files, list):
+            files = list(files)
 
         file = merge_files(files)
         current_tab = self.tabs.currentWidget()
@@ -503,7 +519,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             line_adder = LineAdder(parent=self)
             try:
                 line = SurveyLine(file, crs=crs)
-                line_adder.open(line)
+                if line.df.empty:
+                    self.message.information(self, 'No GPS Found', f"No survey line GPS was found.")
+                else:
+                    line_adder.open(line)
             except Exception as e:
                 self.error.showMessage(f"Error adding line: {str(e)}")
 
@@ -517,6 +536,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                                          f"The following rows could not be parsed:\n\n{errors.to_string()}")
                 if not collar.df.empty:
                     self.fill_gps_table(collar.df, self.collar_table)
+                else:
+                    self.message.information(self, 'No GPS Found', f"No collar GPS was found.")
             except Exception as e:
                 self.error.showMessage(f"Error adding borehole collar: {str(e)}")
 
@@ -525,6 +546,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             loop_adder = LoopAdder(parent=self)
             try:
                 loop = TransmitterLoop(file, crs=crs)
+                if loop.df.empty:
+                    self.message.information(self, 'No GPS Found', f"No loop GPS was found.")
                 loop_adder.open(loop)
             except Exception as e:
                 self.error.showMessage(f"Error adding loop: {str(e)}")

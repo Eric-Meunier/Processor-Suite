@@ -236,6 +236,7 @@ class TransmitterLoop(BaseGPS):
         else:
             raise TypeError('Invalid input for loop GPS parsing')
 
+        gps = gps.astype(str)
         # Remove P tags and units columns
         cols_to_drop = []
         for i, col in gps.dropna(axis=0).iteritems():
@@ -402,6 +403,7 @@ class SurveyLine(BaseGPS):
         else:
             raise TypeError('Invalid input for station GPS parsing')
 
+        gps = gps.astype(str)
         # Remove P tags and units columns
         cols_to_drop = []
         for i, col in gps.dropna(axis=0).iteritems():
@@ -542,6 +544,7 @@ class BoreholeCollar(BaseGPS):
         else:
             raise TypeError('Invalid input for collar GPS parsing')
 
+        gps = gps.astype(str)
         # Remove P tags and units columns
         cols_to_drop = []
         for i, col in gps.dropna(axis=0).iteritems():
@@ -648,6 +651,7 @@ class BoreholeSegments(BaseGPS):
         else:
             raise TypeError('Invalid input for segments parsing')
 
+        gps = gps.astype(str)
         # Remove P tags and units columns
         cols_to_drop = []
         for i, col in gps.dropna(axis=0).iteritems():

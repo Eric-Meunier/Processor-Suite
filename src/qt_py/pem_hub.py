@@ -223,7 +223,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # self.piw_frame.hide()
         self.table.horizontalHeader().hide()
 
-        self.splitter.setStretchFactor(0, 2)
+        self.splitter.setStretchFactor(0, 2)  # Gives the table more stretch than the directory frame
 
     def init_menus(self):
         """
@@ -285,7 +285,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.action3D_Map.triggered.connect(self.open_3d_map)
 
         self.actionContour_Map.setIcon(QIcon(os.path.join(icons_path, 'contour_map3.png')))
-        self.actionContour_Map.triggered.connect(lambda: self.contour_viewer.open(self.get_updated_pem_files()))
+        self.actionContour_Map.triggered.connect(lambda: self.contour_viewer.open(self.pem_files))
 
         # Tools menu
         self.actionLoop_Planner.setIcon(QIcon(os.path.join(icons_path, 'loop_planner.png')))
@@ -541,7 +541,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             """
             Change the information of the selected pem file(s) in the status bar
             """
-            pem_files, rows = self.get_selected_pem_files(updated=False)
+            pem_files, rows = self.get_pem_files(selected=True)
             info = ''
             if len(pem_files) == 1:
                 file = pem_files[0]
@@ -764,7 +764,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if file_path:
                 # Create a copy of the PEM file, then update the copy
                 new_pem = copy.deepcopy(self.pem_files[row])
-                new_pem = self.update_pem(new_pem, row)
                 new_pem.filepath = Path(file_path)
                 new_pem.save()
 
@@ -776,7 +775,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         if self.table.underMouse():
             if self.table.selectionModel().selectedIndexes():
-                selected_pems, rows = self.get_selected_pem_files()
+                selected_pems, rows = self.get_pem_files(selected=True)
 
                 # Create a menu
                 menu = QMenu(self.table)
@@ -794,7 +793,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 save_file_action.triggered.connect(lambda: self.save_pem_files(selected=True))
 
                 export_pem_action = QAction("&Export...", self)
-                export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True))
+                export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True, export_final=False))
 
                 save_file_as_action = QAction("&Save As...", self)
                 save_file_as_action.triggered.connect(save_pem_file_as)
@@ -1100,7 +1099,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
         if not rows:
-            pem_files, rows = self.get_selected_pem_files()
+            pem_files, rows = self.get_pem_files(selected=True)
 
         if not isinstance(rows, list):
             rows = [rows]
@@ -1426,7 +1425,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         Open the selected PEM File in a text editor
         """
-        pem_files, rows = self.get_selected_pem_files()
+        pem_files, rows = self.get_pem_files(selected=True)
         self.text_browsers = []
         for pem_file in pem_files:
             pem_str = pem_file.to_string()
@@ -1468,7 +1467,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             """
             self.pem_editor_widgets.remove(editor)
 
-        pem_files, rows = self.get_selected_pem_files(updated=True)
+        pem_files, rows = self.get_pem_files(selected=True)
         for pem_file in pem_files:
             editor = PEMPlotEditor(parent=self)
             self.pem_editor_widgets.append(editor)
@@ -1492,7 +1491,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             derotator.close()
 
-        pem_files, rows = self.get_selected_pem_files(updated=True)
+        pem_files, rows = self.get_pem_files(selected=True)
         assert len(pem_files) == 1, 'Can only de-rotate one file at a time.'
 
         pem_file, row = pem_files[0], rows[0]
@@ -1512,7 +1511,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.status_bar.showMessage(f"Geometry updated for {', '.join([file.filepath.name for file in pem_files])}."
                                         , 2000)
 
-        pem_files, rows = self.get_selected_pem_files(updated=False)
+        pem_files, rows = self.get_pem_files(selected=True)
 
         pem_geometry = PEMGeometry(parent=self)
         pem_geometry.accepted_sig.connect(accept_geometry)
@@ -1527,10 +1526,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if not self.pem_files:
             return
 
-        if selected_files is True:
-            pem_files, rows = self.get_selected_pem_files(updated=True)
-        else:
-            pem_files, rows = self.get_updated_pem_files(), range(0, len(self.pem_files))
+        pem_files, rows = self.get_pem_files(selected=selected_files)
 
         # Gather the RI files
         ri_files = []
@@ -1609,7 +1605,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     self.pem_files[row] = batch_name_editor.pem_files[i]
                 self.refresh_rows(rows=rows)
 
-        pem_files, rows = self.get_selected_pem_files()
+        pem_files, rows = self.get_pem_files(selected=True)
         if not pem_files:
             pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
 
@@ -1641,9 +1637,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         Open the Map3DViewer if there's any GPS in any of the opened PEM files.
         """
-        pem_files = self.get_updated_pem_files()
-        if any([f.has_any_gps() for f in pem_files]):
-            self.map_viewer_3d.open(pem_files)
+        if any([f.has_any_gps() for f in self.pem_files]):
+            self.map_viewer_3d.open(self.pem_files)
         else:
             self.message.information(self, 'Error', 'No file has any GPS to plot.')
 
@@ -1657,7 +1652,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             Convert the GPS of all GPS objects to the new EPSG code.
             :param epsg_code: int
             """
-            self.update_pems()
             print(f"Converting to EPSG:{epsg_code}")
 
             for pem_file in self.pem_files:
@@ -1745,6 +1739,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.available_gps = list(gps_dir.rglob('*.txt'))
                 self.available_gps.extend(gps_dir.rglob('*.csv'))
                 self.available_gps.extend(gps_dir.rglob('*.gpx'))
+                self.available_gps.extend(gps_dir.rglob('*.xlsx'))
+                self.available_gps.extend(gps_dir.rglob('*.xls'))
 
                 for file in self.available_gps:
                     self.gps_list.addItem(f"{str(file.relative_to(self.project_dir))}")
@@ -1867,7 +1863,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             pem_file.notes.append(f"<GEN>/<CRS> {crs.name}")
 
-        pem_files = self.get_updated_pem_files(selected=selected)
+        pem_files, rows = self.get_pem_files(selected=selected)
         crs = self.get_crs()
 
         self.start_pb(0, len(pem_files), title='Saving PEM Files...')
@@ -1910,7 +1906,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return
 
         kml = simplekml.Kml()
-        pem_files = [pem_file for pem_file in self.get_updated_pem_files(selected=False) if pem_file.has_any_gps()]
+        pem_files = [pem_file for pem_file in self.pem_files if pem_file.has_any_gps()]
 
         line_style = simplekml.Style()
         line_style.linestyle.width = 4
@@ -2017,10 +2013,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
 
-        if selected:
-            pem_files, rows = self.get_selected_pem_files()
-        else:
-            pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
+        pem_files, rows = self.get_pem_files(selected=selected)
 
         if not pem_files:
             return
@@ -2044,53 +2037,48 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param export_final: bool, True will perform a final file export where the file names are modified automatically.
         :return: None
         """
-        crs = self.get_crs()
-        if selected is True:
-            pem_files, rows = self.get_selected_pem_files()
-        else:
-            pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
 
-        self.status_bar.showMessage(f"Saving PEM {'file' if len(pem_files) == 1 else 'files'}...")
-        if not crs:
-            response = self.message.question(self, 'Invalid CRS',
-                                             'The CRS information is invalid.'
-                                             'Do you wish to proceed with no CRS information?',
-                                             self.message.Yes | self.message.No)
-            if response == self.message.No:
-                return
+        pem_files, rows = self.get_pem_files(selected=selected)
 
-        default_path = os.path.split(self.pem_files[-1].filepath)[0]
-        self.dialog.setDirectory(default_path)
-        file_dir = self.dialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
+        if export_final is True:
+            crs = self.get_crs()
+            if not crs:
+                response = self.message.question(self, 'Invalid CRS',
+                                                 'The CRS information is invalid. '
+                                                 'Do you wish to proceed with no CRS information?',
+                                                 self.message.Yes | self.message.No)
+                if response == self.message.No:
+                    return
 
-        if file_dir:
-            for pem_file, row in zip(pem_files, rows):
-                updated_file = self.update_pem(pem_file, row)
-                file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
-                extension = os.path.splitext(pem_file.filepath)[-1]
-                if export_final is True:
-                    # Make sure the file is averaged and split
-                    if not pem_file.is_split():
-                        pem_file = pem_file.split()
-                    if not pem_file.is_averaged():
-                        pem_file = pem_file.average()
-                    # Remove underscore-dates and tags
-                    file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))
-                    if not pem_file.is_borehole():
-                        file_name = file_name.upper()
-                        if file_name.lower()[0] == 'c':
-                            file_name = file_name[1:]
-                        if pem_file.is_averaged() and 'av' not in file_name.lower():
-                            file_name = file_name + 'Av'
-
-                updated_file.filepath = Path(os.path.join(file_dir, file_name + extension))
-                self.save_pem_file(updated_file, dir=file_dir, remove_old=False)
-            self.refresh_rows(rows='all')
-            self.status_bar.showMessage(
-                f"Save complete. {len(pem_files)} PEM {'file' if len(pem_files) == 1 else 'files'} exported", 2000)
-        else:
+        default_path = self.pem_files[-1].filepath.parent
+        # self.dialog.setDirectory(default_path)
+        file_dir = self.dialog.getExistingDirectory(self, '', str(default_path))  #, QFileDialog.DontUseNativeDialog)
+        if not file_dir:
             self.status_bar.showMessage('Cancelled.', 2000)
-            pass
+            return
+
+        for pem_file, row in zip(pem_files, rows):
+            file_name = pem_file.filepath.name
+            if export_final is True:
+                # Make sure the file is averaged and split
+                if not pem_file.is_split():
+                    pem_file = pem_file.split()
+                if not pem_file.is_averaged():
+                    pem_file = pem_file.average()
+                # Remove underscore-dates and tags
+                file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))
+                if not pem_file.is_borehole():
+                    file_name = file_name.upper()
+                    if file_name.lower()[0] == 'c':
+                        file_name = file_name[1:]
+                    if pem_file.is_averaged() and 'av' not in file_name.lower():
+                        file_name = file_name + 'Av'
+
+            pem_file.filepath = Path(file_dir).joinpath(file_name)
+            pem_file.save()
+
+        self.refresh_rows(rows='all')
+        self.status_bar.showMessage(f"Save complete. {len(pem_files)} PEM file(s) exported", 2000)
 
     def export_all_gps(self):
         """
@@ -2523,92 +2511,76 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.save_pem_file(pem_file, backup=True, tag='[B]', remove_old=False)
         self.status_bar.showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
 
-    def update_pem(self, pem_file, table_row):
-        """
-        Saves the pem file in memory using the information in the table.
-        :param pem_file: PEM file object to save.
-        :param table_row: Corresponding row of the PEM file in the main table.
-        :return: the PEM File object with updated information
-        """
+    # def update_pem(self, pem_file, table_row):
+    #     """
+    #     Saves the pem file in memory using the information in the table.
+    #     :param pem_file: PEM file object to save.
+    #     :param table_row: Corresponding row of the PEM file in the main table.
+    #     :return: the PEM File object with updated information
+    #     """
+    #
+    #     def add_crs_tag():
+    #         """
+    #         Add the CRS from the table as a note to the PEM file.
+    #         :return: None
+    #         """
+    #         if crs:
+    #             # Remove any existing CRS tag
+    #             for note in reversed(pem_file.notes):
+    #                 if '<GEN> CRS' in note or '<CRS>' in note:
+    #                     del pem_file.notes[pem_file.notes.index(note)]
+    #
+    #             pem_file.notes.append(f"<GEN>/<CRS> {crs.name}")
+    #
+    #     table_filename = self.table.item(table_row, self.table_columns.index('File')).text()
+    #     pem_file.filepath = Path(pem_file.filepath.parent.joinpath(table_filename))
+    #
+    #     crs = self.get_crs()
+    #
+    #     add_crs_tag()
+    #     pem_file.date = self.table.item(table_row, self.table_columns.index('Date')).text()
+    #     pem_file.client = self.table.item(table_row, self.table_columns.index('Client')).text()
+    #     pem_file.grid = self.table.item(table_row, self.table_columns.index('Grid')).text()
+    #     pem_file.line_name = self.table.item(table_row, self.table_columns.index('Line/Hole')).text()
+    #     pem_file.loop_name = self.table.item(table_row, self.table_columns.index('Loop')).text()
+    #     pem_file.current = float(self.table.item(table_row, self.table_columns.index('Current')).text())
+    #
+    #     pem_file.loop = self.stackedWidget.widget(table_row).get_loop()
+    #     pem_file.loop.crs = crs
+    #     if pem_file.is_borehole():
+    #         pem_file.collar = self.stackedWidget.widget(table_row).get_collar()
+    #         pem_file.collar.crs = crs
+    #         pem_file.segments = self.stackedWidget.widget(table_row).get_segments()
+    #         pem_file.geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
+    #     else:
+    #         pem_file.line = self.stackedWidget.widget(table_row).get_line()
+    #         pem_file.line.crs = crs
+    #
+    #     return pem_file
 
-        def add_crs_tag():
-            """
-            Add the CRS from the table as a note to the PEM file.
-            :return: None
-            """
-            if crs:
-                # Remove any existing CRS tag
-                for note in reversed(pem_file.notes):
-                    if '<GEN> CRS' in note or '<CRS>' in note:
-                        del pem_file.notes[pem_file.notes.index(note)]
-
-                pem_file.notes.append(f"<GEN>/<CRS> {crs.name}")
-
-        table_filename = self.table.item(table_row, self.table_columns.index('File')).text()
-        pem_file.filepath = Path(pem_file.filepath.parent.joinpath(table_filename))
-
-        crs = self.get_crs()
-
-        add_crs_tag()
-        pem_file.date = self.table.item(table_row, self.table_columns.index('Date')).text()
-        pem_file.client = self.table.item(table_row, self.table_columns.index('Client')).text()
-        pem_file.grid = self.table.item(table_row, self.table_columns.index('Grid')).text()
-        pem_file.line_name = self.table.item(table_row, self.table_columns.index('Line/Hole')).text()
-        pem_file.loop_name = self.table.item(table_row, self.table_columns.index('Loop')).text()
-        pem_file.current = float(self.table.item(table_row, self.table_columns.index('Current')).text())
-
-        pem_file.loop = self.stackedWidget.widget(table_row).get_loop()
-        pem_file.loop.crs = crs
-        if pem_file.is_borehole():
-            pem_file.collar = self.stackedWidget.widget(table_row).get_collar()
-            pem_file.collar.crs = crs
-            pem_file.segments = self.stackedWidget.widget(table_row).get_segments()
-            pem_file.geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
-        else:
-            pem_file.line = self.stackedWidget.widget(table_row).get_line()
-            pem_file.line.crs = crs
-
-        return pem_file
-
-    def update_pems(self):
-        """
-        Update self.pem_files with the updated information.
-        """
-        updated_pems = self.get_updated_pem_files(selected=False)
-        self.pem_files = updated_pems
-
-    def get_selected_pem_files(self, updated=False):
+    def get_pem_files(self, selected=False):
         """
         Return the corresponding pem_files and rows which are currently selected in the table
+        :param selected: bool, return PEMFiles which are selected in the table
         :return: pem_file objects and corresponding row indexes
         """
-        selected_pem_files = []
-        rows = [model.row() for model in self.table.selectionModel().selectedRows()]
-
-        # Return row 0 if there are pem files but no rows selected, since the program may have been freshly opened.
-        if self.pem_files and not rows:
-            rows = [0]
-
-        rows.sort(reverse=True)
-        for row in rows:
-            selected_pem_files.append(self.pem_files[row])
-
-        if updated is True:
-            selected_pem_files = [self.update_pem(f, r) for f, r in zip(selected_pem_files, rows)]
-
-        return selected_pem_files, rows
-
-    def get_updated_pem_files(self, selected=False):
-        """
-        Return the updated version of the opened PEM files
-        :return: list, updated PEM files
-        """
-        if selected is True:
-            updated_files, rows = self.get_selected_pem_files(updated=True)
+        if selected is False:
+            pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
+            return pem_files, rows
+        
         else:
-            files, rows = self.pem_files, np.arange(self.table.rowCount())
-            updated_files = [self.update_pem(copy.deepcopy(file), row) for file, row in zip(files, rows)]
-        return updated_files
+            selected_pem_files = []
+            rows = [model.row() for model in self.table.selectionModel().selectedRows()]
+    
+            # Return row 0 if there are pem files but no rows selected, since the program may have been freshly opened.
+            if self.pem_files and not rows:
+                rows = [0]
+    
+            rows.sort(reverse=True)
+            for row in rows:
+                selected_pem_files.append(self.pem_files[row])
+
+            return selected_pem_files, rows
 
     def get_epsg(self):
         """
@@ -2683,10 +2655,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Average the data of each PEM File selected
         :param selected: bool, True will only export selected rows.
         """
-        if selected is True:
-            pem_files, rows = self.get_selected_pem_files()
-        else:
-            pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
+        pem_files, rows = self.get_pem_files(selected=selected)
 
         if not pem_files:
             return
@@ -2704,9 +2673,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for pem_file, row in filt_list:
             print(f"Averaging {pem_file.filepath.name}")
             self.pb.setText(f"Averaging {pem_file.filepath.name}")
-            # Save a backup of the un-averaged file first
-            if self.auto_create_backup_files_cbox.isChecked():
-                self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]', remove_old=False)
+            # # Save a backup of the un-averaged file first
+            # if self.auto_create_backup_files_cbox.isChecked():
+            #     self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]', remove_old=False)
             pem_file = pem_file.average()
             self.refresh_pem(pem_file)
             count += 1
@@ -2718,10 +2687,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Removes the on-time channels of each selected PEM File
         :param selected: bool, True will only export selected rows.
         """
-        if selected is True:
-            pem_files, rows = self.get_selected_pem_files()
-        else:
-            pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
+        pem_files, rows = self.get_pem_files(selected=selected)
 
         if not pem_files:
             return
@@ -2739,8 +2705,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for pem_file, row in filt_list:
             print(f"Splitting channels for {pem_file.filepath.name}")
             self.pb.setText(f"Splitting channels for {pem_file.filepath.name}")
-            if self.auto_create_backup_files_cbox.isChecked():
-                self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]', remove_old=False)
+            # if self.auto_create_backup_files_cbox.isChecked():
+            #     self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]', remove_old=False)
             pem_file = pem_file.split()
             self.refresh_pem(pem_file)
             count += 1
@@ -2758,10 +2724,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if not ok_pressed:
                 return
 
-        if selected is True:
-            pem_files, rows = self.get_selected_pem_files()
-        else:
-            pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
+        pem_files, rows = self.get_pem_files(selected=selected)
 
         for pem_file, row in zip(pem_files, rows):
             pem_file = pem_file.scale_coil_area(coil_area)
@@ -2775,10 +2738,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         current, ok_pressed = QInputDialog.getDouble(self, "Scale Current", "Current:")
         if ok_pressed:
-            if selected is True:
-                pem_files, rows = self.get_selected_pem_files()
-            else:
-                pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
+            pem_files, rows = self.get_pem_files(selected=selected)
 
             for pem_file, row in zip(pem_files, rows):
                 print(f"Performing current change for {pem_file.filepath.name}")
@@ -2870,14 +2830,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         files_to_remove = []
 
         if selected is True:
-            pem_files, rows = self.get_selected_pem_files()
+            pem_files, rows = self.get_pem_files(selected=True)
             if len(pem_files) < 2:
                 self.message.information(self, 'Error', 'Must select multiple PEM Files')
                 return
 
-            # Update the PEM Files from the table
-            for pem_file, row in zip(pem_files, rows):
-                self.update_pem(pem_file, row)
             # Merge the files
             merged_pem = merge_pems(pem_files)
 
@@ -2890,7 +2847,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 return
 
             pem_files, rows = copy.deepcopy(self.pem_files), np.arange(self.table.rowCount())
-            pem_files = [self.update_pem(pem_file, row) for pem_file, row in zip(pem_files, rows)]
 
             bh_files = [f for f in pem_files if f.is_borehole()]
             sf_files = [f for f in pem_files if f not in bh_files]
@@ -2941,12 +2897,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         rows = [pem_files.index(f) for f in files_to_remove]
 
-        if self.auto_create_backup_files_cbox.isChecked():
-            for file in reversed(files_to_remove):
-                self.save_pem_file(copy.deepcopy(file),
-                                   tag='[-M]',
-                                   backup=True,
-                                   remove_old=self.delete_merged_files_cbox.isChecked())
+        # if self.auto_create_backup_files_cbox.isChecked():
+        #     for file in reversed(files_to_remove):
+        #         self.save_pem_file(copy.deepcopy(file),
+        #                            tag='[-M]',
+        #                            backup=True,
+        #                            remove_old=self.delete_merged_files_cbox.isChecked())
 
         if self.delete_merged_files_cbox.isChecked():
             self.remove_file(rows=rows)
