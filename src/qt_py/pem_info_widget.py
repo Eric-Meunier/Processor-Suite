@@ -184,48 +184,34 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # self.reading_num_sort_rbtn.clicked.connect(self.fill_data_table)
 
         def save_selected_row(table):
+            """
+            Save the information of the selected row of table, so the information may be used to re-fill an invalid
+            user input value.
+            :param table: QTableWidget table
+            """
             self.active_table = table
             row = table.selectionModel().selectedRows()[0].row()
             self.selected_row_info = [table.item(row, j).text() for j in range(table.columnCount())]
 
         def cell_changed(row, col):
-
-            def get_errors():
-                """
-                Count any incorrect data types
-                :return: int, number of errors found
-                """
-
-                def has_na(row):
-                    """
-                    Return True if any cell in the row can't be converted to a float
-                    :param row: Int: table row to check
-                    :return: bool
-                    """
-                    for col in range(self.active_table.columnCount()):
-                        item = self.active_table.item(row, col).text()
-                        try:
-                            float(item)
-                        except ValueError:
-                            return True
-                        finally:
-                            if item == 'nan':
-                                return True
-                    return False
-
-                # Cound how many rows have entries that can't be forced into a float
-                error_count = 0
-                if has_na(row):
-                    error_count += 1
-                return error_count
-
-            if get_errors() > 0:
-                self.active_table.blockSignals(True)
+            """
+            Signal slot, ensure the new value is a number. Replaces the value with the saved value if it's not.
+            :param row: int
+            :param col: int
+            """
+            self.active_table.blockSignals(True)
+            value = self.active_table.item(row, col).text()
+            try:
+                float(value)
+            except ValueError:
+                # Replace with the saved information
                 self.message.critical(self, 'Error', "Value cannot be converted to a number")
-
                 item = QTableWidgetItem(self.selected_row_info[col])
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.active_table.setItem(row, col, item)
+            finally:
+                # Save the information of the row
+                save_selected_row(self.active_table)
                 self.active_table.blockSignals(False)
 
         # Table changes

@@ -307,6 +307,47 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Initializing all signals.
         :return: None
         """
+
+        def table_value_changed(row, col):
+            """
+            Signal Slot: Action taken when a value in the main table was changed.
+            :param row: Row of the main table that the change was made.
+            :param col: Column of the main table that the change was made.
+            :return: None
+            """
+            print(f'Table value changed at row {row} and column {col}')
+
+            self.table.blockSignals(True)
+            pem_file = self.pem_files[row]
+
+            # Rename a file when the 'File' column is changed
+            if col == self.table_columns.index('File'):
+                old_path = pem_file.filepath
+                new_value = self.table.item(row, col).text()
+
+                if new_value:
+                    new_path = old_path.parent.joinpath(new_value)
+                    print(f"Renaming {old_path.name} to {new_path.name}")
+
+                    try:
+                        os.rename(str(old_path), str(new_path))
+                    except OSError:
+                        # Keep the old name if the new file name already exists
+                        print(f"{new_path.name} already exists")
+                        self.message.critical(self, 'File Error', f"{new_path.name} already exists")
+                        item = QTableWidgetItem(str(old_path.name))
+                        item.setTextAlignment(QtCore.Qt.AlignCenter)
+                        self.table.setItem(row, col, item)
+                    else:
+                        pem_file.filepath = new_path
+
+                        self.status_bar.showMessage(f"{old_path.name} renamed to {str(new_value)}", 2000)
+
+            self.color_row(row)
+
+            if self.allow_signals:
+                self.table.blockSignals(False)
+
         def set_shared_header(header):
             """
             Signal slot, change the header information for each file in the table when the shared header LineEdits are
@@ -468,7 +509,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.table.itemSelectionChanged.connect(lambda: self.stackedWidget.setCurrentIndex(self.table.currentRow()))
         self.table.itemSelectionChanged.connect(update_selection_text)
-        self.table.cellChanged.connect(self.table_value_changed)
+        self.table.cellChanged.connect(table_value_changed)
 
         # Project Tree
         self.project_tree.clicked.connect(self.project_dir_changed)
@@ -649,6 +690,28 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
 
+        def save_pem_file_as():
+            """
+            Saves a single PEM file to a selected location.
+            :return: None
+            """
+            row = self.table.currentRow()
+            default_path = os.path.split(self.pem_files[-1].filepath)[0]
+
+            file_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM)')[0]
+            if file_path:
+                # Create a copy of the PEM file, then update the copy
+                new_pem = copy.deepcopy(self.pem_files[row])
+                new_pem = self.update_pem(new_pem, row)
+                new_pem.filepath = Path(file_path)
+                new_pem.save()
+
+                self.status_bar.showMessage(f'Save Complete. PEM file saved as {new_pem.filepath.name}', 2000)
+                # Must open and not update the PEM since it is being copied
+                self.open_pem_files(new_pem)
+            else:
+                self.status_bar.showMessage('Cancelled.', 2000)
+
         if self.table.underMouse():
             if self.table.selectionModel().selectedIndexes():
                 selected_pems, rows = self.get_selected_pem_files()
@@ -670,7 +733,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True))
 
                 save_file_as_action = QAction("&Save As...", self)
-                save_file_as_action.triggered.connect(self.save_pem_file_as)
+                save_file_as_action.triggered.connect(save_pem_file_as)
 
                 save_as_xyz_action = QAction("&Save As XYZ...", self)
                 save_as_xyz_action.triggered.connect(lambda: self.save_as_xyz(selected=True))
@@ -1162,8 +1225,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         t1 = time.time()
         parser = PEMParser()
-        self.setUpdatesEnabled(False)
-        # self.table.setUpdatesEnabled(False)
+        self.table.blockSignals(True)
+        self.allow_signals = False
+        self.table.setUpdatesEnabled(False)
 
         # Start the progress bar
         self.start_pb(start=0, end=len(pem_files), title='Opening PEM Files...')
@@ -1215,15 +1279,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.pem_info_widgets.insert(i, pem_widget)
                 self.stackedWidget.insertWidget(i, pem_widget)
                 self.table.insertRow(i)
-                self.fill_pem_row(pem_file, i)
+                self.fill_row(pem_file, i)
 
                 # Progress the progress bar
                 count += 1
                 self.pb.setValue(count)
                 self.total_opened += 1
 
-        self.setUpdatesEnabled(True)
-        # self.table.setUpdatesEnabled(True)
+        self.allow_signals = True
+        self.table.setUpdatesEnabled(True)
+        self.table.blockSignals(False)
+
         self.end_pb()
         self.table.horizontalHeader().show()
         print(f"PEMHub - Time to open all PEM files: {time.time() - t1}")
@@ -1777,32 +1843,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.end_pb()
         self.status_bar.showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
 
-    def save_pem_file_as(self):
-        """
-        Saves a single PEM file to a selected location.
-        :return: None
-        """
-        row = self.table.currentRow()
-        default_path = os.path.split(self.pem_files[-1].filepath)[0]
-        # self.dialog.setFileMode(QFileDialog.ExistingFiles)
-        # self.dialog.setAcceptMode(QFileDialog.AcceptSave)
-        # self.dialog.setDirectory(default_path)
-        self.status_bar.showMessage('Saving PEM files...')
-
-        file_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM)')[0]  # Returns full filepath
-
-        if file_path:
-            pem_file = copy.deepcopy(self.pem_files[row])
-            pem_file.filepath = Path(file_path)
-            updated_file = self.update_pem_from_table(pem_file, row, filepath=file_path)
-
-            self.save_pem_file(updated_file)
-            self.status_bar.showMessage(f'Save Complete. PEM file saved as {pem_file.filepath.name}', 2000)
-            # Must open and not update the PEM since it is being copied
-            self.open_pem_files(updated_file)
-        else:
-            self.status_bar.showMessage('Cancelled.', 2000)
-
     def save_as_kmz(self):
         """
         Saves all GPS from the opened PEM files as a KMZ file. Utilizes 'simplekml' module. Only works with NAD 83
@@ -1978,7 +2018,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         if file_dir:
             for pem_file, row in zip(pem_files, rows):
-                updated_file = self.update_pem_from_table(pem_file, row)
+                updated_file = self.update_pem(pem_file, row)
                 file_name = os.path.splitext(os.path.basename(pem_file.filepath))[0]
                 extension = os.path.splitext(pem_file.filepath)[-1]
                 if export_final is True:
@@ -2093,15 +2133,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             else:
                 self.status_bar.showMessage("No files to export.", 2000)
 
-    def fill_pem_row(self, pem_file, row):
-        """
-        Adds the information from a PEM file to the main table. Blocks the table signals while doing so.
-        :param pem_file: PEMFile object
-        :param row: int, row of the PEM file in the table
-        :return: None
-        """
+    def color_row(self, row):
 
-        def color_table_row_text(row):
+        def color_text():
             """
             Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
             :param row: Row of the main table to check and color
@@ -2115,15 +2149,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 :param color: str: The desired color
                 :return: None
                 """
-                self.table.blockSignals(True)
                 color = QtGui.QColor(color)
                 color.setAlpha(alpha)
                 for j in range(self.table.columnCount()):
                     self.table.item(rowIndex, j).setBackground(color)
-                if self.allow_signals:
-                    self.table.blockSignals(False)
 
-            self.table.blockSignals(True)
             average_col = self.table_columns.index('Averaged')
             split_col = self.table_columns.index('Split')
             suffix_col = self.table_columns.index('Suffix\nWarnings')
@@ -2158,8 +2188,141 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if not pem_has_gps:
                 color_row(row, 'blue')
 
-            if self.allow_signals:
-                self.table.blockSignals(False)
+        def color_anomalies():
+            """
+            Change the text color of table cells where the value warrants attention. An example of this is where the
+            date might be wrong.
+            :return: None
+            """
+            date_column = self.table_columns.index('Date')
+            current_year = str(datetime.datetime.now().year)
+
+            for row in range(self.table.rowCount()):
+                if self.table.item(row, date_column):
+                    date = self.table.item(row, date_column).text()
+                    year = str(date.split(' ')[-1])
+                    if year != current_year:
+                        self.table.item(row, date_column).setForeground(QtGui.QColor('red'))
+                    else:
+                        self.table.item(row, date_column).setForeground(QtGui.QColor('black'))
+
+        def color_changes():
+            """
+            Bolden table cells where the value in the cell is different then what is the PEM file memory.
+            :param pem_file: PEMFile object
+            :param row: Corresponding table row of the PEM file.
+            :return: None
+            """
+            boldFont, normalFont = QtGui.QFont(), QtGui.QFont()
+            boldFont.setBold(True)
+            normalFont.setBold(False)
+
+            info_widget = self.pem_info_widgets[self.pem_files.index(pem_file)]
+
+            # Get the original information in the PEM file
+            row_info = [
+                pem_file.filepath.name,
+                pem_file.date,
+                pem_file.client,
+                pem_file.grid,
+                pem_file.line_name,
+                pem_file.loop_name,
+                pem_file.current,
+                pem_file.coil_area,
+                pem_file.get_stations(converted=True).min(),
+                pem_file.get_stations(converted=True).max(),
+                pem_file.is_averaged(),
+                pem_file.is_split(),
+                str(info_widget.suffix_warnings),
+                str(info_widget.num_repeat_stations)
+            ]
+
+            # If the value in the table is different then in the PEM file, make the value bold.
+            for column in range(self.table.columnCount()):
+                if self.table.item(row, column):
+                    original_value = str(row_info[column])
+                    if self.table.item(row, column).text() != original_value:
+                        self.table.item(row, column).setFont(boldFont)
+                    else:
+                        self.table.item(row, column).setFont(normalFont)
+
+        self.table.blockSignals(True)
+
+        pem_file = self.pem_files[row]
+        color_text()
+        color_anomalies()
+        color_changes()
+
+        if self.allow_signals:
+            self.table.blockSignals(False)
+
+    def fill_row(self, pem_file, row):
+        """
+        Adds the information from a PEM file to the main table. Blocks the table signals while doing so.
+        :param pem_file: PEMFile object
+        :param row: int, row of the PEM file in the table
+        :return: None
+        """
+
+        # def color_table_row_text(row):
+        #     """
+        #     Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
+        #     :param row: Row of the main table to check and color
+        #     :return: None
+        #     """
+        #
+        #     def color_row(rowIndex, color, alpha=50):
+        #         """
+        #         Color an entire table row
+        #         :param rowIndex: Int: Row of the table to color
+        #         :param color: str: The desired color
+        #         :return: None
+        #         """
+        #         self.table.blockSignals(True)
+        #         color = QtGui.QColor(color)
+        #         color.setAlpha(alpha)
+        #         for j in range(self.table.columnCount()):
+        #             self.table.item(rowIndex, j).setBackground(color)
+        #         if self.allow_signals:
+        #             self.table.blockSignals(False)
+        #
+        #     self.table.blockSignals(True)
+        #     average_col = self.table_columns.index('Averaged')
+        #     split_col = self.table_columns.index('Split')
+        #     suffix_col = self.table_columns.index('Suffix\nWarnings')
+        #     repeat_col = self.table_columns.index('Repeat\nStations')
+        #     pem_has_gps = self.pem_files[row].has_all_gps()
+        #
+        #     for col in [average_col, split_col, suffix_col, repeat_col]:
+        #         item = self.table.item(row, col)
+        #         if item:
+        #             value = item.text()
+        #             if col == average_col:
+        #                 if value == 'False':
+        #                     item.setForeground(QtGui.QColor('red'))
+        #                 else:
+        #                     item.setForeground(QtGui.QColor('black'))
+        #             elif col == split_col:
+        #                 if value == 'False':
+        #                     item.setForeground(QtGui.QColor('red'))
+        #                 else:
+        #                     item.setForeground(QtGui.QColor('black'))
+        #             elif col == suffix_col:
+        #                 if int(value) > 0:
+        #                     item.setForeground(QtGui.QColor('red'))
+        #                 else:
+        #                     item.setForeground(QtGui.QColor('black'))
+        #             elif col == repeat_col:
+        #                 if int(value) > 0:
+        #                     item.setForeground(QtGui.QColor('red'))
+        #                 else:
+        #                     item.setForeground(QtGui.QColor('black'))
+        #
+        #     if not pem_has_gps:
+        #         color_row(row, 'blue')
+        #
+        #     if self.allow_signals:
+        #         self.table.blockSignals(False)
 
         print(f"Filling {pem_file.filepath.name}'s information to the table")
         self.table.blockSignals(True)
@@ -2193,127 +2356,77 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
             self.table.setItem(row, i, item)
 
-        color_table_row_text(row)
-        self.check_for_table_changes(pem_file, row)
-        self.check_for_table_anomalies()
+        self.color_row(row)
+        # color_table_row_text(row)
+        # self.check_for_table_changes(pem_file, row)
+        # self.check_for_table_anomalies()
         if self.allow_signals:
             self.table.blockSignals(False)
 
-    def table_value_changed(self, row, col):
-        """
-        Signal Slot: Action taken when a value in the main table was changed.
-        :param row: Row of the main table that the change was made.
-        :param col: Column of the main table that the change was made.
-        :return: None
-        """
-        print(f'Table value changed at row {row} and column {col}')
-
-        self.table.blockSignals(True)
-        pem_file = self.pem_files[row]
-
-        if col == self.table_columns.index('Coil\nArea') + 1:
-            pem_file = self.pem_files[row]
-            old_value = pem_file.coil_area
-            try:
-                new_value = int(self.table.item(row, col).text())
-            except ValueError:
-                self.message.information(self, 'Invalid coil area', 'Coil area must be an integer number.')
-                print("Value is not an integer.")
-                pass
-            else:
-                if int(old_value) != int(new_value):
-                    pem_file = pem_file.scale_coil_area(new_value)
-                    self.status_bar.showMessage(
-                        f"Coil area changed from {old_value} to {new_value}", 2000)
-
-        # Changing the name of a file
-        if col == self.table_columns.index('File'):
-            pem_file = self.pem_files[row]
-            old_path = copy.deepcopy(pem_file.filepath)
-            new_value = self.table.item(row, col).text()
-
-            if new_value != os.path.basename(pem_file.filepath) and new_value:
-                pem_file.old_filepath = old_path
-                new_path = Path(os.path.join(old_path.parent, new_value))
-                print(f"Renaming {old_path.name} to {new_path.name}")
-
-                # Create a copy and delete the old one.
-                copyfile(old_path, new_path)
-                pem_file.filepath = new_path
-                os.remove(old_path)
-
-                self.status_bar.showMessage(f"File renamed to {str(new_value)}", 2000)
-
-        # self.color_table_row_text(row)
-        self.check_for_table_changes(pem_file, row)
-        self.check_for_table_anomalies()
-        if self.allow_signals:
-            self.table.blockSignals(False)
-
-    def check_for_table_anomalies(self):
-        """
-        Change the text color of table cells where the value warrants attention. An example of this is where the
-        date might be wrong.
-        :return: None
-        """
-        self.table.blockSignals(True)
-        date_column = self.table_columns.index('Date')
-        current_year = str(datetime.datetime.now().year)
-
-        for row in range(self.table.rowCount()):
-            if self.table.item(row, date_column):
-                date = self.table.item(row, date_column).text()
-                year = str(date.split(' ')[-1])
-                if year != current_year:
-                    self.table.item(row, date_column).setForeground(QtGui.QColor('red'))
-                else:
-                    self.table.item(row, date_column).setForeground(QtGui.QColor('black'))
-        if self.allow_signals:
-            self.table.blockSignals(False)
-
-    def check_for_table_changes(self, pem_file, row):
-        """
-        Bolden table cells where the value in the cell is different then what is the PEM file memory.
-        :param pem_file: PEMFile object
-        :param row: Corresponding table row of the PEM file.
-        :return: None
-        """
-        self.table.blockSignals(True)
-        boldFont, normalFont = QtGui.QFont(), QtGui.QFont()
-        boldFont.setBold(True)
-        normalFont.setBold(False)
-
-        info_widget = self.pem_info_widgets[self.pem_files.index(pem_file)]
-
-        # Get the original information in the PEM file
-        row_info = [
-            pem_file.filepath.name,
-            pem_file.date,
-            pem_file.client,
-            pem_file.grid,
-            pem_file.line_name,
-            pem_file.loop_name,
-            pem_file.current,
-            pem_file.coil_area,
-            pem_file.get_stations(converted=True).min(),
-            pem_file.get_stations(converted=True).max(),
-            pem_file.is_averaged(),
-            pem_file.is_split(),
-            str(info_widget.suffix_warnings),
-            str(info_widget.num_repeat_stations)
-        ]
-
-        # If the value in the table is different then in the PEM file, make the value bold.
-        for column in range(self.table.columnCount()):
-            if self.table.item(row, column):
-                original_value = str(row_info[column])
-                if self.table.item(row, column).text() != original_value:
-                    self.table.item(row, column).setFont(boldFont)
-                else:
-                    self.table.item(row, column).setFont(normalFont)
-
-        if self.allow_signals:
-            self.table.blockSignals(False)
+    # def check_for_table_anomalies(self):
+    #     """
+    #     Change the text color of table cells where the value warrants attention. An example of this is where the
+    #     date might be wrong.
+    #     :return: None
+    #     """
+    #     self.table.blockSignals(True)
+    #     date_column = self.table_columns.index('Date')
+    #     current_year = str(datetime.datetime.now().year)
+    #
+    #     for row in range(self.table.rowCount()):
+    #         if self.table.item(row, date_column):
+    #             date = self.table.item(row, date_column).text()
+    #             year = str(date.split(' ')[-1])
+    #             if year != current_year:
+    #                 self.table.item(row, date_column).setForeground(QtGui.QColor('red'))
+    #             else:
+    #                 self.table.item(row, date_column).setForeground(QtGui.QColor('black'))
+    #     if self.allow_signals:
+    #         self.table.blockSignals(False)
+    #
+    # def check_for_table_changes(self, pem_file, row):
+    #     """
+    #     Bolden table cells where the value in the cell is different then what is the PEM file memory.
+    #     :param pem_file: PEMFile object
+    #     :param row: Corresponding table row of the PEM file.
+    #     :return: None
+    #     """
+    #     self.table.blockSignals(True)
+    #     boldFont, normalFont = QtGui.QFont(), QtGui.QFont()
+    #     boldFont.setBold(True)
+    #     normalFont.setBold(False)
+    #
+    #     info_widget = self.pem_info_widgets[self.pem_files.index(pem_file)]
+    #
+    #     # Get the original information in the PEM file
+    #     row_info = [
+    #         pem_file.filepath.name,
+    #         pem_file.date,
+    #         pem_file.client,
+    #         pem_file.grid,
+    #         pem_file.line_name,
+    #         pem_file.loop_name,
+    #         pem_file.current,
+    #         pem_file.coil_area,
+    #         pem_file.get_stations(converted=True).min(),
+    #         pem_file.get_stations(converted=True).max(),
+    #         pem_file.is_averaged(),
+    #         pem_file.is_split(),
+    #         str(info_widget.suffix_warnings),
+    #         str(info_widget.num_repeat_stations)
+    #     ]
+    #
+    #     # If the value in the table is different then in the PEM file, make the value bold.
+    #     for column in range(self.table.columnCount()):
+    #         if self.table.item(row, column):
+    #             original_value = str(row_info[column])
+    #             if self.table.item(row, column).text() != original_value:
+    #                 self.table.item(row, column).setFont(boldFont)
+    #             else:
+    #                 self.table.item(row, column).setFont(normalFont)
+    #
+    #     if self.allow_signals:
+    #         self.table.blockSignals(False)
 
     def refresh_pem(self, pem_file):
         """
@@ -2350,7 +2463,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 item = QTableWidgetItem('')
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.table.setItem(row, i, item)
-            self.fill_pem_row(pem_file, row)
+            self.fill_row(pem_file, row)
         if self.allow_signals:
             self.table.blockSignals(False)
 
@@ -2365,13 +2478,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.save_pem_file(pem_file, backup=True, tag='[B]', remove_old=False)
         self.status_bar.showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
 
-    def update_pem_from_table(self, pem_file, table_row, filepath=None):
+    def update_pem(self, pem_file, table_row):
         """
         Saves the pem file in memory using the information in the table.
         :param pem_file: PEM file object to save.
         :param table_row: Corresponding row of the PEM file in the main table.
-        :param filepath: New filepath to be given to the PEM file. If None is given, it will use the filename in the
-        table.
         :return: the PEM File object with updated information
         """
 
@@ -2386,15 +2497,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     if '<GEN> CRS' in note or '<CRS>' in note:
                         del pem_file.notes[pem_file.notes.index(note)]
 
-                pem_file.notes.append(f"<CRS> {crs.name}")
+                pem_file.notes.append(f"<GEN>/<CRS> {crs.name}")
 
-        if filepath is None:
-            pem_file.filepath = Path(pem_file.filepath.parent.joinpath(
-                                                  self.table.item(table_row, self.table_columns.index('File')).text()))
-        else:
-            if not isinstance(filepath, Path):
-                filepath = Path(filepath)
-            pem_file.filepath = filepath
+        table_filename = self.table.item(table_row, self.table_columns.index('File')).text()
+        pem_file.filepath = Path(pem_file.filepath.parent.joinpath(table_filename))
 
         crs = self.get_crs()
 
@@ -2443,7 +2549,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             selected_pem_files.append(self.pem_files[row])
 
         if updated is True:
-            selected_pem_files = [self.update_pem_from_table(f, r) for f, r in zip(selected_pem_files, rows)]
+            selected_pem_files = [self.update_pem(f, r) for f, r in zip(selected_pem_files, rows)]
 
         return selected_pem_files, rows
 
@@ -2456,7 +2562,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             updated_files, rows = self.get_selected_pem_files(updated=True)
         else:
             files, rows = self.pem_files, np.arange(self.table.rowCount())
-            updated_files = [self.update_pem_from_table(copy.deepcopy(file), row) for file, row in zip(files, rows)]
+            updated_files = [self.update_pem(copy.deepcopy(file), row) for file, row in zip(files, rows)]
         return updated_files
 
     def get_epsg(self):
@@ -2726,7 +2832,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             # Update the PEM Files from the table
             for pem_file, row in zip(pem_files, rows):
-                self.update_pem_from_table(pem_file, row)
+                self.update_pem(pem_file, row)
             # Merge the files
             merged_pem = merge_pems(pem_files)
 
@@ -2739,7 +2845,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 return
 
             pem_files, rows = copy.deepcopy(self.pem_files), np.arange(self.table.rowCount())
-            pem_files = [self.update_pem_from_table(pem_file, row) for pem_file, row in zip(pem_files, rows)]
+            pem_files = [self.update_pem(pem_file, row) for pem_file, row in zip(pem_files, rows)]
 
             bh_files = [f for f in pem_files if f.is_borehole()]
             sf_files = [f for f in pem_files if f not in bh_files]
@@ -3480,12 +3586,12 @@ def main():
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # pem_files = pg.get_pems(client='Iscaycruz', selection=0)
-    # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     #
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
-    pem_files = [r'C:\_Data\2020\Generation PGM\__M-20-539\RAW\XY-Collar.PEM']
+    # pem_files = [r'C:\_Data\2020\Generation PGM\__M-20-539\RAW\XY-Collar.PEM']
     mw.open_pem_files(pem_files)
 
     # mw.pem_info_widgets[0].convert_crs()
