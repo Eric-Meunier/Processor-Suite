@@ -51,8 +51,6 @@ class GPSAdder(QMainWindow):
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'gps_adder.png')))
 
         self.df = None
-        self.write_table = None  # QTableWidget, one of the ones in the write_widget
-        self.write_widget = None  # PEMInfoWidget object
         self.error = False  # For pending errors
 
         # Highlighting
@@ -135,7 +133,7 @@ class GPSAdder(QMainWindow):
             self.highlight_point(row)
 
     def close(self):
-        # self.write_widget = None
+        # self.parent = None
         # self.write_table = None
         self.clear_table()
         self.hide()
@@ -487,7 +485,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
         :return: None
         """
-        self.write_widget.fill_gps_table(self.table_to_df().dropna(), self.write_widget.line_table)
+        self.parent.fill_gps_table(self.table_to_df().dropna(), self.parent.line_table)
         self.hide()
 
     def plot_table(self, preserve_limits=False):
@@ -829,7 +827,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
         :return: None
         """
-        self.write_widget.fill_gps_table(self.table_to_df().dropna(), self.write_widget.loop_table)
+        self.parent.fill_gps_table(self.table_to_df().dropna(), self.parent.loop_table)
         self.hide()
 
     def plot_table(self, preserve_limits=False):

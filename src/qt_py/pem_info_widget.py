@@ -1,22 +1,20 @@
 import os
-import re
 import sys
 import time
 from collections import OrderedDict
 from copy import deepcopy
 
 import math
-import natsort
 import numpy as np
-import pandas as pd
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMenu, QInputDialog, QMessageBox,
+from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox,
                              QFileDialog, QErrorMessage, QHeaderView)
 
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
+    GPXEditor
 from src.pem.pem_file import StationConverter
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
-from src.qt_py.ri_importer import RIFile
 from src.qt_py.gps_adder import LoopAdder, LineAdder
+from src.qt_py.ri_importer import RIFile
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
@@ -46,22 +44,17 @@ sys.excepthook = exception_hook
 
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
-    refresh_tables_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to refresh its main table.
+    refresh_row_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to refresh its main table.
     add_geometry_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to open PEMGeometry
 
-    share_loop_signal = QtCore.pyqtSignal()
-    share_line_signal = QtCore.pyqtSignal()
-    share_collar_signal = QtCore.pyqtSignal()
-    share_segments_signal = QtCore.pyqtSignal()
+    share_loop_signal = QtCore.pyqtSignal(object)
+    share_line_signal = QtCore.pyqtSignal(object)
+    share_collar_signal = QtCore.pyqtSignal(object)
+    share_segments_signal = QtCore.pyqtSignal(object)
 
-    line_changed_signal = QtCore.pyqtSignal(object)
-    loop_changed_signal = QtCore.pyqtSignal(object)
-    collar_changed_signal = QtCore.pyqtSignal(object)
-    segments_changed_signal = QtCore.pyqtSignal(object)
-
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
-        self.parent = None
+        self.parent = parent
         self.pem_file = None
         self.ri_file = None
         self.selected_row_info = None
@@ -82,7 +75,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Units', 'Station']
         self.loop_table_columns = ['Easting', 'Northing', 'Elevation', 'Units']
-        # self.data_table_columns = ['index', 'Station', 'Comp.', 'Reading_index', 'Reading_number', 'Number_of_stacks', 'ZTS']
+        # self.data_table_columns = ['index', 'Station', 'Comp.', 'Reading_index', 'Reading_number',
+        # 'Number_of_stacks', 'ZTS']
 
         self.setupUi(self)
         self.init_actions()
@@ -152,42 +146,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def init_signals(self):
 
-        # Buttons
-        self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
-        # self.changeStationSuffixButton.clicked.connect(self.change_station_suffix)
-        # self.changeComponentButton.clicked.connect(self.change_component)
-
-        self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
-        self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
-        self.flip_station_signs_button.clicked.connect(self.check_missing_gps)
-        self.stations_from_data_btn.clicked.connect(self.stations_from_data)
-        self.stations_from_data_btn.clicked.connect(self.check_missing_gps)
-        # self.reversePolarityButton.clicked.connect(self.reverse_polarity)
-        # self.rename_repeat_stations_btn.clicked.connect(self.rename_repeat_stations)
-
-        self.open_station_gps_btn.clicked.connect(self.open_gps_file)
-        self.open_loop_gps_btn.clicked.connect(self.open_gps_file)
-        self.open_collar_gps_btn.clicked.connect(self.open_gps_file)
-        self.add_segments_btn.clicked.connect(lambda: self.add_geometry_signal.emit())
-
-        self.export_station_gps_btn.clicked.connect(lambda: self.export_gps('station'))
-        self.export_loop_gps_btn.clicked.connect(lambda: self.export_gps('loop'))
-        self.export_collar_gps_btn.clicked.connect(lambda: self.export_gps('collar'))
-        self.export_segments_btn.clicked.connect(lambda: self.export_gps('segments'))
-
-        self.edit_loop_btn.clicked.connect(self.open_loop_adder)
-        self.edit_line_btn.clicked.connect(self.open_line_adder)
-
-        self.share_loop_gps_btn.clicked.connect(lambda: self.share_loop_signal.emit())
-        self.share_line_gps_btn.clicked.connect(lambda: self.share_line_signal.emit())
-        self.share_collar_gps_btn.clicked.connect(lambda: self.share_collar_signal.emit())
-        self.share_segments_btn.clicked.connect(lambda: self.share_segments_signal.emit())
-
-        # # Radio buttons
-        # self.station_sort_rbtn.clicked.connect(self.fill_data_table)
-        # self.component_sort_rbtn.clicked.connect(self.fill_data_table)
-        # self.reading_num_sort_rbtn.clicked.connect(self.fill_data_table)
-
         def save_selected_row(table):
             """
             Save the information of the selected row of table, so the information may be used to re-fill an invalid
@@ -214,10 +172,48 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 item = QTableWidgetItem(self.selected_row_info[col])
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.active_table.setItem(row, col, item)
+            else:
+                self.gps_object_changed(self.active_table)
             finally:
                 # Save the information of the row
                 save_selected_row(self.active_table)
                 self.active_table.blockSignals(False)
+
+        # Buttons
+        self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
+        # self.changeStationSuffixButton.clicked.connect(self.change_station_suffix)
+        # self.changeComponentButton.clicked.connect(self.change_component)
+
+        self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
+        self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
+        self.flip_station_signs_button.clicked.connect(self.check_missing_gps)
+        self.stations_from_data_btn.clicked.connect(self.stations_from_data)
+        self.stations_from_data_btn.clicked.connect(self.check_missing_gps)
+        # self.reversePolarityButton.clicked.connect(self.reverse_polarity)
+        # self.rename_repeat_stations_btn.clicked.connect(self.rename_repeat_stations)
+
+        self.open_station_gps_btn.clicked.connect(self.open_gps_file_dialog)
+        self.open_loop_gps_btn.clicked.connect(self.open_gps_file_dialog)
+        self.open_collar_gps_btn.clicked.connect(self.open_gps_file_dialog)
+        self.add_segments_btn.clicked.connect(lambda: self.add_geometry_signal.emit())
+
+        self.export_station_gps_btn.clicked.connect(lambda: self.export_gps('station'))
+        self.export_loop_gps_btn.clicked.connect(lambda: self.export_gps('loop'))
+        self.export_collar_gps_btn.clicked.connect(lambda: self.export_gps('collar'))
+        self.export_segments_btn.clicked.connect(lambda: self.export_gps('segments'))
+
+        self.edit_loop_btn.clicked.connect(self.edit_loop)
+        self.edit_line_btn.clicked.connect(self.edit_line)
+
+        self.share_loop_gps_btn.clicked.connect(lambda: self.share_loop_signal.emit(self.get_loop()))
+        self.share_line_gps_btn.clicked.connect(lambda: self.share_line_signal.emit(self.get_line()))
+        self.share_collar_gps_btn.clicked.connect(lambda: self.share_collar_signal.emit(self.get_collar()))
+        self.share_segments_btn.clicked.connect(lambda: self.share_segments_signal.emit(self.get_segments()))
+
+        # # Radio buttons
+        # self.station_sort_rbtn.clicked.connect(self.fill_data_table)
+        # self.component_sort_rbtn.clicked.connect(self.fill_data_table)
+        # self.reading_num_sort_rbtn.clicked.connect(self.fill_data_table)
 
         # Table changes
         self.line_table.cellChanged.connect(self.check_station_duplicates)
@@ -407,16 +403,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_shift_amt = 0
         spinbox.blockSignals(False)
 
-    def open_file(self, pem_file, parent=None):
+    def open_file(self, pem_file):
         """
         Action of opening a PEM file.
         :param pem_file: PEMFile object.
-        :param parent: parent widget (PEMEditor)
-        :return: PEMFileInfoWidget object
         """
         t = time.time()
         self.pem_file = pem_file
-        self.parent = parent
+
         self.init_tables()
         if self.pem_file.is_borehole():
             self.fill_gps_table(self.pem_file.get_collar(), self.collar_table)
@@ -427,7 +421,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.fill_gps_table(self.pem_file.loop.get_loop(), self.loop_table)
         # self.fill_data_table()
         print(f"PEMInfoWidget - Time to open PIW for {self.pem_file.filepath.name}: {time.time() - t}")
-        return self
 
     def open_ri_file(self, filepath):
         """
@@ -469,7 +462,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         fill_ri_table()
         add_header_from_pem()
 
-    def open_gps_file(self):
+    def open_gps_file_dialog(self):
         """
         Open GPS files through the file dialog
         """
@@ -478,9 +471,67 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if not files:
             return
 
-        self.parent.open_gps_files(files)
+        self.add_gps(files)
 
-    def open_loop_adder(self):
+    def open_gps_files(self, files, crs=None):
+
+        def merge_files(files):
+            """
+            Merge contents of files into one list
+            :param files: list of str, filepaths of text file or GPX files
+            :return: str
+            """
+            merged_file = []
+            gpx_editor = GPXEditor()
+            for file in files:
+                if file.endswith('gpx'):
+                    # Convert the GPX file to string
+                    gps, zone, hemisphere = gpx_editor.get_utm(file, as_string=True)
+                    merged_file.append(gps)
+                else:
+                    with open(file, mode='rt') as in_file:
+                        contents = in_file.readlines()
+                        contents = [c.strip().split() for c in contents]
+                        merged_file.extend(contents)
+            return merged_file
+
+        file = merge_files(files)
+        current_tab = self.tabs.currentWidget()
+
+        # Add survey line GPS
+        if current_tab == self.station_gps_tab:
+            line_adder = LineAdder(parent=self)
+            try:
+                line = SurveyLine(file, crs=crs)
+                line_adder.open(line)
+            except Exception as e:
+                self.error.showMessage(f"Error adding line: {str(e)}")
+
+        # Add borehole collar GPS
+        elif current_tab == self.geometry_tab:
+            try:
+                collar = BoreholeCollar(file, crs=crs)
+                errors = collar.get_errors()
+                if not errors.empty:
+                    self.message.warning(self, 'Parsing Error',
+                                         f"The following rows could not be parsed:\n\n{errors.to_string()}")
+                if not collar.df.empty:
+                    self.fill_gps_table(collar.df, self.collar_table)
+            except Exception as e:
+                self.error.showMessage(f"Error adding borehole collar: {str(e)}")
+
+        # Add loop GPS
+        elif current_tab == self.loop_gps_tab:
+            loop_adder = LoopAdder(parent=self)
+            try:
+                loop = TransmitterLoop(file, crs=crs)
+                loop_adder.open(loop)
+            except Exception as e:
+                self.error.showMessage(f"Error adding loop: {str(e)}")
+        else:
+            pass
+
+    def edit_loop(self):
         """
         Open the LoopAdder widget and open the current loop into it.
         """
@@ -488,7 +539,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         loop_adder.write_widget = self
         loop_adder.open(self.get_loop())
 
-    def open_line_adder(self):
+    def edit_line(self):
         """
         Open the LineAdder widget and open the current line into it.
         """
@@ -761,7 +812,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #     color_rows_by_component()
     #     color_wrong_suffix()
     #     self.num_repeat_stations = bolden_repeat_stations()
-    #     self.refresh_tables_signal.emit()
+    #     self.refresh_row_signal.emit()
     #     self.lcdRepeats.display(self.num_repeat_stations)
 
     def check_station_duplicates(self):
@@ -848,22 +899,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param table: QTableWidget table. Either the loop, station, or geometry tables. Not data_table and not collarGPS table.
         :return: None
         """
-        def add_tags():
-            """
-            Re-numbers the tags so no numbers are skipped due to the deleted row
-            :return:
-            """
-            if table == self.loop_table:
-                tag = 'L'
-            else:
-                tag = 'P'
-            for row in range(table.rowCount()):
-                offset = 1 if table == self.segments_table else 0
-                tag_item = QTableWidgetItem("<" + tag + '{num:02d}'.format(num=row + offset) + ">")
-                tag_item.setTextAlignment(QtCore.Qt.AlignCenter)
-                table.setItem(row, 0, tag_item)
-
         # if table == self.data_table or table == self.collar_table:
+        table.blockSignals(True)
+
         if table == self.collar_table:
             return
 
@@ -874,10 +912,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if table == self.line_table:
             self.check_station_duplicates()
             self.check_missing_gps()
-            # add_tags()
-        # elif table == self.loop_table:
-            # add_tags()
-        self.refresh_tables_signal.emit()
+
+        table.blockSignals(False)
+        self.gps_object_changed(table)
 
     # def remove_data_row(self):
     #     """
@@ -917,6 +954,57 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         gps = gps.df.loc[filt]
 
         self.fill_gps_table(gps, self.line_table)
+        self.gps_object_changed(self.line_table)
+
+    def export_gps(self, type):
+        """
+        Export the GPS in the station GPS table to a text or CSV file.
+        :type: type: 'station' or 'loop'
+        :return: None
+        """
+        if type == 'station':
+            gps = self.get_line()
+        elif type == 'loop':
+            gps = self.get_loop()
+        elif type == 'collar':
+            gps = self.get_collar()
+        elif type == 'segments':
+            gps = self.get_segments()
+        else:
+            raise ValueError(f"{type} is not a valid GPS type to export.")
+
+        if gps.df.empty:
+            print(f"No GPS to export.")
+            return
+
+        default_path = str(self.pem_file.filepath.parent)
+        if type in ['station', 'loop', 'collar']:
+            selected_path = self.dialog.getSaveFileName(self, 'Save File',
+                                                        directory=default_path,
+                                                        filter='Text files (*.txt);; CSV files (*.csv);; All files(*.*)')
+            if selected_path[0]:
+                if selected_path[0].endswith('txt'):
+                    gps_str = gps.to_string()
+                elif selected_path[0].endswith('csv'):
+                    gps_str = gps.to_csv()
+                else:
+                    self.message.information(self, 'Invalid file type', f"Selected file type is invalid. Must be either"
+                    f"'txt' or 'csv'")
+                    return
+            else:
+                return
+        else:
+            selected_path = self.dialog.getSaveFileName(self, 'Save File',
+                                                        directory=default_path,
+                                                        filter='SEG files (*.seg)')
+            if selected_path[0]:
+                gps_str = gps.to_string()
+            else:
+                return
+
+        with open(selected_path[0], 'w+') as file:
+            file.write(gps_str)
+        os.startfile(selected_path[0])
 
     def shift_gps_station_numbers(self):
         """
@@ -954,7 +1042,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             apply_station_shift(row)
 
         self.last_stn_gps_shift_amt = shift_amount
+
         self.line_table.blockSignals(False)
+        self.gps_object_changed(self.line_table)
 
     def shift_loop_elevation(self):
         """
@@ -985,7 +1075,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             apply_elevation_shift(row)
 
         self.last_loop_elev_shift_amt = shift_amount
+
         self.loop_table.blockSignals(False)
+        self.gps_object_changed(self.loop_table)
 
     # def shift_station_numbers(self):
     #     """
@@ -1044,6 +1136,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.line_table.blockSignals(False)
 
+        self.gps_object_changed(self.line_table)
+
     # def reverse_polarity(self, component=None):
     #     """
     #     Reverse the polarity of selected readings
@@ -1090,6 +1184,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             rev_stations = stations[::-1]
             gps.Station = rev_stations
             self.fill_gps_table(gps, self.line_table)
+            self.gps_object_changed(self.line_table)
         else:
             pass
 
@@ -1103,6 +1198,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             item = QTableWidgetItem(str(station))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.line_table.setItem(row, self.line_table_columns.index('Station'), item)
+            self.gps_object_changed(self.line_table)
 
     def calc_distance(self):
         """
@@ -1202,7 +1298,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #     if self.num_repeat_stations > 0:
     #         self.pem_file.data.Station = self.pem_file.data.Station.map(rename_repeat)
     #         self.fill_data_table()
-    #         self.refresh_tables_signal.emit()
+    #         self.refresh_row_signal.emit()
     #         self.window().statusBar().showMessage(
     #             f'{self.num_repeat_stations} repeat station(s) automatically renamed.', 2000)
     #     else:
@@ -1287,54 +1383,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         return BoreholeGeometry(self.get_collar(), self.get_segments())
 
-    def export_gps(self, type):
+    def gps_object_changed(self, table):
         """
-        Export the GPS in the station GPS table to a text or CSV file.
-        :type: type: 'station' or 'loop'
-        :return: None
+        Update the PEMFile's GPS object when it is modified in the table
+        :param table: QTableWidget table
         """
-        if type == 'station':
-            gps = self.get_line()
-        elif type == 'loop':
-            gps = self.get_loop()
-        elif type == 'collar':
-            gps = self.get_collar()
-        elif type == 'segments':
-            gps = self.get_segments()
-        else:
-            raise ValueError(f"{type} is not a valid GPS type to export.")
+        if table == self.loop_table:
+            self.pem_file.loop = self.get_loop()
 
-        if gps.df.empty:
-            print(f"No GPS to export.")
-            return
+        elif table == self.line_table:
+            self.pem_file.line = self.get_line()
 
-        default_path = str(self.pem_file.filepath.parent)
-        if type in ['station', 'loop', 'collar']:
-            selected_path = self.dialog.getSaveFileName(self, 'Save File',
-                                                        directory=default_path,
-                                                        filter='Text files (*.txt);; CSV files (*.csv);; All files(*.*)')
-            if selected_path[0]:
-                if selected_path[0].endswith('txt'):
-                    gps_str = gps.to_string()
-                elif selected_path[0].endswith('csv'):
-                    gps_str = gps.to_csv()
-                else:
-                    self.message.information(self, 'Invalid file type', f"Selected file type is invalid. Must be either"
-                    f"'txt' or 'csv'")
-                    return
-            else:
-                return
-        else:
-            selected_path = self.dialog.getSaveFileName(self, 'Save File',
-                                                        directory=default_path,
-                                                        filter='SEG files (*.seg)')
-            if selected_path[0]:
-                gps_str = gps.to_string()
-            else:
-                return
+        elif table == self.collar_table:
+            self.pem_file.collar = self.get_collar()
 
-        with open(selected_path[0], 'w+') as file:
-            file.write(gps_str)
-        os.startfile(selected_path[0])
+        elif table == self.segments_table:
+            self.pem_file.segments = self.get_segments()
 
-
+        self.refresh_row_signal.emit()

@@ -23,7 +23,8 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
 # from pyqtspinner.spinner import WaitingSpinner
 import geomag
 
-from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeGeometry, GPXEditor)
+from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry,
+                                GPXEditor)
 from src.gps.gpx_creator import GPXCreator
 
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
@@ -1176,29 +1177,53 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             else:
                 return False
 
-        def add_info_widget(pem_file):
+        def add_piw_widget(pem_file):
             """
             Create the PEMFileInfoWidget for the PEM file
             :param pem_file: PEMFile object
             :return: None
             """
-            pem_info_widget = PEMFileInfoWidget()
+
+            def share_gps_object(obj):
+                """
+                Share a GPS object (loop, line, collar, segments) of one file with all other opened PEM files.
+                :param obj: str, which GPS object to share
+                """
+                df = obj.df.dropna()
+                if df.empty:
+                    return
+
+                if isinstance(obj, TransmitterLoop):
+                    for widget in self.pem_info_widgets:
+                        widget.fill_gps_table(df, widget.loop_table)
+                elif isinstance(obj, SurveyLine):
+                    for widget in list(filter(lambda x: not x.pem_file.is_borehole(), self.pem_info_widgets)):
+                        widget.fill_gps_table(df, widget.line_table)
+                elif isinstance(obj, BoreholeCollar):
+                    for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
+                        widget.fill_gps_table(df, widget.collar_table)
+                elif isinstance(obj, BoreholeSegments):
+                    for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
+                        widget.fill_gps_table(df, widget.segments_table)
+
+            pem_info_widget = PEMFileInfoWidget(parent=self)
             pem_info_widget.blockSignals(True)
 
             # Create the PEMInfoWidget for the PEM file
-            pem_widget = pem_info_widget.open_file(pem_file, parent=self)
+            pem_info_widget.open_file(pem_file)
             # Change the current tab of this widget to the same as the opened ones
-            pem_widget.tabs.setCurrentIndex(self.tab_num)
+            pem_info_widget.tabs.setCurrentIndex(self.tab_num)
             # Connect a signal to change the tab when another PIW tab is changed
-            pem_widget.tabs.currentChanged.connect(self.change_pem_info_tab)
+            pem_info_widget.tabs.currentChanged.connect(self.change_pem_info_tab)
 
             # Connect a signal to refresh the main table row when changes are made in the pem_info_widget tables.
-            pem_info_widget.refresh_tables_signal.connect(lambda: self.refresh_rows(current_index=True))
+            pem_info_widget.refresh_row_signal.connect(lambda: self.refresh_rows(current_index=True))
             pem_info_widget.add_geometry_signal.connect(self.open_pem_geometry)
-            pem_info_widget.share_loop_signal.connect(self.share_loop)
-            pem_info_widget.share_line_signal.connect(self.share_line)
-            pem_info_widget.share_collar_signal.connect(self.share_collar)
-            pem_info_widget.share_segments_signal.connect(self.share_segments)
+
+            pem_info_widget.share_loop_signal.connect(share_gps_object)
+            pem_info_widget.share_line_signal.connect(share_gps_object)
+            pem_info_widget.share_collar_signal.connect(share_gps_object)
+            pem_info_widget.share_segments_signal.connect(share_gps_object)
 
             pem_info_widget.blockSignals(False)
             return pem_info_widget
@@ -1319,7 +1344,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             else:
                 self.pb.setText(f"Opening {pem_file.filepath.name}")
                 # Create the PEMInfoWidget
-                pem_widget = add_info_widget(pem_file)
+                pem_widget = add_piw_widget(pem_file)
 
                 # Fill the shared header text boxes and move the project directory
                 if not self.pem_files:
@@ -1362,65 +1387,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Adds GPS information from the gps_files to the PEMFile object
         :param gps_files: list or str, filepaths of text file or GPX files
         """
-        def merge_files(files):
-            """
-            Merge contents of files into one list
-            :param files: list of str, filepaths of text file or GPX files
-            :return: str
-            """
-            merged_file = []
-            gpx_editor = GPXEditor()
-            for file in files:
-                if file.endswith('gpx'):
-                    # Convert the GPX file to string
-                    gps, zone, hemisphere = gpx_editor.get_utm(file, as_string=True)
-                    merged_file.append(gps)
-                else:
-                    with open(file, mode='rt') as in_file:
-                        contents = in_file.readlines()
-                        contents = [c.strip().split() for c in contents]
-                        merged_file.extend(contents)
-            return merged_file
-
-        file = merge_files(gps_files)
         pem_info_widget = self.stackedWidget.currentWidget()
-        current_tab = pem_info_widget.tabs.currentWidget()
         crs = self.get_crs()
-
-        if current_tab == pem_info_widget.station_gps_tab:
-            line_adder = LineAdder(parent=self)
-            try:
-                line = SurveyLine(file, crs=crs)
-                line_adder.write_widget = pem_info_widget
-                line_adder.open(line)
-            except Exception as e:
-                self.error.showMessage(f"Error adding line: {str(e)}")
-
-        elif current_tab == pem_info_widget.geometry_tab:
-            try:
-                collar = BoreholeCollar(file, crs=crs)
-                errors = collar.get_errors()
-                if not errors.empty:
-                    self.message.warning(self, 'Parsing Error',
-                                         f"The following rows could not be parsed:\n\n{errors.to_string()}")
-                # segments = BoreholeSegments(file)
-                if not collar.df.empty:
-                    pem_info_widget.fill_gps_table(collar.df, pem_info_widget.collar_table)
-                # if not segments.df.empty:
-                #     pem_info_widget.fill_gps_table(segments.df, pem_info_widget.segments_table)
-            except Exception as e:
-                self.error.showMessage(f"Error adding borehole collar: {str(e)}")
-
-        elif current_tab == pem_info_widget.loop_gps_tab:
-            loop_adder = LoopAdder(parent=self)
-            try:
-                loop = TransmitterLoop(file, crs=crs)
-                loop_adder.write_widget = pem_info_widget
-                loop_adder.open(loop)
-            except Exception as e:
-                self.error.showMessage(f"Error adding loop: {str(e)}")
-        else:
-            pass
+        pem_info_widget.open_gps_files(gps_files, crs=crs)
 
     def open_ri_file(self, ri_files):
         """
@@ -2511,7 +2480,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         if pem_file in self.pem_files:
             ind = self.pem_files.index(pem_file)
-            self.pem_info_widgets[ind].open_file(pem_file, parent=self)
+            self.pem_info_widgets[ind].open_file(pem_file)
             self.refresh_rows([ind])
 
     def refresh_rows(self, rows=None, current_index=False):
@@ -2982,58 +2951,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.remove_file(rows=rows)
 
         self.open_pem_files(files_to_open)
-
-    def share_loop(self):
-        """
-        Share the loop GPS of one file with all other opened PEM files.
-        :return: None
-        """
-        widget = self.pem_info_widgets[self.table.currentRow()]
-        widget_loop = widget.get_loop().df.dropna()
-        if not widget_loop.empty:
-            for widget in self.pem_info_widgets:
-                widget.fill_gps_table(widget_loop, widget.loop_table)
-        else:
-            print(f"Nothing to share.")
-
-    def share_collar(self):
-        """
-        Share the collar GPS of one file with all other opened PEM files. Will only do so for borehole files.
-        :return: None
-        """
-        widget = self.pem_info_widgets[self.table.currentRow()]
-        widget_collar = widget.get_collar().df.dropna()
-        if not widget_collar.empty:
-            for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
-                widget.fill_gps_table(widget_collar, widget.collar_table)
-        else:
-            print(f"Nothing to share.")
-
-    def share_segments(self):
-        """
-        Share the segments of one file with all other opened PEM files. Will only do so for borehole files.
-        :return: None
-        """
-        widget = self.pem_info_widgets[self.table.currentRow()]
-        wigdet_segments = widget.get_segments().df.dropna()
-        if not wigdet_segments.empty:
-            for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
-                widget.fill_gps_table(wigdet_segments, widget.segments_table)
-        else:
-            print(f"Nothing to share.")
-
-    def share_line(self):
-        """
-        Share the station GPS of one file with all other opened PEM files. Will only do so for surface files.
-        :return: None
-        """
-        widget = self.pem_info_widgets[self.table.currentRow()]
-        widget_line = widget.get_line().df.dropna()
-        if not widget_line.empty:
-            for widget in list(filter(lambda x: not x.pem_file.is_borehole(), self.pem_info_widgets)):
-                widget.fill_gps_table(widget_line, widget.line_table)
-        else:
-            print(f"Nothing to share.")
 
     def auto_name_lines(self):
         """
@@ -3660,8 +3577,8 @@ def main():
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    # pem_files = pg.get_pems(client='Iscaycruz', selection=0)
-    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    pem_files = pg.get_pems(client='Kazzinc', number=4)
+    # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     #
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
