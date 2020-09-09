@@ -54,6 +54,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     share_collar_signal = QtCore.pyqtSignal()
     share_segments_signal = QtCore.pyqtSignal()
 
+    line_changed_signal = QtCore.pyqtSignal(object)
+    loop_changed_signal = QtCore.pyqtSignal(object)
+    collar_changed_signal = QtCore.pyqtSignal(object)
+    segments_changed_signal = QtCore.pyqtSignal(object)
+
     def __init__(self):
         super().__init__()
         self.parent = None

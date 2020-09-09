@@ -19,7 +19,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
                              QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
-                             QVBoxLayout)
+                             QVBoxLayout, QCalendarWidget)
 # from pyqtspinner.spinner import WaitingSpinner
 import geomag
 
@@ -97,6 +97,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.dialog = QFileDialog()
         self.message = QMessageBox()
         self.error = QErrorMessage()
+        self.calender = QCalendarWidget()
+        self.calender.setWindowTitle('Select Date')
         self.text_browsers = []
 
         # Progress bar window
@@ -319,6 +321,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             self.table.blockSignals(True)
             pem_file = self.pem_files[row]
+            value = self.table.item(row, col).text()
 
             # Rename a file when the 'File' column is changed
             if col == self.table_columns.index('File'):
@@ -343,10 +346,65 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                         self.status_bar.showMessage(f"{old_path.name} renamed to {str(new_value)}", 2000)
 
+            elif col == self.table_columns.index('Date'):
+                pem_file.date = value
+
+            elif col == self.table_columns.index('Client'):
+                pem_file.client = value
+
+            elif col == self.table_columns.index('Grid'):
+                pem_file.grid = value
+
+            elif col == self.table_columns.index('Line/Hole'):
+                pem_file.line_name = value
+
+            elif col == self.table_columns.index('Loop'):
+                pem_file.loop_name = value
+
+            elif col == self.table_columns.index('Current'):
+                try:
+                    float(value)
+                except ValueError:
+                    self.message.critical(self, 'Invalid Value', f"Current must be a number")
+                    self.fill_row(pem_file, row)
+                else:
+                    pem_file.current = value
+
+            elif col == self.table_columns.index('Coil\nArea'):
+                try:
+                    float(value)
+                except ValueError:
+                    self.message.critical(self, 'Invalid Value', f"Coil area Must be a number")
+                    self.fill_row(pem_file, row)
+                else:
+                    pem_file.coil_area = value
+
             self.color_row(row)
 
             if self.allow_signals:
                 self.table.blockSignals(False)
+
+        def table_value_doubled(row, col):
+            """
+            When a cell is double clicked. Used for the date column only, to open a calender widget.
+            :param row: int
+            :param col: int
+            """
+            if col == self.table_columns.index('Date'):
+                self.calender.show()
+
+                # Create global variables to be used by set_date
+                global current_row, current_col
+                current_row, current_col = row, col
+
+        def set_date(date):
+            """
+            Change the date in the selected PEM file to that of the calender widget
+            :param date: QDate object from the calender widget
+            """
+            item = QTableWidgetItem(date.toString('MMMM dd, yyyy'))
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.table.setItem(current_row, current_col, item)
 
         def set_shared_header(header):
             """
@@ -501,6 +559,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Widgets
         self.unpacker.open_dmp_sig.connect(self.move_dir_tree_to)
+        self.calender.clicked.connect(set_date)
 
         # Table
         self.table.viewport().installEventFilter(self)
@@ -510,6 +569,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.itemSelectionChanged.connect(lambda: self.stackedWidget.setCurrentIndex(self.table.currentRow()))
         self.table.itemSelectionChanged.connect(update_selection_text)
         self.table.cellChanged.connect(table_value_changed)
+        self.table.cellDoubleClicked.connect(table_value_doubled)
 
         # Project Tree
         self.project_tree.clicked.connect(self.project_dir_changed)
@@ -716,7 +776,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if self.table.selectionModel().selectedIndexes():
                 selected_pems, rows = self.get_selected_pem_files()
 
+                # Create a menu
                 menu = QMenu(self.table)
+
                 remove_file_action = QAction("&Remove", self)
                 remove_file_action.triggered.connect(self.remove_file)
                 remove_file_action.setIcon(QIcon(os.path.join(icons_path, 'remove.png')))
@@ -800,6 +862,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 rename_files_action = QAction("&Rename Files", self)
                 rename_files_action.triggered.connect(lambda: self.open_batch_renamer(type='File'))
 
+                # Add all the actions to the menu
                 menu.addAction(open_file_action)
                 menu.addAction(save_file_action)
                 if len(self.table.selectionModel().selectedRows()) == 1:
@@ -1624,7 +1687,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             Convert the GPS of all GPS objects to the new EPSG code.
             :param epsg_code: int
             """
-            self.update_pem_files()
+            self.update_pems()
             print(f"Converting to EPSG:{epsg_code}")
 
             for pem_file in self.pem_files:
@@ -1776,46 +1839,46 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Update the GPS and PEM trees
         self.project_dir_changed(model)
 
-    def save_pem_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
-        """
-        Action of saving a PEM file to a .PEM file.
-        :param pem_file: PEMFile object to be saved.
-        :param dir: str, save file path. If None, uses the parent of the first PEM file as the default.
-        :param tag: str: Tag to append to the file name ('[A]', '[S]', '[M]'...)
-        :param backup: Bool: If true, will save file to a '[Backup]' folder.
-        :param remove_old: Bool: If true, will delete the old file.
-        :return: None
-        """
-        if dir is None:
-            file_dir = pem_file.filepath.parent
-        else:
-            file_dir = dir
-        file_name = pem_file.filepath.stem
-        extension = pem_file.filepath.suffix
-
-        # Create a backup folder if it doesn't exist, and use it as the new file dir.
-        if backup is True:
-            pem_file.old_filepath = Path(os.path.join(file_dir, file_name + extension))
-            if not os.path.exists(os.path.join(file_dir, '[Backup]')):
-                print('Creating back up folder')
-                os.mkdir(os.path.join(file_dir, '[Backup]'))
-            file_dir = os.path.join(file_dir, '[Backup]')
-            extension += '.bak'
-
-        if tag and tag not in file_name:
-            file_name += tag
-
-        pem_file.filepath = Path(os.path.join(file_dir, file_name + extension))
-        pem_file.save()
-        # pem_text = pem_file.to_string()
-        # print(pem_text, file=open(str(pem_file.filepath), 'w+'))
-
-        # Remove the old filepath if the filename was changed.
-        if pem_file.old_filepath and remove_old is True:
-            print(f'Removing old file {pem_file.old_filepath.name}')
-            if pem_file.old_filepath.is_file():
-                pem_file.old_filepath.unlink()
-                pem_file.old_filepath = None
+    # def save_pem_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
+    #     """
+    #     Action of saving a PEM file to a .PEM file.
+    #     :param pem_file: PEMFile object to be saved.
+    #     :param dir: str, save file path. If None, uses the parent of the first PEM file as the default.
+    #     :param tag: str: Tag to append to the file name ('[A]', '[S]', '[M]'...)
+    #     :param backup: Bool: If true, will save file to a '[Backup]' folder.
+    #     :param remove_old: Bool: If true, will delete the old file.
+    #     :return: None
+    #     """
+    #     if dir is None:
+    #         file_dir = pem_file.filepath.parent
+    #     else:
+    #         file_dir = dir
+    #     file_name = pem_file.filepath.stem
+    #     extension = pem_file.filepath.suffix
+    #
+    #     # Create a backup folder if it doesn't exist, and use it as the new file dir.
+    #     if backup is True:
+    #         pem_file.old_filepath = Path(os.path.join(file_dir, file_name + extension))
+    #         if not os.path.exists(os.path.join(file_dir, '[Backup]')):
+    #             print('Creating back up folder')
+    #             os.mkdir(os.path.join(file_dir, '[Backup]'))
+    #         file_dir = os.path.join(file_dir, '[Backup]')
+    #         extension += '.bak'
+    #
+    #     if tag and tag not in file_name:
+    #         file_name += tag
+    #
+    #     pem_file.filepath = Path(os.path.join(file_dir, file_name + extension))
+    #     pem_file.save()
+    #     # pem_text = pem_file.to_string()
+    #     # print(pem_text, file=open(str(pem_file.filepath), 'w+'))
+    #
+    #     # Remove the old filepath if the filename was changed.
+    #     if pem_file.old_filepath and remove_old is True:
+    #         print(f'Removing old file {pem_file.old_filepath.name}')
+    #         if pem_file.old_filepath.is_file():
+    #             pem_file.old_filepath.unlink()
+    #             pem_file.old_filepath = None
 
     def save_pem_files(self, selected=False):
         """
@@ -1823,23 +1886,37 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param selected: Bool: if True, saves all opened PEM files instead of only the selected ones.
         :return: None
         """
+        def add_crs_tag():
+            """
+            Add the CRS from the table as a note to the PEM file.
+            """
+            # Remove any existing CRS tag
+            for note in reversed(pem_file.notes):
+                if '<GEN> CRS' in note or '<CRS>' in note:
+                    del pem_file.notes[pem_file.notes.index(note)]
+
+            pem_file.notes.append(f"<GEN>/<CRS> {crs.name}")
+
         pem_files = self.get_updated_pem_files(selected=selected)
+        crs = self.get_crs()
+
         self.start_pb(0, len(pem_files), title='Saving PEM Files...')
 
         count = 0
         for pem_file in pem_files:
             self.pb.setText(f"Saving {pem_file.filepath.name}")
+
+            # Add the CRS note if CRS isn't None
+            if crs:
+                add_crs_tag()
+
+            # Save the PEM file and refresh it in the table
             pem_file.save()
-            # self.save_pem_file(pem_file)
             self.refresh_pem(pem_file)
-            # Block the signals because it only updates the row corresponding to the current stackedWidget.
-            # self.pem_info_widgets[row].blockSignals(True)
-            # self.pem_info_widgets[row].open_file(pem_file, parent=self)  # Updates the PEMInfoWidget tables
-            # self.pem_info_widgets[row].blockSignals(False)
+
             count += 1
             self.pb.setValue(count)
 
-        # self.refresh_rows(rows='all')
         self.end_pb()
         self.status_bar.showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
 
@@ -2351,15 +2428,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for i, info in enumerate(row_info):
             item = QTableWidgetItem(str(info))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
-            # Disable editing of columns past First Station
-            if i > self.table_columns.index('Coil\nArea'):
+            # Disable editing of columns past First Station and for the date
+            if i > self.table_columns.index('Coil\nArea') or i == self.table_columns.index('Date'):
                 item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
             self.table.setItem(row, i, item)
 
         self.color_row(row)
-        # color_table_row_text(row)
-        # self.check_for_table_changes(pem_file, row)
-        # self.check_for_table_anomalies()
+
         if self.allow_signals:
             self.table.blockSignals(False)
 
@@ -2525,7 +2600,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         return pem_file
 
-    def update_pem_files(self):
+    def update_pems(self):
         """
         Update self.pem_files with the updated information.
         """
