@@ -24,25 +24,19 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
     """
     Class to bulk rename PEM File line/hole names or file names.
     """
-    acceptChangesSignal = QtCore.pyqtSignal()
+    acceptChangesSignal = QtCore.pyqtSignal(object)
 
     def __init__(self, parent=None):
-        """
-        :param pem_files: list, PEMFile objects
-        :param type: str, the type of name to change, either 'File' or 'Line'
-        :param parent: Qt Widget object
-        """
         super().__init__()
         self.parent = parent
         self.setupUi(self)
         self.pem_files = []
-        self.type = None
+        self.kind = None
 
         self.table_columns = ['Old Name', 'New Name']
         self.table.setColumnCount(len(self.table_columns))
         self.table.setHorizontalHeaderLabels(self.table_columns)
-        self.table.setSizeAdjustPolicy(
-            QAbstractScrollArea.AdjustToContents)
+        self.table.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
@@ -51,19 +45,19 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         self.addEdit.textEdited.connect(self.update_table)
         self.removeEdit.textEdited.connect(self.update_table)
         self.buttonBox.rejected.connect(self.close)
-        self.buttonBox.accepted.connect(self.acceptChangesSignal.emit)
+        self.buttonBox.accepted.connect(self.accept_changes)
 
-    def open(self, pem_files, type=None):
+    def open(self, pem_files, kind=None):
         """
         Open the pem_files
         :param pem_files: list, PEMFile objects
-        :param type: str, either 'Line' to change the line names or 'File' to change file names
+        :param kind: str, either 'Line' to change the line names or 'File' to change file names
         :return: None
         """
         self.pem_files = pem_files
-        self.type = type
+        self.kind = kind
 
-        if self.type == 'Line':
+        if self.kind == 'Line':
             self.setWindowTitle('Rename lines/holes names')
         else:
             self.setWindowTitle('Rename files names')
@@ -81,10 +75,10 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         row_pos = self.table.rowCount()
         self.table.insertRow(row_pos)
 
-        if self.type == 'Line':
+        if self.kind == 'Line':
             item = QTableWidgetItem(pem_file.line_name)
             item2 = QTableWidgetItem(pem_file.line_name)
-        elif self.type == 'File':
+        elif self.kind == 'File':
             item = QTableWidgetItem(pem_file.filepath.name)
             item2 = QTableWidgetItem(pem_file.filepath.name)
         else:
@@ -102,7 +96,7 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
         elif e.key() == QtCore.Qt.Key_Return:
-            self.acceptChangesSignal.emit()
+            self.accept_changes()
 
     def update_table(self):
         """
@@ -111,7 +105,7 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         for row in range(self.table.rowCount()):
             # Split the text based on '[n]'. Anything before it becomes the prefix,
             # and everything after is added as a suffix
-            if self.type == 'Line':
+            if self.kind == 'Line':
                 # Immediately replace what's in the removeEdit object with nothing
                 input = self.table.item(row, 0).text().replace(self.removeEdit.text(), '')
                 suffix = self.addEdit.text().rsplit('[n]')[-1]
@@ -128,42 +122,28 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, 1, item)
 
-    # def close(self):
-    #     while self.table.rowCount() > 0:
-    #         self.table.removeRow(0)
-    #     self.addEdit.setText('[n]')
-    #     self.removeEdit.setText('')
-    #     self.hide()
-
     def accept_changes(self):
         """
         Makes the proposed changes and updates the table
         """
 
         def refresh_table():
-            while self.table.rowCount() > 0:
-                self.table.removeRow(0)
+            """
+            Reset the table as if it were opened anew by copying the new_name cells and setting them
+            as the old_name.
+            """
+            for row in range(self.table.rowCount()):
+                new_item = self.table.item(row, 1).clone()
+                self.table.setItem(row, 0, new_item)
 
-            for pem_file in self.pem_files:
-                self.add_to_table(pem_file)
-
-            header = self.table.horizontalHeader()
-            header.setSectionResizeMode(0, QHeaderView.Stretch)
-            header.setSectionResizeMode(1, QHeaderView.Stretch)
             self.addEdit.setText('[n]')
             self.removeEdit.setText('')
 
-        if self.pem_files:
-            for i, pem_file in enumerate(self.pem_files):
-                new_name = self.table.item(i, 1).text()
-                if self.type == 'Line':
-                    pem_file.line_name = new_name
-                else:
-                    old_path = Path(copy.deepcopy(os.path.abspath(pem_file.filepath)))
-                    new_path = os.path.join(os.path.dirname(pem_file.filepath), new_name)
-                    if pem_file.old_filepath is None:
-                        pem_file.old_filepath = old_path
-                    pem_file.filepath = Path(new_path)
+        new_names = []
+        for i, pem_file in enumerate(self.pem_files):
+            new_name = self.table.item(i, 1).text()
+            new_names.append(new_name)
 
-            refresh_table()
+        self.acceptChangesSignal.emit(new_names)
+        refresh_table()
 

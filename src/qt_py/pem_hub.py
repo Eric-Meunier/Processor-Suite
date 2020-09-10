@@ -256,9 +256,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionPrint_Plots_to_PDF.setIcon(QIcon(os.path.join(icons_path, 'pdf.png')))
 
         # PEM menu
-        self.actionRename_Lines_Holes.triggered.connect(lambda: self.open_batch_renamer(type='Line'))
+        self.actionRename_Lines_Holes.triggered.connect(lambda: self.open_name_editor('Line', selected=False))
 
-        self.actionRename_Files.triggered.connect(lambda: self.open_batch_renamer(type='File'))
+        self.actionRename_Files.triggered.connect(lambda: self.open_name_editor('File', selected=False))
 
         self.actionAverage_All_PEM_Files.setIcon(QIcon(os.path.join(icons_path, 'average.png')))
         self.actionAverage_All_PEM_Files.triggered.connect(lambda: self.average_pem_data(selected=False))
@@ -869,10 +869,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # share_station_gps_action.triggered.connect(self.share_line)
 
                 rename_lines_action = QAction("&Rename Lines/Holes", self)
-                rename_lines_action.triggered.connect(lambda: self.open_batch_renamer(type='Line'))
+                rename_lines_action.triggered.connect(lambda: self.open_name_editor('Line', selected=True))
 
                 rename_files_action = QAction("&Rename Files", self)
-                rename_files_action.triggered.connect(lambda: self.open_batch_renamer(type='File'))
+                rename_files_action.triggered.connect(lambda: self.open_name_editor('File', selected=True))
 
                 # Add all the actions to the menu
                 menu.addAction(open_file_action)
@@ -908,8 +908,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 #     menu.addAction(share_station_gps_action)
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     menu.addSeparator()
-                    menu.addAction(rename_lines_action)
                     menu.addAction(rename_files_action)
+                    menu.addAction(rename_lines_action)
                 menu.addSeparator()
                 menu.addAction(print_plots_action)
                 menu.addSeparator()
@@ -1590,28 +1590,33 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
     #     else:
     #         self.status_bar.showMessage('Invalid survey type', 2000)
 
-    def open_batch_renamer(self, type):
+    def open_name_editor(self, kind, selected=False):
         """
         Opens the BatchNameEditor for renaming multiple file names and/or line/hole names.
-        :param type: str, either 'Line' to change the line names or 'File' to change file names
+        :param kind: str, either 'Line' to change the line names or 'File' to change file names
         :return: None
         """
 
-        def rename_pem_files():
+        def rename_pem_files(new_names):
             """
             Retrieve and open the PEM files from the batch_name_editor object
-            :return: None
+            :param new_names: list of str, new names
             """
-            if len(batch_name_editor.pem_files) > 0:
-                batch_name_editor.accept_changes()
-                for i, row in enumerate(rows):
-                    self.pem_files[row] = batch_name_editor.pem_files[i]
-                    self.refresh_pem(self.pem_files[row])
+            if kind == 'File':
+                col = self.table_columns.index('File')
+            else:
+                col = self.table_columns.index('Line/Hole')
 
-        pem_files, rows = self.get_pem_files(selected=True)
+            for i, row in enumerate(rows):
+                item = QTableWidgetItem(new_names[i])
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.table.setItem(row, col, item)
 
+        pem_files, rows = self.get_pem_files(selected=selected)
+
+        global batch_name_editor
         batch_name_editor = BatchNameEditor(parent=self)
-        batch_name_editor.open(pem_files, type=type)
+        batch_name_editor.open(pem_files, kind=kind)
         batch_name_editor.acceptChangesSignal.connect(rename_pem_files)
 
     def open_ri_importer(self):
