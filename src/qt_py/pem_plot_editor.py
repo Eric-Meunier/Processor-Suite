@@ -58,38 +58,46 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Status bar formatting
         self.station_text = QLabel()
-        self.station_text.setIndent(5)
         self.decay_selection_text = QLabel()
-        self.decay_selection_text.setIndent(5)
+        self.decay_selection_text.setIndent(20)
         self.decay_selection_text.setStyleSheet('color: blue')
         self.decay_selection_text.hide()
         self.profile_selection_text = QLabel()
-        self.profile_selection_text.setIndent(5)
+        self.profile_selection_text.setIndent(20)
         self.profile_selection_text.setStyleSheet('color: purple')
         self.profile_selection_text.hide()
-        self.timebase_label = QLabel()
-        self.timebase_label.setIndent(5)
-        self.survey_type_label = QLabel()
-        self.survey_type_label.setIndent(5)
-        self.operator_label = QLabel()
-        self.operator_label.setIndent(5)
+        self.file_info_label = QLabel()
+        self.file_info_label.setIndent(20)
+        self.file_info_label.setStyleSheet('color: gray')
+        # self.timebase_label = QLabel()
+        # self.timebase_label.setIndent(20)
+        # # self.timebase_label.setStyleSheet('color: gray')
+        # self.survey_type_label = QLabel()
+        # self.survey_type_label.setIndent(20)
+        # # self.survey_type_label.setStyleSheet('color: gray')
+        # self.operator_label = QLabel()
+        # self.operator_label.setIndent(20)
+        # # self.operator_label.setStyleSheet('color: gray')
         self.number_of_readings = QLabel()
-        self.number_of_readings.setIndent(5)
+        self.number_of_readings.setIndent(20)
+        # self.number_of_readings.setStyleSheet('color: gray')
         self.number_of_repeats = QPushButton('')
         self.number_of_repeats.setFlat(True)
-        self.number_of_repeats.setFixedHeight(21)
+        # self.number_of_repeats.setFixedHeight(21)
         # self.number_of_repeats.hide()
 
-        self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray;}")
-        self.status_bar.setStyleSheet("border-top: 1px solid gray;")
+        # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray;}")
+        # self.status_bar.setStyleSheet("border-top: 1px solid gray;")
 
         self.status_bar.addWidget(self.station_text, 0)
+        # self.status_bar.addWidget(QLabel(), 0)  # Spacer
         self.status_bar.addWidget(self.decay_selection_text, 0)
         self.status_bar.addWidget(QLabel(), 1)  # Spacer
         self.status_bar.addWidget(self.profile_selection_text, 0)
-        self.status_bar.addPermanentWidget(self.survey_type_label, 0)
-        self.status_bar.addPermanentWidget(self.timebase_label, 0)
-        self.status_bar.addPermanentWidget(self.operator_label, 0)
+        self.status_bar.addPermanentWidget(self.file_info_label, 0)
+        # self.status_bar.addPermanentWidget(self.survey_type_label, 0)
+        # self.status_bar.addPermanentWidget(self.timebase_label, 0)
+        # self.status_bar.addPermanentWidget(self.operator_label, 0)
         self.status_bar.addPermanentWidget(self.number_of_readings, 0)
         self.status_bar.addPermanentWidget(self.number_of_repeats, 0)
 
@@ -254,7 +262,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Flip the decay when the F key is pressed
         elif event.key() == QtCore.Qt.Key_F:
             if self.selected_lines:
-                self.flip_decays()
+                self.flip_decays(source='decay')
 
         # Change the component of the readings to X
         elif event.key() == QtCore.Qt.Key_X:
@@ -310,9 +318,15 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         self.fallback_file = copy.deepcopy(pem_file)
         self.pem_file = pem_file
-        self.timebase_label.setText(f"Timebase: {self.pem_file.timebase:.2f}ms")
-        self.survey_type_label.setText(f"{self.pem_file.get_survey_type()} Survey")
-        self.operator_label.setText(f"Operator: {self.pem_file.operator.title()}")
+
+        file_info = ' | '.join([f"Timebase: {self.pem_file.timebase:.2f}ms",
+                                f"{self.pem_file.get_survey_type()} Survey",
+                                f"Operator: {self.pem_file.operator.title()}"
+                                ])
+        self.file_info_label.setText(file_info)
+        # self.timebase_label.setText(f"Timebase: {self.pem_file.timebase:.2f}ms")
+        # self.survey_type_label.setText(f"{self.pem_file.get_survey_type()} Survey")
+        # self.operator_label.setText(f"Operator: {self.pem_file.operator.title()}")
 
         if self.pem_file.is_split():
             # self.plot_ontime_decays_cbox.setChecked(False)  # Triggers the signal
@@ -499,10 +513,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         repeats = self.pem_file.get_repeats()
         self.number_of_repeats.setText(f'{len(repeats)} repeat(s)')
-        # if num_repeats > 0:
-        #     self.number_of_repeats.setStyleSheet('background-color: red;')
-        # else:
-        #     self.number_of_repeats.setStyleSheet('background-color: black;')
+        if len(repeats) > 0:
+            self.number_of_repeats.setStyleSheet('color: red')
+        else:
+            self.number_of_repeats.setStyleSheet('color: black')
 
         components = self.pem_file.get_components()
         toggle_profile_plots()
@@ -744,16 +758,16 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             global station_text
             stn = data.Station.unique()
             if stn.any():
-                station_number_text = f"Station {stn[0]}"
+                station_number_text = f" Station: {stn[0]}"
                 reading_numbers = data.Reading_number.unique()
                 if len(reading_numbers) > 1:
-                    r_numbers_range = f"Reading numbers {reading_numbers.min()} - {reading_numbers.max()}"
+                    r_numbers_range = f"R-numbers: {reading_numbers.min()} - {reading_numbers.max()}"
                 else:
-                    r_numbers_range = f"Reading number {reading_numbers.min()}"
+                    r_numbers_range = f"R-number: {reading_numbers.min()}"
 
                 station_readings = f"{len(data.index)} {'Reading' if len(data.index) == 1 else 'Readings'}"
 
-                station_text = '    '.join([station_number_text, station_readings, r_numbers_range])
+                station_text = ' | '.join([station_number_text, station_readings, r_numbers_range])
             else:
                 station_text = ''
             self.station_text.setText(station_text)
@@ -889,23 +903,23 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 # Show the range of reading numbers and reading indexes if multiple decays are selected
                 if len(selected_data) > 1:
                     num_deleted = len(selected_data[selected_data.del_flag == True])
-                    num_selected = f"{len(selected_data)} selected ({num_deleted} deleted)"
+                    num_selected = f"{len(selected_data)} readings selected ({num_deleted} deleted)"
                     r_numbers = selected_data.Reading_number.unique()
                     r_indexes = selected_data.Reading_index.unique()
                     ztses = selected_data.ZTS.unique()
 
                     if len(r_numbers) > 1:
-                        r_number_text = f"Reading numbers: {r_numbers.min()} - {r_numbers.max()}"
+                        r_number_text = f"R-numbers: {r_numbers.min()}-{r_numbers.max()}"
                     else:
-                        r_number_text = f"Reading number: {r_numbers.min()}"
+                        r_number_text = f"R-number: {r_numbers.min()}"
 
                     if len(r_indexes) > 1:
-                        r_index_text = f"Reading indexes: {r_indexes.min()} - {r_indexes.max()}"
+                        r_index_text = f"R-indexes: {r_indexes.min()}-{r_indexes.max()}"
                     else:
-                        r_index_text = f"Reading index: {r_indexes.min()}"
+                        r_index_text = f"R-index: {r_indexes.min()}"
 
                     if len(ztses) > 1:
-                        ztses_text = f"ZTS: {ztses.min():g} - {ztses.max():g}"
+                        ztses_text = f"ZTS: {ztses.min():g}-{ztses.max():g}"
                     else:
                         ztses_text = f"ZTS: {ztses.min():g}"
 
@@ -916,10 +930,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 else:
                     selected_decay = selected_data.iloc[0]
 
-                    r_number_text = f"Reading Number {selected_decay.Reading_number}"
-                    r_index_text = f"Reading Index {selected_decay.Reading_index}"
+                    r_number_text = f"R-number: {selected_decay.Reading_number}"
+                    r_index_text = f"R-index: {selected_decay.Reading_index}"
                     zts = f"ZTS: {selected_decay.ZTS:g}"
-                    stack_number = f"{selected_decay.Number_of_stacks} stacks"
+                    stack_number = f"Stacks: {selected_decay.Number_of_stacks}"
 
                     decay_selection_text.append(r_number_text)
                     decay_selection_text.append(r_index_text)
@@ -934,15 +948,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
                     # Add the RAD tool information if the PEM file is a borehole with all tool values present
                     if self.pem_file.is_borehole() and selected_decay.RAD_tool.has_tool_values():
-                        azimuth = f"Azimuth {selected_decay.RAD_tool.get_azimuth():.2f}"
-                        dip = f"Dip {selected_decay.RAD_tool.get_dip():.2f}"
-                        roll = f"Roll angle {selected_decay.RAD_tool.get_acc_roll():.2f}"
+                        azimuth = f"Azimuth: {selected_decay.RAD_tool.get_azimuth():.2f}"
+                        dip = f"Dip: {selected_decay.RAD_tool.get_dip():.2f}"
+                        roll = f"Roll: {selected_decay.RAD_tool.get_acc_roll():.2f}"
 
-                        decay_selection_text.append(azimuth)
-                        decay_selection_text.append(dip)
-                        decay_selection_text.append(roll)
+                        decay_selection_text.append(f"<{'  '.join([azimuth, dip, roll])}>")
 
-                self.decay_selection_text.setText('     '.join(decay_selection_text))
+                self.decay_selection_text.setText(' | '.join(decay_selection_text))
                 self.decay_selection_text.show()
 
             # Reset the selection text if nothing is selected
