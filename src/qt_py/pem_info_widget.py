@@ -520,7 +520,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             try:
                 line = SurveyLine(file, crs=crs)
                 if line.df.empty:
-                    self.message.information(self, 'No GPS Found', f"No survey line GPS was found.")
+                    self.message.information(self, 'No GPS Found', f"{line.error_msg}")
                 else:
                     line_adder.open(line)
             except Exception as e:
@@ -537,7 +537,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 if not collar.df.empty:
                     self.fill_gps_table(collar.df, self.collar_table)
                 else:
-                    self.message.information(self, 'No GPS Found', f"No collar GPS was found.")
+                    self.message.information(self, 'No GPS Found', f"{collar.error_msg}")
             except Exception as e:
                 self.error.showMessage(f"Error adding borehole collar: {str(e)}")
 
@@ -547,7 +547,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             try:
                 loop = TransmitterLoop(file, crs=crs)
                 if loop.df.empty:
-                    self.message.information(self, 'No GPS Found', f"No loop GPS was found.")
+                    self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
                 loop_adder.open(loop)
             except Exception as e:
                 self.error.showMessage(f"Error adding loop: {str(e)}")

@@ -451,7 +451,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
     def open(self, o):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
-        :param o: Union, filepath; GPS object; DataFrame; Loop to open
+        :param o: Union [filepath; GPS object; DataFrame], Loop to open
         """
         errors = pd.DataFrame()
         if isinstance(o, str):
@@ -463,10 +463,11 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         elif isinstance(o, SurveyLine):
             self.line = o
 
-        if not self.line:
-            return
+        # if not self.line:
+        #     return
 
         if self.line.df.empty:
+            self.message.critical(self, 'No GPS', f"{self.line.error_msg}")
             return
 
         self.clear_table()
@@ -806,10 +807,11 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         else:
             raise ValueError(f"{o} is not a valid input.")
 
-        if not self.loop:
-            return
+        # if not self.loop:
+        #     return
 
         if self.loop.df.empty:
+            self.message.critical(self, 'No GPS', f"{self.loop.error_msg}")
             return
 
         self.clear_table()

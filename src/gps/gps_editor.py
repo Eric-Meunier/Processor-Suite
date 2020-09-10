@@ -17,9 +17,11 @@ from shapely.geometry import asMultiPoint
 class BaseGPS:
 
     def __init__(self):
+        self.pem_file = None
         self.df = gpd.GeoDataFrame()
         self.crs = None
-        self.errors = gpd.GeoDataFrame()
+        self.errors = pd.DataFrame()
+        self.error_msg = ''
 
     def to_string(self, header=False):
         return self.df.to_string(index=False, header=header)
@@ -191,7 +193,7 @@ class TransmitterLoop(BaseGPS):
         """
         super().__init__()
         self.crs = crs
-        self.df, self.errors = self.parse_loop_gps(loop)
+        self.df, self.errors, self.error_msg = self.parse_loop_gps(loop)
 
         # if cull_loop:
         #     self.cull_loop()
@@ -222,6 +224,8 @@ class TransmitterLoop(BaseGPS):
             'Unit',
         ])
 
+        error_msg = ''
+
         if isinstance(file, list):
             # split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(file)
@@ -232,7 +236,7 @@ class TransmitterLoop(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
-            return empty_gps, pd.DataFrame()
+            return empty_gps, pd.DataFrame(), 'Empty file passed.'
         else:
             raise TypeError('Invalid input for loop GPS parsing')
 
@@ -250,8 +254,9 @@ class TransmitterLoop(BaseGPS):
         gps = gps.drop(cols_to_drop, axis=1)
 
         if len(gps.columns) < 3:
-            print("No enough columns found for GPS file.")
-            return empty_gps, gps
+            error_msg = f"{len(gps.columns)} columns of values were found instead of 3."
+            print("Fewer than 3 columns were found.")
+            return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
             gps = gps.drop(gps.columns[3:], axis=1)
 
@@ -278,7 +283,7 @@ class TransmitterLoop(BaseGPS):
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
 
-        return gps, error_gps
+        return gps, error_gps, error_msg
 
     def cull_loop(self):
         """
@@ -347,7 +352,7 @@ class SurveyLine(BaseGPS):
         """
         super().__init__()
         self.crs = crs
-        self.df, self.errors = self.parse_station_gps(line)
+        self.df, self.errors, self.error_msg = self.parse_station_gps(line)
 
     @staticmethod
     def parse_station_gps(file):
@@ -389,6 +394,8 @@ class SurveyLine(BaseGPS):
             'Station'
         ])
 
+        error_msg = ''
+
         if isinstance(file, list):
             # split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(file)
@@ -399,7 +406,7 @@ class SurveyLine(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
-            return empty_gps, pd.DataFrame()
+            return empty_gps, pd.DataFrame(), 'Empty file passed.'
         else:
             raise TypeError('Invalid input for station GPS parsing')
 
@@ -417,8 +424,9 @@ class SurveyLine(BaseGPS):
         gps = gps.drop(cols_to_drop, axis=1)
 
         if len(gps.columns) < 4:
-            print("No enough columns found for GPS file.")
-            return empty_gps, gps
+            error_msg = f"{len(gps.columns)} columns of values were found instead of 4."
+            print(f"{len(gps.columns)} columns of values were found instead of 4.")
+            return empty_gps, gps, error_msg
         elif len(gps.columns) > 4:
             gps = gps.drop(gps.columns[4:], axis=1)
         gps.columns = range(gps.shape[1])  # Reset the columns
@@ -446,7 +454,7 @@ class SurveyLine(BaseGPS):
         gps['Unit'] = gps['Unit'].astype(str)
         gps['Station'] = gps['Station'].map(convert_station)
 
-        return gps, error_gps
+        return gps, error_gps, error_msg
 
     def get_sorted_line(self):
         """
@@ -501,7 +509,7 @@ class BoreholeCollar(BaseGPS):
         """
         super().__init__()
         self.crs = crs
-        self.df, self.errors = self.parse_collar(hole)
+        self.df, self.errors, self.error_msg = self.parse_collar(hole)
 
     @staticmethod
     def parse_collar(file):
@@ -527,6 +535,7 @@ class BoreholeCollar(BaseGPS):
             'Elevation',
             'Unit',
         ])
+        error_msg = ''
 
         if isinstance(file, list):
             if file:
@@ -540,7 +549,7 @@ class BoreholeCollar(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
-            return empty_gps, pd.DataFrame()
+            return empty_gps, pd.DataFrame(), 'Empty file passed.'
         else:
             raise TypeError('Invalid input for collar GPS parsing')
 
@@ -560,8 +569,9 @@ class BoreholeCollar(BaseGPS):
         gps = gps.drop(cols_to_drop, axis=1)
 
         if len(gps.columns) < 3:
-            print("No enough columns found for GPS file.")
-            return empty_gps, gps
+            error_msg = f"{len(gps.columns)} columns of values were found instead of 3."
+            print(f"{len(gps.columns)} columns of values were found instead of 3.")
+            return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
             gps = gps.drop(gps.columns[3:], axis=1)  # Remove extra columns
 
@@ -592,7 +602,7 @@ class BoreholeCollar(BaseGPS):
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
 
-        return gps, error_gps
+        return gps, error_gps, error_msg
 
     def get_collar(self):
         return self.df
@@ -608,7 +618,7 @@ class BoreholeSegments(BaseGPS):
         :param segments: Union (str filepath, dataframe, list), GPS data
         """
         super().__init__()
-        self.df, self.errors = self.parse_segments(segments)
+        self.df, self.errors, self.error_msg = self.parse_segments(segments)
 
     @staticmethod
     def parse_segments(file):
@@ -636,6 +646,7 @@ class BoreholeSegments(BaseGPS):
             'Unit',
             'Depth'
         ])
+        error_msg = ''
 
         if isinstance(file, list):
             # split_file = [r.strip().split() for r in file]
@@ -647,7 +658,7 @@ class BoreholeSegments(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
-            return empty_gps, pd.DataFrame()
+            return empty_gps, pd.DataFrame(), 'Empty file passed.'
         else:
             raise TypeError('Invalid input for segments parsing')
 
@@ -662,8 +673,9 @@ class BoreholeSegments(BaseGPS):
         gps = gps.drop(cols_to_drop, axis=1)
 
         if len(gps.columns) < 5:
-            print("No enough columns found for SEG file.")
-            return empty_gps, gps
+            error_msg = f"{len(gps.columns)} columns of values were found instead of 5."
+            print(f"{len(gps.columns)} columns of values were found instead of 5.")
+            return empty_gps, gps, error_msg
         elif len(gps.columns) > 5:
             gps = gps.drop(gps.columns[5:], axis=1)
 
@@ -695,7 +707,7 @@ class BoreholeSegments(BaseGPS):
                               'Depth']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
 
-        return gps, error_gps
+        return gps, error_gps, error_msg
 
     def get_segments(self):
         return self.df

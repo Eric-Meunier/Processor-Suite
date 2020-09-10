@@ -223,7 +223,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # self.piw_frame.hide()
         self.table.horizontalHeader().hide()
 
-        self.splitter.setStretchFactor(0, 2)  # Gives the table more stretch than the directory frame
+        # self.splitter.setStretchFactor(0, 2)  # Gives the table more stretch than the directory frame
 
     def init_menus(self):
         """
@@ -609,10 +609,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
         self.actionAuto_Merge_All_Files.triggered.connect(lambda: self.merge_pem_files(auto_select=True))
 
-        self.actionReverseX_Component.triggered.connect(lambda: self.reverse_all_data(comp='Z'))
-        self.actionReverseY_Component.triggered.connect(lambda: self.reverse_all_data(comp='X'))
-        self.actionReverseZ_Component.triggered.connect(lambda: self.reverse_all_data(comp='Y'))
-        self.actionAuto_Name_Repeat_Stations.triggered.connect(self.rename_all_repeat_stations)
+        self.actionReverseX_Component.triggered.connect(lambda: self.reverse_component_data(comp='X'))
+        self.actionReverseY_Component.triggered.connect(lambda: self.reverse_component_data(comp='Y'))
+        self.actionReverseZ_Component.triggered.connect(lambda: self.reverse_component_data(comp='Z'))
+        # self.actionAuto_Name_Repeat_Stations.triggered.connect(self.rename_all_repeat_stations)
 
         self.actionConvert_GPS.triggered.connect(self.open_gps_conversion)
 
@@ -1057,12 +1057,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             for widget in self.pem_info_widgets:
                 widget.tabs.setCurrentIndex(self.tab_num)
 
-    def block_signals(self, block_status):
-        print(f'Blocking all signals {block_status}')
-        for thing in [self.table, self.client_edit, self.grid_edit, self.loop_edit, self.min_range_edit,
-                      self.max_range_edit]:
-            thing.blockSignals(block_status)
-
     def start_pb(self, start=0, end=100, title=''):
         """
         Add the progress bar to the status bar and make it visible.
@@ -1087,17 +1081,18 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.pb.setText('')
         self.pb_win.hide()
 
-    def reset_crs(self):
-        self.gps_system_cbox.setCurrentText('')
-        self.gps_zone_cbox.setCurrentText('')
-        self.gps_datum_cbox.setCurrentText('')
-
     def remove_file(self, rows=None):
         """
         Removes PEM files from the main table, along with any associated widgets.
         :param rows: list: Table rows of the PEM files.
         :return: None
         """
+
+        def reset_crs():
+            self.gps_system_cbox.setCurrentText('')
+            self.gps_zone_cbox.setCurrentText('')
+            self.gps_datum_cbox.setCurrentText('')
+
         if not rows:
             pem_files, rows = self.get_pem_files(selected=True)
 
@@ -1112,15 +1107,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             del self.pem_info_widgets[row]
 
         if len(self.pem_files) == 0:
-            # if not self.isMaximized():
-            #     self.resize(self.width() - 425, self.height())
-            # self.piw_frame.hide()
             self.table.horizontalHeader().hide()
             self.client_edit.setText('')
             self.grid_edit.setText('')
             self.loop_edit.setText('')
-            self.reset_crs()
-            # self.project_dir = self.file_sys_model.rootPath()
+            reset_crs()
         self.setUpdatesEnabled(True)
 
     def open_dmp_files(self, dmp_files):
@@ -1217,7 +1208,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             pem_info_widget.tabs.currentChanged.connect(self.change_pem_info_tab)
 
             # Connect a signal to refresh the main table row when changes are made in the pem_info_widget tables.
-            pem_info_widget.refresh_row_signal.connect(lambda: self.refresh_rows(current_index=True))
+            pem_info_widget.refresh_row_signal.connect(lambda: self.refresh_pem(pem_info_widget.pem_file))
             pem_info_widget.add_geometry_signal.connect(self.open_pem_geometry)
 
             pem_info_widget.share_loop_signal.connect(share_gps_object)
@@ -1468,6 +1459,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.pem_editor_widgets.remove(editor)
 
         pem_files, rows = self.get_pem_files(selected=True)
+        # Open individual editors for each PEMFile
         for pem_file in pem_files:
             editor = PEMPlotEditor(parent=self)
             self.pem_editor_widgets.append(editor)
@@ -1603,11 +1595,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 batch_name_editor.accept_changes()
                 for i, row in enumerate(rows):
                     self.pem_files[row] = batch_name_editor.pem_files[i]
-                self.refresh_rows(rows=rows)
+                    self.refresh_pem(self.pem_files[row])
 
         pem_files, rows = self.get_pem_files(selected=True)
-        if not pem_files:
-            pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
 
         batch_name_editor = BatchNameEditor(parent=self)
         batch_name_editor.open(pem_files, type=type)
@@ -1888,8 +1878,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
     def save_as_kmz(self):
         """
-        Saves all GPS from the opened PEM files as a KMZ file. Utilizes 'simplekml' module. Only works with NAD 83
-        or WGS 84.
+        Saves all GPS from the opened PEM files as a KMZ file. Utilizes 'simplekml' module.
         :return: None
         """
         crs = self.get_crs()
@@ -1959,7 +1948,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     line_names.append(line_name)
             else:
                 if pem_file.has_collar_gps():
-                    pem_file.geometry.crs = crs
+                    pem_file.collar.crs = crs
+                    pem_file.geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
                     bh_projection = pem_file.geometry.get_projection(num_segments=100, latlon=True)
                     hole_name = pem_file.line_name
                     if not bh_projection.empty and bh_projection.to_string() not in trace_ids:
@@ -1996,11 +1986,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             ls.extrude = 1
             ls.style = trace_style
 
-        default_path = os.path.split(self.pem_files[-1].filepath)[0]
-        self.dialog.setDirectory(default_path)
+        default_path = str(self.pem_files[-1].filepath.parent)
         save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', default_path, 'KMZ Files (*.KMZ)')[0]
         if save_dir:
-            kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
+            kmz_save_dir = str(Path(save_dir).with_suffix('.kmz'))
             kml.savekmz(kmz_save_dir, format=False)
             os.startfile(kmz_save_dir)
         else:
@@ -2018,13 +2007,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if not pem_files:
             return
 
-        default_path = os.path.split(self.pem_files[-1].filepath)[0]
+        default_path = str(self.pem_files[-1].filepath.parent)
         file_dir = self.dialog.getExistingDirectory(self, '', default_path, QFileDialog.DontUseNativeDialog)
 
         if file_dir:
             for pem_file in pem_files:
                 if not pem_file.is_borehole():
-                    file_name = os.path.splitext(pem_file.filepath)[0] + '.xyz'
+                    file_name = str(pem_file.filepath.with_suffix('.xyz'))
                     xyz_file = pem_file.to_xyz()
                     with open(file_name, 'w+') as file:
                         file.write(xyz_file)
@@ -2051,7 +2040,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     return
 
         default_path = self.pem_files[-1].filepath.parent
-        # self.dialog.setDirectory(default_path)
         file_dir = self.dialog.getExistingDirectory(self, '', str(default_path))  #, QFileDialog.DontUseNativeDialog)
         if not file_dir:
             self.status_bar.showMessage('Cancelled.', 2000)
@@ -2077,7 +2065,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             pem_file.filepath = Path(file_dir).joinpath(file_name)
             pem_file.save()
 
-        self.refresh_rows(rows='all')
+        # self.refresh_rows(rows='all')
         self.status_bar.showMessage(f"Save complete. {len(pem_files)} PEM file(s) exported", 2000)
 
     def export_all_gps(self):
@@ -2299,70 +2287,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
 
-        # def color_table_row_text(row):
-        #     """
-        #     Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
-        #     :param row: Row of the main table to check and color
-        #     :return: None
-        #     """
-        #
-        #     def color_row(rowIndex, color, alpha=50):
-        #         """
-        #         Color an entire table row
-        #         :param rowIndex: Int: Row of the table to color
-        #         :param color: str: The desired color
-        #         :return: None
-        #         """
-        #         self.table.blockSignals(True)
-        #         color = QtGui.QColor(color)
-        #         color.setAlpha(alpha)
-        #         for j in range(self.table.columnCount()):
-        #             self.table.item(rowIndex, j).setBackground(color)
-        #         if self.allow_signals:
-        #             self.table.blockSignals(False)
-        #
-        #     self.table.blockSignals(True)
-        #     average_col = self.table_columns.index('Averaged')
-        #     split_col = self.table_columns.index('Split')
-        #     suffix_col = self.table_columns.index('Suffix\nWarnings')
-        #     repeat_col = self.table_columns.index('Repeat\nStations')
-        #     pem_has_gps = self.pem_files[row].has_all_gps()
-        #
-        #     for col in [average_col, split_col, suffix_col, repeat_col]:
-        #         item = self.table.item(row, col)
-        #         if item:
-        #             value = item.text()
-        #             if col == average_col:
-        #                 if value == 'False':
-        #                     item.setForeground(QtGui.QColor('red'))
-        #                 else:
-        #                     item.setForeground(QtGui.QColor('black'))
-        #             elif col == split_col:
-        #                 if value == 'False':
-        #                     item.setForeground(QtGui.QColor('red'))
-        #                 else:
-        #                     item.setForeground(QtGui.QColor('black'))
-        #             elif col == suffix_col:
-        #                 if int(value) > 0:
-        #                     item.setForeground(QtGui.QColor('red'))
-        #                 else:
-        #                     item.setForeground(QtGui.QColor('black'))
-        #             elif col == repeat_col:
-        #                 if int(value) > 0:
-        #                     item.setForeground(QtGui.QColor('red'))
-        #                 else:
-        #                     item.setForeground(QtGui.QColor('black'))
-        #
-        #     if not pem_has_gps:
-        #         color_row(row, 'blue')
-        #
-        #     if self.allow_signals:
-        #         self.table.blockSignals(False)
-
         print(f"Filling {pem_file.filepath.name}'s information to the table")
         self.table.blockSignals(True)
 
-        info_widget = self.pem_info_widgets[row]
+        piw = self.pem_info_widgets[row]
 
         # Get the information for each column
         row_info = [
@@ -2378,8 +2306,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             pem_file.get_stations(converted=True).max(),
             pem_file.is_averaged(),
             pem_file.is_split(),
-            str(info_widget.suffix_warnings),
-            str(info_widget.num_repeat_stations)
+            str(piw.suffix_warnings),
+            str(piw.num_repeat_stations)
         ]
 
         # Set the information into each cell. Columns from First Station and on can't be edited.
@@ -2470,7 +2398,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if pem_file in self.pem_files:
             ind = self.pem_files.index(pem_file)
             self.pem_info_widgets[ind].open_file(pem_file)
-            self.refresh_rows([ind])
+            self.fill_row(pem_file, ind)
+        else:
+            raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table")
 
     def refresh_rows(self, rows=None, current_index=False):
         """
@@ -2560,9 +2490,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
     def get_pem_files(self, selected=False):
         """
-        Return the corresponding pem_files and rows which are currently selected in the table
+        Return the PEMFiles in the project. If selected is True, will only return the files selected in the table,
+        otherwise returns all opened PEMFiles.
         :param selected: bool, return PEMFiles which are selected in the table
-        :return: pem_file objects and corresponding row indexes
+        :return: tuple, list of PEMFiles and list of their corresponding rows in the table.
         """
         if selected is False:
             pem_files, rows = self.pem_files, np.arange(self.table.rowCount())
@@ -2743,18 +2674,26 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             for pem_file, row in zip(pem_files, rows):
                 print(f"Performing current change for {pem_file.filepath.name}")
                 pem_file = pem_file.scale_current(current)
-                self.refresh_rows(rows=row)
+                self.refresh_pem(pem_file)
+                # self.refresh_rows(rows=row)
 
-    def reverse_all_data(self, comp):
+    def reverse_component_data(self, comp):
         """
         Reverse the polarity of all data of a given component for all opened PEM files.
         :param comp: str, either Z, X, or Y
-        :return: None
         """
-        if len(self.pem_files) > 0:
-            for pem_file, pem_info_widget in zip(self.pem_files, self.pem_info_widgets):
-                pem_info_widget.reverse_polarity(component=comp)
-                pem_file = pem_info_widget.pem_file
+        for pem_file in self.pem_files:
+            filt = pem_file.data.Component == comp.upper()
+
+            if filt.any():
+                data = pem_file.data[filt]
+
+                data.loc[:, 'Reading'] = data.loc[:, 'Reading'] * -1
+
+                pem_file.data[filt] = data
+                self.refresh_pem(pem_file)
+            else:
+                print(f"{pem_file.filepath.name} has no {comp} data.")
 
     def merge_pem_files(self, selected=False, auto_select=False):
         """
@@ -2917,44 +2856,44 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         that (with the suffix) as the new name. Makes the change in the table and saves it in the PEM file in memory.
         :return: None
         """
-        if any(self.pem_files):
-            file_name_column = self.table_columns.index('File')
-            line_name_column = self.table_columns.index('Line/Hole')
-            new_name = ''
-            for row in range(self.table.rowCount()):
-                pem_file = self.pem_files[row]
-                # survey_type = pem_file.survey_type.lower()
-                file_name = self.table.item(row, file_name_column).text()
-                if pem_file.is_borehole():
-                    # hole_name = re.findall('(.*)(xy|XY|z|Z)', file_name)
-                    hole_name = os.path.splitext(file_name)
-                    if hole_name:
-                        new_name = re.split('\s', hole_name[0])[0]
-                else:
-                    line_name = re.findall('\d+[nsewNSEW]', file_name)
-                    if line_name:
-                        new_name = line_name[0].strip()
+        if not self.pem_files:
+            return
 
-                pem_file.line_name = new_name
-                name_item = QTableWidgetItem(new_name)
-                name_item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.table.setItem(row, line_name_column, name_item)
-            self.refresh_rows(rows='all')
+        file_name_column = self.table_columns.index('File')
+        line_name_column = self.table_columns.index('Line/Hole')
+        new_name = ''
+        for row in range(self.table.rowCount()):
+            pem_file = self.pem_files[row]
+            file_name = self.table.item(row, file_name_column).text()
+            if pem_file.is_borehole():
+                # hole_name = re.findall('(.*)(xy|XY|z|Z)', file_name)
+                hole_name = os.path.splitext(file_name)
+                if hole_name:
+                    new_name = re.split('\s', hole_name[0])[0]
+            else:
+                line_name = re.findall('\d+[nsewNSEW]', file_name)
+                if line_name:
+                    new_name = line_name[0].strip()
 
-    def rename_all_repeat_stations(self):
-        """
-        Rename all repeat stations (i.e. stations ending in 1, or 6... to a 0 or 5).
-        :return: None
-        """
-        if any(self.pem_files):
-            num_repeat_stations = 0
-            for i, widget in enumerate(self.pem_info_widgets):
-                num_repeat_stations += widget.num_repeat_stations
-                widget.rename_repeat_stations()
-            self.refresh_rows(rows='all')
-            # self.refresh_table()
-            self.status_bar.showMessage(f'{num_repeat_stations} repeat station(s) automatically renamed.',
-                                                  2000)
+            name_item = QTableWidgetItem(new_name)
+            name_item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.table.setItem(row, line_name_column, name_item)
+
+    # def rename_all_repeat_stations(self):
+    #     """
+    #     Rename all repeat stations (i.e. stations ending in 1, or 6... to a 0 or 5).
+    #     :return: None
+    #     """
+    #     if not self.pem_files:
+    #         return
+    #
+    #     num_repeat_stations = 0
+    #     for i, widget in enumerate(self.pem_info_widgets):
+    #         num_repeat_stations += widget.num_repeat_stations
+    #         widget.rename_repeat_stations()
+    #     # self.refresh_rows(rows='all')
+    #     # self.refresh_table()
+    #     self.status_bar.showMessage(f'{num_repeat_stations} repeat station(s) automatically renamed.', 2000)
 
 
 class FrequencyConverter(QWidget):

@@ -1440,7 +1440,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         if not selected_data.empty:
             # Reverse the reading
-            selected_data.loc[:, 'Reading'] = selected_data.loc[:, 'Reading'].map(lambda x: x * -1)
+            selected_data.loc[:, 'Reading'] = selected_data.loc[:, 'Reading'] * -1
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data

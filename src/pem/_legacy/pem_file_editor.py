@@ -222,6 +222,11 @@ class PEMFileEditor:
         return pem_file
 
     def auto_clean(self, pem_file):
+        """
+        Automatically remove readings above a threshold from the median
+        :param pem_file: PEMFile object
+        :return:
+        """
 
         def same_decay_lengths(decays):
             length = len(decays[0])

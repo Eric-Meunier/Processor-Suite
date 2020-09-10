@@ -87,6 +87,7 @@ class PEMFile:
         self.loop = None
         self.geometry = None
         self.line = None
+        self.crs = None
 
         self.old_filepath = None
         self.pp_table = None
@@ -694,8 +695,10 @@ class PEMFile:
                                                 weights=group['Number_of_stacks'].to_list())
             return new_data_df
 
+        # Don't use deleted data
+        filt = self.data.del_flag == False
         # Create a data frame with all data averaged
-        df = self.data.groupby(['Station', 'Component']).apply(weighted_average)
+        df = self.data[filt].groupby(['Station', 'Component']).apply(weighted_average)
         # Sort the data frame
         df = sort_data(df)
         self.data = df
@@ -2582,26 +2585,26 @@ class PEMSerializer:
     """
 
     def __init__(self):
-        pass
+        self.pem_file = None
 
-    def serialize_tags(self, pem_file):
+    def serialize_tags(self):
         result = ""
-        xyp = ' '.join([pem_file.probes.get('XY probe number'),
-                        pem_file.probes.get('SOA'),
-                        pem_file.probes.get('Tool number'),
-                        pem_file.probes.get('Tool ID')])
-        result += f"<FMT> {pem_file.format}\n"
-        result += f"<UNI> {'nanoTesla/sec' if pem_file.units == 'nT/s' else 'picoTesla'}\n"
-        result += f"<OPR> {pem_file.operator}\n"
+        xyp = ' '.join([self.pem_file.probes.get('XY probe number'),
+                        self.pem_file.probes.get('SOA'),
+                        self.pem_file.probes.get('Tool number'),
+                        self.pem_file.probes.get('Tool ID')])
+        result += f"<FMT> {self.pem_file.format}\n"
+        result += f"<UNI> {'nanoTesla/sec' if self.pem_file.units == 'nT/s' else 'picoTesla'}\n"
+        result += f"<OPR> {self.pem_file.operator}\n"
         result += f"<XYP> {xyp}\n"
-        result += f"<CUR> {pem_file.current}\n"
-        result += f"<TXS> {pem_file.loop_dimensions}"
+        result += f"<CUR> {self.pem_file.current}\n"
+        result += f"<TXS> {self.pem_file.loop_dimensions}"
 
         return result
 
-    def serialize_loop_coords(self, pem_file):
+    def serialize_loop_coords(self):
         result = '~ Transmitter Loop Co-ordinates:'
-        loop = pem_file.get_loop()
+        loop = self.pem_file.get_loop()
         if loop.empty:
             result += '\n<L00>\n''<L01>\n''<L02>\n''<L03>'
         else:
@@ -2612,11 +2615,11 @@ class PEMSerializer:
                 result += '\n' + row
         return result
 
-    def serialize_line_coords(self, pem_file):
+    def serialize_line_coords(self):
 
         def serialize_station_coords():
             result = '~ Hole/Profile Co-ordinates:'
-            line = pem_file.get_line()
+            line = self.pem_file.get_line()
             if line.empty:
                 result += '\n<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
             else:
@@ -2629,7 +2632,7 @@ class PEMSerializer:
 
         def serialize_collar_coords():
             result = '~ Hole/Profile Co-ordinates:'
-            collar = pem_file.get_collar()
+            collar = self.pem_file.get_collar()
             collar.reset_index(drop=True, inplace=True)
             if collar.empty:
                 result += '\n<P00>'
@@ -2642,7 +2645,7 @@ class PEMSerializer:
 
         def serialize_segments():
             result = ''
-            segs = pem_file.get_segments()
+            segs = self.pem_file.get_segments()
             segs.reset_index(drop=True, inplace=True)
             if segs.empty:
                 result += '\n<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
@@ -2653,23 +2656,23 @@ class PEMSerializer:
                     result += '\n' + row
             return result
 
-        if pem_file.is_borehole():
+        if self.pem_file.is_borehole():
             return serialize_collar_coords() + \
                    serialize_segments()
         else:
             return serialize_station_coords()
 
-    def serialize_notes(self, pem_file):
+    def serialize_notes(self):
         results = []
-        if not pem_file.notes:
+        if not self.pem_file.notes:
             return ''
         else:
-            for line in pem_file.notes:
+            for line in self.pem_file.notes:
                 if line not in results:
                     results.append(line)
         return '\n'.join(results) + '\n'
 
-    def serialize_header(self, pem_file):
+    def serialize_header(self):
 
         def get_channel_times(table):
             times = []
@@ -2681,35 +2684,35 @@ class PEMSerializer:
             times.append(table.iloc[-1].End)
             return times
 
-        result_list = [str(pem_file.client),
-                       str(pem_file.grid),
-                       str(pem_file.line_name),
-                       str(pem_file.loop_name),
-                       str(pem_file.date),
-                       ' '.join([str(pem_file.survey_type),
-                                 str(pem_file.convention),
-                                 str(pem_file.sync),
-                                 str(pem_file.timebase),
-                                 str(int(pem_file.ramp)),
-                                 str(pem_file.number_of_channels),
-                                 str(pem_file.number_of_readings)]),
-                       ' '.join([str(pem_file.rx_number),
-                                 str(pem_file.rx_software_version),
-                                 str(pem_file.rx_software_version_date),
-                                 str(pem_file.rx_file_name),
-                                 str(pem_file.normalized),
-                                 str(pem_file.primary_field_value),
-                                 str(pem_file.coil_area)])]
+        result_list = [str(self.pem_file.client),
+                       str(self.pem_file.grid),
+                       str(self.pem_file.line_name),
+                       str(self.pem_file.loop_name),
+                       str(self.pem_file.date),
+                       ' '.join([str(self.pem_file.survey_type),
+                                 str(self.pem_file.convention),
+                                 str(self.pem_file.sync),
+                                 str(self.pem_file.timebase),
+                                 str(int(self.pem_file.ramp)),
+                                 str(self.pem_file.number_of_channels),
+                                 str(self.pem_file.number_of_readings)]),
+                       ' '.join([str(self.pem_file.rx_number),
+                                 str(self.pem_file.rx_software_version),
+                                 str(self.pem_file.rx_software_version_date),
+                                 str(self.pem_file.rx_file_name),
+                                 str(self.pem_file.normalized),
+                                 str(self.pem_file.primary_field_value),
+                                 str(int(self.pem_file.coil_area))])]
 
-        if pem_file.loop_polarity is not None:
-            result_list[-1] += ' ' + pem_file.loop_polarity
+        if self.pem_file.loop_polarity is not None:
+            result_list[-1] += ' ' + self.pem_file.loop_polarity
 
         result = '\n'.join(result_list) + '\n\n'
 
         times_per_line = 7
         cnt = 0
 
-        times = get_channel_times(pem_file.channel_times)
+        times = get_channel_times(self.pem_file.channel_times)
         channel_times = [f'{time:9.6f}' for time in times]
 
         for i in range(0, len(channel_times), times_per_line):
@@ -2720,8 +2723,12 @@ class PEMSerializer:
         result += '$'
         return result
 
-    def serialize_data(self, pem_file):
-        df = pem_file.get_data(sorted=True)
+    def serialize_data(self):
+        df = self.pem_file.get_data(sorted=True)
+
+        # Remove deleted readings
+        filt = df.del_flag == False
+        df = df[filt]
 
         def serialize_reading(reading):
             result = ' '.join([reading['Station'],
@@ -2732,7 +2739,11 @@ class PEMSerializer:
                                f"{reading['Coil_delay']:g}",
                                f"{reading['Number_of_stacks']:g}",
                                f"{reading['Readings_per_set']:g}",
-                               f"{reading['Reading_number']:g}"]) + '\n'
+                               f"{reading['Reading_number']:g}",
+                               # f"{reading['del_flag']:g}",
+                               # f"{reading['Overload']:g}",
+                               # f"{reading['datetime']:g}",
+                               ]) + '\n'
             rad = reading['RAD_tool'].to_string()
             result += rad + '\n'
 
@@ -2758,14 +2769,17 @@ class PEMSerializer:
         :param pem_file: PEM_File object
         :return: A string in PEM file format containing the data found inside of pem_file
         """
-        result = self.serialize_tags(pem_file) + '\n'
-        result += self.serialize_loop_coords(pem_file) + '\n'
-        result += self.serialize_line_coords(pem_file) + '\n'
-        result += self.serialize_notes(pem_file)
-        result += '~\n'
-        result += self.serialize_header(pem_file) + '\n'
-        result += self.serialize_data(pem_file)
+        self.pem_file = pem_file
 
+        t = time.time()
+        result = self.serialize_tags() + '\n'
+        result += self.serialize_loop_coords() + '\n'
+        result += self.serialize_line_coords() + '\n'
+        result += self.serialize_notes()
+        result += '~\n'
+        result += self.serialize_header() + '\n'
+        result += self.serialize_data()
+        print(f"Time to seralize {pem_file.filepath.name}: {time.time() - t}")
         return result
 
 
