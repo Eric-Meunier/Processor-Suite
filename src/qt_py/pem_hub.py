@@ -133,7 +133,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.status_bar.addPermanentWidget(self.project_dir_label, 0)
 
         # Widgets
-        # self.gpx_editor = GPXEditor()
         self.station_splitter = StationSplitter(parent=self)
         self.grid_planner = GridPlanner(parent=self)
         self.loop_planner = LoopPlanner(parent=self)
@@ -142,8 +141,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.gpx_creator = GPXCreator(parent=self)
         self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
-        self.contour_viewer = ContourMapViewer(parent=self)
-        self.gps_conversion_widget = GPSConversionWidget()
+        self.contour_map = ContourMapViewer(parent=self)
+        self.gps_conversion_widget = GPSConversionWidget(parent=self)
         # self.folium_map = FoliumMap()
 
         # Project tree
@@ -165,6 +164,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.init_signals()
         self.init_crs()
 
+        # Table
         self.table_columns = [
             'File',
             'Date',
@@ -183,9 +183,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         ]
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
-
         for i, col in enumerate(self.table_columns[1:]):
             header.setSectionResizeMode(i + 1, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().hide()
 
         # Actions
         self.actionDel_File = QAction("&Remove File", self)
@@ -289,7 +289,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.action3D_Map.triggered.connect(self.open_3d_map)
 
         self.actionContour_Map.setIcon(QIcon(os.path.join(icons_path, 'contour_map3.png')))
-        self.actionContour_Map.triggered.connect(lambda: self.contour_viewer.open(self.pem_files))
+        self.actionContour_Map.triggered.connect(lambda: self.contour_map.open(self.pem_files))
 
         # Tools menu
         self.actionLoop_Planner.setIcon(QIcon(os.path.join(icons_path, 'loop_planner.png')))
@@ -1320,8 +1320,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     count += 1
                     self.pb.setValue(count)
                     continue
-                    # self.end_pb()
-                    # return
 
             # Check if the file is already opened in the table. Won't open if it is.
             if is_opened(pem_file):
@@ -1339,11 +1337,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     # self.piw_frame.show()
                 if self.total_opened == 0:
                     self.move_dir_tree_to(pem_file.filepath.parent)
-
-                # # Only move the dir tree if it hasn't been moved yet
-                # if self.project_tree.model() == self.file_sys_model:
-                #     print(f"Moving dir tree because model == file_sys_model")
-                #     self.move_dir_tree_to(pem_file.filepath.parent)
 
                 # Fill CRS from the file if project CRS currently empty
                 if self.gps_system_cbox.currentText() == '':
