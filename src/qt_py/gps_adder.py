@@ -331,9 +331,7 @@ class GPSAdder(QMainWindow):
             self.table.blockSignals(True)
             self.message.critical(self, 'Error', "Value cannot be converted to a number")
 
-            item = QTableWidgetItem(self.selected_row_info[col])
-            item.setTextAlignment(QtCore.Qt.AlignCenter)
-            self.table.setItem(row, col, item)
+            self.table.setItem(row, col, self.selected_row_info[col])
             self.table.blockSignals(False)
         else:
             self.plot_table()
@@ -406,14 +404,13 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
         self.errors_label = QLabel('')
         self.errors_label.setIndent(5)
-        self.spacer_label = QLabel('')
 
-        # Format the borders of the items in the status bar
-        self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
-        self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
+        # # Format the borders of the items in the status bar
+        # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
+        # self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
 
         self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
-        self.status_bar.addPermanentWidget(self.spacer_label, 1)
+        self.status_bar.addPermanentWidget(QLabel(), 1)
         self.status_bar.addPermanentWidget(self.errors_label, 0)
 
         self.table.setFixedWidth(400)
@@ -593,7 +590,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                 return
 
         # Save the information of the row for backup purposes
-        self.selected_row_info = [self.table.item(row, j).text() for j in range(len(self.df.columns))]
+        self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
         # Remove previously plotted selection
         if self.plan_highlight:
@@ -761,14 +758,12 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.auto_sort_cbox = QCheckBox("Automatically Sort Loop", self)
         self.auto_sort_cbox.setChecked(True)
 
-        self.spacer_label = QLabel('')
-
-        # Format the borders of the items in the status bar
-        self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
-        self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
+        # # Format the borders of the items in the status bar
+        # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
+        # self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
 
         self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
-        self.status_bar.addPermanentWidget(self.spacer_label, 1)
+        self.status_bar.addPermanentWidget(QLabel(), 1)
 
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -933,7 +928,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
                 return
 
         # Save the information of the row for backup purposes
-        self.selected_row_info = [self.table.item(row, j).text() for j in range(len(self.df.columns))]
+        self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
         # Remove previously plotted selection
         if self.plan_highlight:

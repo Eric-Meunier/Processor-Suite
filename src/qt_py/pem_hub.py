@@ -316,10 +316,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
 
-        def open_project_dir():
-            if self.project_dir.is_dir():
-                os.startfile(str(Path(self.project_dir)))
-
         def table_value_changed(row, col):
             """
             Signal Slot: Action taken when a value in the main table was changed.
@@ -394,7 +390,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if self.allow_signals:
                 self.table.blockSignals(False)
 
-        def table_value_doubled(row, col):
+        def table_value_double_clicked(row, col):
             """
             When a cell is double clicked. Used for the date column only, to open a calender widget.
             :param row: int
@@ -499,6 +495,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.add_gps_btn.setEnabled(False)
                 self.remove_gps_btn.setEnabled(False)
 
+        def open_project_dir():
+            """
+            Open the project directory folder
+            """
+            if self.project_dir.is_dir():
+                os.startfile(str(Path(self.project_dir)))
+
         def open_project_dir_file(item):
             """
             Signal slot, open the file that was double clicked in the PEM or GPS lists.
@@ -582,7 +585,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.itemSelectionChanged.connect(lambda: self.stackedWidget.setCurrentIndex(self.table.currentRow()))
         self.table.itemSelectionChanged.connect(update_selection_text)
         self.table.cellChanged.connect(table_value_changed)
-        self.table.cellDoubleClicked.connect(table_value_doubled)
+        self.table.cellDoubleClicked.connect(table_value_double_clicked)
 
         # Project Tree
         self.project_tree.clicked.connect(self.project_dir_changed)
@@ -856,18 +859,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 get_geometry_action.triggered.connect(self.open_pem_geometry)
                 get_geometry_action.setIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
 
-                # share_loop_action = QAction("&Share Loop", self)
-                # share_loop_action.triggered.connect(self.share_loop)
-                #
-                # share_collar_action = QAction("&Share Collar", self)
-                # share_collar_action.triggered.connect(self.share_collar)
-                #
-                # share_segments_action = QAction("&Share Geometry", self)
-                # share_segments_action.triggered.connect(self.share_segments)
-                #
-                # share_station_gps_action = QAction("&Share Station GPS", self)
-                # share_station_gps_action.triggered.connect(self.share_line)
-
                 rename_lines_action = QAction("&Rename Lines/Holes", self)
                 rename_lines_action.triggered.connect(lambda: self.open_name_editor('Line', selected=True))
 
@@ -900,12 +891,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         menu.addAction(derotate_action)
                     menu.addAction(get_geometry_action)
                     menu.addSeparator()
-                # menu.addAction(share_loop_action)
-                # if all([f.is_borehole() for f in selected_pems]):
-                #     menu.addAction(share_collar_action)
-                #     menu.addAction(share_segments_action)
-                # else:
-                #     menu.addAction(share_station_gps_action)
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     menu.addSeparator()
                     menu.addAction(rename_files_action)
@@ -1509,7 +1494,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         def accept_geometry(seg):
             for file in pem_files:
-                file.geometry.segments = seg
+                file.segments = seg
                 self.refresh_pem(file)
             self.status_bar.showMessage(f"Geometry updated for {', '.join([file.filepath.name for file in pem_files])}."
                                         , 2000)
@@ -1594,7 +1579,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         Opens the BatchNameEditor for renaming multiple file names and/or line/hole names.
         :param kind: str, either 'Line' to change the line names or 'File' to change file names
-        :return: None
+        :param selected: bool, whether to only open selected PEMFiles or all of them.
         """
 
         def rename_pem_files(new_names):
@@ -3398,8 +3383,8 @@ def main():
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    # pem_files = pg.get_pems(client='Kazzinc', number=4)
-    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=10)
+    pem_files = pg.get_pems(client='Garibaldi', number=4)
+    # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=10)
     #
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'

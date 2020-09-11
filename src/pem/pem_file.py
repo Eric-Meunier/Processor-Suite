@@ -565,7 +565,7 @@ class PEMFile:
                   'bh_xy_rad' in file_survey_type,
                   'otool' in file_survey_type,
                   'bh_z' in file_survey_type,
-                  'bh_fast rad' in file_survey_type,
+                  'bh_fast_rad' in file_survey_type,
                   'bh_z_probe' in file_survey_type,
                   'radtool' in file_survey_type]):
             survey_type = 'Borehole Induction'
@@ -2972,7 +2972,10 @@ class RADTool:
         g = math.sqrt(sum([self.gx ** 2, self.gy ** 2, self.gz ** 2]))
         numer = ((self.Hz * self.gy) - (self.Hy * self.gz)) * g
         denumer = self.Hx * (self.gy ** 2 + self.gz ** 2) - (self.Hy * self.gx * self.gy) - (self.Hz * self.gx * self.gz)
+        # TODO check that the azimuth is correct
         azimuth = math.degrees(math.atan2(numer, denumer))
+        if azimuth < 0:
+            azimuth = 360 + azimuth
         return azimuth
 
     def get_dip(self):
