@@ -41,7 +41,6 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
 
-        self.addEdit.setText('[n]')
         self.addEdit.textEdited.connect(self.update_table)
         self.removeEdit.textEdited.connect(self.update_table)
         self.buttonBox.rejected.connect(self.close)
@@ -54,6 +53,12 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         :param kind: str, either 'Line' to change the line names or 'File' to change file names
         :return: None
         """
+        # Reset
+        self.addEdit.setText('[n]')
+        self.removeEdit.setText('')
+        while self.table.rowCount() > 0:
+            self.table.removeRow(0)
+
         self.pem_files = pem_files
         self.kind = kind
 
@@ -124,20 +129,8 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
 
     def accept_changes(self):
         """
-        Makes the proposed changes and updates the table
+        Create a list of the new names and emit them as a signal
         """
-
-        def refresh_table():
-            """
-            Reset the table as if it were opened anew by copying the new_name cells and setting them
-            as the old_name.
-            """
-            for row in range(self.table.rowCount()):
-                new_item = self.table.item(row, 1).clone()
-                self.table.setItem(row, 0, new_item)
-
-            self.addEdit.setText('[n]')
-            self.removeEdit.setText('')
 
         new_names = []
         for i, pem_file in enumerate(self.pem_files):
@@ -145,5 +138,4 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
             new_names.append(new_name)
 
         self.acceptChangesSignal.emit(new_names)
-        refresh_table()
 

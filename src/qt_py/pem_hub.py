@@ -1596,6 +1596,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 item = QTableWidgetItem(new_names[i])
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.table.setItem(row, col, item)
+            batch_name_editor.open(pem_files, kind=kind)
 
         pem_files, rows = self.get_pem_files(selected=selected)
 
