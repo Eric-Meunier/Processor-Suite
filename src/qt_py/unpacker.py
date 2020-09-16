@@ -266,7 +266,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.dir_tree.expand(self.model.index(str(Path(self.path).parent)))
         self.change_dir_label()
         self.status_bar.showMessage(f"Opened {path}", 2000)
-        print(f"Opened {self.path}")
+        print(f"Unpacker - Opened {self.path}")
         dmp_extensions = ['dmp', 'dmp2', 'dmp3', 'dmp4']
         damp_extensions = ['log', 'rtf', 'txt']
         dump_extensions = ['pem', 'tdms', 'tdms_index', 'dat', 'xyz', 'csv']
@@ -436,7 +436,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         #         self.open_damp_sig.emit(db_files)
 
         # Change the project directory of PEMPro
-        self.open_dmp_sig.emit(Path(self.path).parents[1])
+        self.open_dmp_sig.emit(Path(new_folder).parents[1])
 
         self.reset(tables_only=True)
 

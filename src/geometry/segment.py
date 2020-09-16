@@ -47,6 +47,7 @@ class Segmenter:
         depths = seg.pop('Depth')
         seg.insert(4, 'Depth', depths)
         seg.reset_index(inplace=True, drop=True)
+        seg = seg.round(2)
 
         return BoreholeSegments(seg)
 

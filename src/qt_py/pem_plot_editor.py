@@ -560,9 +560,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             for ax in self.decay_axes:
                 ax.autoRange()
 
-        for ax in self.profile_axes[1:]:
+        stations = self.pem_file.get_stations(converted=True)
+        for ax in self.profile_axes:
             ax.autoRange()
-        self.active_profile_axes[0].autoRange()
+            ax.setXRange(stations.min(), stations.max())
+
+        # self.active_profile_axes[0].autoRange()
 
     def zoom_to_offtime(self):
         """

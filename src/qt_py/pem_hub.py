@@ -2024,6 +2024,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         pem_files, rows = self.get_pem_files(selected=selected)
 
+        # Make sure there's a valid CRS when doing a final export
         if export_final is True:
             crs = self.get_crs()
             if not crs:
@@ -2153,14 +2154,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
     def color_row(self, row):
 
-        def color_text():
+        def color_row():
             """
             Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
             :param row: Row of the main table to check and color
             :return: None
             """
 
-            def color_row(rowIndex, color, alpha=50):
+            def color_background(rowIndex, color, alpha=50):
                 """
                 Color an entire table row
                 :param rowIndex: Int: Row of the table to color
@@ -2204,7 +2205,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                             item.setForeground(QtGui.QColor('black'))
 
             if not pem_has_gps:
-                color_row(row, 'blue')
+                color_background(row, 'blue')
 
         def color_anomalies():
             """
@@ -2267,7 +2268,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.blockSignals(True)
 
         pem_file = self.pem_files[row]
-        color_text()
+        color_row()
         color_anomalies()
         color_changes()
 
@@ -3377,14 +3378,14 @@ def main():
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    pem_files = pg.get_pems(client='Garibaldi', number=4)
+    # pem_files = pg.get_pems(client='Garibaldi', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=10)
     #
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
     # pem_files = [r'C:\_Data\2020\Generation PGM\__M-20-539\RAW\XY-Collar.PEM']
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
 
     # mw.pem_info_widgets[0].convert_crs()
     # mw.open_3d_map()
