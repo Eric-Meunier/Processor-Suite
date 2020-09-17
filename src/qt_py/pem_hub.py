@@ -557,7 +557,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if len(pem_files) == 1:
                 file = pem_files[0]
                 # name = f"File: {file.filepath.name}"
-                client = f" Client: {file.client}"
+                client = f"Client: {file.client}"
                 line_name = f"Line/Hole: {file.line_name}"
                 loop_name = f"Loop: {file.loop_name}"
                 timebase = f"Timebase: {file.timebase}ms"

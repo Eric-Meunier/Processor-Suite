@@ -80,7 +80,6 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         self.bad_stations_label.hide()
         self.list.hide()
-
         self.statusBar().hide()
 
         # Configure the plots
@@ -434,7 +433,9 @@ class Derotator(QMainWindow, Ui_Derotator):
         method = self.get_method()
         self.soa = self.soa_sbox.value()
         # Create a copy of the pem_file so it is never changed
-        pem_file = copy.deepcopy(self.pem_file)
+        pem_file = self.pem_file.copy()
+        # pem_file.data = copy.deepcopy(pem_file.data)
+        print(id(pem_file.data.iloc[0].RAD_tool), id(self.pem_file.data.iloc[0].RAD_tool))
 
         if method is not None:
             self.rotated_file = pem_file.rotate(method=method, soa=self.soa)

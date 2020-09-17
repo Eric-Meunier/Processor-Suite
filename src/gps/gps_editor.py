@@ -541,17 +541,26 @@ class BoreholeCollar(BaseGPS):
             if file:
                 gps = pd.DataFrame(file)
             else:
-                return empty_gps, pd.DataFrame()
+                return empty_gps, pd.DataFrame(), 'Empty file passed.'
+
         elif isinstance(file, pd.DataFrame):
             gps = file
+
         elif Path(str(file)).is_file():
             file = open(file, 'rt').readlines()
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
+
         elif file is None:
             return empty_gps, pd.DataFrame(), 'Empty file passed.'
+
         else:
+
             raise TypeError('Invalid input for collar GPS parsing')
+
+        # If more than 1 collar GPS is found, only keep the first row and all other rows are errors
+        if len(gps) > 1:
+            gps = gps.drop(gps.iloc[1:].index)
 
         gps = gps.astype(str)
         # Remove P tags and units columns
@@ -595,10 +604,7 @@ class BoreholeCollar(BaseGPS):
 
         # Remove the NaNs from the good data frame
         gps = gps.dropna(axis=0).drop_duplicates()
-        # If more than 1 collar GPS is found, only keep the first row and all other rows are errors
-        if len(gps) > 1:
-            error_gps = error_gps.append(gps.iloc[1:])
-            gps = gps.drop(gps.iloc[1:].index)
+
         gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
         gps['Unit'] = gps['Unit'].astype(str)
 

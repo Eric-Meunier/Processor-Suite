@@ -85,6 +85,8 @@ class PEMFile:
         self.filepath = None
 
         self.loop = None
+        self.collar = None
+        self.segments = None
         self.geometry = None
         self.line = None
         self.crs = None
@@ -155,8 +157,8 @@ class PEMFile:
         crs = self.get_crs()
         self.loop = TransmitterLoop(loop_coords, crs=crs)
         if self.is_borehole():
-            self.collar = BoreholeCollar(line_coords, crs=crs)
-            self.segments = BoreholeSegments(line_coords)
+            self.collar = BoreholeCollar([line_coords[0]], crs=crs)
+            self.segments = BoreholeSegments(line_coords[1:])
             self.geometry = BoreholeGeometry(self.collar, self.segments)
         else:
             self.line = SurveyLine(line_coords, crs=crs)
@@ -660,6 +662,17 @@ class PEMFile:
         print(f"PEMFile - Time to convert {self.filepath.name} to XYZ: {time.time() - t}")
         return str_df
 
+    def copy(self):
+        """
+        Create a copy of the PEMFile object
+        :return: PEMFile object
+        """
+        copy_pem = copy.deepcopy(self)
+        # Create a copy of the RAD Tool objects, otherwise a deepcopy of a PEMFile object still references the same
+        # RADTool objects.
+        copy_pem.data.RAD_tool = copy_pem.data.RAD_tool.map(lambda x: copy.deepcopy(x))
+        return copy_pem
+
     def save(self):
         """
         Save the PEM file to the .PEM file with the same filepath it currently has.
@@ -979,7 +992,7 @@ class PEMFile:
                                                   'CPPy',
                                                   'CPPz'])
             proj = self.geometry.get_projection(stations=self.get_stations(converted=True))
-            loop = self.get_loop(sorted=True, closed=False)
+            loop = self.get_loop(sorted=False, closed=False)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6
             mag_calc = MagneticFieldCalculator(loop)
@@ -1064,12 +1077,18 @@ class PEMFile:
                                                                ramp=ramp)
 
                         # Rotate the theoretical values into the same frame of reference used with boreholes
-                        Tx, Ty, Tz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
+                        rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
+
+                        rTx_new, rTy_new, rTz_new = R.from_euler(
+                            'ZY', [90 - seg_azimuth, 90 - seg_dip], degrees=True).apply([Tx, Ty, Tz]
+                                                                                        )
 
                         # Rotate the theoretical values into the hole coordinate system
                         r = R.from_euler('YZ', [90 - seg_dip, seg_azimuth], degrees=True)
-                        rT = r.apply([Tx, Ty, Tz])  # The rotated theoretical values
+                        rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
                         ppxy_theory = math.sqrt(sum([rT[0] ** 2, rT[1] ** 2]))
+
+                        # ppxy_theory_new = math.sqrt(sum([rTx_new ** 2, rTy_new ** 2]))
 
                         # print(f"Calculated PP at {group.Station.unique()[0]}: {rT[0]:.2f}, {rT[1]:.2f}, {rT[2]:.2f}")
 
@@ -1081,7 +1100,8 @@ class PEMFile:
 
                             # Calculate the required rotation angle
                             cleaned_pp_roll_angle = math.degrees(
-                                math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx))
+                                math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx)
+                            )
                             if cleaned_pp_roll_angle < 0:
                                 cleaned_pp_roll_angle = cleaned_pp_roll_angle + 360
                             # print(f"Cleaned PP roll angle at {group.Station.unique()[0]}: {clean_pp_roll_angle:.2f}")
@@ -1090,7 +1110,8 @@ class PEMFile:
                             ppxy_cleaned = None
 
                         measured_pp_roll_angle = math.degrees(
-                            math.atan2(rT[1], rT[0]) - math.atan2(measured_ppy, measured_ppx))
+                            math.atan2(rT[1], rT[0]) - math.atan2(measured_ppy, measured_ppx)
+                        )
                         if measured_pp_roll_angle < 0:
                             measured_pp_roll_angle = measured_pp_roll_angle + 360
                         # print(f"Raw PP roll angle at {group.Station.unique()[0]}: {measured_pp_roll_angle:.2f}")
@@ -2118,12 +2139,12 @@ class DMPParser:
             times = text.reshape((int(len(text) / 3), 3))
 
             # Used to add the gap channel, but not sure if needed.
-            # if self.pp_file is False:
-            #     # Find the index of the gap 0 channel
-            #     global ind_of_0  # global index since the 0 value must be inserted into the decays
-            #     ind_of_0 = list(times[:, 0]).index(1)
-            #     # Add the gap channel
-            #     times = np.insert(times, ind_of_0, [0., times[ind_of_0-1][2], 0.], axis=0)
+            if self.pp_file is False:
+                # Find the index of the gap 0 channel
+                global ind_of_0  # global index since the 0 value must be inserted into the decays
+                ind_of_0 = list(times[:, 0]).index(1)
+                # Add the gap channel
+                times = np.insert(times, ind_of_0, [0., times[ind_of_0-1][2], 0.], axis=0)
 
             # Remove the channel number column
             times = np.delete(times, 0, axis=1)
@@ -2178,9 +2199,15 @@ class DMPParser:
                 # if self.pp_file is True:
                 #     decay = np.array(''.join(contents[2:]).split(), dtype=float) * 10 ** 9
                 # else:
-                #     # Convert the decays to nT and add the 0 gap
-                #     decay = np.insert(np.array(''.join(contents[2:]).split(), dtype=float) * 10 ** 9, ind_of_0, 0.0)
-                decay = ''.join(contents[2:])
+
+                # Add the 0 gap
+                if self.pp_file is False:
+                    decay = ' '.join(
+                        np.insert(np.array(''.join(contents[2:]).split(), dtype=float), ind_of_0, 0.0).astype(str)
+                    )
+                else:
+                    decay = ''.join(contents[2:])
+
                 return [station, comp, reading_index, gain, rx_type, zts, coil_delay, number_of_stacks,
                         readings_per_set, reading_number, rad_tool, decay]
 
@@ -3133,23 +3160,23 @@ if __name__ == '__main__':
     dparse = DMPParser()
     pemparse = PEMParser()
     pg = PEMGetter()
-    # files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    # pem_file = pg.get_pems(client='PEM Rotation', file='BX-081.PEM')[0]
     # files = pg.get_pems(client='Raglan', number=1)
     # file = files[0]
 
     # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\e110xy.pem')
     # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM')
-    pem_file = pemparse.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\Eric\XY-Collar.PEM')
-    prep_pem, _ = pem_file.prep_rotation()
-    rotated_pem = prep_pem.rotate('acc')
+    # pem_file = pemparse.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\Eric\XY-Collar.PEM')
+    # prep_pem, _ = pem_file.prep_rotation()
+    # rotated_pem = prep_pem.rotate('pp')
 
     t2 = time.time()
+    file = r'C:\_Data\2018\BMSC\Borehole\BRC-1023\DUMP\April 6\Dump\BRC-23xy.DMP'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\2EX7046L1-1\2ex7046l1-1.DMP2'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\Surface\1400e.DMP2'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2 New\BR-01\br01.DMP2'
-    # file = dparse.parse_dmp2(file)
+    file = dparse.parse_dmp(file)
     # print(f"Time to parse DMP: {time.time() - t2}")
-
 
     # out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filepath.stem} - test conversion.pem')
     # print(file.to_string(), file=open(out, 'w'))

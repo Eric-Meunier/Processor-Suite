@@ -318,6 +318,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         self.fallback_file = copy.deepcopy(pem_file)
         self.pem_file = pem_file
+        self.setWindowTitle(f"PEM Plot Editor' - {pem_file.filepath.name}")
 
         file_info = ' | '.join([f"Timebase: {self.pem_file.timebase:.2f}ms",
                                 f"{self.pem_file.get_survey_type()} Survey",
