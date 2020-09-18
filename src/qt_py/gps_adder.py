@@ -4,7 +4,9 @@ import re
 import time
 import keyboard
 import matplotlib.pyplot as plt
+import pyqtgraph as pg
 import pandas as pd
+import numpy as np
 import matplotlib
 from pathlib import Path
 from PyQt5 import (QtCore, QtGui, uic)
@@ -35,15 +37,17 @@ else:
 Ui_LineAdder, _ = uic.loadUiType(lineAdderCreator)
 Ui_LoopAdder, _ = uic.loadUiType(loopAdderCreator)
 
+pg.setConfigOptions(antialias=True)
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+pg.setConfigOption('crashWarning', True)
+
 
 class GPSAdder(QMainWindow):
     """
     Class to help add station GPS to a PEM file. Helps with files that have missing stations numbers or other
     formatting errors.
     """
-    # matplotlib.style.use('ggplot')
-    # matplotlib.style.use('seaborn')
-    matplotlib.style.use('fast')
 
     def __init__(self):
         super().__init__()
@@ -54,76 +58,42 @@ class GPSAdder(QMainWindow):
         self.error = False  # For pending errors
 
         # Highlighting
-        self.plan_highlight = None
-        self.plan_lx = None
-        self.plan_ly = None
-        self.section_highlight = None
-        self.section_lx = None
-        self.section_ly = None
+        self.plan_highlight = pg.PlotDataItem(clickable=True)
+        self.plan_highlight.sigPointsClicked.connect(self.point_clicked)
+        self.plan_highlight.setZValue(2)
+        self.plan_lx = pg.InfiniteLine(movable=False, angle=0, pen=pg.mkPen('b', width=2.))
+        self.plan_lx.setZValue(0)
+        self.plan_ly = pg.InfiniteLine(movable=False, angle=90, pen=pg.mkPen('b', width=2.))
+        self.plan_ly.setZValue(0)
+        self.section_highlight = pg.PlotDataItem(clickable=True)
+        self.section_highlight.sigPointsClicked.connect(self.point_clicked)
+        self.section_highlight.setZValue(2)
+        self.section_lx = pg.InfiniteLine(movable=False, angle=0, pen=pg.mkPen('b', width=2.))
+        self.section_lx.setZValue(0)
+        self.section_ly = pg.InfiniteLine(movable=False, angle=90, pen=pg.mkPen('b', width=2.))
+        self.section_ly.setZValue(0)
         self.selection = []
-
-        # self.layout = QGridLayout()
-        # self.table = QTableWidget()
-        # self.table.setFixedWidth(400)
-        # self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        # self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.selected_row_info = None
 
         self.message = QMessageBox()
-        # self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        # self.button_box.setCenterButtons(True)
-        # self.button_box.accepted.connect(self.accept)
-        # self.button_box.rejected.connect(self.close)
-
-        self.figure = plt.figure()
-        self.figure.subplots_adjust(left=0.20, bottom=0.05, right=0.97, top=0.95)
-        self.plan_ax = plt.subplot2grid((30, 1), (0, 0), rowspan=19, colspan=1, fig=self.figure)
-        self.plan_ax.set_aspect('equal', adjustable='datalim')
-        self.plan_ax.use_sticky_edges = False
-        self.section_ax = plt.subplot2grid((30, 1), (22, 0), rowspan=7, colspan=1, fig=self.figure)
-        self.section_ax.use_sticky_edges = False
-        self.canvas = FigureCanvas(self.figure)
-
-        self.zp = ZoomPan()
-        self.plan_zoom = self.zp.zoom_factory(self.plan_ax)
-        self.plan_pan = self.zp.pan_factory(self.plan_ax)
-        self.section_zoom = self.zp.zoom_factory(self.section_ax)
-        self.section_pan = self.zp.pan_factory(self.section_ax)
-
-        # self.auto_sort_cbox = QCheckBox("Automatically Sort Line by Position", self)
-        # self.auto_sort_cbox.setChecked(True)
-
-        # self.setLayout(self.layout)
-        # self.layout.addWidget(self.auto_sort_cbox, 0, 0)
-        # self.layout.addWidget(self.table, 1, 0)
-        # self.layout.addWidget(self.button_box, 2, 0, 1, 2)
-        # self.layout.addWidget(self.canvas, 1, 1)
-        # self.canvas_frame.layout().addWidget(self.canvas)
-        #
-        # self.canvas.mpl_connect('pick_event', self.onpick)
-        #
-        # self.button_box.rejected.connect(self.close)
-        # self.table.cellChanged.connect(self.plot_table)
-        # self.table.cellChanged.connect(self.check_table)
-        # self.table.itemSelectionChanged.connect(self.highlight_point)
-
-        # self.del_action = QShortcut(QtGui.QKeySequence("Del"), self)
-        # self.del_action.activated.connect(self.del_row)
-
-        # self.reset_action = QShortcut(QtGui.QKeySequence(" "), self)
-        # self.reset_action.activated.connect(self.plot_table)
-        # self.reset_action.activated.connect(self.highlight_point)
-
-        # self.popMenu = QMenu(self)
-        # self.popMenu.addAction(self.move_up_action)
-        # self.popMenu.addAction(self.move_down_action)
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Delete:
             self.del_row()
-        elif e.key() == QtCore.Qt.Key_Space:
-            self.plot_table()
-            self.highlight_point()
+
+        elif e.key() == QtCore.Qt.Key_Space:  # Reset the plot ranges
+            self.plan_view.autoRange()
+            self.section_view.autoRange()
+
+        elif e.key() == QtCore.Qt.Key_Escape:  # Clear the selection
+            self.table.clearSelection()
+            if self.plan_lx in self.plan_view.items():
+                self.plan_view.removeItem(self.plan_highlight)
+                self.plan_view.removeItem(self.plan_lx)
+                self.plan_view.removeItem(self.plan_ly)
+                self.section_view.removeItem(self.section_highlight)
+                self.section_view.removeItem(self.section_lx)
+                self.section_view.removeItem(self.section_ly)
 
     def del_row(self):
         if self.table.selectionModel().hasSelection():
@@ -133,8 +103,6 @@ class GPSAdder(QMainWindow):
             self.highlight_point(row)
 
     def close(self):
-        # self.parent = None
-        # self.write_table = None
         self.clear_table()
         self.hide()
 
@@ -145,16 +113,16 @@ class GPSAdder(QMainWindow):
             self.table.removeRow(0)
         self.table.blockSignals(True)
 
-    def reset_range(self):
-        """
-        Reset the plot limits automatically
-        """
-        self.plan_ax.relim()
-        self.plan_ax.autoscale()
-
-        self.section_ax.relim()
-        self.section_ax.autoscale()
-        self.canvas.draw()
+    # def reset_range(self):
+    #     """
+    #     Reset the plot limits automatically
+    #     """
+    #     self.plan_ax.relim()
+    #     self.plan_ax.autoscale()
+    #
+    #     self.section_ax.relim()
+    #     self.section_ax.autoscale()
+    #     self.canvas.draw()
 
     def open(self, o):
         pass
@@ -234,7 +202,7 @@ class GPSAdder(QMainWindow):
     #     self.table.selectRow(ind)
     #     self.highlight_point(row=ind)
 
-    def onpick(self, event):
+    def point_clicked(self, obj, points):
         """
         Signal slot: When a point in the plots is clicked
         :param event: Mouse click event
@@ -248,44 +216,164 @@ class GPSAdder(QMainWindow):
             corresponding rows in the data frame, then re-creates the table and plots the data.
             :return: None
             """
-            points = self.selection
+            indexes = self.selection
             # Create the data frame
             df = self.table_to_df()
             # Create a copy of the two rows.
-            a, b = df.iloc[points[0]].copy(), df.iloc[points[1]].copy()
+            a, b = df.iloc[indexes[0]].copy(), df.iloc[indexes[1]].copy()
             # Allocate the two rows in reverse order
-            df.iloc[points[0]], df.iloc[points[1]] = b, a
+            df.iloc[indexes[0]], df.iloc[indexes[1]] = b, a
             self.df_to_table(df)
             self.plot_table(preserve_limits=True)
 
-        # Ignore mouse wheel events
-        if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
-            return
-        index = event.ind[0]
+        point = points[0]
+        # Get the index of the point clicked
+        p = point.pos()
+        x, y = p.x(), p.y()
+        if obj == self.plan_highlight or obj == self.plan_plot:
+            lx = np.argwhere(self.plan_plot.xData == x)
+            ly = np.argwhere(self.plan_plot.yData == y)
+        else:
+            lx = np.argwhere(self.section_plot.xData == x)
+            ly = np.argwhere(self.section_plot.yData == y)
+        ind = np.intersect1d(lx, ly).tolist()[0]
+        print(f"Point {ind} clicked")
 
         # Swap two points when CTRL is pressed when selecting two points
         if keyboard.is_pressed('ctrl'):
             # Reset the selection if two were already selected
             if len(self.selection) == 2:
                 self.selection = []
-            self.selection.append(index)
+            self.selection.append(ind)
             # print(f'Selected points: {self.selection}')
 
             if len(self.selection) == 2:
                 # print(f"Two points are selected, swapping them...")
                 swap_points()
-                index = self.selection[0]
+                ind = self.selection[0]
         else:
             # Reset the selection if CTRL isn't pressed
             self.selection = []
 
-        self.table.selectRow(index)
-        self.highlight_point(row=index)
+        self.table.selectRow(ind)
+        self.highlight_point(row=ind)
 
         self.table.blockSignals(False)
 
+    # def onpick(self, event):
+    #     """
+    #     Signal slot: When a point in the plots is clicked
+    #     :param event: Mouse click event
+    #     :return: None
+    #     """
+    #     self.table.blockSignals(True)
+    #
+    #     def swap_points():
+    #         """
+    #         Swaps the position of two points on either axes. Creates a data frame from the table, then swaps the
+    #         corresponding rows in the data frame, then re-creates the table and plots the data.
+    #         :return: None
+    #         """
+    #         points = self.selection
+    #         # Create the data frame
+    #         df = self.table_to_df()
+    #         # Create a copy of the two rows.
+    #         a, b = df.iloc[points[0]].copy(), df.iloc[points[1]].copy()
+    #         # Allocate the two rows in reverse order
+    #         df.iloc[points[0]], df.iloc[points[1]] = b, a
+    #         self.df_to_table(df)
+    #         self.plot_table(preserve_limits=True)
+    #
+    #     # Ignore mouse wheel events
+    #     if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
+    #         return
+    #     index = event.ind[0]
+    #
+    #     # Swap two points when CTRL is pressed when selecting two points
+    #     if keyboard.is_pressed('ctrl'):
+    #         # Reset the selection if two were already selected
+    #         if len(self.selection) == 2:
+    #             self.selection = []
+    #         self.selection.append(index)
+    #         # print(f'Selected points: {self.selection}')
+    #
+    #         if len(self.selection) == 2:
+    #             # print(f"Two points are selected, swapping them...")
+    #             swap_points()
+    #             index = self.selection[0]
+    #     else:
+    #         # Reset the selection if CTRL isn't pressed
+    #         self.selection = []
+    #
+    #     self.table.selectRow(index)
+    #     self.highlight_point(row=index)
+    #
+    #     self.table.blockSignals(False)
+
     def highlight_point(self, row=None):
-        pass
+        """
+        Highlight a scatter point when its row is selected in the table.
+        :param row: Int: table row to highlight
+        :return: None
+        """
+
+        if row is None:
+            selected_row = self.table.selectionModel().selectedRows()
+            if selected_row:
+                row = self.table.selectionModel().selectedRows()[0].row()
+            else:
+                print(f"No row selected")
+                return
+
+        # Save the information of the row for backup purposes
+        self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
+
+        # color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
+        color = 'r' if keyboard.is_pressed('ctrl') else 'b'
+        print(f"CTRL is pressed: {keyboard.is_pressed('ctrl')}")
+
+        df = self.table_to_df()
+
+        # Plot on the plan map
+        plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
+
+        # Add the over-lying scatter point
+        self.plan_highlight.setData([plan_x], [plan_y],
+                                    symbol='o',
+                                    symbolSize=10,
+                                    symbolPen=pg.mkPen(color, width=2.),
+                                    symbolBrush=pg.mkBrush('w'),
+                                    )
+        # Move the cross hairs and set their color
+        self.plan_lx.setPos(plan_y)
+        self.plan_lx.setPen(pg.mkPen(color, width=2.))
+        self.plan_ly.setPos(plan_x)
+        self.plan_ly.setPen(pg.mkPen(color, width=2.))
+
+        # Plot on the section map
+        section_x, section_y = row, df.loc[row, 'Elevation']
+
+        # Add the over-lying scatter point
+        self.section_highlight.setData([section_x], [section_y],
+                                       symbol='o',
+                                       symbolSize=10,
+                                       symbolPen=pg.mkPen(color, width=2.),
+                                       symbolBrush=pg.mkBrush('w'),
+                                       )
+        # Move the cross hairs and set their color
+        self.section_lx.setPos(section_y)
+        self.section_lx.setPen(pg.mkPen(color, width=2.))
+        self.section_ly.setPos(section_x)
+        self.section_ly.setPen(pg.mkPen(color, width=2.))
+
+        # Add the infinite lines if they haven't been added yet
+        if self.plan_lx not in self.plan_view.items():
+            self.plan_view.addItem(self.plan_highlight)
+            self.plan_view.addItem(self.plan_lx)
+            self.plan_view.addItem(self.plan_ly)
+            self.section_view.addItem(self.section_highlight)
+            self.section_view.addItem(self.section_lx)
+            self.section_view.addItem(self.section_ly)
 
     def cell_changed(self, row, col):
         """
@@ -758,21 +846,35 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.auto_sort_cbox = QCheckBox("Automatically Sort Loop", self)
         self.auto_sort_cbox.setChecked(True)
 
-        # # Format the borders of the items in the status bar
-        # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
-        # self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
-
         self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
         self.status_bar.addPermanentWidget(QLabel(), 1)
 
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
 
-        self.canvas_frame.layout().addWidget(self.canvas)
-        self.canvas.mpl_connect('pick_event', self.onpick)
-        self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
+        # Create the plan and section plots
+        self.plan_view.setAspectLocked()
+
+        self.plan_view.hideButtons()
+        self.section_view.hideButtons()
+
+        self.plan_plot = pg.PlotDataItem(clickable=True)
+        self.plan_plot.sigPointsClicked.connect(self.point_clicked)
+        self.plan_view.addItem(self.plan_plot)
+
+        # self.section_view = self.plots_layout.addPlot(row=4, col=0, rowspan=1)
+        self.section_plot = pg.PlotDataItem(clickable=True)
+        self.section_plot.sigPointsClicked.connect(self.point_clicked)
+        self.section_view.addItem(self.section_plot)
+
+        self.plan_view.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.section_view.setFocusPolicy(QtCore.Qt.StrongFocus)
+
+        # # Set the spacing of the plots
+        # self.plots_layout.ci.layout.setSpacing(30)
+        # self.plan_view.layout.setRowStretchFactor(1, 1)
+        # # self.section_view.layout.setRowMinimumHeight(1, 100)
+        # self.section_view.layout.setRowStretchFactor(2, 0)
 
         # Signals
         self.button_box.accepted.connect(self.accept)
@@ -781,9 +883,6 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.table.cellChanged.connect(self.cell_changed)
         self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
-
-        self.reset_action = QShortcut(QtGui.QKeySequence(" "), self)
-        self.reset_action.activated.connect(self.reset_range)
 
     def open(self, o):
         """
@@ -801,9 +900,6 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
             self.loop = o
         else:
             raise ValueError(f"{o} is not a valid input.")
-
-        # if not self.loop:
-        #     return
 
         if self.loop.df.empty:
             self.message.critical(self, 'No GPS', f"{self.loop.error_msg}")
@@ -832,131 +928,90 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        if preserve_limits is True:
-            plan_xlim, plan_ylim = self.plan_ax.get_xlim(), self.plan_ax.get_ylim()
-            section_xlim, section_ylim = self.section_ax.get_xlim(), self.section_ax.get_ylim()
-        self.plan_ax.clear()
-        self.section_ax.clear()
-
         df = self.table_to_df()
 
-        # Redraw the empty canvas if there is a pending error
-        if self.error is True:
-            self.canvas.draw()
-            return
-
+        # Close the loop
         df = df.append(df.iloc[0], ignore_index=True)
+
         # Plot the plan map
-        df.plot(x='Easting', y='Northing',
-                ax=self.plan_ax,
-                color='dimgray',
-                zorder=0,
-                legend=False
-                )
-        # Plot the stations on the plan map
-        df.plot.scatter(x='Easting', y='Northing',
-                        ax=self.plan_ax,
-                        color='w',
-                        edgecolors='dimgray',
-                        zorder=1,
-                        legend=False,
-                        picker=True
-                        )
+        self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy(),
+                               symbol='o',
+                               symbolSize=8,
+                               symbolPen=pg.mkPen('k', width=1.),
+                               symbolBrush=pg.mkBrush('w'),
+                               pen=pg.mkPen('k', width=1.5)
+                               )
         # Plot the sections
-        df.plot(y='Elevation',
-                ax=self.section_ax,
-                color='dimgray',
-                zorder=0,
-                legend=False
-                )
+        self.section_plot.setData(df.Elevation.to_numpy(),
+                                  symbol='o',
+                                  symbolSize=8,
+                                  symbolPen=pg.mkPen('k', width=1.),
+                                  symbolBrush=pg.mkBrush('w'),
+                                  pen=pg.mkPen('k', width=1.5)
+                                  )
 
-        # Plot the stations on the section map
-        df.reset_index().plot.scatter(x='index', y='Elevation',
-                                      ax=self.section_ax,
-                                      color='w',
-                                      edgecolors='dimgray',
-                                      zorder=1,
-                                      legend=False,
-                                      picker=True
-                                      )
-
-        if preserve_limits is True:
-            self.plan_ax.set_xlim(plan_xlim)
-            self.plan_ax.set_ylim(plan_ylim)
-            self.section_ax.set_xlim(section_xlim)
-            self.section_ax.set_ylim(section_ylim)
-        else:
-            # Add flat elevation for the section plot limits
-            self.section_ax.set_ylim(self.section_ax.get_ylim()[0] - 5,
-                                     self.section_ax.get_ylim()[1] + 5)
-
-        self.plan_ax.ticklabel_format(axis='both', style='plain', useOffset=False)
-        # ticks = self.plan_ax.get_yticklabels()
-        # self.plan_ax.set_yticklabels(ticks, rotation=45)
-        self.canvas.draw()
-
-    def highlight_point(self, row=None):
-        """
-        Highlight a scatter point when it's row is selected in the table.
-        :param row: Int: table row to highlight
-        :return: None
-        """
-        def reset_highlight():
-            """
-            Remove the crosshairs
-            """
-            self.plan_highlight.remove()
-            self.plan_lx.remove()
-            self.plan_ly.remove()
-            self.section_highlight.remove()
-            self.section_lx.remove()
-            self.section_ly.remove()
-
-            self.plan_highlight = None
-            self.plan_lx = None
-            self.plan_ly = None
-            self.section_highlight = None
-            self.section_lx = None
-            self.section_ly = None
-
-        if row is None:
-            selected_row = self.table.selectionModel().selectedRows()
-            if selected_row:
-                row = self.table.selectionModel().selectedRows()[0].row()
-            else:
-                print(f"No row selected")
-                return
-
-        # Save the information of the row for backup purposes
-        self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
-
-        # Remove previously plotted selection
-        if self.plan_highlight:
-            reset_highlight()
-
-        color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
-
-        df = self.table_to_df()
-        # Plot on the plan map
-        plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
-        self.plan_highlight = self.plan_ax.scatter([plan_x], [plan_y],
-                                                   color=light_color,
-                                                   edgecolors=color,
-                                                   zorder=3
-                                                   )
-        self.plan_lx = self.plan_ax.axhline(plan_y, color=color, alpha=0.5)
-        self.plan_ly = self.plan_ax.axvline(plan_x, color=color, alpha=0.5)
-
-        # Plot on the section map
-        section_x, section_y = row, df.loc[row, 'Elevation']
-        self.section_highlight = self.section_ax.scatter([section_x], [section_y],
-                                                         color=light_color,
-                                                         edgecolors=color,
-                                                         zorder=3
-                                                         )
-        self.section_lx = self.section_ax.axhline(section_y, color=color, alpha=0.5)
-        self.section_ly = self.section_ax.axvline(section_x, color=color, alpha=0.5)
-        self.canvas.draw()
+    # def highlight_point(self, row=None):
+    #     """
+    #     Highlight a scatter point when its row is selected in the table.
+    #     :param row: Int: table row to highlight
+    #     :return: None
+    #     """
+    #     def reset_highlight():
+    #         """
+    #         Remove the crosshairs
+    #         """
+    #         self.plan_highlight.remove()
+    #         self.plan_lx.remove()
+    #         self.plan_ly.remove()
+    #         self.section_highlight.remove()
+    #         self.section_lx.remove()
+    #         self.section_ly.remove()
+    #
+    #         self.plan_highlight = None
+    #         self.plan_lx = None
+    #         self.plan_ly = None
+    #         self.section_highlight = None
+    #         self.section_lx = None
+    #         self.section_ly = None
+    #
+    #     if row is None:
+    #         selected_row = self.table.selectionModel().selectedRows()
+    #         if selected_row:
+    #             row = self.table.selectionModel().selectedRows()[0].row()
+    #         else:
+    #             print(f"No row selected")
+    #             return
+    #
+    #     # Save the information of the row for backup purposes
+    #     self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
+    #
+    #     # Remove previously plotted selection
+    #     if self.plan_highlight:
+    #         reset_highlight()
+    #
+    #     color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
+    #
+    #     df = self.table_to_df()
+    #     # Plot on the plan map
+    #     plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
+    #     self.plan_highlight = self.plan_ax.scatter([plan_x], [plan_y],
+    #                                                color=light_color,
+    #                                                edgecolors=color,
+    #                                                zorder=3
+    #                                                )
+    #     self.plan_lx = self.plan_ax.axhline(plan_y, color=color, alpha=0.5)
+    #     self.plan_ly = self.plan_ax.axvline(plan_x, color=color, alpha=0.5)
+    #
+    #     # Plot on the section map
+    #     section_x, section_y = row, df.loc[row, 'Elevation']
+    #     self.section_highlight = self.section_ax.scatter([section_x], [section_y],
+    #                                                      color=light_color,
+    #                                                      edgecolors=color,
+    #                                                      zorder=3
+    #                                                      )
+    #     self.section_lx = self.section_ax.axhline(section_y, color=color, alpha=0.5)
+    #     self.section_ly = self.section_ax.axvline(section_x, color=color, alpha=0.5)
+    #     self.canvas.draw()
 
 
 def main():
@@ -964,12 +1019,13 @@ def main():
     app = QApplication(sys.argv)
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Loop GPS'))
-    # mw = LoopAdder()
-    mw = LineAdder()
+    mw = LoopAdder()
+    mw.show()
+    # mw = LineAdder()
 
     pg = PEMGetter()
-    file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
-    # file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
+    # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
+    file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
 
     # loop = TransmitterLoop(file)
     # line = SurveyLine(file)
