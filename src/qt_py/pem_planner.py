@@ -568,15 +568,16 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             self.plan_view_plot.addItem(self.hole_collar_plot)
 
         # Shift the loop position relative to the hole position when the hole is moved
-        if int(self.hole_easting_edit.text()) != self.hole_easting:
-            shift_amt = int(self.hole_easting_edit.text()) - self.hole_easting
-            self.shift_loop(shift_amt, 0)
-            self.hole_easting = int(self.hole_easting_edit.text())
-        if int(self.hole_northing_edit.text()) != self.hole_northing:
-            shift_amt = int(self.hole_northing_edit.text()) - self.hole_northing
-            self.shift_loop(0, shift_amt)
-            self.hole_northing = int(self.hole_northing_edit.text())
+        if self.move_loop_cbox.isChecked():
+            if int(self.hole_easting_edit.text()) != self.hole_easting:
+                shift_amt = int(self.hole_easting_edit.text()) - self.hole_easting
+                self.shift_loop(shift_amt, 0)
+            if int(self.hole_northing_edit.text()) != self.hole_northing:
+                shift_amt = int(self.hole_northing_edit.text()) - self.hole_northing
+                self.shift_loop(0, shift_amt)
 
+        self.hole_easting = int(self.hole_easting_edit.text())
+        self.hole_northing = int(self.hole_northing_edit.text())
         self.hole_elevation = int(self.hole_elevation_edit.text())
         self.hole_az = int(self.hole_az_edit.text())
         self.hole_dip = -int(self.hole_dip_edit.text())
@@ -938,7 +939,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         collar = self.get_collar_lonlat()
         if collar.empty:
             return
-        waypoint = gpxpy.gpx.GPXWaypoint(latitude=collar.loc[0, 'Easting'],
+        waypoint = gpxpy.gpx.GPXWaypoint(latitude=collar.loc[0, 'Northing'],
                                          longitude=collar.loc[0, 'Easting'],
                                          name=hole_name)
         gpx.waypoints.append(waypoint)
