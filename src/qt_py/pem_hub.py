@@ -554,7 +554,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             """
             pem_files, rows = self.get_pem_files(selected=True)
             info = ''
-            if len(pem_files) == 1:
+
+            if not pem_files:
+                pass
+            elif len(pem_files) == 1:
                 file = pem_files[0]
                 # name = f"File: {file.filepath.name}"
                 client = f"Client: {file.client}"
@@ -565,8 +568,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 info = ' | '.join([client, line_name, loop_name, timebase, survey_type])
             elif len(pem_files) > 1:
                 info = f"{len(pem_files)} selected"
-            else:
-                pass
 
             self.selection_label.setText(info)
 
@@ -1108,6 +1109,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.grid_edit.setText('')
             self.loop_edit.setText('')
             reset_crs()
+
         self.setUpdatesEnabled(True)
 
     def open_dmp_files(self, dmp_files):
@@ -2339,9 +2341,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
         for pem_file in self.pem_files:
-            print(f"Backing up {pem_file.filepath.name}")
-            pem_file = copy.deepcopy(pem_file)
-            self.save_pem_file(pem_file, backup=True, tag='[B]', remove_old=False)
+            pem_file.save(backup=True)
         self.status_bar.showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
 
     # def update_pem(self, pem_file, table_row):
@@ -2405,14 +2405,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         else:
             selected_pem_files = []
             rows = [model.row() for model in self.table.selectionModel().selectedRows()]
-    
-            # Return row 0 if there are pem files but no rows selected, since the program may have been freshly opened.
-            if self.pem_files and not rows:
-                rows = [0]
-    
-            rows.sort(reverse=True)
-            for row in rows:
-                selected_pem_files.append(self.pem_files[row])
+
+            # # Return row 0 if there are pem files but no rows selected, since the program may have been freshly opened.
+            # if self.pem_files and not rows:
+            #     rows = [0]
+
+            if rows:
+                rows.sort(reverse=True)
+                for row in rows:
+                    selected_pem_files.append(self.pem_files[row])
 
             return selected_pem_files, rows
 
@@ -2656,18 +2657,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     self.message.information(self, 'Error - Different states of XY de-rotation',
                                              'There is a mix of XY de-rotation in the selected files.')
 
-                merged_pem = copy.deepcopy(pem_files[0])
+                merged_pem = pem_files[0].copy()
                 merged_pem.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
                 merged_pem.number_of_readings = sum([f.number_of_readings for f in pem_files])
                 merged_pem.is_merged = True
-                merged_pem.filepath = pem_files[0].filepath
 
                 # Add the M tag
                 if '[M]' not in pem_files[0].filepath.name:
                     merged_pem.filepath = merged_pem.filepath.with_name(
                         merged_pem.filepath.stem + '[M]' + merged_pem.filepath.suffix)
 
-                self.save_pem_file(merged_pem)
+                merged_pem.save()
                 return merged_pem
 
         files_to_open = []
@@ -3379,13 +3379,13 @@ def main():
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # pem_files = pg.get_pems(client='Garibaldi', number=4)
-    # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=10)
+    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     #
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
     # pem_files = [r'C:\_Data\2020\Generation PGM\__M-20-539\RAW\XY-Collar.PEM']
-    # mw.open_pem_files(pem_files)
+    mw.open_pem_files(pem_files)
 
     # mw.pem_info_widgets[0].convert_crs()
     # mw.open_3d_map()

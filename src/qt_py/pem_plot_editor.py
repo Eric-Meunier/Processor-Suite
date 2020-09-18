@@ -1119,6 +1119,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         :param evt: MouseMovement event
         """
         self.active_ax = None
+
+        # Find which axes is beneath the mouse
         for ax in self.decay_axes:
             if ax.vb.childGroup.sceneBoundingRect().contains(evt):
                 self.active_ax = ax
@@ -1143,7 +1145,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 interp_xi = np.linspace(xi.min(), xi.max(), 1000)
                 interp_yi = np.interp(interp_xi, xi, yi)
 
-                # Calcualte the distance between each point of the line and the mouse position
+                # Calculate the distance between each point of the line and the mouse position
                 distances = spatial.distance.cdist(np.array([[xm, ym]]), np.array([interp_xi, interp_yi]).T,
                                                    metric='euclidean')
                 # distances = np.array([np.linalg.norm(np.array([x, y]) - np.array([xm, ym])) for x, y in zip(xi, yi)])

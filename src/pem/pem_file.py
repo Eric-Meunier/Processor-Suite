@@ -424,25 +424,6 @@ class PEMFile:
             data = self.data
         return data
 
-    # def get_profile_data(self, component=None):
-    #     """
-    #     Transform the readings in the data in a manner to be plotted as a profile
-    #     :param component: str, used to filter the profile data and only keep the given component
-    #     :return: pandas DataFrame object with Station, Component and all channels as columns.
-    #     """
-    #     profile = pd.DataFrame.from_dict(dict(zip(self.data.Reading.index, self.data.Reading.values))).T
-    #     profile.insert(0, 'Station', self.data.Station.map(self.converter.convert_station))
-    #     profile.insert(1, 'Component', self.data.Component)
-    #     profile.insert(2, 'Reading_number', self.data['Reading_number'])
-    #     profile.insert(3, 'Reading_index', self.data['Reading_index'])
-    #
-    #     if component:
-    #         filt = profile['Component'] == component.upper()
-    #         profile = profile[filt]
-    #
-    #     profile.sort_values(by=['Component', 'Station', 'Reading_index', 'Reading_number'], inplace=True)
-    #     return profile
-
     def get_profile_data(self, component, averaged=False, converted=False, ontime=True):
         """
         Transform the readings in the data in a manner to be plotted as a profile
@@ -592,7 +573,7 @@ class PEMFile:
     def get_repeats(self):
         """
         Return a mask of which stations may be repeat stations.
-        :return: np.array mask
+        :return: dataframe
         """
 
         def find_repeats(station):
@@ -610,7 +591,7 @@ class PEMFile:
     def to_string(self):
         """
         Return the text format of the PEM file
-        :return: str: Full text of the PEM file
+        :return: str, Full text of the PEM file
         """
         ps = PEMSerializer()
         text = ps.serialize(copy.deepcopy(self))
@@ -673,13 +654,23 @@ class PEMFile:
         copy_pem.data.RAD_tool = copy_pem.data.RAD_tool.map(lambda x: copy.deepcopy(x))
         return copy_pem
 
-    def save(self):
+    def save(self, backup=False):
         """
         Save the PEM file to the .PEM file with the same filepath it currently has.
         """
-        print(f"Saving {self.filepath.name} to .PEM")
         text = self.to_string()
-        print(text, file=open(str(self.filepath), 'w+'))
+
+        if backup:
+            print(f"Saving backup for {self.filepath.name}")
+
+            backup_path = self.filepath.parent.joinpath('[Backup]').joinpath(self.filepath.name)
+            if not backup_path.parent.is_dir():
+                Path.mkdir(backup_path.parent)
+
+            print(text, file=open(str(backup_path), 'w+'))
+        else:
+            print(f"Saving {self.filepath.name} to .PEM")
+            print(text, file=open(str(self.filepath), 'w+'))
 
     def average(self):
         """
