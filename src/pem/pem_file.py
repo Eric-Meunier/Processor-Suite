@@ -654,16 +654,23 @@ class PEMFile:
         copy_pem.data.RAD_tool = copy_pem.data.RAD_tool.map(lambda x: copy.deepcopy(x))
         return copy_pem
 
-    def save(self, backup=False):
+    def save(self, backup=False, tag=''):
         """
         Save the PEM file to the .PEM file with the same filepath it currently has.
+        :param backup: bool, if the save is for a backup. If so, it will save the PEM file in a [Backup] folder,
+        and create the folder if it doesn't exist. The [Backup] folder will be located in the parent directory of the
+        PEMFile.
+        :param tag: str, tag to be appened to the file name. Used for pre-averaging and pre-splitting saves.
         """
         text = self.to_string()
 
         if backup:
             print(f"Saving backup for {self.filepath.name}")
 
-            backup_path = self.filepath.parent.joinpath('[Backup]').joinpath(self.filepath.name)
+            backup_path = self.filepath.parent.joinpath('[Backup]').joinpath(
+                self.filepath.stem + tag + self.filepath.suffix)
+
+            # Create a [Backup] folder if it doesn't exist
             if not backup_path.parent.is_dir():
                 Path.mkdir(backup_path.parent)
 
@@ -728,7 +735,7 @@ class PEMFile:
         # Update the PEM file's number of channels attribute
         self.number_of_channels = len(self.channel_times.index) - 1
 
-        print(f"PEMFile - Time to split PEM file: {time.time() - t}")
+        # print(f"PEMFile - Time to split PEM file: {time.time() - t}")
         return self
 
     def scale_coil_area(self, coil_area):
@@ -2271,6 +2278,7 @@ class DMPParser:
 
             # Don't see any notes in old .DMP files so only included here
             notes = parse_notes(raw_notes)
+
         # Splitting old .DMP files
         else:
             old_dmp = True

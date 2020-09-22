@@ -8,7 +8,7 @@ import pathlib
 import statistics as stats
 import pyqtgraph as pg
 import logging
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QErrorMessage, QGridLayout, QDesktopWidget, QMessageBox)
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QErrorMessage, QGridLayout, QDesktopWidget, QMessageBox, QFileDialog)
 from PyQt5 import (QtCore, QtGui, uic)
 
 sys._excepthook = sys.excepthook
@@ -64,7 +64,7 @@ class DBPlot(QMainWindow):
         self.damp_parser = DampParser()
         self.message = QMessageBox()
         self.error = QErrorMessage()
-        self.dialog = QtGui.QFileDialog()
+        self.dialog = QFileDialog()
         self.open_widgets = []
         self.opened_files = []
 
@@ -602,10 +602,10 @@ class DampPlot(QWidget):
 
 
 class AxisTime(pg.AxisItem):
-    ## Formats axis label to human readable time.
-    # @param[in] values List of \c time_t.
-    # @param[in] scale Not used.
-    # @param[in] spacing Not used.
+    """
+    Formats axis label to human readable time.
+    """
+
     def tickStrings(self, values, scale, spacing):
         strns = []
         for x in values:

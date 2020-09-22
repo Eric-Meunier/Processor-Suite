@@ -10,21 +10,17 @@ import numpy as np
 import simplekml
 import natsort
 import stopit
+import keyboard
 from pyproj import CRS
 from pathlib import Path
-from shutil import copyfile
 from itertools import groupby
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
                              QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
-                             QVBoxLayout, QCalendarWidget, QSplitter)
-# from pyqtspinner.spinner import WaitingSpinner
-import geomag
-
-from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry,
-                                GPXEditor)
+                             QVBoxLayout, QCalendarWidget)
+from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.gps.gpx_creator import GPXCreator
 
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
@@ -34,7 +30,6 @@ from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.qt_py.unpacker import Unpacker
 from src.qt_py.ri_importer import BatchRIImporter
-from src.qt_py.gps_adder import LineAdder, LoopAdder
 from src.qt_py.name_editor import BatchNameEditor
 from src.qt_py.station_splitter import StationSplitter
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer  #, FoliumMap
@@ -283,7 +278,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # self.actionPlan_Map.setStatusTip("Plot all PEM files on an interactive plan map")
         # self.actionPlan_Map.setToolTip("Plot all PEM files on an interactive plan map")
         # self.actionPlan_Map.setIcon(QIcon(os.path.join(icons_path, 'folium.png')))
-        # self.actionPlan_Map.triggered.connect(lambda: self.folium_map.open(self.get_updated_pem_files(), self.get_crs()))
+        # self.actionPlan_Map.triggered.connect(
+        # lambda: self.folium_map.open(self.get_updated_pem_files(), self.get_crs()))
 
         self.action3D_Map.setIcon(QIcon(os.path.join(icons_path, '3d_map2.png')))
         self.action3D_Map.triggered.connect(self.open_3d_map)
@@ -571,6 +567,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             self.selection_label.setText(info)
 
+        def cell_clicked(row, col):
+            """
+            Open the plot editor when a row is alt + clicked
+            :param row: int, click cell's row
+            :param col: int, click cell's column
+            """
+            if keyboard.is_pressed('alt'):
+                self.open_pem_plot_editor()
+
         # Widgets
         self.unpacker.open_dmp_sig.connect(self.move_dir_tree_to)
         self.calender.clicked.connect(set_date)
@@ -586,6 +591,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.itemSelectionChanged.connect(lambda: self.stackedWidget.setCurrentIndex(self.table.currentRow()))
         self.table.itemSelectionChanged.connect(update_selection_text)
         self.table.cellChanged.connect(table_value_changed)
+        self.table.cellClicked.connect(cell_clicked)
         self.table.cellDoubleClicked.connect(table_value_double_clicked)
 
         # Project Tree
@@ -910,35 +916,37 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         #         self.table.itemAt(event.pos()) is None):
         #     self.table.clearSelection()
 
-        # Change the focus to the table so the 'Del' key works
-        if source == self.table and event.type() == QtCore.QEvent.FocusIn:
-            self.actionDel_File.setEnabled(True)
-        elif source == self.table and event.type() == QtCore.QEvent.FocusOut:
-            self.actionDel_File.setEnabled(False)
+        if source == self.table:
+            # Change the focus to the table so the 'Del' key works
+            if event.type() == QtCore.QEvent.FocusIn:
+                self.actionDel_File.setEnabled(True)
+            elif event.type() == QtCore.QEvent.FocusOut:
+                self.actionDel_File.setEnabled(False)
 
-        # Change the selected PIW widget when the arrow keys are pressed, and clear selection when Esc is pressed
-        elif source == self.table and event.type() == QtCore.QEvent.KeyPress:
-            if len(self.pem_files) > 0:
-                if event.key() == QtCore.Qt.Key_Left:
-                    current_tab = self.pem_info_widgets[0].tabs.currentIndex()
-                    self.change_pem_info_tab(current_tab - 1)
-                    return True
-                elif event.key() == QtCore.Qt.Key_Right:
-                    current_tab = self.pem_info_widgets[0].tabs.currentIndex()
-                    self.change_pem_info_tab(current_tab + 1)
-                    return True
-                elif event.key() == QtCore.Qt.Key_Escape:
-                    self.table.clearSelection()
-                    return True
+            # Change the selected PIW widget when the arrow keys are pressed, and clear selection when Esc is pressed
+            if event.type() == QtCore.QEvent.KeyPress:
+                if self.pem_files:
+                    if event.key() == QtCore.Qt.Key_Left:
+                        current_tab = self.pem_info_widgets[0].tabs.currentIndex()
+                        self.change_pem_info_tab(current_tab - 1)
+                        return True
+                    elif event.key() == QtCore.Qt.Key_Right:
+                        current_tab = self.pem_info_widgets[0].tabs.currentIndex()
+                        self.change_pem_info_tab(current_tab + 1)
+                        return True
+                    elif event.key() == QtCore.Qt.Key_Escape:
+                        self.table.clearSelection()
+                        return True
 
-        # Attempt to side scroll when Shift scrolling, but doesn't work well.
-        elif source == self.table and event.type() == QtCore.QEvent.Wheel and event.modifiers() == QtCore.Qt.ShiftModifier:
-            pos = self.table.horizontalScrollBar().value()
-            if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
-                self.table.horizontalScrollBar().setValue(pos + 20)
-            else:
-                self.table.horizontalScrollBar().setValue(pos - 20)
-            return True
+            # Attempt to side scroll when Shift scrolling, but doesn't work well.
+            elif event.type() == QtCore.QEvent.Wheel:
+                if event.modifiers() == QtCore.Qt.ShiftModifier:
+                    pos = self.table.horizontalScrollBar().value()
+                    if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
+                        self.table.horizontalScrollBar().setValue(pos + 20)
+                    else:
+                        self.table.horizontalScrollBar().setValue(pos - 20)
+                    return True
 
         return super(QWidget, self).eventFilter(source, event)
 
@@ -1253,7 +1261,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                     sc = name.split(' / ')
 
-                    datum = re.sub('\s+', '', sc[0])  # Remove any spaces
+                    datum = re.sub(r'\s+', '', sc[0])  # Remove any spaces
                     if datum == 'WGS84':
                         datum = 'WGS 1984'
                     elif datum == 'NAD83':
@@ -1390,9 +1398,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         def get_inf_crs(filepath):
             file = open(filepath, 'rt').read()
             crs = dict()
-            crs['System'] = re.search('Coordinate System:\W+(?P<System>.*)', file).group(1)
-            crs['Zone'] = re.search('Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
-            crs['Datum'] = re.search('Datum:\W+(?P<Datum>.*)', file).group(1)
+            crs['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
+            crs['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
+            crs['Datum'] = re.search(r'Datum:\W+(?P<Datum>.*)', file).group(1)
             return crs
 
         crs = get_inf_crs(inf_file)
@@ -1418,7 +1426,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             browser.setWindowIcon(QIcon(os.path.join(icons_path, 'txt_file.png')))
             browser.setWindowTitle('Text View')
             browser.show()
-            # os.startfile(pem_file.filepath)
 
     def open_file_dialog(self):
         """
@@ -2020,8 +2027,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         Saves all PEM files to a desired location (keeps them opened) and removes any tags.
         :param selected: bool, True will only export selected rows.
-        :param export_final: bool, True will perform a final file export where the file names are modified automatically.
-        :return: None
+        :param export_final: bool, perform a final file export where the file names are modified automatically.
         """
 
         pem_files, rows = self.get_pem_files(selected=selected)
@@ -2052,7 +2058,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 if not pem_file.is_averaged():
                     pem_file = pem_file.average()
                 # Remove underscore-dates and tags
-                file_name = re.sub('_\d+', '', re.sub('\[-?\w\]', '', file_name))
+                file_name = re.sub(r'_\d+', '', re.sub(r'\[-?\w\]', '', file_name))
                 if not pem_file.is_borehole():
                     file_name = file_name.upper()
                     if file_name.lower()[0] == 'c':
@@ -2063,7 +2069,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             pem_file.filepath = Path(file_dir).joinpath(file_name)
             pem_file.save()
 
-        # self.refresh_rows(rows='all')
         self.status_bar.showMessage(f"Save complete. {len(pem_files)} PEM file(s) exported", 2000)
 
     def export_all_gps(self):
@@ -2159,21 +2164,20 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         def color_row():
             """
             Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
-            :param row: Row of the main table to check and color
             :return: None
             """
 
-            def color_background(rowIndex, color, alpha=50):
+            def color_background(row_index, color):
                 """
                 Color an entire table row
-                :param rowIndex: Int: Row of the table to color
+                :param row_index: Int: Row of the table to color
                 :param color: str: The desired color
                 :return: None
                 """
                 color = QtGui.QColor(color)
-                color.setAlpha(alpha)
+                color.setAlpha(50)
                 for j in range(self.table.columnCount()):
-                    self.table.item(rowIndex, j).setBackground(color)
+                    self.table.item(row_index, j).setBackground(color)
 
             average_col = self.table_columns.index('Averaged')
             split_col = self.table_columns.index('Split')
@@ -2230,13 +2234,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         def color_changes():
             """
             Bolden table cells where the value in the cell is different then what is the PEM file memory.
-            :param pem_file: PEMFile object
-            :param row: Corresponding table row of the PEM file.
-            :return: None
             """
-            boldFont, normalFont = QtGui.QFont(), QtGui.QFont()
-            boldFont.setBold(True)
-            normalFont.setBold(False)
+            bold_font, normal_font = QtGui.QFont(), QtGui.QFont()
+            bold_font.setBold(True)
+            normal_font.setBold(False)
 
             info_widget = self.pem_info_widgets[self.pem_files.index(pem_file)]
 
@@ -2263,9 +2264,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 if self.table.item(row, column):
                     original_value = str(row_info[column])
                     if self.table.item(row, column).text() != original_value:
-                        self.table.item(row, column).setFont(boldFont)
+                        self.table.item(row, column).setFont(bold_font)
                     else:
-                        self.table.item(row, column).setFont(normalFont)
+                        self.table.item(row, column).setFont(normal_font)
 
         self.table.blockSignals(True)
 
@@ -2509,9 +2510,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     pass
                 else:
                     continue
-            # # Save a backup of the un-averaged file first
-            # if self.auto_create_backup_files_cbox.isChecked():
-            #     self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-A]', remove_old=False)
+
+            # Save a backup of the un-averaged file first
+            if self.auto_create_backup_files_cbox.isChecked():
+                pem_file.save(backup=True, tag='[-A]')
+
             pem_file = pem_file.average()
             self.refresh_pem(pem_file)
 
@@ -2531,9 +2534,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return
 
         # Zip the pem_files and rows so they can be filtered together
-        l = zip(pem_files, rows)
+        pems_rows = zip(pem_files, rows)
         # Filter the pem_files to only keep un-averaged files
-        filt_list = list(filter(lambda x: not x[0].is_split(), l))
+        filt_list = list(filter(lambda x: not x[0].is_split(), pems_rows))
 
         if len(filt_list) == 0:
             return
@@ -2543,8 +2546,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for pem_file, row in filt_list:
             print(f"Splitting channels for {pem_file.filepath.name}")
             self.pb.setText(f"Splitting channels for {pem_file.filepath.name}")
-            # if self.auto_create_backup_files_cbox.isChecked():
-            #     self.save_pem_file(copy.deepcopy(pem_file), backup=True, tag='[-S]', remove_old=False)
+            if self.auto_create_backup_files_cbox.isChecked():
+                pem_file.save(backup=True, tag='[-S]')
             pem_file = pem_file.split()
             self.refresh_pem(pem_file)
             count += 1
@@ -2774,9 +2777,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # hole_name = re.findall('(.*)(xy|XY|z|Z)', file_name)
                 hole_name = os.path.splitext(file_name)
                 if hole_name:
-                    new_name = re.split('\s', hole_name[0])[0]
+                    new_name = re.split(r'\s', hole_name[0])[0]
             else:
-                line_name = re.findall('\d+[nsewNSEW]', file_name)
+                line_name = re.findall(r'\d+[nsewNSEW]', file_name)
                 if line_name:
                     new_name = line_name[0].strip()
 
@@ -3043,9 +3046,9 @@ class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
         self.parent = parent
         self.setupUi(self)
         self.setWindowTitle("Plan Map Options")
-        self.initSignals()
+        self.init_signals()
 
-    def initSignals(self):
+    def init_signals(self):
         self.all_btn.clicked.connect(self.toggle_all)
         self.none_btn.clicked.connect(self.toggle_none)
         self.buttonBox.rejected.connect(self.close)
@@ -3378,7 +3381,7 @@ def main():
     pg = PEMGetter()
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    # pem_files = pg.get_pems(client='Garibaldi', number=4)
+    # pem_files = pg.get_pems(client='Kazzinc', number=5)
     pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     #
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
