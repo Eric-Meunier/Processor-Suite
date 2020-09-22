@@ -2292,6 +2292,11 @@ class DMPParser:
 
             notes = []
 
+        if not raw_header:
+            raise ValueError(f'No header found in {self.filepath.name}.')
+        elif not raw_data:
+            raise ValueError(f'No data found in {self.filepath.name}.')
+
         # Parse the sections into nearly what they should be in the PEM file
         header = parse_header(raw_header, old_dmp=old_dmp)
         channel_table = parse_channel_times(raw_channel_table, units=header.get('Units'))
@@ -2595,6 +2600,10 @@ class DMPParser:
 
         # Split the file up into the header and data sections
         scontents = contents.split('$$')
+        if not scontents[0].strip():
+            raise ValueError(f'No header found in {self.filepath.name}.')
+        elif not scontents[1].strip():
+            raise ValueError(f'No data found in {self.filepath.name}.')
 
         header = parse_header(scontents[0])
         data = parse_data(scontents[1], units=header.get('Units'))
