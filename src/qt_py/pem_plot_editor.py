@@ -1885,7 +1885,6 @@ if __name__ == '__main__':
     pem_getter = PEMGetter()
     pem_files = pem_getter.get_pems(client='Minera', selection=4)
 
-
     editor = PEMPlotEditor()
     editor.open(pem_files[0])
     # editor.auto_clean()

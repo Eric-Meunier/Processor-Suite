@@ -4,11 +4,13 @@ import sys
 import datetime
 import time
 import codecs
-import pathlib
+from pathlib import Path
 import statistics as stats
+import numpy as np
+import pandas as pd
 import pyqtgraph as pg
-import logging
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QErrorMessage, QGridLayout, QDesktopWidget, QMessageBox, QFileDialog)
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QErrorMessage, QVBoxLayout, QGridLayout, QDesktopWidget,
+                             QMessageBox, QFileDialog, QScrollArea, QLabel)
 from PyQt5 import (QtCore, QtGui, uic)
 
 sys._excepthook = sys.excepthook
@@ -19,131 +21,43 @@ def exception_hook(exctype, value, traceback):
 sys.excepthook = exception_hook
 
 
+pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-__version__ = '0.0.4'
+__version__ = '0.5'
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = sys._MEIPASS
-    DB_Widget_qtCreatorFile = 'qt_ui\\db_plot_widget.ui'
     icons_path = 'icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    DB_Widget_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\db_plot_widget.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
-# Load Qt ui file into a class
-Ui_DB_Widget, QtBaseClass = uic.loadUiType(DB_Widget_qtCreatorFile)
 
-
-class DBPlot(QMainWindow):
-    """
-    Window that contains all opened DampPlot objects
-    """
+class DBPlotter(QMainWindow):
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
+        self.db_files = []
+        self.db_plots = []
+        self.db_dfs = []
 
-        self.initUi()
-        self.initActions()
-
-        self.filename = None
-        self.show_coords = False
-        self.show_grids = True
-        self.show_symbols = False
-
-        self.x = 0
-        self.y = 0
-
-        self.damp_parser = DampParser()
-        self.message = QMessageBox()
-        self.error = QErrorMessage()
-        self.dialog = QFileDialog()
-        self.open_widgets = []
-        self.opened_files = []
-
-    def initUi(self):
-        def center_window(self):
-            qtRectangle = self.frameGeometry()
-            centerPoint = QDesktopWidget().availableGeometry().center()
-            qtRectangle.moveCenter(centerPoint)
-            self.move(qtRectangle.topLeft())
-
-        # self.setupUi(self)
-        grid_layout = QGridLayout()
-        self.setLayout(grid_layout)
-        self.central_widget = QWidget()
-        self.central_widget_layout = QGridLayout()
-        self.central_widget.setLayout(self.central_widget_layout)
-        self.setCentralWidget(self.central_widget)
-        self.setGeometry(600, 400, 800, 600)
-
+        # Format the window
         self.setWindowTitle("DB Plot v" + str(__version__))
-        self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'db_plot 32.png')))
-        center_window(self)
-
-    def initActions(self):
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'db_plot 32.png')))
+        self.resize(800, 700)
         self.setAcceptDrops(True)
-        self.mainMenu = self.menuBar()
 
-        self.openFile = QtGui.QAction("&Open...", self)
-        self.openFile.setShortcut("Ctrl+O")
-        self.openFile.setStatusTip('Open file')
-        self.openFile.triggered.connect(self.open_file_dialog)
-
-        self.clearFiles = QtGui.QAction("&Clear Files", self)
-        self.clearFiles.setShortcut("Shift+Del")
-        self.clearFiles.setStatusTip('Clear all open files')
-        self.clearFiles.triggered.connect(self.clear_files)
-
-        self.removeFile = QtGui.QAction("&Remove File", self)
-        self.removeFile.setShortcut("Del")
-        self.removeFile.setStatusTip('Remove a single file')
-        self.removeFile.triggered.connect(self.remove_file)
-
-        self.resetRange = QtGui.QAction("&Reset Ranges", self)
-        self.resetRange.setShortcut(" ")
-        self.resetRange.setStatusTip("Reset the X and Y axes ranges of all plots")
-        self.resetRange.triggered.connect(self.reset_range)
-
-        self.savePlots = QtGui.QAction("&Save Plots", self)
-        self.savePlots.setShortcut("Ctrl+S")
-        self.savePlots.setStatusTip("Save all plots as PNG")
-        self.savePlots.triggered.connect(self.save_plots)
-
-        self.showCoords = QtGui.QAction("&Show Mouse Values", self)
-        self.showCoords.setShortcut("V")
-        self.showCoords.setStatusTip("Show the plots values where the mouse is positioned")
-        self.showCoords.triggered.connect(self.toggle_coords)
-
-        self.showGrids = QtGui.QAction("&Show Grid Lines", self)
-        self.showGrids.setShortcut("G")
-        self.showGrids.setStatusTip("Show grid lines on the plots")
-        self.showGrids.triggered.connect(self.toggle_grid)
-
-        self.showSymbols = QtGui.QAction("&Show Symbols", self)
-        self.showSymbols.setShortcut("t")
-        self.showSymbols.setStatusTip("Show data points symbols on plots")
-        self.showSymbols.triggered.connect(self.toggle_symbols)
-
-        self.fileMenu = self.mainMenu.addMenu('&File')
-        self.fileMenu.addAction(self.openFile)
-        self.fileMenu.addAction(self.savePlots)
-
-        self.viewMenu = self.mainMenu.addMenu('&View')
-        self.viewMenu.addAction(self.showCoords)
-        self.viewMenu.addAction(self.showGrids)
-        self.viewMenu.addAction(self.removeFile)
-        self.viewMenu.addAction(self.clearFiles)
-        self.viewMenu.addAction(self.resetRange)
-        self.viewMenu.addAction(self.showSymbols)
+        self.setLayout(QVBoxLayout())
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setLayout(QVBoxLayout())
+        self.layout().addWidget(self.scroll_area)
+        self.setCentralWidget(self.scroll_area)
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
@@ -163,187 +77,521 @@ class DBPlot(QMainWindow):
             self.window().statusBar().showMessage('Invalid file type', 1000)
 
     def dropEvent(self, e):
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
         try:
-            urls = [url.toLocalFile() for url in e.mimeData().urls()]
             self.open(urls)
             # Resize the window
-            if self.central_widget_layout.sizeHint().height() > self.size().height() or self.central_widget_layout.sizeHint().width() > self.size().width():
-                self.resize(self.central_widget_layout.sizeHint().width(), self.central_widget_layout.sizeHint().height())
+            # if self.central_widget_layout.sizeHint().height() > self.size().height() or self.central_widget_layout.sizeHint().width() > self.size().width():
+            #     self.resize(self.central_widget_layout.sizeHint().width(), self.central_widget_layout.sizeHint().height())
         except Exception as e:
-            logging.warning(str(e))
             self.message.information(None, 'Error', str(e))
             pass
 
     def open_file_dialog(self):
-        try:
-            files = self.dialog.getOpenFileNames(self, 'Open Files',
-                                                 filter='Damp files (*.log *.txt *.rtf);; All files(*.*)')
-            if files[0] != '':
-                for file in files[0]:
-                    if file.lower().endswith('log') or file.lower().endswith('txt') or file.lower().endswith('rtf'):
-                        self.open(file)
-                    else:
-                        pass
-            else:
-                pass
-        except Exception as e:
-            logging.warning(str(e))
-            self.message.information(None, 'Error', str(e))
-            pass
-
-    def open(self, files):
-        """
-        Parse and plot damping box data.
-        :param files: list of str, filepaths to open
-        :return: None
-        """
-        # Only work with lists (to accomodate files with multiple logs, so if input isn't a list, makes it one
-        if not isinstance(files, list) and isinstance(files, str):
-            files = [files]
-        for file in files:
-            if isinstance(file, pathlib.Path):
-                file = str(file)
-
-            if os.path.abspath(file) not in self.opened_files:
-                try:
-                    damp_data = self.damp_parser.parse(file)
-                except Exception as e:
-                    logging.warning(str(e))
-                    self.message.information(None, 'Error', str(e))
-                    return
+        files = self.dialog.getOpenFileNames(self, 'Open Files',
+                                             filter='Damp files (*.log *.txt *.rtf)')[0]
+        if files:
+            for file in files[0]:
+                if file.lower().endswith('log') or file.lower().endswith('txt') or file.lower().endswith('rtf'):
+                    self.open(file)
                 else:
-                    if damp_data:
-                        damp_plot = DampPlot(damp_data, grid=self.show_grids, show_coords=self.show_coords,
-                                             show_symbols=self.show_symbols)
-                        self.open_widgets.append(damp_plot)
-                        self.opened_files.append(os.path.abspath(file))
-                        self.add_plot(damp_plot)
-                    else:
-                        self.message.information(None, 'Open Damping Box File Error', f'No damping box data found in {os.path.basename(file)}')
-
-    def clear_files(self):
-        try:
-            for widget in self.open_widgets:
-                self.central_widget_layout.removeWidget(widget)
-                widget.deleteLater()
-            self.open_widgets.clear()
-            self.opened_files = []
-            self.window().statusBar().showMessage('All files removed', 2000)
-            self.x = 0
-            self.y = 0
-        except Exception as e:
-            logging.info(str(e))
-            self.message.information(None, 'Error', str(e))
-            pass
-
-    def remove_file(self):
-        if len(self.open_widgets) > 0:
-            for widget in self.open_widgets:
-                if widget.underMouse():
-                    index = self.open_widgets.index(widget)
-                    self.central_widget_layout.removeWidget(widget)
-                    widget.deleteLater()
-                    self.open_widgets.remove(widget)
-                    self.opened_files.pop(index)
-                    break
-            self.arrange_plots()
-
-    def reset_range(self):
-        if len(self.open_widgets) > 0:
-            try:
-                for widget in self.open_widgets:
-                    widget.set_ranges()
-
-            except Exception as e:
-                self.message.information(None, 'Error Resetting Range', str(e))
-                logging.info(str(e))
-                pass
-
-    def save_plots(self):
-        # Save all plots on the window into a PNG image, basically a screen shot
-        default_path = self.open_widgets[-1].folderpath
-        dates = [widget.date for widget in self.open_widgets if widget.date is not None]
-
-        if dates:
-            min_date, max_date = min(dates), max(dates)
-            min_str_date = min_date.strftime("%B %d, %Y") if min_date else None
-            max_str_date = max_date.strftime("%B %d, %Y") if max_date else None
-
-            if min_str_date != max_str_date:
-                file_name = '/' + min_str_date + '-' + max_str_date + ' Current Logs.png'
-            else:
-                file_name = '/' + min_str_date + ' Current Logs.png' if min_str_date else '/' + max_str_date + ' Current Logs.png'
-        else:
-            file_name = '/Current Logs.png'
-
-        self.mainMenu.hide()
-
-        self.dialog.setFileMode(QtGui.QFileDialog.Directory)
-        self.dialog.setDirectory(default_path)
-        # file_dialog.setOption(QFileDialog.ShowDirsOnly)
-        file_dir = QtGui.QFileDialog.getExistingDirectory(self, '', default_path)
-
-        if file_dir:
-            self.grab().save(file_dir + file_name)
-            self.window().statusBar().showMessage('Imaged saved at {}'.format(str(file_dir)), 2000)
-        else:
-            logging.info("No directory chosen, aborted save")
-            pass
-
-        self.mainMenu.show()
-
-    def toggle_coords(self):
-        # Toggle displaying the plot values at the location of the mouse
-        self.show_coords = not self.show_coords
-        if len(self.open_widgets) > 0:
-            for widget in self.open_widgets:
-                widget.show_coords = self.show_coords
-                if self.show_coords:
-                    widget.text.setText('')
-                    widget.text.show()
-                else:
-                    widget.text.hide()
-
-    def toggle_grid(self):
-        self.show_grids = not self.show_grids
-        if len(self.open_widgets) > 0:
-            for widget in self.open_widgets:
-                widget.pw.showGrid(x=self.show_grids, y=self.show_grids)
-
-    def toggle_symbols(self):
-        self.show_symbols = not self.show_symbols
-        if len(self.open_widgets) > 0:
-            for widget in self.open_widgets:
-                if self.show_symbols:
-                    for symbols in widget.symbols:
-                        widget.pw.addItem(symbols)
-                else:
-                    for symbols in widget.symbols:
-                        widget.pw.removeItem(symbols)
+                    print(f"Invalid file type")
         else:
             pass
 
-    def add_plot(self, plot_widget):
-        # Adding the plot object to the layout
-        self.central_widget_layout.addWidget(plot_widget, self.x, self.y)
-        self.x += 1
-        old_y = self.y
-        self.y = int(self.x / 3) + old_y
+    def open(self, db_files):
+        if not isinstance(db_files, list):
+            db_files = [db_files]
 
-        if old_y != self.y:
-            self.x = 0
+        self.db_files = db_files
+        self.add_db_widget()
 
-    def arrange_plots(self):
+        self.show()
+
+    def add_db_widget(self):
         """
-        Re-arranges the layout of the plots for when a file is removed.
-        :return: None
+        Parse the data and add the DBPlotWidget to the scroll area.
         """
-        for widget in self.open_widgets:
-            self.central_widget_layout.removeWidget(widget)
 
-        self.x, self.y = 0, 0
-        for widget in self.open_widgets:
-            self.add_plot(widget)
+        def to_timestamp(row):
+            """
+            Return a timestamp from the hours, minutes, seconds of the row and the year, month, day from the read
+            command.
+            :param row: pd.Series
+            :return: int, datetime timestamp
+            """
+            date_time = datetime.datetime(year=int(year),
+                                          month=int(month),
+                                          day=int(day),
+                                          hour=row.Hours,
+                                          minute=row.Minutes,
+                                          second=row.Seconds)
+
+            return date_time.timestamp()
+
+        # Create and add a DBPlotWidget for each 'read' command found
+        for file in self.db_files:
+
+            name = Path(file).name
+
+            # Parse the data
+            contents = open(file).read()
+            reads = re.split(r'read ', contents)
+
+            if len(reads) < 2:
+                print(f"No damping box data found in {name}")
+                continue
+
+            # Each read command found
+            for i, read in enumerate(reads[1:]):
+                lines = read.split('\n')
+                command = 'read ' + lines[0]  # The "read" command input
+
+                if len(lines) < 3:  # Meaning it is only the command and no data following
+                    continue
+
+                if len(lines[0]) != 4:  # Meaning it is a ramp reading
+                    continue
+
+                data_str = '\n'.join(lines)
+
+                # Date is required because the X-axis AxisItem requires a datetime timestamp
+                date = re.search(r'<CR>Time:(\d+\/\d+\/\d+)', data_str)
+                if not date:
+                    print(f"Skipped data in {name} as no date can be found")
+                    continue
+                else:
+                    global year, month, day
+                    date_str = date.group(1)
+                    year, month, day = date_str.split('/')
+
+                # Find the data based on the regex pattern
+                data = re.findall(r'\d{1,2}\s\d{1,2}\s\d{1,2}\s\d+\s\d+', data_str)
+                data = [d.split() for d in data]
+
+                # Create a data frame
+                df = pd.DataFrame(data,
+                                  columns=['Hours', 'Minutes', 'Seconds', 'Num_samples', 'Current']
+                                  ).dropna().astype(int)
+                self.db_dfs.append(df)
+
+                # Create a timestamp column to be used as the X axis
+                df['Time'] = df.apply(to_timestamp, axis=1)
+
+                # Convert the miliamps to amps
+                df.Current = df.Current / 1000
+
+                if df.empty:
+                    raise ValueError(f"Data error in {name}")
+
+                db_widget = DBPlotWidget(df, command, name, date_str, parent=self)
+                self.scroll_area.layout().addWidget(db_widget)
+
+
+class DBPlotWidget(QMainWindow):
+    """
+    A widget that plots damping box data, with a linear region item that, when moved, updates
+    the status bar with information within the region.
+    """
+
+    def __init__(self, db_data, command, filepath, date, parent=None):
+        """
+        :param db_data: DataFrame of damping box data.
+        :param command: str, the command that was used in the damping box. Uses it for the legend name.
+        :param filepath: str, filename of the damping box file,
+        :param date: str, date parsed after the command
+        :param parent: Qt parent object
+        """
+        super().__init__()
+        self.parent = parent
+        self.data = db_data
+
+        # Format widget
+        self.setLayout(QVBoxLayout())
+        self.statusBar().show()
+
+        # Create the plot
+        axis = pg.DateAxisItem(orientation='bottom')
+        self.plot_widget = pg.PlotWidget(axisItems={'bottom': axis})
+        self.setCentralWidget(self.plot_widget)
+
+        # Format the plot
+        self.plot_widget.addLegend()
+        self.plot_widget.setTitle(f"{date} ({command})")
+        self.plot_widget.hideButtons()
+        self.plot_widget.getAxis('left').enableAutoSIPrefix(enable=False)
+        self.plot_widget.setLabel('left', f"Current", units='A')
+
+        # Status bar
+        self.min_current_label = QLabel()
+        self.min_current_label.setIndent(5)
+        self.max_current_label = QLabel()
+        self.max_current_label.setIndent(5)
+        self.delta_current_label = QLabel()
+        self.delta_current_label.setIndent(5)
+        self.median_current_label = QLabel()
+        self.median_current_label.setIndent(5)
+        self.duration_label = QLabel()
+        self.duration_label.setIndent(5)
+        self.file_label = QLabel(f"File: {filepath}")
+
+        self.statusBar().addWidget(self.min_current_label)
+        self.statusBar().addWidget(self.max_current_label)
+        self.statusBar().addWidget(self.delta_current_label)
+        self.statusBar().addWidget(self.median_current_label)
+        self.statusBar().addWidget(self.duration_label)
+        self.statusBar().addPermanentWidget(self.file_label)
+
+        self.lr = pg.LinearRegionItem()
+        self.lr.sigRegionChanged.connect(self.lr_moved)
+        self.lr.setZValue(-10)
+
+        self.plot_df()
+
+    def plot_df(self):
+        """
+        Plot the damping box data
+        :param command: str, the command that was used in the damping box. Uses it for the legend name.
+        """
+        color = 'm'
+        plot_item = pg.PlotDataItem(self.data.Time, self.data.Current,
+                                    pen=pg.mkPen(color=color, width=1.5),
+                                    symbol='o',
+                                    symbolSize=6,
+                                    symbolPen=pg.mkPen(color='w', width=0.2),
+                                    symbolBrush=pg.mkBrush(color=color),
+                                    )
+
+        self.plot_widget.addItem(plot_item)
+        self.plot_widget.addItem(self.lr)
+        self.lr.setRegion([plot_item.xData.min(), plot_item.xData.max()])
+        self.lr.setBounds([plot_item.xData.min(), plot_item.xData.max()])
+        self.lr_moved()  # Manually trigger to update status bar information
+
+    def lr_moved(self):
+        """
+        Signal slot, when the linear region item is moved or changed, update the status bar information
+        """
+        mn, mx = self.lr.getRegion()
+
+        # Create a filter to only include data that is within the region
+        filt = (self.data.Time >= mn) & (self.data.Time <= mx)
+        data = self.data[filt]
+
+        self.min_current_label.setText(f"Min: {data.Current.min():g} ")
+        self.max_current_label.setText(f"Max: {data.Current.max():g} ")
+        self.delta_current_label.setText(f"Δ: {data.Current.max() - data.Current.min():g} ")
+        self.median_current_label.setText(f"Median: {data.Current.median():g} ")
+
+        time_d = data.Time.max() - data.Time.min()
+        hours = int(time_d / 3600)
+        minutes = int(time_d % 3600 / 60)
+        seconds = int(time_d % 60)
+        self.duration_label.setText(f"Time: {hours:02d}:{minutes:02d}:{seconds:02d} ")
+
+
+# class DBPlot(QMainWindow):
+#     """
+#     Window that contains all opened DampPlot objects
+#     """
+#     def __init__(self, parent=None):
+#         super().__init__()
+#         self.parent = parent
+#
+#         self.initUi()
+#         self.initActions()
+#
+#         self.filename = None
+#         self.show_coords = False
+#         self.show_grids = True
+#         self.show_symbols = False
+#
+#         self.x = 0
+#         self.y = 0
+#
+#         self.damp_parser = DampParser()
+#         self.message = QMessageBox()
+#         self.error = QErrorMessage()
+#         self.dialog = QFileDialog()
+#         self.open_widgets = []
+#         self.opened_files = []
+#
+#     def initUi(self):
+#         def center_window(self):
+#             qtRectangle = self.frameGeometry()
+#             centerPoint = QDesktopWidget().availableGeometry().center()
+#             qtRectangle.moveCenter(centerPoint)
+#             self.move(qtRectangle.topLeft())
+#
+#         # self.setupUi(self)
+#         grid_layout = QGridLayout()
+#         self.setLayout(grid_layout)
+#         self.central_widget = QWidget()
+#         self.central_widget_layout = QGridLayout()
+#         self.central_widget.setLayout(self.central_widget_layout)
+#         self.setCentralWidget(self.central_widget)
+#         self.setGeometry(600, 400, 800, 600)
+#
+#         self.setWindowTitle("DB Plot v" + str(__version__))
+#         self.setWindowIcon(
+#             QtGui.QIcon(os.path.join(icons_path, 'db_plot 32.png')))
+#         center_window(self)
+#
+#     def initActions(self):
+#         self.setAcceptDrops(True)
+#         self.mainMenu = self.menuBar()
+#
+#         self.openFile = QtGui.QAction("&Open...", self)
+#         self.openFile.setShortcut("Ctrl+O")
+#         self.openFile.setStatusTip('Open file')
+#         self.openFile.triggered.connect(self.open_file_dialog)
+#
+#         self.clearFiles = QtGui.QAction("&Clear Files", self)
+#         self.clearFiles.setShortcut("Shift+Del")
+#         self.clearFiles.setStatusTip('Clear all open files')
+#         self.clearFiles.triggered.connect(self.clear_files)
+#
+#         self.removeFile = QtGui.QAction("&Remove File", self)
+#         self.removeFile.setShortcut("Del")
+#         self.removeFile.setStatusTip('Remove a single file')
+#         self.removeFile.triggered.connect(self.remove_file)
+#
+#         self.resetRange = QtGui.QAction("&Reset Ranges", self)
+#         self.resetRange.setShortcut(" ")
+#         self.resetRange.setStatusTip("Reset the X and Y axes ranges of all plots")
+#         self.resetRange.triggered.connect(self.reset_range)
+#
+#         self.savePlots = QtGui.QAction("&Save Plots", self)
+#         self.savePlots.setShortcut("Ctrl+S")
+#         self.savePlots.setStatusTip("Save all plots as PNG")
+#         self.savePlots.triggered.connect(self.save_plots)
+#
+#         self.showCoords = QtGui.QAction("&Show Mouse Values", self)
+#         self.showCoords.setShortcut("V")
+#         self.showCoords.setStatusTip("Show the plots values where the mouse is positioned")
+#         self.showCoords.triggered.connect(self.toggle_coords)
+#
+#         self.showGrids = QtGui.QAction("&Show Grid Lines", self)
+#         self.showGrids.setShortcut("G")
+#         self.showGrids.setStatusTip("Show grid lines on the plots")
+#         self.showGrids.triggered.connect(self.toggle_grid)
+#
+#         self.showSymbols = QtGui.QAction("&Show Symbols", self)
+#         self.showSymbols.setShortcut("t")
+#         self.showSymbols.setStatusTip("Show data points symbols on plots")
+#         self.showSymbols.triggered.connect(self.toggle_symbols)
+#
+#         self.fileMenu = self.mainMenu.addMenu('&File')
+#         self.fileMenu.addAction(self.openFile)
+#         self.fileMenu.addAction(self.savePlots)
+#
+#         self.viewMenu = self.mainMenu.addMenu('&View')
+#         self.viewMenu.addAction(self.showCoords)
+#         self.viewMenu.addAction(self.showGrids)
+#         self.viewMenu.addAction(self.removeFile)
+#         self.viewMenu.addAction(self.clearFiles)
+#         self.viewMenu.addAction(self.resetRange)
+#         self.viewMenu.addAction(self.showSymbols)
+#
+#     def dragEnterEvent(self, e):
+#         urls = [url.toLocalFile() for url in e.mimeData().urls()]
+#
+#         def check_extension(urls):
+#             for url in urls:
+#                 if url.lower().endswith('log') or url.lower().endswith('txt') or url.lower().endswith('rtf'):
+#                     continue
+#                 else:
+#                     return False
+#             return True
+#
+#         if check_extension(urls):
+#             e.accept()
+#         else:
+#             e.ignore()
+#             self.window().statusBar().showMessage('Invalid file type', 1000)
+#
+#     def dropEvent(self, e):
+#         try:
+#             urls = [url.toLocalFile() for url in e.mimeData().urls()]
+#             self.open(urls)
+#             # Resize the window
+#             if self.central_widget_layout.sizeHint().height() > self.size().height() or self.central_widget_layout.sizeHint().width() > self.size().width():
+#                 self.resize(self.central_widget_layout.sizeHint().width(), self.central_widget_layout.sizeHint().height())
+#         except Exception as e:
+#             logging.warning(str(e))
+#             self.message.information(None, 'Error', str(e))
+#             pass
+#
+#     def open_file_dialog(self):
+#         try:
+#             files = self.dialog.getOpenFileNames(self, 'Open Files',
+#                                                  filter='Damp files (*.log *.txt *.rtf);; All files(*.*)')
+#             if files[0] != '':
+#                 for file in files[0]:
+#                     if file.lower().endswith('log') or file.lower().endswith('txt') or file.lower().endswith('rtf'):
+#                         self.open(file)
+#                     else:
+#                         pass
+#             else:
+#                 pass
+#         except Exception as e:
+#             logging.warning(str(e))
+#             self.message.information(None, 'Error', str(e))
+#             pass
+#
+#     def open(self, files):
+#         """
+#         Parse and plot damping box data.
+#         :param files: list of str, filepaths to open
+#         :return: None
+#         """
+#         # Only work with lists (to accomodate files with multiple logs, so if input isn't a list, makes it one
+#         if not isinstance(files, list) and isinstance(files, str):
+#             files = [files]
+#         for file in files:
+#             if isinstance(file, pathlib.Path):
+#                 file = str(file)
+#
+#             if os.path.abspath(file) not in self.opened_files:
+#                 try:
+#                     damp_data = self.damp_parser.parse(file)
+#                 except Exception as e:
+#                     logging.warning(str(e))
+#                     self.message.information(None, 'Error', str(e))
+#                     return
+#                 else:
+#                     if damp_data:
+#                         damp_plot = DampPlot(damp_data, grid=self.show_grids, show_coords=self.show_coords,
+#                                              show_symbols=self.show_symbols)
+#                         self.open_widgets.append(damp_plot)
+#                         self.opened_files.append(os.path.abspath(file))
+#                         self.add_plot(damp_plot)
+#                     else:
+#                         self.message.information(None, 'Open Damping Box File Error', f'No damping box data found in {os.path.basename(file)}')
+#
+#     def clear_files(self):
+#         try:
+#             for widget in self.open_widgets:
+#                 self.central_widget_layout.removeWidget(widget)
+#                 widget.deleteLater()
+#             self.open_widgets.clear()
+#             self.opened_files = []
+#             self.window().statusBar().showMessage('All files removed', 2000)
+#             self.x = 0
+#             self.y = 0
+#         except Exception as e:
+#             logging.info(str(e))
+#             self.message.information(None, 'Error', str(e))
+#             pass
+#
+#     def remove_file(self):
+#         if len(self.open_widgets) > 0:
+#             for widget in self.open_widgets:
+#                 if widget.underMouse():
+#                     index = self.open_widgets.index(widget)
+#                     self.central_widget_layout.removeWidget(widget)
+#                     widget.deleteLater()
+#                     self.open_widgets.remove(widget)
+#                     self.opened_files.pop(index)
+#                     break
+#             self.arrange_plots()
+#
+#     def reset_range(self):
+#         if len(self.open_widgets) > 0:
+#             try:
+#                 for widget in self.open_widgets:
+#                     widget.set_ranges()
+#
+#             except Exception as e:
+#                 self.message.information(None, 'Error Resetting Range', str(e))
+#                 logging.info(str(e))
+#                 pass
+#
+#     def save_plots(self):
+#         # Save all plots on the window into a PNG image, basically a screen shot
+#         default_path = self.open_widgets[-1].folderpath
+#         dates = [widget.date for widget in self.open_widgets if widget.date is not None]
+#
+#         if dates:
+#             min_date, max_date = min(dates), max(dates)
+#             min_str_date = min_date.strftime("%B %d, %Y") if min_date else None
+#             max_str_date = max_date.strftime("%B %d, %Y") if max_date else None
+#
+#             if min_str_date != max_str_date:
+#                 file_name = '/' + min_str_date + '-' + max_str_date + ' Current Logs.png'
+#             else:
+#                 file_name = '/' + min_str_date + ' Current Logs.png' if min_str_date else '/' + max_str_date + ' Current Logs.png'
+#         else:
+#             file_name = '/Current Logs.png'
+#
+#         self.mainMenu.hide()
+#
+#         self.dialog.setFileMode(QtGui.QFileDialog.Directory)
+#         self.dialog.setDirectory(default_path)
+#         # file_dialog.setOption(QFileDialog.ShowDirsOnly)
+#         file_dir = QtGui.QFileDialog.getExistingDirectory(self, '', default_path)
+#
+#         if file_dir:
+#             self.grab().save(file_dir + file_name)
+#             self.window().statusBar().showMessage('Imaged saved at {}'.format(str(file_dir)), 2000)
+#         else:
+#             logging.info("No directory chosen, aborted save")
+#             pass
+#
+#         self.mainMenu.show()
+#
+#     def toggle_coords(self):
+#         # Toggle displaying the plot values at the location of the mouse
+#         self.show_coords = not self.show_coords
+#         if len(self.open_widgets) > 0:
+#             for widget in self.open_widgets:
+#                 widget.show_coords = self.show_coords
+#                 if self.show_coords:
+#                     widget.text.setText('')
+#                     widget.text.show()
+#                 else:
+#                     widget.text.hide()
+#
+#     def toggle_grid(self):
+#         self.show_grids = not self.show_grids
+#         if len(self.open_widgets) > 0:
+#             for widget in self.open_widgets:
+#                 widget.pw.showGrid(x=self.show_grids, y=self.show_grids)
+#
+#     def toggle_symbols(self):
+#         self.show_symbols = not self.show_symbols
+#         if len(self.open_widgets) > 0:
+#             for widget in self.open_widgets:
+#                 if self.show_symbols:
+#                     for symbols in widget.symbols:
+#                         widget.pw.addItem(symbols)
+#                 else:
+#                     for symbols in widget.symbols:
+#                         widget.pw.removeItem(symbols)
+#         else:
+#             pass
+#
+#     def add_plot(self, plot_widget):
+#         # Adding the plot object to the layout
+#         self.central_widget_layout.addWidget(plot_widget, self.x, self.y)
+#         self.x += 1
+#         old_y = self.y
+#         self.y = int(self.x / 3) + old_y
+#
+#         if old_y != self.y:
+#             self.x = 0
+#
+#     def arrange_plots(self):
+#         """
+#         Re-arranges the layout of the plots for when a file is removed.
+#         :return: None
+#         """
+#         for widget in self.open_widgets:
+#             self.central_widget_layout.removeWidget(widget)
+#
+#         self.x, self.y = 0, 0
+#         for widget in self.open_widgets:
+#             self.add_plot(widget)
 
 
 class DampParser:
@@ -601,43 +849,28 @@ class DampPlot(QWidget):
         self.pw.setXRange(min_x, max_x)
 
 
-class AxisTime(pg.AxisItem):
-    """
-    Formats axis label to human readable time.
-    """
-
-    def tickStrings(self, values, scale, spacing):
-        strns = []
-        for x in values:
-            try:
-                strns.append(time.strftime("%H:%M:%S", time.gmtime(x)))    # time_t --> time.struct_time
-            except ValueError:  # Windows can't handle dates before 1970
-                strns.append('')
-        return strns
-
-
-def main():
-    app = QtGui.QApplication(sys.argv)
-    mw = DBPlot()
-    mw.show()
-    parser = DampParser()
-    plotter = DampPlot
-    files = [r'C:\_Data\2020\Iscaycruz\Surface\Yanagarin\Loop 2\Dump\January 11, 2020\Damp\YAT-Log(234)-20200111-171807.txt',
-             r'C:\_Data\2020\Iscaycruz\Surface\Yanagarin\Loop 2\Dump\January 11, 2020\Damp\YAT-Log(234)-20200111-171818.txt']
-    mw.open(files)
-    # d = plotter(parser.parse(file))
-    # d.show()
-    app.exec_()
-
-    # file = 'df.log'
-    # damp_parser = DampParser()
-    # damp_data = damp_parser.parse(file)
-    # damp_plot = DampPlot(damp_data)
-    # damp_plot.show()
-
-    # if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-    #     QtGui.QApplication.instance().exec_()
+# class AxisTime(pg.AxisItem):
+#     """
+#     Formats axis label to human readable time.
+#     """
+#
+#     def tickStrings(self, values, scale, spacing):
+#         strns = []
+#         for x in values:
+#             try:
+#                 strns.append(time.strftime("%H:%M:%S", time.gmtime(x)))    # time_t --> time.struct_time
+#             except ValueError:  # Windows can't handle dates before 1970
+#                 strns.append('')
+#         return strns
 
 
 if __name__ == '__main__':
-    main()
+    app = QtGui.QApplication(sys.argv)
+    mw = DBPlotter()
+
+    samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Damping box files'))
+
+    files = str(Path(samples_folder).joinpath('08_227-20200914-201740.log'))
+    mw.open(files)
+
+    app.exec_()
