@@ -558,16 +558,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         Open the LoopAdder widget and open the current loop into it.
         """
+        global loop_adder
         loop_adder = LoopAdder(parent=self)
-        loop_adder.write_widget = self
         loop_adder.open(self.get_loop())
 
     def edit_line(self):
         """
         Open the LineAdder widget and open the current line into it.
         """
+        global line_adder
         line_adder = LineAdder(parent=self)
-        line_adder.write_widget = self
         line_adder.open(self.get_line())
 
     def clear_table(self, table):
@@ -1193,8 +1193,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #
     #     # self.fill_data_table()
     #     # self.data_table.resizeColumnsToContents()
-
-        self.line_table.blockSignals(False)
+    #
+        # self.line_table.blockSignals(False)
 
     def reverse_station_gps_numbers(self):
         """
@@ -1216,12 +1216,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Fills the GPS station numbers in the StationGPSTable using the station numbers in the data.
         :return: None
         """
+        self.line_table.blockSignals(True)
+
         data_stations = self.pem_file.get_stations(converted=True)
         for row, station in enumerate(data_stations):
             item = QTableWidgetItem(str(station))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.line_table.setItem(row, self.line_table_columns.index('Station'), item)
             self.gps_object_changed(self.line_table)
+
+        self.line_table.blockSignals(False)
 
     def calc_distance(self):
         """

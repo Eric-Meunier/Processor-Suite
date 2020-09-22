@@ -1,24 +1,19 @@
-import sys
 import os
 import re
-import time
-import keyboard
-import matplotlib.pyplot as plt
-import pyqtgraph as pg
-import pandas as pd
-import numpy as np
-import matplotlib
+import sys
 from pathlib import Path
+
+import keyboard
+import numpy as np
+import pandas as pd
+import pyqtgraph as pg
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QGridLayout, QCheckBox,
-                             QHeaderView, QLabel, QDialogButtonBox, QAbstractItemView, QShortcut)
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.ticker import FixedLocator, FormatStrFormatter
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QCheckBox,
+                             QHeaderView, QLabel)
+
 from src.gps.gps_editor import TransmitterLoop, SurveyLine
 from src.pem.pem_file import StationConverter
-from src.mpl.zoom_pan import ZoomPan
-
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -113,17 +108,6 @@ class GPSAdder(QMainWindow):
             self.table.removeRow(0)
         self.table.blockSignals(True)
 
-    # def reset_range(self):
-    #     """
-    #     Reset the plot limits automatically
-    #     """
-    #     self.plan_ax.relim()
-    #     self.plan_ax.autoscale()
-    #
-    #     self.section_ax.relim()
-    #     self.section_ax.autoscale()
-    #     self.canvas.draw()
-
     def open(self, o):
         pass
 
@@ -186,21 +170,8 @@ class GPSAdder(QMainWindow):
     def plot_table(self, preserve_limits=False):
         pass
 
-    # def onpick(self, event):
-    #     """
-    #     Signal slot: When a point in the plots is clicked, highlights the associated row in the table.
-    #     :param event: Mouse click event
-    #     :return: None
-    #     """
-    #     # Ignore mouse wheel events
-    #     if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
-    #         return
-    #
-    #     ind = event.ind[0]
-    #     print(f"Point {ind} clicked")
-    #
-    #     self.table.selectRow(ind)
-    #     self.highlight_point(row=ind)
+    def highlight_point(self, row=None):
+        pass
 
     def point_clicked(self, obj, points):
         """
@@ -260,121 +231,6 @@ class GPSAdder(QMainWindow):
 
         self.table.blockSignals(False)
 
-    # def onpick(self, event):
-    #     """
-    #     Signal slot: When a point in the plots is clicked
-    #     :param event: Mouse click event
-    #     :return: None
-    #     """
-    #     self.table.blockSignals(True)
-    #
-    #     def swap_points():
-    #         """
-    #         Swaps the position of two points on either axes. Creates a data frame from the table, then swaps the
-    #         corresponding rows in the data frame, then re-creates the table and plots the data.
-    #         :return: None
-    #         """
-    #         points = self.selection
-    #         # Create the data frame
-    #         df = self.table_to_df()
-    #         # Create a copy of the two rows.
-    #         a, b = df.iloc[points[0]].copy(), df.iloc[points[1]].copy()
-    #         # Allocate the two rows in reverse order
-    #         df.iloc[points[0]], df.iloc[points[1]] = b, a
-    #         self.df_to_table(df)
-    #         self.plot_table(preserve_limits=True)
-    #
-    #     # Ignore mouse wheel events
-    #     if event.mouseevent.button == 'up' or event.mouseevent.button == 'down' or event.mouseevent.button == 2:
-    #         return
-    #     index = event.ind[0]
-    #
-    #     # Swap two points when CTRL is pressed when selecting two points
-    #     if keyboard.is_pressed('ctrl'):
-    #         # Reset the selection if two were already selected
-    #         if len(self.selection) == 2:
-    #             self.selection = []
-    #         self.selection.append(index)
-    #         # print(f'Selected points: {self.selection}')
-    #
-    #         if len(self.selection) == 2:
-    #             # print(f"Two points are selected, swapping them...")
-    #             swap_points()
-    #             index = self.selection[0]
-    #     else:
-    #         # Reset the selection if CTRL isn't pressed
-    #         self.selection = []
-    #
-    #     self.table.selectRow(index)
-    #     self.highlight_point(row=index)
-    #
-    #     self.table.blockSignals(False)
-
-    def highlight_point(self, row=None):
-        """
-        Highlight a scatter point when its row is selected in the table.
-        :param row: Int: table row to highlight
-        :return: None
-        """
-
-        if row is None:
-            selected_row = self.table.selectionModel().selectedRows()
-            if selected_row:
-                row = self.table.selectionModel().selectedRows()[0].row()
-            else:
-                print(f"No row selected")
-                return
-
-        # Save the information of the row for backup purposes
-        self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
-
-        # color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
-        color = 'r' if keyboard.is_pressed('ctrl') else 'b'
-        print(f"CTRL is pressed: {keyboard.is_pressed('ctrl')}")
-
-        df = self.table_to_df()
-
-        # Plot on the plan map
-        plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
-
-        # Add the over-lying scatter point
-        self.plan_highlight.setData([plan_x], [plan_y],
-                                    symbol='o',
-                                    symbolSize=10,
-                                    symbolPen=pg.mkPen(color, width=2.),
-                                    symbolBrush=pg.mkBrush('w'),
-                                    )
-        # Move the cross hairs and set their color
-        self.plan_lx.setPos(plan_y)
-        self.plan_lx.setPen(pg.mkPen(color, width=2.))
-        self.plan_ly.setPos(plan_x)
-        self.plan_ly.setPen(pg.mkPen(color, width=2.))
-
-        # Plot on the section map
-        section_x, section_y = row, df.loc[row, 'Elevation']
-
-        # Add the over-lying scatter point
-        self.section_highlight.setData([section_x], [section_y],
-                                       symbol='o',
-                                       symbolSize=10,
-                                       symbolPen=pg.mkPen(color, width=2.),
-                                       symbolBrush=pg.mkBrush('w'),
-                                       )
-        # Move the cross hairs and set their color
-        self.section_lx.setPos(section_y)
-        self.section_lx.setPen(pg.mkPen(color, width=2.))
-        self.section_ly.setPos(section_x)
-        self.section_ly.setPen(pg.mkPen(color, width=2.))
-
-        # Add the infinite lines if they haven't been added yet
-        if self.plan_lx not in self.plan_view.items():
-            self.plan_view.addItem(self.plan_highlight)
-            self.plan_view.addItem(self.plan_lx)
-            self.plan_view.addItem(self.plan_ly)
-            self.section_view.addItem(self.section_highlight)
-            self.section_view.addItem(self.section_lx)
-            self.section_view.addItem(self.section_ly)
-
     def cell_changed(self, row, col):
         """
         Signal slot, when a cell is changed, check if it creates any errors. If it does, replace the changed value
@@ -406,7 +262,7 @@ class GPSAdder(QMainWindow):
                             return True
                 return False
 
-            # Cound how many rows have entries that can't be forced into a float
+            # Count how many rows have entries that can't be forced into a float
             error_count = 0
             if has_na(row):
                 error_count += 1
@@ -428,51 +284,6 @@ class GPSAdder(QMainWindow):
         # Color the table if it's LineAdder running
         if 'color_table' in dir(self):
             self.color_table()
-        # self.highlight_point(row=row)
-
-    # def check_table(self):
-    #     """
-    #     Look for any incorrect data types and create an error if found
-    #     :return: None
-    #     """
-    #
-    #     def color_row(row, color):
-    #         """
-    #         Color the background of each cell of a row in the table
-    #         :param row: Int: Row to color
-    #         :param color: str
-    #         :return: None
-    #         """
-    #         for col in range(self.table.columnCount()):
-    #             self.table.item(row, col).setBackground(QtGui.QColor(color))
-    #
-    #     def has_na(row):
-    #         """
-    #         Return True if any cell in the row can't be converted to a float
-    #         :param row: Int: table row to check
-    #         :return: bool
-    #         """
-    #         for col in range(self.table.columnCount()):
-    #             item = self.table.item(row, col).text()
-    #             try:
-    #                 float(item)
-    #             except ValueError:
-    #                 return True
-    #             finally:
-    #                 if item == 'nan':
-    #                     return True
-    #         return False
-    #
-    #     error_count = 0
-    #     self.table.blockSignals(True)
-    #     for row in range(self.table.rowCount()):
-    #         if has_na(row):
-    #             color_row(row, 'pink')
-    #             error_count += 1
-    #         else:
-    #             color_row(row, 'white')
-    #     self.table.blockSignals(False)
-    #     return error_count
 
 
 class LineAdder(GPSAdder, Ui_LineAdder):
@@ -493,22 +304,47 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.errors_label = QLabel('')
         self.errors_label.setIndent(5)
 
-        # # Format the borders of the items in the status bar
-        # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
-        # self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
-
         self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
         self.status_bar.addPermanentWidget(QLabel(), 1)
         self.status_bar.addPermanentWidget(self.errors_label, 0)
 
+        # Table
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
 
-        self.canvas_frame.layout().addWidget(self.canvas)
-        self.canvas.mpl_connect('pick_event', self.onpick)
-        self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
+        # Create the plan and section plots
+        self.plan_plot = pg.PlotDataItem(clickable=True)
+        self.plan_plot.sigPointsClicked.connect(self.point_clicked)
+        self.plan_view.addItem(self.plan_plot)
+
+        self.section_plot = pg.PlotDataItem(clickable=True)
+        self.section_plot.sigPointsClicked.connect(self.point_clicked)
+        self.section_view.addItem(self.section_plot)
+
+        self.plan_view.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.section_view.setFocusPolicy(QtCore.Qt.StrongFocus)
+
+        # Format the plots
+        self.plan_view.setTitle('Plan View')
+        self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                     'bottom': NonScientific(orientation='bottom')})
+        self.section_view.setTitle('Elevation View')
+
+        self.plan_view.setAspectLocked()
+        self.section_view.setAspectLocked()
+
+        self.plan_view.hideButtons()
+        self.section_view.hideButtons()
+
+        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)
+        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)
+        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)
+        self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)
+
+        self.plan_view.setLabel('left', f"Northing", units='m')
+        self.plan_view.setLabel('bottom', f"Easting", units='m')
+        self.section_view.setLabel('left', f"Elevation", units='m')
+        self.section_view.setLabel('bottom', f"Station", units=None)
 
         # Signals
         self.button_box.accepted.connect(self.accept)
@@ -518,12 +354,23 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
 
-        self.reset_action = QShortcut(QtGui.QKeySequence(" "), self)
-        self.reset_action.activated.connect(self.reset_range)
-
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Delete:
             self.del_row()
+
+        elif e.key() == QtCore.Qt.Key_Space:  # Reset the plot ranges
+            self.plan_view.autoRange()
+            self.section_view.autoRange()
+
+        elif e.key() == QtCore.Qt.Key_Escape:  # Clear the selection
+            self.table.clearSelection()
+            if self.plan_lx in self.plan_view.items():
+                self.plan_view.removeItem(self.plan_highlight)
+                self.plan_view.removeItem(self.plan_lx)
+                self.plan_view.removeItem(self.plan_ly)
+                self.section_view.removeItem(self.section_highlight)
+                self.section_view.removeItem(self.section_lx)
+                self.section_view.removeItem(self.section_ly)
 
     def del_row(self):
         if self.table.selectionModel().hasSelection():
@@ -547,9 +394,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                 raise ValueError(f"{o} is not a valid file.")
         elif isinstance(o, SurveyLine):
             self.line = o
-
-        # if not self.line:
-        #     return
 
         if self.line.df.empty:
             self.message.critical(self, 'No GPS', f"{self.line.error_msg}")
@@ -576,98 +420,35 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
     def plot_table(self, preserve_limits=False):
         """
-        Plot the data from the table to the axes. Ignores any rows that have NaN somewhere in the row.
+        Plot the data from the table to the axes.
         :return: None
         """
-        if preserve_limits is True:
-            plan_xlim, plan_ylim = self.plan_ax.get_xlim(), self.plan_ax.get_ylim()
-            section_xlim, section_ylim = self.section_ax.get_xlim(), self.section_ax.get_ylim()
-
-        self.plan_ax.clear()
-        self.section_ax.clear()
-
         df = self.table_to_df()
         df['Station'] = df['Station'].astype(int)
 
-        # Redraw the empty canvas if there is a pending error
-        if self.error is True:
-            self.canvas.draw()
-            return
-
         # Plot the plan map
-        df.plot(x='Easting', y='Northing',
-                ax=self.plan_ax,
-                color='dimgray',
-                zorder=0,
-                legend=False
-                )
-        # Plot the stations on the plan map
-        df.plot.scatter(x='Easting', y='Northing',
-                        ax=self.plan_ax,
-                        color='w',
-                        edgecolors='dimgray',
-                        zorder=1,
-                        legend=False,
-                        picker=True
-                        )
+        self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy(),
+                               symbol='o',
+                               symbolSize=8,
+                               symbolPen=pg.mkPen('k', width=1.),
+                               symbolBrush=pg.mkBrush('w'),
+                               pen=pg.mkPen('k', width=1.5)
+                               )
         # Plot the sections
-        df.plot(x='Station', y='Elevation',
-                ax=self.section_ax,
-                color='dimgray',
-                zorder=0,
-                legend=False
-                )
-
-        self.plan_ax.ticklabel_format(axis='both', style='plain', useOffset=False)
-        # self.section_ax.xaxis.grid(True, which='minor')
-        self.section_ax.xaxis.set_minor_locator(FixedLocator(df.Station.to_list()))
-
-        # Plot the stations on the section map
-        df.plot.scatter(x='Station', y='Elevation',
-                        ax=self.section_ax,
-                        color='w',
-                        edgecolors='dimgray',
-                        zorder=1,
-                        legend=False,
-                        picker=True
-                        )
-
-        if preserve_limits is True:
-            self.plan_ax.set_xlim(plan_xlim)
-            self.plan_ax.set_ylim(plan_ylim)
-            self.section_ax.set_xlim(section_xlim)
-            self.section_ax.set_ylim(section_ylim)
-        else:
-            # Add flat elevation for the section plot limits
-            self.section_ax.set_ylim(self.section_ax.get_ylim()[0] - 5,
-                                     self.section_ax.get_ylim()[1] + 5)
-        # self.plan_ax.set_yticklabels(self.plan_ax.get_yticklabels(), rotation=0, ha='center')
-        self.canvas.draw()
+        self.section_plot.setData(df.Station.to_numpy(), df.Elevation.to_numpy(),
+                                  symbol='o',
+                                  symbolSize=8,
+                                  symbolPen=pg.mkPen('k', width=1.),
+                                  symbolBrush=pg.mkBrush('w'),
+                                  pen=pg.mkPen('k', width=1.5)
+                                  )
 
     def highlight_point(self, row=None):
         """
-        Highlight a scatter point when it's row is selected in the table
+        Highlight a scatter point when its row is selected in the table.
         :param row: Int: table row to highlight
         :return: None
         """
-
-        def reset_highlight():
-            """
-            Remove the crosshairs
-            """
-            self.plan_highlight.remove()
-            self.plan_lx.remove()
-            self.plan_ly.remove()
-            self.section_highlight.remove()
-            self.section_lx.remove()
-            self.section_ly.remove()
-
-            self.plan_highlight = None
-            self.plan_lx = None
-            self.plan_ly = None
-            self.section_highlight = None
-            self.section_lx = None
-            self.section_ly = None
 
         if row is None:
             selected_row = self.table.selectionModel().selectedRows()
@@ -680,91 +461,53 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         # Save the information of the row for backup purposes
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
-        # Remove previously plotted selection
-        if self.plan_highlight:
-            reset_highlight()
-
-        color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
+        # color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
+        color = 'r' if keyboard.is_pressed('ctrl') else 'b'
+        print(f"CTRL is pressed: {keyboard.is_pressed('ctrl')}")
 
         df = self.table_to_df()
         df['Station'] = df['Station'].astype(int)
 
         # Plot on the plan map
         plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
-        self.plan_highlight = self.plan_ax.scatter([plan_x], [plan_y],
-                                                   color=light_color,
-                                                   edgecolors=color,
-                                                   zorder=3,
-                                                   )
-        self.plan_lx = self.plan_ax.axhline(plan_y, color=color, alpha=0.5)
-        self.plan_ly = self.plan_ax.axvline(plan_x, color=color, alpha=0.5)
+
+        # Add the over-lying scatter point
+        self.plan_highlight.setData([plan_x], [plan_y],
+                                    symbol='o',
+                                    symbolSize=10,
+                                    symbolPen=pg.mkPen(color, width=1.5),
+                                    symbolBrush=pg.mkBrush('w'),
+                                    )
+        # Move the cross hairs and set their color
+        self.plan_lx.setPos(plan_y)
+        self.plan_lx.setPen(pg.mkPen(color, width=2.))
+        self.plan_ly.setPos(plan_x)
+        self.plan_ly.setPen(pg.mkPen(color, width=2.))
 
         # Plot on the section map
         section_x, section_y = df.loc[row, 'Station'], df.loc[row, 'Elevation']
-        self.section_highlight = self.section_ax.scatter([section_x], [section_y],
-                                                         color=light_color,
-                                                         edgecolors=color,
-                                                         zorder=3,
-                                                         )
-        self.section_lx = self.section_ax.axhline(section_y, color=color, alpha=0.5)
-        self.section_ly = self.section_ax.axvline(section_x, color=color, alpha=0.5)
-        self.canvas.draw()
 
-    # def cell_changed(self, row, col):
-    #     """
-    #     Signal slot, when a cell is changed, check if it creates any errors. If it does, replace the changed value
-    #     with the value saved in "cell_activate".
-    #     :param row: int
-    #     :param col: int
-    #     """
-    #
-    #     def get_errors():
-    #         """
-    #         Count any incorrect data types
-    #         :return: int, number of errors found
-    #         """
-    #
-    #         def has_na(row):
-    #             """
-    #             Return True if any cell in the row can't be converted to a float
-    #             :param row: Int: table row to check
-    #             :return: bool
-    #             """
-    #             for col in range(self.table.columnCount()):
-    #                 item = self.table.item(row, col).text()
-    #                 try:
-    #                     float(item)
-    #                 except ValueError:
-    #                     return True
-    #                 finally:
-    #                     if item == 'nan':
-    #                         return True
-    #             return False
-    #
-    #         # Cound how many rows have entries that can't be forced into a float
-    #         error_count = 0
-    #         for row in range(self.table.rowCount()):
-    #             if has_na(row):
-    #                 error_count += 1
-    #         return error_count
-    #
-    #     errors = get_errors()
-    #
-    #     # Reject the change if it causes an error.
-    #     if errors > 0:
-    #         self.table.blockSignals(True)
-    #         self.message.critical(self, 'Error', "Value cannot be converted to a number")
-    #
-    #         item = QTableWidgetItem(self.selected_row_info[col])
-    #         item.setTextAlignment(QtCore.Qt.AlignCenter)
-    #         self.table.setItem(row, col, item)
-    #         self.table.blockSignals(False)
-    #     else:
-    #         self.plot_table()
-    #         self.highlight_point(row=row)
-    #
-    #     self.color_table()
-    #     # self.highlight_point(row=row)
+        # Add the over-lying scatter point
+        self.section_highlight.setData([section_x], [section_y],
+                                       symbol='o',
+                                       symbolSize=10,
+                                       symbolPen=pg.mkPen(color, width=1.5),
+                                       symbolBrush=pg.mkBrush('w'),
+                                       )
+        # Move the cross hairs and set their color
+        self.section_lx.setPos(section_y)
+        self.section_lx.setPen(pg.mkPen(color, width=1.5))
+        self.section_ly.setPos(section_x)
+        self.section_ly.setPen(pg.mkPen(color, width=1.5))
+
+        # Add the infinite lines if they haven't been added yet
+        if self.plan_lx not in self.plan_view.items():
+            self.plan_view.addItem(self.plan_highlight)
+            self.plan_view.addItem(self.plan_lx)
+            self.plan_view.addItem(self.plan_ly)
+            self.section_view.addItem(self.section_highlight)
+            self.section_view.addItem(self.section_lx)
+            self.section_view.addItem(self.section_ly)
 
     def color_table(self):
         """
@@ -853,16 +596,10 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         # Create the plan and section plots
-        self.plan_view.setAspectLocked()
-
-        self.plan_view.hideButtons()
-        self.section_view.hideButtons()
-
         self.plan_plot = pg.PlotDataItem(clickable=True)
         self.plan_plot.sigPointsClicked.connect(self.point_clicked)
         self.plan_view.addItem(self.plan_plot)
 
-        # self.section_view = self.plots_layout.addPlot(row=4, col=0, rowspan=1)
         self.section_plot = pg.PlotDataItem(clickable=True)
         self.section_plot.sigPointsClicked.connect(self.point_clicked)
         self.section_view.addItem(self.section_plot)
@@ -870,11 +607,25 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.plan_view.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.section_view.setFocusPolicy(QtCore.Qt.StrongFocus)
 
-        # # Set the spacing of the plots
-        # self.plots_layout.ci.layout.setSpacing(30)
-        # self.plan_view.layout.setRowStretchFactor(1, 1)
-        # # self.section_view.layout.setRowMinimumHeight(1, 100)
-        # self.section_view.layout.setRowStretchFactor(2, 0)
+        # Format the plots
+        self.plan_view.setTitle('Plan View')
+        self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                     'bottom': NonScientific(orientation='bottom')})
+        self.section_view.setTitle('Elevation View')
+
+        self.plan_view.setAspectLocked()
+
+        self.plan_view.hideButtons()
+        self.section_view.hideButtons()
+
+        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)
+        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)
+        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)
+
+        self.plan_view.setLabel('left', f"Northing", units='m')
+        self.plan_view.setLabel('bottom', f"Easting", units='m')
+        self.section_view.setLabel('left', f"Elevation", units='m')
+        self.section_view.setLabel('bottom', f"index", units=None)
 
         # Signals
         self.button_box.accepted.connect(self.accept)
@@ -950,68 +701,81 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
                                   pen=pg.mkPen('k', width=1.5)
                                   )
 
-    # def highlight_point(self, row=None):
-    #     """
-    #     Highlight a scatter point when its row is selected in the table.
-    #     :param row: Int: table row to highlight
-    #     :return: None
-    #     """
-    #     def reset_highlight():
-    #         """
-    #         Remove the crosshairs
-    #         """
-    #         self.plan_highlight.remove()
-    #         self.plan_lx.remove()
-    #         self.plan_ly.remove()
-    #         self.section_highlight.remove()
-    #         self.section_lx.remove()
-    #         self.section_ly.remove()
-    #
-    #         self.plan_highlight = None
-    #         self.plan_lx = None
-    #         self.plan_ly = None
-    #         self.section_highlight = None
-    #         self.section_lx = None
-    #         self.section_ly = None
-    #
-    #     if row is None:
-    #         selected_row = self.table.selectionModel().selectedRows()
-    #         if selected_row:
-    #             row = self.table.selectionModel().selectedRows()[0].row()
-    #         else:
-    #             print(f"No row selected")
-    #             return
-    #
-    #     # Save the information of the row for backup purposes
-    #     self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
-    #
-    #     # Remove previously plotted selection
-    #     if self.plan_highlight:
-    #         reset_highlight()
-    #
-    #     color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
-    #
-    #     df = self.table_to_df()
-    #     # Plot on the plan map
-    #     plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
-    #     self.plan_highlight = self.plan_ax.scatter([plan_x], [plan_y],
-    #                                                color=light_color,
-    #                                                edgecolors=color,
-    #                                                zorder=3
-    #                                                )
-    #     self.plan_lx = self.plan_ax.axhline(plan_y, color=color, alpha=0.5)
-    #     self.plan_ly = self.plan_ax.axvline(plan_x, color=color, alpha=0.5)
-    #
-    #     # Plot on the section map
-    #     section_x, section_y = row, df.loc[row, 'Elevation']
-    #     self.section_highlight = self.section_ax.scatter([section_x], [section_y],
-    #                                                      color=light_color,
-    #                                                      edgecolors=color,
-    #                                                      zorder=3
-    #                                                      )
-    #     self.section_lx = self.section_ax.axhline(section_y, color=color, alpha=0.5)
-    #     self.section_ly = self.section_ax.axvline(section_x, color=color, alpha=0.5)
-    #     self.canvas.draw()
+    def highlight_point(self, row=None):
+        """
+        Highlight a scatter point when its row is selected in the table.
+        :param row: Int: table row to highlight
+        :return: None
+        """
+
+        if row is None:
+            selected_row = self.table.selectionModel().selectedRows()
+            if selected_row:
+                row = self.table.selectionModel().selectedRows()[0].row()
+            else:
+                print(f"No row selected")
+                return
+
+        # Save the information of the row for backup purposes
+        self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
+
+        # color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
+        color = 'r' if keyboard.is_pressed('ctrl') else 'b'
+        print(f"CTRL is pressed: {keyboard.is_pressed('ctrl')}")
+
+        df = self.table_to_df()
+
+        # Plot on the plan map
+        plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
+
+        # Add the over-lying scatter point
+        self.plan_highlight.setData([plan_x], [plan_y],
+                                    symbol='o',
+                                    symbolSize=10,
+                                    symbolPen=pg.mkPen(color, width=1.5),
+                                    symbolBrush=pg.mkBrush('w'),
+                                    )
+        # Move the cross hairs and set their color
+        self.plan_lx.setPos(plan_y)
+        self.plan_lx.setPen(pg.mkPen(color, width=2.))
+        self.plan_ly.setPos(plan_x)
+        self.plan_ly.setPen(pg.mkPen(color, width=2.))
+
+        # Plot on the section map
+        section_x, section_y = row, df.loc[row, 'Elevation']
+
+        # Add the over-lying scatter point
+        self.section_highlight.setData([section_x], [section_y],
+                                       symbol='o',
+                                       symbolSize=10,
+                                       symbolPen=pg.mkPen(color, width=1.5),
+                                       symbolBrush=pg.mkBrush('w'),
+                                       )
+        # Move the cross hairs and set their color
+        self.section_lx.setPos(section_y)
+        self.section_lx.setPen(pg.mkPen(color, width=1.5))
+        self.section_ly.setPos(section_x)
+        self.section_ly.setPen(pg.mkPen(color, width=1.5))
+
+        # Add the infinite lines if they haven't been added yet
+        if self.plan_lx not in self.plan_view.items():
+            self.plan_view.addItem(self.plan_highlight)
+            self.plan_view.addItem(self.plan_lx)
+            self.plan_view.addItem(self.plan_ly)
+            self.section_view.addItem(self.section_highlight)
+            self.section_view.addItem(self.section_lx)
+            self.section_view.addItem(self.section_ly)
+
+
+class NonScientific(pg.AxisItem):
+    def __init__(self, *args, **kwargs):
+        super(NonScientific, self).__init__(*args, **kwargs)
+
+    def tickStrings(self, values, scale, spacing):
+        return [int(value*1) for value in values] #This line return the NonScientific notation value
+
+    def logTickStrings(self, values, scale, spacing):
+        return [int(value*1) for value in values] #This line return the NonScientific notation value
 
 
 def main():
@@ -1019,13 +783,13 @@ def main():
     app = QApplication(sys.argv)
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Loop GPS'))
-    mw = LoopAdder()
+    # mw = LoopAdder()
+    mw = LineAdder()
     mw.show()
-    # mw = LineAdder()
 
     pg = PEMGetter()
-    # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
-    file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
+    file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
+    # file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
 
     # loop = TransmitterLoop(file)
     # line = SurveyLine(file)
