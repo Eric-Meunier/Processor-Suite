@@ -9,8 +9,8 @@ import statistics as stats
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QErrorMessage, QVBoxLayout, QGridLayout, QDesktopWidget,
-                             QMessageBox, QFileDialog, QScrollArea, QLabel)
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QShortcut, QVBoxLayout, QGridLayout, QDesktopWidget,
+                             QMessageBox, QFileDialog, QScrollArea, QLabel, QAction, QMenu, QApplication)
 from PyQt5 import (QtCore, QtGui, uic)
 
 sys._excepthook = sys.excepthook
@@ -40,12 +40,17 @@ else:
 
 
 class DBPlotter(QMainWindow):
+
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
         self.db_files = []
-        self.db_plots = []
-        self.db_dfs = []
+        self.db_widgets = []
+        self.message = QMessageBox()
+        self.default_path = None
+
+        self.x = 0
+        self.y = 0
 
         # Format the window
         self.setWindowTitle("DB Plot v" + str(__version__))
@@ -54,10 +59,92 @@ class DBPlotter(QMainWindow):
         self.setAcceptDrops(True)
 
         self.setLayout(QVBoxLayout())
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setLayout(QVBoxLayout())
-        self.layout().addWidget(self.scroll_area)
-        self.setCentralWidget(self.scroll_area)
+
+        # Create and format a central widget
+        self.widget_layout = QGridLayout()
+        self.widget_layout.setContentsMargins(0, 0, 0, 0)
+        self.widget = QWidget()
+        self.widget.setLayout(self.widget_layout)
+        self.setCentralWidget(self.widget)
+
+        # Menu
+        def toggle_lrs():
+            """
+            Toggle the visibility of the linear region item in all the plots.
+            """
+            if self.show_lr_action.isChecked():
+                for widget in self.db_widgets:
+                    widget.plot_widget.addItem(widget.lr)
+            else:
+                for widget in self.db_widgets:
+                    widget.plot_widget.removeItem(widget.lr)
+
+        def toggle_symbols():
+            """
+            Toggle the visibility of the scatter points in all the plots.
+            """
+            if self.show_symbols_action.isChecked():
+                for widget in self.db_widgets:
+                    widget.plot_widget.addItem(widget.symbols)
+            else:
+                for widget in self.db_widgets:
+                    widget.plot_widget.removeItem(widget.symbols)
+
+        self.file_menu = QMenu("File", self)
+        self.view_menu = QMenu("View", self)
+
+        self.open_file_action = QAction('Open', self.file_menu)
+        self.open_file_action.triggered.connect(self.open_file_dialog)
+
+        self.show_lr_action = QtGui.QAction('Show Sliding Window', self.view_menu, checkable=True)
+        self.show_lr_action.setChecked(True)
+        self.show_lr_action.setShortcut('r')
+        self.show_lr_action.triggered.connect(toggle_lrs)
+
+        self.show_symbols_action = QtGui.QAction('Show Symbols', self.view_menu, checkable=True)
+        self.show_symbols_action.setChecked(True)
+        self.show_symbols_action.setShortcut('s')
+        self.show_symbols_action.triggered.connect(toggle_symbols)
+
+        self.file_menu.addAction(self.open_file_action)
+        self.view_menu.addAction(self.show_lr_action)
+        self.view_menu.addAction(self.show_symbols_action)
+
+        self.menuBar().addMenu(self.file_menu)
+        self.menuBar().addMenu(self.view_menu)
+
+        # Actions
+        self.save_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
+        self.copy_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+C"), self)
+        self.save_shortcut.activated.connect(self.save_img)
+        self.copy_shortcut.activated.connect(self.copy_img)
+
+        self.show()
+
+        # self.scroll_area = QScrollArea()
+        # self.scroll_area.setLayout(QVBoxLayout())
+        # self.scroll_area.layout().setContentsMargins(0, 0, 0, 0)
+        # # self.scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        # self.scroll_area.setWidgetResizable(True)
+        # # self.scroll_area.setGeometry(10, 10, 200, 200)
+        # self.layout().addWidget(self.scroll_area)
+        # self.setCentralWidget(self.scroll_area)
+        #
+        # self.scroll_area_widget = QWidget()
+        # self.vbox = QVBoxLayout()
+        # self.scroll_area_widget.setLayout(self.vbox)
+        # self.scroll_area.setWidget(self.scroll_area_widget)
+
+    def keyPressEvent(self, event):
+        # Remove the widget
+        if event.key() == QtCore.Qt.Key_Delete:
+            self.remove_file()
+
+        # Reset the range of the plots
+        elif event.key() == QtCore.Qt.Key_Space:
+            if self.db_widgets:
+                for w in self.db_widgets:
+                    w.reset_range()
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
@@ -78,20 +165,13 @@ class DBPlotter(QMainWindow):
 
     def dropEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
-        try:
-            self.open(urls)
-            # Resize the window
-            # if self.central_widget_layout.sizeHint().height() > self.size().height() or self.central_widget_layout.sizeHint().width() > self.size().width():
-            #     self.resize(self.central_widget_layout.sizeHint().width(), self.central_widget_layout.sizeHint().height())
-        except Exception as e:
-            self.message.information(None, 'Error', str(e))
-            pass
+        self.open(urls)
 
     def open_file_dialog(self):
-        files = self.dialog.getOpenFileNames(self, 'Open Files',
-                                             filter='Damp files (*.log *.txt *.rtf)')[0]
+        files = QFileDialog().getOpenFileNames(self, 'Open Files',
+                                               filter='Damp files (*.log *.txt *.rtf)')[0]
         if files:
-            for file in files[0]:
+            for file in files:
                 if file.lower().endswith('log') or file.lower().endswith('txt') or file.lower().endswith('rtf'):
                     self.open(file)
                 else:
@@ -103,14 +183,19 @@ class DBPlotter(QMainWindow):
         if not isinstance(db_files, list):
             db_files = [db_files]
 
-        self.db_files = db_files
-        self.add_db_widget()
+        # Use the first opened file's filepath to be used as the default path for save_img.
+        if not self.default_path:
+            self.default_path = Path(db_files[0])
 
-        self.show()
+        try:
+            self.create_db_widget(db_files)
+        except Exception as e:
+            self.message.critical(self, 'Error', str(e))
+            pass
 
-    def add_db_widget(self):
+    def create_db_widget(self, db_files):
         """
-        Parse the data and add the DBPlotWidget to the scroll area.
+        Parse the data and create the DBPlotWidget
         """
 
         def to_timestamp(row):
@@ -129,63 +214,155 @@ class DBPlotter(QMainWindow):
 
             return date_time.timestamp()
 
-        # Create and add a DBPlotWidget for each 'read' command found
-        for file in self.db_files:
+        def parse_date(string):
+            date = re.search(r'<CR>Time:(\d+\/\d+\/\d+)', string)
+            return date
 
+        def parse_data(data_str):
+            """
+            Create a data frame of the damping box data. The <CR> with date must be in the string, or else no timestamp
+            can be created.
+            :param data_str: string, raw data of a single read command.
+            :return: pd DataFrame
+            """
+
+            # Date is required because the X-axis AxisItem requires a datetime timestamp
+            date = parse_date(data_str)
+            if not date:
+                print(f"Skipped data in {name} as no date can be found")
+                raise Exception(f"No date found in {name}")
+            else:
+                global year, month, day, date_str
+                year, month, day = date.group(1).split('/')
+                date_str = datetime.date(int(year), int(month), int(day)).strftime('%B %d, %Y')
+
+            # Find the data based on the regex pattern
+            data = re.findall(r'\d{1,2}\s\d{1,2}\s\d{1,2}\s\d+\s\d+', data_str)
+            data = [d.split() for d in data]
+
+            # Create a data frame
+            df = pd.DataFrame(data,
+                              columns=['Hours', 'Minutes', 'Seconds', 'Num_samples', 'Current']
+                              ).dropna().astype(int)
+
+            if df.empty:
+                raise Exception(f"Data error in {name}")
+
+            # Create a timestamp column to be used as the X axis
+            df['Time'] = df.apply(to_timestamp, axis=1)
+
+            # Convert the miliamps to amps
+            df.Current = df.Current / 1000
+
+            return df
+
+        for file in db_files:
             name = Path(file).name
-
-            # Parse the data
             contents = open(file).read()
+
+            # Try to create a DBPlotWidget for each 'read' command found
             reads = re.split(r'read ', contents)
 
+            if not reads:
+                raise Exception(f"No data found in {name}")
+
             if len(reads) < 2:
-                print(f"No damping box data found in {name}")
-                continue
+                # No read command found
+                print(f"No 'read' command found in {name}")
+                command = 'None'
+                data_str = contents
 
-            # Each read command found
-            for i, read in enumerate(reads[1:]):
-                lines = read.split('\n')
-                command = 'read ' + lines[0]  # The "read" command input
-
-                if len(lines) < 3:  # Meaning it is only the command and no data following
-                    continue
-
-                if len(lines[0]) != 4:  # Meaning it is a ramp reading
-                    continue
-
-                data_str = '\n'.join(lines)
-
-                # Date is required because the X-axis AxisItem requires a datetime timestamp
-                date = re.search(r'<CR>Time:(\d+\/\d+\/\d+)', data_str)
-                if not date:
-                    print(f"Skipped data in {name} as no date can be found")
-                    continue
-                else:
-                    global year, month, day
-                    date_str = date.group(1)
-                    year, month, day = date_str.split('/')
-
-                # Find the data based on the regex pattern
-                data = re.findall(r'\d{1,2}\s\d{1,2}\s\d{1,2}\s\d+\s\d+', data_str)
-                data = [d.split() for d in data]
-
-                # Create a data frame
-                df = pd.DataFrame(data,
-                                  columns=['Hours', 'Minutes', 'Seconds', 'Num_samples', 'Current']
-                                  ).dropna().astype(int)
-                self.db_dfs.append(df)
-
-                # Create a timestamp column to be used as the X axis
-                df['Time'] = df.apply(to_timestamp, axis=1)
-
-                # Convert the miliamps to amps
-                df.Current = df.Current / 1000
-
-                if df.empty:
-                    raise ValueError(f"Data error in {name}")
+                df = parse_data(data_str)
 
                 db_widget = DBPlotWidget(df, command, name, date_str, parent=self)
-                self.scroll_area.layout().addWidget(db_widget)
+                self.db_widgets.append(db_widget)
+                self.add_widget(db_widget)
+                # self.layout().addWidget(db_widget)
+
+            else:
+                # Each read command found
+                for i, read in enumerate(reads[1:]):
+                    lines = read.split('\n')
+                    command = 'read ' + lines[0]  # The "read" command input
+
+                    if len(lines) < 3:  # Meaning it is only the command and no data following
+                        continue
+
+                    if len(lines[0]) != 4:  # Meaning it is a ramp reading
+                        continue
+
+                    data_str = '\n'.join(lines)
+
+                    df = parse_data(data_str)
+                    if df.empty:
+                        raise Exception(f"Data error in {name}")
+
+                    db_widget = DBPlotWidget(df, command, name, date_str, parent=self)
+                    self.db_widgets.append(db_widget)
+                    self.add_widget(db_widget)
+                    # self.layout().addWidget(db_widget)
+
+    def add_widget(self, plot_widget):
+        """
+        Add and position a plot widget in the grid layout.
+        :param plot_widget: DBPlotWidget object
+        """
+        # Adding the plot object to the layout
+        self.widget_layout.addWidget(plot_widget, self.x, self.y)
+        self.x += 1
+        old_y = self.y
+        self.y = int(self.x / 3) + old_y
+
+        if old_y != self.y:
+            self.x = 0
+
+    def arrange_plots(self):
+        """
+        Re-arranges the layout of the plots for when a file is removed.
+        """
+        self.setUpdatesEnabled(False)
+
+        for widget in self.db_widgets:
+            self.widget_layout.removeWidget(widget)
+
+        self.x, self.y = 0, 0
+        for widget in self.db_widgets:
+            self.add_widget(widget)
+
+        self.setUpdatesEnabled(True)
+
+    def remove_file(self):
+        """
+        Signal slot, Remove the widget beneath the mouse.
+        """
+        for widget in self.db_widgets:
+            if widget.underMouse():
+                self.widget_layout.removeWidget(widget)
+                widget.deleteLater()
+                self.db_widgets.remove(widget)
+                break
+        self.arrange_plots()
+
+    def save_img(self):
+        """
+        Save a screenshot of the window.
+        """
+        if not self.default_path:
+            return
+
+        save_path = QFileDialog().getSaveFileName(self, 'Save File Name',
+                                                  str(self.default_path.with_suffix('.png')),
+                                                  'PNG Files (*.PNG);; All files(*.*)')[0]
+
+        if save_path:
+            self.grab().save(save_path)
+
+    def copy_img(self):
+        """
+        Copy the image of the window to the clipboard
+        """
+        QApplication.clipboard().setPixmap(self.grab())
+        print(f"Screen shot copied to clipboard.")
 
 
 class DBPlotWidget(QMainWindow):
@@ -205,9 +382,13 @@ class DBPlotWidget(QMainWindow):
         super().__init__()
         self.parent = parent
         self.data = db_data
+        self.date = date
+        self.curve = None
+        self.symbols = None
 
         # Format widget
         self.setLayout(QVBoxLayout())
+        self.setMinimumHeight(200)
         self.statusBar().show()
 
         # Create the plot
@@ -217,32 +398,52 @@ class DBPlotWidget(QMainWindow):
 
         # Format the plot
         self.plot_widget.addLegend()
-        self.plot_widget.setTitle(f"{date} ({command})")
         self.plot_widget.hideButtons()
-        self.plot_widget.getAxis('left').enableAutoSIPrefix(enable=False)
+        self.plot_widget.setTitle(f"{self.date} (Command: {command})")
         self.plot_widget.setLabel('left', f"Current", units='A')
+
+        self.plot_widget.getAxis('left').enableAutoSIPrefix(enable=False)
+        self.plot_widget.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.plot_widget.showAxis('right', show=True)
+        self.plot_widget.showAxis('top', show=True)
+        self.plot_widget.showLabel('right', show=False)
+        self.plot_widget.showLabel('top', show=False)
+
+        # self.plot_widget.getAxis("bottom").setStyle(tickTextOffset=10)
+        # self.plot_widget.getAxis("left").setStyle(tickTextOffset=10)
+        self.plot_widget.getAxis("right").setStyle(showValues=False)
+        self.plot_widget.getAxis("top").setStyle(showValues=False)
 
         # Status bar
         self.min_current_label = QLabel()
-        self.min_current_label.setIndent(5)
+        self.min_current_label.setIndent(4)
         self.max_current_label = QLabel()
-        self.max_current_label.setIndent(5)
+        self.max_current_label.setIndent(4)
         self.delta_current_label = QLabel()
-        self.delta_current_label.setIndent(5)
+        self.delta_current_label.setIndent(4)
         self.median_current_label = QLabel()
-        self.median_current_label.setIndent(5)
+        self.median_current_label.setIndent(4)
         self.duration_label = QLabel()
-        self.duration_label.setIndent(5)
+        self.duration_label.setIndent(4)
+        self.rate_of_change_label = QLabel()
+        self.rate_of_change_label.setIndent(4)
         self.file_label = QLabel(f"File: {filepath}")
 
         self.statusBar().addWidget(self.min_current_label)
         self.statusBar().addWidget(self.max_current_label)
-        self.statusBar().addWidget(self.delta_current_label)
         self.statusBar().addWidget(self.median_current_label)
+        self.statusBar().addWidget(self.delta_current_label)
         self.statusBar().addWidget(self.duration_label)
+        self.statusBar().addWidget(self.rate_of_change_label)
         self.statusBar().addPermanentWidget(self.file_label)
 
-        self.lr = pg.LinearRegionItem()
+        # Create the linear region item
+        self.lr = pg.LinearRegionItem(
+            brush=pg.mkBrush(color=(51, 153, 255, 20)),
+            hoverBrush=pg.mkBrush(color=(51, 153, 255, 30)),
+            pen=pg.mkPen(color=(0, 25, 51, 100)),
+            hoverPen=pg.mkPen(color=(0, 25, 51, 200)),
+        )
         self.lr.sigRegionChanged.connect(self.lr_moved)
         self.lr.setZValue(-10)
 
@@ -253,20 +454,33 @@ class DBPlotWidget(QMainWindow):
         Plot the damping box data
         :param command: str, the command that was used in the damping box. Uses it for the legend name.
         """
-        color = 'm'
-        plot_item = pg.PlotDataItem(self.data.Time, self.data.Current,
-                                    pen=pg.mkPen(color=color, width=1.5),
-                                    symbol='o',
-                                    symbolSize=6,
-                                    symbolPen=pg.mkPen(color='w', width=0.2),
-                                    symbolBrush=pg.mkBrush(color=color),
-                                    )
-
-        self.plot_widget.addItem(plot_item)
+        # color = (51, 153, 255)
+        color = (153, 51, 255)
+        self.curve = pg.PlotCurveItem(self.data.Time.to_numpy(), self.data.Current.to_numpy(),
+                                      pen=pg.mkPen(color=color, width=2.5),
+                                      )
+        self.symbols = pg.ScatterPlotItem(self.data.Time, self.data.Current,
+                                          symbol='+',
+                                          size=6,
+                                          pen=pg.mkPen(color='w', width=0.1),
+                                          brush=pg.mkBrush(color=color),
+                                          )
+        self.plot_widget.addItem(self.curve)
+        self.plot_widget.addItem(self.symbols)
         self.plot_widget.addItem(self.lr)
-        self.lr.setRegion([plot_item.xData.min(), plot_item.xData.max()])
-        self.lr.setBounds([plot_item.xData.min(), plot_item.xData.max()])
+
+        self.lr.setRegion([self.curve.xData.min(), self.curve.xData.max()])
+        self.lr.setBounds([self.curve.xData.min(), self.curve.xData.max()])
         self.lr_moved()  # Manually trigger to update status bar information
+
+        self.reset_range()  # Manually set the range
+
+    def reset_range(self):
+        """
+        Set the range to zoom into the median current
+        """
+        self.plot_widget.autoRange()
+        self.plot_widget.setYRange(self.data.Current.median() - 1, self.data.Current.median() + 1)
 
     def lr_moved(self):
         """
@@ -278,16 +492,23 @@ class DBPlotWidget(QMainWindow):
         filt = (self.data.Time >= mn) & (self.data.Time <= mx)
         data = self.data[filt]
 
-        self.min_current_label.setText(f"Min: {data.Current.min():g} ")
-        self.max_current_label.setText(f"Max: {data.Current.max():g} ")
-        self.delta_current_label.setText(f"Δ: {data.Current.max() - data.Current.min():g} ")
-        self.median_current_label.setText(f"Median: {data.Current.median():g} ")
+        self.min_current_label.setText(f"Min: {data.Current.min():.1f} ")
+        self.max_current_label.setText(f"Max: {data.Current.max():.1f} ")
+        current_delta = data.Current.max() - data.Current.min()
+        self.delta_current_label.setText(f"Δ: {current_delta:.1f} ")
+        self.median_current_label.setText(f"Median: {data.Current.median():.1f} ")
+
+        if current_delta > 0.5:
+            self.delta_current_label.setStyleSheet('color: red')
+        else:
+            self.delta_current_label.setStyleSheet('color: black')
 
         time_d = data.Time.max() - data.Time.min()
         hours = int(time_d / 3600)
         minutes = int(time_d % 3600 / 60)
         seconds = int(time_d % 60)
-        self.duration_label.setText(f"Time: {hours:02d}:{minutes:02d}:{seconds:02d} ")
+        self.duration_label.setText(f"Duration: {hours:02d}:{minutes:02d}:{seconds:02d} ")
+        self.rate_of_change_label.setText(f"Rate: {current_delta / (time_d / 3600):.1f} A/h ")
 
 
 # class DBPlot(QMainWindow):
@@ -529,7 +750,7 @@ class DBPlotWidget(QMainWindow):
 #         self.dialog.setFileMode(QtGui.QFileDialog.Directory)
 #         self.dialog.setDirectory(default_path)
 #         # file_dialog.setOption(QFileDialog.ShowDirsOnly)
-#         file_dir = QtGui.QFileDialog.getExistingDirectory(self, '', default_path)
+#         file_dir = QFileDialog.getExistingDirectory(self, '', default_path)
 #
 #         if file_dir:
 #             self.grab().save(file_dir + file_name)
@@ -594,259 +815,259 @@ class DBPlotWidget(QMainWindow):
 #             self.add_plot(widget)
 
 
-class DampParser:
-    """
-    Class that parses damping box data.
-    """
-    def __init__(self):
-        self.re_split_ramp = re.compile(
-            r'read\s+\d{8}([\r\n].*$)*', re.MULTILINE
-        )
+# class DampParser:
+#     """
+#     Class that parses damping box data.
+#     """
+#     def __init__(self):
+#         self.re_split_ramp = re.compile(
+#             r'read\s+\d{8}([\r\n].*$)*', re.MULTILINE
+#         )
+#
+#         self.re_data = re.compile(
+#             r'(?:\s|^)(?P<Hours>\d{1,2})\s'
+#             r'(?P<Minutes>\d{1,2})\s'
+#             r'(?P<Seconds>\d{1,2})\s'
+#             r'(?P<Num_Samples>\d{1,3})\s'
+#             r'(?P<Avg_Current>\d+)\s',
+#             re.MULTILINE)
+#
+#         self.re_date = re.compile(
+#             r'\d{4}\/\d{2}\/\d{2}'
+#         )
+#
+#         self.re_split_file = re.compile(
+#             r'Hours.*'
+#         )
+#
+#     def format_data(self, raw_data):
+#         """
+#         Formats the date to be date objects and the current to be in Amps.
+#         :param raw_data: list: Freshly parsed damping box data.
+#         :return: List of times and list of currents.
+#         """
+#         times = []
+#         currents = []
+#
+#         if raw_data:
+#             for item in raw_data:
+#                 timestamp = datetime.time(int(item[0]), int(item[1]), int(item[2]))
+#                 ts_seconds = int(datetime.timedelta(hours=timestamp.hour, minutes=timestamp.minute,
+#                                                     seconds=timestamp.second).total_seconds())
+#                 current = item[-1]
+#
+#                 times.append(ts_seconds)
+#                 currents.append(float(int(current) / 1000))
+#
+#             return times, currents
+#         else:
+#             return None
+#
+#     def get_date(self, dates):
+#         """
+#         Finds and returns the oldest date.
+#         :param dates: list: list of string dates
+#         :return: The oldest date as a datetime.date object
+#         """
+#         if dates:
+#             formatted_dates = []
+#
+#             for date in dates:
+#                 split_date = date.split('/')
+#                 date_obj = datetime.date(int(split_date[0]), int(split_date[1]), int(split_date[2]))
+#                 formatted_dates.append(date_obj)
+#
+#             return max(formatted_dates)
+#         else:
+#             return None
+#
+#     def parse(self, filepath):
+#         """
+#         Parse the damping box data
+#         :param filepath: filepath of the damping box data.
+#         :return: dict: list of times (as integers), list of currents, the date, filename and folderpath.
+#         """
+#         file = None
+#         damp_data = []
+#         survey_date = None
+#         filename = filepath.split('/')[-1].split('.')[0]
+#         folderpath = '/'.join(filepath.split('/')[0:-1])
+#
+#         file = open(filepath, 'r').read()
+#
+#         # # This try is only needed because some files are encoded in utf-16le (no bom) for some reason
+#         # # If a BOM is present, we know what to use to decode
+#         # raw = open(filepath, 'rb').read()  # Read the file as bytes first...
+#         # if raw.startswith(codecs.BOM_UTF16_LE):
+#         #     file = raw.decode('utf-16le')
+#         # elif raw.startswith(codecs.BOM_UTF16_BE):
+#         #     file = raw.decode('utf-16be')
+#         # elif raw.startswith(codecs.BOM_UTF8):
+#         #     file = raw.decode('utf-8')
+#         # else:
+#         #     # If no BOM is present, becomes trial and error
+#         #     try:
+#         #         decoded = raw.decode('utf-16le').encode('ascii')
+#         #         file = raw.decode('utf-16le')
+#         #     except UnicodeEncodeError:
+#         #         try:
+#         #             decoded = raw.decode('utf-16be').encode('ascii')
+#         #             file = raw.decode('utf-16be')
+#         #         except UnicodeEncodeError:
+#         #             file = raw.decode('utf-8')
+#
+#         file_no_ramp = re.split(self.re_split_ramp, file)[0]
+#         split_file = re.split(self.re_split_file, file_no_ramp)
+#
+#         for section in split_file:
+#             data = self.format_data(self.re_data.findall(section))
+#             if data is not None:
+#                 times = data[0]
+#                 currents = data[1]
+#                 damp_data.append({'times': times, 'currents': currents})
+#
+#         survey_date = self.get_date(set(self.re_date.findall(file)))
+#
+#         for item in damp_data:
+#             item['date'] = survey_date
+#             item['filename'] = filename
+#             item['folderpath'] = folderpath
+#
+#         return damp_data
 
-        self.re_data = re.compile(
-            r'(?:\s|^)(?P<Hours>\d{1,2})\s'
-            r'(?P<Minutes>\d{1,2})\s'
-            r'(?P<Seconds>\d{1,2})\s'
-            r'(?P<Num_Samples>\d{1,3})\s'
-            r'(?P<Avg_Current>\d+)\s',
-            re.MULTILINE)
 
-        self.re_date = re.compile(
-            r'\d{4}\/\d{2}\/\d{2}'
-        )
-
-        self.re_split_file = re.compile(
-            r'Hours.*'
-        )
-
-    def format_data(self, raw_data):
-        """
-        Formats the date to be date objects and the current to be in Amps.
-        :param raw_data: list: Freshly parsed damping box data.
-        :return: List of times and list of currents.
-        """
-        times = []
-        currents = []
-
-        if raw_data:
-            for item in raw_data:
-                timestamp = datetime.time(int(item[0]), int(item[1]), int(item[2]))
-                ts_seconds = int(datetime.timedelta(hours=timestamp.hour, minutes=timestamp.minute,
-                                                    seconds=timestamp.second).total_seconds())
-                current = item[-1]
-
-                times.append(ts_seconds)
-                currents.append(float(int(current) / 1000))
-
-            return times, currents
-        else:
-            return None
-
-    def get_date(self, dates):
-        """
-        Finds and returns the oldest date.
-        :param dates: list: list of string dates
-        :return: The oldest date as a datetime.date object
-        """
-        if dates:
-            formatted_dates = []
-
-            for date in dates:
-                split_date = date.split('/')
-                date_obj = datetime.date(int(split_date[0]), int(split_date[1]), int(split_date[2]))
-                formatted_dates.append(date_obj)
-
-            return max(formatted_dates)
-        else:
-            return None
-
-    def parse(self, filepath):
-        """
-        Parse the damping box data
-        :param filepath: filepath of the damping box data.
-        :return: dict: list of times (as integers), list of currents, the date, filename and folderpath.
-        """
-        file = None
-        damp_data = []
-        survey_date = None
-        filename = filepath.split('/')[-1].split('.')[0]
-        folderpath = '/'.join(filepath.split('/')[0:-1])
-
-        file = open(filepath, 'r').read()
-
-        # # This try is only needed because some files are encoded in utf-16le (no bom) for some reason
-        # # If a BOM is present, we know what to use to decode
-        # raw = open(filepath, 'rb').read()  # Read the file as bytes first...
-        # if raw.startswith(codecs.BOM_UTF16_LE):
-        #     file = raw.decode('utf-16le')
-        # elif raw.startswith(codecs.BOM_UTF16_BE):
-        #     file = raw.decode('utf-16be')
-        # elif raw.startswith(codecs.BOM_UTF8):
-        #     file = raw.decode('utf-8')
-        # else:
-        #     # If no BOM is present, becomes trial and error
-        #     try:
-        #         decoded = raw.decode('utf-16le').encode('ascii')
-        #         file = raw.decode('utf-16le')
-        #     except UnicodeEncodeError:
-        #         try:
-        #             decoded = raw.decode('utf-16be').encode('ascii')
-        #             file = raw.decode('utf-16be')
-        #         except UnicodeEncodeError:
-        #             file = raw.decode('utf-8')
-
-        file_no_ramp = re.split(self.re_split_ramp, file)[0]
-        split_file = re.split(self.re_split_file, file_no_ramp)
-
-        for section in split_file:
-            data = self.format_data(self.re_data.findall(section))
-            if data is not None:
-                times = data[0]
-                currents = data[1]
-                damp_data.append({'times': times, 'currents': currents})
-
-        survey_date = self.get_date(set(self.re_date.findall(file)))
-
-        for item in damp_data:
-            item['date'] = survey_date
-            item['filename'] = filename
-            item['folderpath'] = folderpath
-
-        return damp_data
-
-
-class DampPlot(QWidget):
-    """
-    Plot of the damping box data.
-    """
-
-    def __init__(self, file, show_coords=False, grid=True, show_symbols=True, parent=None):
-        super(DampPlot, self).__init__(parent=parent)
-        self.gridLayout = QGridLayout()
-        self.setLayout(self.gridLayout)
-        self.parent = parent
-        self.pw = None
-        self.__axisTime = AxisTime(orientation='bottom')
-        self.file = file
-        self.filename = file[0]['filename']
-        self.folderpath = file[0]['folderpath']
-        self.grid = grid
-        self.times = []
-        self.currents = []
-        self.date = None
-        self.curves = []
-        self.symbols = []
-        self.mouse_x_txt = 0
-        self.mouse_y_txt = 0
-        self.text = pg.TextItem(text='', color=(0, 0, 0), border='w', fill=(255, 255, 255), anchor=(1, 1.1))
-        self.text.setZValue(4)
-        self.setMouseTracking(True)
-        self.show_coords = show_coords
-        self.show_symbols = show_symbols
-        self.create_plot()
-
-    def leaveEvent(self, e):
-        self.text.hide()
-
-    def create_plot(self):
-        """
-        Creates a pyqtgraph plot and plots the damping box data on it.
-        :return: None
-        """
-        tick_label_font = QtGui.QFont()
-        tick_label_font.setPixelSize(11)
-        tick_label_font.setBold(False)
-
-        labelStyle = {'color': 'black', 'font-size': '10pt', 'bold': True, 'font-family': 'Nimbus Roman No9 L',
-                      'italic': True}
-
-        self.pw = pg.PlotWidget(axisItems={'bottom': self.__axisTime})
-        self.gridLayout.addWidget(self.pw)
-
-        self.pw.showGrid(x=self.grid, y=self.grid, alpha=0.15)
-
-        self.pw.showAxis('right', show=True)
-        self.pw.showAxis('top', show=True)
-        self.pw.showLabel('right', show=False)
-        self.pw.showLabel('top', show=False)
-
-        self.pw.getAxis("bottom").tickFont = tick_label_font
-        self.pw.getAxis("left").tickFont = tick_label_font
-        self.pw.getAxis("bottom").setStyle(tickTextOffset=10)
-        self.pw.getAxis("left").setStyle(tickTextOffset=10)
-        self.pw.getAxis("right").setStyle(showValues=False)
-        self.pw.getAxis("top").setStyle(showValues=False)
-
-        self.pw.setLabel('left', "Current", units='A', **labelStyle)
-        # self.pw.setLabel('bottom', "Time", units='', **labelStyle)
-
-        self.pw.plot()
-
-        # Plotting section
-        try:
-            for i, file in enumerate(self.file):
-                times = file['times']
-                currents = file['currents']
-                self.date = file['date']
-
-                self.times.append(times)
-                self.currents.append(currents)
-
-                color = pg.intColor(i)
-                custom_pen = pg.mkPen(color=color, width=3)
-                # self.pw.plot(x=self.times, y=self.currents, pen=custom_pen)#, symbol='+', symbolSize=8, symbolPen='r')
-                curve = pg.PlotCurveItem(times, currents, pen=custom_pen)
-                symbols = pg.PlotDataItem(times, currents, symbol='d', symbolSize=8,
-                                          symbolPen=color, symbolBrush=color)
-                self.curves.append(curve)
-                self.symbols.append(symbols)
-
-                self.pw.addItem(curve)
-                if self.show_symbols:
-                    self.pw.addItem(symbols)
-
-            self.pw.disableAutoRange()
-            self.pw.addItem(self.text)
-            self.set_ranges()
-
-            if self.date:
-                self.pw.setTitle('Damping Box Current ' + self.date.strftime("%B %d, %Y"))
-            else:
-                self.pw.setTitle('Damping Box Current ')
-
-        except Exception as e:
-            logging.info(str(e))
-            self.message.information(None, 'Error', str(e))
-
-        def mouseMoved(e):
-            # Retrieves the coordinates of the mouse coordinates of the event
-            self.mouse_y_txt = str(round(self.pw.plotItem.vb.mapSceneToView(e).y(), 4))
-            self.mouse_x_txt = str(datetime.timedelta(seconds=self.pw.plotItem.vb.mapSceneToView(e).x())).split('.')[0]
-            if self.show_coords:
-                self.text.show()
-                self.text.setText(text='Time: ' + str(self.mouse_x_txt) + '\nCurrent: ' + str(self.mouse_y_txt))
-                self.text.setPos(self.pw.plotItem.vb.mapSceneToView(e))
-            else:
-                pass
-
-        # Connects the action of moving the mouse to mouseMoved function
-        self.pw.scene().sigMouseMoved.connect(mouseMoved)
-
-    def set_ranges(self):
-        """
-        Automatically calculate and set the range of the plots.
-        :return: None
-        """
-
-        offset = 0.5 * (max([stats.median(currents) for currents in self.currents]) - min(
-            [stats.median(currents) for currents in self.currents]))
-        median = stats.median([stats.median(currents) for currents in self.currents])
-        min_y, max_y = median - max(offset, 1), median + max(offset, 1)
-        min_x, max_x = min([item for sublist in self.times for item in sublist]), max(
-            [item for sublist in self.times for item in sublist])
-
-        self.pw.setYRange(min_y, max_y)
-        self.pw.setXRange(min_x, max_x)
+# class DampPlot(QWidget):
+#     """
+#     Plot of the damping box data.
+#     """
+#
+#     def __init__(self, file, show_coords=False, grid=True, show_symbols=True, parent=None):
+#         super(DampPlot, self).__init__(parent=parent)
+#         self.gridLayout = QGridLayout()
+#         self.setLayout(self.gridLayout)
+#         self.parent = parent
+#         self.pw = None
+#         self.__axisTime = AxisTime(orientation='bottom')
+#         self.file = file
+#         self.filename = file[0]['filename']
+#         self.folderpath = file[0]['folderpath']
+#         self.grid = grid
+#         self.times = []
+#         self.currents = []
+#         self.date = None
+#         self.curves = []
+#         self.symbols = []
+#         self.mouse_x_txt = 0
+#         self.mouse_y_txt = 0
+#         self.text = pg.TextItem(text='', color=(0, 0, 0), border='w', fill=(255, 255, 255), anchor=(1, 1.1))
+#         self.text.setZValue(4)
+#         self.setMouseTracking(True)
+#         self.show_coords = show_coords
+#         self.show_symbols = show_symbols
+#         self.create_plot()
+#
+#     def leaveEvent(self, e):
+#         self.text.hide()
+#
+#     def create_plot(self):
+#         """
+#         Creates a pyqtgraph plot and plots the damping box data on it.
+#         :return: None
+#         """
+#         tick_label_font = QtGui.QFont()
+#         tick_label_font.setPixelSize(11)
+#         tick_label_font.setBold(False)
+#
+#         labelStyle = {'color': 'black', 'font-size': '10pt', 'bold': True, 'font-family': 'Nimbus Roman No9 L',
+#                       'italic': True}
+#
+#         self.pw = pg.PlotWidget(axisItems={'bottom': self.__axisTime})
+#         self.gridLayout.addWidget(self.pw)
+#
+#         self.pw.showGrid(x=self.grid, y=self.grid, alpha=0.15)
+#
+#         self.pw.showAxis('right', show=True)
+#         self.pw.showAxis('top', show=True)
+#         self.pw.showLabel('right', show=False)
+#         self.pw.showLabel('top', show=False)
+#
+#         self.pw.getAxis("bottom").tickFont = tick_label_font
+#         self.pw.getAxis("left").tickFont = tick_label_font
+#         self.pw.getAxis("bottom").setStyle(tickTextOffset=10)
+#         self.pw.getAxis("left").setStyle(tickTextOffset=10)
+#         self.pw.getAxis("right").setStyle(showValues=False)
+#         self.pw.getAxis("top").setStyle(showValues=False)
+#
+#         self.pw.setLabel('left', "Current", units='A', **labelStyle)
+#         # self.pw.setLabel('bottom', "Time", units='', **labelStyle)
+#
+#         self.pw.plot()
+#
+#         # Plotting section
+#         try:
+#             for i, file in enumerate(self.file):
+#                 times = file['times']
+#                 currents = file['currents']
+#                 self.date = file['date']
+#
+#                 self.times.append(times)
+#                 self.currents.append(currents)
+#
+#                 color = pg.intColor(i)
+#                 custom_pen = pg.mkPen(color=color, width=3)
+#                 # self.pw.plot(x=self.times, y=self.currents, pen=custom_pen)#, symbol='+', symbolSize=8, symbolPen='r')
+#                 curve = pg.PlotCurveItem(times, currents, pen=custom_pen)
+#                 symbols = pg.PlotDataItem(times, currents, symbol='d', symbolSize=8,
+#                                           symbolPen=color, symbolBrush=color)
+#                 self.curves.append(curve)
+#                 self.symbols.append(symbols)
+#
+#                 self.pw.addItem(curve)
+#                 if self.show_symbols:
+#                     self.pw.addItem(symbols)
+#
+#             self.pw.disableAutoRange()
+#             self.pw.addItem(self.text)
+#             self.set_ranges()
+#
+#             if self.date:
+#                 self.pw.setTitle('Damping Box Current ' + self.date.strftime("%B %d, %Y"))
+#             else:
+#                 self.pw.setTitle('Damping Box Current ')
+#
+#         except Exception as e:
+#             logging.info(str(e))
+#             self.message.information(None, 'Error', str(e))
+#
+#         def mouseMoved(e):
+#             # Retrieves the coordinates of the mouse coordinates of the event
+#             self.mouse_y_txt = str(round(self.pw.plotItem.vb.mapSceneToView(e).y(), 4))
+#             self.mouse_x_txt = str(datetime.timedelta(seconds=self.pw.plotItem.vb.mapSceneToView(e).x())).split('.')[0]
+#             if self.show_coords:
+#                 self.text.show()
+#                 self.text.setText(text='Time: ' + str(self.mouse_x_txt) + '\nCurrent: ' + str(self.mouse_y_txt))
+#                 self.text.setPos(self.pw.plotItem.vb.mapSceneToView(e))
+#             else:
+#                 pass
+#
+#         # Connects the action of moving the mouse to mouseMoved function
+#         self.pw.scene().sigMouseMoved.connect(mouseMoved)
+#
+#     def set_ranges(self):
+#         """
+#         Automatically calculate and set the range of the plots.
+#         :return: None
+#         """
+#
+#         offset = 0.5 * (max([stats.median(currents) for currents in self.currents]) - min(
+#             [stats.median(currents) for currents in self.currents]))
+#         median = stats.median([stats.median(currents) for currents in self.currents])
+#         min_y, max_y = median - max(offset, 1), median + max(offset, 1)
+#         min_x, max_x = min([item for sublist in self.times for item in sublist]), max(
+#             [item for sublist in self.times for item in sublist])
+#
+#         self.pw.setYRange(min_y, max_y)
+#         self.pw.setXRange(min_x, max_x)
 
 
 # class AxisTime(pg.AxisItem):
@@ -870,7 +1091,7 @@ if __name__ == '__main__':
 
     samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Damping box files'))
 
-    files = str(Path(samples_folder).joinpath('08_227-20200914-201740.log'))
+    files = str(Path(samples_folder).joinpath('08_247-20200914-200332.log'))
     mw.open(files)
 
     app.exec_()

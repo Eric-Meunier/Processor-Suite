@@ -185,19 +185,12 @@ class SurveyPlanner(QMainWindow):
     def save_img(self):
         save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
         if save_file:
-            size = self.contentsRect()
-            img = QtGui.QPixmap(size.width(), size.height())
-            self.render(img)
-            img.save(save_file)
+            self.grab().save(save_file)
         else:
             pass
 
     def copy_img(self):
-        size = self.contentsRect()
-        img = QtGui.QPixmap(size.width(), size.height())
-        self.render(img)
-        img.copy(size)
-        QApplication.clipboard().setPixmap(img)
+        QApplication.clipboard().setPixmap(self.grab())
 
 
 class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
