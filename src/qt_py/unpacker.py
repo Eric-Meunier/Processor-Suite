@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox
                              QFileSystemModel, QAbstractItemView, QErrorMessage, QMenu, QDialogButtonBox,  QCheckBox)
 from pyunpack import Archive
 import py7zr
-from src.damp.db_plot import DBPlot
+from src.damp.db_plot import DBPlotter
 
 # This must be placed after the custom table or else there are issues with class promotion in Qt Designer.
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -41,7 +41,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
         self.setAcceptDrops(True)
 
-        self.db_plot = DBPlot(parent=self)
+        self.db_plot = DBPlotter(parent=self)
         self.dialog = QFileDialog()
         self.message = QMessageBox()
         self.error = QErrorMessage()

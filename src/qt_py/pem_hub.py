@@ -37,7 +37,7 @@ from src.qt_py.derotator import Derotator
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.pem_plot_editor import PEMPlotEditor
 
-from src.damp.db_plot import DBPlot
+from src.damp.db_plot import DBPlotter
 
 __version__ = '0.11.0'
 
@@ -131,7 +131,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.station_splitter = StationSplitter(parent=self)
         self.grid_planner = GridPlanner(parent=self)
         self.loop_planner = LoopPlanner(parent=self)
-        self.db_plot = DBPlot(parent=self)
+        self.db_plot = DBPlotter(parent=self)
         self.unpacker = Unpacker(parent=self)
         self.gpx_creator = GPXCreator(parent=self)
         self.map_viewer_3d = Map3DViewer(parent=self)
