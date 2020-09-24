@@ -1,17 +1,13 @@
-import sys
 import os
-import copy
-import math
-import numpy as np
+import sys
 import time
+from pathlib import Path
+
+import numpy as np
 import pandas as pd
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QRadioButton, QGridLayout,
-                             QLabel, QLineEdit, QShortcut, QFileDialog)
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from src.pem.pem_plotter import LINPlotter, LOGPlotter
 import pyqtgraph as pg
+from PyQt5 import (QtCore, QtGui, uic)
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
 
 sys._excepthook = sys.excepthook
 
@@ -136,6 +132,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.pp_ax.getAxis('top').enableAutoSIPrefix(enable=False)
 
         self.axes = np.concatenate([self.x_view_axes, self.y_view_axes, [self.rot_ax], [self.pp_ax]])
+
         # Disable the 'A' button and auto-scaling SI units
         for ax in self.axes:
             ax.hideButtons()
@@ -143,23 +140,45 @@ class Derotator(QMainWindow, Ui_Derotator):
             ax.getAxis('top').enableAutoSIPrefix(enable=False)
 
         # Signals
-
+        self.actionPEM_File.triggered.connect(self.export_pem_file)
         self.actionStats.triggered.connect(self.export_stats)
 
     def export_stats(self):
         """
-        Save the stats to a CSV file.
+        Save the stats data frame to a CSV file.
         """
         save_file = QFileDialog().getSaveFileName(self, 'Save CSV File',
                                                   str(self.pem_file.filepath.with_suffix('.CSV')),
-                                                  'CSV Files (*.CSV);;')[0]
+                                                  'CSV Files (*.CSV)')[0]
         if save_file:
             df = self.get_stats()
-            df.to_csv(save_file, header=True, index=False)
+            df.to_csv(save_file,
+                      header=True,
+                      index=False,
+                      float_format='%.2f',
+                      na_rep='')
+            os.startfile(save_file)
+
+    def export_pem_file(self):
+        """
+        Export the rotated PEMFile.
+        """
+        save_file = QFileDialog().getSaveFileName(self, 'Save PEM File',
+                                                  str(self.pem_file.filepath),
+                                                  'PEM Files (*.PEM)')[0]
+        if save_file:
+            pem = self.rotated_file.copy()
+            pem.filepath = Path(save_file)
+            pem.save()
+            os.startfile(save_file)
 
     def get_stats(self):
+        """
+        Create a data frame with relevant information about de-rotation.
+        :return: pandas DataFrame object
+        """
 
-        def get_pp_info(reading):
+        def get_stats(reading):
             """
             Return the relevant information in the reading, mostly in the RAD_Tool object.
             :param reading: PEMFile reading
@@ -167,18 +186,26 @@ class Derotator(QMainWindow, Ui_Derotator):
             """
             rad = reading.RAD_tool
             station = reading.Station
-            return [station, rad.azimuth, rad.dip,
-                    rad.x_pos, rad.y_pos, rad.z_pos,
-                    rad.ppx_theory, rad.ppy_theory, rad.ppz_theory]
+            stats.append([station, rad.azimuth, rad.dip,
+                          rad.x_pos, rad.y_pos, rad.z_pos,
+                          rad.ppx_theory, rad.ppy_theory, rad.ppz_theory,
+                          rad.ppxy_theory, rad.ppxy_measured, rad.ppxy_cleaned,
+                          rad.get_azimuth(), rad.get_dip(),
+                          rad.acc_roll_angle, rad.mag_roll_angle, rad.measured_pp_roll_angle, rad.cleaned_pp_roll_angle]
+                         )
 
-        if self.pp_btn.isEnabled():
-            pp_info = self.pem_file.data.apply(get_pp_info, axis=1)
-            df = pd.DataFrame([f for f in pp_info.to_numpy()],
-                              columns=['Station', 'Azimuth', 'Dip',
-                                       'X Position', 'Y Position', 'Z Position',
-                                       'PPx Theory', 'PPy Theory', 'PPz Theory']).drop_duplicates(inplace=False,
-                                                                                                  subset='Station')
-            return df
+        stats = []
+        self.pem_file.data.apply(get_stats, axis=1)
+        df = pd.DataFrame(stats,
+                          columns=['Station', 'Segment Azimuth', 'Segment Dip',
+                                   'X Position', 'Y Position', 'Z Position',
+                                   'PPx Theory', 'PPy Theory', 'PPz Theory',
+                                   'PPxy Theory', 'PPxy Measured', 'PPxy Cleaned',
+                                   'Calculated Azimuth', 'Calculated Dip',
+                                   'Accelerometer Roll Angle', 'Magnetometer Roll Angle', 'Measured PP Roll Angle',
+                                   'Cleaned PP Roll Angle'])
+        df.drop_duplicates(inplace=True, subset='Station')
+        return df
 
     def reset_range(self):
         """
@@ -213,15 +240,15 @@ class Derotator(QMainWindow, Ui_Derotator):
                 result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
                 self.list.addItem(result)
 
+        while isinstance(pem_file, list):
+            pem_file = pem_file[0]
+
         if not pem_file:
             self.message.critical(self, 'Error', 'PEM file is invalid')
             return
         elif pem_file.data.empty:
             self.message.critical(self, 'Error', f"No EM data in {pem_file.filepath.name}")
             return
-
-        while isinstance(pem_file, list):
-            pem_file = pem_file[0]
 
         # Ensure the file is a borehole and it has both X and Y component data
         if all([pem_file.is_borehole(), 'X' in pem_file.get_components(), 'Y' in pem_file.get_components()]):
@@ -231,14 +258,14 @@ class Derotator(QMainWindow, Ui_Derotator):
                                      'File must be a borehole survey with X and Y component data.')
             return
 
-        # # Check that the file hasn't already been de-rotated.
-        # if self.pem_file.is_rotated():
-        #     response = self.message.question(self, 'File already de-rotated',
-        #                                      f"{pem_file.filepath.name} is already de-rotated. " +
-        #                                      'Do you wish to de-rotate again?',
-        #                                      self.message.Yes | self.message.No)
-        #     if response == self.message.No:
-        #         return
+        # Check that the file hasn't already been de-rotated.
+        if self.pem_file.is_rotated():
+            response = self.message.question(self, 'File already de-rotated',
+                                             f"{pem_file.filepath.name} is already de-rotated. " +
+                                             'Do you wish to de-rotate again?',
+                                             self.message.Yes | self.message.No)
+            if response == self.message.No:
+                return
 
         if self.pem_file.has_loop_gps() and self.pem_file.has_geometry():
             self.pp_btn.setEnabled(True)
@@ -269,6 +296,11 @@ class Derotator(QMainWindow, Ui_Derotator):
                 self.list.hide()
 
             self.rotate()
+
+            # Limit the profile plots to only show the station range
+            stations = self.pem_file.get_stations(converted=True)
+            for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
+                ax.setLimits(xMin=stations.min(), xMax=stations.max())
             self.show()
 
     def plot_pem(self, pem_file):
@@ -281,26 +313,6 @@ class Derotator(QMainWindow, Ui_Derotator):
             for ax in self.axes:
                 if ax not in [self.pp_ax, self.rot_ax]:
                     ax.clear()
-
-        def calc_channel_bounds():
-            """
-            Create tuples of start and end channels to be plotted per axes
-            :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
-            """
-            channel_bounds = [None] * 4
-            num_channels_per_plot = int((processed_pem.number_of_channels - 1) // 4)
-            remainder_channels = int((processed_pem.number_of_channels - 1) % 4)
-
-            for k in range(0, len(channel_bounds)):
-                channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
-
-            for i in range(0, remainder_channels):
-                channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
-                for k in range(i + 1, len(channel_bounds)):
-                    channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
-
-            channel_bounds.insert(0, (0, 0))
-            return channel_bounds
 
         def plot_lin(component):
 
@@ -450,8 +462,8 @@ class Derotator(QMainWindow, Ui_Derotator):
         if not pem_file:
             return
 
-        raw_pem = copy.deepcopy(pem_file)  # Needed otherwise the returned PEMFile will be averaged and split
-        processed_pem = copy.deepcopy(pem_file)
+        raw_pem = pem_file.copy()  # Needed otherwise the returned PEMFile will be averaged and split
+        processed_pem = pem_file.copy()
 
         # Split the data if it isn't already split
         if not processed_pem.is_split():
@@ -462,7 +474,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             processed_pem = processed_pem.average()
 
         clear_plots()
-        channel_bounds = calc_channel_bounds()
+        channel_bounds = self.pem_file.get_channel_bounds()
 
         t = time.time()
         plot_lin('X')
@@ -480,17 +492,14 @@ class Derotator(QMainWindow, Ui_Derotator):
         method = self.get_method()
         self.soa = self.soa_sbox.value()
         # Create a copy of the pem_file so it is never changed
-        pem_file = self.pem_file.copy()
+        copy_file = self.pem_file.copy()
 
-        if pem_file.data.empty:
-            raise Exception(f"No EM data in {pem_file.filepath.name}")
-
-        print(id(pem_file.data.iloc[0].RAD_tool), id(self.pem_file.data.iloc[0].RAD_tool))
+        print(id(copy_file.data.iloc[0].RAD_tool), id(self.pem_file.data.iloc[0].RAD_tool))
 
         if method is not None:
-            self.rotated_file = pem_file.rotate(method=method, soa=self.soa)
+            self.rotated_file = copy_file.rotate(method=method, soa=self.soa)
         else:
-            self.rotated_file = pem_file
+            self.rotated_file = copy_file
 
         self.plot_pem(self.rotated_file)
 

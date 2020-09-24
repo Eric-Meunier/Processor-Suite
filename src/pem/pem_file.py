@@ -2882,12 +2882,26 @@ class RADTool:
         self.rotation_type = None
         self.id = None
 
+        # PP rotation stats
+        self.azimuth = None
+        self.dip = None
+        self.x_pos = None
+        self.y_pos = None
+        self.z_pos = None
+        self.ppx_theory = None
+        self.ppy_theory = None
+        self.ppz_theory = None
+        self.ppx_raw = None
+        self.ppy_raw = None
+        self.ppx_cleaned = None
+        self.ppy_cleaned = None
         self.ppxy_theory = None
         self.ppxy_cleaned = None
         self.ppxy_measured = None
-
         self.cleaned_pp_roll_angle = None
         self.measured_pp_roll_angle = None
+        self.pp_dip = None
+
         self.acc_roll_angle = None
         self.mag_roll_angle = None
 
