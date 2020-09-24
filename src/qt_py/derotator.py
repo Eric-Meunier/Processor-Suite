@@ -4,9 +4,10 @@ import copy
 import math
 import numpy as np
 import time
+import pandas as pd
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QRadioButton, QGridLayout,
-                             QLabel, QLineEdit, QShortcut, QTableWidgetItem)
+                             QLabel, QLineEdit, QShortcut, QFileDialog)
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from src.pem.pem_plotter import LINPlotter, LOGPlotter
@@ -141,6 +142,44 @@ class Derotator(QMainWindow, Ui_Derotator):
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
             ax.getAxis('top').enableAutoSIPrefix(enable=False)
 
+        # Signals
+
+        self.actionStats.triggered.connect(self.export_stats)
+
+    def export_stats(self):
+        """
+        Save the stats to a CSV file.
+        """
+        save_file = QFileDialog().getSaveFileName(self, 'Save CSV File',
+                                                  str(self.pem_file.filepath.with_suffix('.CSV')),
+                                                  'CSV Files (*.CSV);;')[0]
+        if save_file:
+            df = self.get_stats()
+            df.to_csv(save_file, header=True, index=False)
+
+    def get_stats(self):
+
+        def get_pp_info(reading):
+            """
+            Return the relevant information in the reading, mostly in the RAD_Tool object.
+            :param reading: PEMFile reading
+            :return: list
+            """
+            rad = reading.RAD_tool
+            station = reading.Station
+            return [station, rad.azimuth, rad.dip,
+                    rad.x_pos, rad.y_pos, rad.z_pos,
+                    rad.ppx_theory, rad.ppy_theory, rad.ppz_theory]
+
+        if self.pp_btn.isEnabled():
+            pp_info = self.pem_file.data.apply(get_pp_info, axis=1)
+            df = pd.DataFrame([f for f in pp_info.to_numpy()],
+                              columns=['Station', 'Azimuth', 'Dip',
+                                       'X Position', 'Y Position', 'Z Position',
+                                       'PPx Theory', 'PPy Theory', 'PPz Theory']).drop_duplicates(inplace=False,
+                                                                                                  subset='Station')
+            return df
+
     def reset_range(self):
         """
         Reset the range of each plot
@@ -174,11 +213,17 @@ class Derotator(QMainWindow, Ui_Derotator):
                 result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
                 self.list.addItem(result)
 
-        assert pem_file, 'Invalid PEM file'
+        if not pem_file:
+            self.message.critical(self, 'Error', 'PEM file is invalid')
+            return
+        elif pem_file.data.empty:
+            self.message.critical(self, 'Error', f"No EM data in {pem_file.filepath.name}")
+            return
 
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
 
+        # Ensure the file is a borehole and it has both X and Y component data
         if all([pem_file.is_borehole(), 'X' in pem_file.get_components(), 'Y' in pem_file.get_components()]):
             self.pem_file = pem_file
         else:
@@ -186,26 +231,28 @@ class Derotator(QMainWindow, Ui_Derotator):
                                      'File must be a borehole survey with X and Y component data.')
             return
 
-        if self.pem_file.is_rotated():
-            response = self.message.question(self, 'File already de-rotated',
-                                             f"{pem_file.filepath.name} is already de-rotated. " +
-                                             'Do you wish to de-rotate again?',
-                                             self.message.Yes | self.message.No)
-            if response == self.message.No:
-                return
+        # # Check that the file hasn't already been de-rotated.
+        # if self.pem_file.is_rotated():
+        #     response = self.message.question(self, 'File already de-rotated',
+        #                                      f"{pem_file.filepath.name} is already de-rotated. " +
+        #                                      'Do you wish to de-rotate again?',
+        #                                      self.message.Yes | self.message.No)
+        #     if response == self.message.No:
+        #         return
 
         if self.pem_file.has_loop_gps() and self.pem_file.has_geometry():
             self.pp_btn.setEnabled(True)
         else:
             self.pp_btn.setEnabled(False)
 
-        self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
-
         try:
             self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
         except Exception as e:
+            # Common exception will be that there is no eligible data
             self.message.information(self, 'Error', str(e))
         else:
+            self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
+
             # Disable the PP values tab if there's no PP information
             if all([self.pem_file.has_loop_gps(), self.pem_file.has_geometry(), self.pem_file.ramp > 0]):
                 self.tabWidget.setTabEnabled(1, True)
@@ -434,7 +481,10 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.soa = self.soa_sbox.value()
         # Create a copy of the pem_file so it is never changed
         pem_file = self.pem_file.copy()
-        # pem_file.data = copy.deepcopy(pem_file.data)
+
+        if pem_file.data.empty:
+            raise Exception(f"No EM data in {pem_file.filepath.name}")
+
         print(id(pem_file.data.iloc[0].RAD_tool), id(self.pem_file.data.iloc[0].RAD_tool))
 
         if method is not None:
@@ -468,9 +518,10 @@ def main():
 
     pg = PEMGetter()
     parser = PEMParser()
-    pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
-    # pem_files = parser.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\test results\718-2941xy - test conversion.pem')
+    # pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
+    pem_files = parser.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\TC170199XYT.PEM')
     mw.open(pem_files)
+    # mw.export_stats()
 
     app.exec_()
 

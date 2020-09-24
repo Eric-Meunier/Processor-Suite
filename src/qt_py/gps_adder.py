@@ -500,7 +500,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         # Save the information of the row for backup purposes
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
-        # color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
         df = self.table_to_df()
@@ -791,7 +790,6 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         # Save the information of the row for backup purposes
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
-        # color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
         df = self.table_to_df()
@@ -843,10 +841,10 @@ class NonScientific(pg.AxisItem):
         super(NonScientific, self).__init__(*args, **kwargs)
 
     def tickStrings(self, values, scale, spacing):
-        return [int(value*1) for value in values] #This line return the NonScientific notation value
+        return [int(value*1) for value in values]  # This line return the NonScientific notation value
 
     def logTickStrings(self, values, scale, spacing):
-        return [int(value*1) for value in values] #This line return the NonScientific notation value
+        return [int(value*1) for value in values]  # This line return the NonScientific notation value
 
 
 def main():

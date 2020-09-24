@@ -1076,6 +1076,8 @@ class PEMFile:
 
                     # Add the PP information (theoretical PP, cleaned PP, roll angle) to the new RAD Tool object
                     if include_pp is True:
+                        pp_rad_info = dict()
+
                         # Calculate the raw PP value for each component
                         pp_ch_index = self.channel_times[self.channel_times.Remove == False].index.values[0]
                         measured_ppx = group[group.Component == 'X'].apply(lambda x: x.Reading[pp_ch_index],
@@ -1103,9 +1105,9 @@ class PEMFile:
                         # Rotate the theoretical values into the same frame of reference used with boreholes
                         rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
 
-                        rTx_new, rTy_new, rTz_new = R.from_euler(
-                            'ZY', [90 - seg_azimuth, 90 - seg_dip], degrees=True).apply([Tx, Ty, Tz]
-                                                                                        )
+                        # rTx_new, rTy_new, rTz_new = R.from_euler(
+                        #     'ZY', [90 - seg_azimuth, 90 - seg_dip], degrees=True).apply([Tx, Ty, Tz]
+                        #                                                                 )
 
                         # Rotate the theoretical values into the hole coordinate system
                         r = R.from_euler('YZ', [90 - seg_dip, seg_azimuth], degrees=True)
@@ -1128,6 +1130,9 @@ class PEMFile:
                             )
                             if cleaned_pp_roll_angle < 0:
                                 cleaned_pp_roll_angle = cleaned_pp_roll_angle + 360
+
+                            pp_rad_info['ppx_cleaned'] = cleaned_PPx
+                            pp_rad_info['ppy_cleaned'] = cleaned_PPy
                             # print(f"Cleaned PP roll angle at {group.Station.unique()[0]}: {clean_pp_roll_angle:.2f}")
                         else:
                             cleaned_pp_roll_angle = None
@@ -1141,22 +1146,26 @@ class PEMFile:
                         # print(f"Raw PP roll angle at {group.Station.unique()[0]}: {measured_pp_roll_angle:.2f}")
 
                         # Update the RAD Tool object with the new information
-                        pp_info = {
-                            # 'ppx_theory': rT[0],
-                            # 'ppy_theory': rT[1],
-                            # 'ppz_theory': rT[2],
-                            # 'ppx_cleaned': cleaned_PPx,
-                            # 'ppy_cleaned': cleaned_PPy,
-                            # 'ppx_raw': measured_ppx,
-                            # 'ppy_raw': measured_ppy,
-                            'ppxy_theory': ppxy_theory,
-                            'ppxy_cleaned': ppxy_cleaned,
-                            'ppxy_measured': ppxy_measured,
-                            'cleaned_pp_roll_angle': cleaned_pp_roll_angle,
-                            'measured_pp_roll_angle': measured_pp_roll_angle,
-                            'pp_dip': -seg_dip
-                        }
-                        for key, value in pp_info.items():
+                        pp_rad_info['azimuth'] = seg_azimuth
+                        pp_rad_info['dip'] = seg_dip
+
+                        pp_rad_info['x_pos'] = x_pos
+                        pp_rad_info['y_pos'] = y_pos
+                        pp_rad_info['z_pos'] = z_pos
+
+                        pp_rad_info['ppx_theory'] = rT[0]
+                        pp_rad_info['ppy_theory'] = rT[1]
+                        pp_rad_info['ppz_theory'] = rT[2]
+                        pp_rad_info['ppx_raw'] = measured_ppx
+                        pp_rad_info['ppy_raw'] = measured_ppy
+                        pp_rad_info['ppxy_theory'] = ppxy_theory
+                        pp_rad_info['ppxy_cleaned'] = ppxy_cleaned
+                        pp_rad_info['ppxy_measured'] = ppxy_measured
+                        pp_rad_info['cleaned_pp_roll_angle'] = cleaned_pp_roll_angle
+                        pp_rad_info['measured_pp_roll_angle'] = measured_pp_roll_angle
+                        pp_rad_info['pp_dip'] = -seg_dip
+
+                        for key, value in pp_rad_info.items():
                             setattr(rad, key, value)
 
                 def calculate_acc_angles():
@@ -1237,7 +1246,9 @@ class PEMFile:
         filtered_data = self.data[filt].groupby(['Station', 'RAD_ID'],
                                                 group_keys=False,
                                                 as_index=False).apply(lambda k: filter_data(k))
-        assert not filtered_data.empty, f"No eligible data found for probe de-rotation in {self.filepath.name}"
+        if filtered_data.dropna(subset=['Station']).empty:
+            raise Exception(f"No eligible data found for probe de-rotation in {self.filepath.name}")
+
         print(f"PEMFile - Time to filter data for rotation preparation: {time.time() - st}")
 
         # Calculate the RAD tool angles
