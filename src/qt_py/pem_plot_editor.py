@@ -609,30 +609,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             for ax in axes:
                 ax.clearPlots()
 
-        def calc_channel_bounds():
-            """
-            Create tuples of start and end channels to be plotted per axes
-            :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
-            """
-            channel_bounds = [None] * 4
-
-            # Only plot off-time channels
-            number_of_channels = len(file.channel_times[file.channel_times.Remove == False]) - 1
-
-            num_channels_per_plot = int((number_of_channels - 1) // 4)
-            remainder_channels = int((number_of_channels - 1) % 4)
-
-            for k in range(0, len(channel_bounds)):
-                channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
-
-            for i in range(0, remainder_channels):
-                channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
-                for k in range(i + 1, len(channel_bounds)):
-                    channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
-
-            channel_bounds.insert(0, (0, 0))
-            return channel_bounds
-
         def plot_lin(profile_data, axes):
 
             def plot_lines(df, ax):
@@ -723,7 +699,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         scatter_plotting_time = 0
 
         # Calculate the lin plot axes channel bounds
-        channel_bounds = calc_channel_bounds()
+        channel_bounds = file.get_channel_bounds()
 
         for component in components:
             profile_data = file.get_profile_data(component, averaged=False, converted=True, ontime=False)

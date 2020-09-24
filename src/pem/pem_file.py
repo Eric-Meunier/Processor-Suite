@@ -424,6 +424,30 @@ class PEMFile:
             data = self.data
         return data
 
+    def get_channel_bounds(self):
+        """
+        Create tuples of start and end channels to be plotted per axes for LIN plots
+        :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
+        """
+        channel_bounds = [None] * 4
+
+        # Only plot off-time channels
+        number_of_channels = len(self.channel_times[self.channel_times.Remove == False]) - 1
+
+        num_channels_per_plot = int((number_of_channels - 1) // 4)
+        remainder_channels = int((number_of_channels - 1) % 4)
+
+        for k in range(0, len(channel_bounds)):
+            channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
+
+        for i in range(0, remainder_channels):
+            channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
+            for k in range(i + 1, len(channel_bounds)):
+                channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
+
+        channel_bounds.insert(0, (0, 0))
+        return channel_bounds
+
     def get_profile_data(self, component, averaged=False, converted=False, ontime=True):
         """
         Transform the readings in the data in a manner to be plotted as a profile
