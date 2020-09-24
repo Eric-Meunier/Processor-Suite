@@ -522,7 +522,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 if line.df.empty:
                     self.message.information(self, 'No GPS Found', f"{line.error_msg}")
                 else:
-                    line_adder.open(line)
+                    line_adder.open(line, name=self.pem_file.line_name)
             except Exception as e:
                 self.error.showMessage(f"Error adding line: {str(e)}")
 
@@ -548,7 +548,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 loop = TransmitterLoop(file, crs=crs)
                 if loop.df.empty:
                     self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
-                loop_adder.open(loop)
+                loop_adder.open(loop, name=self.pem_file.loop_name)
             except Exception as e:
                 self.error.showMessage(f"Error adding loop: {str(e)}")
         else:
@@ -560,7 +560,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         global loop_adder
         loop_adder = LoopAdder(parent=self)
-        loop_adder.open(self.get_loop())
+        loop_adder.open(self.get_loop(), name=self.pem_file.loop_name)
 
     def edit_line(self):
         """
@@ -568,7 +568,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         global line_adder
         line_adder = LineAdder(parent=self)
-        line_adder.open(self.get_line())
+        line_adder.open(self.get_line(), name=self.pem_file.line_name)
 
     def clear_table(self, table):
         """
@@ -593,11 +593,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             'Format': f.format,
             'Units': f.units,
             'Timebase': f.timebase,
+            'Ramp': f.ramp,
             'Number of Channels': f.number_of_channels,
             'Number of Readings': f.number_of_readings,
             'Primary Field Value': f.primary_field_value,
             'Loop Dimensions': ' x '.join(f.loop_dimensions.split()[:-1]),
-            'Loop Polairty': f.loop_polarity,
+            'Loop Polarity': f.loop_polarity,
             'Normalized': f.normalized,
             'Rx Number': f.rx_number,
             'Rx File Name': f.rx_file_name,
@@ -1262,76 +1263,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             self.lcdDistance.display(0)
 
-    # def change_station_suffix(self):
-    #     """
-    #     Change the suffix letter from the station number for selected rows in the data_table. Only for surface files.
-    #     Input suffix must be either N, S, E, or W, case doesn't matter.
-    #     :return: None
-    #     """
-    #     if self.pem_file.is_borehole():  # Shouldn't be needed since the button is disabled for boreholes
-    #         return
-    #
-    #     suffix, okPressed = QInputDialog.getText(self, "Change Station Suffix", "New Suffix:")
-    #     if okPressed and suffix.upper() in ['N', 'E', 'S', 'W']:
-    #         df_rows = self.get_df_rows()
-    #         stations = self.pem_file.data.loc[df_rows, 'Station']
-    #         stations = stations.map(lambda x: re.sub('[NESW]', suffix.upper(), x))
-    #
-    #         self.pem_file.data.loc[df_rows, 'Station'] = stations
-    #         self.fill_data_table()
-    #
-    #     elif okPressed:
-    #         self.message.information(self, 'Invalid Suffix', 'Suffix must be one of [NSEW]')
-
-    # def change_component(self):
-    #     """
-    #     Change the component of selected readings based on user input
-    #     :return: None
-    #     """
-    #     new_comp, okPressed = QInputDialog.getText(self, "Change Component", "New Component:")
-    #     if okPressed and new_comp.upper() in ['Z', 'X', 'Y']:
-    #         df_rows = self.get_df_rows()
-    #         components = self.pem_file.data.loc[df_rows, 'Component']
-    #         components = components.map(lambda x: new_comp)
-    #
-    #         self.pem_file.data.loc[df_rows, 'Component'] = components
-    #         self.fill_data_table()
-    #     elif okPressed:
-    #         self.message.information(self, 'Invalid Component', 'Component must be one of [Z, X, Y]')
-
-    # def rename_repeat_stations(self):
-    #     """
-    #     Change any station name in the data_table that is a repeat station
-    #     (i.e. any station ending in 1,4,6,9 to 0,5,5,0 respectively).
-    #     :return: None
-    #     """
-    #     def rename_repeat(station):
-    #         """
-    #         Applies the appropriate change to the station number
-    #         :param station: str, station number
-    #         :return: str, station number with number changed
-    #         """
-    #         station_num = int(re.findall('-?\d+', station)[0])
-    #         if str(station_num)[-1] in ['1', '4', '6', '9']:
-    #             if str(station_num)[-1] == '1' or str(station_num)[-1] == '6':
-    #                 print(f"station {station_num} changed to {station_num-1}")
-    #                 station_num -= 1
-    #             elif str(station_num)[-1] == '4' or str(station_num)[-1] == '9':
-    #                 print(f"station {station_num} changed to {station_num + 1}")
-    #                 station_num += 1
-    #             station = re.sub('\d+', str(station_num), station)
-    #         return station
-    #
-    #     if self.num_repeat_stations > 0:
-    #         self.pem_file.data.Station = self.pem_file.data.Station.map(rename_repeat)
-    #         self.fill_data_table()
-    #         self.refresh_row_signal.emit()
-    #         self.window().statusBar().showMessage(
-    #             f'{self.num_repeat_stations} repeat station(s) automatically renamed.', 2000)
-    #     else:
-    #         pass
-
-    def get_selected_rows(self, table):
+    @staticmethod
+    def get_selected_rows(table):
         """
         Return the rows that are currently selected from a given table.
         :param table: QTableWidget table.

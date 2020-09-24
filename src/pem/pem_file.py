@@ -359,45 +359,50 @@ class PEMFile:
 
     def get_crs(self):
         """
-        Create a CRS object from the note in the PEM file if it exists.
+        Return the PEMFile's CRS, or create one from the note in the PEM file if it exists.
         :return: Proj CRS object
         """
-        for note in self.notes:
-            if '<CRS>' in note:
-                crs_str = re.split('<CRS>', note)[-1].strip()
-                crs = CRS.from_string(crs_str)
-                print(f"CRS is {crs.name}")
-                return crs
 
-            # For older PEM files that used the <GEN> tag
-            elif 'CRS:' in note:
-                crs_str = re.split('CRS: ', note)[-1]
-                s = crs_str.split()
+        if self.crs:
+            return self.crs
 
-                system = s[0]
-                if system == 'Lat/Lon':
-                    epsg_code = '4326'
-                else:
-                    zone_number = s[2]
-                    north = True if s[3].strip(',') == 'North' else False
-                    datum = f"{s[4]} {s[5]}"
+        else:
+            for note in self.notes:
+                if '<CRS>' in note:
+                    crs_str = re.split('<CRS>', note)[-1].strip()
+                    crs = CRS.from_string(crs_str)
+                    print(f"CRS is {crs.name}")
+                    return crs
 
-                    if datum == 'WGS 1984':
-                        if north:
-                            epsg_code = f'326{zone_number}'
-                        else:
-                            epsg_code = f'327{zone_number}'
-                    elif datum == 'NAD 1927':
-                        epsg_code = f'267{zone_number}'
-                    elif datum == 'NAD 1983':
-                        epsg_code = f'269{zone_number}'
+                # For older PEM files that used the <GEN> tag
+                elif 'CRS:' in note:
+                    crs_str = re.split('CRS: ', note)[-1]
+                    s = crs_str.split()
+
+                    system = s[0]
+                    if system == 'Lat/Lon':
+                        epsg_code = '4326'
                     else:
-                        print(f"CRS string not implemented.")
-                        return None
+                        zone_number = s[2]
+                        north = True if s[3].strip(',') == 'North' else False
+                        datum = f"{s[4]} {s[5]}"
 
-                crs = CRS.from_epsg(epsg_code)
-                print(f"CRS is {crs.name}")
-                return crs
+                        if datum == 'WGS 1984':
+                            if north:
+                                epsg_code = f'326{zone_number}'
+                            else:
+                                epsg_code = f'327{zone_number}'
+                        elif datum == 'NAD 1927':
+                            epsg_code = f'267{zone_number}'
+                        elif datum == 'NAD 1983':
+                            epsg_code = f'269{zone_number}'
+                        else:
+                            print(f"CRS string not implemented.")
+                            return None
+
+                    crs = CRS.from_epsg(epsg_code)
+                    print(f"CRS is {crs.name}")
+                    return crs
 
     def get_loop(self, sorted=False, closed=False):
         return self.loop.get_loop(sorted=sorted, closed=closed)
@@ -523,9 +528,6 @@ class PEMFile:
     def get_mag_dec(self):
         """
         Calculate the magnetic declination for the PEM file.
-        :param pem_file: PEMFile object
-        :param crs: CRS object
-        :return: None
         """
         crs = self.get_crs()
         if not crs:

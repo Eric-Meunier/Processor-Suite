@@ -108,7 +108,7 @@ class GPSAdder(QMainWindow):
             self.table.removeRow(0)
         self.table.blockSignals(True)
 
-    def open(self, o):
+    def open(self, o, name=''):
         pass
 
     def df_to_table(self, df):
@@ -333,18 +333,33 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.plan_view.setAspectLocked()
         self.section_view.setAspectLocked()
 
-        self.plan_view.hideButtons()
-        self.section_view.hideButtons()
+        self.plan_view.hideButtons()  # Hide the little 'A' button at the bottom left
+        self.section_view.hideButtons()  # Hide the little 'A' button at the bottom left
 
-        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)
-        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)
-        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)
-        self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)
+        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+        self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
 
-        self.plan_view.setLabel('left', f"Northing", units='m')
-        self.plan_view.setLabel('bottom', f"Easting", units='m')
-        self.section_view.setLabel('left', f"Elevation", units='m')
-        self.section_view.setLabel('bottom', f"Station", units=None)
+        self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+        self.plan_view.showLabel('right', show=False)
+        self.plan_view.showLabel('top', show=False)
+        self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.section_view.showAxis('right', show=True)  # Show the axis edge line
+        self.section_view.showAxis('top', show=True)  # Show the axis edge line
+        self.section_view.showLabel('right', show=False)
+        self.section_view.showLabel('top', show=False)
+
+        # self.plan_view.setLabel('left', f"Northing", units='m')
+        # self.plan_view.setLabel('bottom', f"Easting", units='m')
+        # self.section_view.setLabel('left', f"Elevation", units='m')
+        # self.section_view.setLabel('bottom', f"Station", units=None)
 
         # Signals
         self.button_box.accepted.connect(self.accept)
@@ -380,10 +395,11 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             self.color_table()
             self.highlight_point(row)
 
-    def open(self, o):
+    def open(self, o, name=''):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
         :param o: Union [filepath; GPS object; DataFrame], Loop to open
+        :param name: str, name of the line
         """
         errors = pd.DataFrame()
         if isinstance(o, str):
@@ -398,6 +414,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         if self.line.df.empty:
             self.message.critical(self, 'No GPS', f"{self.line.error_msg}")
             return
+
+        self.setWindowTitle(f'Line Adder - {name}')
 
         self.clear_table()
         self.df = self.line.get_line(sorted=self.auto_sort_cbox.isChecked())
@@ -443,6 +461,27 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                                   pen=pg.mkPen('k', width=1.5)
                                   )
 
+        # Set the X and Y labels
+        if df.Unit.all() == '0':
+            self.plan_view.getAxis('left').setLabel('Northing', units='m')
+            self.plan_view.getAxis('bottom').setLabel('Easting', units='m')
+
+            self.section_view.setLabel('left', f"Elevation", units='m')
+            self.section_view.setLabel('bottom', f"Station", units='m')
+
+        elif df.Unit.all() == '1':
+            self.plan_view.getAxis('left').setLabel('Northing', units='ft')
+            self.plan_view.getAxis('bottom').setLabel('Easting', units='ft')
+
+            self.section_view.setLabel('left', f"Elevation", units='ft')
+            self.section_view.setLabel('bottom', f"Station", units='ft')
+        else:
+            self.plan_view.getAxis('left').setLabel('Northing', units=None)
+            self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
+
+            self.section_view.setLabel('left', f"Elevation", units=None)
+            self.section_view.setLabel('bottom', f"Station", units=None)
+
     def highlight_point(self, row=None):
         """
         Highlight a scatter point when its row is selected in the table.
@@ -462,8 +501,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
         # color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
-        color = 'r' if keyboard.is_pressed('ctrl') else 'b'
-        print(f"CTRL is pressed: {keyboard.is_pressed('ctrl')}")
+        color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
         df = self.table_to_df()
         df['Station'] = df['Station'].astype(int)
@@ -618,14 +656,27 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.plan_view.hideButtons()
         self.section_view.hideButtons()
 
-        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)
-        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)
-        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)
+        self.section_view.getAxis('bottom').setLabel('Index')  # Set the label only for the section X axis
 
-        self.plan_view.setLabel('left', f"Northing", units='m')
-        self.plan_view.setLabel('bottom', f"Easting", units='m')
-        self.section_view.setLabel('left', f"Elevation", units='m')
-        self.section_view.setLabel('bottom', f"index", units=None)
+        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+        self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+
+        self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+        self.plan_view.showLabel('right', show=False)
+        self.plan_view.showLabel('top', show=False)
+        self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.section_view.showAxis('right', show=True)  # Show the axis edge line
+        self.section_view.showAxis('top', show=True)  # Show the axis edge line
+        self.section_view.showLabel('right', show=False)
+        self.section_view.showLabel('top', show=False)
 
         # Signals
         self.button_box.accepted.connect(self.accept)
@@ -635,10 +686,11 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
 
-    def open(self, o):
+    def open(self, o, name=''):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
         :param o: Union (filepath, dataframe), Loop to open
+        :param name: str, name of the loop
         """
         errors = pd.DataFrame()
         if isinstance(o, str):
@@ -655,6 +707,8 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         if self.loop.df.empty:
             self.message.critical(self, 'No GPS', f"{self.loop.error_msg}")
             return
+
+        self.setWindowTitle(f'Loop Adder - {name}')
 
         self.clear_table()
         self.df = self.loop.get_loop(closed=True, sorted=self.auto_sort_cbox.isChecked())
@@ -701,6 +755,24 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
                                   pen=pg.mkPen('k', width=1.5)
                                   )
 
+        # Set the X and Y labels
+        if df.Unit.all() == '0':
+            self.plan_view.getAxis('left').setLabel('Northing', units='m')
+            self.plan_view.getAxis('bottom').setLabel('Easting', units='m')
+
+            self.section_view.setLabel('left', f"Elevation", units='m')
+
+        elif df.Unit.all() == '1':
+            self.plan_view.getAxis('left').setLabel('Northing', units='ft')
+            self.plan_view.getAxis('bottom').setLabel('Easting', units='ft')
+
+            self.section_view.setLabel('left', f"Elevation", units='ft')
+        else:
+            self.plan_view.getAxis('left').setLabel('Northing', units=None)
+            self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
+
+            self.section_view.setLabel('left', f"Elevation", units=None)
+
     def highlight_point(self, row=None):
         """
         Highlight a scatter point when its row is selected in the table.
@@ -720,8 +792,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
         # color, light_color = ('blue', 'lightsteelblue') if keyboard.is_pressed('ctrl') is False else ('red', 'pink')
-        color = 'r' if keyboard.is_pressed('ctrl') else 'b'
-        print(f"CTRL is pressed: {keyboard.is_pressed('ctrl')}")
+        color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
         df = self.table_to_df()
 
@@ -783,13 +854,14 @@ def main():
     app = QApplication(sys.argv)
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Loop GPS'))
-    # mw = LoopAdder()
-    mw = LineAdder()
+
+    mw = LoopAdder()
+    # mw = LineAdder()
     mw.show()
 
     pg = PEMGetter()
-    file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
-    # file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
+    # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
+    file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
 
     # loop = TransmitterLoop(file)
     # line = SurveyLine(file)

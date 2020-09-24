@@ -741,6 +741,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             else:
                 self.epsg_label.setText('')
 
+        def update_pem_files():
+            """
+            Update the CRS in all opened PEMFiles
+            """
+            crs = self.get_crs()
+            if crs:
+                for pem_file in self.pem_files:
+                    pem_file.crs = crs
+
         # Add the GPS system and datum drop box options
         gps_systems = ['', 'Lat/Lon', 'UTM']
         for system in gps_systems:
@@ -754,9 +763,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Combo boxes
         self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
         self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
+        self.gps_system_cbox.currentIndexChanged.connect(update_pem_files)
         self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
         self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
+        self.gps_datum_cbox.currentIndexChanged.connect(update_pem_files)
         self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
+        self.gps_zone_cbox.currentIndexChanged.connect(update_pem_files)
 
         # Radio buttons
         self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
@@ -764,6 +776,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
         self.epsg_rbtn.clicked.connect(set_epsg_label)
 
+        # Line edit
         self.epsg_edit.editingFinished.connect(check_epsg)
 
     def contextMenuEvent(self, event):
@@ -1431,11 +1444,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         Open files through the file dialog
         """
-        files = self.dialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem);; All files(*.*)')
-        if files[0] != '':
-            for file in files[0]:
-                if file.lower().endswith('.pem'):
-                    self.open_files(file)
+        files = self.dialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem);;')[0]
+        if files:
+            self.open_pem_files(files)
 
     def open_pem_plot_editor(self):
         """
@@ -1562,7 +1573,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return
 
         m = MagDeclinationCalculator(parent=self)
-        m.calc_mag_dec(pem_file, self.get_crs())
+        m.calc_mag_dec(pem_file)
         m.show()
 
     # def show_section_3d_viewer(self):
@@ -3148,17 +3159,16 @@ class MagDeclinationCalculator(QMainWindow):
         cb.setText(str_value, mode=cb.Clipboard)
         self.statusBar().showMessage(f"{str_value} copied to clipboard", 1000)
 
-    def calc_mag_dec(self, pem_file, crs):
+    def calc_mag_dec(self, pem_file):
         """
         Calculate the magnetic declination for the PEM file.
         :param pem_file: PEMFile object
-        :param crs: CRS object
         :return: None
         """
         if not pem_file:
             return
 
-        if not crs:
+        if not pem_file.get_crs():
             self.message.information(self, 'Error', 'GPS coordinate system information is invalid')
             return
 
@@ -3388,7 +3398,7 @@ def main():
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
     # pem_files = [r'C:\_Data\2020\Generation PGM\__M-20-539\RAW\XY-Collar.PEM']
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
 
     # mw.pem_info_widgets[0].convert_crs()
     # mw.open_3d_map()

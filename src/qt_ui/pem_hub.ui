@@ -472,86 +472,6 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="groupBox_8">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="title">
-              <string>Options</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_8">
-              <item>
-               <widget class="QCheckBox" name="auto_sort_files_cbox">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Automatically Sort
-Table on Import</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="auto_create_backup_files_cbox">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Automatically Create
-Backup Files</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="delete_merged_files_cbox">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Delete Files After Merge</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
             <spacer name="verticalSpacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -1360,11 +1280,20 @@ Stations</string>
     <addaction name="actionConvert_Timebase_Frequency"/>
     <addaction name="actionGPX_Creator"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="auto_sort_files_cbox"/>
+    <addaction name="auto_create_backup_files_cbox"/>
+    <addaction name="delete_merged_files_cbox"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuPEM"/>
    <addaction name="menuGPS"/>
    <addaction name="menuMap"/>
    <addaction name="menuTools"/>
+   <addaction name="menuSettings"/>
   </widget>
   <widget class="QStatusBar" name="status_bar">
    <property name="minimumSize">
@@ -1694,6 +1623,39 @@ Stations</string>
     <string>Convert GPS</string>
    </property>
   </action>
+  <action name="auto_sort_files_cbox">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Sort Table on Import</string>
+   </property>
+  </action>
+  <action name="auto_create_backup_files_cbox">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Backup Files Automatically</string>
+   </property>
+  </action>
+  <action name="delete_merged_files_cbox">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Delete Files After Merge</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>share_client_cbox</tabstop>
@@ -1705,8 +1667,6 @@ Stations</string>
   <tabstop>gps_system_cbox</tabstop>
   <tabstop>gps_zone_cbox</tabstop>
   <tabstop>gps_datum_cbox</tabstop>
-  <tabstop>auto_create_backup_files_cbox</tabstop>
-  <tabstop>delete_merged_files_cbox</tabstop>
  </tabstops>
  <resources/>
  <connections/>
