@@ -1086,9 +1086,22 @@ class PEMFile:
                                                                            axis=1).mean()
                         ppxy_measured = math.sqrt(sum([measured_ppx ** 2, measured_ppy ** 2]))
 
-                        # Find the dip at the station's depth
-                        seg_dip = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Dip)
-                        seg_azimuth = np.interp(int(group.Station.unique()[0]), segments.Depth, segments.Azimuth)
+                        # Use the segment azimuth and dip of the next segment (as per Bill's cross)
+                        # Find the next station. If it's the last station, re-use the last station.
+                        stations = list(self.data.Station.unique())
+                        current_station = group.Station.unique()[0]
+                        current_station_ind = stations.index(current_station)
+
+                        # Re-use the last station if it's the current index
+                        if current_station_ind == len(stations) - 1:
+                            next_station = current_station
+                        else:
+                            next_station = stations[current_station_ind + 1]
+
+                        # Calculate the dip and azimuth at the next station, interpolating in case the station
+                        # is not in the segments.
+                        seg_dip = np.interp(int(next_station), segments.Depth, segments.Dip)
+                        seg_azimuth = np.interp(int(next_station), segments.Depth, segments.Azimuth)
 
                         # Find the location in 3D space of the station
                         filt = proj.loc[:, 'Relative_depth'] == float(group.Station.iloc[0])
@@ -3219,24 +3232,17 @@ if __name__ == '__main__':
     dparse = DMPParser()
     pemparse = PEMParser()
     pg = PEMGetter()
-    # pem_file = pg.get_pems(client='PEM Rotation', file='BX-081.PEM')[0]
-    # files = pg.get_pems(client='Raglan', number=1)
-    # file = files[0]
+    pem_file = pg.get_pems(client='PEM Rotation', file='BX-081.PEM')[0]
+    prep_pem, _ = pem_file.prep_rotation()
+    rotated_pem = prep_pem.rotate('pp')
 
     # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\e110xy.pem')
     # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM')
     # pem_file = pemparse.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\Eric\XY-Collar.PEM')
-    # prep_pem, _ = pem_file.prep_rotation()
-    # rotated_pem = prep_pem.rotate('pp')
 
-    t2 = time.time()
-    file = r'C:\_Data\2018\BMSC\Borehole\BRC-1023\DUMP\April 6\Dump\BRC-23xy.DMP'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\2EX7046L1-1\2ex7046l1-1.DMP2'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2\Surface\1400e.DMP2'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP2 New\BR-01\br01.DMP2'
-    file = dparse.parse_dmp(file)
-    # print(f"Time to parse DMP: {time.time() - t2}")
+    # file = str(Path(__file__).parents[2].joinpath('sample_files/PEMGetter files/PEM Rotation/BX-081.PEM'))
+    # file = dparse.parse_dmp(file)
 
-    # out = str(Path(__file__).parent.parent.parent / 'sample_files' / 'test results'/f'{file.filepath.stem} - test conversion.pem')
+    # out = str(Path(__file__).parents[2] / 'sample_files' / 'test results'/f'{file.filepath.stem} - test conversion.pem')
     # print(file.to_string(), file=open(out, 'w'))
     # os.startfile(out)
