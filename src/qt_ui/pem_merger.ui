@@ -509,7 +509,7 @@
       <property name="currentIndex">
        <number>0</number>
       </property>
-      <widget class="QWidget" name="stackedWidgetPage1" native="true">
+      <widget class="QWidget" name="stackedWidgetPage1">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -538,7 +538,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="stackedWidgetPage2" native="true">
+      <widget class="QWidget" name="stackedWidgetPage2">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -567,7 +567,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="stackedWidgetPage3" native="true">
+      <widget class="QWidget" name="stackedWidgetPage3">
        <property name="enabled">
         <bool>true</bool>
        </property>

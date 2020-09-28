@@ -19,7 +19,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
                              QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
-                             QVBoxLayout, QCalendarWidget)
+                             QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QTableWidget, QFrame)
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.gps.gpx_creator import GPXCreator
 
@@ -108,7 +108,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Status bar formatting
         self.selection_label = QLabel()
-        self.selection_label.setIndent(20)
+        self.selection_label.setIndent(5)
         self.epsg_label = QLabel()
         self.project_dir_label = QPushButton()
         self.project_dir_label.setFlat(True)
@@ -416,6 +416,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             :param header: str, either 'client', 'grid', or 'loop'.
             """
 
+            self.allow_signals = False
             self.table.blockSignals(True)
 
             bold_font, normal_font = QtGui.QFont(), QtGui.QFont()
@@ -458,15 +459,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 column = self.table_columns.index(header.title())
 
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
-                if not file.has_any_gps():
-                    color = QtGui.QColor('blue')
-                    color.setAlpha(50)
-                else:
-                    color = QtGui.QColor('white')
-                item.setBackground(color)
+                # if not file.has_any_gps():
+                #     color = QtGui.QColor('blue')
+                #     color.setAlpha(50)
+                # else:
+                #     color = QtGui.QColor('white')
+                # item.setBackground(color)
                 self.table.setItem(row, column, item)
+                self.color_row(row)
 
             self.table.blockSignals(False)
+            self.allow_signals = True
 
         def toggle_pem_list_buttons():
             """
@@ -1201,24 +1204,25 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             def share_gps_object(obj):
                 """
                 Share a GPS object (loop, line, collar, segments) of one file with all other opened PEM files.
-                :param obj: str, which GPS object to share
+                :param obj: BaseGPS object, which GPS object to share
                 """
                 df = obj.df.dropna()
                 if df.empty:
                     return
 
-                if isinstance(obj, TransmitterLoop):
-                    for widget in self.pem_info_widgets:
-                        widget.fill_gps_table(df, widget.loop_table)
-                elif isinstance(obj, SurveyLine):
-                    for widget in list(filter(lambda x: not x.pem_file.is_borehole(), self.pem_info_widgets)):
-                        widget.fill_gps_table(df, widget.line_table)
-                elif isinstance(obj, BoreholeCollar):
-                    for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
-                        widget.fill_gps_table(df, widget.collar_table)
-                elif isinstance(obj, BoreholeSegments):
-                    for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
-                        widget.fill_gps_table(df, widget.segments_table)
+                self.open_gps_share(obj, pem_info_widget)
+                # if isinstance(obj, TransmitterLoop):
+                #     for widget in self.pem_info_widgets:
+                #         widget.fill_gps_table(df, widget.loop_table)
+                # elif isinstance(obj, SurveyLine):
+                #     for widget in list(filter(lambda x: not x.pem_file.is_borehole(), self.pem_info_widgets)):
+                #         widget.fill_gps_table(df, widget.line_table)
+                # elif isinstance(obj, BoreholeCollar):
+                #     for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
+                #         widget.fill_gps_table(df, widget.collar_table)
+                # elif isinstance(obj, BoreholeSegments):
+                #     for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
+                #         widget.fill_gps_table(df, widget.segments_table)
 
             pem_info_widget = PEMFileInfoWidget(parent=self)
             pem_info_widget.blockSignals(True)
@@ -1433,7 +1437,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Open the selected PEM File in a text editor
         """
         pem_files, rows = self.get_pem_files(selected=True)
-        self.text_browsers = []
         for pem_file in pem_files:
             pem_str = pem_file.to_string()
             browser = QTextBrowser()
@@ -1459,7 +1462,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         def save_editor_pem(pem_file):
             """
-            Re-open the PEM file
+            Re-open the PEM file. File is actually saved in PEMPlotEditor.
             :param pem_file: PEMFile object emitted by the signal
             """
             self.refresh_pem(pem_file)
@@ -1688,6 +1691,56 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.gps_conversion_widget.open(crs)
         self.gps_conversion_widget.accept_signal.connect(convert_gps)
+
+    def open_gps_share(self, gps_object, source_widget):
+        """
+        Open the GPSShare widget to select PEMFiles.
+        """
+
+        def share_gps(mask):
+            """
+            Add the gps_object to the selected files.
+            :param mask: list, mask of which files were selected
+            """
+            pem_info_widgets = np.array(piws)[mask]  # Filtered PIWs
+
+            if isinstance(gps_object, TransmitterLoop):
+                for widget in pem_info_widgets:
+                    widget.fill_gps_table(gps_object.df, widget.loop_table)
+
+            elif isinstance(gps_object, SurveyLine):
+                for widget in pem_info_widgets:
+                    widget.fill_gps_table(gps_object.df, widget.line_table)
+
+            elif isinstance(gps_object, BoreholeCollar):
+                for widget in pem_info_widgets:
+                    widget.fill_gps_table(gps_object.df, widget.collar_table)
+
+            elif isinstance(gps_object, BoreholeSegments):
+                for widget in pem_info_widgets:
+                    widget.fill_gps_table(gps_object.df, widget.segments_table)
+
+        # Filter the PEM Files and PIWs based on the GPS object
+        if isinstance(gps_object, TransmitterLoop):
+            pem_files, piws = self.pem_files, self.pem_info_widgets
+
+        elif isinstance(gps_object, SurveyLine):
+            pem_files, piws = zip(*filter(lambda x: not x[0].is_borehole(), zip(self.pem_files, self.pem_info_widgets)))
+
+        elif isinstance(gps_object, BoreholeCollar):
+            pem_files, piws = zip(*filter(lambda x: x[0].is_borehole(), zip(self.pem_files, self.pem_info_widgets)))
+
+        elif isinstance(gps_object, BoreholeSegments):
+            pem_files, piws = zip(*filter(lambda x: x[0].is_borehole(), zip(self.pem_files, self.pem_info_widgets)))
+        else:
+            pem_files = []
+
+        source_index = piws.index(source_widget)
+
+        global gps_share
+        gps_share = GPSShareWidget()
+        gps_share.open(pem_files, source_index)
+        gps_share.accept_sig.connect(share_gps)
 
     # def get_project_path(self):
     #     """
@@ -2182,6 +2235,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             :return: None
             """
 
+            def has_gps(piw_widget):
+                if all([piw_widget.get_line().df.empty,
+                        piw_widget.get_loop().df.empty,
+                        piw_widget.get_collar().df.empty,
+                        piw_widget.get_segments().df.empty]):
+                    return False
+                else:
+                    return True
+
             def color_background(row_index, color):
                 """
                 Color an entire table row
@@ -2198,7 +2260,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             split_col = self.table_columns.index('Split')
             suffix_col = self.table_columns.index('Suffix\nWarnings')
             repeat_col = self.table_columns.index('Repeat\nStations')
-            pem_has_gps = self.pem_files[row].has_all_gps()
+            # TODO This isn't really good still.
+            pem_has_gps = has_gps(self.pem_info_widgets[row])
 
             for col in [average_col, split_col, suffix_col, repeat_col]:
                 item = self.table.item(row, col)
@@ -2348,6 +2411,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             ind = self.pem_files.index(pem_file)
             self.pem_info_widgets[ind].open_file(pem_file)
             self.pem_to_table(pem_file, ind)
+            self.color_row(ind)
         else:
             raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table")
 
@@ -2626,22 +2690,27 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         def check_pems():
 
-            # If the files aren't all split or un-split
-            if not all([f.is_split() == pem_files[0].is_split() for f in pem_files]):
-                response = self.message.question(self, 'Error - Different channel split states',
-                                                 'There is a mix of channel splitting in the selected files. '
-                                                 'Would you like to split the unsplit file(s) and proceed with merging?',
-                                                 self.message.Yes | self.message.No)
-                if response == self.message.Yes:
-                    for pem_file in pem_files:
-                        pem_file = pem_file.split()
-                else:
-                    return
+            f1, f2 = pem_files[0], pem_files[1]
+
+            if not f1.is_borehole() == f2.is_borehole():
+                self.message.information(self, 'Error', f"Cannot merge a borehole survey with a surface survey.")
+                return False
+            if not f1.is_fluxgate() == f2.is_fluxgate():
+                self.message.information(self, 'Error', f"Cannot merge a fluxgate survey with an induction survey.")
+                return False
+            if not f1.timebase == f2.timebase:
+                self.message.information(self, 'Error', f"Both files must have the same timebase.")
+                return False
+            if not f1.number_of_channels == f2.number_of_channels:
+                self.message.information(self, 'Error', f"Both files must have the same number of channels.")
+                return False
 
             # If the files aren't all de-rotated
             if not all([f.is_rotated() == pem_files[0].is_rotated() for f in pem_files]):
                 self.message.warning(self, 'Warning - Different states of XY de-rotation',
                                      'There is a mix of XY de-rotation in the selected files.')
+
+            return True
 
         def accept_merge(filepath):
 
@@ -2655,11 +2724,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.message.information(self, 'Error', 'Must select multiple PEM Files')
             return
 
-        check_pems()
-
-        merger = PEMMerger(parent=self)
-        merger.accept_sig.connect(accept_merge)
-        merger.open(pem_files)
+        if check_pems():
+            global merger
+            merger = PEMMerger(parent=self)
+            merger.accept_sig.connect(accept_merge)
+            merger.open(pem_files)
 
     def auto_merge_pem_files(self):
 
@@ -2818,22 +2887,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             name_item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, line_name_column, name_item)
 
-    # def rename_all_repeat_stations(self):
-    #     """
-    #     Rename all repeat stations (i.e. stations ending in 1, or 6... to a 0 or 5).
-    #     :return: None
-    #     """
-    #     if not self.pem_files:
-    #         return
-    #
-    #     num_repeat_stations = 0
-    #     for i, widget in enumerate(self.pem_info_widgets):
-    #         num_repeat_stations += widget.num_repeat_stations
-    #         widget.rename_repeat_stations()
-    #     # self.refresh_rows(rows='all')
-    #     # self.refresh_table()
-    #     self.status_bar.showMessage(f'{num_repeat_stations} repeat station(s) automatically renamed.', 2000)
-
 
 class FrequencyConverter(QWidget):
     """
@@ -2928,7 +2981,6 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         # Signals
         def get_save_file():
             default_path = self.pem_files[-1].filepath.parent
-            # self.dialog.setDirectory(str(default_path))
             save_dir = QFileDialog.getSaveFileName(self, '', str(default_path))[0]
             print(f"Saving PDFs to {save_dir}")
             if save_dir:
@@ -3381,29 +3433,86 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
         return epsg_code
 
 
+class GPSShareWidget(QWidget):
+    accept_sig = QtCore.pyqtSignal(object)
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.pem_files = []
+        self.cboxes = []
+
+        # Format window
+        self.setWindowTitle(f"Share GPS")
+        # self.resize(600, 400)
+        self.layout = QFormLayout()
+        self.setLayout(self.layout)
+
+        h_line = QFrame()
+        h_line.setFrameShape(QFrame().HLine)
+        h_line.setFrameShadow(QFrame().Sunken)
+
+        self.check_all_cbox = QCheckBox()
+        self.check_all_cbox.setChecked(True)
+        self.check_all_cbox.setToolTip('Check All')
+        self.accept_btn = QPushButton('Accept')
+
+        self.layout.addRow('File', self.check_all_cbox)
+        self.layout.addRow(h_line)
+        self.layout.addRow(self.accept_btn)
+
+        # Signals
+        def toggle_all():
+            for cbox in self.cboxes:
+                if cbox.isEnabled():
+                    cbox.setChecked(self.check_all_cbox.isChecked())
+
+        self.check_all_cbox.toggled.connect(toggle_all)
+        self.accept_btn.clicked.connect(lambda: self.accept_sig.emit([c.isChecked() for c in self.cboxes]))
+        self.accept_btn.clicked.connect(self.close)
+
+    def open(self, pem_files, index_of_source):
+
+        for i, pem_file in enumerate(pem_files):
+            cbox = QCheckBox()
+            cbox.setChecked(True)
+            self.cboxes.append(cbox)
+
+            label = QLabel(pem_file.filepath.name)
+            self.layout.insertRow(i + 2, label, cbox)
+
+            if i == index_of_source:
+                cbox.setEnabled(False)
+                label.setEnabled(False)
+
+        self.show()
+
+
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMHub()
-    # mw.show()
-
     pg = PEMGetter()
+
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=5)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
-    pem_files = pg.get_pems(client='Minera', number=6)
+    # pem_files = pg.get_pems(client='Minera', number=6)
+    pem_files = pg.get_pems(random=True, number=5)
+    # s = GPSShareWidget()
+    # s.open(pem_files, 0)
+    # s.show()
     #
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
     # pem_files = [r'C:\_Data\2020\Generation PGM\__M-20-539\RAW\XY-Collar.PEM']
     mw.open_pem_files(pem_files)
+    # mw.pem_info_widgets[0].share_loop_signal.emit(mw.pem_info_widgets[0].get_loop())
 
-    # mw.pem_info_widgets[0].convert_crs()
-    # mw.open_3d_map()
-    # mw.pem_files[0].loop.to_nad27()
     mw.show()
+
     # mw.open_gps_conversion()
     # mw.delete_merged_files_cbox.setChecked(False)
 

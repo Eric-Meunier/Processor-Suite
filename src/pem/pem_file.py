@@ -2073,7 +2073,7 @@ class DMPParser:
             else:
                 assert len(text) == 29, f'Incorrect number of lines found in the header of {self.filepath.name}'
 
-            t = time.time()
+            # t = time.time()
 
             if text[-1] == 'ZTS - Narrow':
                 self.pp_file = True
@@ -2108,7 +2108,7 @@ class DMPParser:
             header['Coil area'] = float(text[20])
             header['Coil delay'] = int(text[21])
             header['Loop polarity'] = '+'
-            print(f"DMPParser - Time to parse header of {self.filepath.name}: {time.time() - t}")
+            # print(f"DMPParser - Time to parse header of {self.filepath.name}: {time.time() - t}")
 
             return header
 
@@ -2189,7 +2189,7 @@ class DMPParser:
 
             assert text, f'No channel times found in {self.filepath.name}.'
 
-            t1 = time.time()
+            # t1 = time.time()
             text = text.strip().split('\n')
             # text = np.array([t.strip().split() for t in text], dtype=float)
             text = np.array(' '.join([t.strip() for t in text]).split(), dtype=float)
@@ -2212,7 +2212,7 @@ class DMPParser:
             times = np.delete(times, 0, axis=1)
 
             table = channel_table(times)
-            print(f"DMPParser - Time to parse channel times of {self.filepath.name}: {time.time() - t1}")
+            # print(f"DMPParser - Time to parse channel times of {self.filepath.name}: {time.time() - t1}")
             return table
 
         def parse_notes(text):
@@ -2278,7 +2278,7 @@ class DMPParser:
             if isinstance(text, list):
                 text = '\n'.join(text)
 
-            t1 = time.time()
+            # t1 = time.time()
             # df = pd.DataFrame(columns=cols)
 
             # Reading variables that are sourced from outside the data section of the .DMP file
@@ -2319,14 +2319,14 @@ class DMPParser:
                                          'Readings_per_set',
                                          'Reading_number']].astype(int)
             df['ZTS'] = df['ZTS'].astype(float)
-            print(f"DMPParser - Time to parse data of {self.filepath.name} file: {time.time() - t1}")
+            # print(f"DMPParser - Time to parse data of {self.filepath.name} file: {time.time() - t1}")
             return df
 
         assert Path(filepath).is_file(), f"{filepath.name} is not a file"
         self.filepath = Path(filepath)
         print(f"Parsing {self.filepath.name}")
 
-        t = time.time()
+        # t = time.time()
         # Read the contents of the file
         with open(filepath, 'rt') as file:
             contents = file.read()
@@ -2369,7 +2369,7 @@ class DMPParser:
             f"Not all readings found in {self.filepath.name}"
 
         pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath, notes=notes)
-        print(f"DMPParser - Time to convert PEMFile: {time.time() - t}")
+        # print(f"DMPParser - Time to convert PEMFile: {time.time() - t}")
         return pem_file
 
     def parse_dmp2(self, filepath):
@@ -2456,12 +2456,12 @@ class DMPParser:
                             lambda x: True)
                 return table
 
-            t = time.time()
+            # t = time.time()
 
             table = channel_table(header['Channel_times'] / 10 ** 6)  # Convert to seconds
             assert len(table) == int(header['Number of channels']) or len(table) == int(header['Number of channels']) + 1, \
                 f"{len(table)} channels found in channel times section instead of {int(header['Number of channels'])} found in header of {self.filepath.name}"
-            print(f"PEMParser - Time to parse channel table of {self.filepath.name}: {time.time() - t}")
+            # print(f"PEMParser - Time to parse channel table of {self.filepath.name}: {time.time() - t}")
             return table
 
         def parse_header(header_content):
@@ -2470,7 +2470,7 @@ class DMPParser:
             :param header_content: list of str of the header section of the .DMP2 file
             :return: dict
             """
-            t1 = time.time()
+            # t1 = time.time()
             header_content = header_content.split('\n')
             # Remove blank lines
             [header_content.remove(h) for h in reversed(header_content) if h == '']
@@ -2520,7 +2520,7 @@ class DMPParser:
             header['Loop polarity'] = '+'
             # header['Notes'] = [note for note in s['File_Notes'].split('\n')]
 
-            print(f"PEMParser - Time to parse header of {self.filepath.name}: {time.time() - t1}")
+            # print(f"PEMParser - Time to parse header of {self.filepath.name}: {time.time() - t1}")
             return header
 
         def parse_data(data_content, units=None):
@@ -2636,7 +2636,7 @@ class DMPParser:
         self.filepath = Path(filepath)
         print(f"Parsing {self.filepath.name}")
 
-        t1 = time.time()
+        # t1 = time.time()
         # Read the contents of the file
         with open(filepath, 'rt') as file:
             contents = file.read()
@@ -2673,7 +2673,7 @@ class DMPParser:
         channel_table = parse_channel_times(header, units=header.get('Units'))
         # notes = header['Notes']
 
-        print(f'DMPParser - Time to parse {self.filepath.name} file: {time.time() - t1}')
+        # print(f'DMPParser - Time to parse {self.filepath.name} file: {time.time() - t1}')
         pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath)
         return pem_file
 
@@ -2870,7 +2870,7 @@ class PEMSerializer:
         """
         self.pem_file = pem_file
 
-        t = time.time()
+        # t = time.time()
         result = self.serialize_tags() + '\n'
         result += self.serialize_loop_coords() + '\n'
         result += self.serialize_line_coords() + '\n'
@@ -2878,7 +2878,7 @@ class PEMSerializer:
         result += '~\n'
         result += self.serialize_header() + '\n'
         result += self.serialize_data()
-        print(f"Time to seralize {pem_file.filepath.name}: {time.time() - t}")
+        # print(f"Time to seralize {pem_file.filepath.name}: {time.time() - t}")
         return result
 
 

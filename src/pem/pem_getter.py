@@ -1,5 +1,7 @@
 from src.pem.pem_file import PEMParser
 import os
+from pathlib import Path
+from random import choices, randrange
 
 
 class PEMGetter:
@@ -7,9 +9,9 @@ class PEMGetter:
     Class to get a list of PEM files from a testing directory. Used for testing.
     """
     def __init__(self):
-        self.parser = PEMParser
+        self.parser = PEMParser()
 
-    def get_pems(self, client=None, number=None, selection=None, subfolder=None, file=None):
+    def get_pems(self, client=None, number=None, selection=None, subfolder=None, file=None, random=False):
         """
         Retrieve a list of PEMFiles
         :param client: str, folder from which to retrieve files
@@ -17,51 +19,70 @@ class PEMGetter:
         :param selection: int, index of file to select
         :param subfolder: str, name of the folder within the client folder to look into
         :param file: str, name the specific to open
-        :return: list
+        :param random: bool, select random files. If no number is passed, randomly selects the number too.
+        :return: list of PEMFile objects.
         """
-        sample_files_dir = os.path.join(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(
-                        os.path.abspath(__file__)))),
-            'sample_files/PEMGetter files')
-        if client:
-            sample_files_dir = os.path.join(sample_files_dir, client)
-            if subfolder:
-                sample_files_dir = os.path.join(sample_files_dir, subfolder)
 
-        file_names = [f.upper() for f in os.listdir(sample_files_dir) if
-                      os.path.isfile(os.path.join(sample_files_dir, f)) and f.lower().endswith('.pem')]
+        def add_pem(filepath):
+            """
+            Parse and add the PEMFile to the list of pem_files.
+            :param filepath: Path object of the PEMFile
+            """
+            print(f'PEMGetter: Getting File {filepath.name}')
+
+            try:
+                pem_file = self.parser.parse(filepath)
+            except Exception as e:
+                print(f"Error - {str(e)}")
+                return
+
+            pem_files.append(pem_file)
+
+        sample_files_dir = Path(__file__).parents[2].joinpath('sample_files/PEMGetter files')
+
+        if client:
+            sample_files_dir = sample_files_dir.joinpath(client)
+            if subfolder:
+                sample_files_dir = sample_files_dir.joinpath(subfolder)
+
         pem_files = []
 
-        if number:
-            for file in file_names[:number]:
-                filepath = os.path.join(sample_files_dir, file)
-                pem_file = self.parser().parse(filepath)
-                print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
-                # pem_files.append((pem_file, None))  # Empty second item for ri_files
-                pem_files.append(pem_file)
-        elif selection is not None and not selection > len(file_names):
-            filepath = os.path.join(sample_files_dir, file_names[selection])
-            pem_file = self.parser().parse(filepath)
-            print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
-            # pem_files.append((pem_file, None))  # Empty second item for ri_files
-            pem_files.append(pem_file)
-        elif file is not None:
-            index = file_names.index(file.upper())
-            if index is not None:
-                filepath = os.path.join(sample_files_dir, file_names[index])
-                pem_file = self.parser().parse(filepath)
-                print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
-                pem_files.append(pem_file)
-            else:
-                raise ValueError(f"Could not find file {file}")
+        if random:
+            # Pool of available files is all PEMFiles in PEMGetter files directory.
+            available_files = list(sample_files_dir.rglob('*.PEM'))
+            if not number:
+                # Generate a random number of files to choose from
+                number = randrange(5, min(len(available_files), 15))
+            random_selection = choices(available_files, k=number)
+
+            for file in random_selection:
+                add_pem(file)
+
         else:
-            for file in file_names:
-                filepath = os.path.join(sample_files_dir, file)
-                pem_file = self.parser().parse(filepath)
-                print(f'PEMGetter: Getting File {os.path.basename(filepath)}')
+            available_files = list(sample_files_dir.glob('*.PEM'))
+
+            if number:
+                for file in available_files[:number]:
+                    filepath = sample_files_dir.joinpath(file)
+                    add_pem(filepath)
+                    # pem_files.append((pem_file, None))  # Empty second item for ri_files
+
+            elif selection is not None and not selection > len(available_files):
+                filepath = sample_files_dir.joinpath(available_files[selection])
+                add_pem(filepath)
                 # pem_files.append((pem_file, None))  # Empty second item for ri_files
-                pem_files.append(pem_file)
+
+            elif file is not None:
+                filepath = sample_files_dir.joinpath(file)
+                if filepath.exists():
+                    add_pem(filepath)
+                else:
+                    print(f"File {filepath.name} does not exists.")
+
+            else:
+                for file in available_files:
+                    filepath = sample_files_dir.joinpath(file)
+                    # pem_files.append((pem_file, None))  # Empty second item for ri_files
+                    add_pem(filepath)
 
         return pem_files

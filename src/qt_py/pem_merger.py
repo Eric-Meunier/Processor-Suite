@@ -122,6 +122,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
 
         # Configure each axes
         for ax in self.profile_axes:
+            ax.setXLink(self.x_ax0)
             ax.hideButtons()
             ax.setMenuEnabled(False)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
@@ -274,6 +275,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
                         ax = self.get_ax(channel, axes)
                         ax.addItem(curve)
 
+            profile_page_set = False
             stations = np.concatenate([self.pf1.get_stations(converted=True), self.pf2.get_stations(converted=True)])
             mn, mx = stations.min(), stations.max()
 
@@ -289,6 +291,11 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
 
                 set_plot_labels(self.x_layout_axes)
 
+                self.profile_tab_widget.setCurrentIndex(0)
+                profile_page_set = True
+            else:
+                self.profile_tab_widget.setCurrentIndex(1)
+
             if 'Y' in self.components:
                 # Add the line name and loop name as the title for the profile plots
                 self.y_ax0.setTitle(f"Y Component")
@@ -301,6 +308,12 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
 
                 set_plot_labels(self.y_layout_axes)
 
+                if not profile_page_set:
+                    self.profile_tab_widget.setCurrentIndex(1)
+                    profile_page_set = True
+            else:
+                self.profile_tab_widget.setCurrentIndex(2)
+
             if 'Z' in self.components:
                 # Add the line name and loop name as the title for the profile plots
                 self.z_ax0.setTitle(f"Z Component")
@@ -312,6 +325,9 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
                     ax.setLimits(xMin=mn, xMax=mx)
 
                 set_plot_labels(self.z_layout_axes)
+
+                if not profile_page_set:
+                    self.profile_tab_widget.setCurrentIndex(2)
 
         def set_labels():
             """
@@ -453,7 +469,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             self.units = 'pT'
         else:
             self.units = 'nT/s'
-        self.components = set(np.array([self.pf1.get_components(), self.pf2.get_components()]).flatten())
+        self.components = np.unique(np.hstack(np.array([self.pf1.get_components(), self.pf2.get_components()])))
         self.channel_bounds = self.pf1.get_channel_bounds()
 
         format_plots()
@@ -628,9 +644,10 @@ if __name__ == '__main__':
 
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(client='Minera', number=2)
-    pf1 = pem_getter.get_pems(client='Minera', file='L11400N_5.PEM')[0]
-    pf2 = pem_getter.get_pems(client='Minera', file='L11400N_2.PEM')[0]
-
+    # pf1 = pem_getter.get_pems(client='Minera', file='L11400N_5.PEM')[0]
+    # pf2 = pem_getter.get_pems(client='Minera', file='L11400N_2.PEM')[0]
+    pf1 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 XYT.PEM')[0]
+    pf2 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 ZAv.PEM')[0]
     w = PEMMerger()
     w.open([pf1, pf2])
 

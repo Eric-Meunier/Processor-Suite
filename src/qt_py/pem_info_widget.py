@@ -409,7 +409,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Action of opening a PEM file.
         :param pem_file: PEMFile object.
         """
-        t = time.time()
+        # t = time.time()
         self.pem_file = pem_file
 
         self.init_tables()
@@ -421,7 +421,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.fill_info_tab()
         self.fill_gps_table(self.pem_file.loop.get_loop(), self.loop_table)
         # self.fill_data_table()
-        print(f"PEMInfoWidget - Time to open PIW for {self.pem_file.filepath.name}: {time.time() - t}")
+        # print(f"PEMInfoWidget - Time to open PIW for {self.pem_file.filepath.name}: {time.time() - t}")
 
     def open_ri_file(self, filepath):
         """
