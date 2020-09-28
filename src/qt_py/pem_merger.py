@@ -12,7 +12,7 @@ import pyqtgraph as pg
 import pylineclip as lc
 from scipy import spatial
 from PyQt5 import uic, QtCore, QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QShortcut, QLineEdit, QLabel, QMessageBox, QFileDialog,
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFrame, QLineEdit, QLabel, QMessageBox, QFileDialog,
                              QPushButton, QTableWidget, QAction, QWidget, QHBoxLayout, QAbstractItemView)
 from pyqtgraph.Point import Point
 
@@ -38,6 +38,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 
 class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
+    accept_sig = QtCore.pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -62,6 +63,25 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         self.view_x_action = QAction('X Component')
         self.view_y_action = QAction('Y Component')
         self.view_z_action = QAction('Z Component')
+
+        # Status bar
+        self.save_frame = QFrame()
+        self.save_frame.setLayout(QHBoxLayout())
+        self.save_frame.layout().setContentsMargins(0, 0, 0, 0)
+
+        self.save_path_label = QLabel('Save Path:')
+        self.save_path_edit = QLineEdit()
+        self.accept_btn = QPushButton('Accept')
+
+        self.save_frame.layout().addWidget(self.save_path_label)
+        self.save_frame.layout().addWidget(self.save_path_edit)
+        self.save_frame.layout().addWidget(self.accept_btn)
+        # self.accept_btn.setFlat(True)
+
+        self.status_bar.addPermanentWidget(self.save_frame)
+        # self.status_bar.addPermanentWidget(self.save_path_label)
+        # self.status_bar.addPermanentWidget(self.save_path_edit)
+        # self.status_bar.addPermanentWidget(self.accept_btn)
 
         # Configure the plots
         # X axis lin plots
@@ -166,6 +186,16 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
 
                 self.plot_profiles(pem_file, component)
 
+        def accept_merge():
+            merged_pem = self.get_merged_pem()
+            save_path = Path(self.save_path_edit.text())
+
+            merged_pem.filepath = save_path
+            merged_pem.save()
+            self.status_bar.showMessage(f"File saved.", 1000)
+            self.accept_sig.emit(str(save_path))
+            self.close()
+
         # Menu
         self.actionSave_As.triggered.connect(self.save_pem_file)
         self.actionSave_Screenshot.triggered.connect(self.save_img)
@@ -190,6 +220,8 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         # Buttons
         self.flip_data_btn_1.clicked.connect(lambda: flip_component(self.pf1))
         self.flip_data_btn_2.clicked.connect(lambda: flip_component(self.pf2))
+
+        self.accept_btn.clicked.connect(accept_merge)
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
@@ -285,6 +317,45 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             """
             Set the information labels for both PEMFiles.
             """
+
+            def check_label_differences():
+                for l1, l2 in zip([self.client_label_1,
+                                   self.grid_label_1,
+                                   self.line_label_1,
+                                   self.loop_label_1,
+                                   self.operator_label_1,
+                                   self.tools_label_1,
+                                   self.date_label_1,
+                                   self.ramp_label_1,
+                                   self.rx_num_label_1,
+                                   self.sync_label_1,
+                                   self.zts_label_1,
+                                   ],
+                                  [self.client_label_1,
+                                   self.grid_label_2,
+                                   self.line_label_2,
+                                   self.loop_label_2,
+                                   self.operator_label_2,
+                                   self.tools_label_2,
+                                   self.date_label_2,
+                                   self.ramp_label_2,
+                                   self.rx_num_label_2,
+                                   self.sync_label_2,
+                                   self.zts_label_2,
+                                   ]
+                                  ):
+                    if l1.text() != l2.text():
+                        l1_font = l1.font()
+                        l2_font = l2.font()
+
+                        # l1_font.setUnderline(True)
+                        # l2_font.setUnderline(True)
+                        l1_font.setBold(True)
+                        l2_font.setBold(True)
+
+                        l1.setFont(l1_font)
+                        l2.setFont(l2_font)
+
             self.coil_area_sbox_1.blockSignals(True)
             self.coil_area_sbox_2.blockSignals(True)
             self.current_sbox_1.blockSignals(True)
@@ -329,6 +400,8 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             self.current_sbox_1.blockSignals(False)
             self.current_sbox_2.blockSignals(False)
 
+            check_label_differences()
+
         def set_buttons():
             """
             Enable the Flip Component buttons
@@ -345,11 +418,8 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
                 if 'Z' in components:
                     self.menuView.addAction(self.view_z_action)
 
-        if len(pem_files) != 2:
-            raise Exception(f"PEMMerger exclusively accepts two PEM files")
-
+        assert len(pem_files) == 2, f"PEMMerger exclusively accepts two PEM files"
         f1, f2 = pem_files[0], pem_files[1]
-
         assert f1.is_borehole() == f2.is_borehole(), f"Cannot merge a borehole survey with a surface survey."
         assert f1.is_fluxgate() == f2.is_fluxgate(), f"Cannot merge a fluxgate survey with an induction survey."
         assert f1.timebase == f2.timebase, f"Both files must have the same timebase."
@@ -389,6 +459,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         format_plots()
         set_labels()
         set_buttons()
+        self.save_path_edit.setText(str(self.pf1.filepath.with_name(f"{self.pf1.line_name}.PEM")))
 
         # Plot the LIN profiles
         self.plot_profiles(self.pf1, components='all')
@@ -529,8 +600,9 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         self.profile_tab_widget.setCurrentIndex(new_ind)
 
     def save_pem_file(self):
+        default_name = str(self.pf1.filepath.with_name(f"{self.pf1.line_name}.PEM"))
         save_path = QFileDialog.getSaveFileName(self, 'Save PEM File',
-                                                str(self.pf1.filepath),
+                                                default_name,
                                                 'PEM Files (*.PEM)')[0]
         if save_path:
             merged_pem = self.get_merged_pem()

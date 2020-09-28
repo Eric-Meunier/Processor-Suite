@@ -346,29 +346,9 @@ class LINPlotter(ProfilePlotter):
                 else:
                     ax.set_ylabel(f"Channel {channel_bounds[i][0]} - {channel_bounds[i][1]}\n({units})")
 
-        def calc_channel_bounds():
-            """
-            Create tuples of start and end channels to be plotted per axes
-            :return: list of tuples, first item of tuple is the axes, second is the start and end channel for that axes
-            """
-            channel_bounds = [None] * 4
-            num_channels_per_plot = int((self.pem_file.number_of_channels - 1) // 4)
-            remainder_channels = int((self.pem_file.number_of_channels - 1) % 4)
-
-            for k in range(0, len(channel_bounds)):
-                channel_bounds[k] = (k * num_channels_per_plot + 1, num_channels_per_plot * (k + 1))
-
-            for i in range(0, remainder_channels):
-                channel_bounds[i] = (channel_bounds[i][0], (channel_bounds[i][1] + 1))
-                for k in range(i + 1, len(channel_bounds)):
-                    channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
-
-            channel_bounds.insert(0, (0, 0))
-            return channel_bounds
-
         t = time.time()
         profile = self.pem_file.get_profile_data(component, converted=True)
-        channel_bounds = calc_channel_bounds()
+        channel_bounds = self.pem_file.get_channel_bounds()
         for i, group in enumerate(channel_bounds):
             # Starting offset used for channel annotations
             offset = 100
@@ -3954,12 +3934,12 @@ if __name__ == '__main__':
     # sp.plot(pem_files[0], figure=fig)
     # plt.show()
 
-    # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    # ax6 = ax5.twiny()
-    # ax6.get_shared_x_axes().join(ax5, ax6)
-    # lin_plot = LINPlotter(pem_files[0], lin_fig)
-    # lin_plot.plot('X')
-    # plt.show()
+    lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    ax6 = ax5.twiny()
+    ax6.get_shared_x_axes().join(ax5, ax6)
+    lin_plot = LINPlotter(pem_files[0], lin_fig)
+    lin_plot.plot('X')
+    plt.show()
 
     # log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
     # ax2 = ax.twiny()
@@ -3978,9 +3958,9 @@ if __name__ == '__main__':
     # step_plot.plot('X')
     # plt.show()
 
-    map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
-    map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
-    map_plot.show()
+    # map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
+    # map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
+    # map_plot.show()
 
     # map = GeneralMap(pem_files, fig).get_map()
     # map = SectionPlot(pem_files, fig).get_section_plot()

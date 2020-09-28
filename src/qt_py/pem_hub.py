@@ -28,6 +28,7 @@ from src.pem.pem_plotter import PEMPrinter, CustomProgressBar
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
+from src.qt_py.pem_merger import PEMMerger
 from src.qt_py.unpacker import Unpacker
 from src.qt_py.ri_importer import BatchRIImporter
 from src.qt_py.name_editor import BatchNameEditor
@@ -189,9 +190,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.addAction(self.actionDel_File)
         self.actionDel_File.setEnabled(False)
 
-        self.merge_action = QAction("&Merge", self)
-        self.merge_action.triggered.connect(lambda: self.merge_pem_files(selected=True))
-        self.merge_action.setShortcut("Shift+M")
+        # self.merge_action = QAction("&Merge", self)
+        # self.merge_action.triggered.connect(lambda: self.merge_pem_files(selected=True))
+        # self.merge_action.setShortcut("Shift+M")
 
     def init_ui(self):
         """
@@ -628,7 +629,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Menu
         self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
         self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
-        self.actionAuto_Merge_All_Files.triggered.connect(lambda: self.merge_pem_files(auto_select=True))
+        self.actionAuto_Merge_All_Files.triggered.connect(self.auto_merge_pem_files)
 
         self.actionReverseX_Component.triggered.connect(lambda: self.reverse_component_data(comp='X'))
         self.actionReverseY_Component.triggered.connect(lambda: self.reverse_component_data(comp='Y'))
@@ -835,6 +836,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 save_as_xyz_action = QAction("&Save As XYZ...", self)
                 save_as_xyz_action.triggered.connect(lambda: self.save_as_xyz(selected=True))
 
+                merge_action = QAction("&Merge", self)
+                merge_action.triggered.connect(self.merge_pem_files)
+
                 print_plots_action = QAction("&Print Plots", self)
                 print_plots_action.setIcon(QIcon(os.path.join(icons_path, 'pdf.png')))
                 print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected_files=True))
@@ -899,8 +903,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 menu.addSeparator()
                 menu.addAction(open_plot_editor_action)
                 menu.addSeparator()
-                if len(self.table.selectionModel().selectedRows()) > 1:
-                    menu.addAction(self.merge_action)
+                if len(self.table.selectionModel().selectedRows()) == 2:
+                    menu.addAction(merge_action)
                 menu.addAction(average_action)
                 menu.addAction(split_action)
                 menu.addAction(scale_current_action)
@@ -2615,12 +2619,49 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             else:
                 print(f"{pem_file.filepath.name} has no {comp} data.")
 
-    def merge_pem_files(self, selected=False, auto_select=False):
+    def merge_pem_files(self):
         """
-        Action of merging multiple PEM files.
-        :param selected: Bool, use selected PEM files
-        :param auto_select: Bool, automatically select which PEM files to merge
+        Merge two PEM files with PEMMerger.
         """
+
+        def check_pems():
+
+            # If the files aren't all split or un-split
+            if not all([f.is_split() == pem_files[0].is_split() for f in pem_files]):
+                response = self.message.question(self, 'Error - Different channel split states',
+                                                 'There is a mix of channel splitting in the selected files. '
+                                                 'Would you like to split the unsplit file(s) and proceed with merging?',
+                                                 self.message.Yes | self.message.No)
+                if response == self.message.Yes:
+                    for pem_file in pem_files:
+                        pem_file = pem_file.split()
+                else:
+                    return
+
+            # If the files aren't all de-rotated
+            if not all([f.is_rotated() == pem_files[0].is_rotated() for f in pem_files]):
+                self.message.warning(self, 'Warning - Different states of XY de-rotation',
+                                     'There is a mix of XY de-rotation in the selected files.')
+
+        def accept_merge(filepath):
+
+            if self.delete_merged_files_cbox.isChecked():
+                self.remove_file(rows)
+
+            self.open_pem_files(filepath)
+
+        pem_files, rows = self.get_pem_files(selected=True)
+        if len(pem_files) < 2:
+            self.message.information(self, 'Error', 'Must select multiple PEM Files')
+            return
+
+        check_pems()
+
+        merger = PEMMerger(parent=self)
+        merger.accept_sig.connect(accept_merge)
+        merger.open(pem_files)
+
+    def auto_merge_pem_files(self):
 
         def merge_pems(pem_files):
             """
@@ -2687,80 +2728,59 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         files_to_open = []
         files_to_remove = []
 
-        if selected is True:
-            pem_files, rows = self.get_pem_files(selected=True)
-            if len(pem_files) < 2:
-                self.message.information(self, 'Error', 'Must select multiple PEM Files')
-                return
+        if not self.pem_files:
+            return
 
-            # Merge the files
-            merged_pem = merge_pems(pem_files)
+        pem_files, rows = copy.deepcopy(self.pem_files), np.arange(self.table.rowCount())
 
-            if merged_pem is not None:
-                files_to_open.append(merged_pem)
-                files_to_remove.extend(pem_files)
+        bh_files = [f for f in pem_files if f.is_borehole()]
+        sf_files = [f for f in pem_files if f not in bh_files]
 
-        elif auto_select is True:
-            if not self.pem_files:
-                return
+        # Merge surface files
+        # Group the files by loop name
+        for loop, loop_files in groupby(sf_files, key=lambda x: x.loop_name):
+            loop_files = list(loop_files)
+            print(f"Auto merging loop {loop}")
 
-            pem_files, rows = copy.deepcopy(self.pem_files), np.arange(self.table.rowCount())
+            # Group the files by line name
+            for line, line_files in groupby(loop_files, key=lambda x: x.line_name):
+                line_files = list(line_files)
+                if len(line_files) > 1:
+                    print(f"Auto merging line {line}: {[f.filepath.name for f in line_files]}")
 
-            bh_files = [f for f in pem_files if f.is_borehole()]
-            sf_files = [f for f in pem_files if f not in bh_files]
+                    # Merge the files
+                    merged_pem = merge_pems(line_files)
 
-            # Merge surface files
-            # Group the files by loop name
-            for loop, loop_files in groupby(sf_files, key=lambda x: x.loop_name):
-                loop_files = list(loop_files)
-                print(f"Auto merging loop {loop}")
+                    if merged_pem is not None:
+                        files_to_open.append(merged_pem)
+                        files_to_remove.extend(line_files)
 
-                # Group the files by line name
-                for line, line_files in groupby(loop_files, key=lambda x: x.line_name):
-                    line_files = list(line_files)
-                    if len(line_files) > 1:
-                        print(f"Auto merging line {line}: {[f.filepath.name for f in line_files]}")
+        # Merge borehole files
+        # Group the files by loop
+        for loop, loop_files in groupby(bh_files, key=lambda x: x.loop_name):
+            print(f"Loop {loop}")
+            loop_files = list(loop_files)
+
+            # Group the files by hole name
+            for hole, hole_files in groupby(loop_files, key=lambda x: x.line_name):
+                print(f"Hole {hole}")
+                hole_files = sorted(list(hole_files), key=lambda x: x.get_components())
+
+                # Group the files by their components
+                for components, comp_files in groupby(hole_files, key=lambda x: x.get_components()):
+                    print(f"Components {components}")
+                    comp_files = list(comp_files)
+                    if len(comp_files) > 1:
+                        print(f"Auto merging hole {hole}: {[f.filepath.name for f in comp_files]}")
 
                         # Merge the files
-                        merged_pem = merge_pems(line_files)
+                        merged_pem = merge_pems(comp_files)
 
                         if merged_pem is not None:
                             files_to_open.append(merged_pem)
-                            files_to_remove.extend(line_files)
-
-            # Merge borehole files
-            # Group the files by loop
-            for loop, loop_files in groupby(bh_files, key=lambda x: x.loop_name):
-                print(f"Loop {loop}")
-                loop_files = list(loop_files)
-
-                # Group the files by hole name
-                for hole, hole_files in groupby(loop_files, key=lambda x: x.line_name):
-                    print(f"Hole {hole}")
-                    hole_files = sorted(list(hole_files), key=lambda x: x.get_components())
-
-                    # Group the files by their components
-                    for components, comp_files in groupby(hole_files, key=lambda x: x.get_components()):
-                        print(f"Components {components}")
-                        comp_files = list(comp_files)
-                        if len(comp_files) > 1:
-                            print(f"Auto merging hole {hole}: {[f.filepath.name for f in comp_files]}")
-
-                            # Merge the files
-                            merged_pem = merge_pems(comp_files)
-
-                            if merged_pem is not None:
-                                files_to_open.append(merged_pem)
-                                files_to_remove.extend(comp_files)
+                            files_to_remove.extend(comp_files)
 
         rows = [pem_files.index(f) for f in files_to_remove]
-
-        # if self.auto_create_backup_files_cbox.isChecked():
-        #     for file in reversed(files_to_remove):
-        #         self.save_pem_file(copy.deepcopy(file),
-        #                            tag='[-M]',
-        #                            backup=True,
-        #                            remove_old=self.delete_merged_files_cbox.isChecked())
 
         if self.delete_merged_files_cbox.isChecked():
             self.remove_file(rows=rows)
@@ -2906,9 +2926,18 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.section_depth_edit.setValidator(int_validator)
 
         # Signals
+        def get_save_file():
+            default_path = self.pem_files[-1].filepath.parent
+            # self.dialog.setDirectory(str(default_path))
+            save_dir = QFileDialog.getSaveFileName(self, '', str(default_path))[0]
+            print(f"Saving PDFs to {save_dir}")
+            if save_dir:
+                self.save_path_edit.setText(save_dir)
+
         self.print_btn.clicked.connect(self.print_pdfs)
         self.cancel_btn.clicked.connect(self.close)
         self.plan_map_options_btn.clicked.connect(self.plan_map_options.show)
+        self.change_save_path_btn.clicked.connect(get_save_file)
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
@@ -2942,17 +2971,11 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
                 pem_file = pem_file.split()
 
         fill_share_range()
+        self.save_path_edit.setText(str(self.pem_files[0].filepath.parent.with_suffix('.PDF')))
 
         self.show()
 
     def print_pdfs(self):
-
-        def get_save_file():
-            default_path = self.pem_files[-1].filepath.parent
-            # self.dialog.setDirectory(str(default_path))
-            save_dir = QFileDialog.getSaveFileName(self, '', str(default_path))[0]
-            print(f"Saving PDFs to {save_dir}")
-            return save_dir
 
         plot_kwargs = {
             'CRS': self.crs,
@@ -2990,31 +3013,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
             plot_kwargs['x_min'] = None
             plot_kwargs['x_max'] = None
 
-        # # Make sure CRS is passed and valid if making a plan map
-        # if self.make_plan_maps_gbox.isChecked():
-        #     if not self.crs:
-        #         response = self.message.question(self, 'No CRS',
-        #                                          'No valid CRS has been selected. ' +
-        #                                          'Do you wish to proceed without a plan map?',
-        #                                          self.message.Yes | self.message.No)
-        #         if response == self.message.No:
-        #             self.close()
-        #         else:
-        #             self.make_plan_maps_gbox.setChecked(False)
-        #             self.make_plan_maps_gbox.setEnabled(False)
-        #
-        #     elif self.crs.is_geographic:
-        #         response = self.message.question(self, 'Geographic CRS',
-        #                                          'Map creation with geographic CRS has not yet been implemented. ' +
-        #                                          'Do you wish to proceed without a plan map?',
-        #                                          self.message.Yes | self.message.No)
-        #         if response == self.message.No:
-        #             self.close()
-        #         else:
-        #             self.make_plan_maps_gbox.setChecked(False)
-        #             self.make_plan_maps_gbox.setEnabled(False)
-
-        save_dir = get_save_file()
+        save_dir = self.save_path_edit.text()
         if save_dir:
 
             def pb_close(e):
@@ -3043,7 +3042,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
                 self.pb_win.hide()
                 self.close()
         else:
-            self.close()
+            self.message.critical(self, 'Error', 'Invalid file name')
 
 
 class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
@@ -3392,13 +3391,14 @@ def main():
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=5)
-    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    pem_files = pg.get_pems(client='Minera', number=6)
     #
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
     # pem_files = [r'C:\_Data\2020\Generation PGM\__M-20-539\RAW\XY-Collar.PEM']
-    # mw.open_pem_files(pem_files)
+    mw.open_pem_files(pem_files)
 
     # mw.pem_info_widgets[0].convert_crs()
     # mw.open_3d_map()
