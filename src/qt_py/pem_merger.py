@@ -5,14 +5,15 @@ import sys
 import time
 import keyboard
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 import pylineclip as lc
 from scipy import spatial
 from PyQt5 import uic, QtCore, QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                             QPushButton, QTableWidget, QTableWidgetItem, QWidget, QHBoxLayout, QAbstractItemView)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QShortcut, QLineEdit, QLabel, QMessageBox, QFileDialog,
+                             QPushButton, QTableWidget, QAction, QWidget, QHBoxLayout, QAbstractItemView)
 from pyqtgraph.Point import Point
 
 from src.pem.pem_file import StationConverter, PEMParser
@@ -45,20 +46,26 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         self.message = QMessageBox()
 
         # Format window
-        self.setWindowTitle('PEM Plot Editor')
+        self.setWindowTitle('PEM Merger')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'plot_editor.png')))
 
         self.converter = StationConverter()
-        self.pf_1 = None
-        self.pf_2 = None
+        self.pf1 = None
+        self.pf2 = None
         self.units = None
-        self.stations = np.array([])
         self.components = []
         self.channel_bounds = None
+        self.last_scale_factor_1 = 0.
+        self.last_scale_factor_2 = 0.
+
+        self.menuView.addSeparator()
+        self.view_x_action = QAction('X Component')
+        self.view_y_action = QAction('Y Component')
+        self.view_z_action = QAction('Z Component')
 
         # Configure the plots
         # X axis lin plots
-        self.x_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
+        self.x_profile_layout.ci.layout.setSpacing(3)  # Spacing between plots
         self.x_ax0 = self.x_profile_layout.addPlot(0, 0)
         self.x_ax1 = self.x_profile_layout.addPlot(1, 0)
         self.x_ax2 = self.x_profile_layout.addPlot(2, 0)
@@ -68,7 +75,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         self.pf2_x_curves = []
 
         # Y axis lin plots
-        self.y_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
+        self.y_profile_layout.ci.layout.setSpacing(3)  # Spacing between plots
         self.y_ax0 = self.y_profile_layout.addPlot(0, 0)
         self.y_ax1 = self.y_profile_layout.addPlot(1, 0)
         self.y_ax2 = self.y_profile_layout.addPlot(2, 0)
@@ -78,7 +85,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         self.pf2_y_curves = []
 
         # Z axis lin plots
-        self.z_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
+        self.z_profile_layout.ci.layout.setSpacing(3)  # Spacing between plots
         self.z_ax0 = self.z_profile_layout.addPlot(0, 0)
         self.z_ax1 = self.z_profile_layout.addPlot(1, 0)
         self.z_ax2 = self.z_profile_layout.addPlot(2, 0)
@@ -99,7 +106,99 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             ax.setMenuEnabled(False)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
-        # Signals
+        self.init_signals()
+
+    def init_signals(self):
+
+        def toggle_symbols():
+            self.plot_profiles(self.pf1, components='all')
+            self.plot_profiles(self.pf2, components='all')
+
+        def coil_area_1_changed(coil_area):
+            self.pf1 = self.pf1.scale_coil_area(coil_area)
+            self.plot_profiles(self.pf1, components='all')
+
+        def coil_area_2_changed(coil_area):
+            self.pf2 = self.pf2.scale_coil_area(coil_area)
+            self.plot_profiles(self.pf2, components='all')
+
+        def current_1_changed(current):
+            self.pf1 = self.pf1.scale_current(current)
+            self.plot_profiles(self.pf1, components='all')
+
+        def current_2_changed(current):
+            self.pf2 = self.pf2.scale_current(current)
+            self.plot_profiles(self.pf2, components='all')
+
+        def factor_1_changed(factor):
+            scale_factor = factor - self.last_scale_factor_1
+
+            self.pf1 = self.pf1.scale_by_factor(scale_factor)
+            self.plot_profiles(self.pf1, components='all')
+
+            self.last_scale_factor_1 = factor
+
+        def factor_2_changed(factor):
+            factor = factor - self.last_scale_factor_2
+
+            self.pf2 = self.pf2.scale_by_factor(factor)
+            self.plot_profiles(self.pf2, components='all')
+
+            self.last_scale_factor_2 = factor
+
+        def flip_component(pem_file):
+            ind = self.profile_tab_widget.currentIndex()
+            if ind == 0:
+                component = 'X'
+            elif ind == 1:
+                component = 'Y'
+            else:
+                component = 'Z'
+
+            filt = pem_file.data.Component == component
+
+            if filt.any():
+                data = pem_file.data[filt]
+
+                data.loc[:, 'Reading'] = data.loc[:, 'Reading'] * -1
+
+                pem_file.data[filt] = data
+
+                self.plot_profiles(pem_file, component)
+
+        # Menu
+        self.actionSave_As.triggered.connect(self.save_pem_file)
+        self.actionSave_Screenshot.triggered.connect(self.save_img)
+        self.actionCopy_Screenshot.triggered.connect(self.copy_img)
+
+        self.actionSymbols.triggered.connect(toggle_symbols)
+
+        self.view_x_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(0))
+        self.view_y_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(1))
+        self.view_z_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(2))
+
+        # Spin boxes
+        self.coil_area_sbox_1.valueChanged.connect(coil_area_1_changed)
+        self.coil_area_sbox_2.valueChanged.connect(coil_area_2_changed)
+
+        self.current_sbox_1.valueChanged.connect(current_1_changed)
+        self.current_sbox_2.valueChanged.connect(current_2_changed)
+
+        self.factor_sbox_1.valueChanged.connect(factor_1_changed)
+        self.factor_sbox_2.valueChanged.connect(factor_2_changed)
+
+        # Buttons
+        self.flip_data_btn_1.clicked.connect(lambda: flip_component(self.pf1))
+        self.flip_data_btn_2.clicked.connect(lambda: flip_component(self.pf2))
+
+    def keyPressEvent(self, event):
+        # Delete a decay when the delete key is pressed
+        if event.key() == QtCore.Qt.Key_C:
+            self.cycle_profile_component()
+
+        elif event.key() == QtCore.Qt.Key_Space:
+            for ax in self.profile_axes:
+                ax.autoRange()
 
     def open(self, pem_files):
         """
@@ -108,37 +207,143 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         """
 
         def format_plots():
+            """
+            Creates plot curves for each channel of each component. Adds plot labels for the Y axis and title of
+            the profile plots, and sets the X axis limits of each plot.
+            """
 
-            def set_plot_labels(ax):
+            def set_plot_labels(axes):
+                """
+                Plot the Y axis label for the plot.
+                :param axes: list of PlotItem plots for a component.
+                """
 
                 # Set the plot labels
                 for i, bounds in enumerate(self.channel_bounds):
+                    ax = axes[i]
                     # Set the Y-axis labels
                     if i == 0:
                         ax.setLabel('left', f"PP channel", units=self.units)
                     else:
                         ax.setLabel('left', f"Channel {bounds[0]} to {bounds[1]}", units=self.units)
 
+            def add_plot_curves(axes, *item_lists):
+                """
+                Create and add the PlotCurveItems to the correct PlotItem.
+                :param axes: list of plot axes for a component
+                :param item_lists: list of PlotCurveItems for each PEMFile.
+                """
+                for item_list in item_lists:
+                    for channel in range(self.channel_bounds[0][0], self.channel_bounds[-1][-1] + 1):
+                        curve = pg.PlotDataItem()
+                        item_list.append(curve)
+
+                        # Add the curve to the correct plot
+                        ax = self.get_ax(channel, axes)
+                        ax.addItem(curve)
+
+            stations = np.concatenate([self.pf1.get_stations(converted=True), self.pf2.get_stations(converted=True)])
+            mn, mx = stations.min(), stations.max()
+
             if 'X' in self.components:
                 # Add the line name and loop name as the title for the profile plots
                 self.x_ax0.setTitle(f"X Component")
+                # Add the PlotCurveItems
+                add_plot_curves(self.x_layout_axes, *[self.pf1_x_curves, self.pf2_x_curves])
 
+                # Add the plot XY labels
                 for ax in self.x_layout_axes:
-                    set_plot_labels(ax)
+                    ax.setLimits(xMin=mn, xMax=mx)
+
+                set_plot_labels(self.x_layout_axes)
 
             if 'Y' in self.components:
                 # Add the line name and loop name as the title for the profile plots
                 self.y_ax0.setTitle(f"Y Component")
+                # Add the PlotCurveItems
+                add_plot_curves(self.y_layout_axes, *[self.pf1_y_curves, self.pf2_y_curves])
 
+                # Add the plot XY labels
                 for ax in self.y_layout_axes:
-                    set_plot_labels(ax)
+                    ax.setLimits(xMin=mn, xMax=mx)
+
+                set_plot_labels(self.y_layout_axes)
 
             if 'Z' in self.components:
                 # Add the line name and loop name as the title for the profile plots
                 self.z_ax0.setTitle(f"Z Component")
+                # Add the PlotCurveItems
+                add_plot_curves(self.z_layout_axes, *[self.pf1_z_curves, self.pf2_z_curves])
 
+                # Add the plot XY labels
                 for ax in self.z_layout_axes:
-                    set_plot_labels(ax)
+                    ax.setLimits(xMin=mn, xMax=mx)
+
+                set_plot_labels(self.z_layout_axes)
+
+        def set_labels():
+            """
+            Set the information labels for both PEMFiles.
+            """
+            self.coil_area_sbox_1.blockSignals(True)
+            self.coil_area_sbox_2.blockSignals(True)
+            self.current_sbox_1.blockSignals(True)
+            self.current_sbox_2.blockSignals(True)
+
+            self.file_label_1.setText(self.pf1.filepath.name)
+            self.client_label_1.setText(self.pf1.client)
+            self.grid_label_1.setText(self.pf1.grid)
+            self.line_label_1.setText(self.pf1.line_name)
+            self.loop_label_1.setText(self.pf1.loop_name)
+            self.operator_label_1.setText(self.pf1.operator)
+            self.tools_label_1.setText(' '.join(self.pf1.probes.values()))
+
+            self.date_label_1.setText(self.pf1.date)
+            self.ramp_label_1.setText(str(self.pf1.ramp))
+            self.rx_num_label_1.setText(self.pf1.rx_number)
+            self.sync_label_1.setText(self.pf1.sync)
+            self.zts_label_1.setText(', '.join(self.pf1.data.ZTS.astype(str).unique()))
+
+            self.coil_area_sbox_1.setValue(self.pf1.coil_area)
+            self.current_sbox_1.setValue(self.pf1.current)
+
+            self.file_label_2.setText(self.pf2.filepath.name)
+            self.client_label_2.setText(self.pf2.client)
+            self.grid_label_2.setText(self.pf2.grid)
+            self.line_label_2.setText(self.pf2.line_name)
+            self.loop_label_2.setText(self.pf2.loop_name)
+            self.operator_label_2.setText(self.pf2.operator)
+            self.tools_label_2.setText(' '.join(self.pf2.probes.values()))
+
+            self.date_label_2.setText(self.pf2.date)
+            self.ramp_label_2.setText(str(self.pf2.ramp))
+            self.rx_num_label_2.setText(self.pf2.rx_number)
+            self.sync_label_2.setText(self.pf2.sync)
+            self.zts_label_2.setText(', '.join(self.pf1.data.ZTS.astype(str).unique()))
+
+            self.coil_area_sbox_2.setValue(self.pf2.coil_area)
+            self.current_sbox_2.setValue(self.pf2.current)
+
+            self.coil_area_sbox_1.blockSignals(False)
+            self.coil_area_sbox_2.blockSignals(False)
+            self.current_sbox_1.blockSignals(False)
+            self.current_sbox_2.blockSignals(False)
+
+        def set_buttons():
+            """
+            Enable the Flip Component buttons
+            """
+            for pem_file in [self.pf1, self.pf2]:
+                components = pem_file.get_components()
+
+                if 'X' in components:
+                    self.menuView.addAction(self.view_x_action)
+
+                if 'Y' in components:
+                    self.menuView.addAction(self.view_y_action)
+
+                if 'Z' in components:
+                    self.menuView.addAction(self.view_z_action)
 
         if len(pem_files) != 2:
             raise Exception(f"PEMMerger exclusively accepts two PEM files")
@@ -157,25 +362,37 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             if response == self.message.No:
                 return
 
-        self.pf_1 = f1
-        self.pf_2 = f2
+        if not f1.is_rotated() == f2.is_rotated():
+            response = self.message.question(self, 'Warning', 'There is a mix of XY de-rotation in the selected files. '
+                                                              'Continue with merging?',
+                                             self.message.Yes, self.message.No)
 
-        if self.pf_1.is_split():
-            self.actionOn_time.blockSignals(True)
-            self.actionOn_time.setChecked(False)
-            self.actionOn_time.blockSignals(False)
+            if response == self.message.No:
+                return
 
-            self.actionOn_time.setEnabled(False)
+        # Try and ensure the files are plotted in the correct order
+        f1_min, f2_min = f1.get_stations(converted=True).min(), f2.get_stations(converted=True).min()
+        if f1_min < f2_min:
+            self.pf1 = f1
+            self.pf2 = f2
         else:
-            self.actionOn_time.setEnabled(True)
+            self.pf1 = f2
+            self.pf2 = f1
 
-        self.components = set(np.array([self.pf_1.get_components(), self.pf_2.get_components()]).flatten())
-        self.channel_bounds = self.pf_1.get_channel_bounds()
+        if self.pf1.is_fluxgate():
+            self.units = 'pT'
+        else:
+            self.units = 'nT/s'
+        self.components = set(np.array([self.pf1.get_components(), self.pf2.get_components()]).flatten())
+        self.channel_bounds = self.pf1.get_channel_bounds()
 
         format_plots()
+        set_labels()
+        set_buttons()
 
         # Plot the LIN profiles
-        self.plot_profiles(self.pf_1, components='all')
+        self.plot_profiles(self.pf1, components='all')
+        self.plot_profiles(self.pf2, components='all')
 
         self.show()
 
@@ -183,125 +400,99 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         """
         Plot the PEM file in a LIN plot style, with both components in separate plots
         :param pem_file: PEMFile object to plot.
-        :param color: Union, line color to use for the plots.
         :param components: list of str, components to plot. If None it will plot every component in the file.
         """
 
-        def clear_plots(components):
+        def plot_lines(channel):
             """
-            Clear the plots of the given components
-            :param components: list of str
+            Average and plot the data of the channel.
+            :param channel: int, channel number
             """
-            axes = []
+            channel_number = channel.name
+            df_avg = channel.groupby('Station').mean()
+            x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
-            if 'X' in components:
-                axes.extend(self.x_layout_axes)
-            if 'Y' in components:
-                axes.extend(self.y_layout_axes)
-            if 'Z' in components:
-                axes.extend(self.z_layout_axes)
+            curve = self.get_curve(channel_number, component, pem_file)
 
-            for ax in axes:
-                ax.clearPlots()
+            if self.actionSymbols.isChecked():
+                symbols = {'symbol': 'o',
+                           'symbolSize': 5,
+                           'symbolPen': pg.mkPen(color, width=1.1),
+                           'symbolBrush': pg.mkBrush('w')}
+            else:
+                symbols = {'symbol': None}
 
-        def plot_lin(profile_data, axes):
-
-            # def plot_lines(df, ax):
-            #     """
-            #     Plot the lines on the pyqtgraph ax
-            #     :param df: DataFrame of filtered data
-            #     :param ax: pyqtgraph PlotItem
-            #     """
-            #     df_avg = df.groupby('Station').mean()
-            #     x, y = df_avg.index, df_avg
-            #
-            #     curve = pg.PlotCurveItem(
-            #         x.to_numpy(), y.to_numpy(),
-            #         pen=pg.mkPen(color, width=1.),
-            #         symbol='o',
-            #         symbolSize=2,
-            #         symbolBrush='k',
-            #         symbolPen='k',
-            #     )
-            #     ax.addItem(curve)
-
-            def get_ax(channel):
-                pass
-
-            def plot_lines_2(channel):
-                channel_number = channel.name
-                df_avg = channel.groupby('Station').mean()
-                x, y = df_avg.index, df_avg
-                print(channel)
-
-
-            # def plot_scatters(df, ax):
-            #     """
-            #     Plot the scatter plot markers
-            #     :param df: DataFrame of filtered data
-            #     :param ax: pyqtgraph PlotItem
-            #     :return:
-            #     """
-            #     global scatter_plotting_time
-            #     t = time.time()
-            #     x, y = df.index, df
-            #
-            #     scatter = pg.ScatterPlotItem(x=x, y=y,
-            #                                  pen=pg.mkPen('k', width=1.),
-            #                                  symbol='o',
-            #                                  size=2,
-            #                                  brush='w',
-            #                                  )
-            #
-            #     ax.addItem(scatter)
-            #     scatter_plotting_time += time.time() - t
-
-            # Plotting
-
-            profile_data.apply(plot_lines_2)
-
-            # for i, bounds in enumerate(self.channel_bounds):
-            #     ax = axes[i]
-            #
-            #     # Plot the data
-            #     for channel in range(bounds[0], bounds[1] + 1):
-            #         data = profile_data.iloc[:, channel]
-            #
-            #         plot_lines(data, ax)
-            #         # if self.show_scatter_cbox.isChecked():
-            #         #     plot_scatters(data, ax)
+            curve.setData(x, y, pen=pg.mkPen(color), **symbols)
 
         if not isinstance(components, np.ndarray):
             # Get the components
             if components is None or components == 'all':
                 components = self.components
 
-        # clear_plots(components)
-
-        if pem_file == self.pf_1:
-            color = 'b'
-            
-        file = pem_file.copy()
+        if pem_file == self.pf1:
+            # color = 'r'
+            color = (28, 28, 27)
+        else:
+            # color = 'b'
+            color = (206, 74, 126)
 
         for component in components:
-            profile_data = file.get_profile_data(component,
-                                                 averaged=False,
-                                                 converted=True,
-                                                 ontime=self.actionOn_time.isChecked())
+            profile_data = pem_file.get_profile_data(component,
+                                                     averaged=False,
+                                                     converted=True,
+                                                     ontime=False)
 
             if profile_data.empty:
                 continue
 
-            print(f"Plotting profile for {component} component")
-            # Select the correct axes based on the component
-            if component == 'X':
-                axes = self.x_layout_axes
-            elif component == 'Y':
-                axes = self.y_layout_axes
-            else:
-                axes = self.z_layout_axes
+            profile_data.apply(plot_lines)
 
-            plot_lin(profile_data, axes)
+    def get_ax(self, channel, axes):
+        """
+        Find which plot the channel should be plotted in.
+        :param channel: int, channel number
+        :param axes: list, pg PlotItems
+        :return: pg PlotItem
+        """
+        for i, bound in enumerate(self.channel_bounds):
+            if channel in range(bound[0], bound[1] + 1):
+                return axes[i]
+
+    def get_curve(self, channel, component, pem_file):
+        """
+        Find the PlotCurveItem for a given channel, component and PEMFile
+        :param channel: int
+        :param component: str
+        :param pem_file: PEMFile object
+        """
+        if component == 'X':
+            if pem_file == self.pf1:
+                return self.pf1_x_curves[channel]
+            else:
+                return self.pf2_x_curves[channel]
+        if component == 'Y':
+            if pem_file == self.pf1:
+                return self.pf1_y_curves[channel]
+            else:
+                return self.pf2_y_curves[channel]
+        else:
+            if pem_file == self.pf1:
+                return self.pf1_z_curves[channel]
+            else:
+                return self.pf2_z_curves[channel]
+
+    def get_merged_pem(self):
+        """
+        Merge the two PEM files into a single PEM file.
+        :return: single PEMFile object
+        """
+        pems = [self.pf1, self.pf2]
+        merged_pem = pems[0].copy()
+        merged_pem.data = pd.concat([pem_file.data for pem_file in pems], axis=0, ignore_index=True)
+        merged_pem.number_of_readings = sum([f.number_of_readings for f in pems])
+        merged_pem.is_merged = True
+
+        return merged_pem
 
     def cycle_profile_component(self):
         """
@@ -337,16 +528,39 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         print(f"Cycling profile tab to {new_ind}")
         self.profile_tab_widget.setCurrentIndex(new_ind)
 
+    def save_pem_file(self):
+        save_path = QFileDialog.getSaveFileName(self, 'Save PEM File',
+                                                str(self.pf1.filepath),
+                                                'PEM Files (*.PEM)')[0]
+        if save_path:
+            merged_pem = self.get_merged_pem()
+            merged_pem.filepath = Path(save_path)
+            merged_pem.save()
+
+    def save_img(self):
+        default = self.pf1.filepath.parent.joinpath(f"{self.pf1.filepath.stem} & {self.pf2.filepath.stem}")
+        save_file = QFileDialog.getSaveFileName(self, 'Save Image',
+                                                str(default),
+                                                'PNG Files (*.PNG);; All files(*.*)')[0]
+        if save_file:
+            self.grab().save(save_file)
+
+    def copy_img(self):
+        QApplication.clipboard().setPixmap(self.grab())
+        self.status_bar.showMessage('Image copied to clipboard.', 1000)
+
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
 
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Minera', number=2)
+    # pem_files = pem_getter.get_pems(client='Minera', number=2)
+    pf1 = pem_getter.get_pems(client='Minera', file='L11400N_5.PEM')[0]
+    pf2 = pem_getter.get_pems(client='Minera', file='L11400N_2.PEM')[0]
 
     w = PEMMerger()
-    w.open(pem_files)
+    w.open([pf1, pf2])
 
     w.show()
 

@@ -91,7 +91,7 @@ class PEMFile:
         self.line = None
         self.crs = None
 
-        self.old_filepath = None
+        self.total_scale_factor = 0.
         self.pp_table = None
         self.prepped_for_rotation = False
 
@@ -437,7 +437,7 @@ class PEMFile:
         channel_bounds = [None] * 4
 
         # Only plot off-time channels
-        number_of_channels = len(self.channel_times[self.channel_times.Remove == False]) - 1
+        number_of_channels = len(self.channel_times[self.channel_times.Remove == False])
 
         num_channels_per_plot = int((number_of_channels - 1) // 4)
         remainder_channels = int((number_of_channels - 1) % 4)
@@ -482,7 +482,7 @@ class PEMFile:
         if averaged is True:
             profile = profile.groupby('Station').mean()
 
-        print(f"PEMFile - Time to get profile data: {time.time() - t}")
+        # print(f"PEMFile - Time to get profile data: {time.time() - t}")
         return profile
 
     def get_components(self):
@@ -651,7 +651,7 @@ class PEMFile:
         assert not self.is_borehole(), 'Can only create XYZ file with surface PEM files.'
         assert not gps.empty, 'No GPS found.'
         print(f'Converting {self.filepath.name} to XYZ')
-        t = time.time()
+        # t = time.time()
 
         df['Component'] = pem_data.Component.copy()
         df['Station'] = pem_data.Station.copy()
@@ -666,7 +666,7 @@ class PEMFile:
         df = pd.concat([df, channel_data], axis=1).drop('c_Station', axis=1)
         str_df = df.apply(lambda x: x.astype(str).str.cat(sep=' '), axis=1)
         str_df = '\n'.join(str_df.to_list())
-        print(f"PEMFile - Time to convert {self.filepath.name} to XYZ: {time.time() - t}")
+        # print(f"PEMFile - Time to convert {self.filepath.name} to XYZ: {time.time() - t}")
         return str_df
 
     def copy(self):
@@ -682,7 +682,7 @@ class PEMFile:
 
     def save(self, backup=False, tag=''):
         """
-        Save the PEM file to the .PEM file with the same filepath it currently has.
+        Save the PEM file to a .PEM file with the same filepath it currently has.
         :param backup: bool, if the save is for a backup. If so, it will save the PEM file in a [Backup] folder,
         and create the folder if it doesn't exist. The [Backup] folder will be located in the parent directory of the
         PEMFile.
@@ -702,7 +702,7 @@ class PEMFile:
 
             print(text, file=open(str(backup_path), 'w+'))
         else:
-            print(f"Saving {self.filepath.name} to .PEM")
+            print(f"Saving {self.filepath.name}.")
             print(text, file=open(str(self.filepath), 'w+'))
 
     def average(self):
@@ -711,7 +711,7 @@ class PEMFile:
         :return: PEM file object
         """
         print(f"Averaging {self.filepath.name}")
-        t = time.time()
+        # t = time.time()
         if self.is_averaged():
             print(f"{self.filepath.name} is already averaged")
             return
@@ -739,7 +739,7 @@ class PEMFile:
         # Sort the data frame
         df = sort_data(df)
         self.data = df
-        print(f"PEMFile - Time to average {self.filepath.name}: {time.time() - t}")
+        # print(f"PEMFile - Time to average {self.filepath.name}: {time.time() - t}")
         return self
 
     def split(self):
@@ -748,7 +748,7 @@ class PEMFile:
         :return: PEM file object with split data
         """
         print(f"Splitting channels for {self.filepath.name}")
-        t = time.time()
+        # t = time.time()
         if self.is_split():
             print(f"{self.filepath.name} is already split.")
             return
@@ -770,7 +770,7 @@ class PEMFile:
         :param coil_area: int: new coil area
         :return: PEMFile object: self with data scaled
         """
-        t = time.time()
+        # t = time.time()
         print(f"Scaling coil area of {self.filepath.name}")
 
         new_coil_area = coil_area
@@ -778,36 +778,50 @@ class PEMFile:
         old_coil_area = self.coil_area
 
         scale_factor = float(old_coil_area / new_coil_area)
-        # self.data.Reading = self.data.Reading.map(lambda x: x * scale_factor)
-        self.data.Reading = self.data.Reading * scale_factor  # Vertorized
+
+        self.data.Reading = self.data.Reading * scale_factor  # Vectorized
         print(f"{self.filepath.name} coil area scaled to {new_coil_area} from {old_coil_area}")
 
         self.coil_area = new_coil_area
         self.notes.append(f'<HE3> Data scaled by coil area change of {old_coil_area}/{new_coil_area}')
-        print(f"PEMFile - Time to scale by coil area: {time.time() - t}")
+        # print(f"PEMFile - Time to scale by coil area: {time.time() - t}")
         return self
 
     def scale_current(self, current):
         """
         Scale the data by a change in current
-        :param current: int: new current
-        :return: PEMFile object: self with data scaled
+        :param current: float, new current
+        :return: PEMFile object, self with data scaled
         """
-        t = time.time()
-        print(f"Scaling current of {self.filepath.name}")
-
         new_current = current
         assert isinstance(new_current, float), "New current is not type float"
         old_current = self.current
 
         scale_factor = float(new_current / old_current)
-        # self.data.Reading = self.data.Reading.map(lambda x: x * scale_factor)
-        self.data.Reading = self.data.Reading * scale_factor  # Vertorized
-        print(f"{self.filepath.name} current scaled to {new_current}A from {old_current}A")
+
+        self.data.Reading = self.data.Reading * scale_factor  # Vectorized
 
         self.current = new_current
         self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{old_current}A')
-        print(f"PEMFile - Time to scale by current: {time.time() - t}")
+        return self
+
+    def scale_by_factor(self, factor):
+        """
+        Scale the data by a change in coil area
+        :param factor: float
+        :return: PEMFile object, self with data scaled
+        """
+        assert isinstance(factor, float), "New coil area is not type float"
+
+        # Scale the scale factor to account for compounding
+        scaled_factor = factor / (1 + self.total_scale_factor)
+
+        self.data.Reading = self.data.Reading * (1 + scaled_factor)  # Vectorized
+        print(f"{self.filepath.name} data scaled by factor of {(1 + scaled_factor)}")
+
+        self.total_scale_factor += factor
+
+        self.notes.append(f'<HE3> Data scaled by factor of {1 + factor}')
         return self
 
     def rotate(self, method='acc', soa=0):
@@ -820,7 +834,7 @@ class PEMFile:
         """
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
         assert self.prepped_for_rotation, f"{self.filepath.name} has not been prepped for rotation."
-        print(f"Derotating data of {self.filepath.name}")
+        print(f"De-rotating data of {self.filepath.name}")
 
         def rotate_data(group, method, soa):
             """
@@ -1254,7 +1268,7 @@ class PEMFile:
 
         # Create a filter for X and Y data only
         filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
-        st = time.time()
+        # st = time.time()
         # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
         filtered_data = self.data[filt].groupby(['Station', 'RAD_ID'],
                                                 group_keys=False,
@@ -1262,13 +1276,13 @@ class PEMFile:
         if filtered_data.dropna(subset=['Station']).empty:
             raise Exception(f"No eligible data found for probe de-rotation in {self.filepath.name}")
 
-        print(f"PEMFile - Time to filter data for rotation preparation: {time.time() - st}")
+        # print(f"PEMFile - Time to filter data for rotation preparation: {time.time() - st}")
 
         # Calculate the RAD tool angles
         prepped_data = filtered_data.groupby(['Station', 'RAD_ID'],
                                              group_keys=False,
                                              as_index=False).apply(lambda l: prepare_rad(l))
-        print(f"PEMFile - Time to prepare RAD tools: {time.time() - st}")
+        # print(f"PEMFile - Time to prepare RAD tools: {time.time() - st}")
 
         self.data[filt] = prepped_data
         # Remove the rows that were filtered out in filtered_data
@@ -1651,7 +1665,7 @@ class PEMParser:
         """
 
         def parse_tags(text):
-            t = time.time()
+            # t = time.time()
             cols = [
                 'Format',
                 'Units',
@@ -1687,7 +1701,7 @@ class PEMParser:
             probe_cols = ['XY probe number', 'SOA', 'Tool number', 'Tool ID']
             tags['Probes'] = dict(zip(probe_cols, tags['Probes'].split()))
 
-            print(f"PEMParser - Time to parse tags of {self.filepath.name}: {time.time() - t}")
+            # print(f"PEMParser - Time to parse tags of {self.filepath.name}: {time.time() - t}")
             return tags
 
         def parse_loop(text):
@@ -1698,10 +1712,10 @@ class PEMParser:
             """
             assert text, f'Error parsing the loop coordinates. No matches were found in {self.filepath.name}.'
 
-            t = time.time()
+            # t = time.time()
             text = text.strip().split('\n')
             loop_text = [t.strip().split() for t in text if t.startswith('<L')]
-            print(f"PEMParser - Time to parse loop of {self.filepath.name}: {time.time() - t}")
+            # print(f"PEMParser - Time to parse loop of {self.filepath.name}: {time.time() - t}")
             return loop_text
 
         def parse_line(text):
@@ -1712,10 +1726,10 @@ class PEMParser:
             """
             assert text, f'Error parsing the line coordinates. No matches were found in {self.filepath.name}.'
 
-            t = time.time()
+            # t = time.time()
             text = text.strip().split('\n')
             line_text = [t.strip().split() for t in text if t.startswith('<P')]
-            print(f"PEMParser - Time to parse line of {self.filepath.name}: {time.time() - t}")
+            # print(f"PEMParser - Time to parse line of {self.filepath.name}: {time.time() - t}")
             return line_text
 
         def parse_notes(file):
@@ -1724,14 +1738,14 @@ class PEMParser:
             :param file: str of the .PEM file
             :return: list of notes
             """
-            t = time.time()
+            # t = time.time()
             notes = re.findall(r'<GEN>.*|<HE\d>.*|<CRS>.*', file)
             # Remove the 'xxxxxxxxxxxxxxxx' notes
             for note in reversed(notes):
                 if 'xxx' in note.lower() or re.match('<GEN> NOTES', note):
                     notes.remove(note)
 
-            print(f"PEMParser - Time to parse notes of {self.filepath.name}: {time.time() - t}")
+            # print(f"PEMParser - Time to parse notes of {self.filepath.name}: {time.time() - t}")
             return notes
 
         def parse_header(text):
@@ -1742,7 +1756,7 @@ class PEMParser:
             """
 
             assert text, f'Error parsing the tags. No matches were found in {self.filepath.name}.'
-            t1 = time.time()
+            # t1 = time.time()
 
             text = text.strip().split('\n')
             # Remove any Note tags
@@ -1787,7 +1801,7 @@ class PEMParser:
             if len(receiver_param) > 7:
                 header['Loop polarity'] = receiver_param[7]
 
-            print(f"PEMParser - Time to parse header of {self.filepath.name}: {time.time() - t1}")
+            # print(f"PEMParser - Time to parse header of {self.filepath.name}: {time.time() - t1}")
             return header
 
         def parse_channel_times(text, units=None, num_channels=None):
@@ -1876,12 +1890,12 @@ class PEMParser:
                 return table
 
             assert text, f'Error parsing the channel times. No matches were found in {self.filepath.name}.'
-            t = time.time()
+            # t = time.time()
 
             table = channel_table(np.array(text.split(), dtype=float))
             assert len(table) == num_channels or len(table) == num_channels + 1, \
                 f"{len(table)} channels found in channel times section instead of {num_channels} found in header of {self.filepath.name}"
-            print(f"PEMParser - Time to parse channel table of {self.filepath.name}: {time.time() - t}")
+            # print(f"PEMParser - Time to parse channel table of {self.filepath.name}: {time.time() - t}")
             return table
 
         def parse_data(text):
@@ -1930,7 +1944,7 @@ class PEMParser:
                         reading_number, rad_tool, decay]
 
             assert text, f'No data found in {self.filepath.name}.'
-            t = time.time()
+            # t = time.time()
 
             # Each reading is separated by two return characters
             text = text.strip().split('\n\n')
@@ -1961,14 +1975,14 @@ class PEMParser:
                                          'Readings_per_set',
                                          'Reading_number']].astype(int)
             df['ZTS'] = df['ZTS'].astype(float)
-            print(f"PEMParser - Time to parse data of {self.filepath.name}: {time.time() - t}")
+            # print(f"PEMParser - Time to parse data of {self.filepath.name}: {time.time() - t}")
             return df
 
         assert Path(filepath).is_file(), f"{filepath.name} is not a file"
         self.filepath = Path(filepath)
         print(f"Parsing {self.filepath.name}")
 
-        t = time.time()
+        # t = time.time()
         with open(filepath, "rt") as file:
             contents = file.readlines()
 
@@ -2004,7 +2018,7 @@ class PEMParser:
                                             num_channels=header.get('Number of channels'))
         data = parse_data(raw_data)
 
-        print(f"PEMParser - Time to parse {self.filepath.name}: {time.time() - t}")
+        # print(f"PEMParser - Time to parse {self.filepath.name}: {time.time() - t}")
 
         pem_file = PEMFile().from_pem(tags, loop_coords, line_coords, notes, header, channel_table, data,
                                       filepath=filepath)
