@@ -12,6 +12,8 @@ import natsort
 import stopit
 import keyboard
 import pyqtgraph as pg
+from matplotlib import pyplot as plt
+from matplotlib import cm
 from pyproj import CRS
 from pathlib import Path
 from itertools import groupby
@@ -840,6 +842,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 save_as_xyz_action = QAction("&Save As XYZ...", self)
                 save_as_xyz_action.triggered.connect(lambda: self.save_as_xyz(selected=True))
 
+                action_view_channels = QAction("&View Channel Table", self)
+                action_view_channels.triggered.connect(self.view_channel_table)
+
                 merge_action = QAction("&Merge", self)
                 merge_action.triggered.connect(self.merge_pem_files)
 
@@ -901,6 +906,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     menu.addAction(save_as_xyz_action)
                     menu.addAction(extract_stations_action)
                     menu.addAction(calc_mag_dec)
+                    menu.addAction(action_view_channels)
                 else:
                     menu.addAction(save_as_xyz_action)
                     menu.addAction(export_pem_action)
@@ -1754,6 +1760,55 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         gps_share = GPSShareWidget()
         gps_share.open(pem_files, source_index)
         gps_share.accept_sig.connect(share_gps)
+
+    def view_channel_table(self):
+
+        def color_table():
+
+            for i, column in enumerate(df.columns[:-1]):
+                mn, mx, count = df[column].min(), df[column].max(), len(df[column])
+                norm = plt.Normalize(mn - 1, mx + 1)
+                colors = cm.hot(norm(df[column].to_numpy()))
+
+                for row in range(table.rowCount() + 1):
+                    table.item(row, i).setBackground(QtGui.QColor(colors[row]))
+
+        pem_files, rows = self.get_pem_files(selected=True)
+        pem_file = pem_files[0]
+
+        global win
+        win = QWidget()
+        win.setLayout(QVBoxLayout())
+        win.setWindowTitle(f"Channel Times - {pem_file.filepath.name}")
+
+        table = pg.TableWidget()
+        win.layout().addWidget(table)
+
+        df = pem_file.channel_times
+
+        table.setData(df.to_dict('index'))
+        color_table()
+
+        win.show()
+
+        # colors = np.zeros((df.shape[0], df.shape[1], 4))
+        # for i in range(df.shape[1]):
+        #     col_data = df.iloc[:, i].to_numpy()
+        #     normal = plt.Normalize(np.min(col_data), np.max(col_data))
+        #     colors[:, i] = cm.Reds(normal(col_data))
+        #
+        # # fig.patch.set_visible(False)
+        # ax.axis('off')
+        # ax.axis('tight')
+        # ax.table(cellText=df.values,
+        #          rowLabels=df.index,
+        #          colLabels=df.columns,
+        #          cellColours=colors,
+        #          loc='center',
+        #          # colWidths=[0.1 for x in columns]
+        #          )
+        # fig.tight_layout()
+        # plt.show()
 
     # def get_project_path(self):
     #     """
@@ -3498,7 +3553,7 @@ def main():
     # pem_files = pg.get_pems(client='Kazzinc', number=5)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='Minera', number=6)
-    pem_files = pg.get_pems(random=True, number=20)
+    pem_files = pg.get_pems(random=True, number=2)
     # s = GPSShareWidget()
     # s.open(pem_files, 0)
     # s.show()
