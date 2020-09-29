@@ -11,6 +11,7 @@ import simplekml
 import natsort
 import stopit
 import keyboard
+import pyqtgraph as pg
 from pyproj import CRS
 from pathlib import Path
 from itertools import groupby
@@ -19,12 +20,12 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
                              QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
-                             QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QTableWidget, QFrame)
+                             QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QProgressBar, QProgressDialog, QFrame)
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.gps.gpx_creator import GPXCreator
 
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
-from src.pem.pem_plotter import PEMPrinter, CustomProgressBar
+from src.pem.pem_plotter import PEMPrinter, CustomProgressBar, CustomProgressBar
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
@@ -1153,26 +1154,34 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         parser = DMPParser()
         pem_files = []
-        count = 0
-        self.start_pb(start=count, end=len(dmp_files), title='Converting DMP Files...')
+        bar = CustomProgressBar()
+        bar.setMaximum(len(dmp_files))
 
-        for file in dmp_files:
-            self.pb.setText(f"Converting {Path(file).name}")
-            try:
-                if file.lower().endswith('dmp'):
-                    pem_file = parser.parse_dmp(file)
+        with pg.ProgressDialog("Converting DMP Files...", 0, len(dmp_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle("Converting DMP Files")
+
+            for file in dmp_files:
+                if dlg.wasCanceled():
+                    print(f"Converting DMP files was cancelled.")
+                    break
+
+                dlg.setLabelText(f"Converting {Path(file).name}")
+                try:
+                    if file.lower().endswith('dmp'):
+                        pem_file = parser.parse_dmp(file)
+                    else:
+                        pem_file = parser.parse_dmp2(file)
+                except Exception as e:
+                    self.error.setWindowTitle('Error converting DMP file')
+                    self.error.showMessage(str(e))
+                    dlg += 1
+                    continue
                 else:
-                    pem_file = parser.parse_dmp2(file)
-            except Exception as e:
-                self.error.setWindowTitle('Error converting DMP file')
-                self.error.showMessage(str(e))
-            else:
-                pem_files.append(pem_file)
-            finally:
-                count += 1
-                self.pb.setValue(count)
+                    pem_files.append(pem_file)
+                finally:
+                    dlg += 1
 
-        self.end_pb()
         self.open_pem_files(pem_files)
 
     def open_pem_files(self, pem_files):
@@ -1336,60 +1345,64 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.setUpdatesEnabled(False)
 
         # Start the progress bar
-        self.start_pb(start=0, end=len(pem_files), title='Opening PEM Files...')
-        count = 0
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
 
-        for pem_file in pem_files:
-            # Create a PEMFile object if a filepath was passed
-            if not isinstance(pem_file, PEMFile):
-                try:
-                    pem_file = parser.parse(pem_file)
-                except Exception as e:
-                    self.error.setWindowTitle('Error parsing PEM file')
-                    self.error.showMessage(str(e))
+        with pg.ProgressDialog("Opening PEMs Files...", 0, len(pem_files), busyCursor=False) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle('Opening PEM Files')
+
+            for pem_file in pem_files:
+                # Create a PEMFile object if a filepath was passed
+                if not isinstance(pem_file, PEMFile):
+                    try:
+                        pem_file = parser.parse(pem_file)
+                    except Exception as e:
+                        self.error.setWindowTitle('Error parsing PEM file')
+                        self.error.showMessage(str(e))
+                        dlg += 1
+                        continue
+
+                # Check if the file is already opened in the table. Won't open if it is.
+                if is_opened(pem_file):
+                    self.status_bar.showMessage(f"{pem_file.filepath.name} is already opened", 2000)
+                    dlg += 1
+                else:
+                    dlg.setLabelText(f"Opening {pem_file.filepath.name}")
+
+                    # Create the PEMInfoWidget
+                    pem_widget = add_piw_widget(pem_file)
+
+                    # Fill the shared header text boxes and move the project directory
+                    if not self.pem_files:
+                        share_header(pem_file)
+                        # self.piw_frame.show()
+                    if self.total_opened == 0:
+                        self.move_dir_tree_to(pem_file.filepath.parent)
+
+                    # Fill CRS from the file if project CRS currently empty
+                    if self.gps_system_cbox.currentText() == '':
+                        fill_crs(pem_file)
+
+                    i = get_insertion_point(pem_file)
+                    self.pem_files.insert(i, pem_file)
+                    self.pem_info_widgets.insert(i, pem_widget)
+                    self.stackedWidget.insertWidget(i, pem_widget)
+                    self.table.insertRow(i)
+                    self.pem_to_table(pem_file, i)
+
                     # Progress the progress bar
-                    count += 1
-                    self.pb.setValue(count)
-                    continue
+                    dlg += 1
+                    self.total_opened += 1
 
-            # Check if the file is already opened in the table. Won't open if it is.
-            if is_opened(pem_file):
-                self.status_bar.showMessage(f"{pem_file.filepath.name} is already opened", 2000)
-                count += 1
-                self.pb.setValue(count)
-            else:
-                self.pb.setText(f"Opening {pem_file.filepath.name}")
-                # Create the PEMInfoWidget
-                pem_widget = add_piw_widget(pem_file)
-
-                # Fill the shared header text boxes and move the project directory
-                if not self.pem_files:
-                    share_header(pem_file)
-                    # self.piw_frame.show()
-                if self.total_opened == 0:
-                    self.move_dir_tree_to(pem_file.filepath.parent)
-
-                # Fill CRS from the file if project CRS currently empty
-                if self.gps_system_cbox.currentText() == '':
-                    fill_crs(pem_file)
-
-                i = get_insertion_point(pem_file)
-                self.pem_files.insert(i, pem_file)
-                self.pem_info_widgets.insert(i, pem_widget)
-                self.stackedWidget.insertWidget(i, pem_widget)
-                self.table.insertRow(i)
-                self.pem_to_table(pem_file, i)
-
-                # Progress the progress bar
-                count += 1
-                self.pb.setValue(count)
-                self.total_opened += 1
+                    if dlg.wasCanceled():
+                        print(f"Operation cancelled.")
+                        break
 
         self.allow_signals = True
         self.table.setUpdatesEnabled(True)
         self.table.blockSignals(False)
 
-        self.end_pb()
         self.table.horizontalHeader().show()
         print(f"PEMHub - Time to open all PEM files: {time.time() - t1}")
 
@@ -2967,10 +2980,6 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
 
         self.plan_map_options = PlanMapOptions(parent=self)
         self.message = QMessageBox()
-        self.pb_win = QWidget()  # Progress bar window
-        self.pb_win.resize(400, 45)
-        self.pb_win.setLayout(QVBoxLayout())
-        self.pb_win.setWindowTitle('Saving PDF Plots...')
 
         # Set validations
         int_validator = QtGui.QIntValidator()
@@ -3023,7 +3032,10 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
                 pem_file = pem_file.split()
 
         fill_share_range()
-        self.save_path_edit.setText(str(self.pem_files[0].filepath.parent.with_suffix('.PDF')))
+
+        # Fill the default path to be the name of the 2nd parent folder located at the same directory as pem_file[0].
+        self.save_path_edit.setText(str(self.pem_files[0].filepath.with_name(
+            self.pem_files[0].filepath.parents[1].stem + '.PDF')))
 
         self.show()
 
@@ -3068,19 +3080,8 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         save_dir = self.save_path_edit.text()
         if save_dir:
 
-            def pb_close(e):
-                # Tell the printer to stop printing
-                printer.stop = True
-                print(f"Printing cancelled")
-
             save_dir = os.path.splitext(save_dir)[0]
             printer = PEMPrinter(parent=self, **plot_kwargs)
-            # Connect the closing of the progress bar window to the pb_close function, which stops the running function
-            self.pb_win.closeEvent = pb_close
-            # Add the printer's progress bar to the progress bar window
-            self.pb_win.layout().insertWidget(0, printer.pb)
-            self.pb_win.show()
-            QApplication.processEvents()
 
             try:
                 # PEM Files and RI files zipped together for when they get sorted
@@ -3090,8 +3091,6 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
             except IOError:
                 self.message.information(self, 'Error', f'{save_dir} is currently opened')
             finally:
-                self.pb_win.layout().removeWidget(printer.pb)
-                self.pb_win.hide()
                 self.close()
         else:
             self.message.critical(self, 'Error', 'Invalid file name')
@@ -3499,7 +3498,7 @@ def main():
     # pem_files = pg.get_pems(client='Kazzinc', number=5)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='Minera', number=6)
-    pem_files = pg.get_pems(random=True, number=5)
+    pem_files = pg.get_pems(random=True, number=20)
     # s = GPSShareWidget()
     # s.open(pem_files, 0)
     # s.show()
@@ -3508,7 +3507,9 @@ def main():
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
     # pem_files = [r'C:\_Data\2020\Generation PGM\__M-20-539\RAW\XY-Collar.PEM']
+
     mw.open_pem_files(pem_files)
+    # mw.open_pdf_plot_printer(selected_files=False)
     # mw.pem_info_widgets[0].share_loop_signal.emit(mw.pem_info_widgets[0].get_loop())
 
     mw.show()

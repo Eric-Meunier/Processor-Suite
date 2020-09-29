@@ -53,6 +53,9 @@ class PEMGetter:
             if not number:
                 # Generate a random number of files to choose from
                 number = randrange(5, min(len(available_files), 15))
+            elif number > len(available_files):
+                number = len(available_files)
+
             random_selection = choices(available_files, k=number)
 
             for file in random_selection:

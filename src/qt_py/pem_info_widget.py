@@ -558,17 +558,25 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         Open the LoopAdder widget and open the current loop into it.
         """
+        loop = self.get_loop()
+        if loop.df.empty:
+            return
+
         global loop_adder
         loop_adder = LoopAdder(parent=self)
-        loop_adder.open(self.get_loop(), name=self.pem_file.loop_name)
+        loop_adder.open(loop, name=self.pem_file.loop_name)
 
     def edit_line(self):
         """
         Open the LineAdder widget and open the current line into it.
         """
+        line = self.get_line()
+        if line.df.empty:
+            return
+
         global line_adder
         line_adder = LineAdder(parent=self)
-        line_adder.open(self.get_line(), name=self.pem_file.line_name)
+        line_adder.open(line, name=self.pem_file.line_name)
 
     def clear_table(self, table):
         """

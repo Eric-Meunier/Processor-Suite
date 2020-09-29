@@ -3246,16 +3246,16 @@ if __name__ == '__main__':
     dparse = DMPParser()
     pemparse = PEMParser()
     pg = PEMGetter()
-    pem_file = pg.get_pems(client='PEM Rotation', file='BX-081.PEM')[0]
-    prep_pem, _ = pem_file.prep_rotation()
-    rotated_pem = prep_pem.rotate('pp')
+    # pem_file = pg.get_pems(client='PEM Rotation', file='BX-081.PEM')[0]
+    # prep_pem, _ = pem_file.prep_rotation()
+    # rotated_pem = prep_pem.rotate('pp')
 
-    # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\e110xy.pem')
     # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM')
     # pem_file = pemparse.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\Eric\XY-Collar.PEM')
 
+    file = r'C:\_Data\2018\BHP\SPEM\OCLT01\DMP\May 22, 2018\Dump\L1E.DMP'
     # file = str(Path(__file__).parents[2].joinpath('sample_files/PEMGetter files/PEM Rotation/BX-081.PEM'))
-    # file = dparse.parse_dmp(file)
+    file = dparse.parse_dmp(file)
 
     # out = str(Path(__file__).parents[2] / 'sample_files' / 'test results'/f'{file.filepath.stem} - test conversion.pem')
     # print(file.to_string(), file=open(out, 'w'))

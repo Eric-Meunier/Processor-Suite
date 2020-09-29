@@ -23,6 +23,7 @@ import natsort
 import numpy as np
 import six
 import utm
+import pyqtgraph as pg
 from pyproj import CRS
 from PIL import Image
 from PyQt5 import QtCore
@@ -346,6 +347,7 @@ class LINPlotter(ProfilePlotter):
                 else:
                     ax.set_ylabel(f"Channel {channel_bounds[i][0]} - {channel_bounds[i][1]}\n({units})")
 
+        # TODO channel numbers are wrong (with LOG too).
         t = time.time()
         profile = self.pem_file.get_profile_data(component, converted=True)
         channel_bounds = self.pem_file.get_channel_bounds()
@@ -399,7 +401,7 @@ class LOGPlotter(ProfilePlotter):
 
         def add_ylabels():
             units = 'nT/s' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
-            ax.set_ylabel(f"Primary Pulse to Channel {str(self.pem_file.number_of_channels - 1)}\n({units})")
+            ax.set_ylabel(f"Primary Pulse to Channel {str(self.pem_file.number_of_channels - 1  )}\n({units})")
 
         t = time.time()
         ax = self.figure.axes[0]
@@ -3280,8 +3282,6 @@ class GeneralMap:
             return None
 
 
-
-
 # class Map3D(MapPlotMethods):
 #     """
 #     Class that plots all GPS from PEM Files in 3D. Draws on a given Axes3D object.
@@ -3532,11 +3532,6 @@ class PEMPrinter:
     def __init__(self, parent=None, **kwargs):
         super().__init__()
         self.parent = parent
-        self.stop = False
-
-        self.pb = CustomProgressBar()
-        self.pb_count = 0
-        self.pb_end = 0
 
         self.portrait_fig = None
         self.landscape_fig = None
@@ -3581,7 +3576,6 @@ class PEMPrinter:
         Plot the files to a PDF document
         :param save_path: str, PDF document filepath
         :param files: list of PEMFile and RIFile objects. RI files are optional.
-        :param kwargs: dictionary of additional plotting arguments.
         """
 
         def save_plots(pem_files, ri_files, x_min, x_max):
@@ -3591,15 +3585,15 @@ class PEMPrinter:
             :param ri_files: optional list, RIFile objects for Step plots
             :param x_min: float, minimum x-axis limit to be shared between all profile plots
             :param x_max: float, maximum x-axis limit to be shared between all profile plots
-            :param kwargs: dict, dictionary of additional arguments
             """
-            if self.stop is True:
+            global dlg
+            if dlg.wasCanceled():
                 return
 
             # Saving the Plan Map. Must have a valid CRS.
             if all([self.crs, self.print_plan_maps is True]):
                 if any([pem_file.has_any_gps() for pem_file in pem_files]):
-                    self.pb.setText(f"Saving plan map for {', '.join([f.line_name for f in pem_files])}")
+                    dlg.setLabelText(f"Saving plan map for {', '.join([f.line_name for f in pem_files])}")
                     # Plot the plan map
                     plan_map = PlanMap(pem_files, self.landscape_fig, self.crs,
                                        annotate_loop=self.annotate_loop,
@@ -3622,17 +3616,19 @@ class PEMPrinter:
                     plan_fig = plan_map.plot()
                     # Save the plot to the PDF file
                     pdf.savefig(plan_fig, orientation='landscape')
-
-                    self.pb_count += 1
-                    self.pb.setValue(self.pb_count)
                     self.landscape_fig.clf()
+
+                    dlg += 1
+                    if dlg.wasCanceled():
+                        return
                 else:
                     print('No PEM file has any GPS to plot on the plan map.')
 
             # Save the Section plot as long as it is a borehole survey. Must have loop, collar GPS and segments.
             if self.print_section_plot is True and pem_files[0].is_borehole():
                 if pem_files[0].has_geometry():
-                    self.pb.setText(f"Saving section plot for {pem_files[0].line_name}")
+                    dlg.setLabelText(f"Saving section plot for {pem_files[0].line_name}")
+
                     stations = sorted(set(itertools.chain.from_iterable(
                         [pem_file.get_stations(converted=True) for pem_file in pem_files])))
                     # Plot the section plot
@@ -3643,11 +3639,11 @@ class PEMPrinter:
                                                        label_ticks=self.draw_segment_labels)
                     # Save the plot to the PDF file
                     pdf.savefig(section_fig, orientation='portrait')
-
-                    self.pb_count += 1
-                    self.pb.setValue(self.pb_count)
-                    # QApplication.processEvents()  # Force pyqt to update, and prevents the application from freezing
                     self.portrait_fig.clear()
+
+                    dlg += 1
+                    if dlg.wasCanceled():
+                        return
                 else:
                     print('No PEM file has the GPS required to make a section plot.')
 
@@ -3665,20 +3661,22 @@ class PEMPrinter:
                         components.insert(0, 'Z')
 
                     for component in components:
-                        # Configure the figure since it gets cleared after each plot
-                        t = time.time()
-                        self.configure_lin_fig()
-                        print(f"Time to configure LIN figure: {time.time() - t}")
+                        dlg.setLabelText(f"Saving LIN plot for {pem_file.line_name}, component {component}")
 
-                        self.pb.setText(f"Saving LIN plot for {pem_file.line_name}, component {component}")
+                        # Configure the figure since it gets cleared after each plot
+                        self.configure_lin_fig()
+
                         # Plot the LIN profile
                         plotted_fig = lin_plotter.plot(component)
+
                         # Save the figure to the PDF
                         pdf.savefig(plotted_fig, orientation='portrait')
 
-                        self.pb_count += 1
-                        self.pb.setValue(self.pb_count)
                         self.portrait_fig.clear()
+
+                        dlg += 1
+                        if dlg.wasCanceled():
+                            return
 
             # Saving the LOG plots
             if self.print_log_plots is True:
@@ -3694,20 +3692,21 @@ class PEMPrinter:
                         components.insert(0, 'Z')
 
                     for component in components:
-                        # Configure the figure since it gets cleared after each plot
-                        t = time.time()
-                        self.configure_log_fig()
-                        print(f"Time to configure LOG figure: {time.time() - t}")
+                        dlg.setLabelText(f"Saving LOG plot for {pem_file.line_name}, component {component}")
 
-                        self.pb.setText(f"Saving LOG plot for {pem_file.line_name}, component {component}")
+                        # Configure the figure since it gets cleared after each plot
+                        self.configure_log_fig()
+
                         # Plot the LOG profile
                         plotted_fig = log_plotter.plot(component)
+
                         # Save the figure to the PDF
                         pdf.savefig(plotted_fig, orientation='portrait')
-
-                        self.pb_count += 1
-                        self.pb.setValue(self.pb_count)
                         self.portrait_fig.clear()
+
+                        dlg += 1
+                        if dlg.wasCanceled():
+                            return
 
             # Saving the STEP plots. Must have RI files associated with the PEM file.
             if self.print_step_plots is True:
@@ -3723,28 +3722,32 @@ class PEMPrinter:
                             components.insert(0, 'Z')
 
                         for component in components:
-                            self.pb.setText(f"Saving STEP plot for {pem_file.line_name}, component {component}")
+                            dlg.setLabelText(f"Saving STEP plot for {pem_file.line_name}, component {component}")
+
                             self.configure_step_fig()
+
                             # Plot the step profile
                             plotted_fig = step_plotter.plot(component)
+
                             # Save the plot to the PDF file
                             pdf.savefig(plotted_fig, orientation='portrait')
-
-                            self.pb_count += 1
-                            self.pb.setValue(self.pb_count)
                             self.portrait_fig.clear()
 
-        def set_pb_max(unique_bhs, unique_grids):
+                            dlg += 1
+                            if dlg.wasCanceled():
+                                return
+
+        def count_pdf_pages(bhs, grids):
             """
             Calculate the progress bar maximum value. I.E. calculates how many PDF pages will be made.
-            :param unique_bhs: Dict of unique borehole surveys (different hole name and loop name)
-            :param unique_grids: Dict of unique surface grids (different loop names)
-            :return: Sets the maximum value of self.pb.
+            :param bhs: Dict of unique borehole surveys (different hole name and loop name)
+            :param grids: Dict of unique surface grids (different loop names)
+            :return: int, number of PDF pages
             """
             total_count = 0
 
-            if unique_bhs:
-                for survey, files in unique_bhs.items():
+            if bhs:
+                for survey, files in bhs.items():
                     num_plots = sum([len(file[0].get_components()) for file in files])
                     if self.print_plan_maps:
                         if any([file[0].has_any_gps() for file in files]):
@@ -3761,8 +3764,8 @@ class PEMPrinter:
                         if all([file[1] for file in files]):
                             total_count += num_plots
 
-            if unique_grids:
-                for loop, lines in unique_grids.items():
+            if grids:
+                for loop, lines in grids.items():
                     num_plots = sum([len(file[0].get_components()) for file in lines])
                     if self.print_plan_maps:
                         if any([file[0].has_any_gps() for file in lines]):
@@ -3775,16 +3778,11 @@ class PEMPrinter:
                         if all([file[1] for file in lines]):
                             total_count += num_plots
 
-            self.pb_end = total_count
             print(f"Number of PDF pages: {total_count}")
-            self.pb.setMaximum(total_count)
+            return total_count
 
         files = files  # Zipped PEM and RI files
         save_path = save_path
-
-        self.pb_count = 0
-        self.pb_end = 0
-        self.pb.setValue(0)
 
         unique_bhs = defaultdict()
         unique_grids = defaultdict()
@@ -3812,40 +3810,55 @@ class PEMPrinter:
             unique_grids[loop] = list(files)
             print(loop, list(files))
 
-        set_pb_max(unique_bhs, unique_grids)  # Set the maximum for the progress bar
+        num_pages = count_pdf_pages(unique_bhs, unique_grids)  # for the progress bar
+        bar = CustomProgressBar()
+        bar.setMaximum(num_pages)
 
         with PdfPages(save_path + '.PDF') as pdf:
 
-            # Save the borehole PDFs
-            for survey, files in unique_bhs.items():
-                pem_files = [pair[0] for pair in files]
-                ri_files = [pair[1] for pair in files]
+            global dlg
+            with pg.ProgressDialog("Printing PDFs..", 0, num_pages, busyCursor=True) as dlg:
+                dlg.setWindowTitle('Printing PDFs')
+                dlg.setBar(bar)
 
-                if self.x_min is None and self.share_range is True:
-                    x_min = min([min(f.get_stations(converted=True)) for f in pem_files])
-                else:
-                    x_min = self.x_min
-                if self.x_max is None and self.share_range is True:
-                    x_max = max([max(f.get_stations(converted=True)) for f in pem_files])
-                else:
-                    x_max = self.x_max
+                # Save the borehole PDFs
+                for survey, files in unique_bhs.items():
 
-                save_plots(pem_files, ri_files, x_min, x_max)
+                    if dlg.wasCanceled():
+                        break
 
-            # Save the surface PDFs
-            for loop, files in unique_grids.items():
-                pem_files = [pair[0] for pair in files]
-                ri_files = [pair[1] for pair in files]
-                if self.x_min is None and self.share_range is True:
-                    x_min = min([min(f.get_stations(converted=True)) for f in pem_files])
-                else:
-                    x_min = self.x_min
-                if self.x_max is None and self.share_range is True:
-                    x_max = max([max(f.get_stations(converted=True)) for f in pem_files])
-                else:
-                    x_max = self.x_max
+                    pem_files = [pair[0] for pair in files]
+                    ri_files = [pair[1] for pair in files]
 
-                save_plots(pem_files, ri_files, x_min, x_max)
+                    if self.x_min is None and self.share_range is True:
+                        x_min = min([min(f.get_stations(converted=True)) for f in pem_files])
+                    else:
+                        x_min = self.x_min
+                    if self.x_max is None and self.share_range is True:
+                        x_max = max([max(f.get_stations(converted=True)) for f in pem_files])
+                    else:
+                        x_max = self.x_max
+
+                    save_plots(pem_files, ri_files, x_min, x_max)
+
+                # Save the surface PDFs
+                for loop, files in unique_grids.items():
+
+                    if dlg.wasCanceled():
+                        break
+
+                    pem_files = [pair[0] for pair in files]
+                    ri_files = [pair[1] for pair in files]
+                    if self.x_min is None and self.share_range is True:
+                        x_min = min([min(f.get_stations(converted=True)) for f in pem_files])
+                    else:
+                        x_min = self.x_min
+                    if self.x_max is None and self.share_range is True:
+                        x_max = max([max(f.get_stations(converted=True)) for f in pem_files])
+                    else:
+                        x_max = self.x_max
+
+                    save_plots(pem_files, ri_files, x_min, x_max)
 
         plt.close(self.portrait_fig)
         plt.close(self.landscape_fig)
@@ -3881,10 +3894,8 @@ class CustomProgressBar(QProgressBar):
 
     def __init__(self):
         super().__init__()
-        self.setMinimum(0)
-        self.setAlignment(QtCore.Qt.AlignCenter)
-        self._text = None
-        self.setFixedHeight(40)
+        # self.setFixedHeight(40)
+        # self.setFixedWidth(120)
 
         COMPLETED_STYLE = """
         QProgressBar {
@@ -3900,21 +3911,6 @@ class CustomProgressBar(QProgressBar):
         """
         # '#37DA7E' for green
         self.setStyleSheet(COMPLETED_STYLE)
-
-        self.valueChanged.connect(self.on_change)
-
-    def setText(self, text):
-        self._text = text
-        self.on_change()
-
-    def text(self):
-        return self._text
-
-    def on_change(self):
-        """
-        Signal slot, force Qt to update when the text or progress bar value are changed.
-        """
-        QApplication.processEvents()
 
 
 if __name__ == '__main__':
