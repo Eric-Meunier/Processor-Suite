@@ -417,7 +417,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_gps_table(self.pem_file.get_collar(), self.collar_table)
             self.fill_gps_table(self.pem_file.get_segments(), self.segments_table)
         else:
-            self.fill_gps_table(self.pem_file.line.get_line(), self.line_table)
+            self.fill_gps_table(self.pem_file.get_line(), self.line_table)
         self.fill_info_tab()
         self.fill_gps_table(self.pem_file.loop.get_loop(), self.loop_table)
         # self.fill_data_table()
@@ -931,10 +931,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param table: QTableWidget table. Either the loop, station, or geometry tables. Not data_table and not collarGPS table.
         :return: None
         """
-        # if table == self.data_table or table == self.collar_table:
         table.blockSignals(True)
 
         if table == self.collar_table:
+            self.collar_table.clearContents()
             return
 
         selected_rows = self.get_selected_rows(table)

@@ -1,5 +1,4 @@
 import math
-import os
 import re
 import time
 import copy
@@ -638,35 +637,41 @@ class PEMFile:
             value = row.c_Station
             filt = gps['Station'] == value
 
-            if filt.any() or filt.all():
+            if filt.any():
                 row['Easting'] = gps[filt]['Easting'].iloc[0]
                 row['Northing'] = gps[filt]['Northing'].iloc[0]
                 row['Elevation'] = gps[filt]['Elevation'].iloc[0]
             return row
 
         df = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Component', 'Station', 'c_Station'])
-        pem_data = self.get_data(sorted=True).dropna()
-        gps = self.line.get_line(sorted=True).drop_duplicates('Station')
+        pem_data = self.get_data(sorted=True).dropna(subset=['Station'])
 
-        assert not self.is_borehole(), 'Can only create XYZ file with surface PEM files.'
-        assert not gps.empty, 'No GPS found.'
+        if self.is_borehole():
+            gps = self.get_geometry().get_projection(stations=self.get_stations(converted=True))
+            # Rename 'Relative_depth' to 'Station' for get_station_gps, so it matches with
+            gps.rename(columns={'Relative_depth': 'Station'}, inplace=True)
+        else:
+            gps = self.get_line(sorted=True).drop_duplicates('Station')
+
+        # assert not self.is_borehole(), 'Can only create XYZ file with surface PEM files.'
+        if gps.empty:
+            raise Exception(f"Cannot create XYZ file with {self.filepath.name} because it has no GPS.")
+
         print(f'Converting {self.filepath.name} to XYZ')
-        # t = time.time()
 
         df['Component'] = pem_data.Component.copy()
         df['Station'] = pem_data.Station.copy()
-        df['c_Station'] = df.Station.map(self.converter.convert_station)
+        df['c_Station'] = df.Station.map(self.converter.convert_station)  # Used to find corresponding GPS
+
         # Add the GPS
         df = df.apply(get_station_gps, axis=1)
 
         # Create a dataframe of the readings with channel number as columns
-        channel_data = pd.DataFrame(columns=range(int(self.number_of_channels)))
-        channel_data = pem_data.apply(lambda x: pd.Series(x.Reading), axis=1)
+        channel_data = pd.DataFrame(pem_data.Reading.to_dict()).transpose()
+
         # Merge the two data frames
         df = pd.concat([df, channel_data], axis=1).drop('c_Station', axis=1)
-        str_df = df.apply(lambda x: x.astype(str).str.cat(sep=' '), axis=1)
-        str_df = '\n'.join(str_df.to_list())
-        # print(f"PEMFile - Time to convert {self.filepath.name} to XYZ: {time.time() - t}")
+        str_df = df.to_string(index=False)
         return str_df
 
     def copy(self):
@@ -3245,17 +3250,19 @@ if __name__ == '__main__':
 
     dparse = DMPParser()
     pemparse = PEMParser()
-    pg = PEMGetter()
+    pem_g = PEMGetter()
     # pem_file = pg.get_pems(client='PEM Rotation', file='BX-081.PEM')[0]
+    pem_file = pem_g.get_pems(client='Kazzinc', number=1)[0]
+    pem_file.to_xyz()
     # prep_pem, _ = pem_file.prep_rotation()
     # rotated_pem = prep_pem.rotate('pp')
 
     # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM')
     # pem_file = pemparse.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\Eric\XY-Collar.PEM')
 
-    file = r'C:\_Data\2018\BHP\SPEM\OCLT01\DMP\May 22, 2018\Dump\L1E.DMP'
+    # file = r'C:\_Data\2018\BHP\SPEM\OCLT01\DMP\May 22, 2018\Dump\L1E.DMP'
     # file = str(Path(__file__).parents[2].joinpath('sample_files/PEMGetter files/PEM Rotation/BX-081.PEM'))
-    file = dparse.parse_dmp(file)
+    # file = dparse.parse_dmp(file)
 
     # out = str(Path(__file__).parents[2] / 'sample_files' / 'test results'/f'{file.filepath.stem} - test conversion.pem')
     # print(file.to_string(), file=open(out, 'w'))

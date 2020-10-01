@@ -498,6 +498,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                 return
 
         # Save the information of the row for backup purposes
+        # TODO Deleting last item in table throws exception.
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)

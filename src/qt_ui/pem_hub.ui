@@ -1201,12 +1201,19 @@ Stations</string>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <widget class="QMenu" name="menuExport_Files">
+     <property name="title">
+      <string>Export Files As...</string>
+     </property>
+     <addaction name="actionExport_As_PEM"/>
+     <addaction name="actionExport_Processed_PEM"/>
+     <addaction name="separator"/>
+     <addaction name="actionExport_As_XYZ"/>
+    </widget>
     <addaction name="actionOpenFile"/>
     <addaction name="separator"/>
     <addaction name="actionSaveFiles"/>
-    <addaction name="actionSave_Files_as_XYZ"/>
-    <addaction name="actionExport_Files"/>
-    <addaction name="actionExport_Final_PEM_Files"/>
+    <addaction name="menuExport_Files"/>
     <addaction name="separator"/>
     <addaction name="actionBackup_Files"/>
     <addaction name="actionImport_RI_Files"/>
@@ -1353,20 +1360,12 @@ Stations</string>
     <string>Ctrl+S</string>
    </property>
   </action>
-  <action name="actionSave_Files_as_XYZ">
+  <action name="actionExport_As_XYZ">
    <property name="text">
-    <string>Save Files as XYZ</string>
+    <string>XYZ</string>
    </property>
    <property name="toolTip">
     <string>Save all PEM files as XYZ files (only for surface surveys)</string>
-   </property>
-  </action>
-  <action name="actionExport_Files">
-   <property name="text">
-    <string>Export Files...</string>
-   </property>
-   <property name="toolTip">
-    <string>Export all PEM files to a specified location</string>
    </property>
   </action>
   <action name="actionExport_Final_PEM_Files">
@@ -1659,7 +1658,25 @@ Stations</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Delete Merged Files</string>
+    <string>Remove Merged Files</string>
+   </property>
+  </action>
+  <action name="actionExport_As_PEM">
+   <property name="text">
+    <string>PEM</string>
+   </property>
+  </action>
+  <action name="action_XYZ">
+   <property name="text">
+    <string>XYZ</string>
+   </property>
+  </action>
+  <action name="actionExport_Processed_PEM">
+   <property name="text">
+    <string>Processed PEM</string>
+   </property>
+   <property name="toolTip">
+    <string>Averages, splits, and de-rotates (if applicable) the files before saving.</string>
    </property>
   </action>
  </widget>
