@@ -124,7 +124,7 @@ class PEMFile:
         self.sync = header.get('Sync')
         self.timebase = header.get('Timebase')
         self.ramp = header.get('Ramp')
-        self.number_of_channels = header.get('Number of channels')
+        # self.number_of_channels = header.get('Number of channels')
         self.number_of_readings = header.get('Number of readings')
         self.rx_number = header.get('Receiver number')
         self.rx_software_version = header.get('Rx software version')
@@ -135,6 +135,7 @@ class PEMFile:
         self.coil_area = header.get('Coil area')
         self.loop_polarity = header.get('Loop polarity')
         self.channel_times = channel_table
+        self.number_of_channels = len(channel_table)
 
         self.notes = notes
 
@@ -191,7 +192,7 @@ class PEMFile:
         self.sync = header.get('Sync')
         self.timebase = header.get('Timebase')
         self.ramp = header.get('Ramp')
-        self.number_of_channels = header.get('Number of channels')
+        # self.number_of_channels = header.get('Number of channels')
         self.number_of_readings = header.get('Number of readings')
         self.rx_number = header.get('Receiver number')
         self.rx_software_version = header.get('Rx software version')
@@ -202,6 +203,7 @@ class PEMFile:
         self.coil_area = header.get('Coil area')
         self.loop_polarity = header.get('Loop polarity')
         self.channel_times = channel_table
+        self.number_of_channels = len(channel_table)
 
         if notes:
             self.notes = notes
@@ -276,7 +278,7 @@ class PEMFile:
 
     def has_collar_gps(self):
         if self.is_borehole():
-            if not self.geometry.collar.df.dropna().empty and all(self.geometry.collar.df):
+            if not self.collar.df.dropna().empty and all(self.collar.df):
                 return True
             else:
                 return False
@@ -285,7 +287,7 @@ class PEMFile:
 
     def has_geometry(self):
         if self.is_borehole():
-            if not self.geometry.segments.df.dropna().empty and all(self.geometry.segments.df):
+            if not self.segments.df.dropna().empty and all(self.segments.df):
                 return True
             else:
                 return False
@@ -764,7 +766,7 @@ class PEMFile:
         filt = self.channel_times.Remove == False
         self.channel_times = self.channel_times[filt]
         # Update the PEM file's number of channels attribute
-        self.number_of_channels = len(self.channel_times.index) - 1
+        self.number_of_channels = len(self.channel_times)
 
         # print(f"PEMFile - Time to split PEM file: {time.time() - t}")
         return self
@@ -2634,7 +2636,7 @@ class DMPParser:
             pem_df.loc[overload_filt, 'del_flag'] = True
 
             pem_df['datetime'] = df['Date_Time'].map(str_to_datetime)
-            print(f"DMPParser - Time to parse data of {self.filepath.name}: {time.time() - t1}")
+            # print(f"DMPParser - Time to parse data of {self.filepath.name}: {time.time() - t1}")
             return pem_df
 
         assert Path(filepath).is_file(), f"{filepath.name} is not a file"
@@ -2798,7 +2800,7 @@ class PEMSerializer:
                                  str(self.pem_file.sync),
                                  str(self.pem_file.timebase),
                                  str(int(self.pem_file.ramp)),
-                                 str(self.pem_file.number_of_channels),
+                                 str(self.pem_file.number_of_channels - 1),
                                  str(self.pem_file.number_of_readings)]),
                        ' '.join([str(self.pem_file.rx_number),
                                  str(self.pem_file.rx_software_version),

@@ -1073,20 +1073,22 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         decay line. If control is held, it extends the current selection.
         :param evt: MouseClick event
         """
-        self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
+        if self.active_ax_ind:
 
-        if self.nearest_decay:
+            self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
 
-            self.line_selected = True
-            if keyboard.is_pressed('ctrl'):
-                self.selected_lines.append(self.nearest_decay)
-                self.highlight_lines()
-            else:
-                self.selected_data = None
-                self.selected_lines = [self.nearest_decay]
-                self.highlight_lines()
-        # else:
-        #     print(f"No nearest decay")
+            if self.nearest_decay:
+
+                self.line_selected = True
+                if keyboard.is_pressed('ctrl'):
+                    self.selected_lines.append(self.nearest_decay)
+                    self.highlight_lines()
+                else:
+                    self.selected_data = None
+                    self.selected_lines = [self.nearest_decay]
+                    self.highlight_lines()
+        else:
+            print(f"No nearest decay")
 
     def decay_mouse_moved(self, evt):
         """

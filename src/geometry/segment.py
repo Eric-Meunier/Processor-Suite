@@ -2,6 +2,7 @@ from src.gps.gps_editor import BoreholeSegments
 
 
 class Segmenter:
+
     def __init__(self):
         pass
 

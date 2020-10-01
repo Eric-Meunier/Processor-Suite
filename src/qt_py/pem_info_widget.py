@@ -516,6 +516,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         # Add survey line GPS
         if current_tab == self.station_gps_tab:
+            global line_adder
             line_adder = LineAdder(parent=self)
             try:
                 line = SurveyLine(file, crs=crs)
@@ -543,6 +544,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         # Add loop GPS
         elif current_tab == self.loop_gps_tab:
+            global loop_adder
             loop_adder = LoopAdder(parent=self)
             try:
                 loop = TransmitterLoop(file, crs=crs)

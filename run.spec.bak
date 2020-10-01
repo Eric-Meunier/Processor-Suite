@@ -1,0 +1,51 @@
+# -*- mode: python ; coding: utf-8 -*-
+
+"""
+When using QtWebEngineView, must place the 'QtWebEngineProcess.exe' (created after pyinstaller runs) to the root directory, along with all files in the 'Resources' folders that
+is in the '/PyQt5/Qt' folder.
+"""
+block_cipher = None
+
+
+a = Analysis(['run.py'],
+pathex=['C:\\Users\\Eric\\PycharmProjects\\PEMPro\\venv\\Lib\\site-packages'],
+binaries=[],
+datas=[('src/qt_ui/*.ui','qt_ui'), # Places all .ui files in a folder called 'qt_ui'
+			('src/qt_ui/icons/*.png', 'icons'),  # Places all icon files in a folder called 'icons'
+			('src/qt_ui/icons/*.ico', 'icons'), 
+			('src/qt_ui/icons/*.svg', 'icons'), 
+			('src/geomag/WMM.COF', 'geomag'),  # Places a file used for magnetic declination calculation in a 'geomag' folder.
+			('C:\\Users\\Eric\\PycharmProjects\\PEMPro\\venv\\Lib\\site-packages\\folium\\templates', 'templates'),  # Places the template files in a 'templates' folder
+			('C:\\Users\\Eric\\PycharmProjects\\PEMPro\\venv\\Lib\\site-packages\\branca\\templates', 'templates'),  # Might not be necessary with the below folder
+			('C:\\Users\\Eric\\PycharmProjects\\PEMPro\\venv\\Lib\\site-packages\\branca', 'branca'),
+			('C:\\Users\\Eric\\PycharmProjects\\PEMPro\\venv\\Lib\\site-packages\\folium', 'folium')],  # Places the entire branca folder to a 'branca' folder. Otherwise there are TemplateNotFoundErrors with jinja2.
+hiddenimports=['pkg_resources.py2_warn'],
+hookspath=[],
+runtime_hooks=[],
+excludes=[],
+win_no_prefer_redirects=False,
+win_private_assemblies=False,
+cipher=block_cipher,
+noarchive=False)
+pyz = PYZ(a.pure, a.zipped_data,
+cipher=block_cipher)
+
+exe = EXE(pyz,
+a.scripts,
+[],
+exclude_binaries=True,
+name='PEMPro',
+debug=True,
+bootloader_ignore_signals=False,
+strip=False,
+upx=False,
+console=False, icon='conder.ico')
+
+coll = COLLECT(exe,
+a.binaries,
+a.zipfiles,
+a.datas,
+strip=False,
+upx=False,
+upx_exclude=[],
+name='PEMPro V0.11.0')

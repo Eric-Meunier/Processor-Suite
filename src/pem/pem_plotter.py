@@ -298,9 +298,14 @@ class ProfilePlotter:
 
             return interp_x, interp_y
 
+        # # Check that the stations are monotonically increasing.
+        # if not np.all(x[1:] >= x[:-1], axis=0):
+        #     raise Exception(f"{self.pem_file.filepath.name} - Stations must be increasing for interpolation.")
+
         # Interpolate the x and y data
         interp_x = np.linspace(x.min(), x.max() + 1, num=1000)
-        interp_y = np.interp(interp_x, x, y)
+        interp_y = np.interp(np.abs(interp_x), np.abs(x), y)  # Take the absolute values for negative stations.
+
         # Mask the data in gaps
         if self.hide_gaps:
             interp_x, interp_y = mask_gaps(interp_y, interp_x, x)
@@ -347,8 +352,7 @@ class LINPlotter(ProfilePlotter):
                 else:
                     ax.set_ylabel(f"Channel {channel_bounds[i][0]} - {channel_bounds[i][1]}\n({units})")
 
-        # TODO channel numbers are wrong (with LOG too).
-        t = time.time()
+        # t = time.time()
         profile = self.pem_file.get_profile_data(component, converted=True)
         channel_bounds = self.pem_file.get_channel_bounds()
         for i, group in enumerate(channel_bounds):
@@ -378,7 +382,7 @@ class LINPlotter(ProfilePlotter):
 
         add_ylabels()
         self.format_figure(component)
-        print(f"Time to create LINPlotter plot: {time.time() - t}")
+        # print(f"Time to create LINPlotter plot: {time.time() - t}")
         return self.figure
 
 
@@ -401,7 +405,7 @@ class LOGPlotter(ProfilePlotter):
 
         def add_ylabels():
             units = 'nT/s' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
-            ax.set_ylabel(f"Primary Pulse to Channel {str(self.pem_file.number_of_channels - 1  )}\n({units})")
+            ax.set_ylabel(f"Primary Pulse to Channel {self.pem_file.number_of_channels - 1}\n({units})")
 
         t = time.time()
         ax = self.figure.axes[0]
@@ -409,7 +413,7 @@ class LOGPlotter(ProfilePlotter):
         offset = 100
         profile = self.pem_file.get_profile_data(component, converted=True)
 
-        for ch in range(self.pem_file.number_of_channels + 1):
+        for ch in range(self.pem_file.number_of_channels):
             stations = profile.index.values
             data = profile.loc[:, ch].to_numpy()
 
@@ -816,14 +820,15 @@ class MapPlotter:
     def plot_hole(self, pem_file, figure, label=True, label_depth=True, plot_ticks=True, plot_trace=True, color='black',
                   zorder=6):
         """
-        Plot the loop GPS of a pem_file.
+        Plot a borehole collar and hole trace.
         :param pem_file: PEMFile object
-        :param figure: Matplotlib Figure object to plot on
-        :param annotate: bool, add L-tag annotations
-        :param label: bool, add loop label
-        :param color: str, line color
-        :param zorder: int, order in which to draw the object (higher number draws it on top of lower numbers)
-        :return: loop_handle for legend
+        :param figure: matplotlib Figure object
+        :param label: bool, label the hole name at the hole collar.
+        :param label_depth: bool, label the depth of the hole at the end of the hole trace.
+        :param plot_ticks: bool, plot ticks going down the hole.
+        :param plot_trace: bool, plot the hole trace.
+        :param color: str, color of the collar and trace.
+        :param zorder: int
         """
         ax = figure.axes[0]
         geometry = pem_file.geometry
@@ -1130,7 +1135,6 @@ class PlanMap(MapPlotter):
     Draws a plan map on a given Matplotlib figure object. Only makes a plan map for one survey type and timebase.
     :param: pem_files: list of pem_files
     :param: figure: Matplotlib landscape-oriented figure object
-    :param: **kwargs: Dictionary of settings
     """
 
     def __init__(self, pem_files, figure, crs, annotate_loop=False, is_moving_loop=False, draw_title_box=True,
@@ -1142,6 +1146,7 @@ class PlanMap(MapPlotter):
 
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
+
         self.pem_files = pem_files
         self.crs = crs
 
@@ -3918,11 +3923,15 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Kazzinc', selection=1)
+    pem_files = pem_getter.get_pems(client='Nantou', file='PUX-021 XYT.PEM')
 
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()
+
+    map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
+    map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
+    map_plot.show()
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
     # fig = plt.figure(figsize=(8.5, 11), dpi=100)
@@ -3930,12 +3939,12 @@ if __name__ == '__main__':
     # sp.plot(pem_files[0], figure=fig)
     # plt.show()
 
-    lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    ax6 = ax5.twiny()
-    ax6.get_shared_x_axes().join(ax5, ax6)
-    lin_plot = LINPlotter(pem_files[0], lin_fig)
-    lin_plot.plot('X')
-    plt.show()
+    # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    # ax6 = ax5.twiny()
+    # ax6.get_shared_x_axes().join(ax5, ax6)
+    # lin_plot = LINPlotter(pem_files[0], lin_fig)
+    # lin_plot.plot('X')
+    # plt.show()
 
     # log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
     # ax2 = ax.twiny()
@@ -3953,10 +3962,6 @@ if __name__ == '__main__':
     # step_plot = STEPPlotter(pem, ri, step_fig)
     # step_plot.plot('X')
     # plt.show()
-
-    # map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
-    # map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
-    # map_plot.show()
 
     # map = GeneralMap(pem_files, fig).get_map()
     # map = SectionPlot(pem_files, fig).get_section_plot()

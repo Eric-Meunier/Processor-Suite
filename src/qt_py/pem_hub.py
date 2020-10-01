@@ -27,7 +27,7 @@ from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, Bor
 from src.gps.gpx_creator import GPXCreator
 
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
-from src.pem.pem_plotter import PEMPrinter, CustomProgressBar, CustomProgressBar
+from src.pem.pem_plotter import PEMPrinter, CustomProgressBar
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
@@ -55,6 +55,7 @@ def exception_hook(exctype, value, traceback):
 
 
 sys.excepthook = exception_hook
+
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -116,19 +117,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.project_dir_label = QPushButton()
         self.project_dir_label.setFlat(True)
 
-        # Format the borders of the items in the status bar
-        # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray;}")
-        # self.status_bar.setStyleSheet("border: 0.1px solid gray;")
-
-        # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
-        # self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
-
         self.status_bar.addWidget(self.selection_label, 0)
         self.status_bar.addPermanentWidget(QLabel(), 1)  # Spacer
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
-        spacer = QLabel()
-        spacer.setIndent(20)
-        self.status_bar.addPermanentWidget(spacer, 0)
+        # spacer = QLabel()
+        # spacer.setIndent(20)
+        # self.status_bar.addPermanentWidget(spacer, 0)
         self.status_bar.addPermanentWidget(self.project_dir_label, 0)
 
         # Widgets
@@ -820,7 +814,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 save_file_as_action = QAction("&Save As...", self)
                 save_file_as_action.triggered.connect(self.save_pem_file_as)
 
-                action_view_channels = QAction("&View Channel Table", self)
+                action_view_channels = QAction("&Channel Table", self)
                 action_view_channels.triggered.connect(self.open_channel_table_viewer)
 
                 merge_action = QAction("&Merge", self)
@@ -900,49 +894,88 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # Add all the actions to the menu
                 menu.addAction(open_file_action)
                 menu.addAction(save_file_action)
+
+                # Only for single file selection
                 if len(self.table.selectionModel().selectedRows()) == 1:
+                    pem_file = selected_pems[0]
+
                     menu.addAction(save_file_as_action)
                     menu.addAction(extract_stations_action)
+
                     menu.addAction(calc_mag_dec)
+                    if not pem_file.has_any_gps():
+                        calc_mag_dec.setDisabled(True)
                     menu.addSeparator()
 
                     # View menu
                     view_menu = menu.addMenu('View')
                     view_menu.addAction(action_view_channels)
+                    view_menu.addSeparator()
+
+                    # View Loop
                     view_menu.addAction(view_loop_action)
-                    if not selected_pems[0].is_borehole():
+                    if not pem_file.has_loop_gps():
+                        view_loop_action.setDisabled(True)
+
+                    # View Line
+                    if not pem_file.is_borehole():
                         view_menu.addAction(view_line_action)
+                        if not pem_file.has_station_gps():
+                            view_line_action.setDisabled(True)
+
                     menu.addSeparator()
 
                     # Share menu
                     share_menu = menu.addMenu('Share')
+
+                    # Share loop
                     share_menu.addAction(share_loop_action)
-                    if not selected_pems[0].is_borehole():
+                    if not pem_file.has_loop_gps():
+                        share_loop_action.setDisabled(True)
+
+                    # Share line GPS
+                    if not pem_file.is_borehole():
                         share_menu.addAction(share_line_action)
+                        if not pem_file.has_station_gps():
+                            share_line_action.setDisabled(True)
+
+                    # Share Collar and Segments
                     else:
                         share_menu.addAction(share_collar_action)
                         share_menu.addAction(share_segments_action)
+                        if not pem_file.has_collar_gps():
+                            share_collar_action.setDisabled(True)
+                        if not pem_file.has_geometry():
+                            share_segments_action.setDisabled(True)
                 else:
                     menu.addAction(export_pem_action)
+
                 menu.addSeparator()
                 menu.addAction(open_plot_editor_action)
                 menu.addSeparator()
+
+                # Merge PEMs
                 if len(self.table.selectionModel().selectedRows()) == 2:
                     menu.addAction(merge_action)
+
                 menu.addAction(average_action)
                 menu.addAction(split_action)
                 menu.addAction(scale_current_action)
                 menu.addAction(scale_ca_action)
                 menu.addSeparator()
+
+                # For boreholes only, do-rotate and geometry
                 if all([f.is_borehole() for f in selected_pems]):
                     if len(self.table.selectionModel().selectedRows()) == 1:
                         menu.addAction(derotate_action)
                     menu.addAction(get_geometry_action)
                     menu.addSeparator()
+
                 if len(self.table.selectionModel().selectedRows()) > 1:
                     menu.addSeparator()
                     menu.addAction(rename_files_action)
                     menu.addAction(rename_lines_action)
+
                 menu.addSeparator()
                 menu.addAction(print_plots_action)
                 menu.addSeparator()
@@ -1240,18 +1273,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     return
 
                 self.open_gps_share(obj, pem_info_widget)
-                # if isinstance(obj, TransmitterLoop):
-                #     for widget in self.pem_info_widgets:
-                #         widget.fill_gps_table(df, widget.loop_table)
-                # elif isinstance(obj, SurveyLine):
-                #     for widget in list(filter(lambda x: not x.pem_file.is_borehole(), self.pem_info_widgets)):
-                #         widget.fill_gps_table(df, widget.line_table)
-                # elif isinstance(obj, BoreholeCollar):
-                #     for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
-                #         widget.fill_gps_table(df, widget.collar_table)
-                # elif isinstance(obj, BoreholeSegments):
-                #     for widget in list(filter(lambda x: x.pem_file.is_borehole(), self.pem_info_widgets)):
-                #         widget.fill_gps_table(df, widget.segments_table)
 
             pem_info_widget = PEMFileInfoWidget(parent=self)
             pem_info_widget.blockSignals(True)
@@ -2324,14 +2345,23 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             :return: None
             """
 
-            def has_gps(piw_widget):
-                if all([piw_widget.get_line().df.dropna().empty,
-                        piw_widget.get_loop().df.dropna().empty,
-                        piw_widget.get_collar().df.dropna().empty,
-                        piw_widget.get_segments().df.dropna().empty]):
-                    return False
+            def has_all_gps(piw_widget):
+                if piw_widget.pem_file.is_borehole():
+                    if any([piw_widget.get_loop().df.dropna().empty,
+                            piw_widget.get_collar().df.dropna().empty,
+                            piw_widget.get_segments().df.dropna().empty
+                            ]):
+                        return False
+                    else:
+                        return True
+
                 else:
-                    return True
+                    if any([piw_widget.get_line().df.dropna().empty,
+                            piw_widget.get_loop().df.dropna().empty,
+                            ]):
+                        return False
+                    else:
+                        return True
 
             def color_background(row_index, color):
                 """
@@ -2349,8 +2379,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             split_col = self.table_columns.index('Split')
             suffix_col = self.table_columns.index('Suffix\nWarnings')
             repeat_col = self.table_columns.index('Repeat\nStations')
-            # TODO This isn't really good still.
-            pem_has_gps = has_gps(self.pem_info_widgets[row])
+            pem_has_gps = has_all_gps(self.pem_info_widgets[row])
 
             for col in [average_col, split_col, suffix_col, repeat_col]:
                 item = self.table.item(row, col)
@@ -3049,6 +3078,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.parent = parent
         self.setupUi(self)
         self.setWindowTitle("PDF Printing Options")
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'pdf.png')))
 
         self.pem_files = []
         self.ri_files = []
@@ -3079,6 +3109,8 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
+        elif e.key() == QtCore.Qt.Key_Enter:
+            self.print_pdfs()
 
     def open(self, pem_files, ri_files=None, crs=None):
 
@@ -3166,6 +3198,8 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
                 self.message.information(self, 'Error', f'{save_dir} does not exist')
             except IOError:
                 self.message.information(self, 'Error', f'{save_dir} is currently opened')
+            except Exception as e:
+                self.message.critical(self, 'Error', str(e))
             finally:
                 self.close()
         else:

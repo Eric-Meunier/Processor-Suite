@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>283</width>
-    <height>385</height>
+    <height>447</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -358,6 +358,27 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>print_btn</tabstop>
+  <tabstop>cancel_btn</tabstop>
+  <tabstop>make_profile_plots_gbox</tabstop>
+  <tabstop>output_log_cbox</tabstop>
+  <tabstop>output_lin_cbox</tabstop>
+  <tabstop>output_step_cbox</tabstop>
+  <tabstop>share_range_cbox</tabstop>
+  <tabstop>max_range_edit</tabstop>
+  <tabstop>min_range_edit</tabstop>
+  <tabstop>hide_gaps_cbox</tabstop>
+  <tabstop>make_plan_maps_gbox</tabstop>
+  <tabstop>moving_loop_cbox</tabstop>
+  <tabstop>show_loop_anno_cbox</tabstop>
+  <tabstop>plan_map_options_btn</tabstop>
+  <tabstop>make_section_plots_gbox</tabstop>
+  <tabstop>label_section_depths_cbox</tabstop>
+  <tabstop>section_depth_edit</tabstop>
+  <tabstop>save_path_edit</tabstop>
+  <tabstop>change_save_path_btn</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
