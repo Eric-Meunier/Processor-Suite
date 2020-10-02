@@ -17,10 +17,10 @@ from src.pem.pem_file import StationConverter
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
+    application_path = os.path.dirname(sys.executable)
     lineAdderCreator = 'qt_ui\\line_adder.ui'
     loopAdderCreator = 'qt_ui\\loop_adder.ui'
-    icons_path = 'icons'
+    icons_path = 'qt_ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     lineAdderCreator = os.path.join(os.path.dirname(application_path), 'qt_ui\\line_adder.ui')

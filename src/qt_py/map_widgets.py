@@ -1,8 +1,9 @@
-import io
 import os
 import re
 import sys
 import time
+import logging
+import traceback
 
 # import folium
 # import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
@@ -22,12 +23,30 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from src.pem.pem_plotter import ContourMap
 
 
+def custom_excepthook(exc_type, exc_value, exc_traceback):
+    # Do not print exception when user cancels the program
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logging.error("An uncaught exception occurred:")
+    logging.error("Type: %s", exc_type)
+    logging.error("Value: %s", exc_value)
+
+    if exc_traceback:
+        format_exception = traceback.format_tb(exc_traceback)
+        for line in format_exception:
+            logging.error(repr(line))
+
+
+sys.excepthook = custom_excepthook
+
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
+    application_path = os.path.dirname(sys.executable)
     section3DCreatorFile = 'qt_ui\\3D_section.ui'
     contourMapCreatorFile = 'qt_ui\\contour_map.ui'
-    icons_path = 'icons'
+    icons_path = 'qt_ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     section3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_section.ui')
@@ -35,20 +54,8 @@ else:
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
-Ui_Section3DWidget, QtBaseClass = uic.loadUiType(section3DCreatorFile)
-Ui_ContourMapCreatorFile, QtBaseClass = uic.loadUiType(contourMapCreatorFile)
-
-
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
+Ui_Section3DWidget, _ = uic.loadUiType(section3DCreatorFile)
+Ui_ContourMapCreatorFile, _ = uic.loadUiType(contourMapCreatorFile)
 
 
 class Map3DViewer(QMainWindow):
@@ -805,6 +812,7 @@ class ContourMapToolbar(NavigationToolbar):
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
+
     app = QApplication(sys.argv)
 
     pg = PEMGetter()
@@ -817,6 +825,5 @@ if __name__ == '__main__':
     # cmap = ContourMapViewer()
     # cmap.open(files)
     # cmap.show()
-
 
     app.exec_()

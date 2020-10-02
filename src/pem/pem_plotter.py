@@ -44,7 +44,7 @@ from src.qt_py.ri_importer import RIFile
 
 
 if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
+    application_path = os.path.dirname(sys.executable)
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 

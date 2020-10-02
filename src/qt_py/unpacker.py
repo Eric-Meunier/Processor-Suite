@@ -1,12 +1,12 @@
 import os
 import sys
 from pathlib import Path
-from shutil import copyfile, rmtree, unpack_archive
+from shutil import copyfile, rmtree
 
-import numpy as np
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QLabel,
-                             QFileSystemModel, QAbstractItemView, QErrorMessage, QMenu, QDialogButtonBox,  QCheckBox)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QLabel, QFileSystemModel,
+                             QAbstractItemView, QErrorMessage, QMenu, QDialogButtonBox, QCheckBox,
+                             QTableWidget, QTableWidgetItem, QVBoxLayout)
 from pyunpack import Archive
 import py7zr
 from src.damp.db_plot import DBPlotter
@@ -14,9 +14,9 @@ from src.damp.db_plot import DBPlotter
 # This must be placed after the custom table or else there are issues with class promotion in Qt Designer.
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
+    application_path = os.path.dirname(sys.executable)
     unpackerCreatorFile = 'qt_ui\\unpacker.ui'
-    icons_path = 'icons'
+    icons_path = 'qt_ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     unpackerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\unpacker.ui')
@@ -70,7 +70,34 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.open_folder_action.triggered.connect(self.open_file_dialog)
         self.reset_action.triggered.connect(self.reset)
 
-        # Format the tables and directory tree
+        # Format the tables
+        self.dump_frame.setLayout(QVBoxLayout())
+        self.damp_frame.setLayout(QVBoxLayout())
+        self.dmp_frame.setLayout(QVBoxLayout())
+        self.gps_frame.setLayout(QVBoxLayout())
+        self.geometry_frame.setLayout(QVBoxLayout())
+        self.other_frame.setLayout(QVBoxLayout())
+        self.dump_frame.layout().setContentsMargins(0, 0, 0, 0)
+        self.damp_frame.layout().setContentsMargins(0, 0, 0, 0)
+        self.dmp_frame.layout().setContentsMargins(0, 0, 0, 0)
+        self.gps_frame.layout().setContentsMargins(0, 0, 0, 0)
+        self.geometry_frame.layout().setContentsMargins(0, 0, 0, 0)
+        self.other_frame.layout().setContentsMargins(0, 0, 0, 0)
+
+        self.dump_table = UnpackerTable()
+        self.damp_table = UnpackerTable()
+        self.dmp_table = UnpackerTable()
+        self.gps_table = UnpackerTable()
+        self.geometry_table = UnpackerTable()
+        self.other_table = UnpackerTable()
+
+        self.dump_frame.layout().addWidget(self.dump_table)
+        self.damp_frame.layout().addWidget(self.damp_table)
+        self.dmp_frame.layout().addWidget(self.dmp_table)
+        self.gps_frame.layout().addWidget(self.gps_table)
+        self.geometry_frame.layout().addWidget(self.geometry_table)
+        self.other_frame.layout().addWidget(self.other_table)
+
         self.dump_table.setColumnWidth(0, 225)
         self.damp_table.setColumnWidth(0, 225)
         self.dmp_table.setColumnWidth(0, 225)
@@ -78,6 +105,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.geometry_table.setColumnWidth(0, 225)
         self.other_table.setColumnWidth(0, 225)
 
+        # Format the directory tree
         self.dir_tree.setColumnHidden(1, True)
         self.dir_tree.setColumnHidden(2, True)
         self.dir_tree.setColumnHidden(3, True)
@@ -314,7 +342,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                     add_to_table(file, root, self.other_table, ext)
 
         # Plot the damping box files
-        if self.open_damp_files_cbox.isChecked():
+        if self.open_damp_files_cbox.isChecked() and damp_files:
             self.db_plot.open(damp_files)
             self.db_plot.show()
 
@@ -439,6 +467,67 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.open_dmp_sig.emit(Path(new_folder).parents[1])
 
         self.reset(tables_only=True)
+
+
+# Must be in a different file than unpacker.py since it will create circular imports
+class UnpackerTable(QTableWidget):
+    """
+    Re-implement a QTableWidget object to customize it
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setDragEnabled(True)
+        self.setDragDropOverwriteMode(False)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+
+        self.setColumnCount(2)
+        self.setHorizontalHeaderLabels(['File', 'Directory'])
+        self.horizontalHeader().hide()
+        self.verticalHeader().hide()
+
+    def dropEvent(self, event: QtGui.QDropEvent):
+        if not event.isAccepted() and event.source() == self:
+            drop_row = self.drop_on(event)
+
+            rows = sorted(set(item.row() for item in self.selectedItems()))
+            rows_to_move = [[QTableWidgetItem(self.item(row_index, column_index)) for column_index in range(self.columnCount())]
+                            for row_index in rows]
+            for row_index in reversed(rows):
+                self.removeRow(row_index)
+                if row_index < drop_row:
+                    drop_row -= 1
+
+            for row_index, data in enumerate(rows_to_move):
+                row_index += drop_row
+                self.insertRow(row_index)
+                for column_index, column_data in enumerate(data):
+                    self.setItem(row_index, column_index, column_data)
+            event.accept()
+            for row_index in range(len(rows_to_move)):
+                self.item(drop_row + row_index, 0).setSelected(True)
+                self.item(drop_row + row_index, 1).setSelected(True)
+        super().dropEvent(event)
+
+    def drop_on(self, event):
+        index = self.indexAt(event.pos())
+        if not index.isValid():
+            return self.rowCount()
+
+        return index.row() + 1 if self.is_below(event.pos(), index) else index.row()
+
+    def is_below(self, pos, index):
+        rect = self.visualRect(index)
+        margin = 2
+        if pos.y() - rect.top() < margin:
+            return False
+        elif rect.bottom() - pos.y() < margin:
+            return True
+        # noinspection PyTypeChecker
+        return rect.contains(pos, True) and not (int(self.model().flags(index)) & QtCore.Qt.ItemIsDropEnabled) and pos.y() >= rect.center().y()
 
 
 def main():

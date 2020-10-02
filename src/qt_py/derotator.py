@@ -22,8 +22,8 @@ sys.excepthook = exception_hook
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
-    icons_path = 'icons'
+    application_path = os.path.dirname(sys.executable)
+    icons_path = 'qt_ui\\icons'
     derotatorCreatorFile = 'qt_ui\\derotator.ui'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))

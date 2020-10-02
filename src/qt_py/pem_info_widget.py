@@ -21,9 +21,9 @@ if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the pyInstaller bootloader
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
-    application_path = sys._MEIPASS
+    application_path = os.path.dirname(sys.executable)
     pemInfoWidgetCreatorFile = 'qt_ui\\pem_info_widget.ui'
-    icons_path = 'icons'
+    icons_path = 'qt_ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     pemInfoWidgetCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_info_widget.ui')

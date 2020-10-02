@@ -8,9 +8,9 @@ from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QHe
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
+    application_path = os.path.dirname(sys.executable)
     lineNameEditorCreatorFile = 'qt_ui\\line_name_editor.ui'
-    icons_path = 'icons'
+    icons_path = 'qt_ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     lineNameEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\line_name_editor.ui')

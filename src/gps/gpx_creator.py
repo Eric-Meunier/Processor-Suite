@@ -12,9 +12,9 @@ from PyQt5 import (QtGui, uic)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction, QLabel)
 
 if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
+    application_path = os.path.dirname(sys.executable)
     gpxCreatorFile = 'qt_ui\\gpx_creator.ui'
-    icons_path = 'icons'
+    icons_path = 'qt_ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     gpxCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\gpx_creator.ui')

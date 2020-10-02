@@ -21,9 +21,9 @@ from pyqtgraph.Point import Point
 from src.pem.pem_file import StationConverter, PEMParser
 
 if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
+    application_path = os.path.dirname(sys.executable)
     plotEditorCreatorFile = 'qt_ui\\pem_plot_editor.ui'
-    icons_path = 'icons'
+    icons_path = 'qt_ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     plotEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_plot_editor.ui')

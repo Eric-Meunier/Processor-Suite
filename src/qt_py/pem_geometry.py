@@ -17,9 +17,9 @@ from src.mpl.zoom_pan import ZoomPan
 from src.geometry.segment import Segmenter
 
 if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
+    application_path = os.path.dirname(sys.executable)
     pemGeometryCreatorFile = 'qt_ui\\pem_geometry.ui'
-    icons_path = 'icons'
+    icons_path = 'qt_ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     pemGeometryCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_geometry.ui')

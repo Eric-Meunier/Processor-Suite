@@ -27,10 +27,10 @@ from shutil import copyfile
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
+    application_path = os.path.dirname(sys.executable)
     loopPlannerCreatorFile = 'qt_ui\\loop_planner.ui'
     gridPlannerCreatorFile = 'qt_ui\\grid_planner.ui'
-    icons_path = 'icons'
+    icons_path = 'qt_ui\\icons'
 
     # Copy required files to root folder if they are not present. Needed for QtWebEngineView. Possibly won't be
     # needed when bundling in 64 bit windows.
