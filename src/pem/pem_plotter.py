@@ -7,7 +7,7 @@ import time
 from collections import defaultdict
 from datetime import datetime
 
-import cartopy
+# import cartopy
 import cartopy.crs as ccrs  # import projections
 import cartopy.io.img_tiles as cimgt
 import cartopy.io.shapereader as shpreader
@@ -26,7 +26,6 @@ import utm
 import pyqtgraph as pg
 from pyproj import CRS
 from PIL import Image
-from PyQt5 import QtCore
 from PyQt5.QtWidgets import (QProgressBar, QApplication)
 from cartopy.feature import NaturalEarthFeature
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
@@ -3884,7 +3883,7 @@ class PEMPrinter:
         self.portrait_fig, ax = plt.subplots(1, 1, num=1, clear=True)
         ax2 = ax.twiny()
         ax2.get_shared_x_axes().join(ax, ax2)
-        plt.yscale('symlog', linthresh=10, linscale=1. / math.log(10), subs=list(np.arange(2, 10, 1)))
+        plt.yscale('symlog', linthreshy=10, linscale=1. / math.log(10), subs=list(np.arange(2, 10, 1)))
 
     def configure_step_fig(self):
         """

@@ -5,20 +5,33 @@ from src.qt_py.pem_hub import PEMHub
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QTimer
 
-logger = logging.getLogger(__name__)
-handler = logging.StreamHandler(stream=sys.stdout)
-logger.addHandler(handler)
+# logger = logging.getLogger(__name__)
+# handler = logging.StreamHandler(stream=sys.stdout)
+# logger.addHandler(handler)
+#
+#
+# def handle_exception(exc_type, exc_value, exc_traceback):
+#     if issubclass(exc_type, KeyboardInterrupt):
+#         sys.__excepthook__(exc_type, exc_value, exc_traceback)
+#         return
+#
+#     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+#
+#
+# sys.excepthook = handle_exception
 
 
-def handle_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
-
-    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+sys._excepthook = sys.excepthook
 
 
-sys.excepthook = handle_exception
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+
+sys.excepthook = exception_hook
+
 
 # if getattr(sys, 'frozen', False):
 #     # If the application is run as a bundle, the pyInstaller bootloader

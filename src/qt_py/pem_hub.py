@@ -1715,10 +1715,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         Open the Map3DViewer if there's any GPS in any of the opened PEM files.
         """
-        if any([f.has_any_gps() for f in self.pem_files]):
-            self.map_viewer_3d.open(self.pem_files)
-        else:
+        if not self.pem_files:
+            self.message.information(self, 'Error', 'No file to plot.')
+        elif not any([f.has_any_gps() for f in self.pem_files]):
             self.message.information(self, 'Error', 'No file has any GPS to plot.')
+        else:
+            self.map_viewer_3d.open(self.pem_files)
 
     def open_gps_conversion(self):
         """

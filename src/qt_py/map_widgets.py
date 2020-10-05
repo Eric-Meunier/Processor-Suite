@@ -104,6 +104,10 @@ class Map3DViewer(QMainWindow):
     def open(self, pem_files):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
+
+        if not pem_files:
+            raise Exception("No files to plot.")
+
         if any([f.has_any_gps() for f in pem_files]):
             self.pem_files = pem_files
             self.plot_pems()

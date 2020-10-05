@@ -5,7 +5,7 @@ import re
 import numpy as np
 import utm
 import simplekml
-import folium
+# import folium
 import io
 import gpxpy
 
@@ -16,8 +16,8 @@ from shapely.geometry import asMultiPoint
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib.ticker as ticker
 import pyqtgraph as pg
-from folium import FeatureGroup
-from folium.plugins import MiniMap
+# from folium import FeatureGroup
+# from folium.plugins import MiniMap
 from PyQt5 import QtGui, QtCore, uic, QtWebEngineWidgets
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -32,24 +32,24 @@ if getattr(sys, 'frozen', False):
     gridPlannerCreatorFile = 'qt_ui\\grid_planner.ui'
     icons_path = 'qt_ui\\icons'
 
-    # Copy required files to root folder if they are not present. Needed for QtWebEngineView. Possibly won't be
-    # needed when bundling in 64 bit windows.
-    resources_dir, exe_dir, root = r'PyQt5\Qt\resources', r'PyQt5\Qt\bin', os.curdir
-    resources_files, exe_file, root_files = os.listdir(resources_dir), 'QtWebEngineProcess.exe', os.listdir(root)
-
-    for file in resources_files:
-        if file not in root_files:
-            source = os.path.join(resources_dir, file)
-            print(f"Copying file {source} to {file}")
-            copyfile(source, file)
-        else:
-            print(f"File {file} already in folder")
-    if exe_file not in root_files:
-        source = os.path.join(exe_dir, exe_file)
-        print(f"Copying {source} to {exe_file}")
-        copyfile(source, exe_file)
-    else:
-        print(f"File {exe_file} already in folder")
+    # # Copy required files to root folder if they are not present. Needed for QtWebEngineView. Possibly won't be
+    # # needed when bundling in 64 bit windows.
+    # resources_dir, exe_dir, root = r'PyQt5\Qt\resources', r'PyQt5\Qt\bin', os.curdir
+    # resources_files, exe_file, root_files = os.listdir(resources_dir), 'QtWebEngineProcess.exe', os.listdir(root)
+    #
+    # for file in resources_files:
+    #     if file not in root_files:
+    #         source = os.path.join(resources_dir, file)
+    #         print(f"Copying file {source} to {file}")
+    #         copyfile(source, file)
+    #     else:
+    #         print(f"File {file} already in folder")
+    # if exe_file not in root_files:
+    #     source = os.path.join(exe_dir, exe_file)
+    #     print(f"Copying {source} to {exe_file}")
+    #     copyfile(source, exe_file)
+    # else:
+    #     print(f"File {exe_file} already in folder")
 
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
