@@ -44,22 +44,6 @@ from src.qt_py.pem_plot_editor import PEMPlotEditor
 
 from src.damp.db_plot import DBPlotter
 
-import logging
-logger = logging.getLogger(__name__)
-handler = logging.StreamHandler(stream=sys.stdout)
-logger.addHandler(handler)
-
-
-def handle_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
-
-    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-
-
-sys.excepthook = handle_exception
-
 __version__ = '0.11.0a'
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -3784,6 +3768,27 @@ def main():
 
 
 if __name__ == '__main__':
+    import logging
+    logger = logging.getLogger(__name__)
+    handler = logging.StreamHandler(stream=sys.stdout)
+    logger.addHandler(handler)
+
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+
+        logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+        sys.exit(1)
+
+    sys.excepthook = handle_exception
+
+    # logging.basicConfig(filename='err.log', filemode='w', level=logging.INFO)
+    logging.basicConfig(filename='err.log',
+                        level=logging.INFO,
+                        format='\n%(asctime)s\n%(levelname)s: %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p')
+
     main()
     # cProfile.run('main()', 'restats')
     # p = pstats.Stats('restats')

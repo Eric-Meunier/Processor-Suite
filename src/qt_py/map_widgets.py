@@ -113,7 +113,7 @@ class Map3DViewer(QMainWindow):
             self.plot_pems()
             self.show()
         else:
-            print(f"No GPS to plot.")
+            raise Exception(f"No GPS to plot.")
 
     def plot_pems(self):
         if not self.pem_files:
@@ -127,8 +127,6 @@ class Map3DViewer(QMainWindow):
             self.holes = []
 
         def plot_loop(pem_file):
-            t = time.time()
-
             loop = pem_file.get_loop(closed=True)
             if loop.to_string() not in self.loops:
                 self.loops.append(loop.to_string())
@@ -142,10 +140,7 @@ class Map3DViewer(QMainWindow):
                                                    name=f"Loop {pem_file.loop_name}",
                                                    text=loop.index))
 
-            print(f"Map3DViewer - Time to add loop trace: {time.time() - t}")
-
         def plot_line(pem_file):
-            t = time.time()
             line = pem_file.get_line()
 
             if line.to_string() not in self.lines:
@@ -172,10 +167,7 @@ class Map3DViewer(QMainWindow):
                 #                                      xanchor="center",
                 #                                      yanchor="bottom"))
 
-                print(f"Map3DViewer - Time to add line trace: {time.time() - t}")
-
         def plot_hole(pem_file):
-            t = time.time()
             collar = pem_file.get_collar().dropna()
             geometry = pem_file.get_geometry()
             proj = geometry.get_projection()
@@ -205,8 +197,6 @@ class Map3DViewer(QMainWindow):
                                                    name=pem_file.line_name,
                                                    text=pem_file.line_name
                                                    ))
-
-            print(f"Map3DViewer - Time to add line trace: {time.time() - t}")
 
         reset_figure()
 

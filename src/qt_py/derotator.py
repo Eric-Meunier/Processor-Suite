@@ -9,17 +9,6 @@ import pyqtgraph as pg
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
 
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
-
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -521,6 +510,15 @@ class Derotator(QMainWindow, Ui_Derotator):
 
 
 def main():
+    sys._excepthook = sys.excepthook
+
+    def exception_hook(exctype, value, traceback):
+        print(exctype, value, traceback)
+        sys._excepthook(exctype, value, traceback)
+        sys.exit(1)
+
+    sys.excepthook = exception_hook
+
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
     app = QApplication(sys.argv)
@@ -530,7 +528,8 @@ def main():
     parser = PEMParser()
     pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
     # pem_files = parser.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\TC170199XYT.PEM')
-    mw.open(pem_files)
+    mw.open(['sdfs'])
+
     # mw.export_stats()
 
     app.exec_()
