@@ -12,6 +12,7 @@ import natsort
 import stopit
 import keyboard
 import pyqtgraph as pg
+import subprocess
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as lcmap
 from pyproj import CRS
@@ -106,14 +107,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.calender.setWindowTitle('Select Date')
         self.text_browsers = []
 
-        # Progress bar window
-        self.pb = CustomProgressBar()
-        self.pb_win = QWidget()  # Progress bar window
-        self.pb_win.resize(400, 45)
-        self.pb_win.setLayout(QVBoxLayout())
-        self.pb_win.setWindowTitle('Saving PDF Plots...')
-        self.pb_win.layout().addWidget(self.pb)
-
         # Status bar formatting
         self.selection_label = QLabel()
         self.selection_label.setIndent(5)
@@ -124,9 +117,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.status_bar.addWidget(self.selection_label, 0)
         self.status_bar.addPermanentWidget(QLabel(), 1)  # Spacer
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
-        # spacer = QLabel()
-        # spacer.setIndent(20)
-        # self.status_bar.addPermanentWidget(spacer, 0)
         self.status_bar.addPermanentWidget(self.project_dir_label, 0)
 
         # Widgets
@@ -139,7 +129,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_map = ContourMapViewer(parent=self)
         self.gps_conversion_widget = GPSConversionWidget(parent=self)
-        # self.folium_map = FoliumMap()
 
         # Project tree
         self.project_dir = None
@@ -214,16 +203,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.resize(1700, 900)
         center_window()
 
-        self.refresh_pem_list_btn.setIcon(QIcon(os.path.join(icons_path, 'refresh.png')))
-        self.refresh_gps_list_btn.setIcon(QIcon(os.path.join(icons_path, 'refresh.png')))
-        self.refresh_pem_list_btn.setText('')
-        self.refresh_gps_list_btn.setText('')
-
-        # self.stackedWidget.hide()
-        # self.piw_frame.hide()
         self.table.horizontalHeader().hide()
-
-        # self.splitter.setStretchFactor(0, 2)  # Gives the table more stretch than the directory frame
 
     def init_menus(self):
         """
@@ -231,10 +211,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
         # 'File' menu
-        self.actionOpenFile.setIcon(QIcon(os.path.join(icons_path, 'open.png')))
         self.actionOpenFile.triggered.connect(self.open_file_dialog)
 
-        self.actionSaveFiles.setIcon(QIcon(os.path.join(icons_path, 'save.png')))
         self.actionSaveFiles.triggered.connect(lambda: self.save_pem_files(selected=False))
 
         self.actionExport_As_XYZ.triggered.connect(self.export_as_xyz)
@@ -249,23 +227,18 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionImport_RI_Files.triggered.connect(self.open_ri_importer)
 
         self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
-        self.actionPrint_Plots_to_PDF.setIcon(QIcon(os.path.join(icons_path, 'pdf.png')))
 
         # PEM menu
         self.actionRename_Lines_Holes.triggered.connect(lambda: self.open_name_editor('Line', selected=False))
 
         self.actionRename_Files.triggered.connect(lambda: self.open_name_editor('File', selected=False))
 
-        self.actionAverage_All_PEM_Files.setIcon(QIcon(os.path.join(icons_path, 'average.png')))
         self.actionAverage_All_PEM_Files.triggered.connect(lambda: self.average_pem_data(selected=False))
 
-        self.actionSplit_All_PEM_Files.setIcon(QIcon(os.path.join(icons_path, 'split.png')))
         self.actionSplit_All_PEM_Files.triggered.connect(lambda: self.split_pem_channels(selected=False))
 
-        self.actionScale_All_Currents.setIcon(QIcon(os.path.join(icons_path, 'current.png')))
         self.actionScale_All_Currents.triggered.connect(lambda: self.scale_pem_current(selected=False))
 
-        self.actionChange_All_Coil_Areas.setIcon(QIcon(os.path.join(icons_path, 'coil.png')))
         self.actionChange_All_Coil_Areas.triggered.connect(lambda: self.scale_pem_coil_area(selected=False))
 
         self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
@@ -276,10 +249,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionReverseZ_Component.triggered.connect(lambda: self.reverse_component_data(comp='Z'))
 
         # GPS menu
-        self.actionSave_as_KMZ.setIcon(QIcon(os.path.join(icons_path, 'google_earth.png')))
-        self.actionSave_as_KMZ.triggered.connect(self.save_as_kmz)
+        self.actionSave_as_KMZ.triggered.connect(lambda: self.save_as_kmz(save=True))
 
-        self.actionExport_All_GPS.setIcon(QIcon(os.path.join(icons_path, 'csv.png')))
         self.actionExport_All_GPS.triggered.connect(self.export_all_gps)
 
         self.actionConvert_GPS.triggered.connect(self.open_gps_conversion)
@@ -288,32 +259,24 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # self.actionPlan_Map.setStatusTip("Plot all PEM files on an interactive plan map")
         # self.actionPlan_Map.setToolTip("Plot all PEM files on an interactive plan map")
         # self.actionPlan_Map.setIcon(QIcon(os.path.join(icons_path, 'folium.png')))
-        # self.actionPlan_Map.triggered.connect(
-        # lambda: self.folium_map.open(self.get_updated_pem_files(), self.get_crs()))
 
-        self.action3D_Map.setIcon(QIcon(os.path.join(icons_path, '3d_map2.png')))
+        self.actionGoogle_Earth.triggered.connect(lambda: self.save_as_kmz(save=False))
+
         self.action3D_Map.triggered.connect(self.open_3d_map)
 
-        self.actionContour_Map.setIcon(QIcon(os.path.join(icons_path, 'contour_map3.png')))
         self.actionContour_Map.triggered.connect(lambda: self.contour_map.open(self.pem_files))
 
         # Tools menu
-        self.actionLoop_Planner.setIcon(QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.actionLoop_Planner.triggered.connect(lambda: self.loop_planner.show())
 
-        self.actionGrid_Planner.setIcon(QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.actionGrid_Planner.triggered.connect(lambda: self.grid_planner.show())
 
-        self.actionConvert_Timebase_Frequency.setIcon(QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
         self.actionConvert_Timebase_Frequency.triggered.connect(lambda: self.freq_con.show())
 
-        self.actionDamping_Box_Plotter.setIcon(QIcon(os.path.join(icons_path, 'db_plot 32.png')))
         self.actionDamping_Box_Plotter.triggered.connect(self.open_db_plot)
 
-        self.actionUnpacker.setIcon(QIcon(os.path.join(icons_path, 'unpacker_1.png')))
         self.actionUnpacker.triggered.connect(lambda: self.unpacker.show())
 
-        self.actionGPX_Creator.setIcon(QIcon(os.path.join(icons_path, 'gpx_creator_4.png')))
         self.actionGPX_Creator.triggered.connect(lambda: self.gpx_creator.show())
 
     def init_signals(self):
@@ -1140,30 +1103,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             for widget in self.pem_info_widgets:
                 widget.tabs.setCurrentIndex(self.tab_num)
 
-    def start_pb(self, start=0, end=100, title=''):
-        """
-        Add the progress bar to the status bar and make it visible.
-        :param start: Starting value of the progress bar, usually 0.
-        :param end: Maximum value of the progress bar.
-        :param title: Title of the progress bar window.
-        """
-        self.pb.setValue(start)
-        self.pb.setMaximum(end)
-        self.pb.setText('')
-        self.pb_win.setWindowTitle(title)
-        # self.status_bar.addPermanentWidget(self.pb)
-        self.pb_win.show()
-        QApplication.processEvents()
-
-    def end_pb(self):
-        """
-        Reset the progress bar and hide its window
-        """
-        self.pb.setValue(0)
-        self.pb.setMaximum(1)
-        self.pb.setText('')
-        self.pb_win.hide()
-
     def remove_file(self, rows=None):
         """
         Removes PEM files from the main table, along with any associated widgets.
@@ -1220,7 +1159,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             for file in dmp_files:
                 if dlg.wasCanceled():
-                    print(f"Converting DMP files was cancelled.")
                     break
 
                 dlg.setLabelText(f"Converting {Path(file).name}")
@@ -1398,6 +1336,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             dlg.setWindowTitle('Opening PEM Files')
 
             for pem_file in pem_files:
+                if dlg.wasCanceled():
+                    break
+
                 # Create a PEMFile object if a filepath was passed
                 if not isinstance(pem_file, PEMFile):
                     try:
@@ -1439,10 +1380,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     # Progress the progress bar
                     dlg += 1
                     self.total_opened += 1
-
-                    if dlg.wasCanceled():
-                        print(f"Operation cancelled.")
-                        break
 
         self.allow_signals = True
         self.table.setUpdatesEnabled(True)
@@ -1749,6 +1686,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 # Convert all GPS of each PEMFile
                 for pem_file in self.pem_files:
+                    if dlg.wasCanceled():
+                        break
+
                     dlg.setLabelText(f"Converting GPS of {pem_file.filepath.name}")
 
                     if not pem_file.loop.df.empty:
@@ -2018,24 +1958,28 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_files, rows = self.get_pem_files(selected=selected)
         crs = self.get_crs()
 
-        self.start_pb(0, len(pem_files), title='Saving PEM Files...')
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
 
-        count = 0
-        for pem_file in pem_files:
-            self.pb.setText(f"Saving {pem_file.filepath.name}")
+        with pg.ProgressDialog('Saving PEM Files...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle('Saving PEM Files')
 
-            # Add the CRS note if CRS isn't None
-            if crs:
-                add_crs_tag()
+            for pem_file in pem_files:
+                if dlg.wasCanceled():
+                    break
 
-            # Save the PEM file and refresh it in the table
-            pem_file.save()
-            self.refresh_pem(pem_file)
+                dlg.setLabelText(f"Saving {pem_file.filepath.name}")
 
-            count += 1
-            self.pb.setValue(count)
+                # Add the CRS note if CRS isn't None
+                if crs:
+                    add_crs_tag()
 
-        self.end_pb()
+                # Save the PEM file and refresh it in the table
+                pem_file.save()
+                self.refresh_pem(pem_file)
+                dlg += 1
+
         self.status_bar.showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
 
     def save_pem_file_as(self):
@@ -2072,9 +2016,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             else:
                 save_pem()
 
-    def save_as_kmz(self):
+    def save_as_kmz(self, save=False):
         """
         Saves all GPS from the opened PEM files as a KMZ file. Utilizes 'simplekml' module.
+        :param save: bool, save the file with FileDialog or simply save as a temporary file.
         :return: None
         """
         crs = self.get_crs()
@@ -2128,21 +2073,28 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Grouping up the loops, lines and boreholes into lists.
         for pem_file in pem_files:
             pem_file.loop.crs = crs
+
+            # Save the loop
             loop_gps = pem_file.loop.to_latlon().get_loop(closed=True)
             loop_name = pem_file.loop_name
+
             if not loop_gps.empty and loop_gps.to_string() not in loop_ids:
                 loops.append(loop_gps)
                 loop_ids.append(loop_gps.to_string())
                 loop_names.append(loop_name)
+
+            # Save the line
             if not pem_file.is_borehole():
                 pem_file.line.crs = crs
                 line_gps = pem_file.line.to_latlon().get_line()
                 line_name = pem_file.line_name
+
                 if not line_gps.empty and line_gps.to_string() not in line_ids:
                     lines.append(line_gps)
                     line_ids.append(line_gps.to_string())
                     line_names.append(line_name)
             else:
+                # Save the borehole collar and trace
                 if pem_file.has_collar_gps():
                     pem_file.collar.crs = crs
                     pem_file.geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
@@ -2182,14 +2134,29 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             ls.extrude = 1
             ls.style = trace_style
 
-        default_path = str(self.pem_files[-1].filepath.parent)
-        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', default_path, 'KMZ Files (*.KMZ)')[0]
-        if save_dir:
-            kmz_save_dir = str(Path(save_dir).with_suffix('.kmz'))
-            kml.savekmz(kmz_save_dir, format=False)
-            os.startfile(kmz_save_dir)
+        if save:
+            # Save the file using the user-input save path
+            default_path = str(self.pem_files[-1].filepath.parent)
+            save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', default_path, 'KMZ Files (*.KMZ)')[0]
+            if save_dir:
+                kmz_save_dir = str(Path(save_dir).with_suffix('.kmz'))
+                kml.savekmz(kmz_save_dir, format=False)
+                # os.startfile(kmz_save_dir)
         else:
-            self.status_bar.showMessage('Cancelled.', 2000)
+            # Save the file and open Google Earth using a temporary file
+            prog = Path(os.environ["ProgramFiles"]).joinpath(r'Google/Google Earth Pro/client/googleearth.exe')
+            if prog.is_file():
+                # Create the temp folder
+                Path('temp').mkdir(exist_ok=True)
+                # Temp file name
+                kmz_save_dir = str(Path(r'temp/temp.kmz').resolve())  # Gets the absolute path
+                # Save the file
+                kml.savekmz(kmz_save_dir, format=False)
+                # Open Google Earth
+                cmd = [str(prog), kmz_save_dir]
+                subprocess.Popen(cmd)
+            else:
+                self.message.information(self, "Error", "Cannot find Google Earth Pro.")
 
     def export_as_xyz(self):
         """
@@ -2716,30 +2683,36 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if not pem_files:
             return
 
-        self.start_pb(start=0, end=len(pem_files), title='Averaging PEM Files...')
-        count = 0
-        for pem_file in pem_files:
-            self.pb.setText(f"Averaging {pem_file.filepath.name}")
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
 
-            if pem_file.is_borehole() and pem_file.has_xy() and not pem_file.is_rotated():
-                response = self.message.question(self, 'Rotated PEM File',
-                                                 f"{pem_file.filepath.name} has not been de-rotated. "
-                                                 f"Continue with averaging?",
-                                                 self.message.Yes, self.message.No)
-                if response == self.message.Yes:
-                    pass
-                else:
-                    continue
+        with pg.ProgressDialog('Averaging PEM Files...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle('Averaging PEM Files')
 
-            # Save a backup of the un-averaged file first
-            if self.auto_create_backup_files_cbox.isChecked():
-                pem_file.save(backup=True, tag='[-A]')
+            for pem_file in pem_files:
+                if dlg.wasCanceled():
+                    break
 
-            pem_file = pem_file.average()
-            self.refresh_pem(pem_file)
+                dlg.setLabelText(f"Averaging {pem_file.filepath.name}")
 
-            count += 1
-            self.pb.setValue(count)
+                if pem_file.is_borehole() and pem_file.has_xy() and not pem_file.is_rotated():
+                    response = self.message.question(self, 'Rotated PEM File',
+                                                     f"{pem_file.filepath.name} has not been de-rotated. "
+                                                     f"Continue with averaging?",
+                                                     self.message.Yes, self.message.No)
+                    if response == self.message.Yes:
+                        pass
+                    else:
+                        continue
+
+                # Save a backup of the un-averaged file first
+                if self.auto_create_backup_files_cbox.isChecked():
+                    pem_file.save(backup=True, tag='[-A]')
+
+                pem_file = pem_file.average()
+                self.refresh_pem(pem_file)
+                dlg += 1
 
         self.end_pb()
 
@@ -2761,18 +2734,26 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if len(filt_list) == 0:
             return
 
-        self.start_pb(start=0, end=len(filt_list), title='Splitting PEM Files...')
-        count = 0
-        for pem_file, row in filt_list:
-            print(f"Splitting channels for {pem_file.filepath.name}")
-            self.pb.setText(f"Splitting channels for {pem_file.filepath.name}")
-            if self.auto_create_backup_files_cbox.isChecked():
-                pem_file.save(backup=True, tag='[-S]')
-            pem_file = pem_file.split()
-            self.refresh_pem(pem_file)
-            count += 1
-            self.pb.setValue(count)
-        self.end_pb()
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+
+        with pg.ProgressDialog('Splitting PEM Files...', 0, len(filt_list)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle('Splitting PEM File Channels')
+
+            for pem_file, row in filt_list:
+                if dlg.wasCanceled():
+                    break
+
+                dlg.setLabelText(f"Splitting channels for {pem_file.filepath.name}")
+
+                # Save a backup file
+                if self.auto_create_backup_files_cbox.isChecked():
+                    pem_file.save(backup=True, tag='[-S]')
+
+                pem_file = pem_file.split()
+                self.refresh_pem(pem_file)
+                dlg += 1
 
     def scale_pem_coil_area(self, coil_area=None, selected=False):
         """
@@ -3370,7 +3351,6 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
-        self.setWindowTitle('GPS Conversion')
 
         self.parent = parent
         self.message = QMessageBox()
@@ -3579,9 +3559,12 @@ class GPSShareWidget(QWidget):
 
         # Format window
         self.setWindowTitle(f"Share GPS")
-        # self.resize(600, 400)
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'share_gps.png')))
+
         self.layout = QFormLayout()
         self.setLayout(self.layout)
+        self.layout.setHorizontalSpacing(100)
+        self.layout.setVerticalSpacing(8)
 
         h_line = QFrame()
         h_line.setFrameShape(QFrame().HLine)
@@ -3592,7 +3575,9 @@ class GPSShareWidget(QWidget):
         self.check_all_cbox.setToolTip('Check All')
         self.accept_btn = QPushButton('Accept')
 
-        self.layout.addRow('File', self.check_all_cbox)
+        header_label = QLabel('File')
+        header_label.setFont(QtGui.QFont('Arial', 10))
+        self.layout.addRow(header_label, self.check_all_cbox)
         self.layout.addRow(h_line)
         self.layout.addRow(self.accept_btn)
 
@@ -3607,6 +3592,11 @@ class GPSShareWidget(QWidget):
         self.accept_btn.clicked.connect(self.close)
 
     def open(self, pem_files, index_of_source):
+        """
+        Add the PEMFiles to the widget as labels with checkboxes.
+        :param pem_files: list, PEMFile objects
+        :param index_of_source: int, index of the file/widget that is sharing its GPS.
+        """
 
         for i, pem_file in enumerate(pem_files):
             cbox = QCheckBox()
@@ -3614,6 +3604,7 @@ class GPSShareWidget(QWidget):
             self.cboxes.append(cbox)
 
             label = QLabel(pem_file.filepath.name)
+            label.setFont(QtGui.QFont('Arial', 10))
             self.layout.insertRow(i + 2, label, cbox)
 
             if i == index_of_source:
@@ -3758,9 +3749,9 @@ def main():
 
     # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
-    # pem_files = pg.get_pems(client='Kazzinc', number=5)
+    pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
-    pem_files = pg.get_pems(random=True, number=9)
+    # pem_files = pg.get_pems(random=True, number=9)
     # s = GPSShareWidget()
     # s.open(pem_files, 0)
     # s.show()

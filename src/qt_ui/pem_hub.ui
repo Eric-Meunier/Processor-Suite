@@ -17,7 +17,11 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>PEMPro</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>icons/conder.png</normaloff>icons/conder.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_15">
@@ -940,7 +944,11 @@ Stations</string>
                       <string>Refresh</string>
                      </property>
                      <property name="text">
-                      <string>Refresh</string>
+                      <string/>
+                     </property>
+                     <property name="icon">
+                      <iconset>
+                       <normaloff>icons/refresh.png</normaloff>icons/refresh.png</iconset>
                      </property>
                      <property name="default">
                       <bool>false</bool>
@@ -1086,7 +1094,11 @@ Stations</string>
                       <string>Refresh</string>
                      </property>
                      <property name="text">
-                      <string>PushButton</string>
+                      <string/>
+                     </property>
+                     <property name="icon">
+                      <iconset>
+                       <normaloff>icons/refresh.png</normaloff>icons/refresh.png</iconset>
                      </property>
                     </widget>
                    </item>
@@ -1277,6 +1289,7 @@ Stations</string>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <addaction name="actionGoogle_Earth"/>
     <addaction name="action3D_Map"/>
     <addaction name="actionContour_Map"/>
    </widget>
@@ -1339,6 +1352,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionOpenFile">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/open.png</normaloff>icons/open.png</iconset>
+   </property>
    <property name="text">
     <string>Open PEM Files...</string>
    </property>
@@ -1353,6 +1370,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionSaveFiles">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/save.png</normaloff>icons/save.png</iconset>
+   </property>
    <property name="text">
     <string>Save Files</string>
    </property>
@@ -1368,7 +1389,7 @@ Stations</string>
     <string>XYZ</string>
    </property>
    <property name="toolTip">
-    <string>Save all PEM files as XYZ files (only for surface surveys)</string>
+    <string>Save all PEM files as XYZ files.</string>
    </property>
   </action>
   <action name="actionExport_Final_PEM_Files">
@@ -1405,6 +1426,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionPrint_Plots_to_PDF">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/pdf.png</normaloff>icons/pdf.png</iconset>
+   </property>
    <property name="text">
     <string>Print Plots to PDF</string>
    </property>
@@ -1421,6 +1446,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionAverage_All_PEM_Files">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/average.png</normaloff>icons/average.png</iconset>
+   </property>
    <property name="text">
     <string>Average All PEM Files</string>
    </property>
@@ -1432,6 +1461,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionSplit_All_PEM_Files">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/split.png</normaloff>icons/split.png</iconset>
+   </property>
    <property name="text">
     <string>Split All PEM Files</string>
    </property>
@@ -1443,6 +1476,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionScale_All_Currents">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/current.png</normaloff>icons/current.png</iconset>
+   </property>
    <property name="text">
     <string>Scale All Currents</string>
    </property>
@@ -1454,6 +1491,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionChange_All_Coil_Areas">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/coil.png</normaloff>icons/coil.png</iconset>
+   </property>
    <property name="text">
     <string>Change All Coil Areas</string>
    </property>
@@ -1465,6 +1506,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionSave_as_KMZ">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/google_earth.png</normaloff>icons/google_earth.png</iconset>
+   </property>
    <property name="text">
     <string>Save as KMZ</string>
    </property>
@@ -1473,6 +1518,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionExport_All_GPS">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/csv.png</normaloff>icons/csv.png</iconset>
+   </property>
    <property name="text">
     <string>Export All GPS</string>
    </property>
@@ -1486,6 +1535,10 @@ Stations</string>
    </property>
   </action>
   <action name="action3D_Map">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/3d_map2.png</normaloff>icons/3d_map2.png</iconset>
+   </property>
    <property name="text">
     <string>3D Map</string>
    </property>
@@ -1497,6 +1550,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionContour_Map">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/contour_map3.png</normaloff>icons/contour_map3.png</iconset>
+   </property>
    <property name="text">
     <string>Contour Map</string>
    </property>
@@ -1505,6 +1562,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionLoop_Planner">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/loop_planner.png</normaloff>icons/loop_planner.png</iconset>
+   </property>
    <property name="text">
     <string>Loop Planner</string>
    </property>
@@ -1513,6 +1574,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionGrid_Planner">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/grid_planner.png</normaloff>icons/grid_planner.png</iconset>
+   </property>
    <property name="text">
     <string>Grid Planner</string>
    </property>
@@ -1521,6 +1586,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionConvert_Timebase_Frequency">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/freq_timebase_calc.png</normaloff>icons/freq_timebase_calc.png</iconset>
+   </property>
    <property name="text">
     <string>Convert Timebase/Frequency</string>
    </property>
@@ -1529,6 +1598,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionDamping_Box_Plotter">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/db_plot 32.png</normaloff>icons/db_plot 32.png</iconset>
+   </property>
    <property name="text">
     <string>Damping Box Plotter</string>
    </property>
@@ -1537,6 +1610,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionUnpacker">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/unpacker_1.png</normaloff>icons/unpacker_1.png</iconset>
+   </property>
    <property name="text">
     <string>Unpacker</string>
    </property>
@@ -1545,6 +1622,10 @@ Stations</string>
    </property>
   </action>
   <action name="actionGPX_Creator">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/gpx_creator_4.png</normaloff>icons/gpx_creator_4.png</iconset>
+   </property>
    <property name="text">
     <string>GPX Creator</string>
    </property>
@@ -1627,8 +1708,15 @@ Stations</string>
    </property>
   </action>
   <action name="actionConvert_GPS">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/convert_gps.png</normaloff>icons/convert_gps.png</iconset>
+   </property>
    <property name="text">
     <string>Convert GPS</string>
+   </property>
+   <property name="toolTip">
+    <string>Convert GPS to a selected CRS</string>
    </property>
   </action>
   <action name="auto_sort_files_cbox">
@@ -1641,6 +1729,9 @@ Stations</string>
    <property name="text">
     <string>Sort Table Automatically</string>
    </property>
+   <property name="toolTip">
+    <string>Automatically sort the table when a PEM file is opened</string>
+   </property>
   </action>
   <action name="auto_create_backup_files_cbox">
    <property name="checkable">
@@ -1651,6 +1742,9 @@ Stations</string>
    </property>
    <property name="text">
     <string>Backups Files Automatically</string>
+   </property>
+   <property name="toolTip">
+    <string>Automatically create backup files</string>
    </property>
   </action>
   <action name="delete_merged_files_cbox">
@@ -1663,10 +1757,16 @@ Stations</string>
    <property name="text">
     <string>Remove Merged Files</string>
    </property>
+   <property name="toolTip">
+    <string>Remove pre-merged files after they are merged together</string>
+   </property>
   </action>
   <action name="actionExport_As_PEM">
    <property name="text">
     <string>PEM</string>
+   </property>
+   <property name="toolTip">
+    <string>Export all PEM files to a selected directory</string>
    </property>
   </action>
   <action name="action_XYZ">
@@ -1679,7 +1779,22 @@ Stations</string>
     <string>Processed PEM</string>
    </property>
    <property name="toolTip">
-    <string>Averages, splits, and de-rotates (if applicable) the files before saving.</string>
+    <string>Averages, splits, and de-rotates (if applicable) the files before exporting all files to a selected directory</string>
+   </property>
+   <property name="shortcut">
+    <string>F9</string>
+   </property>
+  </action>
+  <action name="actionGoogle_Earth">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/google_earth.png</normaloff>icons/google_earth.png</iconset>
+   </property>
+   <property name="text">
+    <string>Google Earth</string>
+   </property>
+   <property name="toolTip">
+    <string>View the GPS in Google Earth</string>
    </property>
   </action>
  </widget>

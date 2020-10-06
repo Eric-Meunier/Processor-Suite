@@ -53,9 +53,15 @@ class BaseGPS:
         Convert the data frame coordinates to Lat Lon in decimal format
         :return: GPS object
         """
-        if any([not self.crs, self.df.empty]):
-            print('GPS dataframe is empty or there is something wrong with the CRS')
-            return
+        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
+        if not self.crs:
+            print('Invalid CRS.')
+            self.df = df
+            return self
+        elif self.df.empty:
+            print('GPS dataframe is empty.')
+            self.df = df
+            return self
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
@@ -76,9 +82,15 @@ class BaseGPS:
         Convert the data frame coordinates to NAD 1927.
         :return: GPS object
         """
-        if any([not self.crs, self.df.empty]):
-            print('GPS dataframe is empty or there is something wrong with the CRS')
-            return
+        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
+        if not self.crs:
+            print('Invalid CRS.')
+            self.df = df
+            return self
+        elif self.df.empty:
+            print('GPS dataframe is empty.')
+            self.df = df
+            return self
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
@@ -103,9 +115,15 @@ class BaseGPS:
         Convert the data frame coordinates to NAD 1983.
         :return: GPS object
         """
-        if any([not self.crs, self.df.empty]):
-            print('GPS dataframe is empty or there is something wrong with the CRS')
-            return
+        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
+        if not self.crs:
+            print('Invalid CRS.')
+            self.df = df
+            return self
+        elif self.df.empty:
+            print('GPS dataframe is empty.')
+            self.df = df
+            return self
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
@@ -130,9 +148,15 @@ class BaseGPS:
         Convert the data frame coordinates to WGS 1984.
         :return: GPS object
         """
-        if any([not self.crs, self.df.empty]):
-            print('GPS dataframe is empty or there is something wrong with the CRS')
-            return
+        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
+        if not self.crs:
+            print('Invalid CRS.')
+            self.df = df
+            return self
+        elif self.df.empty:
+            print('GPS dataframe is empty.')
+            self.df = df
+            return self
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
@@ -162,9 +186,15 @@ class BaseGPS:
         Convert the data frame coordinates to WGS 1984.
         :return: GPS object
         """
-        if any([not self.crs, self.df.empty]):
-            print('GPS dataframe is empty or there is something wrong with the CRS')
-            return
+        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
+        if not self.crs:
+            print('Invalid CRS.')
+            self.df = df
+            return self
+        elif self.df.empty:
+            print('GPS dataframe is empty.')
+            self.df = df
+            return self
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
@@ -736,6 +766,8 @@ class BoreholeGeometry(BaseGPS):
         :param latlon: bool, whether to return the projection as latlon
         :return: pandas DataFrame: Projected easting, northing, elevation, and relative depth from collar
         """
+        self.crs = self.collar.crs
+
         # Create the data frame
         projection = gpd.GeoDataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative_depth'])
         collar = self.collar.get_collar().dropna()
@@ -798,8 +830,10 @@ class BoreholeGeometry(BaseGPS):
         projection.Elevation = pd.Series(depths, dtype=float)
         projection['Relative_depth'] = pd.Series(relative_depth, dtype=float)
         self.df = projection
-        if latlon:
+
+        if latlon and not self.df.empty:
             self.df = self.to_latlon().df
+
         return self.df
 
     def get_collar(self):
