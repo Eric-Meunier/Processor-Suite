@@ -1732,22 +1732,22 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if isinstance(gps_object, TransmitterLoop):
                 for widget in pem_info_widgets:
                     widget.fill_gps_table(gps_object.df, widget.loop_table)
-                    widget.gps_object_changed(widget.loop_table)
+                    widget.gps_object_changed(widget.loop_table, refresh=True)
 
             elif isinstance(gps_object, SurveyLine):
                 for widget in pem_info_widgets:
                     widget.fill_gps_table(gps_object.df, widget.line_table)
-                    widget.gps_object_changed(widget.line_table)
+                    widget.gps_object_changed(widget.line_table, refresh=True)
 
             elif isinstance(gps_object, BoreholeCollar):
                 for widget in pem_info_widgets:
                     widget.fill_gps_table(gps_object.df, widget.collar_table)
-                    widget.gps_object_changed(widget.collar_table)
+                    widget.gps_object_changed(widget.collar_table, refresh=True)
 
             elif isinstance(gps_object, BoreholeSegments):
                 for widget in pem_info_widgets:
                     widget.fill_gps_table(gps_object.df, widget.segments_table)
-                    widget.gps_object_changed(widget.segments_table)
+                    widget.gps_object_changed(widget.segments_table, refresh=True)
 
         # Filter the PEM Files and PIWs based on the GPS object
         if isinstance(gps_object, TransmitterLoop):
@@ -3566,17 +3566,22 @@ class GPSShareWidget(QWidget):
         self.layout.setHorizontalSpacing(100)
         self.layout.setVerticalSpacing(8)
 
+        # Create the horizontal line for the header
         h_line = QFrame()
         h_line.setFrameShape(QFrame().HLine)
         h_line.setFrameShadow(QFrame().Sunken)
 
+        # Create the header checkbox
         self.check_all_cbox = QCheckBox()
         self.check_all_cbox.setChecked(True)
         self.check_all_cbox.setToolTip('Check All')
         self.accept_btn = QPushButton('Accept')
 
+        # Create the header label
         header_label = QLabel('File')
         header_label.setFont(QtGui.QFont('Arial', 10))
+
+        # Add them to the layout
         self.layout.addRow(header_label, self.check_all_cbox)
         self.layout.addRow(h_line)
         self.layout.addRow(self.accept_btn)

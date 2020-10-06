@@ -66,7 +66,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dialog = QFileDialog()
         self.error = QErrorMessage()
         self.message = QMessageBox()
-        self.message.setIcon(QMessageBox.Information)
+        # self.message.setIcon(QMessageBox.Information)
 
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
@@ -174,7 +174,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.active_table.setItem(row, col, item)
             else:
-                self.gps_object_changed(self.active_table)
+                self.gps_object_changed(self.active_table, refresh=True)
             finally:
                 # Save the information of the row
                 save_selected_row(self.active_table)
@@ -219,7 +219,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # Table changes
         self.line_table.cellChanged.connect(self.check_station_duplicates)
         self.line_table.cellChanged.connect(self.color_line_table)
-        self.line_table.cellChanged.connect(self.check_missing_gps)
         self.line_table.cellChanged.connect(self.check_missing_gps)
         self.line_table.itemSelectionChanged.connect(self.calc_distance)
         self.line_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
@@ -849,26 +848,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     #     self.refresh_row_signal.emit()
     #     self.lcdRepeats.display(self.num_repeat_stations)
 
-    def check_station_duplicates(self):
-        """
-        Colors stationGPS table rows to indicate duplicate station numbers in the GPS.
-        :return: None
-        """
-        self.line_table.blockSignals(True)
-        stations_column = self.line_table_columns.index('Station')
-        stations = []
-        for row in range(self.line_table.rowCount()):
-            if self.line_table.item(row, stations_column):
-                station = self.line_table.item(row, stations_column).text()
-                if station in stations:
-                    other_station_index = stations.index(station)
-                    self.line_table.item(row, stations_column).setForeground(QtGui.QColor('red'))
-                    self.line_table.item(other_station_index, stations_column).setForeground(QtGui.QColor('red'))
-                else:
-                    self.line_table.item(row, stations_column).setForeground(QtGui.QColor('black'))
-                stations.append(station)
-        self.line_table.blockSignals(False)
-
     def color_line_table(self):
         """
         Colors the line_table rows, station number column, based on issues with the ordering of the station numbers.
@@ -892,6 +871,26 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.line_table.item(row, station_col).setBackground(red_color)
             else:
                 self.line_table.item(row, station_col).setBackground(QtGui.QColor('white'))
+        self.line_table.blockSignals(False)
+
+    def check_station_duplicates(self):
+        """
+        Colors stationGPS table rows to indicate duplicate station numbers in the GPS.
+        :return: None
+        """
+        self.line_table.blockSignals(True)
+        stations_column = self.line_table_columns.index('Station')
+        stations = []
+        for row in range(self.line_table.rowCount()):
+            if self.line_table.item(row, stations_column):
+                station = self.line_table.item(row, stations_column).text()
+                if station in stations:
+                    other_station_index = stations.index(station)
+                    self.line_table.item(row, stations_column).setForeground(QtGui.QColor('red'))
+                    self.line_table.item(other_station_index, stations_column).setForeground(QtGui.QColor('red'))
+                else:
+                    self.line_table.item(row, stations_column).setForeground(QtGui.QColor('black'))
+                stations.append(station)
         self.line_table.blockSignals(False)
 
     def check_missing_gps(self):
@@ -948,7 +947,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.check_missing_gps()
 
         table.blockSignals(False)
-        self.gps_object_changed(table)
+        self.gps_object_changed(table, refresh=True)
 
     # def remove_data_row(self):
     #     """
@@ -988,7 +987,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         gps = gps.df.loc[filt]
 
         self.fill_gps_table(gps, self.line_table)
-        self.gps_object_changed(self.line_table)
+        self.gps_object_changed(self.line_table, refresh=True)
 
     def export_gps(self, type):
         """
@@ -1046,7 +1045,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         it will do the shift for the entire table.
         :return: None
         """
-        print('Shifting station GPS numbers')
         self.line_table.blockSignals(True)
 
         def apply_station_shift(row):
@@ -1078,7 +1076,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_gps_shift_amt = shift_amount
 
         self.line_table.blockSignals(False)
-        self.gps_object_changed(self.line_table)
+        self.gps_object_changed(self.line_table, refresh=False)
+
+        # Color the table
+        self.color_line_table()
+        self.check_station_duplicates()
+        self.check_missing_gps()
 
     def shift_loop_elevation(self):
         """
@@ -1111,7 +1114,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_loop_elev_shift_amt = shift_amount
 
         self.loop_table.blockSignals(False)
-        self.gps_object_changed(self.loop_table)
+        self.gps_object_changed(self.loop_table, refresh=False)
 
     # def shift_station_numbers(self):
     #     """
@@ -1170,7 +1173,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.line_table.blockSignals(False)
 
-        self.gps_object_changed(self.line_table)
+        self.gps_object_changed(self.line_table, refresh=False)
 
     # def reverse_polarity(self, component=None):
     #     """
@@ -1218,7 +1221,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             rev_stations = stations[::-1]
             gps.Station = rev_stations
             self.fill_gps_table(gps, self.line_table)
-            self.gps_object_changed(self.line_table)
+            self.gps_object_changed(self.line_table, refresh=False)
         else:
             pass
 
@@ -1234,7 +1237,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             item = QTableWidgetItem(str(station))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.line_table.setItem(row, self.line_table_columns.index('Station'), item)
-            self.gps_object_changed(self.line_table)
+            self.gps_object_changed(self.line_table, refresh=False)
 
         self.line_table.blockSignals(False)
 
@@ -1353,10 +1356,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         return BoreholeGeometry(self.get_collar(), self.get_segments())
 
-    def gps_object_changed(self, table):
+    def gps_object_changed(self, table, refresh=False):
         """
         Update the PEMFile's GPS object when it is modified in the table
         :param table: QTableWidget table
+        :param refresh: bool, if the parent should refresh the PEMFile. Should be false the GPS object isn't
+        losing or gaining any rows.
         """
         if table == self.loop_table:
             self.pem_file.loop = self.get_loop()
@@ -1370,4 +1375,5 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         elif table == self.segments_table:
             self.pem_file.segments = self.get_segments()
 
-        self.refresh_row_signal.emit()
+        if refresh:
+            self.refresh_row_signal.emit()

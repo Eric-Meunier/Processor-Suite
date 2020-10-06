@@ -74,6 +74,7 @@ class BaseGPS:
 
         # Assign the converted UTM columns to the data frame
         self.df['Easting'], self.df['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+        self.df.dropna(inplace=True)
         self.crs = CRS.from_epsg(epsg_code)
         return self
 
@@ -107,6 +108,7 @@ class BaseGPS:
 
         # Assign the converted UTM columns to the data frame
         self.df['Easting'], self.df['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+        self.df.dropna(inplace=True)
         self.crs = CRS.from_epsg(epsg_code)
         return self
 
@@ -140,6 +142,7 @@ class BaseGPS:
 
         # Assign the converted UTM columns to the data frame
         self.df['Easting'], self.df['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+        self.df.dropna(inplace=True)
         self.crs = CRS.from_epsg(epsg_code)
         return self
 
@@ -178,6 +181,7 @@ class BaseGPS:
 
         # Assign the converted UTM columns to the data frame
         self.df['Easting'], self.df['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+        self.df.dropna(inplace=True)
         self.crs = CRS.from_epsg(epsg_code)
         return self
 
@@ -208,6 +212,7 @@ class BaseGPS:
         else:
             # Assign the converted UTM columns to the data frame
             self.df['Easting'], self.df['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
+            self.df.dropna(inplace=True)
             self.crs = CRS.from_epsg(epsg_code)
             return self
 
