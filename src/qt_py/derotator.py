@@ -267,7 +267,8 @@ class Derotator(QMainWindow, Ui_Derotator):
             if response == self.message.No:
                 return
 
-        if self.pem_file.has_loop_gps() and self.pem_file.has_geometry():
+        # Disable the EXE PP de-rotation button until we know it works correctly.
+        if self.pem_file.has_loop_gps() and self.pem_file.has_geometry() and not getattr(sys, 'frozen', False):
             self.pp_btn.setEnabled(True)
         else:
             self.pp_btn.setEnabled(False)

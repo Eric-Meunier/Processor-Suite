@@ -1,11 +1,8 @@
 import math
 import os
 import sys
-import re
 import numpy as np
-import utm
 import simplekml
-# import folium
 import io
 import gpxpy
 
@@ -16,14 +13,11 @@ from shapely.geometry import asMultiPoint
 import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib.ticker as ticker
 import pyqtgraph as pg
-# from folium import FeatureGroup
-# from folium.plugins import MiniMap
 from PyQt5 import QtGui, QtCore, uic, QtWebEngineWidgets
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from shutil import copyfile
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -31,26 +25,6 @@ if getattr(sys, 'frozen', False):
     loopPlannerCreatorFile = 'qt_ui\\loop_planner.ui'
     gridPlannerCreatorFile = 'qt_ui\\grid_planner.ui'
     icons_path = 'qt_ui\\icons'
-
-    # # Copy required files to root folder if they are not present. Needed for QtWebEngineView. Possibly won't be
-    # # needed when bundling in 64 bit windows.
-    # resources_dir, exe_dir, root = r'PyQt5\Qt\resources', r'PyQt5\Qt\bin', os.curdir
-    # resources_files, exe_file, root_files = os.listdir(resources_dir), 'QtWebEngineProcess.exe', os.listdir(root)
-    #
-    # for file in resources_files:
-    #     if file not in root_files:
-    #         source = os.path.join(resources_dir, file)
-    #         print(f"Copying file {source} to {file}")
-    #         copyfile(source, file)
-    #     else:
-    #         print(f"File {file} already in folder")
-    # if exe_file not in root_files:
-    #     source = os.path.join(exe_dir, exe_file)
-    #     print(f"Copying {source} to {exe_file}")
-    #     copyfile(source, exe_file)
-    # else:
-    #     print(f"File {exe_file} already in folder")
-
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     loopPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\loop_planner.ui')
@@ -267,8 +241,9 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.actionSave_as_KMZ.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
         self.actionSave_as_GPX.triggered.connect(self.save_gpx)
         self.actionSave_as_GPX.setIcon(QtGui.QIcon(os.path.join(icons_path, 'garmin_file.png')))
-        self.view_map_action.triggered.connect(self.view_map)
-        self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+        self.view_map_action.setDisabled(True)
+        # self.view_map_action.triggered.connect(self.view_map)
+        # self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
         self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_loop_to_clipboard)
 
         # Line edits
@@ -770,72 +745,72 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         hole['Easting'], hole['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
         return hole
 
-    def view_map(self):
-        """
-        View the hole and loop in a Folium interactive map. A screen capture of the map can be saved with 'Ctrl+S'
-        or copied to the clipboard with 'Ctrl+C'
-        :return: None
-        """
-        loop_coords = self.get_loop_lonlat().drop('Elevation', axis=1).to_numpy()
-        if not loop_coords.any():
-            return
-
-        collar = self.get_collar_lonlat().to_numpy()
-        if not collar.any():
-            return
-
-        # Swap the lon and lat columns so it is now (lat, lon)
-        loop_coords[:, [0, 1]] = loop_coords[:, [1, 0]]
-        collar[:, [0, 1]] = collar[:, [1, 0]]
-
-        hole_name = 'Hole' if self.hole_name_edit.text() == '' else self.hole_name_edit.text()
-        loop_name = 'Loop' if self.loop_name_edit.text() == '' else self.loop_name_edit.text()
-
-        # tiles='Stamen Terrain', 'CartoDBPositronNoLabels'
-        m = folium.Map(location=collar,
-                       zoom_start=15,
-                       zoom_control=False,
-                       control_scale=True,
-                       tiles='OpenStreetMap',
-                       attr='testing attr'
-                       )
-
-        mini_map = MiniMap(toggle_display=True)
-
-        folium.raster_layers.TileLayer('OpenStreetMap').add_to(m)
-        folium.raster_layers.TileLayer('Stamen Toner').add_to(m)
-        folium.raster_layers.TileLayer('Stamen Terrain').add_to(m)
-        folium.raster_layers.TileLayer('Cartodb positron').add_to(m)
-
-        collar_group = FeatureGroup(name='Collar')
-        loop_group = FeatureGroup(name='Loop')
-        collar_group.add_to(m)
-        loop_group.add_to(m)
-        folium.LayerControl().add_to(m)
-
-        # Plot hole collar
-        folium.Marker(collar,
-                      popup=hole_name,
-                      tooltip=hole_name
-                      ).add_to(collar_group)
-
-        # Plot loop
-        folium.PolyLine(locations=loop_coords,
-                        popup=loop_name,
-                        tooltip=loop_name,
-                        line_opacity=0.5,
-                        color='magenta'
-                        ).add_to(loop_group)
-
-        # m.add_child(MeasureControl(toggle_display=True))
-        # m.add_child(mini_map)
-
-        # So the HTML can be opened in PyQt
-        data = io.BytesIO()
-        m.save(data, close_file=False)
-
-        self.win.setHtml(data.getvalue().decode())
-        self.win.show()
+    # def view_map(self):
+    #     """
+    #     View the hole and loop in a Folium interactive map. A screen capture of the map can be saved with 'Ctrl+S'
+    #     or copied to the clipboard with 'Ctrl+C'
+    #     :return: None
+    #     """
+    #     loop_coords = self.get_loop_lonlat().drop('Elevation', axis=1).to_numpy()
+    #     if not loop_coords.any():
+    #         return
+    #
+    #     collar = self.get_collar_lonlat().to_numpy()
+    #     if not collar.any():
+    #         return
+    #
+    #     # Swap the lon and lat columns so it is now (lat, lon)
+    #     loop_coords[:, [0, 1]] = loop_coords[:, [1, 0]]
+    #     collar[:, [0, 1]] = collar[:, [1, 0]]
+    #
+    #     hole_name = 'Hole' if self.hole_name_edit.text() == '' else self.hole_name_edit.text()
+    #     loop_name = 'Loop' if self.loop_name_edit.text() == '' else self.loop_name_edit.text()
+    #
+    #     # tiles='Stamen Terrain', 'CartoDBPositronNoLabels'
+    #     m = folium.Map(location=collar,
+    #                    zoom_start=15,
+    #                    zoom_control=False,
+    #                    control_scale=True,
+    #                    tiles='OpenStreetMap',
+    #                    attr='testing attr'
+    #                    )
+    #
+    #     mini_map = MiniMap(toggle_display=True)
+    #
+    #     folium.raster_layers.TileLayer('OpenStreetMap').add_to(m)
+    #     folium.raster_layers.TileLayer('Stamen Toner').add_to(m)
+    #     folium.raster_layers.TileLayer('Stamen Terrain').add_to(m)
+    #     folium.raster_layers.TileLayer('Cartodb positron').add_to(m)
+    #
+    #     collar_group = FeatureGroup(name='Collar')
+    #     loop_group = FeatureGroup(name='Loop')
+    #     collar_group.add_to(m)
+    #     loop_group.add_to(m)
+    #     folium.LayerControl().add_to(m)
+    #
+    #     # Plot hole collar
+    #     folium.Marker(collar,
+    #                   popup=hole_name,
+    #                   tooltip=hole_name
+    #                   ).add_to(collar_group)
+    #
+    #     # Plot loop
+    #     folium.PolyLine(locations=loop_coords,
+    #                     popup=loop_name,
+    #                     tooltip=loop_name,
+    #                     line_opacity=0.5,
+    #                     color='magenta'
+    #                     ).add_to(loop_group)
+    #
+    #     # m.add_child(MeasureControl(toggle_display=True))
+    #     # m.add_child(mini_map)
+    #
+    #     # So the HTML can be opened in PyQt
+    #     data = io.BytesIO()
+    #     m.save(data, close_file=False)
+    #
+    #     self.win.setHtml(data.getvalue().decode())
+    #     self.win.show()
 
     def save_kmz(self):
         """
@@ -1025,8 +1000,9 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.actionSave_as_KMZ.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
         self.actionSave_as_GPX.triggered.connect(self.save_gpx)
         self.actionSave_as_GPX.setIcon(QtGui.QIcon(os.path.join(icons_path, 'garmin_file.png')))
-        self.view_map_action.triggered.connect(self.view_map)
-        self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+        self.view_map_action.setDisabled(True)
+        # self.view_map_action.triggered.connect(self.view_map)
+        # self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
         self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_loop_to_clipboard)
         self.actionCopy_Grid_to_Clipboard.triggered.connect(self.copy_grid_to_clipboard)
 
@@ -1604,87 +1580,87 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
 
         return loop
 
-    def view_map(self):
-        """
-        View the hole and loop in a Folium interactive map. A screen capture of the map can be saved with 'Ctrl+S'
-        or copied to the clipboard with 'Ctrl+C'
-        :return: None
-        """
-        loop_coords = self.get_loop_lonlat()
-
-        # Get the center of the loop to be used as the location of the folium map
-        center = loop_coords['Northing'].sum() / loop_coords.shape[0], \
-                 loop_coords['Easting'].sum() / loop_coords.shape[0]
-
-        loop_coords = loop_coords.to_numpy()
-        # Swap the lon and lat columns so it is now (lat, lon)
-        loop_coords[:, [0, 1]] = loop_coords[:, [1, 0]]
-
-        grid_name = 'Grid' if self.grid_name_edit.text() == '' else self.grid_name_edit.text()
-        loop_name = 'Loop' if self.loop_name_edit.text() == '' else self.loop_name_edit.text()
-
-        # tiles='Stamen Terrain', 'CartoDBPositronNoLabels'
-        m = folium.Map(location=center,
-                       zoom_start=15,
-                       zoom_control=False,
-                       control_scale=True,
-                       tiles='OpenStreetMap',
-                       attr='testing attr'
-                       )
-
-        mini_map = MiniMap(toggle_display=True)
-
-        folium.raster_layers.TileLayer('OpenStreetMap').add_to(m)
-        folium.raster_layers.TileLayer('Stamen Toner').add_to(m)
-        folium.raster_layers.TileLayer('Stamen Terrain').add_to(m)
-        folium.raster_layers.TileLayer('Cartodb positron').add_to(m)
-
-        station_group = FeatureGroup(name='Stations')
-        line_group = FeatureGroup(name='Lines')
-        loop_group = FeatureGroup(name='Loop')
-        station_group.add_to(m)
-        line_group.add_to(m)
-        loop_group.add_to(m)
-
-        folium.LayerControl().add_to(m)
-
-        # Plot loop
-        folium.PolyLine(locations=loop_coords,
-                        popup=loop_name,
-                        tooltip=loop_name,
-                        line_opacity=0.5,
-                        color='magenta'
-                        ).add_to(loop_group)
-
-        # Plot the line
-        def grid_line_to_folium(group):
-            folium.PolyLine(locations=group.loc[:, ['Northing', 'Easting']].to_numpy(),
-                            popup=group.Line_name.unique()[0],
-                            tooltip=group.Line_name.unique()[0],
-                            line_opacity=0.5
-                            ).add_to(line_group)
-
-        # Plot the station markers
-        def grid_station_to_folium(row):
-            folium.Marker([row.Northing, row.Easting],
-                          popup=row.Station,
-                          tooltip=row.Station,
-                          size=10
-                          ).add_to(station_group)
-
-        grid = self.get_grid_lonlat()
-        grid.groupby('Line_name').apply(grid_line_to_folium)
-        grid.apply(grid_station_to_folium, axis=1)
-
-        # m.add_child(MeasureControl(toggle_display=True))
-        # m.add_child(mini_map)
-
-        # So the HTML can be opened in PyQt
-        data = io.BytesIO()
-        m.save(data, close_file=False)
-
-        self.win.setHtml(data.getvalue().decode())
-        self.win.show()
+    # def view_map(self):
+    #     """
+    #     View the hole and loop in a Folium interactive map. A screen capture of the map can be saved with 'Ctrl+S'
+    #     or copied to the clipboard with 'Ctrl+C'
+    #     :return: None
+    #     """
+    #     loop_coords = self.get_loop_lonlat()
+    #
+    #     # Get the center of the loop to be used as the location of the folium map
+    #     center = loop_coords['Northing'].sum() / loop_coords.shape[0], \
+    #              loop_coords['Easting'].sum() / loop_coords.shape[0]
+    #
+    #     loop_coords = loop_coords.to_numpy()
+    #     # Swap the lon and lat columns so it is now (lat, lon)
+    #     loop_coords[:, [0, 1]] = loop_coords[:, [1, 0]]
+    #
+    #     grid_name = 'Grid' if self.grid_name_edit.text() == '' else self.grid_name_edit.text()
+    #     loop_name = 'Loop' if self.loop_name_edit.text() == '' else self.loop_name_edit.text()
+    #
+    #     # tiles='Stamen Terrain', 'CartoDBPositronNoLabels'
+    #     m = folium.Map(location=center,
+    #                    zoom_start=15,
+    #                    zoom_control=False,
+    #                    control_scale=True,
+    #                    tiles='OpenStreetMap',
+    #                    attr='testing attr'
+    #                    )
+    #
+    #     mini_map = MiniMap(toggle_display=True)
+    #
+    #     folium.raster_layers.TileLayer('OpenStreetMap').add_to(m)
+    #     folium.raster_layers.TileLayer('Stamen Toner').add_to(m)
+    #     folium.raster_layers.TileLayer('Stamen Terrain').add_to(m)
+    #     folium.raster_layers.TileLayer('Cartodb positron').add_to(m)
+    #
+    #     station_group = FeatureGroup(name='Stations')
+    #     line_group = FeatureGroup(name='Lines')
+    #     loop_group = FeatureGroup(name='Loop')
+    #     station_group.add_to(m)
+    #     line_group.add_to(m)
+    #     loop_group.add_to(m)
+    #
+    #     folium.LayerControl().add_to(m)
+    #
+    #     # Plot loop
+    #     folium.PolyLine(locations=loop_coords,
+    #                     popup=loop_name,
+    #                     tooltip=loop_name,
+    #                     line_opacity=0.5,
+    #                     color='magenta'
+    #                     ).add_to(loop_group)
+    #
+    #     # Plot the line
+    #     def grid_line_to_folium(group):
+    #         folium.PolyLine(locations=group.loc[:, ['Northing', 'Easting']].to_numpy(),
+    #                         popup=group.Line_name.unique()[0],
+    #                         tooltip=group.Line_name.unique()[0],
+    #                         line_opacity=0.5
+    #                         ).add_to(line_group)
+    #
+    #     # Plot the station markers
+    #     def grid_station_to_folium(row):
+    #         folium.Marker([row.Northing, row.Easting],
+    #                       popup=row.Station,
+    #                       tooltip=row.Station,
+    #                       size=10
+    #                       ).add_to(station_group)
+    #
+    #     grid = self.get_grid_lonlat()
+    #     grid.groupby('Line_name').apply(grid_line_to_folium)
+    #     grid.apply(grid_station_to_folium, axis=1)
+    #
+    #     # m.add_child(MeasureControl(toggle_display=True))
+    #     # m.add_child(mini_map)
+    #
+    #     # So the HTML can be opened in PyQt
+    #     data = io.BytesIO()
+    #     m.save(data, close_file=False)
+    #
+    #     self.win.setHtml(data.getvalue().decode())
+    #     self.win.show()
 
     def save_kmz(self):
         """

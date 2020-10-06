@@ -36,7 +36,7 @@ from src.qt_py.unpacker import Unpacker
 from src.qt_py.ri_importer import BatchRIImporter
 from src.qt_py.name_editor import BatchNameEditor
 from src.qt_py.station_splitter import StationSplitter
-from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer  #, FoliumMap
+from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer
 from src.qt_py.derotator import Derotator
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.pem_plot_editor import PEMPlotEditor
@@ -59,7 +59,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
 sys.excepthook = handle_exception
 
-__version__ = '0.11.0'
+__version__ = '0.11.0a'
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -733,7 +733,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             else:
                 self.epsg_label.setText('')
 
-        def update_pem_files():
+        def update_pem_files_crs():
             """
             Update the CRS in all opened PEMFiles
             """
@@ -755,12 +755,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Combo boxes
         self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
         self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_system_cbox.currentIndexChanged.connect(update_pem_files)
+        self.gps_system_cbox.currentIndexChanged.connect(update_pem_files_crs)
         self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
         self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_datum_cbox.currentIndexChanged.connect(update_pem_files)
+        self.gps_datum_cbox.currentIndexChanged.connect(update_pem_files_crs)
         self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_zone_cbox.currentIndexChanged.connect(update_pem_files)
+        self.gps_zone_cbox.currentIndexChanged.connect(update_pem_files_crs)
 
         # Radio buttons
         self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
@@ -1732,24 +1732,41 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             Convert the GPS of all GPS objects to the new EPSG code.
             :param epsg_code: int
             """
+            # Set the EPSG text in the status bar and click the EPSG radio button
+            self.epsg_edit.setText(str(epsg_code))
+            self.epsg_edit.editingFinished.emit()
+            self.epsg_rbtn.click()
+
             print(f"Converting to EPSG:{epsg_code}")
 
-            for pem_file in self.pem_files:
-                if not pem_file.loop.df.empty:
-                    pem_file.loop.crs = crs
-                    pem_file.loop = pem_file.loop.to_epsg(epsg_code)
-                if pem_file.is_borehole():
-                    if not pem_file.collar.df.empty:
-                        pem_file.collar.crs = crs
-                        pem_file.collar = pem_file.collar.to_epsg(epsg_code)
-                else:
-                    if not pem_file.line.df.empty:
-                        pem_file.line.crs = crs
-                        pem_file.line = pem_file.line.to_epsg(epsg_code)
-                self.refresh_pem(pem_file)
-                self.epsg_edit.setText(str(epsg_code))
-                self.epsg_edit.editingFinished.emit()
-                self.epsg_rbtn.click()
+            # Set up the progress bar
+            bar = CustomProgressBar()
+            bar.setMaximum(len(self.pem_files))
+
+            with pg.ProgressDialog("Converting DMP Files...", 0, len(self.pem_files)) as dlg:
+                dlg.setBar(bar)
+                dlg.setWindowTitle("Converting DMP Files")
+
+                # Convert all GPS of each PEMFile
+                for pem_file in self.pem_files:
+                    dlg.setLabelText(f"Converting GPS of {pem_file.filepath.name}")
+
+                    if not pem_file.loop.df.empty:
+                        pem_file.loop.crs = crs
+                        pem_file.loop = pem_file.loop.to_epsg(epsg_code)
+
+                    if pem_file.is_borehole():
+                        if not pem_file.collar.df.empty:
+                            pem_file.collar.crs = crs
+                            pem_file.collar = pem_file.collar.to_epsg(epsg_code)
+
+                    else:
+                        if not pem_file.line.df.empty:
+                            pem_file.line.crs = crs
+                            pem_file.line = pem_file.line.to_epsg(epsg_code)
+
+                    self.refresh_pem(pem_file)
+                    dlg += 1
 
         crs = self.get_crs()
 
@@ -3361,14 +3378,6 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
         self.convert_to_label.setText('')
         self.current_crs_label.setText('')
 
-        # Add the GPS system and datum drop box options
-        gps_systems = ['', 'Lat/Lon', 'UTM']
-        for system in gps_systems:
-            self.gps_system_cbox.addItem(system)
-
-        int_valid = QtGui.QIntValidator()
-        self.epsg_edit.setValidator(int_valid)
-
         self.init_signals()
 
     def init_signals(self):
@@ -3408,8 +3417,7 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
                     zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
                 # WGS 84 has zones from 1N and 1S to 60N and 60S
                 else:
-                    zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
-                                                                               range(1, 61)]
+                    zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
 
                 for zone in zones:
                     self.gps_zone_cbox.addItem(zone)
@@ -3463,6 +3471,18 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
                 self.convert_to_label.setText(f"{crs.name} ({crs.type_name})")
             else:
                 self.convert_to_label.setText('')
+
+        # Add the GPS system and datum drop box options
+        gps_systems = ['', 'Lat/Lon', 'UTM']
+        for system in gps_systems:
+            self.gps_system_cbox.addItem(system)
+
+        datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
+        for datum in datums:
+            self.gps_datum_cbox.addItem(datum)
+
+        int_valid = QtGui.QIntValidator()
+        self.epsg_edit.setValidator(int_valid)
 
         self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
         self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
