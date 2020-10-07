@@ -1,5 +1,6 @@
 import copy
 import re
+import logging
 from pathlib import Path
 
 import geopandas as gpd
@@ -12,6 +13,8 @@ from math import hypot
 from pyproj import CRS
 from scipy import spatial
 from shapely.geometry import asMultiPoint
+
+logger = logging.getLogger(__name__)
 
 
 class BaseGPS:
@@ -290,7 +293,8 @@ class TransmitterLoop(BaseGPS):
 
         if len(gps.columns) < 3:
             error_msg = f"{len(gps.columns)} columns of values were found instead of 3."
-            print("Fewer than 3 columns were found.")
+            logger.info(error_msg)
+            # print("Fewer than 3 columns were found.")
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
             gps = gps.drop(gps.columns[3:], axis=1)
@@ -460,7 +464,7 @@ class SurveyLine(BaseGPS):
 
         if len(gps.columns) < 4:
             error_msg = f"{len(gps.columns)} columns of values were found instead of 4."
-            print(f"{len(gps.columns)} columns of values were found instead of 4.")
+            logger.info(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 4:
             gps = gps.drop(gps.columns[4:], axis=1)
@@ -614,7 +618,7 @@ class BoreholeCollar(BaseGPS):
 
         if len(gps.columns) < 3:
             error_msg = f"{len(gps.columns)} columns of values were found instead of 3."
-            print(f"{len(gps.columns)} columns of values were found instead of 3.")
+            logger.info(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
             gps = gps.drop(gps.columns[3:], axis=1)  # Remove extra columns
@@ -715,7 +719,7 @@ class BoreholeSegments(BaseGPS):
 
         if len(gps.columns) < 5:
             error_msg = f"{len(gps.columns)} columns of values were found instead of 5."
-            print(f"{len(gps.columns)} columns of values were found instead of 5.")
+            logger.info(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 5:
             gps = gps.drop(gps.columns[5:], axis=1)

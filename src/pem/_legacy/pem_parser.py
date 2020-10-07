@@ -172,7 +172,7 @@ class PEMParser:
                     the start of the next on-time.
                     :return: int: Row index of the last off-time channel
                     """
-                    filt = table['Remove'] == False
+                    filt = ~table['Remove']
                     for index, row in table[filt][1:-1].iterrows():
                         next_row = table.loc[index + 1]
                         if row.Width > (next_row.Width * 2):

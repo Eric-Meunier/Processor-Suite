@@ -760,15 +760,18 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 save_file_action.triggered.connect(lambda: self.save_pem_files(selected=True))
 
                 export_pem_action = QAction("&Export...", self)
+                export_pem_action.setIcon(QIcon(os.path.join(icons_path, 'export.png')))
                 export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True, processed=False))
 
                 save_file_as_action = QAction("&Save As...", self)
+                save_file_as_action.setIcon(QIcon(os.path.join(icons_path, 'save_as.png')))
                 save_file_as_action.triggered.connect(self.save_pem_file_as)
 
                 action_view_channels = QAction("&Channel Table", self)
                 action_view_channels.triggered.connect(self.open_channel_table_viewer)
 
                 merge_action = QAction("&Merge", self)
+                merge_action.setIcon(QIcon(os.path.join(icons_path, 'pem_merger.png')))
                 merge_action.triggered.connect(self.merge_pem_files)
 
                 print_plots_action = QAction("&Print Plots", self)
@@ -862,6 +865,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     # View menu
                     view_menu = menu.addMenu('View')
                     view_menu.addAction(action_view_channels)
+                    view_menu.setIcon(QIcon(os.path.join(icons_path, 'view.png')))
                     view_menu.addSeparator()
 
                     # View Loop
@@ -1981,7 +1985,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             self.status_bar.showMessage(f'Save Complete. PEM file saved as {new_pem.filepath.name}', 2000)
             # Must open and not update the PEM since it is being copied
-            self.open_pem_files(new_pem)
+            # self.open_pem_files(new_pem)
 
         def save_xyz():
             xyz_file = pem_file.to_xyz()
@@ -3629,8 +3633,8 @@ class ChannelTimeViewer(QMainWindow):
         # Status bar
         self.survey_type_label = QLabel(f" {self.pem_file.get_survey_type()} Survey ")
         self.timebase_label = QLabel(f" Timebase: {self.pem_file.timebase}ms ")
-        off_time_channels = len(self.pem_file.channel_times[self.pem_file.channel_times.Remove == False])
-        on_time_channels = len(self.pem_file.channel_times[self.pem_file.channel_times.Remove == True])
+        off_time_channels = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove])
+        on_time_channels = len(self.pem_file.channel_times[self.pem_file.channel_times.Remove])
         self.num_channels = QLabel(f" Channels: {on_time_channels} On-Time / {off_time_channels} Off-Time ")
 
         self.units_combo = QComboBox()
@@ -3738,9 +3742,9 @@ def main():
     mw = PEMHub()
     pg = PEMGetter()
 
-    # pem_files = pg.get_pems(client='PEM Rotation', file='131-20-32xy.PEM')
+    pem_files = pg.get_pems(client='PEM Rotation', random=True, number=3)
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
-    pem_files = pg.get_pems(client='Kazzinc', number=4)
+    # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(random=True, number=9)
     # s = GPSShareWidget()
@@ -3785,7 +3789,6 @@ if __name__ == '__main__':
 
     sys.excepthook = handle_exception
 
-    # logging.basicConfig(filename='err.log', filemode='w', level=logging.INFO)
     logging.basicConfig(filename='err.log',
                         level=logging.INFO,
                         format='\n%(asctime)s\n%(levelname)s: %(message)s',

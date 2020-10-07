@@ -438,7 +438,7 @@ class PEMFile:
         channel_bounds = [None] * 4
 
         # Only plot off-time channels
-        number_of_channels = len(self.channel_times[self.channel_times.Remove == False])
+        number_of_channels = len(self.channel_times[~self.channel_times.Remove])
 
         num_channels_per_plot = int((number_of_channels - 1) // 4)
         remainder_channels = int((number_of_channels - 1) % 4)
@@ -615,6 +615,40 @@ class PEMFile:
         repeat_data = self.data[repeat_mask]
         return repeat_data
 
+    def get_rotation_filtered_data(self):
+        """
+        Filter the data to only keep readings that have a matching X and Y pair for the same RAD_tool ID.
+        :return: tuple, data frame of eligible and ineligible data.
+        """
+
+        def filter_data(group):
+            """
+            Flag the readings to be removed if the group doesn't have a X and Y pair.
+            :param group: DataFrame, readings of the same station and same RAD tool ID
+            :return: DataFrame
+            """
+            if group.Component.nunique() < 2:
+                # Flag the readings to be removed
+                group.Remove = True
+            return group
+
+        data = self.data.copy()
+
+        # Add a 'Remove' column, which will be removed later.
+        data['Remove'] = False
+
+        # Create a filter for X and Y data only
+        xy_filt = (data.Component == 'X') | (data.Component == 'Y')
+
+        # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
+        data = data[xy_filt].groupby(['Station', 'RAD_ID'],
+                                     group_keys=False,
+                                     as_index=False).apply(lambda k: filter_data(k))
+
+        eligible_data = data[~data.Remove].drop(['Remove'], axis=1)
+        ineligible_stations = data[data.Remove].drop(['Remove'], axis=1)
+        return eligible_data, ineligible_stations
+
     def to_string(self):
         """
         Return the text format of the PEM file
@@ -740,7 +774,7 @@ class PEMFile:
             return new_data_df
 
         # Don't use deleted data
-        filt = self.data.del_flag == False
+        filt = ~self.data.del_flag
         # Create a data frame with all data averaged
         df = self.data[filt].groupby(['Station', 'Component']).apply(weighted_average)
         # Sort the data frame
@@ -763,7 +797,7 @@ class PEMFile:
         # Only keep the select channels from each reading
         self.data.Reading = self.data.Reading.map(lambda x: x[~self.channel_times.Remove])
         # Create a filter and update the channels table
-        filt = self.channel_times.Remove == False
+        filt = ~self.channel_times.Remove
         self.channel_times = self.channel_times[filt]
         # Update the PEM file's number of channels attribute
         self.number_of_channels = len(self.channel_times)
@@ -831,6 +865,85 @@ class PEMFile:
         self.notes.append(f'<HE3> Data scaled by factor of {1 + factor}')
         return self
 
+    def rotate_soa(self, soa):
+        """
+        Rotate the X and Y by an SOA value.
+        :param soa: int
+        :return: PEMFile object
+        """
+
+        def rotate_data(group, soa):
+            """
+            Rotate the data for a given reading
+            :param group: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
+            reading from X and Y components, and the RAD tool values for all readings must all be the same.
+            :param soa: int, value to rotate by.
+            :return: pandas DataFrame: data frame of the readings with the data rotated.
+            """
+
+            def rotate_x(x_values, y_pair, roll_angle):
+                """
+                Rotate the X data of a reading
+                Formula: X' = Xcos(roll) - Ysin(roll)
+                :param x_values: list: list of x readings to rotated
+                :param y_pair: list: list of paired y reading
+                :param roll_angle: float: calculated roll angle
+                :return: list: rotated x values
+                """
+                rotated_x = [x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)) for (x, y) in
+                             zip(x_values, y_pair)]
+                return np.array(rotated_x, dtype=float)
+
+            def rotate_y(y_values, x_pair, roll_angle):
+                """
+                Rotate the Y data of a reading
+                Formula: Y' = Xsin(roll) + Ycos(roll)
+                :param y_values: list: list of y readings to rotated
+                :param x_pair: list: list of paired x reading
+                :param roll_angle: float: calculated roll angle
+                :return: list: rotated y values
+                """
+                rotated_y = [x * math.sin(math.radians(roll_angle)) + y * math.cos(math.radians(roll_angle)) for (x, y) in
+                             zip(x_pair, y_values)]
+                return np.array(rotated_y, dtype=float)
+
+            def weighted_average(group):
+                """
+                Function to calculate the weighted average reading of a station-component group.
+                :param group: pandas DataFrame of PEM data for a station-component
+                :return: np array, averaged reading
+                """
+                # Sum the number of stacks column
+                weights = group['Number_of_stacks'].to_list()
+                # Add the weighted average of the readings to the reading column
+                averaged_reading = np.average(group.Reading.to_list(),
+                                              axis=0,
+                                              weights=weights)
+                return averaged_reading
+
+            x_data = group[group['Component'] == 'X']
+            y_data = group[group['Component'] == 'Y']
+            # Save the first reading of each component to be used a the 'pair' reading for rotation
+            x_pair = weighted_average(x_data)
+            y_pair = weighted_average(y_data)
+
+            x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, soa))
+            y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, soa))
+            row = x_data.append(y_data)
+            return row
+
+        filtered_data, _ = self.get_rotation_filtered_data()
+        print(f"Rotating data by SOA {soa}")
+
+        # Rotate the data
+        rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
+                                             group_keys=False,
+                                             as_index=False).apply(lambda l: rotate_data(l, soa))
+
+        xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
+        self.data[xy_filt] = rotated_data
+        return self
+
     def rotate(self, method='acc', soa=0):
         """
         Rotate the XY data of the PEM file.
@@ -856,7 +969,7 @@ class PEMFile:
                 """
                 Rotate the X data of a reading
                 Formula: X' = Xcos(roll) - Ysin(roll)
-                :param x: list: list of x readings to rotated
+                :param x_values: list: list of x readings to rotated
                 :param y_pair: list: list of paired y reading
                 :param roll_angle: float: calculated roll angle
                 :return: list: rotated x values
@@ -868,8 +981,8 @@ class PEMFile:
             def rotate_y(y_values, x_pair, roll_angle):
                 """
                 Rotate the Y data of a reading
-                Y' = Xsin(roll) + Ycos(roll)
-                :param y: list: list of y readings to rotated
+                Formula: Y' = Xsin(roll) + Ycos(roll)
+                :param y_values: list: list of y readings to rotated
                 :param x_pair: list: list of paired x reading
                 :param roll_angle: float: calculated roll angle
                 :return: list: rotated y values
@@ -973,8 +1086,8 @@ class PEMFile:
                 raise ValueError("Cannot perform PP rotation on a PEM file that doesn't have the necessary geometry.")
 
         # Create a filter for X and Y data only
-        filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
-        filtered_data = self.data[filt]
+        xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
+        filtered_data = self.data[xy_filt]  # Data should have already been filtered by prep_rotation.
 
         st = time.time()
         # Rotate the data
@@ -983,7 +1096,7 @@ class PEMFile:
                                              as_index=False).apply(lambda l: rotate_data(l, method, soa))
         print(f"PEMFile - Time to rotate data: {time.time() - st}")
 
-        self.data[filt] = rotated_data
+        self.data[xy_filt] = rotated_data
         # Remove the rows that were filtered out in filtered_data
         # self.data.dropna(inplace=True)
         self.probes['SOA'] = str(soa)
@@ -997,22 +1110,7 @@ class PEMFile:
         """
 
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
-        print(f"Preparing for XY-derotation for {self.filepath.name}")
-
-        def filter_data(df):
-            """
-            Remove reading groups that don't have and X and Y pair. Such readings have their station name changed
-            to NaN and are added to a 'ineligible_stations' data frame.
-            :param df: group pd DataFrame, readings of the same station and same RAD tool ID
-            :return: pd DataFrame
-            """
-            if df.Component.nunique() < 2:
-                # Capture to the ineligible stations
-                global ineligible_stations
-                ineligible_stations = pd.concat([df, ineligible_stations])
-                # Make the station NaN so it can be easily removed after
-                df.Station = np.nan
-            return df
+        print(f"Preparing for XY de-rotation for {self.filepath.name}")
 
         def setup_pp():
             """
@@ -1044,7 +1142,7 @@ class PEMFile:
 
             # TODO Remove the last channel of fluxgates
             # Only keep off-time channels with PP
-            ch_times = self.channel_times[self.channel_times.loc[:, 'Remove'] == False]
+            ch_times = self.channel_times[~self.channel_times.Remove]
             # Normalize the channel times so they start from turn off
             # ch_times.loc[:, 'Start':'Center'] = ch_times.loc[:, 'Start':'Center'].applymap(lambda x: x + ramp)
 
@@ -1097,10 +1195,11 @@ class PEMFile:
 
                     # Add the PP information (theoretical PP, cleaned PP, roll angle) to the new RAD Tool object
                     if include_pp is True:
+                        segments = self.get_segments()
                         pp_rad_info = dict()
 
                         # Calculate the raw PP value for each component
-                        pp_ch_index = self.channel_times[self.channel_times.Remove == False].index.values[0]
+                        pp_ch_index = self.channel_times[~self.channel_times.Remove].index.values[0]
                         measured_ppx = group[group.Component == 'X'].apply(lambda x: x.Reading[pp_ch_index],
                                                                            axis=1).mean()
                         measured_ppy = group[group.Component == 'Y'].apply(lambda x: x.Reading[pp_ch_index],
@@ -1263,39 +1362,29 @@ class PEMFile:
             group.RAD_tool = rad
             return group
 
-        global ineligible_stations, include_pp
-        ineligible_stations = pd.DataFrame()
-        segments = self.get_segments()
-
         if all([self.has_loop_gps(), self.has_geometry(), self.ramp > 0]):
             setup_pp()
             include_pp = True
         else:
             include_pp = False
 
-        # Create a filter for X and Y data only
-        filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
-        # st = time.time()
         # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
-        filtered_data = self.data[filt].groupby(['Station', 'RAD_ID'],
-                                                group_keys=False,
-                                                as_index=False).apply(lambda k: filter_data(k))
-        if filtered_data.dropna(subset=['Station']).empty:
+        eligible_data, ineligible_data = self.get_rotation_filtered_data()
+
+        if eligible_data.empty:
             raise Exception(f"No eligible data found for probe de-rotation in {self.filepath.name}")
 
-        # print(f"PEMFile - Time to filter data for rotation preparation: {time.time() - st}")
-
         # Calculate the RAD tool angles
-        prepped_data = filtered_data.groupby(['Station', 'RAD_ID'],
+        prepped_data = eligible_data.groupby(['Station', 'RAD_ID'],
                                              group_keys=False,
                                              as_index=False).apply(lambda l: prepare_rad(l))
-        # print(f"PEMFile - Time to prepare RAD tools: {time.time() - st}")
 
-        self.data[filt] = prepped_data
+        xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
+        self.data[xy_filt] = prepped_data
         # Remove the rows that were filtered out in filtered_data
         self.data.dropna(subset=['Station'], inplace=True)
         self.prepped_for_rotation = True
-        return self, ineligible_stations
+        return self, ineligible_data
 
 
 class PEMParser:
@@ -1859,7 +1948,7 @@ class PEMParser:
                     the start of the next on-time.
                     :return: int: Row index of the last off-time channel
                     """
-                    filt = table['Remove'] == False
+                    filt = ~table['Remove']
                     for index, row in table[filt][1:-1].iterrows():
                         next_row = table.loc[index + 1]
                         if row.Width > (next_row.Width * 2):
@@ -2165,7 +2254,7 @@ class DMPParser:
                     the start of the next on-time.
                     :return: int: Row index of the last off-time channel
                     """
-                    filt = table['Remove'] == False
+                    filt = ~table['Remove']
                     for index, row in table[filt][1:-1].iterrows():
                         next_row = table.loc[index + 1]
                         if row.Width > (next_row.Width * 2):
@@ -2431,7 +2520,7 @@ class DMPParser:
                     the start of the next on-time.
                     :return: int: Row index of the last off-time channel
                     """
-                    filt = table['Remove'] == False
+                    filt = ~table['Remove']
                     for index, row in table[filt][1:-1].iterrows():
                         next_row = table.loc[index + 1]
                         if row.Width > (next_row.Width * 2):
@@ -2632,7 +2721,7 @@ class DMPParser:
             pem_df['Overload'] = df['Overload'].map(lambda x: False if x.strip() == 'F' else True)
 
             # Find the overload readings and set them to be deleted
-            overload_filt = pem_df.loc[:, 'Overload'] == True
+            overload_filt = pem_df.loc[:, 'Overload']
             pem_df.loc[overload_filt, 'del_flag'] = True
 
             pem_df['datetime'] = df['Date_Time'].map(str_to_datetime)
@@ -2833,7 +2922,7 @@ class PEMSerializer:
         df = self.pem_file.get_data(sorted=True)
 
         # Remove deleted readings
-        filt = df.del_flag == False
+        filt = ~df.del_flag
         df = df[filt]
 
         def serialize_reading(reading):
@@ -3253,10 +3342,11 @@ if __name__ == '__main__':
     dparse = DMPParser()
     pemparse = PEMParser()
     pem_g = PEMGetter()
-    # pem_file = pg.get_pems(client='PEM Rotation', file='BX-081.PEM')[0]
-    pem_file = pem_g.get_pems(client='Kazzinc', number=1)[0]
-    pem_file.to_xyz()
+    pem_file = pem_g.get_pems(client='PEM Rotation', file='BX-081.PEM')[0]
+    # pem_file = pem_g.get_pems(client='Kazzinc', number=1)[0]
+    # pem_file.to_xyz()
     # prep_pem, _ = pem_file.prep_rotation()
+    pem = pem_file.rotate_soa(10)
     # rotated_pem = prep_pem.rotate('pp')
 
     # pem_file = pemparse.parse(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM')

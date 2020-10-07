@@ -37,6 +37,7 @@ pg.setConfigOption('crashWarning', True)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
+# TODO Add SOA rotation for XY boreholes
 class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
     accept_sig = QtCore.pyqtSignal(str)
 
@@ -48,7 +49,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
 
         # Format window
         self.setWindowTitle('PEM Merger')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'plot_editor.png')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'pem_merger.png')))
 
         self.converter = StationConverter()
         self.pf1 = None
@@ -58,6 +59,8 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         self.channel_bounds = None
         self.last_scale_factor_1 = 0.
         self.last_scale_factor_2 = 0.
+        self.last_soa_1 = 0.
+        self.last_soa_2 = 0.
 
         self.menuView.addSeparator()
         self.view_x_action = QAction('X Component')
@@ -160,12 +163,28 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             self.last_scale_factor_1 = factor
 
         def factor_2_changed(factor):
-            factor = factor - self.last_scale_factor_2
+            scale_factor = factor - self.last_scale_factor_2
 
-            self.pf2 = self.pf2.scale_by_factor(factor)
+            self.pf2 = self.pf2.scale_by_factor(scale_factor)
             self.plot_profiles(self.pf2, components='all')
 
             self.last_scale_factor_2 = factor
+
+        def soa_1_changed(soa):
+            soa_delta = soa - self.last_soa_1
+
+            self.pf1 = self.pf1.rotate_soa(soa_delta)
+            self.plot_profiles(self.pf1, components='all')
+
+            self.last_soa_1 = soa
+
+        def soa_2_changed(soa):
+            soa_delta = soa - self.last_soa_2
+
+            self.pf2 = self.pf2.rotate_soa(soa_delta)
+            self.plot_profiles(self.pf2, components='all')
+
+            self.last_soa_2 = soa
 
         def flip_component(pem_file):
             ind = self.profile_tab_widget.currentIndex()
@@ -217,6 +236,9 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
 
         self.factor_sbox_1.valueChanged.connect(factor_1_changed)
         self.factor_sbox_2.valueChanged.connect(factor_2_changed)
+
+        self.soa_sbox_1.valueChanged.connect(soa_1_changed)
+        self.soa_sbox_2.valueChanged.connect(soa_2_changed)
 
         # Buttons
         self.flip_data_btn_1.clicked.connect(lambda: flip_component(self.pf1))
@@ -329,7 +351,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
                 if not profile_page_set:
                     self.profile_tab_widget.setCurrentIndex(2)
 
-        def set_labels():
+        def set_file_information():
             """
             Set the information labels for both PEMFiles.
             """
@@ -456,6 +478,12 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             if response == self.message.No:
                 return
 
+        # Enable the SOA spin boxes if the file is a borehole file and has XY component data
+        if all([f1.is_borehole(), f1.has_xy()]):
+            self.soa_sbox_1.setEnabled(True)
+        if all([f2.is_borehole(), f2.has_xy()]):
+            self.soa_sbox_2.setEnabled(True)
+
         # Try and ensure the files are plotted in the correct order
         f1_min, f2_min = f1.get_stations(converted=True).min(), f2.get_stations(converted=True).min()
         if f1_min < f2_min:
@@ -469,11 +497,13 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             self.units = 'pT'
         else:
             self.units = 'nT/s'
-        self.components = np.unique(np.hstack(np.array([self.pf1.get_components(), self.pf2.get_components()])))
+
+        self.components = np.unique(np.hstack(np.array([self.pf1.get_components(), self.pf2.get_components()],
+                                                       dtype=object)))
         self.channel_bounds = self.pf1.get_channel_bounds()
 
         format_plots()
-        set_labels()
+        set_file_information()
         set_buttons()
         self.save_path_edit.setText(str(self.pf1.filepath.with_name(f"{self.pf1.line_name}.PEM")))
 
@@ -646,8 +676,10 @@ if __name__ == '__main__':
     # pem_files = pem_getter.get_pems(client='Minera', number=2)
     # pf1 = pem_getter.get_pems(client='Minera', file='L11400N_5.PEM')[0]
     # pf2 = pem_getter.get_pems(client='Minera', file='L11400N_2.PEM')[0]
-    pf1 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 XYT.PEM')[0]
-    pf2 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 ZAv.PEM')[0]
+    # pf1 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 XYT.PEM')[0]
+    # pf2 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 ZAv.PEM')[0]
+    pf1 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_02.PEM')[0]
+    pf2 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_03.PEM')[0]
     w = PEMMerger()
     w.open([pf1, pf2])
 

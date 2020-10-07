@@ -1220,6 +1220,10 @@ Stations</string>
      <property name="title">
       <string>Export Files As...</string>
      </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>icons/export.png</normaloff>icons/export.png</iconset>
+     </property>
      <addaction name="actionExport_As_PEM"/>
      <addaction name="actionExport_Processed_PEM"/>
      <addaction name="separator"/>

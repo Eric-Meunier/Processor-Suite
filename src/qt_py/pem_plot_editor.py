@@ -384,7 +384,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Save the PEM file
         """
         self.status_bar.showMessage('Saving file...')
-        self.pem_file.data = self.pem_file.data[self.pem_file.data.del_flag == False]
+        self.pem_file.data = self.pem_file.data[~self.pem_file.data.del_flag]
         self.pem_file.save()
         self.plot_profiles('all')
         self.plot_station(self.selected_station, preserve_selection=False)
@@ -572,7 +572,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Change the Y limits of the decay plots to be zoomed on the late off-time channels.
         """
         filt = self.pem_file.data.cStation == self.selected_station
-        channel_mask = self.pem_file.channel_times.Remove == False
+        channel_mask = ~self.pem_file.channel_times.Remove
         min_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x[channel_mask][-3:].min()).min() - 1
         max_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x[channel_mask][-3:].max()).max() + 1
 
@@ -680,7 +680,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         print(f"PEMPlotEditor - Time to update file: {time.time() - t}")
 
         file = copy.deepcopy(self.pem_file)
-        file.data = file.data.loc[file.data.del_flag == False]
+        file.data = file.data.loc[~file.data.del_flag ]
 
         self.number_of_readings.setText(f"{len(file.data)} reading(s)")
 
@@ -847,7 +847,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             if self.plot_ontime_decays_cbox.isChecked():
                 y = len(self.pem_file.channel_times)
             else:
-                y = len(self.pem_file.channel_times[self.pem_file.channel_times.Remove == False])
+                y = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove])
 
             ax.setLimits(minXRange=0, maxXRange=y - 1,
                          xMin=0, xMax=y - 1)
@@ -881,7 +881,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 decay_selection_text = []
                 # Show the range of reading numbers and reading indexes if multiple decays are selected
                 if len(selected_data) > 1:
-                    num_deleted = len(selected_data[selected_data.del_flag == True])
+                    num_deleted = len(selected_data[selected_data.del_flag])
                     num_selected = f"{len(selected_data)} readings selected ({num_deleted} deleted)"
                     r_numbers = selected_data.Reading_number.unique()
                     r_indexes = selected_data.Reading_index.unique()
@@ -1608,7 +1608,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             data_std = np.array([threshold_value] * len(readings[0]))
             data_median = np.median(readings, axis=0)
 
-            if len(group.loc[group.del_flag == False]) > 2:
+            if len(group.loc[~group.del_flag]) > 2:
                 global local_count
                 local_count = 0  # The number of readings that have been deleted so far for this group.
                 max_removable = len(group) - 2  # Maximum number of readings that are allowed to be deleted.
@@ -1626,13 +1626,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         threshold_value = self.auto_clean_std_sbox.value()
 
         # Filter the data to only see readings that aren't already flagged for deletion
-        data = self.pem_file.data[self.pem_file.data.del_flag == False]
+        data = self.pem_file.data[~self.pem_file.data.del_flag]
         # Filter the readings to only consider off-time channels
-        mask = np.asarray(self.pem_file.channel_times.Remove == False)
+        mask = np.asarray(~self.pem_file.channel_times.Remove)
         # Clean the data
         cleaned_data = data.groupby(['Station', 'Component']).apply(clean_group)
         # Update the data
-        self.pem_file.data[self.pem_file.data.del_flag == False] = cleaned_data
+        self.pem_file.data[~self.pem_file.data.del_flag] = cleaned_data
 
         # Plot the new data
         self.plot_profiles(components='all')
