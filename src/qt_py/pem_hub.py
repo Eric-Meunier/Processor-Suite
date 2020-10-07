@@ -776,6 +776,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected_files=True))
 
                 extract_stations_action = QAction("&Extract Stations", self)
+                extract_stations_action.setIcon(QIcon(os.path.join(icons_path, 'station_splitter.png')))
                 extract_stations_action.triggered.connect(
                     lambda: self.station_splitter.open(selected_pems[0]))
 
@@ -878,6 +879,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                     # Share menu
                     share_menu = menu.addMenu('Share')
+                    share_menu.setIcon(QIcon(os.path.join(icons_path, 'share_gps.png')))
 
                     # Share loop
                     share_menu.addAction(share_loop_action)

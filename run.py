@@ -1,6 +1,6 @@
 import sys
 from src.qt_py.pem_hub import PEMHub
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QErrorMessage
 from PyQt5.QtCore import QTimer
 
 import logging
@@ -16,14 +16,19 @@ def handle_exception(exc_type, exc_value, exc_traceback):
         return
 
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-    sys.exit(1)
+
+    global error_box
+    error_box = QErrorMessage()
+    error_box.setWindowTitle('Error')
+    error_box.showMessage(open('err.log').read())
+    # sys.exit(1)
 
 
 sys.excepthook = handle_exception
 
 logging.basicConfig(filename='err.log',
                     filemode='w',
-                    level=logging.INFO,
+                    level=logging.DEBUG,
                     format='\n%(asctime)s - %(filename)s\n%(levelname)s: %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p')
 

@@ -777,6 +777,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.last_stn_gps_shift_amt = shift_amount
 
+        # TODO remove this
         self.setSelectedRange(10)
         self.line_table.blockSignals(False)
         self.gps_object_changed(self.line_table, refresh=False)

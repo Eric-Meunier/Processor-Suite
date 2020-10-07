@@ -20,10 +20,11 @@ class StationSplitter(QWidget):
         self.setWindowTitle('Station Splitter')
         self.resize(300, 500)
         if getattr(sys, 'frozen', False):
-            icon_path = os.path.join(os.path.dirname(os.path.dirname(sys.executable)), "qt_ui\\icons\\station_splitter2.png")
+            icon_path = os.path.join(os.path.dirname(os.path.dirname(sys.executable)),
+                                     "qt_ui\\icons\\station_splitter.png")
         else:
             icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                     "qt_ui\\icons\\station_splitter2.png")
+                                     "qt_ui\\icons\\station_splitter.png")
         self.setWindowIcon(QtGui.QIcon(icon_path))
 
         self.extract_btn = QPushButton('Extract')
