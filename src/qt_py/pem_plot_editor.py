@@ -1084,7 +1084,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.active_ax = ax
                 self.last_active_ax = ax
                 self.active_ax_ind = np.where(self.decay_axes == self.active_ax)[0][0]
-                print(f"Active index is {self.active_ax_ind}")
                 self.last_active_ax_ind = self.active_ax_ind
                 break
 

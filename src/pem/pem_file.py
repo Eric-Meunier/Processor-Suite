@@ -650,13 +650,15 @@ class PEMFile:
         ineligible_stations = data[data.Remove].drop(['Remove'], axis=1)
         return eligible_data, ineligible_stations
 
-    def to_string(self):
+    def to_string(self, processed=False):
         """
         Return the text format of the PEM file
+        :param processed: bool, if True will strip newer features so it is compatible with Step (such as D5 RAD tool
+        lines and remove datetime and del_flag values.
         :return: str, Full text of the PEM file
         """
         ps = PEMSerializer()
-        text = ps.serialize(self.copy())
+        text = ps.serialize(self.copy(), processed=processed)
         return text
 
     def to_xyz(self):
@@ -722,15 +724,17 @@ class PEMFile:
         copy_pem.data.RAD_tool = copy_pem.data.RAD_tool.map(lambda x: copy.deepcopy(x))
         return copy_pem
 
-    def save(self, backup=False, tag=''):
+    def save(self, processed=False, backup=False, tag=''):
         """
         Save the PEM file to a .PEM file with the same filepath it currently has.
+        :param processed: bool, if True will strip newer features so it is compatible with Step (such as D5 RAD tool
+        lines and remove datetime and del_flag values.
         :param backup: bool, if the save is for a backup. If so, it will save the PEM file in a [Backup] folder,
         and create the folder if it doesn't exist. The [Backup] folder will be located in the parent directory of the
         PEMFile.
         :param tag: str, tag to be appened to the file name. Used for pre-averaging and pre-splitting saves.
         """
-        text = self.to_string()
+        text = self.to_string(processed=processed)
 
         if backup:
             print(f"Saving backup for {self.filepath.name}")
@@ -1018,7 +1022,7 @@ class PEMFile:
                     new_info = {'roll_angle': rad.acc_roll_angle,
                                 'dip': rad.acc_dip,
                                 'R': 'R3',
-                                'angle_used': rad.acc_roll_angle - soa,
+                                'angle_used': rad.acc_roll_angle + soa,
                                 'rotated': True,
                                 'rotation_type': 'acc'}
 
@@ -1028,7 +1032,7 @@ class PEMFile:
                     new_info = {'roll_angle': rad.mag_roll_angle,
                                 'dip': rad.mag_dip,
                                 'R': 'R3',
-                                'angle_used': rad.mag_roll_angle - soa,
+                                'angle_used': rad.mag_roll_angle + soa,
                                 'rotated': True,
                                 'rotation_type': 'mag'}
 
@@ -2602,7 +2606,7 @@ class DMPParser:
             header['Receiver number'] = s['Crone_Digital_PEM_Receiver']
             header['Rx software version'] = s['Software_Version']
             header['Rx software version date'] = re.sub('\s+', '', s['Software_Release_Date'])
-            header['Rx file name'] = s['File_Name']
+            header['Rx file name'] = re.sub('\s+', '_', s['File_Name'])
             header['Normalized'] = 'N'
             header['Primary field value'] = '1000'
 
@@ -2955,10 +2959,12 @@ class PEMSerializer:
 
         return ''.join(df.apply(serialize_reading, axis=1))
 
-    def serialize(self, pem_file):
+    def serialize(self, pem_file, processed=False):
         """
         Create a string of a PEM file to be printed to a text file.
         :param pem_file: PEM_File object
+        :param processed: bool, if True will strip newer features so it is compatible with Step (such as D5 RAD tool
+        lines and remove datetime and del_flag values.
         :return: A string in PEM file format containing the data found inside of pem_file
         """
         self.pem_file = pem_file
@@ -3259,9 +3265,10 @@ class RADTool:
     def is_rotated(self):
         return True if self.angle_used is not None else False
 
-    def to_string(self):
+    def to_string(self, processed=False):
         """
         Create a string for PEM serialization
+        :param processed: bool, if True, return D5 values instead of D7.
         :return: str
         """
         if self.D == 'D5':

@@ -105,6 +105,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         dir_frame = QFrame()
         dir_frame.setLayout(QHBoxLayout())
         dir_frame.layout().setContentsMargins(2, 0, 2, 0)
+        dir_frame.layout().setSpacing(2)
         label = QLabel('Project Directory:')
         self.project_dir_edit = QLineEdit('')
         self.project_dir_edit.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
