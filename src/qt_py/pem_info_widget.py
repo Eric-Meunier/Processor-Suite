@@ -2,6 +2,7 @@ import os
 import sys
 from collections import OrderedDict
 from copy import deepcopy
+import logging
 
 import pandas as pd
 import math
@@ -27,6 +28,7 @@ else:
 
 # Load Qt ui file into a class
 Ui_PEMInfoWidget, QtBaseClass = uic.loadUiType(pemInfoWidgetCreatorFile)
+logger = logging.getLogger(__name__)
 
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
@@ -395,8 +397,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         # Add survey line GPS
         if current_tab == self.station_gps_tab:
+
+            def loop_accept_sig_wrapper(data):
+                self.fill_gps_table(data, self.line_table)
+
             global line_adder
             line_adder = LineAdder(parent=self)
+            line_adder.accept_sig.connect(loop_accept_sig_wrapper)
+            line_adder.accept_sig.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
             try:
                 line = SurveyLine(file, crs=crs)
                 if line.df.empty:
@@ -416,6 +424,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                                          f"The following rows could not be parsed:\n\n{errors.to_string()}")
                 if not collar.df.empty:
                     self.fill_gps_table(collar.df, self.collar_table)
+                    self.gps_object_changed(self.collar_table, refresh=True)
                 else:
                     self.message.information(self, 'No GPS Found', f"{collar.error_msg}")
             except Exception as e:
@@ -423,8 +432,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         # Add loop GPS
         elif current_tab == self.loop_gps_tab:
+
+            def loop_accept_sig_wrapper(data):
+                self.fill_gps_table(data, self.loop_table)
+
             global loop_adder
             loop_adder = LoopAdder(parent=self)
+            loop_adder.accept_sig.connect(loop_accept_sig_wrapper)
+            loop_adder.accept_sig.connect(lambda: self.gps_object_changed(self.loop_table, refresh=True))
+
             try:
                 loop = TransmitterLoop(file, crs=crs)
                 if loop.df.empty:
@@ -1002,6 +1018,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param refresh: bool, if the signal for the parent to refresh the PEMFile should be emitted. Should be false
         the GPS object isn't losing or gaining any rows.
         """
+        print(f"Table changed.")
         if table == self.loop_table:
             self.pem_file.loop = self.get_loop()
 

@@ -46,6 +46,7 @@ class GPSAdder(QMainWindow):
     Class to help add station GPS to a PEM file. Helps with files that have missing stations numbers or other
     formatting errors.
     """
+    accept_sig = QtCore.pyqtSignal(object)
 
     def __init__(self):
         super().__init__()
@@ -113,6 +114,14 @@ class GPSAdder(QMainWindow):
             # Color the table if it's LineAdder running
             if 'color_table' in dir(self):
                 self.color_table()
+
+    def accept(self):
+        """
+        Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
+        :return: None
+        """
+        self.accept_sig.emit(self.table_to_df().dropna())
+        self.hide()
 
     def close(self):
         self.clear_table()
@@ -437,14 +446,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             self.message.warning(self, 'Parsing Error',
                                  f"The following rows could not be parsed:\n\n{errors.to_string()}")
 
-    def accept(self):
-        """
-        Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
-        :return: None
-        """
-        self.parent.fill_gps_table(self.table_to_df().dropna(), self.parent.line_table)
-        self.hide()
-
     def plot_table(self, preserve_limits=False):
         """
         Plot the data from the table to the axes.
@@ -730,14 +731,6 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         if not errors.empty:
             self.message.warning(self, 'Parsing Error',
                                  f"The following rows could not be parsed:\n\n{errors.to_string()}")
-
-    def accept(self):
-        """
-        Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
-        :return: None
-        """
-        self.parent.fill_gps_table(self.table_to_df().dropna(), self.parent.loop_table)
-        self.hide()
 
     def plot_table(self, preserve_limits=False):
         """

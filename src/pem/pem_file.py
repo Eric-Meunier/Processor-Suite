@@ -573,6 +573,7 @@ class PEMFile:
                   'b_rad' in file_survey_type,
                   'bh_rad' in file_survey_type,
                   'bh_xy_rad' in file_survey_type,
+                  'bh_xy_fast_rad' in file_survey_type,
                   'otool' in file_survey_type,
                   'bh_z' in file_survey_type,
                   'bh_fast_rad' in file_survey_type,
@@ -655,7 +656,7 @@ class PEMFile:
         :return: str, Full text of the PEM file
         """
         ps = PEMSerializer()
-        text = ps.serialize(copy.deepcopy(self))
+        text = ps.serialize(self.copy())
         return text
 
     def to_xyz(self):
@@ -2470,10 +2471,9 @@ class DMPParser:
         :param filepath: str, filepath of the .DMP2 file
         :return: PEMFile object
         """
-        def parse_channel_times(header_dict, units=None):
+        def parse_channel_times(units=None):
             """
             Convert the channel table in the .DMP file to a PEM channel times table DataFrame
-            :param header_dict: dict, parsed header section of the .DMP file
             :param units: str, 'nT/s' or 'pT'
             :return: DataFrame
             """
@@ -2548,12 +2548,9 @@ class DMPParser:
                             lambda x: True)
                 return table
 
-            # t = time.time()
-
             table = channel_table(header['Channel_times'] / 10 ** 6)  # Convert to seconds
             assert len(table) == int(header['Number of channels']) or len(table) == int(header['Number of channels']) + 1, \
                 f"{len(table)} channels found in channel times section instead of {int(header['Number of channels'])} found in header of {self.filepath.name}"
-            # print(f"PEMParser - Time to parse channel table of {self.filepath.name}: {time.time() - t}")
             return table
 
         def parse_header(header_content):
@@ -2608,7 +2605,11 @@ class DMPParser:
             header['Rx file name'] = s['File_Name']
             header['Normalized'] = 'N'
             header['Primary field value'] = '1000'
-            header['Coil area'] = float(s['Coil_Area'])  # / 10 ** 3  # Doesn't work with dB/dt
+
+            coil_area = float(s['Coil_Area'])
+            if coil_area > 50000:
+                coil_area = coil_area / 10 ** 3  # For fluxgate files
+            header['Coil area'] = coil_area
             header['Loop polarity'] = '+'
             # header['Notes'] = [note for note in s['File_Notes'].split('\n')]
 
@@ -2762,7 +2763,7 @@ class DMPParser:
 
         header = parse_header(scontents[0])
         data = parse_data(scontents[1], units=header.get('Units'))
-        channel_table = parse_channel_times(header, units=header.get('Units'))
+        channel_table = parse_channel_times(units=header.get('Units'))
         # notes = header['Notes']
 
         # print(f'DMPParser - Time to parse {self.filepath.name} file: {time.time() - t1}')

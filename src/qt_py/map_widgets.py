@@ -21,6 +21,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
     NavigationToolbar2QT as NavigationToolbar
 
 from src.pem.pem_plotter import ContourMap
+from src.gps.gps_editor import BoreholeGeometry
 
 
 def custom_excepthook(exc_type, exc_value, exc_traceback):
@@ -169,8 +170,8 @@ class Map3DViewer(QMainWindow):
 
         def plot_hole(pem_file):
             collar = pem_file.get_collar().dropna()
-            geometry = pem_file.get_geometry()
-            proj = geometry.get_projection()
+            geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
+            proj = geometry.get_projection(latlon=False)
 
             if not proj.empty:
                 if proj.to_string() not in self.holes:

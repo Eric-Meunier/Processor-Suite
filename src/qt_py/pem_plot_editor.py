@@ -1054,7 +1054,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         decay line. If control is held, it extends the current selection.
         :param evt: MouseClick event
         """
-        if self.active_ax_ind:
+        if self.active_ax_ind is not None:
 
             self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
 
@@ -1084,6 +1084,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.active_ax = ax
                 self.last_active_ax = ax
                 self.active_ax_ind = np.where(self.decay_axes == self.active_ax)[0][0]
+                print(f"Active index is {self.active_ax_ind}")
                 self.last_active_ax_ind = self.active_ax_ind
                 break
 

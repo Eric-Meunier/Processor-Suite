@@ -5,8 +5,8 @@ from shutil import copyfile, rmtree
 
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QLabel, QFileSystemModel,
-                             QAbstractItemView, QErrorMessage, QMenu, QDialogButtonBox, QCheckBox,
-                             QTableWidget, QTableWidgetItem, QVBoxLayout)
+                             QAbstractItemView, QErrorMessage, QMenu, QPushButton, QFrame, QHBoxLayout,
+                             QTableWidget, QTableWidgetItem, QVBoxLayout, QLineEdit)
 from pyunpack import Archive
 import py7zr
 from src.damp.db_plot import DBPlotter
@@ -27,7 +27,6 @@ Ui_UnpackerCreator, QtBaseClass = uic.loadUiType(unpackerCreatorFile)
 
 
 class Unpacker(QMainWindow, Ui_UnpackerCreator):
-    open_damp_sig = QtCore.pyqtSignal(object)
     open_dmp_sig = QtCore.pyqtSignal(object)
 
     def __init__(self, parent=None):
@@ -36,37 +35,64 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.setupUi(self)
 
         self.setWindowTitle('Unpacker')
-        self.setWindowIcon(
-            QtGui.QIcon(os.path.join(icons_path, 'unpacker_1.png')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'unpacker_1.png')))
 
         self.setAcceptDrops(True)
 
-        self.db_plot = DBPlotter(parent=self)
         self.dialog = QFileDialog()
         self.message = QMessageBox()
         self.error = QErrorMessage()
         self.model = QFileSystemModel()
-        self.open_damp_files_cbox = QCheckBox('Plot damping box files')
-        self.open_damp_files_cbox.setChecked(True)
 
-        self.dir_label = QLabel('')
-        self.spacer_label = QLabel('')
-        self.status_bar.addWidget(self.dir_label)
-        self.status_bar.addWidget(self.spacer_label, 1)
-        self.status_bar.addPermanentWidget(self.open_damp_files_cbox)
+        # Status bar
+        dir_frame = QFrame()
+        dir_frame.setLayout(QHBoxLayout())
+        dir_frame.layout().setContentsMargins(2, 0, 2, 0)
 
-        self.path = ''
+        label = QLabel('Dump Directory:')
+        self.dir_edit = QLineEdit('')
+        self.accept_btn = QPushButton('Accept')
+        self.accept_btn.setEnabled(False)
+        dir_frame.layout().addWidget(label)
+        dir_frame.layout().addWidget(self.dir_edit)
+        dir_frame.layout().addWidget(self.accept_btn)
+
+        self.status_bar.addWidget(dir_frame)
+
+        self.input_path = Path()
+        self.output_path = Path()
         self.model.setRootPath(QtCore.QDir.rootPath())
         self.dir_tree.setModel(self.model)
         self.dir_tree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.dir_tree.customContextMenuRequested.connect(self.open_context_menu)
         self.move_dir_tree_to(self.model.rootPath())
+        self.dir_edit.setText(self.model.rootPath())
         self.set_current_date()
 
         # Signals
-        self.buttonBox.accepted.connect(self.accept_changes)
-        self.buttonBox.button(QDialogButtonBox.Reset).clicked.connect(self.reset)
+
+        def dir_edit_changed():
+            print(f"dir_edit editing finished.")
+            path = Path(self.dir_edit.text())
+            if path.is_dir():
+                self.move_dir_tree_to(str(path))
+                self.output_path = path
+            else:
+                response = self.message.question(self, 'Create Folder?', f'"{str(path)}" does not exist. '
+                                                 f'Would you like to create it?', self.message.Yes, self.message.No)
+
+                if response == self.message.Yes:
+
+                    path.mkdir(parents=True, exist_ok=True)
+                    self.move_dir_tree_to(str(path))
+                    self.output_path = path
+                else:
+
+                    self.change_dir_label()
+
+        self.accept_btn.clicked.connect(self.accept_changes)
         self.dir_tree.clicked.connect(self.change_dir_label)
+        self.dir_edit.returnPressed.connect(dir_edit_changed)
         self.open_folder_action.triggered.connect(self.open_file_dialog)
         self.reset_action.triggered.connect(self.reset)
 
@@ -125,22 +151,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
     def dropEvent(self, e):
         url = [Path(url.toLocalFile()) for url in e.mimeData().urls()][0]
-
-        if url.is_dir():
-            self.open_folder(url)
-
-        # Extract zipped files to a folder of the same name as the zipped file
-        elif url.suffix.lower() in ['.zip', '.7z', '.rar']:
-            print(f"Extracting {url.name}")
-            new_folder_dir = url.with_suffix('')
-
-            # Use py7zr instead of pyunpack for 7zip files since they don't seem to work with patool
-            if url.suffix == '.7z':
-                with py7zr.SevenZipFile(url, mode='r') as z:
-                    z.extractall(new_folder_dir)
-            else:
-                Archive(url).extractall(new_folder_dir, auto_create_dir=True)
-            self.open_folder(new_folder_dir)
+        self.open_folder(url)
 
     def set_current_date(self):
         self.calendar_widget.setSelectedDate(QtCore.QDate.currentDate())
@@ -168,7 +179,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         for table in tables:
             self.clear_table(table)
         if tables_only is False:
-            self.dir_label.setText('')
+            self.dir_edit.setText('')
             self.dir_tree.collapseAll()
             self.move_dir_tree_to(self.model.rootPath())
             self.set_current_date()
@@ -176,7 +187,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
     def move_dir_tree_to(self, path):
         """
         Changes the directory tree to show the given directory.
-        :param path: File path of the desired directory
+        :param path: str, file path of the desired directory
         :return: None
         """
         # Adds a timer or else it doesn't actually scroll to it properly.
@@ -187,12 +198,12 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
     def get_current_path(self):
         """
         Return the path of the selected directory tree item.
-        :return: str: filepath
+        :return: Path object, filepath
         """
         index = self.dir_tree.currentIndex()
         index_item = self.model.index(index.row(), 0, index.parent())
         path = self.model.filePath(index_item)
-        return path
+        return Path(path)
 
     def change_dir_label(self):
         """
@@ -200,7 +211,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         :return: None
         """
         path = self.get_current_path()
-        self.dir_label.setText(f" Dump directory: {path} ")
+        self.dir_edit.setText(str(path))
 
     def open_context_menu(self, position):
         """
@@ -210,11 +221,8 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
         def add_dump_folder():
             path = self.get_current_path()
-            dump_path = os.path.join(path, 'Dump')
-            if os.path.isdir(dump_path):
-                self.status_bar.showMessage('Dump folder already exists')
-            else:
-                os.mkdir(dump_path)
+            dump_path = path.joinpath('Dump')
+            dump_path.mkdir(parents=True, exist_ok=True)
 
         menu = QMenu()
         menu.addAction('Add Dump Folder', add_dump_folder)
@@ -224,17 +232,17 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         """
         Open files through the file dialog
         """
-        path = self.dialog.getExistingDirectory(self, 'Open Folder')
-        if path != '':
+        path = Path(self.dialog.getExistingDirectory(self, 'Open Folder'))
+        if path:
             self.open_folder(path)
         else:
             pass
 
-    def open_folder(self, path):
+    def open_folder(self, path, project_dir=None):
         """
         Add all the files in the directory to the tables. Attempts to add the file types to the correct tables.
-        :param path: directory path of the folder
-        :return: None
+        :param path: str or Path object, directory path of the folder
+        :param project_dir: project directory of the parent widget. Will use this as the default path if given.
         """
 
         def get_icon(ext):
@@ -288,13 +296,39 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             table.setItem(row, 0, file_item)
             table.setItem(row, 1, dir_item)
 
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        # Extract zipped files to a folder of the same name as the zipped file
+        if path.suffix.lower() in ['.zip', '.7z', '.rar']:
+            print(f"Extracting {path.name}")
+            new_folder_dir = path.with_suffix('')
+
+            # Use py7zr instead of pyunpack for 7zip files since they don't seem to work with patool
+            if path.suffix == '.7z':
+                with py7zr.SevenZipFile(path, mode='r') as z:
+                    z.extractall(new_folder_dir)
+            else:
+                Archive(path).extractall(new_folder_dir, auto_create_dir=True)
+            path = new_folder_dir
+
+        self.input_path = path
         self.reset(tables_only=True)
-        self.path = path
-        self.move_dir_tree_to(str(Path(self.path).parent))
-        self.dir_tree.expand(self.model.index(str(Path(self.path).parent)))
+        self.accept_btn.setEnabled(True)
+        self.output_path = path
+
+        if project_dir:
+            self.move_dir_tree_to(str(path))
+            self.dir_edit.setText(str(path))
+            self.dir_tree.expand(self.model.index(str(project_dir)))
+        else:
+            self.move_dir_tree_to(str(path))
+            self.dir_edit.setText(str(Path(path).parent))
+            self.dir_tree.expand(self.model.index(str(Path(path).parent)))
+
         self.change_dir_label()
-        self.status_bar.showMessage(f"Opened {path}", 2000)
-        print(f"Unpacker - Opened {self.path}")
+        self.setWindowTitle(f"Unpacker - {str(path)}")
+        print(f"Unpacker - Opened {str(self.output_path)}")
         dmp_extensions = ['dmp', 'dmp2', 'dmp3', 'dmp4']
         damp_extensions = ['log', 'rtf', 'txt']
         dump_extensions = ['pem', 'tdms', 'tdms_index', 'dat', 'xyz', 'csv']
@@ -304,7 +338,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         damp_files = []
 
         # r=root, d=directories, f = files
-        for root, dir, files in os.walk(self.path):
+        for root, dir, files in os.walk(str(self.output_path)):
             for file in files:
                 if any([file.lower().endswith(ext) for ext in dmp_extensions]):
                     # print(f"{file} is a DMP file")
@@ -343,8 +377,10 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
         # Plot the damping box files
         if self.open_damp_files_cbox.isChecked() and damp_files:
-            self.db_plot.open(damp_files)
-            self.db_plot.show()
+            global db_plot
+            db_plot = DBPlotter(parent=self)
+            db_plot.open(damp_files)
+            db_plot.show()
 
     def accept_changes(self):
         """
@@ -365,34 +401,31 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                 return
 
             # Create a folder if folder_name isn't a folder already
-            if not os.path.isdir(os.path.join(new_folder, folder_name)):
-                os.mkdir(os.path.join(new_folder, folder_name))
+            folder = new_folder.joinpath(folder_name)
+            if not folder.is_dir():
+                folder.mkdir(parents=True)
 
             for row in range(table.rowCount()):
-                file = table.item(row, 0).text()
-                root = table.item(row, 1).text()
+                file = Path(table.item(row, 0).text())
+                root = Path(table.item(row, 1).text())
 
-                old_path = os.path.join(root, file)
-                new_path = os.path.join(os.path.join(new_folder, folder_name), file)
+                old_path = root.joinpath(file)
+                new_path = new_folder.joinpath(folder_name).joinpath(file)
 
                 # Copy Damp, DMP, and GPS files to an additional folder, and create the folder if it doesn't exist
                 if additional_folder:
                     if not additional_folder.is_dir():  # Create the folder
-                        os.mkdir(str(additional_folder))
+                        additional_folder.mkdir(parents=True)
 
-                    file_name = os.path.splitext(file)[0]
+                    file_name = file.stem
 
                     # Skip soa files
                     if 'soa' in file_name.lower():
                         print(f"Skipping {file}")
-                    # # Skip all dump files that aren't .DMP
-                    # elif table == self.dump_table and \
-                    #         os.path.splitext(file)[1].lower() in ['.tdms', '.tdms_index', '.dat', '.xyz', '.csv']:
-                    #     print(f"Skipping {file}")
 
                     # Copy the rest of the files to their respective folders
                     else:
-                        ext = os.path.splitext(file)[-1]
+                        ext = file.suffix
                         date_str = date.toString('dd')
                         # Rename damp files to include the date
                         if folder_name.lower() == 'damp':
@@ -404,11 +437,11 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                             new_file_name = f"{file_name}_{date_str}{ext}"
 
                         # Copy the files
-                        additional_path = os.path.join(str(additional_folder), new_file_name)
+                        additional_path = additional_folder.joinpath(new_file_name)
                         copyfile(old_path, additional_path)
 
                 # Move all files in the DUMP folder. Skip if the new filepath already exists.
-                if os.path.abspath(old_path) == os.path.abspath(new_path):
+                if old_path.resolve() == new_path.resolve():
                     continue
                 else:
                     try:
@@ -425,46 +458,37 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                         self.error.showMessage(f'{e}')
                         continue
 
-        # delete_old_folder = True
-        delete_old_folder = False
+        delete_old_folder = True
+        # delete_old_folder = False
         date = self.calendar_widget.selectedDate()
-        new_folder = os.path.join(self.get_current_path(), date.toString('MMMM dd, yyyy'))
-        if os.path.isdir(new_folder):
+
+        # Check if the folder already exists. If so, do not delete the folder when the process is complete.
+        new_folder = self.get_current_path().joinpath(date.toString('MMMM dd, yyyy'))
+        if new_folder.is_dir():
             response = self.message.question(self, 'Overwrite Folder',
-                                             f"Folder {new_folder} already exists. Would you like to unpack in the existing folder?",
+                                             f"Folder {new_folder} already exists. "
+                                             f"Would you like to unpack in the existing folder?",
                                              self.message.Yes | self.message.No)
             if response == self.message.No:
                 return
             else:
                 delete_old_folder = False
         else:
-            os.mkdir(new_folder)
+            new_folder.mkdir(parents=True, exist_ok=False)
 
         make_move('Dump', self.dump_table)
-        make_move('Damp', self.damp_table, additional_folder=Path(self.get_current_path()).parent.joinpath('DAMP'))
-        make_move('DMP', self.dmp_table, additional_folder=Path(self.get_current_path()).parent.joinpath('RAW'))
-        make_move('GPS', self.gps_table, additional_folder=Path(self.get_current_path()).parent.joinpath('GPS'))
+        make_move('Damp', self.damp_table, additional_folder=self.get_current_path().parent.joinpath('DAMP'))
+        make_move('DMP', self.dmp_table, additional_folder=self.get_current_path().parent.joinpath('RAW'))
+        make_move('GPS', self.gps_table, additional_folder=self.get_current_path().parent.joinpath('GPS'))
         make_move('Geometry', self.geometry_table)
         make_move('Other', self.other_table)
 
-        if self.path != new_folder and delete_old_folder is True:
-            rmtree(self.path)
-        self.status_bar.showMessage('Complete.', 2000)
-
-        # # Plot damping box files
-        # if self.open_damp_files_cbox.isChecked():
-        #     # db_files = []
-        #     # for row in np.arange(self.damp_table.rowCount()):
-        #     #     filepath = os.path.join(self.damp_table.item(row, 0).text(), self.damp_table.item(row, 1).text())
-        #     #     db_files.append(filepath)
-        #     damp_dir = Path(new_folder).joinpath('Damp')
-        #     db_files = list(damp_dir.glob('*.*'))
-        #
-        #     if db_files:
-        #         self.open_damp_sig.emit(db_files)
+        if self.input_path.resolve() != new_folder.resolve() and delete_old_folder is True:
+            rmtree(self.input_path)
+        # self.status_bar.showMessage('Complete.', 2000)
 
         # Change the project directory of PEMPro
-        self.open_dmp_sig.emit(Path(new_folder).parents[1])
+        self.open_dmp_sig.emit(new_folder.parents[1])
 
         self.reset(tables_only=True)
 
@@ -488,6 +512,7 @@ class UnpackerTable(QTableWidget):
         self.setHorizontalHeaderLabels(['File', 'Directory'])
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
+        self.setShowGrid(False)
 
     def dropEvent(self, event: QtGui.QDropEvent):
         if not event.isAccepted() and event.source() == self:

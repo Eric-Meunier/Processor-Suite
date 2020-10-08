@@ -21,7 +21,7 @@ from itertools import groupby
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
-                             QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel,
+                             QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel, QHBoxLayout,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
                              QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame, QComboBox)
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
@@ -100,15 +100,22 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.selection_label = QLabel()
         self.selection_label.setIndent(5)
         self.epsg_label = QLabel()
-        self.project_dir_label = QPushButton()
-        self.project_dir_label.setFlat(True)
+
+        # Project directory frame
+        dir_frame = QFrame()
+        dir_frame.setLayout(QHBoxLayout())
+        dir_frame.layout().setContentsMargins(2, 0, 2, 0)
+        label = QLabel('Project Directory:')
+        self.project_dir_edit = QLineEdit('')
+        self.project_dir_edit.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        self.project_dir_edit.setMinimumWidth(250)
+        dir_frame.layout().addWidget(label)
+        dir_frame.layout().addWidget(self.project_dir_edit)
 
         self.status_bar.addPermanentWidget(self.selection_label, 0)
         self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
-        self.status_bar.addPermanentWidget(self.project_dir_label, 0)
-
-        self.status_bar.showMessage("Testing this bullshit")
+        self.status_bar.addPermanentWidget(dir_frame, 0)
 
         # Widgets
         self.station_splitter = StationSplitter(parent=self)
@@ -266,7 +273,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.actionDamping_Box_Plotter.triggered.connect(self.open_db_plot)
 
-        self.actionUnpacker.triggered.connect(lambda: self.unpacker.show())
+        self.actionUnpacker.triggered.connect(self.open_unpacker)
 
         self.actionGPX_Creator.triggered.connect(lambda: self.gpx_creator.show())
 
@@ -451,12 +458,23 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         def open_project_dir():
             """
-            Open the project directory folder
+            Open the project directory folder when the button in the status bar is clicked.
             """
-            if self.project_dir.is_dir():
-                os.startfile(str(Path(self.project_dir)))
+            path = Path(self.project_dir_edit.text())
+            if path.exists():
+                self.move_dir_tree_to(Path(self.project_dir_edit.text()))
+            else:
+                self.message.information(self, "Invalid Path", f"{str(path)} does not exist.")
+                self.project_dir_edit.setText(str(self.get_current_path()))
 
-        def open_project_dir_file(item):
+        def open_project_file(item):
+            """
+            Signal slot, open the file that was double clicked in the project tree.
+            :param item: QListWidget item
+            """
+            os.startfile(str(self.get_current_path()))
+
+        def open_list_file(item):
             """
             Signal slot, open the file that was double clicked in the PEM or GPS lists.
             :param item: QListWidget item
@@ -539,7 +557,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.calender.clicked.connect(set_date)
 
         # Buttons
-        self.project_dir_label.clicked.connect(open_project_dir)
+        self.project_dir_edit.returnPressed.connect(open_project_dir)
 
         # Table
         self.table.viewport().installEventFilter(self)
@@ -554,14 +572,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Project Tree
         self.project_tree.clicked.connect(self.project_dir_changed)
+        self.project_tree.doubleClicked.connect(open_project_file)
 
         self.refresh_pem_list_btn.clicked.connect(self.fill_pem_list)
         self.refresh_gps_list_btn.clicked.connect(self.fill_gps_list)
 
         self.pem_list.itemSelectionChanged.connect(toggle_pem_list_buttons)
         self.gps_list.itemSelectionChanged.connect(toggle_gps_list_buttons)
-        self.pem_list.itemDoubleClicked.connect(open_project_dir_file)
-        self.gps_list.itemDoubleClicked.connect(open_project_dir_file)
+        self.pem_list.itemDoubleClicked.connect(open_list_file)
+        self.gps_list.itemDoubleClicked.connect(open_list_file)
 
         self.add_pem_btn.clicked.connect(add_pem_list_files)
         self.add_gps_btn.clicked.connect(add_gps_list_files)
@@ -790,9 +809,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 extract_stations_action.triggered.connect(
                     lambda: self.station_splitter.open(selected_pems[0]))
 
-                calc_mag_dec = QAction("&Magnetic Declination", self)
-                calc_mag_dec.setIcon(QIcon(os.path.join(icons_path, 'mag_field.png')))
-                calc_mag_dec.triggered.connect(lambda: self.open_mag_dec(selected_pems[0]))
+                calc_mag_dec_action = QAction("&Magnetic Declination", self)
+                calc_mag_dec_action.setIcon(QIcon(os.path.join(icons_path, 'mag_field.png')))
+                calc_mag_dec_action.triggered.connect(lambda: self.open_mag_dec(selected_pems[0]))
 
                 view_loop_action = QAction("&Loop GPS", self)
                 view_loop_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].edit_loop())
@@ -864,9 +883,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     menu.addAction(save_file_as_action)
                     menu.addAction(extract_stations_action)
 
-                    menu.addAction(calc_mag_dec)
-                    if not pem_file.has_any_gps():
-                        calc_mag_dec.setDisabled(True)
+                    menu.addAction(calc_mag_dec_action)
+                    if pem_file.has_any_gps():
+                        calc_mag_dec_action.setDisabled(False)
+                    else:
+                        calc_mag_dec_action.setDisabled(True)
                     menu.addSeparator()
 
                     # View menu
@@ -998,97 +1019,80 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param e: PyQT event
         """
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
-        pem_files = False
-        dmp_files = False
-        text_files = False
-        ri_files = False
-        inf_files = False
-        gpx_files = False
 
-        # Files must all be the same extension
-        if all([url.lower().endswith('pem') for url in urls]):
-            pem_files = True
-        elif all([url.lower().endswith('dmp') or url.lower().endswith('dmp2') for url in urls]):
-            dmp_files = True
-        elif all([url.lower().endswith('txt') or url.lower().endswith('csv') or url.lower().endswith(
-                'seg') or url.lower().endswith('xyz') for url in
-                  urls]):
-            text_files = True
-        elif all([url.lower().endswith('ri1') or url.lower().endswith('ri2') or url.lower().endswith(
-                'ri3') for url in urls]):
-            ri_files = True
-        elif all([url.lower().endswith('inf') or url.lower().endswith('log') for url in urls]):
-            inf_files = True
-        elif all([url.lower().endswith('gpx') for url in urls]):
-            gpx_files = True
-
-        pem_conditions = bool(all([
-            bool(e.answerRect().intersects(self.table.geometry())),
-            bool(pem_files or dmp_files),
-        ]))
-
-        # When no PEM files are open, only open PEM files and not any other kind of file
-        if not self.pem_files:
-            if pem_conditions is True:
+        # PEM, DMP, and DUMP folders can be opened with no PEM files currently opened.
+        # PEM files
+        if all([Path(file).suffix.lower() in ['.pem'] for file in urls]):
+            if e.answerRect().intersects(self.table.geometry()):
                 e.acceptProposedAction()
-            else:
-                e.ignore()
+                return
 
+        # DMP files
+        elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
+            if e.answerRect().intersects(self.table.geometry()):
+                e.acceptProposedAction()
+                return
+
+        # Dump folder
+        elif len(urls) == 1 and (Path(urls[0]).is_dir() or Path(urls[0]).suffix.lower() in ['.zip', '.7z', '.rar']):
+            e.acceptProposedAction()
+            return
+
+        # Rest of the file types can only be opened if a PEM file is opened.
         else:
-            eligible_tabs = [self.stackedWidget.currentWidget().station_gps_tab,
-                             self.stackedWidget.currentWidget().loop_gps_tab,
-                             self.stackedWidget.currentWidget().geometry_tab]
+            if not self.pem_files:
+                e.ignore()
+                return
 
-            gps_conditions = bool(all([
-                e.answerRect().intersects(self.piw_frame.geometry()),
-                text_files is True or gpx_files is True,
-                self.stackedWidget.currentWidget().tabs.currentWidget() in eligible_tabs,
-                len(self.pem_files) > 0
-            ]))
+            current_piw = self.stackedWidget.currentWidget()
+            eligible_tabs = [current_piw.station_gps_tab,
+                             current_piw.loop_gps_tab,
+                             current_piw.geometry_tab]
 
-            ri_conditions = bool(all([
-                e.answerRect().intersects(self.piw_frame.geometry()),
-                ri_files is True,
-                self.stackedWidget.currentWidget().tabs.currentWidget() == self.stackedWidget.currentWidget().ri_tab,
-                len(self.pem_files) > 0
-            ]))
+            # GPS files
+            if all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
+                if all([e.answerRect().intersects(self.piw_frame.geometry()),
+                        current_piw.tabs.currentWidget() in eligible_tabs,
+                        self.pem_files]):
+                    e.acceptProposedAction()
+                    return
 
-            inf_conditions = bool(all([
-                e.answerRect().intersects(self.project_crs_box.geometry()),
-                inf_files is True or gpx_files is True,
-            ]))
+            # RI files
+            elif all([Path(file).suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
+                if all([e.answerRect().intersects(self.piw_frame.geometry()),
+                        current_piw.tabs.currentWidget() == current_piw.ri_tab,
+                        self.pem_files]):
+                    e.acceptProposedAction()
+                    return
 
-            if any([pem_conditions, gps_conditions, ri_conditions, inf_conditions]):
-                e.acceptProposedAction()
+            elif all([Path(file).suffix.lower() in ['.inf', '.log', '.gpx'] for file in urls]):
+                if e.answerRect().intersects(self.project_crs_box.geometry()):
+                    e.acceptProposedAction()
+                    return
+
             else:
                 e.ignore()
 
     def dropEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
 
-        pem_files = [file for file in urls if file.lower().endswith('pem')]
-        dmp_files = [file for file in urls if file.lower().endswith('dmp') or file.lower().endswith('dmp2')]
-        gps_files = [file for file in urls if
-                     file.lower().endswith('txt') or file.lower().endswith('csv') or file.lower().endswith(
-                         'seg') or file.lower().endswith('xyz') or file.lower().endswith('gpx')]
-        ri_files = [file for file in urls if
-                    file.lower().endswith('ri1') or file.lower().endswith('ri2') or file.lower().endswith('ri3')]
-        inf_files = [file for file in urls if file.lower().endswith('inf') or file.lower().endswith('log')]
+        if all([Path(file).suffix.lower() in ['.pem'] for file in urls]):
+            self.open_pem_files(urls)
 
-        if pem_files:
-            self.open_pem_files(pem_files)
+        elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
+            self.open_dmp_files(urls)
 
-        elif dmp_files:
-            self.open_dmp_files(dmp_files)
+        elif all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
+            self.open_gps_files(urls)
 
-        elif gps_files:
-            self.open_gps_files(gps_files)
+        elif all([Path(file).suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
+            self.open_ri_file(urls)
 
-        elif ri_files:
-            self.open_ri_file(ri_files)
+        elif all([Path(file).suffix.lower() in ['.inf', '.log'] for file in urls]):
+            self.open_inf_file(urls[0])
 
-        elif inf_files:
-            self.open_inf_file(inf_files[0])
+        elif len(urls) == 1 and (Path(urls[0]).is_dir() or Path(urls[0]).suffix.lower() in ['.zip', '.7z', '.rar']):
+            self.open_unpacker(folder=urls[0])
 
     def change_pem_info_tab(self, tab_num):
         """
@@ -1587,6 +1591,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         m.calc_mag_dec(pem_file)
         m.show()
 
+    def open_unpacker(self, folder=None):
+        self.unpacker.show()
+        if folder:
+            self.unpacker.open_folder(folder, project_dir=self.project_dir)
+
     def open_db_plot(self):
         """
         Open the damping box plotter.
@@ -1811,7 +1820,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if str(path) != str(self.project_dir):
             self.project_dir = path
             print(f"New project dir: {str(path)}")
-            self.project_dir_label.setText(f"Project directory: {str(path)} ")
+            self.project_dir_edit.setText(str(path))
 
             self.fill_gps_list()
             self.fill_pem_list()
@@ -1839,7 +1848,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         gps_dir = find_gps_dir(timeout=1)
 
         if gps_dir is None:
-            self.status_bar.showMessage(f"No GPS directory found.", 1000)
             return
         elif gps_dir == 'timeout':
             self.status_bar.showMessage(f"Searching for GPS directory timed out.", 1000)
@@ -1880,7 +1888,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.available_pems = find_pem_files(timeout=1)
 
         if self.available_pems is None:
-            self.status_bar.showMessage(f"No PEM files found.", 1000)
             return
         elif self.available_pems == 'timeout':
             self.status_bar.showMessage(f"Searching for PEM files timed out.", 1000)
@@ -2398,7 +2405,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 if piw_widget.pem_file.is_borehole():
                     if any([piw_widget.get_loop().df.dropna().empty,
                             piw_widget.get_collar().df.dropna().empty,
-                            piw_widget.get_segments().df.dropna().empty
                             ]):
                         return False
                     else:
@@ -2592,6 +2598,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for pem_file in self.pem_files:
             pem_file.save(backup=True)
         self.status_bar.showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
+
+    def get_current_path(self):
+        """
+        Return the path of the selected directory tree item.
+        :return: Path object, filepath
+        """
+        index = self.project_tree.currentIndex()
+        index_item = self.file_sys_model.index(index.row(), 0, index.parent())
+        path = self.file_sys_model.filePath(index_item)
+        return Path(path)
 
     def get_pem_files(self, selected=False):
         """
