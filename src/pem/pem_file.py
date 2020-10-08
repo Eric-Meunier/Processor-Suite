@@ -438,7 +438,7 @@ class PEMFile:
         channel_bounds = [None] * 4
 
         # Only plot off-time channels
-        number_of_channels = len(self.channel_times[~self.channel_times.Remove])
+        number_of_channels = len(self.channel_times[~self.channel_times.Remove.astype(bool)])
 
         num_channels_per_plot = int((number_of_channels - 1) // 4)
         remainder_channels = int((number_of_channels - 1) % 4)
@@ -468,7 +468,7 @@ class PEMFile:
         data = self.data[comp_filt]
 
         if ontime is False:
-            data.Reading = data.Reading.map(lambda x: x[~self.channel_times.Remove])
+            data.Reading = data.Reading.map(lambda x: x[~self.channel_times.Remove.astype(bool)])
 
         profile = pd.DataFrame.from_dict(dict(zip(data.Reading.index, data.Reading.values))).T
 
@@ -645,7 +645,7 @@ class PEMFile:
                                      group_keys=False,
                                      as_index=False).apply(lambda k: filter_data(k))
 
-        eligible_data = data[~data.Remove].drop(['Remove'], axis=1)
+        eligible_data = data[~data.Remove.astype(bool)].drop(['Remove'], axis=1)
         ineligible_stations = data[data.Remove].drop(['Remove'], axis=1)
         return eligible_data, ineligible_stations
 
@@ -752,7 +752,6 @@ class PEMFile:
         :return: PEM file object
         """
         print(f"Averaging {self.filepath.name}")
-        # t = time.time()
         if self.is_averaged():
             print(f"{self.filepath.name} is already averaged")
             return
@@ -774,7 +773,7 @@ class PEMFile:
             return new_data_df
 
         # Don't use deleted data
-        filt = ~self.data.del_flag
+        filt = ~self.data.del_flag.astype(bool)
         # Create a data frame with all data averaged
         df = self.data[filt].groupby(['Station', 'Component']).apply(weighted_average)
         # Sort the data frame
@@ -789,20 +788,18 @@ class PEMFile:
         :return: PEM file object with split data
         """
         print(f"Splitting channels for {self.filepath.name}")
-        # t = time.time()
         if self.is_split():
             print(f"{self.filepath.name} is already split.")
             return
 
         # Only keep the select channels from each reading
-        self.data.Reading = self.data.Reading.map(lambda x: x[~self.channel_times.Remove])
+        self.data.Reading = self.data.Reading.map(lambda x: x[~self.channel_times.Remove.astype(bool)])
         # Create a filter and update the channels table
-        filt = ~self.channel_times.Remove
+        filt = ~self.channel_times.Remove.astype(bool)
         self.channel_times = self.channel_times[filt]
         # Update the PEM file's number of channels attribute
         self.number_of_channels = len(self.channel_times)
 
-        # print(f"PEMFile - Time to split PEM file: {time.time() - t}")
         return self
 
     def scale_coil_area(self, coil_area):
@@ -811,8 +808,7 @@ class PEMFile:
         :param coil_area: int: new coil area
         :return: PEMFile object: self with data scaled
         """
-        # t = time.time()
-        print(f"Scaling coil area of {self.filepath.name}")
+        print(f"Scaling coil area of {self.filepath.name} to {coil_area}")
 
         new_coil_area = coil_area
         assert isinstance(new_coil_area, int), "New coil area is not type int"
@@ -825,7 +821,6 @@ class PEMFile:
 
         self.coil_area = new_coil_area
         self.notes.append(f'<HE3> Data scaled by coil area change of {old_coil_area}/{new_coil_area}')
-        # print(f"PEMFile - Time to scale by coil area: {time.time() - t}")
         return self
 
     def scale_current(self, current):
@@ -836,6 +831,8 @@ class PEMFile:
         """
         new_current = current
         assert isinstance(new_current, float), "New current is not type float"
+        print(f"Performing current change for {self.filepath.name} to {current}")
+
         old_current = self.current
 
         scale_factor = float(new_current / old_current)
@@ -853,7 +850,6 @@ class PEMFile:
         :return: PEMFile object, self with data scaled
         """
         assert isinstance(factor, float), "New coil area is not type float"
-
         # Scale the scale factor to account for compounding
         scaled_factor = factor / (1 + self.total_scale_factor)
 
@@ -933,7 +929,7 @@ class PEMFile:
             return row
 
         filtered_data, _ = self.get_rotation_filtered_data()
-        print(f"Rotating data by SOA {soa}")
+        print(f"Rotating {self.filepath.name} by SOA of {soa}")
 
         # Rotate the data
         rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
@@ -954,7 +950,7 @@ class PEMFile:
         """
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
         assert self.prepped_for_rotation, f"{self.filepath.name} has not been prepped for rotation."
-        print(f"De-rotating data of {self.filepath.name}")
+        print(f"De-rotating data of {self.filepath.name} using {method} with SOA {soa}")
 
         def rotate_data(group, method, soa):
             """
@@ -1077,7 +1073,6 @@ class PEMFile:
             return row
 
         global include_pp
-
         if all([self.has_loop_gps(), self.has_geometry(), self.ramp > 0]):
             include_pp = True
         else:
@@ -1089,12 +1084,13 @@ class PEMFile:
         xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
         filtered_data = self.data[xy_filt]  # Data should have already been filtered by prep_rotation.
 
-        st = time.time()
+        if filtered_data.empty:
+            raise Exception(f"{self.filepath.name} has no eligible XY data for de-rotation.")
+
         # Rotate the data
         rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
                                              group_keys=False,
                                              as_index=False).apply(lambda l: rotate_data(l, method, soa))
-        print(f"PEMFile - Time to rotate data: {time.time() - st}")
 
         self.data[xy_filt] = rotated_data
         # Remove the rows that were filtered out in filtered_data
@@ -1142,7 +1138,7 @@ class PEMFile:
 
             # TODO Remove the last channel of fluxgates
             # Only keep off-time channels with PP
-            ch_times = self.channel_times[~self.channel_times.Remove]
+            ch_times = self.channel_times[~self.channel_times.Remove.astype(bool)]
             # Normalize the channel times so they start from turn off
             # ch_times.loc[:, 'Start':'Center'] = ch_times.loc[:, 'Start':'Center'].applymap(lambda x: x + ramp)
 
@@ -1199,7 +1195,7 @@ class PEMFile:
                         pp_rad_info = dict()
 
                         # Calculate the raw PP value for each component
-                        pp_ch_index = self.channel_times[~self.channel_times.Remove].index.values[0]
+                        pp_ch_index = self.channel_times[~self.channel_times.Remove.astype(bool)].index.values[0]
                         measured_ppx = group[group.Component == 'X'].apply(lambda x: x.Reading[pp_ch_index],
                                                                            axis=1).mean()
                         measured_ppy = group[group.Component == 'Y'].apply(lambda x: x.Reading[pp_ch_index],
@@ -1948,7 +1944,7 @@ class PEMParser:
                     the start of the next on-time.
                     :return: int: Row index of the last off-time channel
                     """
-                    filt = ~table['Remove']
+                    filt = ~table['Remove'].astype(bool)
                     for index, row in table[filt][1:-1].iterrows():
                         next_row = table.loc[index + 1]
                         if row.Width > (next_row.Width * 2):
@@ -2254,7 +2250,7 @@ class DMPParser:
                     the start of the next on-time.
                     :return: int: Row index of the last off-time channel
                     """
-                    filt = ~table['Remove']
+                    filt = ~table['Remove'].astype(bool)
                     for index, row in table[filt][1:-1].iterrows():
                         next_row = table.loc[index + 1]
                         if row.Width > (next_row.Width * 2):
@@ -2520,7 +2516,7 @@ class DMPParser:
                     the start of the next on-time.
                     :return: int: Row index of the last off-time channel
                     """
-                    filt = ~table['Remove']
+                    filt = ~table['Remove'].astype(bool)
                     for index, row in table[filt][1:-1].iterrows():
                         next_row = table.loc[index + 1]
                         if row.Width > (next_row.Width * 2):
@@ -2922,7 +2918,7 @@ class PEMSerializer:
         df = self.pem_file.get_data(sorted=True)
 
         # Remove deleted readings
-        filt = ~df.del_flag
+        filt = ~df.del_flag.astype(bool)
         df = df[filt]
 
         def serialize_reading(reading):

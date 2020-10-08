@@ -1,7 +1,7 @@
 import os
 import sys
-import time
 from pathlib import Path
+from src.pem.pem_file import PEMFile
 
 import numpy as np
 import pandas as pd
@@ -231,6 +231,8 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
+
+        assert isinstance(pem_file, PEMFile), f"{pem_file} is not a PEMFile object."
 
         if not pem_file:
             self.message.critical(self, 'Error', 'PEM file is invalid')
@@ -466,13 +468,11 @@ class Derotator(QMainWindow, Ui_Derotator):
         clear_plots()
         channel_bounds = self.pem_file.get_channel_bounds()
 
-        t = time.time()
         plot_lin('X')
         plot_lin('Y')
         plot_rotation()
         if self.pp_plotted is False and self.pp_btn.isEnabled():
             plot_pp_values()
-        print(f"Time to make plots: {time.time() - t}")
 
     def rotate(self):
         """
@@ -483,8 +483,6 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.soa = self.soa_sbox.value()
         # Create a copy of the pem_file so it is never changed
         copy_file = self.pem_file.copy()
-
-        print(id(copy_file.data.iloc[0].RAD_tool), id(self.pem_file.data.iloc[0].RAD_tool))
 
         if method is not None:
             self.rotated_file = copy_file.rotate(method=method, soa=self.soa)
@@ -510,15 +508,6 @@ class Derotator(QMainWindow, Ui_Derotator):
 
 
 def main():
-    sys._excepthook = sys.excepthook
-
-    def exception_hook(exctype, value, traceback):
-        print(exctype, value, traceback)
-        sys._excepthook(exctype, value, traceback)
-        sys.exit(1)
-
-    sys.excepthook = exception_hook
-
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
     app = QApplication(sys.argv)
@@ -528,7 +517,7 @@ def main():
     parser = PEMParser()
     pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
     # pem_files = parser.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\TC170199XYT.PEM')
-    mw.open(['sdfs'])
+    mw.open(pem_files)
 
     # mw.export_stats()
 
@@ -536,4 +525,5 @@ def main():
 
 
 if __name__ == '__main__':
+
     main()

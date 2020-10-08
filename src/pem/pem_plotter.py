@@ -434,7 +434,7 @@ class LOGPlotter(ProfilePlotter):
 
         add_ylabels()
         self.format_figure(component)
-        print(f"Time to create LOGPLotter plot: {time.time() - t}")
+        print(f"Time to create LOGPLotter plot: {time.time() - t:.3f}")
         return self.figure
 
 
@@ -583,7 +583,7 @@ class STEPPlotter(ProfilePlotter):
 
         add_ylabel()
         self.format_figure(component)
-        print(f"Time to create STEPPlotter plot: {time.time() - t}")
+        print(f"Time to create STEPPlotter plot: {time.time() - t:.3f}")
         return self.figure
 
 
@@ -2273,7 +2273,7 @@ class ContourMap(MapPlotter):
         # Create the data for the contour map
         t = time.time()
         contour_data_to_arrays(component, channel)
-        print(f"Time to get contour data: {time.time() - t}")
+        print(f"Time to get contour data: {time.time() - t:.3f}")
 
         if all([self.xs.any(), self.ys.any(), self.zs.any(), self.ds.any()]):
             # Creating a 2D grid for the interpolation

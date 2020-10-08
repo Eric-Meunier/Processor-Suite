@@ -236,7 +236,6 @@ class MagneticFieldCalculator:
         xx = xx_rot + c1[0]
         yy = yy_rot + c1[1]
 
-        print('Computing Field at {} points.....'.format(xx.size))
         start = timer()
 
         # Calculate the magnetic field at each grid point
@@ -299,17 +298,10 @@ class MagneticFieldCalculator:
         xx = xx_rot + c1[0]
         yy = yy_rot + c1[1]
 
-        print('Computing Field at {} points.....'.format(xx.size))
-        start = timer()
-
         # Calculate the magnetic field at each grid point
         u, v, w = v_field(xx, yy, zz)
         # Project the arrows
         uproj, vproj, wproj = v_proj(u, v, w, planeNormal)
-
-        end = timer()
-        time = round(end - start, 2)
-        print('Calculated in {} seconds'.format(str(time)))
 
         mag = np.sqrt(u * u + v * v + w * w)  # Magnitude for colormap
         uprot = np.cos(theta) * uproj + np.sin(theta) * vproj  # Rotate the vectors back to the X-Z Plane

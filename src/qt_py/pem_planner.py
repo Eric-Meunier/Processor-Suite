@@ -3,14 +3,14 @@ import os
 import sys
 import numpy as np
 import simplekml
-import io
 import gpxpy
+import logging
 
 from pyproj import CRS
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import asMultiPoint
-import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
+# import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib.ticker as ticker
 import pyqtgraph as pg
 from PyQt5 import QtGui, QtCore, uic, QtWebEngineWidgets
@@ -31,6 +31,10 @@ else:
     gridPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\grid_planner.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
+
 # Load Qt ui file into a class
 Ui_LoopPlannerWindow, QtBaseClass = uic.loadUiType(loopPlannerCreatorFile)
 Ui_GridPlannerWindow, QtBaseClass = uic.loadUiType(gridPlannerCreatorFile)
@@ -40,19 +44,7 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 # Ensure using PyQt5 backend
-matplotlib.use('QT5Agg')
-
-
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
+# matplotlib.use('QT5Agg')
 
 
 class SurveyPlanner(QMainWindow):
@@ -1910,7 +1902,7 @@ class CustomAxis(pg.AxisItem):
         return strings
 
 
-if __name__ == '__main__':
+def main():
     app = QApplication(sys.argv)
     # planner = LoopPlanner()
     planner = GridPlanner()
@@ -1924,3 +1916,19 @@ if __name__ == '__main__':
     # planner.save_gpx()
 
     app.exec_()
+
+
+if __name__ == '__main__':
+
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+
+        logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+    sys.excepthook = handle_exception
+
+    main()
+
+

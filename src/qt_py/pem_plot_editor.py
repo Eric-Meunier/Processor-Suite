@@ -237,7 +237,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         if event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_R:
             t = time.time()
             self.delete_lines()
-            print(f"PEMPlotEditor - Time to delete and replot: {time.time() - t}")
+            print(f"PEMPlotEditor - Time to delete and replot: {time.time() - t:.3f}")
 
         elif event.key() == QtCore.Qt.Key_C:
             self.cycle_profile_component()
@@ -384,7 +384,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Save the PEM file
         """
         self.status_bar.showMessage('Saving file...')
-        self.pem_file.data = self.pem_file.data[~self.pem_file.data.del_flag]
+        self.pem_file.data = self.pem_file.data[~self.pem_file.data.del_flag.astype(bool)]
         self.pem_file.save()
         self.plot_profiles('all')
         self.plot_station(self.selected_station, preserve_selection=False)
@@ -617,15 +617,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 :param df: DataFrame of filtered data
                 :param ax: pyqtgraph PlotItem
                 """
-                global lin_plotting_time, averaging_time
-
-                t = time.time()
                 df_avg = df.groupby('Station').mean()
-                averaging_time += time.time() - t
-
                 x, y = df_avg.index, df_avg
 
-                t2 = time.time()
                 ax.plot(x=x, y=y,
                         pen=pg.mkPen('k', width=1.),
                         symbol='o',
@@ -633,7 +627,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                         symbolBrush='k',
                         symbolPen='k',
                         )
-                lin_plotting_time += time.time() - t2
 
             def plot_scatters(df, ax):
                 """
@@ -642,8 +635,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 :param ax: pyqtgraph PlotItem
                 :return:
                 """
-                global scatter_plotting_time
-                t = time.time()
                 x, y = df.index, df
 
                 scatter = pg.ScatterPlotItem(x=x, y=y,
@@ -654,7 +645,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                                              )
 
                 ax.addItem(scatter)
-                scatter_plotting_time += time.time() - t
 
             # Plotting
             for i, bounds in enumerate(channel_bounds):
@@ -675,12 +665,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     if self.show_scatter_cbox.isChecked():
                         plot_scatters(data, ax)
 
-        t = time.time()
         self.update_file()
-        print(f"PEMPlotEditor - Time to update file: {time.time() - t}")
 
         file = copy.deepcopy(self.pem_file)
-        file.data = file.data.loc[~file.data.del_flag ]
+        file.data = file.data.loc[~file.data.del_flag.astype(bool)]
 
         self.number_of_readings.setText(f"{len(file.data)} reading(s)")
 
@@ -692,7 +680,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Clear the plots of the components that are to be plotted only
         clear_plots(components)
 
-        t = time.time()
         global averaging_time, lin_plotting_time, scatter_plotting_time
         averaging_time = 0
         lin_plotting_time = 0
@@ -706,7 +693,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             if profile_data.empty:
                 continue
 
-            print(f"Plotting profile for {component} component")
             # Select the correct axes based on the component
             if component == 'X':
                 axes = self.x_layout_axes
@@ -716,11 +702,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 axes = self.z_layout_axes
 
             plot_lin(profile_data, axes)
-
-        print(f"PEMPlotEditor - Time to make lin plots: {lin_plotting_time}")
-        print(f"PEMPlotEditor - Time to make scatter plots: {scatter_plotting_time}")
-        print(f"PEMPlotEditor - Averaging time: {averaging_time}")
-        print(f"PEMPlotEditor - Total plotting time for profile plots: {time.time() - t}")
 
     def plot_station(self, station, preserve_selection=False):
         """
@@ -1608,7 +1589,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             data_std = np.array([threshold_value] * len(readings[0]))
             data_median = np.median(readings, axis=0)
 
-            if len(group.loc[~group.del_flag]) > 2:
+            if len(group.loc[~group.del_flag.astype(bool)]) > 2:
                 global local_count
                 local_count = 0  # The number of readings that have been deleted so far for this group.
                 max_removable = len(group) - 2  # Maximum number of readings that are allowed to be deleted.
@@ -1626,13 +1607,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         threshold_value = self.auto_clean_std_sbox.value()
 
         # Filter the data to only see readings that aren't already flagged for deletion
-        data = self.pem_file.data[~self.pem_file.data.del_flag]
+        data = self.pem_file.data[~self.pem_file.data.del_flag.astype(bool)]
         # Filter the readings to only consider off-time channels
         mask = np.asarray(~self.pem_file.channel_times.Remove)
         # Clean the data
         cleaned_data = data.groupby(['Station', 'Component']).apply(clean_group)
         # Update the data
-        self.pem_file.data[~self.pem_file.data.del_flag] = cleaned_data
+        self.pem_file.data[~self.pem_file.data.del_flag.astype(bool)] = cleaned_data
 
         # Plot the new data
         self.plot_profiles(components='all')

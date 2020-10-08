@@ -7,6 +7,7 @@ import keyboard
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+import logging
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QCheckBox,
@@ -14,6 +15,8 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidge
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine
 from src.pem.pem_file import StationConverter
+
+logger = logging.getLogger(__name__)
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -95,7 +98,24 @@ class GPSAdder(QMainWindow):
             row = self.table.selectionModel().selectedRows()[0].row()
             self.table.removeRow(row)
             self.plot_table()
-            self.highlight_point(row)
+
+            # Select the next row
+            if self.table.rowCount() == 0:
+                return
+
+            elif row == self.table.rowCount():
+                next_row = row - 1
+
+            else:
+                next_row = row
+
+            print(f"Row count: {self.table.rowCount()} - Next row: {next_row}")
+
+            self.highlight_point(next_row)
+
+            # Color the table if it's LineAdder running
+            if 'color_table' in dir(self):
+                self.color_table()
 
     def close(self):
         self.clear_table()
@@ -387,14 +407,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                 self.section_view.removeItem(self.section_lx)
                 self.section_view.removeItem(self.section_ly)
 
-    def del_row(self):
-        if self.table.selectionModel().hasSelection():
-            row = self.table.selectionModel().selectedRows()[0].row()
-            self.table.removeRow(row)
-            self.plot_table()
-            self.color_table()
-            self.highlight_point(row)
-
     def open(self, o, name=''):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
@@ -442,6 +454,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         :return: None
         """
         df = self.table_to_df()
+        if df.empty:
+            return
+
         df['Station'] = df['Station'].astype(int)
 
         # Plot the plan map
@@ -498,7 +513,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                 return
 
         # Save the information of the row for backup purposes
-        # TODO Deleting last item in table throws exception.
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
@@ -735,6 +749,9 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         """
         df = self.table_to_df()
 
+        if df.empty:
+            return
+
         # Close the loop
         df = df.append(df.iloc[0], ignore_index=True)
 
@@ -851,8 +868,8 @@ class NonScientific(pg.AxisItem):
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
-    line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Line GPS'))
-    loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Loop GPS'))
+    line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))
+    loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
 
     mw = LoopAdder()
     # mw = LineAdder()

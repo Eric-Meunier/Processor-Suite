@@ -231,7 +231,7 @@ class Map3DViewer(QMainWindow):
         t2 = time.time()
         # Add the plot HTML to be shown in the plot widget
         self.plot_widget.setHtml(html)
-        print(f'Time to set HTML: {time.time() - t2}')
+        print(f'Time to set HTML: {time.time() - t2:.3f}')
 
     def save_img(self):
         save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]

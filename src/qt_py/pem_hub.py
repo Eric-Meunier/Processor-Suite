@@ -43,6 +43,11 @@ from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.pem_plot_editor import PEMPlotEditor
 
 from src.damp.db_plot import DBPlotter
+import logging
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 __version__ = '0.11.0a'
 
@@ -98,10 +103,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.project_dir_label = QPushButton()
         self.project_dir_label.setFlat(True)
 
-        self.status_bar.addWidget(self.selection_label, 0)
-        self.status_bar.addPermanentWidget(QLabel(), 1)  # Spacer
+        self.status_bar.addPermanentWidget(self.selection_label, 0)
+        self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
         self.status_bar.addPermanentWidget(self.project_dir_label, 0)
+
+        self.status_bar.showMessage("Testing this bullshit")
 
         # Widgets
         self.station_splitter = StationSplitter(parent=self)
@@ -516,7 +523,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             elif len(pem_files) > 1:
                 info = f"{len(pem_files)} selected"
 
-            self.selection_label.setText(info)
+            self.selection_label.setText(f"{info} ")
 
         def cell_clicked(row, col):
             """
@@ -1312,10 +1319,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             pem_files = [pem_files]
 
         t1 = time.time()
+        count = 0
         parser = PEMParser()
         self.table.blockSignals(True)
         self.allow_signals = False
-        self.table.setUpdatesEnabled(False)
+        self.table.setUpdatesEnabled(False)  # Suspends the animation of the table getting populated
 
         # Start the progress bar
         bar = CustomProgressBar()
@@ -1367,6 +1375,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     self.table.insertRow(i)
                     self.pem_to_table(pem_file, i)
 
+                    count += 1
                     # Progress the progress bar
                     dlg += 1
                     self.total_opened += 1
@@ -1376,7 +1385,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.blockSignals(False)
 
         self.table.horizontalHeader().show()
-        print(f"PEMHub - Time to open all PEM files: {time.time() - t1}")
+        self.status_bar.showMessage(f"{count} PEM files opened.", 2000)
+        print(f"PEMHub - Time to open all PEM files: {time.time() - t1:.3f}")
 
     def open_gps_files(self, gps_files):
         """
@@ -1417,6 +1427,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.gps_datum_cbox.setCurrentText(datum)
         self.gps_zone_cbox.setCurrentText(coord_zone)
 
+        self.status_bar.showMessage(f"CRS information filled.", 2000)
+
     def open_in_text_editor(self):
         """
         Open the selected PEM File in a text editor
@@ -1429,14 +1441,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             browser.setText(pem_str)
             browser.resize(600, 800)
             browser.setWindowIcon(QIcon(os.path.join(icons_path, 'txt_file.png')))
-            browser.setWindowTitle('Text View')
+            browser.setWindowTitle(f"{pem_file.filepath.name}")
             browser.show()
 
     def open_file_dialog(self):
         """
         Open files through the file dialog
         """
-        files = self.dialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem);;')[0]
+        files = self.dialog.getOpenFileNames(self, 'Open PEM Files', filter='PEM files (*.pem);;')[0]
         if files:
             self.open_pem_files(files)
 
@@ -1488,6 +1500,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         assert len(pem_files) == 1, 'Can only de-rotate one file at a time.'
 
         pem_file, row = pem_files[0], rows[0]
+
+        global derotator
         derotator = Derotator(parent=self)
         derotator.accept_sig.connect(accept_file)
         derotator.open(pem_file)
@@ -1506,6 +1520,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         pem_files, rows = self.get_pem_files(selected=True)
 
+        global pem_geometry
         pem_geometry = PEMGeometry(parent=self)
         pem_geometry.accepted_sig.connect(accept_geometry)
         pem_geometry.open(pem_files)
@@ -1517,6 +1532,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
 
         if not self.pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
         pem_files, rows = self.get_pem_files(selected=selected_files)
@@ -1526,6 +1542,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for row, pem_file in zip(rows, pem_files):
             ri_files.append(self.pem_info_widgets[row].ri_file)
 
+        global pdf_plot_printer
         pdf_plot_printer = PDFPlotPrinter(parent=self)
 
         # Disable plan map creation if no CRS is selected or if the CRS is geographic.
@@ -1536,6 +1553,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                              'Do you wish to proceed without a plan map?',
                                              self.message.Yes | self.message.No)
             if response == self.message.No:
+                self.status_bar.showMessage("Cancelled.", 1000)
                 return
             else:
                 pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
@@ -1547,6 +1565,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                              'Do you wish to proceed without a plan map?',
                                              self.message.Yes | self.message.No)
             if response == self.message.No:
+                self.status_bar.showMessage("Cancelled.", 1000)
                 return
             else:
                 pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
@@ -1613,6 +1632,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         pem_files, rows = self.get_pem_files(selected=selected)
 
+        if not pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
         global batch_name_editor
         batch_name_editor = BatchNameEditor(parent=self)
         batch_name_editor.open(pem_files, kind=kind)
@@ -1629,7 +1652,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if len(ri_filepaths) > 0:
                 for i, ri_filepath in enumerate(ri_filepaths):
                     self.pem_info_widgets[i].open_ri_file(ri_filepath)
-                self.status_bar.showMessage(f"Imported {str(len(ri_filepaths))} RI files", 2000)
+                self.status_bar.showMessage(f"Imported {len(ri_filepaths)} RI files", 2000)
             else:
                 pass
 
@@ -1643,9 +1666,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Open the Map3DViewer if there's any GPS in any of the opened PEM files.
         """
         if not self.pem_files:
-            self.message.information(self, 'Error', 'No file to plot.')
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+
         elif not any([f.has_any_gps() for f in self.pem_files]):
             self.message.information(self, 'Error', 'No file has any GPS to plot.')
+
         else:
             self.map_viewer_3d.open(self.pem_files)
 
@@ -1697,6 +1722,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                     self.refresh_pem(pem_file)
                     dlg += 1
+
+                self.status_bar.showMessage(f"Process complete. GPS converted to {crs.to_string()}.", 2000)
 
         crs = self.get_crs()
 
@@ -1812,8 +1839,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         gps_dir = find_gps_dir(timeout=1)
 
         if gps_dir is None:
+            self.status_bar.showMessage(f"No GPS directory found.", 1000)
             return
         elif gps_dir == 'timeout':
+            self.status_bar.showMessage(f"Searching for GPS directory timed out.", 1000)
             # self.message.information(self, 'Timeout', 'Searching for the GPS folder timed out.')
             return
         else:
@@ -1826,7 +1855,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 for file in self.available_gps:
                     self.gps_list.addItem(f"{str(file.relative_to(self.project_dir))}")
-                    # self.gps_list.addItem(f"{file.parent.name}/{file.name}")
 
     def fill_pem_list(self):
         """
@@ -1852,13 +1880,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.available_pems = find_pem_files(timeout=1)
 
         if self.available_pems is None:
+            self.status_bar.showMessage(f"No PEM files found.", 1000)
             return
         elif self.available_pems == 'timeout':
-            # self.message.information(self, 'Timeout', 'Searching for PEM files timed out.')
+            self.status_bar.showMessage(f"Searching for PEM files timed out.", 1000)
             return
         else:
             for file in self.available_pems:
-                # self.pem_list.addItem(f"{file.parent.name}/{file.name}")
                 self.pem_list.addItem(f"{str(file.relative_to(self.project_dir))}")
 
     def move_dir_tree_to(self, dir_path):
@@ -2015,6 +2043,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         crs = self.get_crs()
 
         if not self.pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
         if not any([pem_file.has_any_gps() for pem_file in self.pem_files]):
@@ -2150,29 +2179,43 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
     def export_as_xyz(self):
         """
-        Save the selected PEM files as XYZ files. Only for surface PEM files.
+        Save the selected PEM files as XYZ files
         :return: None
         """
 
         pem_files, rows = self.get_pem_files(selected=False)
 
         if not pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
         # default_path = str(self.pem_files[-1].filepath.parent)
         file_dir = self.dialog.getExistingDirectory(self, '', str(self.project_dir))
 
         if file_dir:
-            for pem_file in pem_files:
-                file_name = str(pem_file.filepath.with_suffix('.xyz'))
-                try:
-                    xyz_file = pem_file.to_xyz()
-                except Exception as e:
-                    self.message.critical(self, 'Error', str(e))
-                    continue
-                else:
-                    with open(file_name, 'w+') as file:
-                        file.write(xyz_file)
+            bar = CustomProgressBar()
+            bar.setMaximum(len(pem_files))
+
+            with pg.ProgressDialog("Exporting XYZ Files...", 0, len(pem_files)) as dlg:
+                dlg.setBar(bar)
+                dlg.setWindowTitle('Exporting XYZ Files')
+
+                for pem_file in pem_files:
+                    if dlg.wasCanceled():
+                        break
+
+                    file_name = str(pem_file.filepath.with_suffix('.xyz'))
+                    dlg.setLabelText(f"Exporting {file_name}")
+                    try:
+                        xyz_file = pem_file.to_xyz()
+                    except Exception as e:
+                        self.message.critical(self, 'Error', str(e))
+                        continue
+                    else:
+                        with open(file_name, 'w+') as file:
+                            file.write(xyz_file)
+                    finally:
+                        dlg += 1
 
     def export_pem_files(self, selected=False, processed=False):
         """
@@ -2192,40 +2235,51 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                                  'Do you wish to proceed with no CRS information?',
                                                  self.message.Yes | self.message.No)
                 if response == self.message.No:
-                    return
+                    self.status_bar.showMessage(f"Cancelled.", 2000)
 
-        file_dir = self.dialog.getExistingDirectory(self, '', str(self.project_dir))  #, QFileDialog.DontUseNativeDialog)
+        file_dir = self.dialog.getExistingDirectory(self, '', str(self.project_dir))
         if not file_dir:
             self.status_bar.showMessage('Cancelled.', 2000)
             return
 
-        for pem_file, row in zip(pem_files, rows):
-            file_name = pem_file.filepath.name
-            pem_file = pem_file.copy()
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+        with pg.ProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle('Exporting PEM Files')
 
-            if processed is True:
-                # Make sure the file is averaged and split and de-rotated
-                if not pem_file.is_split():
-                    pem_file = pem_file.split()
-                if not pem_file.is_averaged():
-                    pem_file = pem_file.average()
-                if pem_file.is_borehole():
-                    if pem_file.has_xy() and not pem_file.is_rotated():
-                        if not pem_file.prepped_for_rotation:
-                            pem_file, _ = pem_file.prep_rotation()
-                        pem_file.rotate('acc')
+            for pem_file, row in zip(pem_files, rows):
+                if dlg.wasCanceled():
+                    break
 
-                # Remove underscore-dates and tags
-                file_name = re.sub(r'_\d+', '', re.sub(r'\[-?\w\]', '', file_name))
-                if not pem_file.is_borehole():
-                    file_name = file_name.upper()
-                    if file_name.lower()[0] == 'c':
-                        file_name = file_name[1:]
-                    # if pem_file.is_averaged() and 'av' not in file_name.lower():
-                    #     file_name = file_name + 'Av'
+                file_name = pem_file.filepath.name
+                pem_file = pem_file.copy()
+                print(f"Exporting {file_name}")
 
-            pem_file.filepath = Path(file_dir).joinpath(file_name)
-            pem_file.save()
+                if processed is True:
+                    # Make sure the file is averaged and split and de-rotated
+                    if not pem_file.is_split():
+                        pem_file = pem_file.split()
+                    if not pem_file.is_averaged():
+                        pem_file = pem_file.average()
+                    if pem_file.is_borehole():
+                        if pem_file.has_xy() and not pem_file.is_rotated():
+                            if not pem_file.prepped_for_rotation:
+                                pem_file, _ = pem_file.prep_rotation()
+                            pem_file.rotate('acc')
+
+                    # Remove underscore-dates and tags
+                    file_name = re.sub(r'_\d+', '', re.sub(r'\[-?\w\]', '', file_name))
+                    if not pem_file.is_borehole():
+                        file_name = file_name.upper()
+                        if file_name.lower()[0] == 'c':
+                            file_name = file_name[1:]
+                        # if pem_file.is_averaged() and 'av' not in file_name.lower():
+                        #     file_name = file_name + 'Av'
+
+                pem_file.filepath = Path(file_dir).joinpath(file_name)
+                pem_file.save()
+                dlg += 1
 
         self.status_bar.showMessage(f"Save complete. {len(pem_files)} PEM file(s) exported", 2000)
 
@@ -2235,29 +2289,40 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Doesn't repeat if a line/hole/loop has been done already.
         :return: None
         """
-        if self.pem_files:
-            crs = self.get_crs()
+        if not self.pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
 
-            if not crs:
-                self.message.information(self, 'Invalid CRS', 'CRS is incomplete and/or invalid.')
-                return
+        crs = self.get_crs()
 
-            loops = []
-            lines = []
-            collars = []
+        if not crs:
+            self.message.information(self, 'Invalid CRS', 'CRS is incomplete and/or invalid.')
+            return
 
-            default_path = os.path.dirname(self.pem_files[0].filepath)
-            export_folder = self.dialog.getExistingDirectory(
-                self, 'Select Destination Folder', default_path, QFileDialog.DontUseNativeDialog)
-            if export_folder != '':
+        loops = []
+        lines = []
+        collars = []
+
+        default_path = os.path.dirname(self.pem_files[0].filepath)
+        export_folder = self.dialog.getExistingDirectory(self, 'Select Destination Folder', default_path)
+
+        if export_folder:
+            bar = CustomProgressBar()
+            bar.setMaximum(len(self.pem_files))
+            with pg.ProgressDialog("Exporting GPS...", 0, len(self.pem_files)) as dlg:
+                dlg.setBar(bar)
+                dlg.setWindowTitle('Exporting GPS')
+
                 for loop, pem_files in groupby(self.pem_files, key=lambda x: x.loop_name):
+                    if dlg.wasCanceled():
+                        break
+
                     pem_files = list(pem_files)
-                    try:
-                        # Creates a new folder for each loop, where each CSV will be saved for that loop.
-                        os.mkdir(os.path.join(export_folder, loop))
-                    except FileExistsError:
-                        pass
-                    folder = os.path.join(export_folder, loop)
+
+                    # Creates a new folder for each loop, where each CSV will be saved for that loop.
+                    folder = Path(export_folder).joinpath(loop)
+                    folder.mkdir(parents=True, exist_ok=True)
+
                     for pem_file in pem_files:
                         if pem_file.has_loop_gps():
                             loop = pem_file.get_loop(closed=False)
@@ -2265,7 +2330,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                 loop_name = pem_file.loop_name
                                 print(f"Creating CSV file for loop {loop_name}")
                                 loops.append(loop.to_string())
-                                csv_filepath = os.path.join(folder, loop_name + '.csv')
+                                csv_filepath = str(folder.joinpath(loop_name).with_suffix('csv'))
+
                                 with open(csv_filepath, 'w') as csvfile:
                                     filewriter = csv.writer(csvfile,
                                                             delimiter=',',
@@ -2283,7 +2349,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                 line_name = pem_file.line_name
                                 print(f"Creating CSV file for line {line_name}")
                                 lines.append(line.to_string())
-                                csv_filepath = os.path.join(folder, f"{line_name}.csv")
+                                csv_filepath = str(folder.joinpath(line_name).with_suffix('csv'))
+
                                 with open(csv_filepath, 'w') as csvfile:
                                     filewriter = csv.writer(csvfile,
                                                             delimiter=',',
@@ -2302,7 +2369,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                 hole_name = pem_file.line_name
                                 print(f"Creating CSV file for hole {hole_name}")
                                 collars.append(collar.to_string())
-                                csv_filepath = os.path.join(folder, hole_name + '.csv')
+                                csv_filepath = str(folder.joinpath(hole_name).with_suffix('csv'))
+
                                 with open(csv_filepath, 'w') as csvfile:
                                     filewriter = csv.writer(csvfile,
                                                             delimiter=',',
@@ -2313,9 +2381,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                     filewriter.writerow(['Easting', 'Northing', 'Elevation'])
                                     collar.apply(lambda x: filewriter.writerow([x.Easting, x.Northing, x.Elevation]),
                                                  axis=1)
-                self.status_bar.showMessage("Export complete.", 2000)
-            else:
-                self.status_bar.showMessage("No files to export.", 2000)
+
+                        dlg += 1
+
+            self.status_bar.showMessage("Export complete.", 2000)
 
     def format_row(self, row):
 
@@ -2462,7 +2531,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
 
-        print(f"Filling {pem_file.filepath.name}'s information to the table")
+        print(f"Adding {pem_file.filepath.name} to the table")
         self.table.blockSignals(True)
 
         piw = self.pem_info_widgets[row]
@@ -2506,11 +2575,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param pem_file: PEMFile object
         """
         if pem_file in self.pem_files:
+            print(f"Refreshing {pem_file.filepath.name}")
             ind = self.pem_files.index(pem_file)
             self.pem_info_widgets[ind].open_file(pem_file)
             self.pem_to_table(pem_file, ind)
             self.format_row(ind)
         else:
+            logger.error(f"PEMFile ID {id(pem_file)} is not in the table")
             raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table")
 
     def backup_files(self):
@@ -2521,53 +2592,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         for pem_file in self.pem_files:
             pem_file.save(backup=True)
         self.status_bar.showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
-
-    # def update_pem(self, pem_file, table_row):
-    #     """
-    #     Saves the pem file in memory using the information in the table.
-    #     :param pem_file: PEM file object to save.
-    #     :param table_row: Corresponding row of the PEM file in the main table.
-    #     :return: the PEM File object with updated information
-    #     """
-    #
-    #     def add_crs_tag():
-    #         """
-    #         Add the CRS from the table as a note to the PEM file.
-    #         :return: None
-    #         """
-    #         if crs:
-    #             # Remove any existing CRS tag
-    #             for note in reversed(pem_file.notes):
-    #                 if '<GEN> CRS' in note or '<CRS>' in note:
-    #                     del pem_file.notes[pem_file.notes.index(note)]
-    #
-    #             pem_file.notes.append(f"<GEN>/<CRS> {crs.name}")
-    #
-    #     table_filename = self.table.item(table_row, self.table_columns.index('File')).text()
-    #     pem_file.filepath = Path(pem_file.filepath.parent.joinpath(table_filename))
-    #
-    #     crs = self.get_crs()
-    #
-    #     add_crs_tag()
-    #     pem_file.date = self.table.item(table_row, self.table_columns.index('Date')).text()
-    #     pem_file.client = self.table.item(table_row, self.table_columns.index('Client')).text()
-    #     pem_file.grid = self.table.item(table_row, self.table_columns.index('Grid')).text()
-    #     pem_file.line_name = self.table.item(table_row, self.table_columns.index('Line/Hole')).text()
-    #     pem_file.loop_name = self.table.item(table_row, self.table_columns.index('Loop')).text()
-    #     pem_file.current = float(self.table.item(table_row, self.table_columns.index('Current')).text())
-    #
-    #     pem_file.loop = self.stackedWidget.widget(table_row).get_loop()
-    #     pem_file.loop.crs = crs
-    #     if pem_file.is_borehole():
-    #         pem_file.collar = self.stackedWidget.widget(table_row).get_collar()
-    #         pem_file.collar.crs = crs
-    #         pem_file.segments = self.stackedWidget.widget(table_row).get_segments()
-    #         pem_file.geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
-    #     else:
-    #         pem_file.line = self.stackedWidget.widget(table_row).get_line()
-    #         pem_file.line.crs = crs
-    #
-    #     return pem_file
 
     def get_pem_files(self, selected=False):
         """
@@ -2583,10 +2607,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         else:
             selected_pem_files = []
             rows = [model.row() for model in self.table.selectionModel().selectedRows()]
-
-            # # Return row 0 if there are pem files but no rows selected, since the program may have been freshly opened.
-            # if self.pem_files and not rows:
-            #     rows = [0]
 
             if rows:
                 rows.sort(reverse=True)
@@ -2656,6 +2676,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             try:
                 crs = CRS.from_epsg(epsg_code)
             except Exception as e:
+                logger.error(f"Invalid EPSG code: {str(e)}")
                 self.error.showMessage(f"Invalid EPSG code: {str(e)}")
             else:
                 print(f"PEMHub project CRS: {crs.name}")
@@ -2669,8 +2690,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param selected: bool, True will only export selected rows.
         """
         pem_files, rows = self.get_pem_files(selected=selected)
+        if not pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
         pem_files = [f for f in pem_files if not f.is_averaged()]
         if not pem_files:
+            self.status_bar.showMessage(f"No un-averaged PEM files opened.", 2000)
             return
 
         bar = CustomProgressBar()
@@ -2704,7 +2730,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.refresh_pem(pem_file)
                 dlg += 1
 
-        self.end_pb()
+        self.status_bar.showMessage(f"Process complete. {len(pem_files)} PEM files averaged.", 2000)
 
     def split_pem_channels(self, selected=False):
         """
@@ -2714,6 +2740,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_files, rows = self.get_pem_files(selected=selected)
 
         if not pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
         # Zip the pem_files and rows so they can be filtered together
@@ -2722,6 +2749,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         filt_list = list(filter(lambda x: not x[0].is_split(), pems_rows))
 
         if len(filt_list) == 0:
+            self.status_bar.showMessage(f"No un-split PEM files opened.", 2000)
             return
 
         bar = CustomProgressBar()
@@ -2745,6 +2773,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.refresh_pem(pem_file)
                 dlg += 1
 
+        self.status_bar.showMessage(f"Process complete. {len(filt_list)} PEM files split.", 2000)
+
     def scale_pem_coil_area(self, coil_area=None, selected=False):
         """
         Scales the data according to the coil area change
@@ -2757,10 +2787,28 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 return
 
         pem_files, rows = self.get_pem_files(selected=selected)
+        if not pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
 
-        for pem_file, row in zip(pem_files, rows):
-            pem_file = pem_file.scale_coil_area(coil_area)
-            self.refresh_pem(pem_file)
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+
+        with pg.ProgressDialog('Scaling PEM File Coil Area...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle('Scaling PEM File Coil Area')
+
+            for pem_file, row in zip(pem_files, rows):
+                if dlg.wasCanceled():
+                    break
+                dlg.setLabelText(f"Scaling coil area of {pem_file.filepath.name}")
+
+                pem_file = pem_file.scale_coil_area(coil_area)
+                self.refresh_pem(pem_file)
+                dlg += 1
+
+        self.status_bar.showMessage(f"Process complete. "
+                                    f"Coil area of {len(pem_files)} PEM files scaled to {coil_area}.", 2000)
 
     def scale_pem_current(self, selected=False):
         """
@@ -2768,20 +2816,40 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param selected: bool, True will only export selected rows.
         :return: None
         """
+        pem_files, rows = self.get_pem_files(selected=selected)
+        if not pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
         current, ok_pressed = QInputDialog.getDouble(self, "Scale Current", "Current:")
         if ok_pressed:
-            pem_files, rows = self.get_pem_files(selected=selected)
+            bar = CustomProgressBar()
+            bar.setMaximum(len(pem_files))
 
-            for pem_file, row in zip(pem_files, rows):
-                print(f"Performing current change for {pem_file.filepath.name}")
-                pem_file = pem_file.scale_current(current)
-                self.refresh_pem(pem_file)
+            with pg.ProgressDialog('Scaling PEM File Current...', 0, len(pem_files)) as dlg:
+                dlg.setBar(bar)
+                dlg.setWindowTitle('Scaling PEM File Current')
+
+                for pem_file, row in zip(pem_files, rows):
+                    dlg.setLabelText(f"Scaling current of {pem_file.filepath.name}")
+
+                    pem_file = pem_file.scale_current(current)
+                    self.refresh_pem(pem_file)
+                    dlg += 1
+
+            self.status_bar.showMessage(f"Process complete. "
+                                        f"Current of {len(pem_files)} PEM files scaled to {current}.", 2000)
 
     def reverse_component_data(self, comp):
         """
         Reverse the polarity of all data of a given component for all opened PEM files.
         :param comp: str, either Z, X, or Y
         """
+        pem_files, rows = self.get_pem_files(selected=False)
+        if not pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
         for pem_file in self.pem_files:
             filt = pem_file.data.Component == comp.upper()
 
@@ -2794,6 +2862,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.refresh_pem(pem_file)
             else:
                 print(f"{pem_file.filepath.name} has no {comp} data.")
+
+        self.status_bar.showMessage(f"Process complete. "
+                                    f"{comp.upper()} of {len(pem_files)} PEM files reversed.", 2000)
 
     def merge_pem_files(self):
         """
@@ -2825,6 +2896,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return True
 
         def accept_merge(filepath):
+            """
+            Open the new merged PEMFile, and remove the old ones if the delete_merged_files_cbox is checked.
+            :param filepath: Path object.
+            """
 
             if self.delete_merged_files_cbox.isChecked():
                 self.remove_file(rows)
@@ -2910,6 +2985,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         files_to_remove = []
 
         if not self.pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
         pem_files, rows = copy.deepcopy(self.pem_files), np.arange(self.table.rowCount())
@@ -2977,6 +3053,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
         if not self.pem_files:
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
         file_name_column = self.table_columns.index('File')
@@ -3633,7 +3710,7 @@ class ChannelTimeViewer(QMainWindow):
         # Status bar
         self.survey_type_label = QLabel(f" {self.pem_file.get_survey_type()} Survey ")
         self.timebase_label = QLabel(f" Timebase: {self.pem_file.timebase}ms ")
-        off_time_channels = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove])
+        off_time_channels = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove.astype(bool)])
         on_time_channels = len(self.pem_file.channel_times[self.pem_file.channel_times.Remove])
         self.num_channels = QLabel(f" Channels: {on_time_channels} On-Time / {off_time_channels} Off-Time ")
 
@@ -3774,10 +3851,6 @@ def main():
 
 
 if __name__ == '__main__':
-    import logging
-    logger = logging.getLogger(__name__)
-    handler = logging.StreamHandler(stream=sys.stdout)
-    logger.addHandler(handler)
 
     def handle_exception(exc_type, exc_value, exc_traceback):
         if issubclass(exc_type, KeyboardInterrupt):
@@ -3785,7 +3858,6 @@ if __name__ == '__main__':
             return
 
         logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-        sys.exit(1)
 
     sys.excepthook = handle_exception
 
