@@ -102,15 +102,12 @@ class GPSAdder(QMainWindow):
             # Select the next row
             if self.table.rowCount() == 0:
                 return
-
             elif row == self.table.rowCount():
                 next_row = row - 1
-
             else:
                 next_row = row
 
-            print(f"Row count: {self.table.rowCount()} - Next row: {next_row}")
-
+            # Highlight the next row
             self.highlight_point(next_row)
 
             # Color the table if it's LineAdder running
