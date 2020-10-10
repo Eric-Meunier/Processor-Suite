@@ -258,7 +258,8 @@ class DBPlotter(QMainWindow):
 
         for file in db_files:
             name = Path(file).name
-            contents = open(file).read()
+            with open(file) as f:
+                contents = f.read()
 
             # Try to create a DBPlotWidget for each 'read' command found
             reads = re.split(r'read ', contents)

@@ -384,7 +384,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Save the PEM file
         """
         self.status_bar.showMessage('Saving file...')
-        self.pem_file.data = self.pem_file.data[~self.pem_file.data.del_flag.astype(bool)]
+        self.pem_file.data = self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)]
         self.pem_file.save()
         self.plot_profiles('all')
         self.plot_station(self.selected_station, preserve_selection=False)
@@ -668,7 +668,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.update_file()
 
         file = copy.deepcopy(self.pem_file)
-        file.data = file.data.loc[~file.data.del_flag.astype(bool)]
+        file.data = file.data.loc[~file.data.Deleted.astype(bool)]
 
         self.number_of_readings.setText(f"{len(file.data)} reading(s)")
 
@@ -750,7 +750,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 self.active_decay_axes.append(ax)
 
             # Change the pen if the data is flagged for deletion or overload
-            if row.del_flag is False:
+            if row.Deleted is False:
                 color = (96, 96, 96, 150)
                 z_value = 2
             else:
@@ -862,7 +862,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 decay_selection_text = []
                 # Show the range of reading numbers and reading indexes if multiple decays are selected
                 if len(selected_data) > 1:
-                    num_deleted = len(selected_data[selected_data.del_flag])
+                    num_deleted = len(selected_data[selected_data.Deleted])
                     num_selected = f"{len(selected_data)} readings selected ({num_deleted} deleted)"
                     r_numbers = selected_data.Reading_number.unique()
                     r_indexes = selected_data.Reading_index.unique()
@@ -937,10 +937,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.flip_decay_btn.setEnabled(False)
 
         # Change the color of the plotted lines
-        for line, del_flag, overload in zip(self.plotted_decay_lines, self.plotted_decay_data.del_flag, self.plotted_decay_data.Overload):
+        for line, Deleted, overload in zip(self.plotted_decay_lines, self.plotted_decay_data.Deleted, self.plotted_decay_data.Overload):
 
             # Change the pen if the data is flagged for deletion
-            if del_flag is False:
+            if Deleted is False:
                 color = (96, 96, 96, 150)
                 z_value = 2
             else:
@@ -955,7 +955,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             # Colors for the lines if they selected
             if line in self.selected_lines:
-                if del_flag is False:
+                if Deleted is False:
                     color = (85, 85, 255, 200)  # Blue
                     # color = (153, 85, 204, 200)  # Purple
                     z_value = 4
@@ -1264,7 +1264,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         selected_data = self.get_selected_decay_data()
         if not selected_data.empty:
             # Change the deletion flag
-            selected_data.loc[:, 'del_flag'] = selected_data.loc[:, 'del_flag'].map(lambda x: not x)
+            selected_data.loc[:, 'Deleted'] = selected_data.loc[:, 'Deleted'].map(lambda x: not x)
 
             # Update the data in the pem file object
             self.pem_file.data.loc[selected_data.index] = selected_data
@@ -1430,7 +1430,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         selected_data = self.get_selected_profile_data()
         if not selected_data.empty:
             # Change the deletion flag
-            selected_data.loc[:, 'del_flag'] = True
+            selected_data.loc[:, 'Deleted'] = True
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
@@ -1589,11 +1589,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             data_std = np.array([threshold_value] * len(readings[0]))
             data_median = np.median(readings, axis=0)
 
-            if len(group.loc[~group.del_flag.astype(bool)]) > 2:
+            if len(group.loc[~group.Deleted.astype(bool)]) > 2:
                 global local_count
                 local_count = 0  # The number of readings that have been deleted so far for this group.
                 max_removable = len(group) - 2  # Maximum number of readings that are allowed to be deleted.
-                group.del_flag = group.Reading.map(lambda x: eval_decay(x, data_std, data_median, max_removable))
+                group.Deleted = group.Reading.map(lambda x: eval_decay(x, data_std, data_median, max_removable))
 
             return group
 

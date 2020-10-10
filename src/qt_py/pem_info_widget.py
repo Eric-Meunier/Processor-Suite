@@ -57,8 +57,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
-        self.num_repeat_stations = 0
-        self.suffix_warnings = 0
 
         self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Units', 'Station']
         self.loop_table_columns = ['Easting', 'Northing', 'Elevation', 'Units']

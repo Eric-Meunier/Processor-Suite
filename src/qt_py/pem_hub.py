@@ -23,7 +23,8 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
                              QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel, QHBoxLayout,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
-                             QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame, QComboBox)
+                             QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame,
+                             QComboBox)
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.gps.gpx_creator import GPXCreator
 
@@ -163,7 +164,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             'Averaged',
             'Split',
             'Suffix\nWarnings',
-            'Repeat\nStations'
+            'Repeat\nWarnings'
         ]
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
@@ -221,6 +222,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.actionExport_Processed_PEM.triggered.connect(lambda: self.export_pem_files(selected=False,
                                                                                         processed=True))
+        self.actionExport_Legacy_PEM.triggered.connect(lambda: self.export_pem_files(selected=False,
+                                                                                     legacy=True))
 
         self.actionBackup_Files.triggered.connect(self.backup_files)
         self.actionImport_RI_Files.triggered.connect(self.open_ri_importer)
@@ -364,12 +367,39 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             :param row: int
             :param col: int
             """
+
+            pem_file = self.pem_files[row]
+
+            def accept_change(data):
+                """
+                Signal slot, update the station names of the PEM file.
+                :param data: DataFrame of the data with the stations re-named.
+                """
+                pem_file.data = data
+                self.refresh_pem(pem_file)
+
             if col == self.table_columns.index('Date'):
                 self.calender.show()
 
                 # Create global variables to be used by set_date
                 global current_row, current_col
                 current_row, current_col = row, col
+
+            elif col == self.table_columns.index('Suffix\nWarnings'):
+                warnings = pem_file.get_suffix_warnings()
+                print(f"{len(warnings)} suffix warnings for {pem_file.filepath.name}")
+
+                global suffix_viewer
+                suffix_viewer = WarningViewer(pem_file, warning_type='suffix')
+                suffix_viewer.accept_sig.connect(accept_change)
+
+            elif col == self.table_columns.index('Repeat\nWarnings'):
+                warnings = pem_file.get_repeats()
+                print(f"{len(warnings)} repeat warnings for {pem_file.filepath.name}")
+
+                global repeat_viewer
+                repeat_viewer = WarningViewer(pem_file, warning_type='repeats')
+                repeat_viewer.accept_sig.connect(accept_change)
 
         def set_date(date):
             """
@@ -1417,7 +1447,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param inf_file: str, .INF filepath
         """
         def get_inf_crs(filepath):
-            file = open(filepath, 'rt').read()
+            with open(filepath, 'rt') as f:
+                file = f.read()
             crs = dict()
             crs['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
             crs['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
@@ -2017,11 +2048,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             # Create a copy of the PEM file, then update the copy
             new_pem = pem_file.copy()
             new_pem.filepath = Path(save_path)
-            new_pem.save()
+            new_pem.save(legacy='legacy' in save_type.lower())
 
             self.status_bar.showMessage(f'Save Complete. PEM file saved as {new_pem.filepath.name}', 2000)
             # Must open and not update the PEM since it is being copied
             # self.open_pem_files(new_pem)
+
+            # Refresh the PEM list
+            self.fill_pem_list()
 
         def save_xyz():
             xyz_file = pem_file.to_xyz()
@@ -2034,10 +2068,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         pem_file = self.pem_files[self.table.currentRow()]
         default_path = str(pem_file.filepath)
-        save_path = QFileDialog.getSaveFileName(self, '', default_path, 'PEM Files (*.PEM);; XYZ Files (*.XYZ)')[0]
+        save_path, save_type = QFileDialog.getSaveFileName(self, '', default_path, 'PEM File (*.PEM);; '
+                                                                                   'Legacy PEM File (*.PEM);;'
+                                                                                   'XYZ File (*.XYZ)')
 
         if save_path:
-            if save_path.lower().endswith('.xyz'):
+            if 'XYZ' in save_type:
                 save_xyz()
             else:
                 save_pem()
@@ -2225,11 +2261,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     finally:
                         dlg += 1
 
-    def export_pem_files(self, selected=False, processed=False):
+    def export_pem_files(self, selected=False, legacy=False, processed=False):
         """
         Saves all PEM files to a desired location (keeps them opened) and removes any tags.
         :param selected: bool, True will only export selected rows.
-        :param processed: bool, perform a final file export where the file names are modified automatically.
+        :param legacy: bool, Save the PEM Files as legacy format, compatible with Step.
+        :param processed: bool, Save the PEM files as processed and legacy format. Will average, split,
+        de-rotated (if applicable), and re-name the file names.
         """
 
         pem_files, rows = self.get_pem_files(selected=selected)
@@ -2264,29 +2302,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 pem_file = pem_file.copy()
                 print(f"Exporting {file_name}")
 
-                if processed is True:
-                    # Make sure the file is averaged and split and de-rotated
-                    if not pem_file.is_split():
-                        pem_file = pem_file.split()
-                    if not pem_file.is_averaged():
-                        pem_file = pem_file.average()
-                    if pem_file.is_borehole():
-                        if pem_file.has_xy() and not pem_file.is_rotated():
-                            if not pem_file.prepped_for_rotation:
-                                pem_file, _ = pem_file.prep_rotation()
-                            pem_file.rotate('acc')
-
-                    # Remove underscore-dates and tags
-                    file_name = re.sub(r'_\d+', '', re.sub(r'\[-?\w\]', '', file_name))
-                    if not pem_file.is_borehole():
-                        file_name = file_name.upper()
-                        if file_name.lower()[0] == 'c':
-                            file_name = file_name[1:]
-                        # if pem_file.is_averaged() and 'av' not in file_name.lower():
-                        #     file_name = file_name + 'Av'
-
                 pem_file.filepath = Path(file_dir).joinpath(file_name)
-                pem_file.save()
+                pem_file.save(legacy=legacy, processed=processed)
                 dlg += 1
 
         self.status_bar.showMessage(f"Save complete. {len(pem_files)} PEM file(s) exported", 2000)
@@ -2434,7 +2451,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             average_col = self.table_columns.index('Averaged')
             split_col = self.table_columns.index('Split')
             suffix_col = self.table_columns.index('Suffix\nWarnings')
-            repeat_col = self.table_columns.index('Repeat\nStations')
+            repeat_col = self.table_columns.index('Repeat\nWarnings')
             pem_has_gps = has_all_gps(self.pem_info_widgets[row])
 
             for col in [average_col, split_col, suffix_col, repeat_col]:
@@ -2491,8 +2508,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             bold_font.setBold(True)
             normal_font.setBold(False)
 
-            info_widget = self.pem_info_widgets[self.pem_files.index(pem_file)]
-
             # Get the original information in the PEM file
             row_info = [
                 pem_file.filepath.name,
@@ -2507,8 +2522,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 pem_file.get_stations(converted=True).max(),
                 pem_file.is_averaged(),
                 pem_file.is_split(),
-                str(info_widget.suffix_warnings),
-                str(info_widget.num_repeat_stations)
+                str(len(pem_file.get_suffix_warnings())),
+                str(len(pem_file.get_repeats()))
             ]
 
             # If the value in the table is different then in the PEM file, make the value bold.
@@ -2557,8 +2572,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             pem_file.get_stations(converted=True).max(),
             pem_file.is_averaged(),
             pem_file.is_split(),
-            str(piw.suffix_warnings),
-            str(piw.num_repeat_stations)
+            len(pem_file.get_suffix_warnings()),
+            len(pem_file.get_repeats()),
         ]
 
         # Set the information into each cell. Columns from First Station and on can't be edited.
@@ -3830,16 +3845,141 @@ class ChannelTimeViewer(QMainWindow):
         color_table()
 
 
+class SuffixWarningViewer(QMainWindow):
+
+    def __init__(self, pem_file, parent=None):
+        super().__init__()
+        self.parent = parent
+
+        assert not pem_file.is_borehole(), f"{pem_file.filepath.name} is a borehole file."
+
+        self.pem_file = pem_file
+        self.suffixes = self.pem_file.get_suffix_warnings()
+        self.suffixes = self.suffixes[['Station', 'Component', 'Reading_index', 'Reading_number']]
+        if self.suffixes.empty:
+            print(f"No suffixes to view in {pem_file.filepath.name}")
+            return
+
+        self.setWindowTitle(f"Suffix Warnings Viewer - {pem_file.filepath.name}")
+
+        self.setLayout(QVBoxLayout())
+        self.table = pg.TableWidget()
+        self.layout().addWidget(self.table)
+        self.setCentralWidget(self.table)
+
+        self.table.setData(self.suffixes.to_dict('index'))
+        self.show()
+
+
+class WarningViewer(QMainWindow):
+    accept_sig = QtCore.pyqtSignal(object)
+
+    def __init__(self, pem_file, warning_type=None, parent=None):
+        """
+        Widget to view Repeat and Suffix warnings, and allow to fix them easily.
+        :param pem_file: PEMFile object
+        :param warning_type: str, either "suffix" or "repeat" for which kind of warning to present.
+        :param parent: PyQt parent object
+        """
+        super().__init__()
+        self.parent = parent
+
+        self.pem_file = pem_file
+        self.warning_type = warning_type
+
+        if self.warning_type == 'suffix':
+            assert not pem_file.is_borehole(), f"{pem_file.filepath.name} is a borehole file."
+
+            def get_new_name(station):
+                """
+                Automatically rename the repeat.
+                :param station: str, station name to be re-named.
+                :return: str
+                """
+                new_station = re.sub(r'[NSEWnsew]', mode, station)
+                return new_station
+
+            self.warnings = self.pem_file.get_repeats().Station.to_frame()
+            self.warnings[''] = '→'
+            mode = self.pem_file.get_suffix_mode()
+            self.warnings['To'] = self.warnings.Station.map(get_new_name)
+            self.setWindowTitle(f"Suffix Warnings Viewer - {pem_file.filepath.name}")
+
+        else:
+
+            def get_new_name(station):
+                """
+                Automatically rename the repeat.
+                :param station: str, station name to be re-named.
+                :return: str
+                """
+                station_num = re.search(r'\d+', station).group()
+                if station_num[-1] == '1' or station_num[-1] == '6':
+                    station_num = str(int(station_num) - 1)
+                elif station_num[-1] == '4' or station_num[-1] == '9':
+                    station_num = str(int(station_num) + 1)
+
+                new_station = re.sub(r'\d+', station_num, station)
+                return new_station
+
+            self.warnings = self.pem_file.get_suffix_warnings().Station.to_frame()
+            self.warnings[''] = '→'
+            self.warnings['To'] = self.warnings.Station.map(get_new_name)
+            self.setWindowTitle(f"Repeat Warnings Viewer - {pem_file.filepath.name}")
+
+        if self.warnings.empty:
+            print(f"No warnings to view in {pem_file.filepath.name}")
+            return
+
+        # Format that window
+        self.setLayout(QVBoxLayout())
+
+        self.widget = QWidget()
+        self.widget.setLayout(QVBoxLayout())
+        self.setCentralWidget(self.widget)
+
+        # Add the widgets
+        self.table = pg.TableWidget()
+        self.table.horizontalHeader().hide()
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.widget.layout().addWidget(self.table)
+
+        self.accept_btn = QPushButton('Rename')
+        self.widget.layout().addWidget(self.accept_btn)
+
+        self.table.setData(self.repeats.to_dict('index'))
+        self.format_table()
+
+        # Init the signals
+        self.accept_btn.clicked.connect(self.accept_rename)
+        self.show()
+
+    def accept_rename(self):
+        data = self.pem_file.data
+        data.loc[self.repeats.index, 'Station'] = self.repeats['To']
+        self.accept_sig.emit(data)
+        self.close()
+
+    def format_table(self):
+        for row in range(self.table.rowCount()):
+            for col in range(self.table.columnCount()):
+                item = self.table.item(row, col)
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+        self.table.resizeRowsToContents()
+        # self.table.resizeColumnsToContents()
+
+
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMHub()
     pg = PEMGetter()
 
-    pem_files = pg.get_pems(client='PEM Rotation', random=True, number=3)
+    # pem_files = pg.get_pems(client='PEM Rotation', random=True, number=3)
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    pem_files = pg.get_pems(client='Minera', number=1)
     # pem_files = pg.get_pems(random=True, number=9)
     # s = GPSShareWidget()
     # s.open(pem_files, 0)
