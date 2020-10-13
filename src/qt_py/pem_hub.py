@@ -1,23 +1,21 @@
 import copy
+import csv
 import datetime
+import logging
 import os
 import re
-import csv
-import sys
-import time
-import pandas as pd
-import numpy as np
-import simplekml
-import natsort
-import stopit
-import keyboard
-import pyqtgraph as pg
 import subprocess
-from matplotlib import pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap as lcmap
-from pyproj import CRS
-from pathlib import Path
+import sys
 from itertools import groupby
+from pathlib import Path
+
+import keyboard
+import natsort
+import numpy as np
+import pandas as pd
+import pyqtgraph as pg
+import simplekml
+import stopit
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
@@ -25,31 +23,40 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
                              QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame,
                              QComboBox)
-from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
-from src.gps.gpx_creator import GPXCreator
-
-from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
-from src.pem.pem_plotter import PEMPrinter, CustomProgressBar
-from src.qt_py.pem_planner import LoopPlanner, GridPlanner
-
-from src.qt_py.pem_info_widget import PEMFileInfoWidget
-from src.qt_py.pem_merger import PEMMerger
-from src.qt_py.unpacker import Unpacker
-from src.qt_py.ri_importer import BatchRIImporter
-from src.qt_py.name_editor import BatchNameEditor
-from src.qt_py.station_splitter import StationSplitter
-from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer
-from src.qt_py.derotator import Derotator
-from src.qt_py.pem_geometry import PEMGeometry
-from src.qt_py.pem_plot_editor import PEMPlotEditor
+from matplotlib import pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap as lcmap
+from pyproj import CRS
 
 from src.damp.db_plot import DBPlotter
-import logging
-import sys
+from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
+from src.gps.gpx_creator import GPXCreator
+from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
+from src.pem.pem_plotter import PEMPrinter, CustomProgressBar
+from src.qt_py.derotator import Derotator
+from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer
+from src.qt_py.name_editor import BatchNameEditor
+from src.qt_py.pem_geometry import PEMGeometry
+from src.qt_py.pem_info_widget import PEMFileInfoWidget
+from src.qt_py.pem_merger import PEMMerger
+from src.qt_py.pem_planner import LoopPlanner, GridPlanner
+from src.qt_py.pem_plot_editor import PEMPlotEditor
+from src.qt_py.ri_importer import BatchRIImporter
+from src.qt_py.station_splitter import StationSplitter
+from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
-handler = logging.StreamHandler(stream=sys.stdout)
-logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
+                                datefmt='%m/%d/%Y %I:%M:%S %p')
+stream_format = logging.Formatter('%(filename)s (%(funcName)s)\n%(levelname)s: %(message)s')
+stream_handler = logging.StreamHandler(stream=sys.stdout)
+stream_handler.setLevel(logging.INFO)
+stream_handler.setFormatter(stream_format)
+file_handler = logging.FileHandler(filename='err.log', mode='w')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(file_format)
+logger.addHandler(stream_handler)
+logger.addHandler(file_handler)
 
 __version__ = '0.11.0a'
 
@@ -4026,20 +4033,20 @@ def main():
 
 if __name__ == '__main__':
 
-    def handle_exception(exc_type, exc_value, exc_traceback):
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
+    # def handle_exception(exc_type, exc_value, exc_traceback):
+    #     if issubclass(exc_type, KeyboardInterrupt):
+    #         sys.__excepthook__(exc_type, exc_value, exc_traceback)
+    #         return
+    #
+    #     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    #
+    # sys.excepthook = handle_exception
 
-        logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-
-    sys.excepthook = handle_exception
-
-    logging.basicConfig(filename='err.log',
-                        filemode='w',
-                        level=logging.INFO,
-                        format='\n%(asctime)s - %(filename)s\n%(levelname)s: %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p')
+    # logging.basicConfig(filename='err.log',
+    #                     filemode='w',
+    #                     level=logging.INFO,
+    #                     format='\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
+    #                     datefmt='%m/%d/%Y %I:%M:%S %p')
 
     main()
     # cProfile.run('main()', 'restats')

@@ -70,3 +70,4 @@ class Logger:
         self.logger.exception(''.join(str(i) for i in args) +
                               Color.normal)
         self.handler.setFormatter(self.normal_formatter)
+

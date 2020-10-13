@@ -21,8 +21,18 @@ from shapely.geometry import asMultiPoint
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 
 logger = logging.getLogger(__name__)
-handler = logging.StreamHandler(stream=sys.stdout)
-logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
+                                datefmt='%m/%d/%Y %I:%M:%S %p')
+stream_format = logging.Formatter('%(filename)s (%(funcName)s)\n%(levelname)s: %(message)s')
+stream_handler = logging.StreamHandler(stream=sys.stdout)
+stream_handler.setLevel(logging.INFO)
+stream_handler.setFormatter(stream_format)
+file_handler = logging.FileHandler(filename='err.log', mode='w')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(file_format)
+logger.addHandler(stream_handler)
+logger.addHandler(file_handler)
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
