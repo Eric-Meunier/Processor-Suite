@@ -486,8 +486,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 #         def plot_borehole(pem_file):
 #             if pem_file.has_collar_gps():
 #                 # Add the CRS to the collar and retrieve the lat lon coordinates
-#                 pem_file.geometry.collar.crs = self.crs
-#                 collar = pem_file.geometry.collar.to_latlon().df
+#                 pem_file.collar.crs = self.crs
+#                 collar = pem_file.collar.to_latlon().df
 #
 #                 if collar.to_string() not in collars:
 #                     collars.append(collar.to_string())

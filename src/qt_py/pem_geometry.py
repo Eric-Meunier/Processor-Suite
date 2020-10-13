@@ -2,6 +2,7 @@ import copy
 import os
 import sys
 import mplcursors
+from src.logger import Log
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -195,9 +196,14 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
     def open(self, pem_files):
         if not isinstance(pem_files, list):
-            pem_files = list(pem_files)
+            pem_files = [pem_files]
 
-        pem_file = copy.deepcopy(pem_files[0])
+        # Try to use a file which has the geometry required to calculate the magnetic declination. Otherwise use the
+        # last file.
+        for file in pem_files:
+            if file == pem_files[-1] or file.get_mag_dec():
+                self.pem_file = file.copy()
+                break
 
         if not all([f.is_borehole for f in pem_files]):
             logger.error(f"PEM files must be borehole surveys.")
@@ -205,18 +211,16 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         # Merge the data of the pem files
         if len(pem_files) > 1:
-            pem_file.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
+            self.pem_file.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
 
-            # Use the first geometry where the segments aren't empty (if any)
-            for file in pem_files:
-                if not file.geometry.segments.df.empty:
-                    pem_file.geometry = file.geometry
+            # # Use the first geometry where the segments aren't empty (if any)
+            # for file in pem_files:
+            #     if not file.segments.df.empty:
+            #         pem_file.geometry = file.get_geometry()
 
-        if not all([f.has_d7() for f in pem_files]) and not pem_file.has_geometry():
+        if not all([f.has_d7() for f in pem_files]) and not self.pem_file.has_geometry():
             logger.error(f"PEM files must have D7 RAD tool objects or P tag geometry.")
             return
-
-        self.pem_file = copy.deepcopy(pem_file)
 
         if not self.pem_file.is_averaged():
             self.pem_file = self.pem_file.average()

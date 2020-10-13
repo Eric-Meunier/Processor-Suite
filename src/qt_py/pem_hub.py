@@ -417,6 +417,22 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(current_row, current_col, item)
 
+        def apply_header():
+            """
+            Update the header of each PEM file when the Apply button is clicked for the shared header.
+            """
+            if self.share_client_cbox.isChecked():
+                for row in range(self.table.rowCount()):
+                    self.table.item(row, 2).setText(self.client_edit.text())
+
+            if self.share_grid_cbox.isChecked():
+                for row in range(self.table.rowCount()):
+                    self.table.item(row, 3).setText(self.grid_edit.text())
+
+            if self.share_loop_cbox.isChecked():
+                for row in range(self.table.rowCount()):
+                    self.table.item(row, 5).setText(self.loop_edit.text())
+
         def set_shared_header(header):
             """
             Signal slot, change the header information for each file in the table when the shared header LineEdits are
@@ -596,6 +612,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.calender.clicked.connect(set_date)
 
         # Buttons
+        self.apply_shared_header_btn.clicked.connect(apply_header)
         self.project_dir_edit.returnPressed.connect(open_project_dir)
 
         # Table
@@ -633,13 +650,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             lambda: self.grid_edit.setEnabled(self.share_grid_cbox.isChecked()))
         self.share_loop_cbox.stateChanged.connect(
             lambda: self.loop_edit.setEnabled(self.share_loop_cbox.isChecked()))
-        self.share_client_cbox.stateChanged.connect(lambda: set_shared_header('client'))
-        self.share_grid_cbox.stateChanged.connect(lambda: set_shared_header('grid'))
-        self.share_loop_cbox.stateChanged.connect(lambda: set_shared_header('loop'))
+        # self.share_client_cbox.stateChanged.connect(lambda: set_shared_header('client'))
+        # self.share_grid_cbox.stateChanged.connect(lambda: set_shared_header('grid'))
+        # self.share_loop_cbox.stateChanged.connect(lambda: set_shared_header('loop'))
 
-        self.client_edit.textChanged.connect(lambda: set_shared_header('client'))
-        self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
-        self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
+        # self.client_edit.textChanged.connect(lambda: set_shared_header('client'))
+        # self.grid_edit.textChanged.connect(lambda: set_shared_header('grid'))
+        # self.loop_edit.textChanged.connect(lambda: set_shared_header('loop'))
 
     def init_crs(self):
         """
@@ -994,6 +1011,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 if all([f.is_borehole() for f in selected_pems]):
                     if len(self.table.selectionModel().selectedRows()) == 1:
                         menu.addAction(derotate_action)
+                        if not pem_file.has_xy():
+                            derotate_action.setDisabled(True)
                     menu.addAction(get_geometry_action)
                     menu.addSeparator()
 
@@ -1272,7 +1291,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             # Connect a signal to refresh the main table row when changes are made in the pem_info_widget tables.
             pem_info_widget.refresh_row_signal.connect(lambda: self.refresh_pem(pem_info_widget.pem_file))
-            pem_info_widget.add_geometry_signal.connect(self.open_pem_geometry)
+            # pem_info_widget.add_geometry_signal.connect(self.open_pem_geometry)
 
             pem_info_widget.share_loop_signal.connect(share_gps_object)
             pem_info_widget.share_line_signal.connect(share_gps_object)
@@ -2381,7 +2400,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                         axis=1)
 
                         if pem_file.has_collar_gps():
-                            collar = pem_file.geometry.get_collar()
+                            collar = pem_file.get_collar()
                             if collar.to_string() not in collars:
                                 hole_name = pem_file.line_name
                                 logger.info(f"Creating CSV file for hole {hole_name}.")
@@ -2552,10 +2571,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         row_info = [
             pem_file.filepath.name,
             pem_file.date,
-            self.client_edit.text() if self.share_client_cbox.isChecked() else pem_file.client,
-            self.grid_edit.text() if self.share_grid_cbox.isChecked() else pem_file.grid,
+            pem_file.client,
+            pem_file.grid,
             pem_file.line_name,
-            self.loop_edit.text() if self.share_loop_cbox.isChecked() else pem_file.loop_name,
+            pem_file.loop_name,
             pem_file.current,
             pem_file.coil_area,
             pem_file.get_stations(converted=True).min(),
@@ -4014,12 +4033,9 @@ def main():
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
-    pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
-    ri_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\5-01-38.RI3']
+    # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     mw.open_pem_files(pem_files)
-    mw.open_ri_file(ri_files)
-    mw.open_pdf_plot_printer()
     # mw.open_pdf_plot_printer(selected_files=False)
     # mw.pem_info_widgets[0].share_loop_signal.emit(mw.pem_info_widgets[0].get_loop())
 

@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox,
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXEditor
 from src.pem.pem_file import StationConverter
+from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.gps_adder import LoopAdder, LineAdder
 from src.qt_py.ri_importer import RIFile
 
@@ -47,7 +48,6 @@ logger = logging.getLogger(__name__)
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     refresh_row_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to refresh its main table.
-    add_geometry_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to open PEMGeometry
 
     share_loop_signal = QtCore.pyqtSignal(object)
     share_line_signal = QtCore.pyqtSignal(object)
@@ -178,7 +178,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.open_station_gps_btn.clicked.connect(self.open_gps_file_dialog)
         self.open_loop_gps_btn.clicked.connect(self.open_gps_file_dialog)
         self.open_collar_gps_btn.clicked.connect(self.open_gps_file_dialog)
-        self.add_segments_btn.clicked.connect(lambda: self.add_geometry_signal.emit())
+        self.add_segments_btn.clicked.connect(self.open_pem_geometry)
 
         self.export_station_gps_btn.clicked.connect(lambda: self.export_gps('station'))
         self.export_loop_gps_btn.clicked.connect(lambda: self.export_gps('loop'))
@@ -466,6 +466,20 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.error.showMessage(f"Error adding loop: {str(e)}")
         else:
             pass
+
+    def open_pem_geometry(self):
+        """
+        Open the PEMGeometry window
+        """
+
+        def accept_geometry(seg):
+            self.pem_file.segments = seg
+            self.refresh_row_signal.emit()
+
+        global pem_geometry
+        pem_geometry = PEMGeometry(parent=self)
+        pem_geometry.accepted_sig.connect(accept_geometry)
+        pem_geometry.open(self.pem_file)
 
     def edit_loop(self):
         """

@@ -916,7 +916,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     # Add the time stamp if it exists
                     timestamp = selected_decay.Timestamp
                     if timestamp is not None:
-                        date_time = f"Timestamp: {selected_decay.datetime.strftime('%b %d - %H:%M:%S')}"
+                        date_time = f"Timestamp: {selected_decay.Timestamp.strftime('%b %d - %H:%M:%S')}"
                         decay_selection_text.append(date_time)
 
                     # Add the RAD tool information if the PEM file is a borehole with all tool values present

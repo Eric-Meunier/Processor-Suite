@@ -712,7 +712,7 @@ class MapPlotter:
             # Label the loop
             if label:
                 if pem_file.is_borehole():
-                    collar = pem_file.geometry.collar
+                    collar = pem_file.collar
                     if not collar.df.empty:
                         # Find a more optimal location to plot the label
                         label_x, label_y = get_label_pos(collar, loop)
@@ -828,7 +828,7 @@ class MapPlotter:
         :param zorder: int
         """
         ax = figure.axes[0]
-        geometry = pem_file.geometry
+        geometry = pem_file.get_geometry()
         projection = geometry.get_projection(num_segments=1000)
 
         if not geometry.collar.df.empty:
@@ -1793,7 +1793,7 @@ class SectionPlot(MapPlotter):
 
             self.ax.text(center_pos, top_pos - 0.051, f"{self.pem_file.client}\n" + f"{self.pem_file.grid}\n"
                                                       f"Hole: {self.pem_file.line_name}    Loop: "
-        f"                                            {self.pem_file.loop_name}",
+                                                      f"{self.pem_file.loop_name}",
                          fontname='Century Gothic',
                          fontsize=10,
                          va='top',
@@ -1863,7 +1863,7 @@ class SectionPlot(MapPlotter):
                                 rotation=90,
                                 va='center')
 
-        units = self.pem_file.geometry.collar.get_units()
+        units = self.pem_file.collar.get_units()
         if units == 'm':
             self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} m'))
         else:

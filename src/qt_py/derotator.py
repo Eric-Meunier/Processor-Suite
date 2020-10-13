@@ -6,6 +6,7 @@ from src.pem.pem_file import PEMFile
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+from src.logger import Log
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
 
@@ -234,6 +235,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         else:
             self.tab_widget.setCurrentIndex(0)
 
+    @Log()
     def open(self, pem_file):
         """
         Open, rotate, and plot the PEMFile.

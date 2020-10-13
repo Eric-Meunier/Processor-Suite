@@ -259,8 +259,11 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             self.cycle_profile_component()
 
         elif event.key() == QtCore.Qt.Key_Space:
-            for ax in self.profile_axes:
-                ax.autoRange()
+            self.reset_range()
+
+    def reset_range(self):
+        for ax in self.profile_axes:
+            ax.autoRange()
 
     def open(self, pem_files):
         """
@@ -502,7 +505,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         # Plot the LIN profiles
         self.plot_profiles(self.pf1, components='all')
         self.plot_profiles(self.pf2, components='all')
-
+        self.reset_range()
         self.show()
 
     def plot_profiles(self, pem_file, components=None):

@@ -106,7 +106,7 @@ class PEMFile:
         self.loop = None
         self.collar = None
         self.segments = None
-        self.geometry = None
+        # self.geometry = None
         self.line = None
         self.crs = None
 
@@ -179,7 +179,7 @@ class PEMFile:
         if self.is_borehole():
             self.collar = BoreholeCollar([line_coords[0]], crs=crs)
             self.segments = BoreholeSegments(line_coords[1:])
-            self.geometry = BoreholeGeometry(self.collar, self.segments)
+            # self.geometry = BoreholeGeometry(self.collar, self.segments)
         else:
             self.line = SurveyLine(line_coords, crs=crs)
 
@@ -250,7 +250,7 @@ class PEMFile:
         if self.is_borehole():
             self.collar = BoreholeCollar(None, crs=crs)
             self.segments = BoreholeSegments(None)
-            self.geometry = BoreholeGeometry(self.collar, self.segments)
+            # self.geometry = BoreholeGeometry(self.collar, self.segments)
         else:
             self.line = SurveyLine(None, crs=crs)
 
@@ -438,7 +438,7 @@ class PEMFile:
         return self.segments.get_segments()
 
     def get_geometry(self):
-        return self.geometry
+        return BoreholeGeometry(self.collar, self.segments)
 
     def get_notes(self):
         return self.notes
@@ -535,7 +535,7 @@ class PEMFile:
             segments = self.get_segments()
 
             if not segments.empty:
-                line = self.geometry.get_projection()
+                line = BoreholeGeometry(collar, segments).get_projection()
             else:
                 line = collar
         else:
@@ -554,11 +554,11 @@ class PEMFile:
         """
         crs = self.get_crs()
         if not crs:
-            logger.info(f'{self.filepath.name} CRS is invalid')
+            logger.info(f'{self.filepath.name} No CRS.')
             return
 
         if self.has_collar_gps():
-            coords = self.geometry.collar
+            coords = self.collar
         elif self.has_loop_gps():
             coords = self.loop
         elif self.has_station_gps():
@@ -567,6 +567,7 @@ class PEMFile:
             logger.error(f'No GPS in {self.filepath.name}')
             return
 
+        assert not coords.df.empty, f"GPS data frame of {self.filepath.name} is empty."
         coords = copy.deepcopy(coords)
 
         coords.crs = crs
@@ -1207,6 +1208,7 @@ class PEMFile:
             """
             assert self.has_loop_gps(), f"{self.filepath.name} has no loop GPS."
             assert self.has_geometry(), f"{self.filepath.name} has incomplete geometry."
+            assert self.has_collar_gps(), f"{self.filepath.name} has no collar GPS."
             assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filepath.name}."
 
             global proj, loop, ramp, mag_calc, ch_times, ch_numbers
@@ -1223,13 +1225,14 @@ class PEMFile:
                                                   'CPPx',
                                                   'CPPy',
                                                   'CPPz'])
-            proj = self.geometry.get_projection(stations=self.get_stations(converted=True))
+            geometry = BoreholeGeometry(self.collar, self.segments)
+            proj = geometry.get_projection(stations=self.get_stations(converted=True))
             loop = self.get_loop(sorted=False, closed=False)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6
             mag_calc = MagneticFieldCalculator(loop)
 
-            # TODO Remove the last channel of fluxgates
+            # TODO Remove the last channel of full waveform (currently this channel is already removed when splitting)
             # Only keep off-time channels with PP
             ch_times = self.channel_times[~self.channel_times.Remove.astype(bool)]
             # Normalize the channel times so they start from turn off
@@ -2819,6 +2822,8 @@ class RADTool:
                     self.R,
                     str(self.angle_used),
                 ])
+            else:
+                raise Exception(f"{len(match)} long D7 RAD tool match passed. Should be length of 8 or 11.")
 
         elif self.D == 'D5':
             self.x = float(match[1])
@@ -2853,10 +2858,10 @@ class RADTool:
                 ])
 
             else:
-                raise ValueError('Error in the number of the RAD tool values')
+                raise ValueError(f'{len(match)} long D5 RAD tool match passed. Should be length of 6 or 8.')
 
         else:
-            raise ValueError('Error in D value of RAD tool line. D value is neither D5 nor D7.')
+            raise ValueError(f'{self.D} is an invalid RAD tool D value. D value must be D5 or D7.')
 
         return self
 
@@ -2884,7 +2889,7 @@ class RADTool:
         if not isinstance(text, list):
             text = text.split()
 
-        self.D = f"D{len(text)}"
+        self.D = 'D7'
         self.Hx = float(text[0])
         self.gx = float(text[1])
         self.Hy = float(text[2])
@@ -2893,6 +2898,8 @@ class RADTool:
         self.gz = float(text[5])
         if len(text) > 6:
             self.T = float(text[6])
+        else:
+            self.T = 0.0
 
         self.id = ''.join([
             str(self.Hx),
@@ -2901,6 +2908,7 @@ class RADTool:
             str(self.gy),
             str(self.Hz),
             str(self.gz),
+            str(self.T),
         ])
 
         return self
@@ -3024,16 +3032,6 @@ class RADTool:
             result.append(f"{self.roll_angle:g}")
             result.append(f"{self.dip:g}")
 
-        # elif self.D == 'D6':
-        #     result = [
-        #         self.D,
-        #         f"{self.Hx:g}",
-        #         f"{self.gx:g}",
-        #         f"{self.Hy:g}",
-        #         f"{self.gy:g}",
-        #         f"{self.Hz:g}",
-        #         f"{self.gz:g}",
-        #     ]
         else:
 
             # Create the D5 RAD tool line that is compatible with Step (just for borehole XY).
@@ -3044,7 +3042,7 @@ class RADTool:
                 else:
                     x, y, z = f"{self.gx:g}", f"{self.gy:g}", f"{self.gz:g}"
 
-                # For XY RADs
+                # For de-rotated XY RADs
                 if all([self.roll_angle, self.dip, self.angle_used, self.R]):
                     result = [
                         'D5',
@@ -3057,17 +3055,17 @@ class RADTool:
                         f"{self.angle_used:g}"
                     ]
 
-                # For Z RADs
+                # For rotated and Z RADs
                 else:
                     result = [
                         'D7',
-                        x,
-                        y,
-                        z,
-                        '0',
-                        '0',
-                        '0',
-                        '0'
+                        f"{self.Hx:g}",
+                        f"{self.gx:g}",
+                        f"{self.Hy:g}",
+                        f"{self.gy:g}",
+                        f"{self.Hz:g}",
+                        f"{self.gz:g}",
+                        f"{self.T:g}" if self.T is not None else '0'
                     ]
 
             else:
@@ -3091,20 +3089,21 @@ class RADTool:
                             result.append(f"{self.measured_pp_roll_angle:g}")
                         elif self.rotation_type == 'pp_cleaned':
                             result.append(f"{self.cleaned_pp_roll_angle:g}")
-                        # else:
-                        #     result.append(f"{self.roll_angle:g}")
+                        else:
+                            if self.roll_angle is None:
+                                raise Exception(f"The RAD tool object has been de-rotated, yet no roll_angle exists.")
+
+                            logger.warning(f"No rotation type passed. Using existing roll angle of {self.roll_angle:g}.")
+                            result.append(f"{self.roll_angle:g}")
 
                         result.append(f"{self.get_dip():g}")
                         result.append(self.R)
                         result.append(f"{self.angle_used:g}")
                     else:
-                        if self.T is not None:
-                            result.append(f"{self.T:g}")
-                        else:
-                            result.append('0')
+                        result.append(f"{self.T:g}")
 
                 else:
-                    raise ValueError('RADTool D value is neither "D5", "D6", nor "D7"')
+                    raise ValueError('RADTool D value is neither "D5" nor "D7"')
 
         return ' '.join(result)
 

@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
+file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s - %(lineno)d)\n%(levelname)s: %(message)s',
                                 datefmt='%m/%d/%Y %I:%M:%S %p')
 stream_format = logging.Formatter('%(filename)s (%(funcName)s)\n%(levelname)s: %(message)s')
 
