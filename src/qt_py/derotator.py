@@ -544,8 +544,8 @@ def main():
 
     pg = PEMGetter()
     parser = PEMParser()
-    pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
-    # pem_files = parser.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\TC170199XYT.PEM')
+    # pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
+    pem_files = parser.parse(r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\RAW\ddh5-01-38 flux_30.PEM')
     mw.open(pem_files)
 
     # mw.export_stats()

@@ -1483,7 +1483,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         pem_files, rows = self.get_pem_files(selected=True)
         for pem_file in pem_files:
-            pem_str = pem_file.to_string()
+            # pem_str = pem_file.to_string()
+            with open(str(pem_file.filepath), 'r') as file:
+                pem_str = file.read()
             browser = QTextBrowser()
             self.text_browsers.append(browser)
             browser.setText(pem_str)
@@ -4003,7 +4005,7 @@ def main():
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
-    pem_files = pg.get_pems(client='Minera', number=1)
+    # pem_files = pg.get_pems(client='Minera', number=1)
     # pem_files = pg.get_pems(random=True, number=9)
     # s = GPSShareWidget()
     # s.open(pem_files, 0)
@@ -4012,9 +4014,12 @@ def main():
     # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
     # mw.open_dmp_files(file)
-    # pem_files = [r'C:\_Data\2020\Generation PGM\__M-20-539\RAW\XY-Collar.PEM']
+    pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
+    ri_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\5-01-38.RI3']
 
     mw.open_pem_files(pem_files)
+    mw.open_ri_file(ri_files)
+    mw.open_pdf_plot_printer()
     # mw.open_pdf_plot_printer(selected_files=False)
     # mw.pem_info_widgets[0].share_loop_signal.emit(mw.pem_info_widgets[0].get_loop())
 
@@ -4032,21 +4037,6 @@ def main():
 
 
 if __name__ == '__main__':
-
-    # def handle_exception(exc_type, exc_value, exc_traceback):
-    #     if issubclass(exc_type, KeyboardInterrupt):
-    #         sys.__excepthook__(exc_type, exc_value, exc_traceback)
-    #         return
-    #
-    #     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-    #
-    # sys.excepthook = handle_exception
-
-    # logging.basicConfig(filename='err.log',
-    #                     filemode='w',
-    #                     level=logging.INFO,
-    #                     format='\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
-    #                     datefmt='%m/%d/%Y %I:%M:%S %p')
 
     main()
     # cProfile.run('main()', 'restats')

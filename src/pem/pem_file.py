@@ -796,7 +796,8 @@ class PEMFile:
         :param tag: str, tag to be append to the file name. Used for pre-averaging and pre-splitting saves.
         """
 
-        logger.info(f"Saving {self.filepath.name}. (Legacy: {legacy}. Processed: {processed}. Backup: {backup}. Tag: {tag})")
+        logger.info(f"Saving {self.filepath.name}. (Legacy: {legacy}. Processed: {processed}. Backup: {backup}. "
+                    f"Tag: {tag})")
 
         if processed is True:
             # Make sure the file is averaged and split and de-rotated
@@ -3036,24 +3037,38 @@ class RADTool:
         else:
 
             # Create the D5 RAD tool line that is compatible with Step (just for borehole XY).
-            if legacy and self.has_tool_values():
-                assert self.rotation_type, f"File must be de-rotated."
+            if legacy:
 
                 if self.rotation_type == 'mag':  # Only mag de-rotation uses the mag values. Everything else uses acc.
                     x, y, z = f"{self.Hx:g}", f"{self.Hy:g}", f"{self.Hz:g}"
                 else:
                     x, y, z = f"{self.gx:g}", f"{self.gy:g}", f"{self.gz:g}"
 
-                result = [
-                    'D5',
-                    x,
-                    y,
-                    z,
-                    f"{self.roll_angle:g}:",
-                    f"{self.dip:g}:",
-                    self.R,
-                    f"{self.angle_used:g}:"
-                ]
+                # For XY RADs
+                if all([self.roll_angle, self.dip, self.angle_used, self.R]):
+                    result = [
+                        'D5',
+                        x,
+                        y,
+                        z,
+                        f"{self.roll_angle:g}",
+                        f"{self.dip:g}",
+                        self.R,
+                        f"{self.angle_used:g}"
+                    ]
+
+                # For Z RADs
+                else:
+                    result = [
+                        'D7',
+                        x,
+                        y,
+                        z,
+                        '0',
+                        '0',
+                        '0',
+                        '0'
+                    ]
 
             else:
                 if self.D == 'D7' or self.D == 'D6':
@@ -3096,6 +3111,7 @@ class RADTool:
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
+    import os
 
     dparser = DMPParser()
     pemparser = PEMParser()
@@ -3107,11 +3123,12 @@ if __name__ == '__main__':
     # pem = pem_file.rotate_soa(10)
     # rotated_pem = prep_pem.rotate('pp')
 
-    # pem_file = pemparse.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\Eric\XY-Collar.PEM')
+    pem_file = pemparser.parse(r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\RAW\ddh5-01-38 flux_30.PEM')
+    pem_file.save(legacy=True)
 
-    file = str(Path(__file__).parents[2].joinpath('sample_files/DMP files/DMP2 New/BR-32 Surface/l4200e.dmp2'))
-    pem_file = dparser.parse_dmp2(file)
-    pem_file.get_suffix_warnings()
+    # file = str(Path(__file__).parents[2].joinpath('sample_files/DMP files/DMP2 New/BR-32 Surface/l4200e.dmp2'))
+    # pem_file = dparser.parse_dmp2(file)
+    # pem_file.get_suffix_warnings()
     # pem_file.save(processed=False)
     # pem_file2 = pemparser.parse(file.filepath)
     # pem_file2.save(processed=True)
@@ -3119,4 +3136,4 @@ if __name__ == '__main__':
     # out = str(Path(__file__).parents[2].joinpath(
     # 'sample_files/test results/f'{file.filepath.stem} - test conversion.pem')
     # print(file.to_string(), file=open(out, 'w'))
-    # os.startfile(file2.filepath)
+    os.startfile(pem_file.filepath)

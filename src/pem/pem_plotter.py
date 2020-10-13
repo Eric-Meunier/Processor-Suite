@@ -24,7 +24,7 @@ import six
 import utm
 from PIL import Image
 from PyQt5.QtWidgets import (QProgressBar, QApplication)
-from cartopy.feature import NaturalEarthFeature
+from cartopy import feature
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from matplotlib import patches
 from matplotlib import patheffects
@@ -41,19 +41,15 @@ from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
 file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
                                 datefmt='%m/%d/%Y %I:%M:%S %p')
 stream_format = logging.Formatter('%(filename)s (%(funcName)s)\n%(levelname)s: %(message)s')
-
 stream_handler = logging.StreamHandler(stream=sys.stdout)
 stream_handler.setLevel(logging.INFO)
 stream_handler.setFormatter(stream_format)
-
 file_handler = logging.FileHandler(filename='err.log', mode='w')
 file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(file_format)
-
 logger.addHandler(stream_handler)
 logger.addHandler(file_handler)
 
@@ -516,8 +512,8 @@ class STEPPlotter(ProfilePlotter):
                                            "Deviation from S1\n"
                                            "(% Total Theoretical)")
             self.figure.axes[3].set_ylabel("Pulse EM Off-time\n"
-                                           f"Channels {str(min(channels[-num_channels_to_plot:]))} - "
-                                           f"{str(max(channels[-num_channels_to_plot:]))}\n"
+                                           f"Channels {min(channels[-num_channels_to_plot:])} - "
+                                           f"{max(channels[-num_channels_to_plot:])}\n"
                                            f"({units})")
 
         def plot_ri_lines():
@@ -562,11 +558,14 @@ class STEPPlotter(ProfilePlotter):
             """
             offset = 100
             # Plotting the off-time channels to the fourth axes
-            for i, channel in enumerate(off_time_channel_data[-num_channels_to_plot:]):
-                x_intervals, interp_data = self.get_interp_data(stations, channel)
+            for i, data in enumerate(off_time_channel_data[-num_channels_to_plot:]):
+                x_intervals, interp_data = self.get_interp_data(stations, data)
                 ax = self.figure.axes[3]
                 ax.plot(x_intervals, interp_data, color=line_color)
-                self.annotate_line(ax, str(num_off_time_channels - i), x_intervals, interp_data, offset)
+                self.annotate_line(ax, str(num_off_time_channels - num_channels_to_plot + i + 1),
+                                   x_intervals,
+                                   interp_data,
+                                   offset)
                 offset += len(x_intervals) * 0.15
                 if offset >= len(x_intervals) * 0.85:
                     offset = len(x_intervals) * 0.10
@@ -3029,9 +3028,9 @@ class GeneralMap:
             #                         edgecolor='black',
             #                         facecolor='gray',
             #                         alpha=0.2)
-            self.ax_sub.add_feature(cartopy.feature.BORDERS,
+            self.ax_sub.add_feature(feature.BORDERS,
                                     linewidth=0.4)
-            # other_borders = NaturalEarthFeature(category='cultural',
+            # other_borders = feature.NaturalEarthFeature(category='cultural',
             #                                     name='admin_1_states_provinces_lines',
             #                                     scale='50m',
             #                                     edgecolors='black',
@@ -3117,17 +3116,17 @@ class GeneralMap:
         # request = cimgt.MapQuestOpenAerial()
         request = cimgt.OSM()
 
-        coastline = NaturalEarthFeature(category='physical',
+        coastline = feature.NaturalEarthFeature(category='physical',
                                         name='coastline',
                                         scale='10m',
                                         edgecolor='blue',
                                         facecolor='none')
-        water = NaturalEarthFeature(category='physical',
+        water = feature.NaturalEarthFeature(category='physical',
                                     name='rivers_lake_centerlines',
                                     scale='10m',
-                                    edgecolor=cartopy.feature.COLORS['water'],
+                                    edgecolor=feature.COLORS['water'],
                                     facecolor='none')
-        borders = NaturalEarthFeature(category='cultural',
+        borders = feature.NaturalEarthFeature(category='cultural',
                                       name='admin_1_states_provinces_shp',
                                       scale='10m',
                                       edgecolor='gray',
