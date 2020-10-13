@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import sys
@@ -7,7 +8,6 @@ import keyboard
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-import logging
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QCheckBox,
@@ -17,6 +17,8 @@ from src.gps.gps_editor import TransmitterLoop, SurveyLine
 from src.pem.pem_file import StationConverter
 
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -169,6 +171,7 @@ class GPSAdder(QMainWindow):
                 self.table.setItem(row_pos, m, item)
 
         if df.empty:
+            logger.warning(f"No GPS found.")
             self.message.warning(self, 'Warning', 'No GPS was found')
         else:
             self.clear_table()
@@ -234,7 +237,6 @@ class GPSAdder(QMainWindow):
             lx = np.argwhere(self.section_plot.xData == x)
             ly = np.argwhere(self.section_plot.yData == y)
         ind = np.intersect1d(lx, ly).tolist()[0]
-        print(f"Point {ind} clicked")
 
         # Swap two points when CTRL is pressed when selecting two points
         if keyboard.is_pressed('ctrl'):
@@ -299,7 +301,8 @@ class GPSAdder(QMainWindow):
         # Reject the change if it causes an error.
         if errors > 0:
             self.table.blockSignals(True)
-            self.message.critical(self, 'Error', "Value cannot be converted to a number")
+            logger.critical(f"{self.table.item(row, col).text()} is not a number.")
+            self.message.critical(self, 'Error', f"{self.table.item(row, col).text()} cannot be converted to a number.")
 
             self.table.setItem(row, col, self.selected_row_info[col])
             self.table.blockSignals(False)
@@ -430,7 +433,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             self.line = o
 
         if self.line.df.empty:
-            self.message.critical(self, 'No GPS', f"{self.line.error_msg}")
+            logger.critical(f"No GPS found: {self.line.error_msg}.")
+            self.message.critical(self, 'No GPS', f"{self.line.error_msg}.")
             return
 
         self.setWindowTitle(f'Line Adder - {name}')
@@ -443,6 +447,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.show()
 
         if not errors.empty:
+            logger.warning(f"The following rows could not be parsed:\n\n{errors.to_string()}.")
             self.message.warning(self, 'Parsing Error',
                                  f"The following rows could not be parsed:\n\n{errors.to_string()}")
 
@@ -507,7 +512,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             if selected_row:
                 row = self.table.selectionModel().selectedRows()[0].row()
             else:
-                print(f"No row selected")
+                logger.info(f"No row selected.")
                 return
 
         # Save the information of the row for backup purposes
@@ -587,7 +592,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             Color the background of the station cells if the station number is out of order
             """
             global errors
-            df_stations = self.table_to_df().Station.map(lambda x: re.search('-?\d+', str(x)).group())
+            df_stations = self.table_to_df().Station.map(lambda x: re.search(r'-?\d+', str(x)).group())
 
             table_stations = df_stations.astype(int).to_list()
 
@@ -717,6 +722,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
             raise ValueError(f"{o} is not a valid input.")
 
         if self.loop.df.empty:
+            logger.critical(f"No GPS found: {self.loop.error_msg}")
             self.message.critical(self, 'No GPS', f"{self.loop.error_msg}")
             return
 
@@ -729,6 +735,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.show()
 
         if not errors.empty:
+            logger.warning(f"The following rows could not be parsed:\n\n{errors.to_string()}")
             self.message.warning(self, 'Parsing Error',
                                  f"The following rows could not be parsed:\n\n{errors.to_string()}")
 
@@ -792,7 +799,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
             if selected_row:
                 row = self.table.selectionModel().selectedRows()[0].row()
             else:
-                print(f"No row selected")
+                logger.info(f"No row selected.")
                 return
 
         # Save the information of the row for backup purposes

@@ -6,7 +6,11 @@ from PyQt5 import (QtCore)
 from PyQt5.QtWidgets import (QWidget, QMessageBox, QAbstractScrollArea, QTableWidgetItem, QHeaderView, QTableWidget,
                              QDialogButtonBox, QVBoxLayout)
 
-__version__ = '0.0.0'
+import logging
+import sys
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 
 def convert_station(station):

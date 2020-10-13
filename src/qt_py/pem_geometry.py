@@ -16,6 +16,13 @@ from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
 from src.geometry.segment import Segmenter
 
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
+
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
     pemGeometryCreatorFile = 'qt_ui\\pem_geometry.ui'
@@ -27,17 +34,6 @@ else:
 
 # Load Qt ui file into a class
 Ui_PemGeometry, QtBaseClass = uic.loadUiType(pemGeometryCreatorFile)
-
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
 
 
 class PEMGeometry(QMainWindow, Ui_PemGeometry):
@@ -51,7 +47,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.setWindowTitle('PEM Geometry')
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
         self.resize(1100, 800)
-        self.status_bar.setStyleSheet("border-top :0.5px solid gray;")
+        # self.status_bar.setStyleSheet("border-top :0.5px solid gray;")
 
         self.message = QMessageBox()
         self.error = QErrorMessage()
@@ -124,7 +120,6 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.update_plots)
-        self.reset_range_shortcut.activated.connect(lambda: print("space pressed"))
 
         self.mag_dec_sbox.valueChanged.connect(self.redraw_az_line)
         self.collar_az_sbox.valueChanged.connect(self.redraw_collar_az_line)
@@ -195,7 +190,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         pem_file = copy.deepcopy(pem_files[0])
 
         if not all([f.is_borehole for f in pem_files]):
-            print(f"PEM files must be borehole surveys.")
+            logger.error(f"PEM files must be borehole surveys.")
             return
 
         # Merge the data of the pem files
@@ -208,7 +203,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                     pem_file.geometry = file.geometry
 
         if not all([f.has_d7() for f in pem_files]) and not pem_file.has_geometry():
-            print(f"PEM files must have D7 RAD tool objects or P tag geometry.")
+            logger.error(f"PEM files must have D7 RAD tool objects or P tag geometry.")
             return
 
         self.pem_file = copy.deepcopy(pem_file)
@@ -576,12 +571,14 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                  header=None,
                                  dtype=float)
         except Exception as e:
+            logger.critical(f"The following error occurred trying to read {Path(filepath).name}:{str(e)}")
             self.error.showMessage(f"The following error occurred trying to read {Path(filepath).name}:{str(e)}")
 
         else:
             if all([d == float for d in df.dtypes]):
                 self.plot_df(df, source='dad')
             else:
+                logger.error(f'Data in {Path(filepath).name} is not float. Make sure there is no header row.')
                 self.message.information(self, 'Error', 'Data returned is not float. Make sure there is no header row.')
 
     def redraw_az_line(self):

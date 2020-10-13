@@ -9,6 +9,13 @@ import pyqtgraph as pg
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
 
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
+
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -235,9 +242,11 @@ class Derotator(QMainWindow, Ui_Derotator):
         assert isinstance(pem_file, PEMFile), f"{pem_file} is not a PEMFile object."
 
         if not pem_file:
+            logger.error("No PEM file passed.")
             self.message.critical(self, 'Error', 'PEM file is invalid')
             return
         elif pem_file.data.empty:
+            logger.error(f"No data found in {pem_file.filepath.name}.")
             self.message.critical(self, 'Error', f"No EM data in {pem_file.filepath.name}")
             return
 
@@ -245,8 +254,13 @@ class Derotator(QMainWindow, Ui_Derotator):
         if all([pem_file.is_borehole(), 'X' in pem_file.get_components(), 'Y' in pem_file.get_components()]):
             self.pem_file = pem_file
         else:
-            self.message.information(self, 'Ineligible File',
-                                     'File must be a borehole survey with X and Y component data.')
+            if not pem_file.is_borehole():
+                logger.error(f"{pem_file.filepath.name} is not a borehole file.")
+            else:
+                logger.error(f"No X and/or Y data found in {pem_file.filepath.name}.")
+
+            self.message.critical(self, 'Ineligible File',
+                                  'File must be a borehole survey with X and Y component data.')
             return
 
         # Check that the file hasn't already been de-rotated.
@@ -268,6 +282,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
         except Exception as e:
             # Common exception will be that there is no eligible data
+            logger.error(str(e))
             self.message.information(self, 'Error', str(e))
         else:
             self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")

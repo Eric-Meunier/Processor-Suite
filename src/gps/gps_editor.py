@@ -1,6 +1,7 @@
 import copy
-import re
 import logging
+import re
+import sys
 from pathlib import Path
 
 import geopandas as gpd
@@ -15,6 +16,8 @@ from scipy import spatial
 from shapely.geometry import asMultiPoint
 
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 
 class BaseGPS:
@@ -58,11 +61,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            print('Invalid CRS.')
+            logger.info('No CRS')
             self.df = df
             return self
         elif self.df.empty:
-            print('GPS dataframe is empty.')
+            logger.info('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -88,11 +91,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            print('Invalid CRS.')
+            logger.info('No CRS')
             self.df = df
             return self
         elif self.df.empty:
-            print('GPS dataframe is empty.')
+            logger.info('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -122,11 +125,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            print('Invalid CRS.')
+            logger.info('No CRS.')
             self.df = df
             return self
         elif self.df.empty:
-            print('GPS dataframe is empty.')
+            logger.info('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -156,11 +159,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            print('Invalid CRS.')
+            logger.info('No CRS.')
             self.df = df
             return self
         elif self.df.empty:
-            print('GPS dataframe is empty.')
+            logger.info('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -195,11 +198,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            print('Invalid CRS.')
+            logger.info('No CRS.')
             self.df = df
             return self
         elif self.df.empty:
-            print('GPS dataframe is empty.')
+            logger.info('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -210,7 +213,7 @@ class BaseGPS:
         try:
             converted_gdf = gdf.to_crs(f"EPSG:{epsg_code}")
         except Exception as e:
-            print(f"Could not convert to {epsg_code}: {str(e)}")
+            logger.error(f"Could not convert to {epsg_code}: {str(e)}.")
             return None
         else:
             # Assign the converted UTM columns to the data frame
@@ -274,9 +277,11 @@ class TransmitterLoop(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
+            logger.error(f"Empty file passed.")
             return empty_gps, pd.DataFrame(), 'Empty file passed.'
         else:
-            raise TypeError('Invalid input for loop GPS parsing')
+            logger.error(f"Invalid input: {file}.")
+            raise TypeError(f'{file} is not a valid input for loop GPS parsing.')
 
         gps = gps.astype(str)
         # Remove P tags and units columns
@@ -293,7 +298,7 @@ class TransmitterLoop(BaseGPS):
 
         if len(gps.columns) < 3:
             error_msg = f"{len(gps.columns)} columns of values were found instead of 3."
-            logger.info(error_msg)
+            logger.warning(error_msg)
             # print("Fewer than 3 columns were found.")
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
@@ -333,7 +338,7 @@ class TransmitterLoop(BaseGPS):
         if self.df.shape[0] > 100:
             # Cutting down the loop size to being no more than 100 points
             num_to_cull = self.df.shape[0] - 99
-            print(f"Culling {num_to_cull} coordinates from loop")
+            logger.info(f"Culling {num_to_cull} coordinates from loop")
             factor = num_to_cull / self.df.shape[0]
             n = int(1/factor)
             self.df = self.df[self.df.index % n != 0]
@@ -445,9 +450,11 @@ class SurveyLine(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
+            logger.error("Empty file passed.")
             return empty_gps, pd.DataFrame(), 'Empty file passed.'
         else:
-            raise TypeError('Invalid input for station GPS parsing')
+            logger.error(f"Invalid input: {file}.")
+            raise TypeError(f'{file} is not a valid input for station GPS parsing.')
 
         gps = gps.astype(str)
         # Remove P tags and units columns
@@ -464,7 +471,7 @@ class SurveyLine(BaseGPS):
 
         if len(gps.columns) < 4:
             error_msg = f"{len(gps.columns)} columns of values were found instead of 4."
-            logger.info(error_msg)
+            logger.warning(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 4:
             gps = gps.drop(gps.columns[4:], axis=1)
@@ -580,6 +587,7 @@ class BoreholeCollar(BaseGPS):
             if file:
                 gps = pd.DataFrame(file)
             else:
+                logger.error(f"Empty file passed.")
                 return empty_gps, pd.DataFrame(), 'Empty file passed.'
 
         elif isinstance(file, pd.DataFrame):
@@ -591,10 +599,11 @@ class BoreholeCollar(BaseGPS):
             gps = pd.DataFrame(split_file)
 
         elif file is None:
+            logger.error(f"No file passed.")
             return empty_gps, pd.DataFrame(), 'Empty file passed.'
 
         else:
-
+            logger.error(f"Invalid input: {file}.")
             raise TypeError('Invalid input for collar GPS parsing')
 
         # If more than 1 collar GPS is found, only keep the first row and all other rows are errors
@@ -618,7 +627,7 @@ class BoreholeCollar(BaseGPS):
 
         if len(gps.columns) < 3:
             error_msg = f"{len(gps.columns)} columns of values were found instead of 3."
-            logger.info(error_msg)
+            logger.warning(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
             gps = gps.drop(gps.columns[3:], axis=1)  # Remove extra columns
@@ -703,9 +712,11 @@ class BoreholeSegments(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
+            logger.warning(f"Empty file passed.")
             return empty_gps, pd.DataFrame(), 'Empty file passed.'
         else:
-            raise TypeError('Invalid input for segments parsing')
+            logger.warning(f"Invalid input: {file}.")
+            raise TypeError(f'{file} is not a valid input for segments parsing')
 
         gps = gps.astype(str)
         # Remove P tags and units columns
@@ -719,7 +730,7 @@ class BoreholeSegments(BaseGPS):
 
         if len(gps.columns) < 5:
             error_msg = f"{len(gps.columns)} columns of values were found instead of 5."
-            logger.info(error_msg)
+            logger.warning(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 5:
             gps = gps.drop(gps.columns[5:], axis=1)
@@ -783,6 +794,7 @@ class BoreholeGeometry(BaseGPS):
         segments = self.segments.get_segments().dropna()
 
         if collar.empty or segments.empty:
+            logger.warning(f"Collar GPS or segments are empty.")
             return projection
 
         # Interpolate the segments

@@ -3,6 +3,13 @@ import os
 from pathlib import Path
 from random import choices, randrange
 
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
+
 
 class PEMGetter:
     """
@@ -28,12 +35,12 @@ class PEMGetter:
             Parse and add the PEMFile to the list of pem_files.
             :param filepath: Path object of the PEMFile
             """
-            print(f'PEMGetter: Getting File {filepath.name}')
+            logger.info(f'Getting File {filepath.name}.')
 
             try:
                 pem_file = self.parser.parse(filepath)
             except Exception as e:
-                print(f"Error - {str(e)}")
+                logger.error(f"{str(e)}")
                 return
 
             pem_files.append(pem_file)
@@ -80,7 +87,7 @@ class PEMGetter:
                 if filepath.exists():
                     add_pem(filepath)
                 else:
-                    print(f"File {filepath.name} does not exists.")
+                    logger.info(f"File {filepath.name} does not exists.")
 
             else:
                 for file in available_files:

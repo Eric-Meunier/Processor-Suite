@@ -1,5 +1,6 @@
 import copy
 import itertools
+import logging
 import os
 import re
 import sys
@@ -7,12 +8,10 @@ import time
 from collections import defaultdict
 from datetime import datetime
 
-# import cartopy
 import cartopy.crs as ccrs  # import projections
 import cartopy.io.img_tiles as cimgt
 import cartopy.io.shapereader as shpreader
 import math
-# import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib as mpl
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
@@ -21,10 +20,9 @@ import matplotlib.ticker as ticker
 import matplotlib.transforms as mtransforms
 import natsort
 import numpy as np
+import pyqtgraph as pg
 import six
 import utm
-import pyqtgraph as pg
-from pyproj import CRS
 from PIL import Image
 from PyQt5.QtWidgets import (QProgressBar, QApplication)
 from cartopy.feature import NaturalEarthFeature
@@ -33,6 +31,7 @@ from matplotlib import patches
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
+from pyproj import CRS
 from scipy import interpolate as interp
 from scipy import stats
 from shapely.geometry import Point
@@ -41,22 +40,14 @@ from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.pem.pem_file import PEMParser, StationConverter
 from src.qt_py.ri_importer import RIFile
 
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
 
 mpl.rcParams['path.simplify'] = True
 mpl.rcParams['path.simplify_threshold'] = 1.0
@@ -351,7 +342,6 @@ class LINPlotter(ProfilePlotter):
                 else:
                     ax.set_ylabel(f"Channel {channel_bounds[i][0]} - {channel_bounds[i][1]}\n({units})")
 
-        # t = time.time()
         profile = self.pem_file.get_profile_data(component, converted=True)
         channel_bounds = self.pem_file.get_channel_bounds()
         for i, group in enumerate(channel_bounds):
@@ -381,7 +371,6 @@ class LINPlotter(ProfilePlotter):
 
         add_ylabels()
         self.format_figure(component)
-        # print(f"Time to create LINPlotter plot: {time.time() - t}")
         return self.figure
 
 
@@ -406,7 +395,6 @@ class LOGPlotter(ProfilePlotter):
             units = 'nT/s' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
             ax.set_ylabel(f"Primary Pulse to Channel {self.pem_file.number_of_channels - 1}\n({units})")
 
-        t = time.time()
         ax = self.figure.axes[0]
         # Starting offset used for channel annotations
         offset = 100
@@ -434,7 +422,6 @@ class LOGPlotter(ProfilePlotter):
 
         add_ylabels()
         self.format_figure(component)
-        print(f"Time to create LOGPLotter plot: {time.time() - t:.3f}")
         return self.figure
 
 
@@ -571,7 +558,6 @@ class STEPPlotter(ProfilePlotter):
                 if offset >= len(x_intervals) * 0.85:
                     offset = len(x_intervals) * 0.10
 
-        t = time.time()
         ri_profile = self.ri_file.get_ri_profile(component)
         off_time_channel_data = [ri_profile[key] for key in ri_profile if re.match('Ch', key)]
         num_off_time_channels = len(off_time_channel_data) + 10
@@ -583,7 +569,6 @@ class STEPPlotter(ProfilePlotter):
 
         add_ylabel()
         self.format_figure(component)
-        print(f"Time to create STEPPlotter plot: {time.time() - t:.3f}")
         return self.figure
 
 
@@ -754,6 +739,7 @@ class MapPlotter:
         :param figure: Matplotlib Figure object to plot on
         :param annotate: bool, add L-tag annotations
         :param label: bool, add loop label
+        :param plot_ticks: bool, add the tick marks at each station
         :param color: str, line color
         :param zorder: int, order in which to draw the object (higher number draws it on top of lower numbers)
         :return: loop_handle for legend
@@ -1196,8 +1182,9 @@ class PlanMap(MapPlotter):
         for pem_file in self.pem_files:
             # Remove files that aren't the same survey type
             if pem_file.get_survey_type() != survey_type:
-                print(
-                    f"{pem_file.filepath.name} is not the correct survey type: {pem_file.get_survey_type()} vs {survey_type}")
+                logger.warning(
+                    f"{pem_file.filepath.name} is not the correct survey type: {pem_file.get_survey_type()} vs "
+                    f"{survey_type}")
                 self.pem_files.pop(pem_file)
                 break
 
@@ -1315,7 +1302,7 @@ class PlanMap(MapPlotter):
 
             # Subtitle
             self.ax.text(center_pos, top_pos - 0.020, f"{'Hole' if self.pem_files[0].is_borehole() else 'Line'}"
-            f" and Loop Location Map",
+                                                      f" and Loop Location Map",
                          family='cursive',
                          fontname='Century Gothic',
                          fontsize=10,
@@ -1335,7 +1322,7 @@ class PlanMap(MapPlotter):
 
             # Client and grid names
             self.ax.text(center_pos, top_pos - 0.054, f"{client}\n" + f"{grid}\n"
-            f"{survey_text}",
+                                                      f"{survey_text}",
                          fontname='Century Gothic',
                          fontsize=10,
                          va='top',
@@ -1688,7 +1675,7 @@ class SectionPlot(MapPlotter):
 
         line_center_x, line_center_y = proj.iloc[i_perc_50_depth]['Easting'], proj.iloc[i_perc_50_depth]['Northing']
         line_az = interp_az[i_perc_depth]
-        print(f"Line azimuth: {line_az:.0f}°")
+        logger.info(f"Section azimuth for {self.pem_file.filepath.name}: {line_az:.0f}°")
 
         # Calculate the length of the cross-section. The section length is 3/4 of the hole depth
         line_len = math.ceil(segments.iloc[-1]['Depth'] / 400) * 300
@@ -1717,118 +1704,6 @@ class SectionPlot(MapPlotter):
             bbox = self.ax.get_window_extent().transformed(self.figure.dpi_scale_trans.inverted())
             current_scale = map_width / (bbox.width * .0254)
             return current_scale
-
-        # def add_scale_bar(units):
-        #     """
-        #     Adds scale bar to the axes.
-        #     Gets the width of the map in meters, find the best bar length number, and converts the bar length to
-        #     equivalent axes percentage, then plots using axes transform so it is static on the axes.
-        #     :return: None
-        #     """
-        #
-        #     def myround(x, base=5):
-        #         return base * math.ceil(x / base)
-        #
-        #     def add_rectangles(left_bar_pos, bar_center, right_bar_pos, y):
-        #         """
-        #         Draw the scale bar itself, using multiple rectangles.
-        #         :param left_bar_pos: Axes position of the left-most part of the scale bar
-        #         :param bar_center: Axes position center scale bar
-        #         :param right_bar_pos: Axes position of the right-most part of the scale bar
-        #         :param y: Axes height of the desired location of the scale bar
-        #         :return: None
-        #         """
-        #         rect_height = 0.005
-        #         line_width = 0.4
-        #         sm_rect_width = (bar_center - left_bar_pos) / 5
-        #         sm_rect_xs = np.arange(left_bar_pos, bar_center, sm_rect_width)
-        #         big_rect_x = bar_center
-        #         big_rect_width = right_bar_pos - bar_center
-        #
-        #         # Adding the small rectangles
-        #         for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
-        #             fill = 'w' if i % 2 == 0 else 'k'
-        #             patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
-        #                                       ec='k',
-        #                                       linewidth=line_width,
-        #                                       facecolor=fill,
-        #                                       transform=self.ax.transAxes,
-        #                                       zorder=9)
-        #             self.ax.add_patch(patch)
-        #         for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
-        #             fill = 'k' if i % 2 == 0 else 'w'
-        #             patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
-        #                                       ec='k',
-        #                                       zorder=9,
-        #                                       linewidth=line_width,
-        #                                       facecolor=fill,
-        #                                       transform=self.ax.transAxes)
-        #             self.ax.add_patch(patch)
-        #
-        #         # Adding the big rectangles
-        #         patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
-        #                                    ec='k',
-        #                                    facecolor='k',
-        #                                    linewidth=line_width,
-        #                                    transform=self.ax.transAxes,
-        #                                    zorder=9)
-        #         patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
-        #                                    ec='k',
-        #                                    facecolor='w',
-        #                                    linewidth=line_width,
-        #                                    transform=self.ax.transAxes,
-        #                                    zorder=9)
-        #         # Background rectangle
-        #         patch3 = patches.Rectangle((left_bar_pos, y - rect_height), big_rect_width * 2, rect_height * 2,
-        #                                    ec='k',
-        #                                    facecolor='w',
-        #                                    linewidth=line_width,
-        #                                    transform=self.ax.transAxes,
-        #                                    zorder=5,
-        #                                    path_effects=buffer)
-        #         self.ax.add_patch(patch1)
-        #         self.ax.add_patch(patch2)
-        #         self.ax.add_patch(patch3)
-        #
-        #     bar_center = 0.015 + (0.38 / 2)
-        #     bar_height_pos = 0.25
-        #     map_width = self.line_len
-        #     num_digit = int(np.floor(np.log10(map_width)))  # number of digits in number
-        #     bar_map_length = round(map_width, -num_digit)  # round to 1sf
-        #     bar_map_length = myround(bar_map_length / 4, base=0.5 * 10 ** num_digit)  # Rounds to the nearest 1,2,5...
-        #     print(f"Section plot map width: {map_width}")
-        #     units = 'meters' if units == 'm' else 'feet'
-        #
-        #     buffer = [patheffects.Stroke(linewidth=5, foreground='white'), patheffects.Normal()]
-        #     bar_ax_length = bar_map_length / map_width
-        #     left_bar_pos = bar_center - (bar_ax_length / 2)
-        #     right_bar_pos = bar_center + (bar_ax_length / 2)
-        #
-        #     add_rectangles(left_bar_pos, bar_center, right_bar_pos, bar_height_pos)
-        #     self.ax.text(left_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
-        #                  ha='center',
-        #                  transform=self.ax.transAxes,
-        #                  path_effects=buffer,
-        #                  fontsize=7,
-        #                  zorder=9)
-        #     self.ax.text(bar_center, bar_height_pos + .009, f"0",
-        #                  ha='center',
-        #                  transform=self.ax.transAxes,
-        #                  path_effects=buffer,
-        #                  fontsize=7,
-        #                  zorder=9)
-        #     self.ax.text(right_bar_pos, bar_height_pos + .009, f"{bar_map_length / 2:.0f}",
-        #                  ha='center',
-        #                  transform=self.ax.transAxes,
-        #                  path_effects=buffer,
-        #                  fontsize=7,
-        #                  zorder=9)
-        #     self.ax.text(bar_center, bar_height_pos - .018, f"({units})",
-        #                  ha='center',
-        #                  transform=self.ax.transAxes,
-        #                  path_effects=buffer,
-        #                  fontsize=7,
-        #                  zorder=9)
 
         def add_title():
 
@@ -1905,7 +1780,8 @@ class SectionPlot(MapPlotter):
                          transform=self.ax.transAxes)
 
             self.ax.text(center_pos, top_pos - 0.051, f"{self.pem_file.client}\n" + f"{self.pem_file.grid}\n"
-            f"Hole: {self.pem_file.line_name}    Loop: {self.pem_file.loop_name}",
+                                                      f"Hole: {self.pem_file.line_name}    Loop: "
+        f"                                            {self.pem_file.loop_name}",
                          fontname='Century Gothic',
                          fontsize=10,
                          va='top',
@@ -2071,7 +1947,8 @@ class ContourMap(MapPlotter):
                                           zorder=10)
 
             survey_text = self.figure.text(center_pos, top_pos - 0.036, f"Cubic-Interpolation Contour Map"
-            f"\n{pem_files[0].get_survey_type()} Pulse EM Survey",
+                                                                        f"\n{pem_files[0].get_survey_type()} Pulse EM "
+                                                                        f"Survey",
                                            family='cursive',
                                            style='italic',
                                            fontname='Century Gothic',
@@ -2182,7 +2059,7 @@ class ContourMap(MapPlotter):
                     if not component_data.empty:
                         data = component_data.iloc[0]['Reading'][channel]
                     else:
-                        print(f"No data for channel {channel} of station {station_num} ({component} component) \
+                        logger.warning(f"No data for channel {channel} of station {station_num} ({component} component) \
                                                             in file {pem_file.filepath.name}")
                         return
 
@@ -2198,11 +2075,11 @@ class ContourMap(MapPlotter):
             for pem_file in pem_files:
 
                 if channel > pem_file.number_of_channels:
-                    print(f"Channel {channel} not in file {pem_file.filepath.name}")
+                    logger.warning(f"Channel {channel} not in file {pem_file.filepath.name}.")
                     break
 
                 if component != 'TF' and component not in pem_file.get_components():
-                    print(f"{pem_file.filepath.name} has no {component} data.")
+                    logger.warning(f"{pem_file.filepath.name} has no {component} data.")
                     break
 
                 pem_data = pem_file.data
@@ -2211,7 +2088,7 @@ class ContourMap(MapPlotter):
                 line_gps = line_gps[~line_gps.Station.isin(pem_file.get_stations(converted=True))]
 
                 if line_gps.empty:
-                    print(f"Skipping {pem_file.filepath.name} because it has no line GPS")
+                    logger.warning(f"Skipping {pem_file.filepath.name} because it has no line GPS.")
                     break
 
                 # Get the contour information
@@ -2271,9 +2148,7 @@ class ContourMap(MapPlotter):
         plot_pem_gps()
 
         # Create the data for the contour map
-        t = time.time()
         contour_data_to_arrays(component, channel)
-        print(f"Time to get contour data: {time.time() - t:.3f}")
 
         if all([self.xs.any(), self.ys.any(), self.zs.any(), self.ds.any()]):
             # Creating a 2D grid for the interpolation
@@ -2473,6 +2348,7 @@ class GeneralMap:
 
             return eastings, northings, depths, relative_depth
 
+    # TODO Should this be removed
     def get_section_extent(self, pem_file, hole_depth=None, section_plot=False, plot_width=None):
         """
         Find the 50th percentile down the hole, use that as the center of the section, and find the
@@ -3522,8 +3398,6 @@ class GeneralMap:
 #         self.mag_field_artists.append(mag_field_artist)
 
 
-
-
 class PEMPrinter:
     """
     Class for printing PEMPLotter plots to PDF.
@@ -3626,7 +3500,7 @@ class PEMPrinter:
                     if dlg.wasCanceled():
                         return
                 else:
-                    print('No PEM file has any GPS to plot on the plan map.')
+                    logger.warning('No PEM file has any GPS to plot on the plan map.')
 
             # Save the Section plot as long as it is a borehole survey. Must have loop, collar GPS and segments.
             if self.print_section_plot is True and pem_files[0].is_borehole():
@@ -3649,7 +3523,7 @@ class PEMPrinter:
                     if dlg.wasCanceled():
                         return
                 else:
-                    print('No PEM file has the GPS required to make a section plot.')
+                    logger.warning('No PEM file has the GPS required to make a section plot.')
 
             # Saving the LIN plots
             if self.print_lin_plots is True:
@@ -3740,6 +3614,8 @@ class PEMPrinter:
                             dlg += 1
                             if dlg.wasCanceled():
                                 return
+                    else:
+                        logger.warning(f"No RI file to go with {pem_file.filepath.name}.")
 
         def count_pdf_pages(bhs, grids):
             """
@@ -3782,7 +3658,7 @@ class PEMPrinter:
                         if all([file[1] for file in lines]):
                             total_count += num_plots
 
-            print(f"Number of PDF pages: {total_count}")
+            logger.info(f"Number of PDF pages: {total_count}")
             return total_count
 
         files = files  # Zipped PEM and RI files

@@ -45,6 +45,7 @@ from src.qt_py.pem_plot_editor import PEMPlotEditor
 
 from src.damp.db_plot import DBPlotter
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
@@ -294,7 +295,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             :param col: Column of the main table that the change was made.
             :return: None
             """
-            print(f'Table value changed at row {row} and column {col}')
+            logger.info(f'Table value changed at row {row} and column {col}')
 
             self.table.blockSignals(True)
             pem_file = self.pem_files[row]
@@ -307,20 +308,19 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 if new_value:
                     new_path = old_path.parent.joinpath(new_value)
-                    print(f"Renaming {old_path.name} to {new_path.name}")
+                    logger.info(f"Renaming {old_path.name} to {new_path.name}")
 
                     try:
                         os.rename(str(old_path), str(new_path))
                     except OSError:
                         # Keep the old name if the new file name already exists
-                        print(f"{new_path.name} already exists")
-                        self.message.critical(self, 'File Error', f"{new_path.name} already exists")
+                        logger.error(f"{new_path.name} already exists.")
+                        self.message.critical(self, 'File Error', f"{new_path.name} already exists.")
                         item = QTableWidgetItem(str(old_path.name))
                         item.setTextAlignment(QtCore.Qt.AlignCenter)
                         self.table.setItem(row, col, item)
                     else:
                         pem_file.filepath = new_path
-
                         self.status_bar.showMessage(f"{old_path.name} renamed to {str(new_value)}", 2000)
 
             elif col == self.table_columns.index('Date'):
@@ -342,6 +342,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 try:
                     float(value)
                 except ValueError:
+                    logger.error(f"{value} is not a number.")
                     self.message.critical(self, 'Invalid Value', f"Current must be a number")
                     self.pem_to_table(pem_file, row)
                 else:
@@ -351,6 +352,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 try:
                     float(value)
                 except ValueError:
+                    logger.error(f"{value} is not a number.")
                     self.message.critical(self, 'Invalid Value', f"Coil area Must be a number")
                     self.pem_to_table(pem_file, row)
                 else:
@@ -387,7 +389,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             elif col == self.table_columns.index('Suffix\nWarnings'):
                 warnings = pem_file.get_suffix_warnings()
-                print(f"{len(warnings)} suffix warnings for {pem_file.filepath.name}")
 
                 global suffix_viewer
                 suffix_viewer = WarningViewer(pem_file, warning_type='suffix')
@@ -395,7 +396,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             elif col == self.table_columns.index('Repeat\nWarnings'):
                 warnings = pem_file.get_repeats()
-                print(f"{len(warnings)} repeat warnings for {pem_file.filepath.name}")
 
                 global repeat_viewer
                 repeat_viewer = WarningViewer(pem_file, warning_type='repeats')
@@ -495,6 +495,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if path.exists():
                 self.move_dir_tree_to(Path(self.project_dir_edit.text()))
             else:
+                logger.error(f"{str(path)} does not exist.")
                 self.message.information(self, "Invalid Path", f"{str(path)} does not exist.")
                 self.project_dir_edit.setText(str(self.get_current_path()))
 
@@ -715,10 +716,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 try:
                     crs = CRS.from_epsg(epsg_code)
                 except Exception as e:
+                    logger.critical(f"{epsg_code} is not a valid EPSG code.")
                     self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
                     self.epsg_edit.setText('')
                 else:
                     if crs.is_geographic:
+                        logger.warning(f"Geographics CRS selected.")
                         self.message.warning(self, 'Geographic CRS',
                                              "Some features such as maps don't work with a geographic CRS.")
                 finally:
@@ -1200,8 +1203,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     else:
                         pem_file = parser.parse_dmp2(file)
                 except Exception as e:
-                    self.error.setWindowTitle('Error converting DMP file')
-                    self.error.showMessage(str(e))
+                    logger.critical(f"{e}")
+                    # self.error.setWindowTitle('Error converting DMP file')
+                    self.error.showMessage(f"Error converting DMP file: {str(e)}")
                     dlg += 1
                     continue
                 else:
@@ -1223,6 +1227,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if self.pem_files:
                 existing_filepaths = [file.filepath.absolute for file in self.pem_files]
                 if path.absolute in existing_filepaths:
+                    logger.info(f"{path.name} is already opened.")
                     self.status_bar.showMessage(f"{path.name} is already opened", 2000)
                     return True
                 else:
@@ -1314,7 +1319,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     elif datum == 'NAD27':
                         datum = 'NAD 1927'
                     else:
-                        print(f"{datum} is not a valid datum for PEMPro.")
+                        logger.error(f"{datum} has not been implemented for PEMPro.")
                         return
 
                     zone = sc[1].split(' ')[-1]
@@ -1322,7 +1327,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     north = 'North' if zone[-1] == 'N' else 'South'
                     zone = f'{zone_number} {north}'
                 else:
-                    print(f"{name} parsing is not currently implemented.")
+                    logger.info(f"{name} parsing is not currently implemented.")
                     return
 
                 self.gps_system_cbox.setCurrentText(system)
@@ -1353,7 +1358,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
-        t1 = time.time()
         count = 0
         parser = PEMParser()
         self.table.blockSignals(True)
@@ -1377,8 +1381,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     try:
                         pem_file = parser.parse(pem_file)
                     except Exception as e:
+                        logger.critical(str(e))
                         self.error.setWindowTitle('Error parsing PEM file')
-                        self.error.showMessage(str(e))
+                        self.error.showMessage(f"Error parsing PEM file: {str(e)}")
                         dlg += 1
                         continue
 
@@ -1421,7 +1426,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.table.horizontalHeader().show()
         self.status_bar.showMessage(f"{count} PEM files opened.", 2000)
-        print(f"PEMHub - Time to open all PEM files: {time.time() - t1:.3f}")
 
     def open_gps_files(self, gps_files):
         """
@@ -1453,6 +1457,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             crs['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
             crs['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
             crs['Datum'] = re.search(r'Datum:\W+(?P<Datum>.*)', file).group(1)
+            logger.info(f"Parsing INF file: System: {crs['System']}. Zone: {crs['Zone']}. Datum: {crs['Datum']}")
             return crs
 
         crs = get_inf_crs(inf_file)
@@ -1616,6 +1621,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         crs = self.get_crs()
         if not crs:
+            logger.warning(f"No CRS.")
             self.message.information(self, 'Error', 'GPS coordinate system information is incomplete')
             return
 
@@ -1674,7 +1680,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_files, rows = self.get_pem_files(selected=selected)
 
         if not pem_files:
-            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            logger.warning("No PEM files selected.")
+            self.status_bar.showMessage(f"No PEM files selected.", 2000)
             return
 
         global batch_name_editor
@@ -1707,9 +1714,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Open the Map3DViewer if there's any GPS in any of the opened PEM files.
         """
         if not self.pem_files:
+            logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
 
         elif not any([f.has_any_gps() for f in self.pem_files]):
+            logger.warning(f"No GPS found in any file.")
             self.message.information(self, 'Error', 'No file has any GPS to plot.')
 
         else:
@@ -1730,7 +1739,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.epsg_edit.editingFinished.emit()
             self.epsg_rbtn.click()
 
-            print(f"Converting to EPSG:{epsg_code}")
+            logger.info(f"Converting to EPSG:{epsg_code}")
 
             # Set up the progress bar
             bar = CustomProgressBar()
@@ -1769,6 +1778,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         crs = self.get_crs()
 
         if not crs:
+            logger.error(f"No CRS.")
             self.message.critical(self, 'Invalid CRS', 'Project CRS is invalid.')
             return
 
@@ -1851,7 +1861,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Only fill the files lists if the project directory changed
         if str(path) != str(self.project_dir):
             self.project_dir = path
-            print(f"New project dir: {str(path)}")
+            logger.info(f"New project directory: {str(path)}")
             self.project_dir_edit.setText(str(path))
 
             self.fill_gps_list()
@@ -1868,10 +1878,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             search_result = list(self.project_dir.rglob('GPS'))
             if search_result:
                 gps_dir = search_result[0]
-                print(f"GPS dir found: {str(gps_dir)}")
+                logger.info(f"GPS dir found: {str(gps_dir)}")
                 return gps_dir
 
         if not self.project_dir:
+            logger.error('No projected directory selected')
             self.message.information(self, 'Error', 'No project directory has been selected.')
             return
 
@@ -1882,6 +1893,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if gps_dir is None:
             return
         elif gps_dir == 'timeout':
+            logger.warning(f"Searching for GPS directory timed out.")
             self.status_bar.showMessage(f"Searching for GPS directory timed out.", 1000)
             # self.message.information(self, 'Timeout', 'Searching for the GPS folder timed out.')
             return
@@ -1911,6 +1923,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return files
 
         if not self.project_dir:
+            logger.error('No projected directory selected')
             self.message.information(self, 'Error', 'No project directory has been selected.')
             return
 
@@ -1922,6 +1935,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if self.available_pems is None:
             return
         elif self.available_pems == 'timeout':
+            logger.warning(f"Searching for GPS directory timed out.")
             self.status_bar.showMessage(f"Searching for PEM files timed out.", 1000)
             return
         else:
@@ -1953,47 +1967,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Update the GPS and PEM trees
         self.project_dir_changed(model)
-
-    # def save_pem_file(self, pem_file, dir=None, tag=None, backup=False, remove_old=False):
-    #     """
-    #     Action of saving a PEM file to a .PEM file.
-    #     :param pem_file: PEMFile object to be saved.
-    #     :param dir: str, save file path. If None, uses the parent of the first PEM file as the default.
-    #     :param tag: str: Tag to append to the file name ('[A]', '[S]', '[M]'...)
-    #     :param backup: Bool: If true, will save file to a '[Backup]' folder.
-    #     :param remove_old: Bool: If true, will delete the old file.
-    #     :return: None
-    #     """
-    #     if dir is None:
-    #         file_dir = pem_file.filepath.parent
-    #     else:
-    #         file_dir = dir
-    #     file_name = pem_file.filepath.stem
-    #     extension = pem_file.filepath.suffix
-    #
-    #     # Create a backup folder if it doesn't exist, and use it as the new file dir.
-    #     if backup is True:
-    #         pem_file.old_filepath = Path(os.path.join(file_dir, file_name + extension))
-    #         if not os.path.exists(os.path.join(file_dir, '[Backup]')):
-    #             print('Creating back up folder')
-    #             os.mkdir(os.path.join(file_dir, '[Backup]'))
-    #         file_dir = os.path.join(file_dir, '[Backup]')
-    #         extension += '.bak'
-    #
-    #     if tag and tag not in file_name:
-    #         file_name += tag
-    #
-    #     pem_file.filepath = Path(os.path.join(file_dir, file_name + extension))
-    #     pem_file.save()
-    #     # pem_text = pem_file.to_string()
-    #     # print(pem_text, file=open(str(pem_file.filepath), 'w+'))
-    #
-    #     # Remove the old filepath if the filename was changed.
-    #     if pem_file.old_filepath and remove_old is True:
-    #         print(f'Removing old file {pem_file.old_filepath.name}')
-    #         if pem_file.old_filepath.is_file():
-    #             pem_file.old_filepath.unlink()
-    #             pem_file.old_filepath = None
 
     def save_pem_files(self, selected=False):
         """
@@ -2051,8 +2024,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             new_pem.save(legacy='legacy' in save_type.lower())
 
             self.status_bar.showMessage(f'Save Complete. PEM file saved as {new_pem.filepath.name}', 2000)
-            # Must open and not update the PEM since it is being copied
-            # self.open_pem_files(new_pem)
 
             # Refresh the PEM list
             self.fill_pem_list()
@@ -2064,7 +2035,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 try:
                     os.startfile(save_path)
                 except OSError:
-                    print(f"Cannot open {Path(save_path).name} because there is no application associated with it.")
+                    logger.error(f"Cannot open {Path(save_path).name} because there is no"
+                                 f" application associated with it.")
 
         pem_file = self.pem_files[self.table.currentRow()]
         default_path = str(pem_file.filepath)
@@ -2087,14 +2059,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         crs = self.get_crs()
 
         if not self.pem_files:
+            logger.error("No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
         if not any([pem_file.has_any_gps() for pem_file in self.pem_files]):
+            logger.error("No GPS found in any PEM file.")
             self.message.information(self, 'No GPS', 'No file has any GPS to save.')
             return
 
         if not crs:
+            logger.error("No CRS.")
             self.message.information(self, 'Invalid CRS', 'GPS coordinate system information is invalid.')
             return
 
@@ -2219,6 +2194,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 cmd = [str(prog), kmz_save_dir]
                 subprocess.Popen(cmd)
             else:
+                logger.error(f"Cannot find Google Earth Pro.")
                 self.message.information(self, "Error", "Cannot find Google Earth Pro.")
 
     def export_as_xyz(self):
@@ -2230,10 +2206,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_files, rows = self.get_pem_files(selected=False)
 
         if not pem_files:
+            logger.error(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        # default_path = str(self.pem_files[-1].filepath.parent)
         file_dir = self.dialog.getExistingDirectory(self, '', str(self.project_dir))
 
         if file_dir:
@@ -2253,9 +2229,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     try:
                         xyz_file = pem_file.to_xyz()
                     except Exception as e:
+                        logger.critical(f"{e}")
                         self.message.critical(self, 'Error', str(e))
                         continue
                     else:
+                        logger.info(F"Exporting {file_name}.")
                         with open(file_name, 'w+') as file:
                             file.write(xyz_file)
                     finally:
@@ -2271,6 +2249,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
 
         pem_files, rows = self.get_pem_files(selected=selected)
+        if not pem_files:
+            logger.error(f"No PEM files opened.")
+            return
 
         # Make sure there's a valid CRS when doing a final export
         if processed is True:
@@ -2300,7 +2281,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 file_name = pem_file.filepath.name
                 pem_file = pem_file.copy()
-                print(f"Exporting {file_name}")
+                logger.info(f"Exporting {file_name}.")
 
                 pem_file.filepath = Path(file_dir).joinpath(file_name)
                 pem_file.save(legacy=legacy, processed=processed)
@@ -2315,12 +2296,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
         if not self.pem_files:
+            logger.error(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
         crs = self.get_crs()
 
         if not crs:
+            logger.error(f"No CRS.")
             self.message.information(self, 'Invalid CRS', 'CRS is incomplete and/or invalid.')
             return
 
@@ -2353,7 +2336,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                             loop = pem_file.get_loop(closed=False)
                             if loop.to_string() not in loops:
                                 loop_name = pem_file.loop_name
-                                print(f"Creating CSV file for loop {loop_name}")
+                                logger.info(f"Creating CSV file for loop {loop_name}.")
                                 loops.append(loop.to_string())
                                 csv_filepath = str(folder.joinpath(loop_name).with_suffix('csv'))
 
@@ -2372,7 +2355,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                             line = pem_file.line.get_line()
                             if line.to_string() not in lines:
                                 line_name = pem_file.line_name
-                                print(f"Creating CSV file for line {line_name}")
+                                logger.info(f"Creating CSV file for line {line_name}.")
                                 lines.append(line.to_string())
                                 csv_filepath = str(folder.joinpath(line_name).with_suffix('csv'))
 
@@ -2392,7 +2375,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                             collar = pem_file.geometry.get_collar()
                             if collar.to_string() not in collars:
                                 hole_name = pem_file.line_name
-                                print(f"Creating CSV file for hole {hole_name}")
+                                logger.info(f"Creating CSV file for hole {hole_name}.")
                                 collars.append(collar.to_string())
                                 csv_filepath = str(folder.joinpath(hole_name).with_suffix('csv'))
 
@@ -2553,10 +2536,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
 
-        print(f"Adding {pem_file.filepath.name} to the table")
+        logger.info(f"Adding {pem_file.filepath.name} to the table.")
         self.table.blockSignals(True)
-
-        piw = self.pem_info_widgets[row]
 
         # Get the information for each column
         row_info = [
@@ -2597,20 +2578,21 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param pem_file: PEMFile object
         """
         if pem_file in self.pem_files:
-            print(f"Refreshing {pem_file.filepath.name}")
+            logger.info(f"Refreshing {pem_file.filepath.name}.")
             ind = self.pem_files.index(pem_file)
             self.pem_info_widgets[ind].open_file(pem_file)
             self.pem_to_table(pem_file, ind)
             self.format_row(ind)
         else:
-            logger.error(f"PEMFile ID {id(pem_file)} is not in the table")
-            raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table")
+            logger.error(f"PEMFile ID {id(pem_file)} is not in the table.")
+            raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table.")
 
     def backup_files(self):
         """
         Create a backup (.bak) file for each opened PEM file, saved in a backup folder.
         :return: None
         """
+        logger.info(f"Backing up PEM files.")
         for pem_file in self.pem_files:
             pem_file.save(backup=True)
         self.status_bar.showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
@@ -2708,10 +2690,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             try:
                 crs = CRS.from_epsg(epsg_code)
             except Exception as e:
-                logger.error(f"Invalid EPSG code: {str(e)}")
+                logger.error(f"{e}.")
                 self.error.showMessage(f"Invalid EPSG code: {str(e)}")
             else:
-                print(f"PEMHub project CRS: {crs.name}")
+                logger.info(f"Project CRS: {crs.name}")
                 return crs
         else:
             return None
@@ -2723,11 +2705,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         pem_files, rows = self.get_pem_files(selected=selected)
         if not pem_files:
+            logger.error(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
         pem_files = [f for f in pem_files if not f.is_averaged()]
         if not pem_files:
+            logger.error(f"No un-averaged PEM files opened.")
             self.status_bar.showMessage(f"No un-averaged PEM files opened.", 2000)
             return
 
@@ -2745,6 +2729,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 dlg.setLabelText(f"Averaging {pem_file.filepath.name}")
 
                 if pem_file.is_borehole() and pem_file.has_xy() and not pem_file.is_rotated():
+                    logger.warning(f"{pem_file.filepath.name} is a borehole file with rotated XY data.")
                     response = self.message.question(self, 'Rotated PEM File',
                                                      f"{pem_file.filepath.name} has not been de-rotated. "
                                                      f"Continue with averaging?",
@@ -2772,6 +2757,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_files, rows = self.get_pem_files(selected=selected)
 
         if not pem_files:
+            logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
@@ -2781,6 +2767,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         filt_list = list(filter(lambda x: not x[0].is_split(), pems_rows))
 
         if len(filt_list) == 0:
+            logger.warning(f"No un-split PEM files opened.")
             self.status_bar.showMessage(f"No un-split PEM files opened.", 2000)
             return
 
@@ -2820,6 +2807,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         pem_files, rows = self.get_pem_files(selected=selected)
         if not pem_files:
+            logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
@@ -2850,6 +2838,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         pem_files, rows = self.get_pem_files(selected=selected)
         if not pem_files:
+            logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
@@ -2879,6 +2868,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         pem_files, rows = self.get_pem_files(selected=False)
         if not pem_files:
+            logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
@@ -2893,7 +2883,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 pem_file.data[filt] = data
                 self.refresh_pem(pem_file)
             else:
-                print(f"{pem_file.filepath.name} has no {comp} data.")
+                logger.warning(f"{pem_file.filepath.name} has no {comp} data.")
 
         self.status_bar.showMessage(f"Process complete. "
                                     f"{comp.upper()} of {len(pem_files)} PEM files reversed.", 2000)
@@ -2908,22 +2898,37 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             f1, f2 = pem_files[0], pem_files[1]
 
             if not f1.is_borehole() == f2.is_borehole():
+                logger.error(f"{f1.filepath.name} is a {f1.get_survey_type()} and"
+                             f" {f2.filepath.name} is a {f2.get_survey_type()}.")
                 self.message.information(self, 'Error', f"Cannot merge a borehole survey with a surface survey.")
                 return False
             if not f1.is_fluxgate() == f2.is_fluxgate():
+                logger.error(f"{f1.filepath.name} is a {f1.get_survey_type()} and"
+                             f" {f2.filepath.name} is a {f2.get_survey_type()}.")
                 self.message.information(self, 'Error', f"Cannot merge a fluxgate survey with an induction survey.")
                 return False
             if not f1.timebase == f2.timebase:
+                logger.error(f"{f1.filepath.name} has a timebase of {f1.timebase} and"
+                             f" {f2.filepath.name} has a timebase of {f2.timebase}.")
                 self.message.information(self, 'Error', f"Both files must have the same timebase.")
                 return False
             if not f1.number_of_channels == f2.number_of_channels:
+                logger.error(f"{f1.filepath.name} has {len(f1.channel_table)} channels and"
+                             f" {f2.filepath.name} has {len(f2.channel_table)} channels.")
                 self.message.information(self, 'Error', f"Both files must have the same number of channels.")
                 return False
 
             # If the files aren't all de-rotated
             if not all([f.is_rotated() == pem_files[0].is_rotated() for f in pem_files]):
+                logger.warning(f"Mixed states of XY de-rotation between {f1.filepath.name} and {f2.filepath.name}.")
                 self.message.warning(self, 'Warning - Different states of XY de-rotation',
                                      'There is a mix of XY de-rotation in the selected files.')
+
+            if f1.ramp != f2.ramp:
+                logger.warning(
+                    f"{f1.filepath.name} has a ramp of {f1.ramp}. {f2.filepath.name} has a ramp of {f2.ramp}.")
+                self.message.warning(self, 'Warning - Different ramp lengths.',
+                                     'The two files have different ramp lengths.')
 
             return True
 
@@ -2939,8 +2944,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.open_pem_files(filepath)
 
         pem_files, rows = self.get_pem_files(selected=True)
-        if len(pem_files) < 2:
-            self.message.information(self, 'Error', 'Must select multiple PEM Files')
+        if len(pem_files) != 2:
+            logger.error(f"PEMMerger must have two PEM files, not {len(pem_files)}.")
+            self.message.critical(self, 'Error', f'Must select two PEM Files, not {len(pem_files)}.')
             return
 
         if check_pems():
@@ -2958,7 +2964,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             :return: single PEMFile object
             """
             if isinstance(pem_files, list) and len(pem_files) > 1:
-                print(f"Merging {', '.join([f.filepath.name for f in pem_files])}")
+                logger.info(f"Merging {', '.join([f.filepath.name for f in pem_files])}.")
                 # Data merging section
                 currents = [pem_file.current for pem_file in pem_files]
                 coil_areas = [pem_file.coil_area for pem_file in pem_files]
@@ -2966,7 +2972,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # If any currents are different
                 if not all([current == currents[0] for current in currents]):
                     response = self.message.question(self, 'Warning - Different currents',
-                                                     f"{', '.join([f.filepath.name for f in pem_files])} do not have the same current. Proceed with merging anyway?",
+                                                     f"{', '.join([f.filepath.name for f in pem_files])} do not have "
+                                                     f"the same current. Proceed with merging anyway?",
                                                      self.message.Yes | self.message.No)
                     if response == self.message.No:
                         self.status_bar.showMessage('Aborted.', 2000)
@@ -2975,7 +2982,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # If any coil areas are different
                 if not all([coil_area == coil_areas[0] for coil_area in coil_areas]):
                     response = self.message.question(self, 'Warning - Different coil areas',
-                                                     f"{', '.join([f.filepath.name for f in pem_files])} do not have the same coil area. Proceed with merging anyway?",
+                                                     f"{', '.join([f.filepath.name for f in pem_files])} do not have "
+                                                     f"the same coil area. Proceed with merging anyway?",
                                                      self.message.Yes | self.message.No)
                     if response == self.message.No:
                         self.status_bar.showMessage('Aborted.', 2000)
@@ -2986,7 +2994,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         [not pem_file.is_split() for pem_file in pem_files]):
                     response = self.message.question(self, 'Warning - Different channel split states',
                                                      'There is a mix of channel splitting in the selected files. '
-                                                     'Would you like to split the unsplit file(s) and proceed with merging?',
+                                                     'Would you like to split the unsplit file(s) '
+                                                     'and proceed with merging?',
                                                      self.message.Yes | self.message.No)
                     if response == self.message.Yes:
                         for pem_file in pem_files:
@@ -3017,6 +3026,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         files_to_remove = []
 
         if not self.pem_files:
+            logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
@@ -3029,13 +3039,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Group the files by loop name
         for loop, loop_files in groupby(sf_files, key=lambda x: x.loop_name):
             loop_files = list(loop_files)
-            print(f"Auto merging loop {loop}")
+            logger.info(f"Auto merging loop {loop}.")
 
             # Group the files by line name
             for line, line_files in groupby(loop_files, key=lambda x: x.line_name):
                 line_files = list(line_files)
                 if len(line_files) > 1:
-                    print(f"Auto merging line {line}: {[f.filepath.name for f in line_files]}")
+                    logger.info(f"Auto merging line {line}: {[f.filepath.name for f in line_files]}.")
 
                     # Merge the files
                     merged_pem = merge_pems(line_files)
@@ -3047,20 +3057,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Merge borehole files
         # Group the files by loop
         for loop, loop_files in groupby(bh_files, key=lambda x: x.loop_name):
-            print(f"Loop {loop}")
             loop_files = list(loop_files)
 
             # Group the files by hole name
             for hole, hole_files in groupby(loop_files, key=lambda x: x.line_name):
-                print(f"Hole {hole}")
                 hole_files = sorted(list(hole_files), key=lambda x: x.get_components())
 
                 # Group the files by their components
                 for components, comp_files in groupby(hole_files, key=lambda x: x.get_components()):
-                    print(f"Components {components}")
                     comp_files = list(comp_files)
                     if len(comp_files) > 1:
-                        print(f"Auto merging hole {hole}: {[f.filepath.name for f in comp_files]}")
+                        logger.info(f"Auto merging hole {hole}: {[f.filepath.name for f in comp_files]}")
 
                         # Merge the files
                         merged_pem = merge_pems(comp_files)
@@ -3072,6 +3079,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         rows = [pem_files.index(f) for f in files_to_remove]
 
         if self.delete_merged_files_cbox.isChecked():
+            logger.warning(f"Removing rows {', '.join(rows)}.")
             self.remove_file(rows=rows)
 
         self.open_pem_files(files_to_open)
@@ -3085,6 +3093,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
         if not self.pem_files:
+            logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
@@ -3125,7 +3134,7 @@ class FrequencyConverter(QWidget):
             try:
                 freq = float(freq_edit.text())
             except ValueError:
-                print('Not a number')
+                logger.error(f'{freq_edit.text()} is not a number.')
             else:
                 timebase = (1 / freq) * (1000 / 4)
                 timebase_edit.setText(f"{timebase:.2f}")
@@ -3141,7 +3150,7 @@ class FrequencyConverter(QWidget):
             try:
                 timebase = float(timebase_edit.text())
             except ValueError:
-                print('Not a number')
+                logger.error(f'{timebase_edit.text()} is not a number.')
             else:
                 freq = (1 / (4 * timebase / 1000))
                 freq_edit.setText(f"{freq:.2f}")
@@ -3200,7 +3209,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         def get_save_file():
             default_path = self.pem_files[-1].filepath.parent
             save_dir = QFileDialog.getSaveFileName(self, '', str(default_path), 'PDF Files (*.PDF)')[0]
-            print(f"Saving PDFs to {save_dir}")
+            logger.info(f"Saving PDFs to {save_dir}.")
             if save_dir:
                 self.save_path_edit.setText(save_dir)
 
@@ -3298,14 +3307,18 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
                 # PEM Files and RI files zipped together for when they get sorted
                 printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
             except FileNotFoundError:
+                logger.critical(f'{save_dir} does not exist.')
                 self.message.information(self, 'Error', f'{save_dir} does not exist')
             except IOError:
+                logger.critical(f"{save_dir} is currently opened.")
                 self.message.information(self, 'Error', f'{save_dir} is currently opened')
             except Exception as e:
+                logger.critical(f"{e}.")
                 self.message.critical(self, 'Error', str(e))
             finally:
                 self.close()
         else:
+            logger.error(f"No file name passed.")
             self.message.critical(self, 'Error', 'Invalid file name')
 
 
@@ -3429,9 +3442,11 @@ class MagDeclinationCalculator(QMainWindow):
         :return: None
         """
         if not pem_file:
+            logger.warning(f"No PEM files passed.")
             return
 
         if not pem_file.get_crs():
+            logger.warning(f"No CRS.")
             self.message.information(self, 'Error', 'GPS coordinate system information is invalid')
             return
 
@@ -3533,6 +3548,7 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
                 try:
                     crs = CRS.from_epsg(epsg_code)
                 except Exception as e:
+                    logger.critical(str(e))
                     self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
                     self.epsg_edit.setText('')
                 finally:
@@ -3589,6 +3605,7 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
             self.accept_signal.emit(int(epsg_code))
             self.close()
         else:
+            logger.error(f"{epsg_code} is not a valid EPSG code.")
             self.message.information(self, 'Invalid CRS', 'The selected CRS is invalid.')
 
     def open(self, current_crs):
@@ -3634,7 +3651,7 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
                 elif datum == 'NAD 1983':
                     epsg_code = f'269{zone_number:02d}'
                 else:
-                    print(f"CRS string not implemented.")
+                    logger.error(f"{datum} to EPSG code has not been implemented.")
                     return None
 
                 return epsg_code
@@ -3857,7 +3874,7 @@ class SuffixWarningViewer(QMainWindow):
         self.suffixes = self.pem_file.get_suffix_warnings()
         self.suffixes = self.suffixes[['Station', 'Component', 'Reading_index', 'Reading_number']]
         if self.suffixes.empty:
-            print(f"No suffixes to view in {pem_file.filepath.name}")
+            logger.error(f"No suffixes to view in {pem_file.filepath.name}.")
             return
 
         self.setWindowTitle(f"Suffix Warnings Viewer - {pem_file.filepath.name}")
@@ -3928,7 +3945,7 @@ class WarningViewer(QMainWindow):
             self.setWindowTitle(f"Repeat Warnings Viewer - {pem_file.filepath.name}")
 
         if self.warnings.empty:
-            print(f"No warnings to view in {pem_file.filepath.name}")
+            logger.error(f"No warnings to view in {pem_file.filepath.name}.")
             return
 
         # Format that window
@@ -4019,8 +4036,9 @@ if __name__ == '__main__':
     sys.excepthook = handle_exception
 
     logging.basicConfig(filename='err.log',
+                        filemode='w',
                         level=logging.INFO,
-                        format='\n%(asctime)s\n%(levelname)s: %(message)s',
+                        format='\n%(asctime)s - %(filename)s\n%(levelname)s: %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p')
 
     main()

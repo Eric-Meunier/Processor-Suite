@@ -1,22 +1,20 @@
-import copy
+import logging
 import os
-import re
 import sys
-import time
-import keyboard
-
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-import pylineclip as lc
-from scipy import spatial
 from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFrame, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                             QPushButton, QTableWidget, QAction, QWidget, QHBoxLayout, QAbstractItemView)
-from pyqtgraph.Point import Point
+                             QPushButton, QAction, QHBoxLayout)
 
-from src.pem.pem_file import StationConverter, PEMParser
+from src.pem.pem_file import StationConverter
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -37,7 +35,6 @@ pg.setConfigOption('crashWarning', True)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
-# TODO Add SOA rotation for XY boreholes
 class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
     accept_sig = QtCore.pyqtSignal(str)
 
@@ -456,27 +453,12 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
                 if 'Z' in components:
                     self.menuView.addAction(self.view_z_action)
 
-        assert len(pem_files) == 2, f"PEMMerger exclusively accepts two PEM files"
+        assert len(pem_files) == 2, f"PEMMerger exclusively accepts two PEM files."
         f1, f2 = pem_files[0], pem_files[1]
         assert f1.is_borehole() == f2.is_borehole(), f"Cannot merge a borehole survey with a surface survey."
         assert f1.is_fluxgate() == f2.is_fluxgate(), f"Cannot merge a fluxgate survey with an induction survey."
         assert f1.timebase == f2.timebase, f"Both files must have the same timebase."
         assert f1.number_of_channels == f2.number_of_channels, f"Both files must have the same number of channels."
-
-        if f1.ramp != f2.ramp:
-            response = self.message.question(self, 'Warning', 'The two files have different ramps. Continue with'
-                                                              'merging?', self.message.Yes, self.message.No)
-
-            if response == self.message.No:
-                return
-
-        if not f1.is_rotated() == f2.is_rotated():
-            response = self.message.question(self, 'Warning', 'There is a mix of XY de-rotation in the selected files. '
-                                                              'Continue with merging?',
-                                             self.message.Yes, self.message.No)
-
-            if response == self.message.No:
-                return
 
         # Enable the SOA spin boxes if the file is a borehole file and has XY component data
         if all([f1.is_borehole(), f1.has_xy()]):

@@ -1,11 +1,16 @@
 import copy
+import logging
 import os
 import sys
-
 from pathlib import Path
-from PyQt5 import (QtCore,  QtGui)
+
+from PyQt5 import (QtCore, QtGui)
 from PyQt5.QtWidgets import (QWidget, QFileDialog, QApplication, QTableWidgetItem, QHeaderView, QTableWidget,
                              QPushButton, QGridLayout)
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 
 class StationSplitter(QWidget):

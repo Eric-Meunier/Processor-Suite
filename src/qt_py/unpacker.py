@@ -1,17 +1,22 @@
+import logging
 import os
 import sys
 from pathlib import Path
 from shutil import copyfile, rmtree
 
+import py7zr
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QLabel, QFileSystemModel,
                              QAbstractItemView, QErrorMessage, QMenu, QPushButton, QFrame, QHBoxLayout,
                              QTableWidget, QTableWidgetItem, QVBoxLayout, QLineEdit)
 from pyunpack import Archive
-import py7zr
+
 from src.damp.db_plot import DBPlotter
 
-# This must be placed after the custom table or else there are issues with class promotion in Qt Designer.
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
+
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -301,7 +306,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
         # Extract zipped files to a folder of the same name as the zipped file
         if path.suffix.lower() in ['.zip', '.7z', '.rar']:
-            print(f"Extracting {path.name}")
+            logger.info(f"Extracting {path.name}.")
             new_folder_dir = path.with_suffix('')
 
             # Use py7zr instead of pyunpack for 7zip files since they don't seem to work with patool
@@ -328,7 +333,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
         self.change_dir_label()
         self.setWindowTitle(f"Unpacker - {str(path)}")
-        print(f"Unpacker - Opened {str(self.output_path)}")
+        logger.info(f"Opened {str(self.output_path)}.")
         dmp_extensions = ['dmp', 'dmp2', 'dmp3', 'dmp4']
         damp_extensions = ['log', 'rtf', 'txt']
         dump_extensions = ['pem', 'tdms', 'tdms_index', 'dat', 'xyz', 'csv']
@@ -445,15 +450,27 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                     continue
                 else:
                     try:
-                        # print(f"Moving \"{old_path}\" to \"{new_path}\"")
+                        if new_path.exists():
+                            logger.error(f"{new_path.name} already exists.")
+                            self.error.showMessage(f"{new_path.name} already exists.")
+                            continue
+
+                        elif not old_path.is_file():
+                            logger.error(f"{old_path.name} not found.")
+                            self.error.showMessage(f"{old_path.name} not found.")
+                            continue
+
                         copyfile(old_path, new_path)
-                    except FileExistsError:
-                        self.error.setWindowTitle('Error - File Exists')
-                        self.error.showMessage(f'\"{new_path}\" exists already')
-                    except FileNotFoundError:
-                        self.error.setWindowTitle('Error - File Not Found')
-                        self.error.showMessage(f'Cannot find \"{old_path}\"')
+                        
+                    # except FileExistsError:
+                    #     logger.error(f"\"{new_path}\" exists already")
+                    #     self.error.showMessage(f'\"{new_path}\" exists already')
+                    # except FileNotFoundError:
+                    #     logger.error(f"")
+                    #     self.error.setWindowTitle('Error - File Not Found')
+                    #     self.error.showMessage(f'Cannot find \"{old_path}\"')
                     except Exception as e:
+                        logger.error(f"")
                         self.error.setWindowTitle('Exception')
                         self.error.showMessage(f'{e}')
                         continue

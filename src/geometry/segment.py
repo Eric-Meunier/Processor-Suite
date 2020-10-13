@@ -1,4 +1,10 @@
 from src.gps.gps_editor import BoreholeSegments
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 
 class Segmenter:

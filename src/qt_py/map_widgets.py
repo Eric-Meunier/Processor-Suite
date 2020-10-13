@@ -1,12 +1,9 @@
+import logging
 import os
 import re
 import sys
 import time
-import logging
-import traceback
 
-# import folium
-# import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
 import matplotlib.pyplot as plt
 import numpy as np
 import plotly
@@ -14,33 +11,18 @@ import plotly.graph_objects as go
 from PyQt5 import (QtGui)
 from PyQt5 import uic
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWidgets import (QErrorMessage, QApplication, QWidget, QShortcut, QFileDialog, QMessageBox, QGridLayout,
+from PyQt5.QtWidgets import (QErrorMessage, QApplication, QWidget, QFileDialog, QMessageBox, QGridLayout,
                              QAction, QMainWindow)
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
 
-from src.pem.pem_plotter import ContourMap
 from src.gps.gps_editor import BoreholeGeometry
+from src.pem.pem_plotter import ContourMap
 
-
-def custom_excepthook(exc_type, exc_value, exc_traceback):
-    # Do not print exception when user cancels the program
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
-
-    logging.error("An uncaught exception occurred:")
-    logging.error("Type: %s", exc_type)
-    logging.error("Value: %s", exc_value)
-
-    if exc_traceback:
-        format_exception = traceback.format_tb(exc_traceback)
-        for line in format_exception:
-            logging.error(repr(line))
-
-
-sys.excepthook = custom_excepthook
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -117,8 +99,6 @@ class Map3DViewer(QMainWindow):
             raise Exception(f"No GPS to plot.")
 
     def plot_pems(self):
-        if not self.pem_files:
-            return
 
         def reset_figure():
             self.figure.data = []
@@ -253,194 +233,6 @@ class Map3DViewer(QMainWindow):
         QApplication.clipboard().setPixmap(img)
 
 
-# class Section3DViewer(QWidget, Ui_Section3DWidget):
-#     """
-#     Displays a 3D vector plot of a borehole. Plots the vector plot itself in 2D, on a plane that is automatically
-#     calculated
-#     """
-#
-#     def __init__(self, pem_file, parent=None):
-#         super().__init__()
-#         self.setupUi(self)
-#         self.pem_file = pem_file
-#         if not self.pem_file.is_borehole():
-#             raise TypeError(f'{os.path.basename(self.pem_file.filepath)} is not a borehole file.')
-#         self.parent = parent
-#         self.list_points = []
-#
-#         self.setWindowTitle('3D Section Viewer')
-#         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
-#
-#         self.draw_loop = self.draw_loop_cbox.isChecked()
-#         self.draw_borehole = self.draw_borehole_cbox.isChecked()
-#         self.draw_mag_field = self.draw_mag_field_cbox.isChecked()
-#
-#         self.label_loop = self.label_loop_cbox.isChecked()
-#         self.label_loop_anno = self.label_loop_anno_cbox.isChecked()
-#         self.label_borehole = self.label_borehole_cbox.isChecked()
-#
-#         self.draw_loop_cbox.toggled.connect(self.toggle_loop)
-#         self.draw_borehole_cbox.toggled.connect(self.toggle_borehole)
-#         self.draw_mag_field_cbox.toggled.connect(self.toggle_mag_field)
-#
-#         self.label_loop_cbox.toggled.connect(self.toggle_loop_label)
-#         self.label_loop_anno_cbox.toggled.connect(self.toggle_loop_anno_labels)
-#         self.label_borehole_cbox.toggled.connect(self.toggle_borehole_label)
-#         self.label_segments_cbox.toggled.connect(self.toggle_segment_labels)
-#
-#         self.figure = Figure()
-#         self.canvas = FigureCanvas(self.figure)
-#         # self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)  # Needed for key-press events
-#         # self.canvas.setFocus()
-#
-#         self.map_layout.addWidget(self.canvas)
-#         self.ax = self.figure.add_subplot(111, projection='3d')
-#
-#         self.section_plotter = Section3D(self.ax, self.pem_file, parent=self)
-#         self.section_plotter.plot_3d_magnetic_field()
-#         self.section_plotter.format_ax()
-#         self.figure.subplots_adjust(left=-0.1, bottom=-0.1, right=1.1, top=1.1)
-#         self.update_canvas()
-
-    """
-    Not used
-        # self.cid_press = self.figure.canvas.mpl_connect('key_press_event', self.mpl_onpress)
-        # self.cid_release = self.figure.canvas.mpl_connect('key_release_event', self.mpl_onrelease)
-
-    def mpl_onclick(self, event):
-
-        def get_mouse_xyz():
-            x = float(self.ax.format_coord(event.xdata, event.ydata).split(',')[0].strip().split('=')[-1])
-            y = float(self.ax.format_coord(event.xdata, event.ydata).split(',')[1].strip().split('=')[-1])
-            z = float(self.ax.format_coord(event.xdata, event.ydata).split(',')[2].strip().split('=')[-1])
-            return x, y, z
-
-        if plt.get_current_fig_manager().toolbar.mode != '' or event.xdata is None:
-            return
-        if event.button == 3:
-            if self.clickp1 is None:
-                self.clickp1 = get_mouse_xyz()
-                print(f'P1: {self.ax.format_coord(event.xdata, event.ydata)}')
-                self.ax.plot([self.clickp1[0]], [self.clickp1[1]], [self.clickp1[2]], 'ro', label='1')
-        #     self.plan_lines.append(self.ax.lines[-1])
-                self.canvas.draw()
-        #
-            elif self.clickp2 is None:
-                self.clickp2 = get_mouse_xyz()
-                print(f'P2: {self.ax.format_coord(event.xdata, event.ydata)}')
-                self.ax.plot([self.clickp2[0]], [self.clickp2[1]], [self.clickp2[2]], 'bo', label='2')
-                self.canvas.draw()
-            else:
-                self.clickp1 = None
-                self.clickp2 = None
-        #     self.clickp2 = [int(event.xdata), int(event.ydata)]
-        #
-        #     if self.clickp2 == self.clickp1:
-        #         self.clickp1, self.clickp2 = None, None
-        #         raise NameError('P1 != P2, reset')
-        #
-        #     print(f'P2: {self.clickp2}')
-        #
-        #     self.ax.plot([self.clickp1[0], self.clickp2[0]],
-        #                        [self.clickp1[1], self.clickp2[1]], 'r', label='L')
-        #     self.plan_lines.append(self.ax.lines[-1])
-        #
-        #     plt.draw()
-        #
-        #     print('Plotting section...')
-
-    def mpl_onpress(self, event):
-        # print('press ', event.key)
-        sys.stdout.flush()
-        if event.key == 'control':
-            self.cid_click = self.figure.canvas.mpl_connect('button_press_event', self.mpl_onclick)
-        elif event.key == 'escape':
-            self.clickp1 = None
-            self.clickp2 = None
-
-    def mpl_onrelease(self, event):
-        # print('release ', event.key)
-        if event.key == 'control':
-            self.figure.canvas.mpl_disconnect(self.cid_click)
-    """
-
-    # def update_canvas(self):
-    #     self.toggle_loop()
-    #     self.toggle_borehole()
-    #     self.toggle_mag_field()
-    #     self.toggle_loop_label()
-    #     self.toggle_loop_anno_labels()
-    #     self.toggle_borehole_label()
-    #     self.toggle_segment_labels()
-    #
-    # def toggle_loop(self):
-    #     if self.draw_loop_cbox.isChecked():
-    #         for artist in self.section_plotter.loop_artists:
-    #             artist.set_visible(True)
-    #     else:
-    #         for artist in self.section_plotter.loop_artists:
-    #             artist.set_visible(False)
-    #     self.canvas.draw()
-    #
-    # def toggle_borehole(self):
-    #     if self.draw_borehole_cbox.isChecked():
-    #         for artist in self.section_plotter.hole_artists:
-    #             artist.set_visible(True)
-    #     else:
-    #         for artist in self.section_plotter.hole_artists:
-    #             artist.set_visible(False)
-    #     self.canvas.draw()
-    #
-    # def toggle_mag_field(self):
-    #     if self.draw_mag_field_cbox.isChecked():
-    #         for artist in self.section_plotter.mag_field_artists:
-    #             artist.set_visible(True)
-    #     else:
-    #         for artist in self.section_plotter.mag_field_artists:
-    #             artist.set_visible(False)
-    #     self.canvas.draw()
-    #
-    # def toggle_loop_label(self):
-    #     if self.label_loop_cbox.isChecked():
-    #         for artist in self.section_plotter.loop_label_artists:
-    #             artist.set_visible(True)
-    #     else:
-    #         for artist in self.section_plotter.loop_label_artists:
-    #             artist.set_visible(False)
-    #     self.canvas.draw()
-    #
-    # def toggle_loop_anno_labels(self):
-    #     if self.label_loop_anno_cbox.isChecked():
-    #         for artist in self.section_plotter.loop_anno_artists:
-    #             artist.set_visible(True)
-    #     else:
-    #         for artist in self.section_plotter.loop_anno_artists:
-    #             artist.set_visible(False)
-    #     self.canvas.draw()
-    #
-    # def toggle_borehole_label(self):
-    #     if self.label_borehole_cbox.isChecked():
-    #         for artist in self.section_plotter.hole_label_artists:
-    #             artist.set_visible(True)
-    #     else:
-    #         for artist in self.section_plotter.hole_label_artists:
-    #             artist.set_visible(False)
-    #     self.canvas.draw()
-    #
-    # def toggle_segment_labels(self):
-    #     if self.label_segments_cbox.isChecked():
-    #         for artist in self.section_plotter.segment_label_artists:
-    #             artist.set_visible(True)
-    #     else:
-    #         for artist in self.section_plotter.segment_label_artists:
-    #             artist.set_visible(False)
-    #     self.canvas.draw()
-    #
-    # def closeEvent(self, e):
-    #     self.figure.clear()
-    #     e.accept()
-
-
 class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
     """
     Widget to display contour maps. Filters the given PEMFiles to only include surface surveys. Either all files
@@ -507,13 +299,11 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         # Averages any file not already averaged.
         for pem_file in self.pem_files:
             if not pem_file.is_averaged():
-                print(f"Averaging {pem_file.filepath.name}")
                 pem_file = pem_file.average()
 
         # Either all files must be split or all un-split
         if not all([pem_file.is_split() for pem_file in self.pem_files]):
             for pem_file in self.pem_files:
-                print(f"Splitting channels for {pem_file.filepath.name}")
                 pem_file = pem_file.split()
 
         self.components = np.append(np.unique(np.array([file.get_components() for file in self.pem_files])), 'TF')
@@ -567,7 +357,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                                    elevation_contours=self.plot_elevation_cbox.isChecked(),
                                    title_box=self.title_box_cbox.isChecked())
         except Exception as e:
-            self.error.showMessage(f"The following error occured while creating the contour plot:\n{str(e)}")
+            logger.critical(str(e))
+            self.error.showMessage(f"The following error occurred while creating the contour plot:\n{str(e)}")
         else:
             self.canvas.draw()
 
@@ -593,16 +384,17 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             if path:
                 # Create a new instance of ContourMap
                 cmap_save = ContourMap()
-                print(f"Saving PDF to {path}")
+                logger.info(f"Saving PDF to {path}.")
                 with PdfPages(path) as pdf:
                     # Print plots from the list of channels if it's enabled
                     if self.channel_list_edit.isEnabled():
                         text = self.channel_list_edit.text()
                         try:
                             channels = [int(re.match('\d+', text)[0]) for text in re.split(',| ', text)]
-                            print(f"Saving contour map plots for channels {channels}")
+                            logger.info(f"Saving contour map plots for channels {channels}.")
                         except IndexError:
-                            self.error.showMessage(f"No numbers found in the list of channels")
+                            logger.critical(f"No numbers found in the list of channels.")
+                            self.error.showMessage(f"No numbers found in the list of channels.")
                             return
                     else:
                         channels = [self.channel_spinbox.value()]

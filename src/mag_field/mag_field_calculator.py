@@ -3,6 +3,13 @@ import numpy as np
 import pandas as pd
 from timeit import default_timer as timer
 
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
+
 
 class MagneticFieldCalculator:
     """
@@ -19,7 +26,7 @@ class MagneticFieldCalculator:
             self.wire = np.array(wire, dtype='float')
             # Remove any unwanted columns. Only easting, northing, elevation is required.
             while self.wire.shape[1] > 3:
-                print(f"Loop has {self.wire.shape[1]} columns in row. Removing the last column...")
+                logger.info(f"Loop has {self.wire.shape[1]} columns in row. Removing the last column.")
                 self.wire = np.delete(self.wire, 3, axis=1)
 
     @staticmethod

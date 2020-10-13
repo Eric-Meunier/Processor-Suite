@@ -1,24 +1,29 @@
 import copy
+import logging
 import os
 import re
 import sys
 import time
-import keyboard
 
+import keyboard
 import numpy as np
 import pandas as pd
-import pyqtgraph as pg
 import pylineclip as lc
-from scipy import spatial
+import pyqtgraph as pg
 from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                             QPushButton, QTableWidget, QTableWidgetItem, QWidget, QHBoxLayout, QAbstractItemView)
+                             QPushButton)
 from pyqtgraph.Point import Point
+from scipy import spatial
+
+from src.pem.pem_file import StationConverter, PEMParser
+
 # from pyod.models.abod import ABOD
 # from pyod.models.knn import KNN
 # from pyod.utils.data import get_outliers_inliers
-
-from src.pem.pem_file import StationConverter, PEMParser
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -235,9 +240,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
         if event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_R:
-            t = time.time()
             self.delete_lines()
-            print(f"PEMPlotEditor - Time to delete and replot: {time.time() - t:.3f}")
 
         elif event.key() == QtCore.Qt.Key_C:
             self.cycle_profile_component()
@@ -901,7 +904,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     decay_selection_text.append(stack_number)
 
                     # Add the time stamp if it exists
-                    timestamp = selected_decay.datetime
+                    timestamp = selected_decay.Timestamp
                     if timestamp is not None:
                         date_time = f"Timestamp: {selected_decay.datetime.strftime('%b %d - %H:%M:%S')}"
                         decay_selection_text.append(date_time)
@@ -1069,7 +1072,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                     self.selected_lines = [self.nearest_decay]
                     self.highlight_lines()
         else:
-            print(f"No nearest decay")
+            logger.warning(f"No nearest decay.")
 
     def decay_mouse_moved(self, evt):
         """
@@ -1277,7 +1280,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         :param source: str, either 'decay' or 'profile' to signify which data to modify
         """
         if not source:
-            print(f"No source selected")
+            logger.warning(f"No source selected.")
             return
 
         new_comp, ok_pressed = QInputDialog.getText(self, "Change Component", "New Component:", QLineEdit.Normal)
@@ -1317,7 +1320,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         :param source: str, must be in ['N', 'E', 'S', 'W']
         """
         if not source:
-            print(f"No source selected")
+            logger.warning(f"No source selected.")
             return
 
         new_suffix, ok_pressed = QInputDialog.getText(self, "Change Suffix", "New Suffix:")
@@ -1342,7 +1345,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             selected_data = self.get_selected_profile_data()
 
         selected_data.loc[:, 'Station'] = selected_data.loc[:, 'Station'].map(
-            lambda x: re.sub('[NESW]', new_suffix.upper(), x))
+            lambda x: re.sub(r'[NESW]', new_suffix.upper(), x))
 
         # Update the data in the pem file object
         self.pem_file.data.iloc[selected_data.index] = selected_data
@@ -1361,7 +1364,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                                                            selected_station)
             if ok_pressed:
                 new_station = new_station.upper()
-                if re.match('-?\d+', new_station):
+                if re.match(r'-?\d+', new_station):
                     # Update the station number in the selected data
                     selected_data.loc[:, 'Station'] = new_station
                     # Update the data in the pem file object
@@ -1378,10 +1381,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         def shift(station):
             # Find the numbers in the station name
-            station_num = re.match('-?\d+', station).group()
+            station_num = re.match(r'-?\d+', station).group()
             if station_num:
                 new_num = int(station_num) + shift_amount
-                new_station = re.sub('-?\d+', str(new_num), station)
+                new_station = re.sub(r'-?\d+', str(new_num), station)
                 return new_station
 
         selected_data = self.get_selected_profile_data()
@@ -1571,7 +1574,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                         local_count += 1
                         return True
                 else:
-                    print(f"Max removable limit reached.")
+                    logger.info(f"Max removable limit reached.")
                 if local_count < max_removable:
                     # Second pass, looking at the last 3 off-time channels, and using 68% confidence interval
                     min_cutoff = median[mask][-3:] - std[mask][-3:]
@@ -1581,7 +1584,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                         local_count += 1
                         return True
                 else:
-                    print(f"Max removable limit reached.")
+                    logger.info(f"Max removable limit reached.")
 
                 return False
 
@@ -1607,13 +1610,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         threshold_value = self.auto_clean_std_sbox.value()
 
         # Filter the data to only see readings that aren't already flagged for deletion
-        data = self.pem_file.data[~self.pem_file.data.del_flag.astype(bool)]
+        data = self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)]
         # Filter the readings to only consider off-time channels
         mask = np.asarray(~self.pem_file.channel_times.Remove)
         # Clean the data
         cleaned_data = data.groupby(['Station', 'Component']).apply(clean_group)
         # Update the data
-        self.pem_file.data[~self.pem_file.data.del_flag.astype(bool)] = cleaned_data
+        self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)] = cleaned_data
 
         # Plot the new data
         self.plot_profiles(components='all')

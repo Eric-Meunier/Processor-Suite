@@ -1,10 +1,13 @@
-import copy
+import logging
 import os
 import sys
-from pathlib import Path
 
 from PyQt5 import (QtCore, uic)
 from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QHeaderView)
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -87,7 +90,7 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
             item = QTableWidgetItem(pem_file.filepath.name)
             item2 = QTableWidgetItem(pem_file.filepath.name)
         else:
-            raise ValueError('Invalid type in BatchNameEditor')
+            raise ValueError(f'{self.kind} is not a valid option.')
 
         item.setTextAlignment(QtCore.Qt.AlignCenter)
         item2.setTextAlignment(QtCore.Qt.AlignCenter)

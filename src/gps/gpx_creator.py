@@ -1,15 +1,20 @@
-import geopandas as gpd
-import pandas as pd
-import utm
-import sys
-import os
 import csv
-import gpxpy
-from shapely.geometry import asMultiPoint
+import logging
+import os
+import sys
 from pathlib import Path
-from pyproj import CRS
+
+import geopandas as gpd
+import gpxpy
+import pandas as pd
 from PyQt5 import (QtGui, uic)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction, QLabel)
+from pyproj import CRS
+from shapely.geometry import asMultiPoint
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -22,17 +27,6 @@ else:
 
 # Load Qt ui file into a class
 Ui_GPXCreator, QtBaseClass = uic.loadUiType(gpxCreatorFile)
-
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
 
 
 class GPXCreator(QMainWindow, Ui_GPXCreator):
@@ -292,7 +286,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
                 elif datum == 'NAD 1983':
                     epsg_code = f'269{zone_number:02d}'
                 else:
-                    print(f"CRS string not implemented.")
+                    logger.info(f"CRS string not implemented.")
                     return None
 
                 return epsg_code
@@ -354,8 +348,8 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         data.loc[:, 'Comment'] = data.loc[:, 'Comment'].astype(str)
         df_to_table(data)
 
-        print(f'Opening file {self.filepath.name}')
-        self.status_bar.showMessage(f'Opened file {self.filepath.name}', 2000)
+        logger.info(f'Opening {self.filepath.name}')
+        self.status_bar.showMessage(f'Opened {self.filepath.name}', 2000)
 
     def export_gpx(self):
         """
@@ -405,7 +399,6 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         else:
             crs = CRS.from_epsg(epsg)
 
-        print('Exporting GPX...')
         self.status_bar.showMessage(f"Saving GPX file...")
 
         default_path = str(self.filepath.parent)
@@ -414,6 +407,8 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         if not file:
             self.status_bar.showMessage('Cancelled', 2000)
             return
+
+        logger.info(f"Saving {file}")
 
         gpx = gpxpy.gpx.GPX()
 
@@ -441,7 +436,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
             try:
                 os.startfile(file)
             except OSError:
-                print(f'No application to open {file}')
+                logger.error(f'No application to open {file}')
                 pass
 
 
@@ -450,7 +445,7 @@ def main():
 
     gpx_creator = GPXCreator()
     gpx_creator.show()
-    file = r'C:\Users\Eric\PycharmProjects\PEMPro\sample_files\GPX files\testing file.csv'
+    file = str(Path(__file__).parents[2].joinpath(r'sample_files\GPX files\testing file.csv'))
     gpx_creator.open(file)
     gpx_creator.name_edit.setText('Testing line')
     gpx_creator.gps_system_cbox.setCurrentText('UTM')

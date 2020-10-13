@@ -1,23 +1,28 @@
-import math
+import logging
 import os
 import sys
-import numpy as np
-import simplekml
-import gpxpy
-import logging
+from pathlib import Path
 
-from pyproj import CRS
 import geopandas as gpd
-import pandas as pd
-from shapely.geometry import asMultiPoint
-# import matplotlib.backends.backend_tkagg  # Needed for pyinstaller, or receive  ImportError
+import gpxpy
+import math
 import matplotlib.ticker as ticker
+import numpy as np
+import pandas as pd
 import pyqtgraph as pg
+import simplekml
 from PyQt5 import QtGui, QtCore, uic, QtWebEngineWidgets
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from pyproj import CRS
+from shapely.geometry import asMultiPoint
+
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -31,10 +36,6 @@ else:
     gridPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\grid_planner.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
-logger = logging.getLogger(__name__)
-handler = logging.StreamHandler(stream=sys.stdout)
-logger.addHandler(handler)
-
 # Load Qt ui file into a class
 Ui_LoopPlannerWindow, QtBaseClass = uic.loadUiType(loopPlannerCreatorFile)
 Ui_GridPlannerWindow, QtBaseClass = uic.loadUiType(gridPlannerCreatorFile)
@@ -43,8 +44,6 @@ pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
-# Ensure using PyQt5 backend
-# matplotlib.use('QT5Agg')
 
 
 class SurveyPlanner(QMainWindow):
@@ -330,6 +329,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
                 try:
                     crs = CRS.from_epsg(epsg_code)
                 except Exception as e:
+                    logger.error(f"Invalid EPSG code: {epsg_code}.")
                     self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
                     self.epsg_edit.setText('')
                 finally:
@@ -523,7 +523,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             """
             self.hole_trace_plot.setData(xs, ys, pen=pg.mkPen(width=2, color=0.5))
             self.hole_collar_plot.setData([self.hole_easting], [self.hole_northing],
-                                                       pen=pg.mkPen(width=3, color=0.5))
+                                          pen=pg.mkPen(width=3, color=0.5))
             self.plan_view_plot.addItem(self.hole_trace_plot)
             self.plan_view_plot.addItem(self.hole_collar_plot)
 
@@ -853,9 +853,10 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
             kml.savekmz(kmz_save_dir, format=False)
             try:
+                logger.info(f"Saving {Path(kmz_save_dir).name}.")
                 os.startfile(kmz_save_dir)
             except OSError:
-                print(f'No application to open {kmz_save_dir}')
+                logger.error(f'No application to open {kmz_save_dir}.')
                 pass
         else:
             self.status_bar.showMessage('Cancelled.', 2000)
@@ -911,9 +912,10 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
                 f.write(gpx.to_xml())
             self.status_bar.showMessage('Save complete.', 2000)
             try:
+                logger.info(f"Saving {Path(save_path).name}.")
                 os.startfile(save_path)
             except OSError:
-                print(f'No application to open {save_path}')
+                logger.error(f'No application to open {save_path}.')
                 pass
         else:
             self.status_bar.showMessage('Cancelled.', 2000)
@@ -1096,6 +1098,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
                 try:
                     crs = CRS.from_epsg(epsg_code)
                 except Exception as e:
+                    logger.error(f"Invalid EPSG code: {epsg_code}.")
                     self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
                     self.epsg_edit.setText('')
                 finally:
@@ -1723,9 +1726,10 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
             kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
             kml.savekmz(kmz_save_dir, format=False)
             try:
+                logger.info(f"Saving {Path(save_dir).name}.")
                 os.startfile(save_dir)
             except OSError:
-                print(f'No application to open {save_dir}')
+                logger.error(f'No application to open {save_dir}.')
                 pass
         else:
             self.status_bar.showMessage('Cancelled.', 2000)
@@ -1788,9 +1792,10 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
                 f.write(gpx.to_xml())
             self.status_bar.showMessage('Save complete.', 2000)
             try:
+                logger.info(f"Saving {Path(save_path).name}.")
                 os.startfile(save_path)
             except OSError:
-                print(f'No application to open {save_path}')
+                logger.error(f'No application to open {save_path}.')
                 pass
         else:
             self.status_bar.showMessage('Cancelled.', 2000)

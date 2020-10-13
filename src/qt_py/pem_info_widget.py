@@ -1,12 +1,12 @@
+import logging
 import os
 import sys
 from collections import OrderedDict
 from copy import deepcopy
-import logging
 
-import pandas as pd
 import math
 import numpy as np
+import pandas as pd
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox,
                              QFileDialog, QErrorMessage, QHeaderView)
@@ -16,6 +16,10 @@ from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, Bore
 from src.pem.pem_file import StationConverter
 from src.qt_py.gps_adder import LoopAdder, LineAdder
 from src.qt_py.ri_importer import RIFile
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -140,7 +144,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 float(value)
             except ValueError:
                 # Replace with the saved information
-                self.message.critical(self, 'Error', "Value cannot be converted to a number")
+                logger.error(f"{value} is not a number.")
+                self.message.critical(self, 'Error', f"{value} is not a number.")
                 item = QTableWidgetItem(self.selected_row_info[col])
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.active_table.setItem(row, col, item)
@@ -406,11 +411,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             try:
                 line = SurveyLine(file, crs=crs)
                 if line.df.empty:
-                    self.message.information(self, 'No GPS Found', f"{line.error_msg}")
+                    self.message.information(self, 'No GPS Found', f"{line.error_msg}.")
                 else:
                     line_adder.open(line, name=self.pem_file.line_name)
             except Exception as e:
-                self.error.showMessage(f"Error adding line: {str(e)}")
+                logger.critical(str(e))
+                self.error.showMessage(f"Error adding line: {str(e)}.")
 
         # Add borehole collar GPS
         elif current_tab == self.geometry_tab:
@@ -419,14 +425,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 errors = collar.get_errors()
                 if not errors.empty:
                     self.message.warning(self, 'Parsing Error',
-                                         f"The following rows could not be parsed:\n\n{errors.to_string()}")
+                                         f"The following rows could not be parsed:\n\n{errors.to_string()}.")
                 if not collar.df.empty:
                     self.fill_gps_table(collar.df, self.collar_table)
                     self.gps_object_changed(self.collar_table, refresh=True)
                 else:
                     self.message.information(self, 'No GPS Found', f"{collar.error_msg}")
             except Exception as e:
-                self.error.showMessage(f"Error adding borehole collar: {str(e)}")
+                logger.critical(f"{e}.")
+                self.error.showMessage(f"Error adding borehole collar: {str(e)}.")
 
         # Add loop GPS
         elif current_tab == self.loop_gps_tab:
@@ -445,6 +452,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
                 loop_adder.open(loop, name=self.pem_file.loop_name)
             except Exception as e:
+                logger.critical(f"{e}.")
                 self.error.showMessage(f"Error adding loop: {str(e)}")
         else:
             pass
@@ -723,7 +731,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             raise ValueError(f"{type} is not a valid GPS type to export.")
 
         if gps.df.empty:
-            print(f"No GPS to export.")
+            logger.warning(f"No GPS to export.")
             return
 
         default_path = str(self.pem_file.filepath.parent)
@@ -738,7 +746,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     gps_str = gps.to_csv()
                 else:
                     self.message.information(self, 'Invalid file type', f"Selected file type is invalid. Must be either"
-                    f"'txt' or 'csv'")
+                                                                        f"'txt' or 'csv'")
                     return
             else:
                 return
@@ -774,7 +782,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             try:
                 station = int(station)
             except ValueError:
-                print(f"{station} cannot be converted to Int")
+                logger.error(f"{station} is not an integer.")
                 return
             else:
                 new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_gps_shift_amt)))
@@ -904,11 +912,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             north_col = self.line_table_columns.index('Northing')
             try:
                 easting = float(self.line_table.item(row, east_col).text())
-            except ValueError:
+            except ValueError as e:
+                logger.error(f"{e}.")
                 easting = None
             try:
                 northing = float(self.line_table.item(row, north_col).text())
-            except ValueError:
+            except ValueError as e:
+                logger.error(f"{e}.")
                 northing = None
             if easting and northing:
                 return float(easting), float(northing)

@@ -1,9 +1,10 @@
 import datetime
+import logging
 import os
 import re
 import sys
-from threading import Timer
 from pathlib import Path
+from threading import Timer
 
 import pandas as pd
 import pyqtgraph as pg
@@ -11,16 +12,9 @@ from PyQt5 import (QtCore, QtGui)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QShortcut, QVBoxLayout, QGridLayout, QMessageBox, QFileDialog,
                              QLabel, QAction, QMenu, QApplication)
 
-sys._excepthook = sys.excepthook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-    sys.exit(1)
-
-
-sys.excepthook = exception_hook
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
 
 
 pg.setConfigOptions(antialias=True)
@@ -175,7 +169,7 @@ class DBPlotter(QMainWindow):
                 if file.lower().endswith('log') or file.lower().endswith('txt') or file.lower().endswith('rtf'):
                     self.open(file)
                 else:
-                    print(f"Invalid file type")
+                    nt(f"Invalid file type")
         else:
             pass
 
@@ -229,7 +223,7 @@ class DBPlotter(QMainWindow):
             # Date is required because the X-axis AxisItem requires a datetime timestamp
             date = parse_date(data_str)
             if not date:
-                print(f"Skipped data in {name} as no date can be found")
+                logger.error(f"Skipped data in {name} as no date can be found")
                 raise Exception(f"No date found in {name}")
             else:
                 global year, month, day, date_str
@@ -265,11 +259,12 @@ class DBPlotter(QMainWindow):
             reads = re.split(r'read ', contents)
 
             if not reads:
+                logger.info(f"No data found in {name}")
                 raise Exception(f"No data found in {name}")
 
             if len(reads) < 2:
                 # No read command found
-                print(f"No 'read' command found in {name}")
+                logger.info(f"No 'read' command found in {name}")
                 command = 'None'
                 data_str = contents
 
@@ -372,8 +367,6 @@ class DBPlotter(QMainWindow):
         t = Timer(1., hide_status_bar)  # Runs 'hide_status_bar' after 1 second
         t.start()
         self.statusBar().showMessage(f"Screen shot copied to clipboard.", 1000)
-
-        print(f"Screen shot copied to clipboard.")
 
 
 class DBPlotWidget(QMainWindow):
