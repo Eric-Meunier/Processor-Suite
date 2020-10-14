@@ -3,21 +3,21 @@ import logging
 import sys
 
 logger = logging.getLogger('decorator-log')
-logger.setLevel(logging.INFO)
-
-# formatter = logging.Formatter('%(filename)s (%(funcName)s)\n%(message)s\n ',
-#                               datefmt='%m/%d/%Y %I:%M:%S %p')
-
-stream_handler = logging.StreamHandler(stream=sys.stdout)
-stream_handler.setLevel(logging.INFO)
-# stream_handler.setFormatter(formatter)
-
-file_handler = logging.FileHandler(filename='err.log', mode='w')
-file_handler.setLevel(logging.INFO)
-# file_handler.setFormatter(formatter)
-
-logger.addHandler(stream_handler)
-logger.addHandler(file_handler)
+# logger.setLevel(logging.INFO)
+#
+# # formatter = logging.Formatter('%(filename)s (%(funcName)s)\n%(message)s\n ',
+# #                               datefmt='%m/%d/%Y %I:%M:%S %p')
+#
+# stream_handler = logging.StreamHandler(stream=sys.stdout)
+# stream_handler.setLevel(logging.INFO)
+# # stream_handler.setFormatter(formatter)
+#
+# file_handler = logging.FileHandler(filename='err.log', mode='w')
+# file_handler.setLevel(logging.INFO)
+# # file_handler.setFormatter(formatter)
+#
+# logger.addHandler(stream_handler)
+# logger.addHandler(file_handler)
 
 
 class Log(object):

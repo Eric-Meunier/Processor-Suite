@@ -4066,7 +4066,7 @@ if __name__ == '__main__':
                 'level': 'DEBUG',
                 'formatter': 'file',
                 'class': 'logging.FileHandler',
-                'filename': 'logs.log',
+                'filename': 'tmp.log',
                 'mode': 'w',
             }
         },
