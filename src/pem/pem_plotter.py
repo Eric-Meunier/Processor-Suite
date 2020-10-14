@@ -40,18 +40,6 @@ from src.pem.pem_file import PEMParser, StationConverter
 from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
-                                datefmt='%m/%d/%Y %I:%M:%S %p')
-stream_format = logging.Formatter('%(filename)s (%(funcName)s)\n%(levelname)s: %(message)s')
-stream_handler = logging.StreamHandler(stream=sys.stdout)
-stream_handler.setLevel(logging.INFO)
-stream_handler.setFormatter(stream_format)
-file_handler = logging.FileHandler(filename='err.log', mode='w')
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(file_format)
-logger.addHandler(stream_handler)
-logger.addHandler(file_handler)
 
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -3771,7 +3759,7 @@ class PEMPrinter:
         self.portrait_fig, ax = plt.subplots(1, 1, num=1, clear=True)
         ax2 = ax.twiny()
         ax2.get_shared_x_axes().join(ax, ax2)
-        plt.yscale('symlog', linthreshy=10, linscale=1. / math.log(10), subs=list(np.arange(2, 10, 1)))
+        plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
 
     def configure_step_fig(self):
         """

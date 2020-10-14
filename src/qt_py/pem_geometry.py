@@ -1,11 +1,10 @@
-import copy
+import logging
 import os
 import sys
-import mplcursors
-from src.logger import Log
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import mplcursors
 import numpy as np
 import pandas as pd
 from PyQt5 import (uic, QtGui, QtCore)
@@ -13,26 +12,11 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QShortcut, QFileDialog, QMessageBox, QErrorMessage)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+from src.geometry.segment import Segmenter
 from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
-from src.geometry.segment import Segmenter
-
-import logging
-import sys
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
-                                datefmt='%m/%d/%Y %I:%M:%S %p')
-stream_format = logging.Formatter('%(filename)s (%(funcName)s)\n%(levelname)s: %(message)s')
-stream_handler = logging.StreamHandler(stream=sys.stdout)
-stream_handler.setLevel(logging.INFO)
-stream_handler.setFormatter(stream_format)
-file_handler = logging.FileHandler(filename='err.log', mode='w')
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(file_format)
-logger.addHandler(stream_handler)
-logger.addHandler(file_handler)
 
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -579,7 +563,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                    dtype=float)
             else:
                 df = pd.read_csv(filepath,
-                                 # delim_whitespace=True,
+                                 delim_whitespace=True,
                                  usecols=[0, 1, 2],
                                  names=['Depth', 'Azimuth', 'Dip'],
                                  header=None,
@@ -900,14 +884,19 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
+    from src.pem.pem_file import PEMParser
     app = QApplication(sys.argv)
 
     pg = PEMGetter()
+    parser = PEMParser()
     # files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
+    # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
+    files = parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\with marks.PEM')
+    dad = r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\RADTool dad.dad'
 
     win = PEMGeometry()
     win.open(files)
+    win.open_dad_file(dad)
     # win.az_output_combo.setCurrentIndex(1)
     # win.dip_output_combo.setCurrentIndex(1)
     # win.add_dad(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\BR01.dad')

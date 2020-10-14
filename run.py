@@ -4,24 +4,47 @@ from PyQt5.QtWidgets import QApplication, QErrorMessage
 from PyQt5.QtCore import QTimer
 
 import logging
+from logging.config import dictConfig
+
+# Create a root logger. These configurations will be used by all loggers when calling logging.getLogger().
+log_config = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'stream': {
+            'format': '>>[%(levelname)s] %(filename)s (%(funcName)s:%(lineno)d):\n %(message)s'
+        },
+        'file': {
+            'format': '>>%(asctime)s [%(levelname)s] %(filename)s (%(funcName)s:%(lineno)d):\n %(message)s',
+            'datefmt': '%m/%d/%Y %I:%M:%S %p'
+        },
+    },
+    'handlers': {
+        'stream_handler': {
+            'level': 'DEBUG',
+            'formatter': 'stream',
+            'class': 'logging.StreamHandler',
+        },
+        'file_handler': {
+            'level': 'DEBUG',
+            'formatter': 'file',
+            'class': 'logging.FileHandler',
+            'filename': 'logs.log',
+            'mode': 'w',
+        }
+    },
+    'loggers': {
+        '': {
+            'handlers': ['stream_handler', 'file_handler'],
+            'level': 'INFO',
+            'propagate': True
+        },
+    }
+}
+
+dictConfig(log_config)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s - %(lineno)d)\n%(levelname)s: %(message)s',
-                                datefmt='%m/%d/%Y %I:%M:%S %p')
-stream_format = logging.Formatter('%(filename)s (%(funcName)s)\n%(levelname)s: %(message)s')
-
-stream_handler = logging.StreamHandler(stream=sys.stdout)
-stream_handler.setLevel(logging.WARNING)
-stream_handler.setFormatter(stream_format)
-
-file_handler = logging.FileHandler(filename='err.log', mode='w')
-file_handler.setLevel(logging.WARNING)
-file_handler.setFormatter(file_format)
-
-logger.addHandler(stream_handler)
-logger.addHandler(file_handler)
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -34,7 +57,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     global error_box
     error_box = QErrorMessage()
     error_box.setWindowTitle('Error')
-    error_box.showMessage(open('err.log').read())
+    error_box.showMessage(open('logger.log').read())
     # sys.exit(1)
 
 

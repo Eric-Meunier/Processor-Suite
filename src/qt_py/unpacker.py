@@ -14,18 +14,6 @@ from pyunpack import Archive
 from src.damp.db_plot import DBPlotter
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
-                                datefmt='%m/%d/%Y %I:%M:%S %p')
-stream_format = logging.Formatter('%(filename)s (%(funcName)s)\n%(levelname)s: %(message)s')
-stream_handler = logging.StreamHandler(stream=sys.stdout)
-stream_handler.setLevel(logging.INFO)
-stream_handler.setFormatter(stream_format)
-file_handler = logging.FileHandler(filename='err.log', mode='w')
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(file_format)
-logger.addHandler(stream_handler)
-logger.addHandler(file_handler)
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -459,10 +447,11 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                 if old_path.resolve() == new_path.resolve():
                     continue
                 else:
+                    logger.info(f"Moving {old_path} to {new_path}.")
                     try:
                         if new_path.exists():
-                            logger.error(f"{new_path.name} already exists.")
-                            self.error.showMessage(f"{new_path.name} already exists.")
+                            logger.warning(f"{new_path.name} already exists.")
+                            self.message.warning(self, "File Exists", f"{new_path} already exists.")
                             continue
 
                         elif not old_path.is_file():
@@ -480,8 +469,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                     #     self.error.setWindowTitle('Error - File Not Found')
                     #     self.error.showMessage(f'Cannot find \"{old_path}\"')
                     except Exception as e:
-                        logger.error(f"")
-                        self.error.setWindowTitle('Exception')
+                        logger.error(f"{e}.")
                         self.error.showMessage(f'{e}')
                         continue
 

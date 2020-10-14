@@ -1,35 +1,23 @@
+import copy
+import logging
 import math
 import re
 import time
-import copy
-import natsort
-import geomag
-import sys
 from datetime import datetime
-from pyproj import CRS
+from pathlib import Path
+
+import geomag
+import natsort
 import numpy as np
 import pandas as pd
+from pyproj import CRS
 from scipy.spatial.transform import Rotation as R
+
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry  # , CRS
 from src.logger import Log
-from pathlib import Path
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry  #, CRS
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 
-import logging
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
-                                datefmt='%m/%d/%Y %I:%M:%S %p')
-stream_format = logging.Formatter('%(filename)s (%(funcName)s)\n%(levelname)s: %(message)s')
-stream_handler = logging.StreamHandler(stream=sys.stdout)
-stream_handler.setLevel(logging.INFO)
-stream_handler.setFormatter(stream_format)
-file_handler = logging.FileHandler(filename='err.log', mode='w')
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(file_format)
-logger.addHandler(stream_handler)
-logger.addHandler(file_handler)
 
 
 def sort_data(data):
@@ -472,7 +460,7 @@ class PEMFile:
                 channel_bounds[k] = (channel_bounds[k][0] + 1, channel_bounds[k][1] + 1)
 
         channel_bounds.insert(0, (0, 0))
-        logger.info(f"{self.filepath.name} has {number_of_channels} channels. LIN plots binned as {channel_bounds}.")
+        logger.debug(f"{self.filepath.name} has {number_of_channels} channels. LIN plots binned as {channel_bounds}.")
 
         return channel_bounds
 
@@ -2913,6 +2901,7 @@ class RADTool:
 
         return self
 
+    @Log()
     def get_azimuth(self):
         """
         Calculate the azimuth of the RAD tool object. Must be D7.
@@ -2926,8 +2915,8 @@ class RADTool:
         denumer = self.Hx * (self.gy ** 2 + self.gz ** 2) - (self.Hy * self.gx * self.gy) - (self.Hz * self.gx * self.gz)
         # TODO check that the azimuth is correct
         azimuth = math.degrees(math.atan2(numer, denumer))
-        if azimuth < 0:
-            azimuth = 360 + azimuth
+        # if azimuth < 0:
+        #     azimuth = 360 + azimuth
         return azimuth
 
     def get_dip(self):

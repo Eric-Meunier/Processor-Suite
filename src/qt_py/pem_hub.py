@@ -45,18 +45,6 @@ from src.qt_py.station_splitter import StationSplitter
 from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-file_format = logging.Formatter('\n%(asctime)s - %(filename)s (%(funcName)s)\n%(levelname)s: %(message)s',
-                                datefmt='%m/%d/%Y %I:%M:%S %p')
-stream_format = logging.Formatter('%(filename)s (%(funcName)s)\n%(levelname)s: %(message)s')
-stream_handler = logging.StreamHandler(stream=sys.stdout)
-stream_handler.setLevel(logging.INFO)
-stream_handler.setFormatter(stream_format)
-file_handler = logging.FileHandler(filename='err.log', mode='w')
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(file_format)
-logger.addHandler(stream_handler)
-logger.addHandler(file_handler)
 
 __version__ = '0.11.0a'
 
@@ -3720,6 +3708,8 @@ class GPSShareWidget(QWidget):
         self.check_all_cbox.setChecked(True)
         self.check_all_cbox.setToolTip('Check All')
         self.accept_btn = QPushButton('Accept')
+        self.accept_btn.setShortcut('Return')
+        self.accept_btn.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         # Create the header label
         header_label = QLabel('File')
@@ -4011,7 +4001,6 @@ class WarningViewer(QMainWindow):
                 item = self.table.item(row, col)
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
         self.table.resizeRowsToContents()
-        # self.table.resizeColumnsToContents()
 
 
 def main():
@@ -4025,7 +4014,7 @@ def main():
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='Minera', number=1)
-    # pem_files = pg.get_pems(random=True, number=9)
+    pem_files = pg.get_pems(random=True, number=9)
     # s = GPSShareWidget()
     # s.open(pem_files, 0)
     # s.show()
@@ -4053,6 +4042,45 @@ def main():
 
 
 if __name__ == '__main__':
+    from logging.config import dictConfig
+    # Create a root logger. These configurations will be used by all loggers when calling logging.getLogger().
+    log_config = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'stream': {
+                'format': '>>[%(levelname)s] %(filename)s (%(funcName)s:%(lineno)d):\n %(message)s'
+            },
+            'file': {
+                'format': '>>%(asctime)s [%(levelname)s] %(filename)s (%(funcName)s:%(lineno)d):\n %(message)s',
+                'datefmt': '%m/%d/%Y %I:%M:%S %p'
+            },
+        },
+        'handlers': {
+            'stream_handler': {
+                'level': 'DEBUG',
+                'formatter': 'stream',
+                'class': 'logging.StreamHandler',
+            },
+            'file_handler': {
+                'level': 'DEBUG',
+                'formatter': 'file',
+                'class': 'logging.FileHandler',
+                'filename': 'logs.log',
+                'mode': 'w',
+            }
+        },
+        'loggers': {
+            '': {
+                'handlers': ['stream_handler', 'file_handler'],
+                'level': 'INFO',
+                'propagate': True
+            },
+        }
+    }
+
+    dictConfig(log_config)
+    logger = logging.getLogger(__name__)
 
     main()
     # cProfile.run('main()', 'restats')
