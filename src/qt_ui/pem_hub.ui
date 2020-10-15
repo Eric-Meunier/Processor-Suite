@@ -965,6 +965,23 @@ Warnings</string>
                      </property>
                     </widget>
                    </item>
+                   <item row="2" column="1">
+                    <widget class="QPushButton" name="filter_pem_list_btn">
+                     <property name="maximumSize">
+                      <size>
+                       <width>23</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                     <property name="icon">
+                      <iconset>
+                       <normaloff>icons/filter.png</normaloff>icons/filter.png</iconset>
+                     </property>
+                    </widget>
+                   </item>
                   </layout>
                  </widget>
                  <widget class="QFrame" name="frame_2">
@@ -1329,12 +1346,19 @@ Warnings</string>
     <addaction name="auto_create_backup_files_cbox"/>
     <addaction name="delete_merged_files_cbox"/>
    </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionView_Logs"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuPEM"/>
    <addaction name="menuGPS"/>
    <addaction name="menuMap"/>
    <addaction name="menuTools"/>
    <addaction name="menuSettings"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="status_bar">
    <property name="minimumSize">
@@ -1815,6 +1839,15 @@ Warnings</string>
    </property>
    <property name="toolTip">
     <string>Export as legacy PEM format that is compatible with Step</string>
+   </property>
+  </action>
+  <action name="actionView_Logs">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/txt_file.png</normaloff>icons/txt_file.png</iconset>
+   </property>
+   <property name="text">
+    <string>View Logs</string>
    </property>
   </action>
  </widget>

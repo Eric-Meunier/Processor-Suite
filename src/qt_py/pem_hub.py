@@ -24,9 +24,10 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame,
                              QComboBox)
 from matplotlib import pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap as lcmap
+from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
+from src.logger import Log
 from src.damp.db_plot import DBPlotter
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.gps.gpx_creator import GPXCreator
@@ -125,6 +126,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_map = ContourMapViewer(parent=self)
         self.gps_conversion_widget = GPSConversionWidget(parent=self)
+        self.pem_list_filter = FolderFilter(parent=self)
 
         # Project tree
         self.project_dir = None
@@ -276,6 +278,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionUnpacker.triggered.connect(self.open_unpacker)
 
         self.actionGPX_Creator.triggered.connect(lambda: self.gpx_creator.show())
+
+        # Help menu
+        def open_logs():
+            log_file = Path(r'.log')
+            if log_file.exists():
+                os.startfile(str(log_file))
+            else:
+                self.message.error(self, 'File Not Found', f"'{log_file}' file not found.")
+
+        self.actionView_Logs.triggered.connect(open_logs)
 
     def init_signals(self):
         """
@@ -568,23 +580,27 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             Change the information of the selected pem file(s) in the status bar
             """
             pem_files, rows = self.get_pem_files(selected=True)
-            info = ''
 
             if not pem_files:
-                pass
-            elif len(pem_files) == 1:
+                return
+
+            if len(pem_files) == 1:
                 file = pem_files[0]
-                # name = f"File: {file.filepath.name}"
-                client = f"Client: {file.client}"
-                line_name = f"Line/Hole: {file.line_name}"
-                loop_name = f"Loop: {file.loop_name}"
+                selection_info = []
+
                 timebase = f"Timebase: {file.timebase}ms"
                 survey_type = f"Survey Type: {file.get_survey_type()}"
-                info = ' | '.join([client, line_name, loop_name, timebase, survey_type])
-            elif len(pem_files) > 1:
-                info = f"{len(pem_files)} selected"
+                selection_info.extend([timebase, survey_type])
 
-            self.selection_label.setText(f"{info} ")
+                if file.is_borehole() and file.has_xy():
+                    rotated = f"De-rotated: {file.is_rotated()}"
+                    selection_info.extend(rotated)
+
+                info_str = ' | '.join(selection_info)
+            else:
+                info_str = f"{len(pem_files)} selected"
+
+            self.selection_label.setText(f"{info_str} ")
 
         def cell_clicked(row, col):
             """
@@ -592,16 +608,20 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             :param row: int, click cell's row
             :param col: int, click cell's column
             """
+            update_selection_text()
+
             if keyboard.is_pressed('alt'):
                 self.open_pem_plot_editor()
 
         # Widgets
+        self.pem_list_filter.accept_sig.connect(self.fill_pem_list)
         self.unpacker.open_dmp_sig.connect(self.move_dir_tree_to)
         self.calender.clicked.connect(set_date)
 
         # Buttons
         self.apply_shared_header_btn.clicked.connect(apply_header)
         self.project_dir_edit.returnPressed.connect(open_project_dir)
+        self.filter_pem_list_btn.clicked.connect(self.pem_list_filter.show)
 
         # Table
         self.table.viewport().installEventFilter(self)
@@ -1911,7 +1931,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         elif gps_dir == 'timeout':
             logger.warning(f"Searching for GPS directory timed out.")
             self.status_bar.showMessage(f"Searching for GPS directory timed out.", 1000)
-            # self.message.information(self, 'Timeout', 'Searching for the GPS folder timed out.')
             return
         else:
             if gps_dir:
@@ -1955,7 +1974,24 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.status_bar.showMessage(f"Searching for PEM files timed out.", 1000)
             return
         else:
-            for file in self.available_pems:
+            filtered_pems = self.available_pems
+
+            # Filter the PEM files by folder names
+            folder_filt = self.pem_list_filter.folder_filt_edit.text().split()
+            if folder_filt:
+
+                filtered_pems = [p for p in self.available_pems if any(
+                    [f.lower() in str(p).lower() for f in folder_filt]
+                )]
+            file_ext_filt = self.pem_list_filter.file_ext_edit.text().split()
+
+            # Filter the PEM files by file extension
+            if file_ext_filt:
+                filtered_pems = [p for p in filtered_pems if any(
+                    [Path(f).suffix.lower() == p.suffix.lower() for f in file_ext_filt]
+                )]
+
+            for file in filtered_pems:
                 self.pem_list.addItem(f"{str(file.relative_to(self.project_dir))}")
 
     def move_dir_tree_to(self, dir_path):
@@ -2902,7 +2938,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 logger.warning(f"{pem_file.filepath.name} has no {comp} data.")
 
         self.status_bar.showMessage(f"Process complete. "
-                                    f"{comp.upper()} of {len(pem_files)} PEM files reversed.", 2000)
+                                    f"{comp.upper()} of {len(pem_files)} PEM file(s) reversed.", 2000)
 
     def merge_pem_files(self):
         """
@@ -3132,6 +3168,59 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             name_item = QTableWidgetItem(new_name)
             name_item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, line_name_column, name_item)
+
+
+class FolderFilter(QWidget):
+    accept_sig = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.setWindowTitle(f"PEM File Filter")
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'filter.png')))
+
+        self.folder_filt_edit = QLineEdit()
+        self.folder_filt_edit.setToolTip("Separate items with [SPACE] or [,]")
+
+        self.file_ext_edit = QLineEdit()
+        self.file_ext_edit.setToolTip("Separate items with [SPACE] or [,]")
+
+        frame = QFrame()
+        frame.setLayout(QHBoxLayout())
+        self.accept_btn = QPushButton("&Accept")
+        self.accept_btn.setShortcut('Return')
+        self.reset_btn = QPushButton("&Reset")
+
+        frame.layout().addWidget(self.accept_btn)
+        frame.layout().addWidget(self.reset_btn)
+
+        self.setLayout(QFormLayout())
+        self.layout().setContentsMargins(8, 3, 8, 3)
+        self.layout().setHorizontalSpacing(10)
+        self.layout().setVerticalSpacing(5)
+        self.layout().addRow(QLabel("Include Folders:"))
+        self.layout().addRow(self.folder_filt_edit)
+
+        self.layout().addRow(QLabel("Include Extensions:"))
+        self.layout().addRow(self.file_ext_edit)
+
+        self.layout().addRow(frame)
+
+        # Signals
+        self.reset_btn.clicked.connect(self.reset)
+        self.accept_btn.clicked.connect(self.accept_sig.emit)
+        self.accept_btn.clicked.connect(self.hide)
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.hide()
+
+    def reset(self):
+        self.folder_filt_edit.setText('')
+        self.file_ext_edit.setText('')
+
+    def close(self):
+        self.hide()
 
 
 class FrequencyConverter(QWidget):
@@ -3833,7 +3922,7 @@ class ChannelTimeViewer(QMainWindow):
                     norm = plt.Normalize(mn, mx)
 
                     # Create a custom color map
-                    cm = lcmap.from_list('Custom', [mpl_red, mpl_blue])
+                    cm = LCMap.from_list('Custom', [mpl_red, mpl_blue])
 
                     # Apply the color map to the values in the column
                     colors = cm(norm(df[column].to_numpy()))
@@ -4008,13 +4097,15 @@ def main():
     app = QApplication(sys.argv)
     mw = PEMHub()
     pg = PEMGetter()
+    # ff = FolderFilter()
+    # ff.show()
 
     # pem_files = pg.get_pems(client='PEM Rotation', random=True, number=3)
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='Minera', number=1)
-    pem_files = pg.get_pems(random=True, number=9)
+    pem_files = pg.get_pems(random=True, number=1)
     # s = GPSShareWidget()
     # s.open(pem_files, 0)
     # s.show()
@@ -4042,44 +4133,7 @@ def main():
 
 
 if __name__ == '__main__':
-    from logging.config import dictConfig
-    # Create a root logger. These configurations will be used by all loggers when calling logging.getLogger().
-    log_config = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'stream': {
-                'format': '>>[%(levelname)s] %(filename)s (%(funcName)s:%(lineno)d):\n %(message)s'
-            },
-            'file': {
-                'format': '>>%(asctime)s [%(levelname)s] %(filename)s (%(funcName)s:%(lineno)d):\n %(message)s',
-                'datefmt': '%m/%d/%Y %I:%M:%S %p'
-            },
-        },
-        'handlers': {
-            'stream_handler': {
-                'level': 'DEBUG',
-                'formatter': 'stream',
-                'class': 'logging.StreamHandler',
-            },
-            'file_handler': {
-                'level': 'DEBUG',
-                'formatter': 'file',
-                'class': 'logging.FileHandler',
-                'filename': 'tmp.log',
-                'mode': 'w',
-            }
-        },
-        'loggers': {
-            '': {
-                'handlers': ['stream_handler', 'file_handler'],
-                'level': 'INFO',
-                'propagate': True
-            },
-        }
-    }
-
-    dictConfig(log_config)
+    from src.logger import Log
     logger = logging.getLogger(__name__)
 
     main()

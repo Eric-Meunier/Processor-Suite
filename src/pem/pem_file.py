@@ -1802,7 +1802,7 @@ class PEMParser:
                 df['Timestamp'] = df['Timestamp'].map(get_time)
             return df
 
-        assert Path(filepath).is_file(), f"{filepath.name} is not a file"
+        assert Path(filepath).exists(), f"{Path(filepath)} does not exist."
         self.filepath = Path(filepath)
         logger.info(f"Parsing {self.filepath.name}")
 

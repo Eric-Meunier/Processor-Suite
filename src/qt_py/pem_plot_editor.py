@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import sys
+import math
 
 import keyboard
 import numpy as np
@@ -16,6 +17,7 @@ from pyqtgraph.Point import Point
 from scipy import spatial
 
 from src.pem.pem_file import StationConverter, PEMParser
+from src.logger import Log
 
 # from pyod.models.abod import ABOD
 # from pyod.models.knn import KNN
@@ -66,40 +68,25 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.decay_selection_text.hide()
         self.profile_selection_text = QLabel()
         self.profile_selection_text.setIndent(20)
-        self.profile_selection_text.setStyleSheet('color: purple')
+        self.profile_selection_text.setStyleSheet('color: #ce4a7e')
+        # self.profile_selection_text.setStyleSheet('color: purple')
         self.profile_selection_text.hide()
         self.file_info_label = QLabel()
         self.file_info_label.setIndent(20)
         self.file_info_label.setStyleSheet('color: gray')
-        # self.timebase_label = QLabel()
-        # self.timebase_label.setIndent(20)
-        # # self.timebase_label.setStyleSheet('color: gray')
-        # self.survey_type_label = QLabel()
-        # self.survey_type_label.setIndent(20)
-        # # self.survey_type_label.setStyleSheet('color: gray')
-        # self.operator_label = QLabel()
-        # self.operator_label.setIndent(20)
-        # # self.operator_label.setStyleSheet('color: gray')
         self.number_of_readings = QLabel()
         self.number_of_readings.setIndent(20)
-        # self.number_of_readings.setStyleSheet('color: gray')
         self.number_of_repeats = QPushButton('')
         self.number_of_repeats.setFlat(True)
-        # self.number_of_repeats.setFixedHeight(21)
-        # self.number_of_repeats.hide()
 
         # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray;}")
         # self.status_bar.setStyleSheet("border-top: 1px solid gray;")
 
         self.status_bar.addWidget(self.station_text, 0)
-        # self.status_bar.addWidget(QLabel(), 0)  # Spacer
         self.status_bar.addWidget(self.decay_selection_text, 0)
         self.status_bar.addWidget(QLabel(), 1)  # Spacer
         self.status_bar.addWidget(self.profile_selection_text, 0)
         self.status_bar.addPermanentWidget(self.file_info_label, 0)
-        # self.status_bar.addPermanentWidget(self.survey_type_label, 0)
-        # self.status_bar.addPermanentWidget(self.timebase_label, 0)
-        # self.status_bar.addPermanentWidget(self.operator_label, 0)
         self.status_bar.addPermanentWidget(self.number_of_readings, 0)
         self.status_bar.addPermanentWidget(self.number_of_repeats, 0)
 
@@ -178,19 +165,26 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             ax.vb.box_select_signal.connect(self.box_select_profile_plot)
             ax.hideButtons()
             ax.setMenuEnabled(False)
+            ax.getAxis('left').setWidth(60)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
             # Add the vertical selection line
+            color = (23, 23, 23, 100)
+            font = QtGui.QFont("Helvetica", 10)
+            # hover_color = (102, 178, 255, 100)
+            # select_color = (51, 51, 255, 100)
             hover_v_line = pg.InfiniteLine(angle=90, movable=False)
-            hover_v_line.setPen((102, 178, 255, 100), width=2.)
+            hover_v_line.setPen(color, width=2.)
             selected_v_line = pg.InfiniteLine(angle=90, movable=False)
-            selected_v_line.setPen((51, 51, 255, 100), width=2.)
+            selected_v_line.setPen(color, width=2.)
 
             # Add the text annotations for the vertical lines
             hover_v_line_text = pg.TextItem("", anchor=(0, 0))
             hover_v_line_text.setParentItem(ax.vb)
             hover_v_line_text.setPos(0, 0)
-            hover_v_line_text.setColor((102, 178, 255, 100))
+            hover_v_line_text.setColor(color)
+            hover_v_line_text.setFont(font)
+            # hover_v_line_text.setColor((102, 178, 255, 100))
 
             ax.addItem(hover_v_line, ignoreBounds=True)
             ax.addItem(selected_v_line, ignoreBounds=True)
@@ -997,6 +991,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Hide the profile selection text. Decay selection text is taken care of in self.highlight_lines
         self.profile_selection_text.hide()
 
+    # @Log()
     def find_nearest_station(self, x):
         """
         Calculate the nearest station from the position x
@@ -1076,6 +1071,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Signal slot, find the decay_axes plot under the mouse when the mouse is moved to determine which plot is active.
         :param evt: MouseMovement event
         """
+
+        def closest_node(node, nodes):
+            nodes = np.asarray(nodes)
+            dist_2 = np.sum((nodes - node) ** 2, axis=1)
+            return dist_2.min(), np.argmin(dist_2)
+            # return np.argmin(dist_2)
+
         self.active_ax = None
 
         # Find which axes is beneath the mouse
@@ -1090,27 +1092,42 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         if self.active_ax is not None:
             line_distances = []
             ax_lines = self.active_ax.curves
+            vb = self.active_ax.vb
 
             if not ax_lines:
                 return
 
-            # Change the mouse coordinates to be relative to the plot coordinates
-            m_pos = self.active_ax.vb.mapSceneToView(evt)
-            xm, ym = m_pos.x(), m_pos.y()
+            # Change the mouse coordinates to be in the plot's native coordinates (not data coordinates)
+            m_pos = vb.mapToScene(evt)
+            # m_pos = vb.mapFromScene(evt)
+            mouse_point = (m_pos.x(), m_pos.y())
+            logger.info(f"Mouse pos: {m_pos.x():.1f}, {m_pos.y():.1f}")
 
             for line in ax_lines:
                 xi, yi = line.xData, line.yData
-                interp_xi = np.linspace(xi.min(), xi.max(), 1000)
-                interp_yi = np.interp(interp_xi, xi, yi)
+                # interp_xi = np.linspace(xi.min(), xi.max(), 500)
+                # interp_yi = np.interp(interp_xi, xi, yi)  # Interp for when the mouse in between two points
+                # TODO Mapping breaks when zoomed in. Maybe normalize the axes view coordinates?
+                line_qpoints = [vb.mapFromView(QtCore.QPoint(x, y)) for x, y in zip(xi, yi)]
+                line_points = [(p.x(), p.y()) for p in line_qpoints]
+
+                logger.info(f"Line data pos: {np.average([p[0] for p in line_points]):.1f}, "
+                            f"{np.average([p[1] for p in line_points]):.1f}")
+                smallest_dist, ind = closest_node(mouse_point, line_points)
+                # logger.info(f"Nearest point for line {ax_lines.index(line)}: {ind}")
+                line_distances.append(smallest_dist)
 
                 # Calculate the distance between each point of the line and the mouse position
-                distances = spatial.distance.cdist(np.array([[xm, ym]]), np.array([interp_xi, interp_yi]).T,
-                                                   metric='euclidean')
+                # distances = spatial.distance.cdist(np.array([mouse_point]), line_points, metric='euclidean')
+                # distances = spatial.distance.cdist(np.array([mouse_point]), np.array([interp_xi, interp_yi]).T,
+                #                                    metric='euclidean')
                 # distances = np.array([np.linalg.norm(np.array([x, y]) - np.array([xm, ym])) for x, y in zip(xi, yi)])
-                line_distances.append(distances)
+                # line_distances.append(distances)
 
             # Find the index of the smallest overall distance
             ind_of_min = np.array([l.min() for l in line_distances]).argmin()
+            logger.info(f"Line {ind_of_min} is nearest the mouse.")
+
             self.nearest_decay = ax_lines[ind_of_min]
             for line in ax_lines:
                 if line == self.nearest_decay:
@@ -1182,10 +1199,25 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             else:
                 return self.z_layout_axes
 
+        """
+        Using the range given by the signal doesn't always work properly. As a work-around, we calculate the distance 
+        of the range, and subtract it from the hover station as the left-most point, with the right-most point being
+        the hover station. UPDATE: Not sued.
+        """
+        # diff = round_up(np.diff(range)[0], 5)
+        # logger.info(F"Box selecting distance {diff}")
+        #
+        # hover_station = self.profile_axes[0].items[2].x()  # The station hover line
+        # logger.info(f"Hover station: {hover_station}")
+
         range = (min(range), max(range))
+        # range = (hover_station - diff, hover_station)
+        # logger.info(f"Selecting range from {hover_station:.2f} to {hover_station - diff:.2f}")
+
         # Force the range to use existing stations
         x0 = self.find_nearest_station(range[0])
         x1 = self.find_nearest_station(range[1])
+        # logger.info(f"Selecting stations from {x0} to {x1}")
 
         ind, comp = self.get_active_component()
         comp_profile_axes = get_comp_profile(comp)
@@ -1771,13 +1803,14 @@ class ProfileViewBox(pg.ViewBox):
 
     def __init__(self, *args, **kwds):
         pg.ViewBox.__init__(self, *args, **kwds)
-        brush = QtGui.QBrush(QtGui.QColor('purple'))
+        color = r'#ce4a7e'
+        brush = QtGui.QBrush(QtGui.QColor(color))
         pen = QtGui.QPen(brush, 1)
 
         self.lr = pg.LinearRegionItem([-100, 100], movable=False)
         self.lr.setZValue(-10)
         self.lr.setBrush(brush)
-        self.lr.setOpacity(0.2)
+        self.lr.setOpacity(0.5)
         self.lr.hide()
         self.addItem(self.lr)
 
@@ -1787,12 +1820,11 @@ class ProfileViewBox(pg.ViewBox):
             range = [self.mapToView(ev.buttonDownPos()).x(), self.mapToView(ev.pos()).x()]
 
             if ev.isFinish():  # This is the final move in the drag
-                # self.lr.hide()
                 self.box_select_signal.emit(range)
             else:
                 # update region of the LinearRegionItem
                 self.lr.show()
-                # self.lr.setRegion([self.mapToView(ev.buttonDownPos()).x(), self.mapToView(ev.pos()).x()])
+                self.lr.setRegion(range)
                 self.box_select_signal.emit(range)
                 ev.accept()
         else:
@@ -1839,10 +1871,15 @@ class ProfileViewBox(pg.ViewBox):
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
+    from src.pem.pem_file import PEMParser, DMPParser
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Minera', selection=4)
+    parser = PEMParser()
+    dmp_parser = DMPParser()
+    # pem_files = pem_getter.get_pems(client='Minera', selection=4)
+    pem_files = [parser.parse(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.PEM')]
+    # pem_files = [dmp_parser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\_14_pp.DMP2')]
 
     editor = PEMPlotEditor()
     editor.open(pem_files[0])

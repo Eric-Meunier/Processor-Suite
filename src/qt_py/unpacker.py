@@ -424,7 +424,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
                     # Skip soa files
                     if 'soa' in file_name.lower():
-                        print(f"Skipping {file}")
+                        logger.info(f"Skipping {file}.")
 
                     # Copy the rest of the files to their respective folders
                     else:

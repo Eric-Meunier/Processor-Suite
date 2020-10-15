@@ -1,7 +1,7 @@
 import copy
 import logging
 import re
-import sys
+from src.logger import Log
 from pathlib import Path
 
 import geopandas as gpd
@@ -238,6 +238,7 @@ class TransmitterLoop(BaseGPS):
         #     self.cull_loop()
 
     @staticmethod
+    @Log()
     def parse_loop_gps(file):
         """
         Parse a text file or data frame for loop GPS.
@@ -397,6 +398,7 @@ class SurveyLine(BaseGPS):
         self.df, self.errors, self.error_msg = self.parse_station_gps(line)
 
     @staticmethod
+    @Log()
     def parse_station_gps(file):
         """
         Parse a text file or data frame for station GPS.
@@ -556,6 +558,7 @@ class BoreholeCollar(BaseGPS):
         self.df, self.errors, self.error_msg = self.parse_collar(hole)
 
     @staticmethod
+    @Log()
     def parse_collar(file):
         """
         Parse a text file for collar GPS. Returns the first match found.
@@ -673,6 +676,7 @@ class BoreholeSegments(BaseGPS):
         self.df, self.errors, self.error_msg = self.parse_segments(segments)
 
     @staticmethod
+    @Log()
     def parse_segments(file):
         """
         Parse a text file for geometry segments.
