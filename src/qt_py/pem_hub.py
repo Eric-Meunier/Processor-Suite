@@ -1938,109 +1938,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.fill_gps_list()
             self.fill_pem_list()
 
-    # def fill_gps_list(self):
-    #     """
-    #     Populate the GPS files list based on the files found in the nearest 'GPS' folder in the project directory
-    #     """
-    #
-    #     @stopit.threading_timeoutable(default='timeout')
-    #     def find_gps_dir():
-    #         # Try to find the 'GPS' folder in the current directory
-    #         search_result = list(self.project_dir.rglob('GPS'))
-    #         if search_result:
-    #             gps_dir = search_result[0]
-    #             logger.info(f"GPS dir found: {str(gps_dir)}")
-    #             return gps_dir
-    #
-    #     def get_filtered_gps():
-    #         """
-    #         Filter the list of GPS files based on filepath names from the user inputs in GPSPathFilter.
-    #         :return: list of GPS files.
-    #         """
-    #         filtered_gps = self.available_gps
-    #
-    #         # Filter the PEM files by file name
-    #         include_files = re.sub(r'\s+', '', self.gps_list_filter.include_files_edit.text()).split(',')
-    #         logger.info(f"Include files: {include_files}")
-    #         exclude_files = re.sub(r'\s+', '', self.gps_list_filter.exclude_files_edit.text()).split(',')
-    #         logger.info(f"Include files: {exclude_files}")
-    #
-    #         # Filter the PEM files by folder names
-    #         include_folders = re.sub(r'\s+', '', self.gps_list_filter.include_folders_edit.text()).split(',')
-    #         logger.info(f"Include folders: {include_folders}")
-    #         exclude_folders = re.sub(r'\s+', '', self.gps_list_filter.exclude_folders_edit.text()).split(',')
-    #         logger.info(f"Exclude folders: {exclude_folders}")
-    #
-    #         # Inclusive files
-    #         if any(include_files):
-    #             filtered_gps = [p for p in filtered_gps if any(
-    #                 [f.strip().lower() in str(p.name).lower() for f in include_files if f]
-    #             )]
-    #
-    #         # Inclusive files
-    #         if any(exclude_files):
-    #             filtered_gps = [p for p in filtered_gps if all(
-    #                 [f.strip().lower() not in str(p.name).lower() for f in exclude_files if f]
-    #             )]
-    #
-    #         # Inclusive folders
-    #         if any(include_folders):
-    #             filtered_gps = [p for p in filtered_gps if any(
-    #                 [f.strip().lower() in str(p.parent).lower() for f in include_folders if f]
-    #             )]
-    #
-    #         # Exclusive folders
-    #         if any(exclude_folders):
-    #             filtered_gps = [p for p in filtered_gps if all(
-    #                 [f.strip().lower() not in str(p.parent).lower() for f in exclude_folders if f]
-    #             )]
-    #
-    #         include_exts = re.sub(r'\s+', '', self.gps_list_filter.include_exts_edit.text()).split(',')
-    #         logger.info(f"Include extensions: {include_exts}")
-    #         exclude_exts = re.sub(r'\s+', '', self.gps_list_filter.exclude_exts_edit.text()).split(',')
-    #         logger.info(f"Exclude extensions: {exclude_exts}")
-    #
-    #         # Filter the PEM files by file extension
-    #         # Inclusive extensions
-    #         if any(include_exts):
-    #             filtered_gps = [p for p in filtered_gps if any(
-    #                 [re.sub(r'[\*\.]', '', f.strip().lower()) == p.suffix.lower()[1:] for f in include_exts if f]
-    #             )]
-    #         # Exclusive extensions
-    #         if any(exclude_exts):
-    #             filtered_gps = [p for p in filtered_gps if all(
-    #                 [re.sub(r'[\*\.]', '', f.strip().lower()) != p.suffix.lower()[1:] for f in exclude_exts if f]
-    #             )]
-    #
-    #         return filtered_gps
-    #
-    #     if not self.project_dir:
-    #         logger.error('No projected directory selected')
-    #         self.message.information(self, 'Error', 'No project directory has been selected.')
-    #         return
-    #
-    #     self.gps_list.clear()
-    #     # Try to find a GPS folder, but time out after 1 second
-    #     gps_dir = find_gps_dir(timeout=1)
-    #
-    #     if gps_dir is None:
-    #         return
-    #     elif gps_dir == 'timeout':
-    #         logger.warning(f"Searching for GPS directory timed out.")
-    #         self.status_bar.showMessage(f"Searching for GPS directory timed out.", 1000)
-    #         return
-    #     else:
-    #         if gps_dir:
-    #             self.available_gps = list(gps_dir.rglob('*.txt'))
-    #             self.available_gps.extend(gps_dir.rglob('*.csv'))
-    #             self.available_gps.extend(gps_dir.rglob('*.gpx'))
-    #             self.available_gps.extend(gps_dir.rglob('*.xlsx'))
-    #             self.available_gps.extend(gps_dir.rglob('*.xls'))
-    #
-    #             gps_files = get_filtered_gps()
-    #             for file in gps_files:
-    #                 self.gps_list.addItem(f"{str(file.relative_to(self.project_dir))}")
-
     def fill_gps_list(self):
         """
         Populate the GPS files list based on the files found in the nearest 'GPS' folder in the project directory
@@ -2142,7 +2039,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         else:
             gps_files = get_filtered_gps()
             for file in gps_files:
-                self.gps_list.addItem(QListWidgetItem(get_icon(file), f"{str(file.relative_to(self.project_dir))}"))
+                if file.stem != '.txt':
+                    self.gps_list.addItem(QListWidgetItem(get_icon(file), f"{str(file.relative_to(self.project_dir))}"))
 
     def fill_pem_list(self):
         """
@@ -3445,8 +3343,6 @@ class PathFilter(QWidget):
         self.exclude_files_edit = QLineEdit('DTL, exp, Correct' if self.filetype == 'GPS' else '')
         self.exclude_files_edit.setToolTip("Separate items with commas [,]")
 
-        #TODO exclude ".txt" files.
-        # TODO add icons to lists
         self.include_folders_edit = QLineEdit('GPS' if self.filetype == 'GPS' else '')
         self.include_folders_edit.setToolTip("Separate items with commas [,]")
 
@@ -3476,29 +3372,26 @@ class PathFilter(QWidget):
         self.layout().setVerticalSpacing(2)
 
         files_gbox = QGroupBox('Files')
-        files_gbox.setLayout(QVBoxLayout())
-        files_gbox.layout().addWidget(QLabel("Include:"))
-        files_gbox.layout().addWidget(self.include_files_edit)
-        files_gbox.layout().addWidget(QLabel("Exclude:"))
-        files_gbox.layout().addWidget(self.exclude_files_edit)
+        files_gbox.setAlignment(QtCore.Qt.AlignCenter)
+        files_gbox.setLayout(QFormLayout())
+        files_gbox.layout().addRow(QLabel("Include:"), self.include_files_edit)
+        files_gbox.layout().addRow(QLabel("Exclude:"), self.exclude_files_edit)
 
         self.layout().addRow(files_gbox)
 
         folders_gbox = QGroupBox('Folders')
-        folders_gbox.setLayout(QVBoxLayout())
-        folders_gbox.layout().addWidget(QLabel("Include:"))
-        folders_gbox.layout().addWidget(self.include_folders_edit)
-        folders_gbox.layout().addWidget(QLabel("Exclude:"))
-        folders_gbox.layout().addWidget(self.exclude_folders_edit)
+        folders_gbox.setAlignment(QtCore.Qt.AlignCenter)
+        folders_gbox.setLayout(QFormLayout())
+        folders_gbox.layout().addRow(QLabel("Include:"), self.include_folders_edit)
+        folders_gbox.layout().addRow(QLabel("Exclude:"), self.exclude_folders_edit)
 
         self.layout().addRow(folders_gbox)
 
         extensions_gbox = QGroupBox('Extensions')
-        extensions_gbox.setLayout(QVBoxLayout())
-        extensions_gbox.layout().addWidget(QLabel("Include:"))
-        extensions_gbox.layout().addWidget(self.include_exts_edit)
-        extensions_gbox.layout().addWidget(QLabel("Exclude:"))
-        extensions_gbox.layout().addWidget(self.exclude_exts_edit)
+        extensions_gbox.setAlignment(QtCore.Qt.AlignCenter)
+        extensions_gbox.setLayout(QFormLayout())
+        extensions_gbox.layout().addRow(QLabel("Include:"), self.include_exts_edit)
+        extensions_gbox.layout().addRow(QLabel("Exclude:"), self.exclude_exts_edit)
 
         self.layout().addRow(extensions_gbox)
 

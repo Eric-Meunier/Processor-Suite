@@ -1026,7 +1026,7 @@ Warnings</string>
                  </widget>
                  <widget class="QFrame" name="frame_2">
                   <property name="sizePolicy">
-                   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                     <horstretch>0</horstretch>
                     <verstretch>0</verstretch>
                    </sizepolicy>
@@ -1076,7 +1076,7 @@ Warnings</string>
                     <widget class="QListWidget" name="gps_list">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                       <horstretch>0</horstretch>
+                       <horstretch>1</horstretch>
                        <verstretch>0</verstretch>
                       </sizepolicy>
                      </property>
@@ -1946,18 +1946,38 @@ Warnings</string>
    <property name="text">
     <string>View Logs</string>
    </property>
+   <property name="toolTip">
+    <string>View the program logs</string>
+   </property>
   </action>
  </widget>
  <tabstops>
-  <tabstop>share_client_cbox</tabstop>
   <tabstop>client_edit</tabstop>
-  <tabstop>share_grid_cbox</tabstop>
   <tabstop>grid_edit</tabstop>
-  <tabstop>share_loop_cbox</tabstop>
   <tabstop>loop_edit</tabstop>
+  <tabstop>apply_shared_header_btn</tabstop>
+  <tabstop>share_client_cbox</tabstop>
+  <tabstop>share_grid_cbox</tabstop>
+  <tabstop>share_loop_cbox</tabstop>
   <tabstop>gps_system_cbox</tabstop>
   <tabstop>gps_zone_cbox</tabstop>
   <tabstop>gps_datum_cbox</tabstop>
+  <tabstop>crs_rbtn</tabstop>
+  <tabstop>epsg_edit</tabstop>
+  <tabstop>epsg_rbtn</tabstop>
+  <tabstop>frame_4</tabstop>
+  <tabstop>table</tabstop>
+  <tabstop>project_tree</tabstop>
+  <tabstop>remove_pem_btn</tabstop>
+  <tabstop>add_pem_btn</tabstop>
+  <tabstop>pem_list</tabstop>
+  <tabstop>refresh_pem_list_btn</tabstop>
+  <tabstop>filter_pem_list_btn</tabstop>
+  <tabstop>remove_gps_btn</tabstop>
+  <tabstop>add_gps_btn</tabstop>
+  <tabstop>gps_list</tabstop>
+  <tabstop>refresh_gps_list_btn</tabstop>
+  <tabstop>filter_gps_list_btn</tabstop>
  </tabstops>
  <resources/>
  <connections/>
