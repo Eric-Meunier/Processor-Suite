@@ -1978,6 +1978,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             # Filter the PEM files by folder names
             folder_filt = self.pem_list_filter.folder_filt_edit.text().split()
+            logger.info(f"Folder filter: {folder_filt}")
             if folder_filt:
 
                 filtered_pems = [p for p in self.available_pems if any(
