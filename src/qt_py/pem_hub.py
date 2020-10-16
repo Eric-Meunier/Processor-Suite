@@ -17,12 +17,12 @@ import pyqtgraph as pg
 import simplekml
 import stopit
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
                              QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel, QHBoxLayout,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
                              QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame, QGroupBox,
-                             QComboBox)
+                             QComboBox, QListWidgetItem)
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
@@ -70,6 +70,38 @@ Ui_PEMHubWindow, _ = uic.loadUiType(pemhubWindowCreatorFile)
 Ui_PlanMapOptionsWidget, _ = uic.loadUiType(planMapOptionsCreatorFile)
 Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
+
+
+def get_icon(filepath):
+    ext = filepath.suffix.lower()
+    if ext in ['.xls', '.xlsx', '.csv']:
+        icon_pix = QPixmap(os.path.join(icons_path, 'excel_file.png'))
+        icon = QIcon(icon_pix)
+    elif ext in ['.rtf', '.docx', '.doc']:
+        icon_pix = QPixmap(os.path.join(icons_path, 'word_file.png'))
+        icon = QIcon(icon_pix)
+    elif ext in ['.log', '.txt', '.xyz', '.seg', '.dad']:
+        icon_pix = QPixmap(os.path.join(icons_path, 'txt_file.png'))
+        icon = QIcon(icon_pix)
+    elif ext in ['.pem']:
+        icon_pix = QPixmap(os.path.join(icons_path, 'crone_logo.png'))
+        icon = QIcon(icon_pix)
+    elif ext in ['.dmp', '.dmp2', '.dmp3', '.dmp4']:
+        icon_pix = QPixmap(os.path.join(icons_path, 'dmp.png'))
+        icon = QIcon(icon_pix)
+    elif ext in ['.gpx', '.gdb']:
+        icon_pix = QPixmap(os.path.join(icons_path, 'garmin_file.png'))
+        icon = QIcon(icon_pix)
+    elif ext in ['.ssf']:
+        icon_pix = QPixmap(os.path.join(icons_path, 'ssf_file.png'))
+        icon = QIcon(icon_pix)
+    elif ext in ['.cor']:
+        icon_pix = QPixmap(os.path.join(icons_path, 'cor_file.png'))
+        icon = QIcon(icon_pix)
+    else:
+        icon_pix = QPixmap(os.path.join(icons_path, 'none_file.png'))
+        icon = QIcon(icon_pix)
+    return icon
 
 
 class PEMHub(QMainWindow, Ui_PEMHubWindow):
@@ -2108,11 +2140,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.status_bar.showMessage(f"Searching for GPS files timed out.", 1000)
             return
         else:
-            if self.available_gps:
-
-                gps_files = get_filtered_gps()
-                for file in gps_files:
-                    self.gps_list.addItem(f"{str(file.relative_to(self.project_dir))}")
+            gps_files = get_filtered_gps()
+            for file in gps_files:
+                self.gps_list.addItem(QListWidgetItem(get_icon(file), f"{str(file.relative_to(self.project_dir))}"))
 
     def fill_pem_list(self):
         """
@@ -2216,7 +2246,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         else:
             pem_files = get_filtered_pems()
             for file in pem_files:
-                self.pem_list.addItem(f"{str(file.relative_to(self.project_dir))}")
+                self.pem_list.addItem(QListWidgetItem(get_icon(file), f"{str(file.relative_to(self.project_dir))}"))
 
     def move_dir_tree_to(self, dir_path):
         """
@@ -3415,7 +3445,9 @@ class PathFilter(QWidget):
         self.exclude_files_edit = QLineEdit('DTL, exp, Correct' if self.filetype == 'GPS' else '')
         self.exclude_files_edit.setToolTip("Separate items with commas [,]")
 
-        self.include_folders_edit = QLineEdit('GPS, Loop 1' if self.filetype == 'GPS' else '')
+        #TODO exclude ".txt" files.
+        # TODO add icons to lists
+        self.include_folders_edit = QLineEdit('GPS' if self.filetype == 'GPS' else '')
         self.include_folders_edit.setToolTip("Separate items with commas [,]")
 
         self.exclude_folders_edit = QLineEdit()

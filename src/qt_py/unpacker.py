@@ -6,6 +6,7 @@ from shutil import copyfile, rmtree
 
 import py7zr
 from PyQt5 import (QtCore, QtGui, uic)
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QLabel, QFileSystemModel,
                              QAbstractItemView, QErrorMessage, QMenu, QPushButton, QFrame, QHBoxLayout,
                              QTableWidget, QTableWidgetItem, QVBoxLayout, QLineEdit)
@@ -248,47 +249,50 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         :param project_dir: project directory of the parent widget. Will use this as the default path if given.
         """
 
-        def get_icon(ext):
-            ext = ext.lower()
-            if ext in ['xls', 'xlsx', 'csv']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'excel_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['rtf', 'docx', 'doc']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'word_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['log', 'txt', 'xyz', 'seg', 'dad']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'txt_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['pem', 'dmp', 'dmp2', 'dmp3', 'dmp4']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'crone_logo.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['gpx', 'gdb']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'garmin_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['ssf']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'ssf_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['cor']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'cor_file.png'))
-                icon = QtGui.QIcon(icon_pix)
+        def get_icon(filepath):
+            ext = filepath.suffix.lower()
+
+            if ext in ['.xls', '.xlsx', '.csv']:
+                icon_pix = QPixmap(os.path.join(icons_path, 'excel_file.png'))
+                icon = QIcon(icon_pix)
+            elif ext in ['.rtf', '.docx', '.doc']:
+                icon_pix = QPixmap(os.path.join(icons_path, 'word_file.png'))
+                icon = QIcon(icon_pix)
+            elif ext in ['.log', '.txt', '.xyz', '.seg', '.dad']:
+                icon_pix = QPixmap(os.path.join(icons_path, 'txt_file.png'))
+                icon = QIcon(icon_pix)
+            elif ext in ['.pem']:
+                icon_pix = QPixmap(os.path.join(icons_path, 'crone_logo.png'))
+                icon = QIcon(icon_pix)
+            elif ext in ['.dmp', '.dmp2', '.dmp3', '.dmp4']:
+                icon_pix = QPixmap(os.path.join(icons_path, 'dmp.png'))
+                icon = QIcon(icon_pix)
+            elif ext in ['.gpx', '.gdb']:
+                icon_pix = QPixmap(os.path.join(icons_path, 'garmin_file.png'))
+                icon = QIcon(icon_pix)
+            elif ext in ['.ssf']:
+                icon_pix = QPixmap(os.path.join(icons_path, 'ssf_file.png'))
+                icon = QIcon(icon_pix)
+            elif ext in ['.cor']:
+                icon_pix = QPixmap(os.path.join(icons_path, 'cor_file.png'))
+                icon = QIcon(icon_pix)
             else:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'none_file.png'))
-                icon = QtGui.QIcon(icon_pix)
+                icon_pix = QPixmap(os.path.join(icons_path, 'none_file.png'))
+                icon = QIcon(icon_pix)
             return icon
 
-        def add_to_table(file, dir, table, extension):
+        def add_to_table(file, dir, table, icon):
             """
             Add the file to the table.
             :param file: str, file name with extension
             :param dir: str, directory of the file, added to the invisible second column
             :param table: QTableWidget to add it to
-            :param extension: str, extension of the file, to be given an icon.
+            :param icon: QIcon object
             """
             row = table.rowCount()
             table.insertRow(row)
 
             # Add the icon
-            icon = get_icon(extension)
             file_item = QTableWidgetItem(icon, file)
             dir_item = QTableWidgetItem(dir)
 
@@ -332,51 +336,39 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.change_dir_label()
         self.setWindowTitle(f"Unpacker - {str(path)}")
         logger.info(f"Opened {str(self.output_path)}.")
-        dmp_extensions = ['dmp', 'dmp2', 'dmp3', 'dmp4']
-        damp_extensions = ['log', 'rtf', 'txt']
-        dump_extensions = ['pem', 'tdms', 'tdms_index', 'dat', 'xyz', 'csv']
-        gps_extensions = ['ssf', 'cor', 'gdb', 'gpx', 'txt', 'csv']
-        geometry_extensions = ['xls', 'xlsx', 'dad', 'seg', 'csv']
+        dmp_extensions = ['.dmp', '.dmp2', '.dmp3', '.dmp4']
+        damp_extensions = ['.log', '.rtf', '.txt']
+        dump_extensions = ['.pem', '.tdms', '.tdms_index', '.dat', '.xyz', '.csv']
+        gps_extensions = ['.ssf', '.cor', '.gdb', '.gpx', '.txt', '.csv']
+        geometry_extensions = ['.xls', '.xlsx', '.dad', '.seg', '.csv']
 
         damp_files = []
 
         # r=root, d=directories, f = files
         for root, dir, files in os.walk(str(self.output_path)):
             for file in files:
-                if any([file.lower().endswith(ext) for ext in dmp_extensions]):
-                    # print(f"{file} is a DMP file")
-                    ext = os.path.splitext(file)[-1][1:]
-                    add_to_table(file, root, self.dmp_table, ext)
+                ext = Path(file).suffix.lower()
+                icon = get_icon(Path(file))
 
-                elif any([file.lower().endswith(ext) for ext in damp_extensions]) and not os.path.split(root)[
-                                                                                              -1].lower() == 'gps':
-                    # print(f"{file} is a Damp file")
-                    ext = os.path.splitext(file)[-1][1:]
-                    add_to_table(file, root, self.damp_table, ext)
+                if any([ext in dmp_extensions]):
+                    # print(f"{file} is a DMP file")
+                    add_to_table(file, root, self.dmp_table, icon)
+
+                elif any([ext in damp_extensions]) and not os.path.split(root)[-1].lower() == 'gps':
+                    add_to_table(file, root, self.damp_table, icon)
                     damp_files.append(os.path.join(root, file))
 
-                elif any([file.lower().endswith(ext) for ext in dump_extensions]) and not os.path.split(root)[
-                                                                                              -1].lower() == 'gps':
-                    # print(f"{file} is a Dump file")
-                    ext = os.path.splitext(file)[-1][1:]
-                    add_to_table(file, root, self.dump_table, ext)
+                elif any([ext in dump_extensions]) and not os.path.split(root)[-1].lower() == 'gps':
+                    add_to_table(file, root, self.dump_table, icon)
 
-                elif any([file.lower().endswith(ext) for ext in gps_extensions]):
+                elif any([ext in gps_extensions]):
+                    add_to_table(file, root, self.gps_table, icon)
 
-                    # print(f"{file} is a GPS file")
-                    ext = os.path.splitext(file)[-1][1:]
-                    add_to_table(file, root, self.gps_table, ext)
-
-                elif any([file.lower().endswith(ext) for ext in geometry_extensions]) and not os.path.split(root)[
-                                                                                                  -1].lower() == 'gps':
-                    # print(f"{file} is a Geometry file")
-                    ext = os.path.splitext(file)[-1][1:]
-                    add_to_table(file, root, self.geometry_table, ext)
+                elif any([ext in geometry_extensions]) and not os.path.split(root)[-1].lower() == 'gps':
+                    add_to_table(file, root, self.geometry_table, icon)
 
                 else:
-                    # print(f"{file} is another file")
-                    ext = os.path.splitext(file)[-1][1:]
-                    add_to_table(file, root, self.other_table, ext)
+                    add_to_table(file, root, self.other_table, icon)
 
         # Plot the damping box files
         if self.open_damp_files_cbox.isChecked() and damp_files:
