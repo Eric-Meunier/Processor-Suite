@@ -11,6 +11,7 @@ import pandas as pd
 import pylineclip as lc
 import pyqtgraph as pg
 from PyQt5 import uic, QtCore, QtGui
+from PyQt5.QtCore import QPointF
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
                              QPushButton)
 from pyqtgraph.Point import Point
@@ -1072,11 +1073,16 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         :param evt: MouseMovement event
         """
 
-        def closest_node(node, nodes):
-            nodes = np.asarray(nodes)
-            dist_2 = np.sum((nodes - node) ** 2, axis=1)
-            return dist_2.min(), np.argmin(dist_2)
-            # return np.argmin(dist_2)
+        def normalize(point):
+            """
+            Normalize a point so it works as a percentage of the view box data coordinates.
+            :param point: QPoint object
+            :return: normalized QPointF object
+            """
+            view = vb.viewRect()
+            nx = (point.x() + view.x()) / view.width()
+            ny = (point.y() + view.y()) / view.height()
+            return QPointF(nx, ny)
 
         self.active_ax = None
 
@@ -1098,35 +1104,28 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 return
 
             # Change the mouse coordinates to be in the plot's native coordinates (not data coordinates)
-            m_pos = vb.mapToScene(evt)
-            # m_pos = vb.mapFromScene(evt)
+            m_pos = vb.mapSceneToView(evt)
+            m_pos = normalize(m_pos)
             mouse_point = (m_pos.x(), m_pos.y())
-            logger.info(f"Mouse pos: {m_pos.x():.1f}, {m_pos.y():.1f}")
+            # logger.info(f"Mouse pos: {mouse_point[0]:.2f}, {mouse_point[1]:.2f}")
 
             for line in ax_lines:
                 xi, yi = line.xData, line.yData
-                # interp_xi = np.linspace(xi.min(), xi.max(), 500)
-                # interp_yi = np.interp(interp_xi, xi, yi)  # Interp for when the mouse in between two points
-                # TODO Mapping breaks when zoomed in. Maybe normalize the axes view coordinates?
-                line_qpoints = [vb.mapFromView(QtCore.QPoint(x, y)) for x, y in zip(xi, yi)]
-                line_points = [(p.x(), p.y()) for p in line_qpoints]
+                interp_xi = np.linspace(xi.min(), xi.max(), 100)
+                interp_yi = np.interp(interp_xi, xi, yi)  # Interp for when the mouse in between two points
+                line_qpoints = [normalize(QPointF(x, y)) for x, y in zip(interp_xi, interp_yi)]
+                line_points = np.array([(p.x(), p.y()) for p in line_qpoints])
 
-                logger.info(f"Line data pos: {np.average([p[0] for p in line_points]):.1f}, "
-                            f"{np.average([p[1] for p in line_points]):.1f}")
-                smallest_dist, ind = closest_node(mouse_point, line_points)
-                # logger.info(f"Nearest point for line {ax_lines.index(line)}: {ind}")
-                line_distances.append(smallest_dist)
+                # logger.info(f"Line data pos: {np.average([p[0] for p in line_points]):.2f}, "
+                #             f"{np.average([p[1] for p in line_points]):.2f}")
 
                 # Calculate the distance between each point of the line and the mouse position
-                # distances = spatial.distance.cdist(np.array([mouse_point]), line_points, metric='euclidean')
-                # distances = spatial.distance.cdist(np.array([mouse_point]), np.array([interp_xi, interp_yi]).T,
-                #                                    metric='euclidean')
-                # distances = np.array([np.linalg.norm(np.array([x, y]) - np.array([xm, ym])) for x, y in zip(xi, yi)])
-                # line_distances.append(distances)
+                distances = spatial.distance.cdist(np.array([mouse_point]), line_points, metric='euclidean')
+                line_distances.append(distances)
 
             # Find the index of the smallest overall distance
             ind_of_min = np.array([l.min() for l in line_distances]).argmin()
-            logger.info(f"Line {ind_of_min} is nearest the mouse.")
+            # logger.info(f"Line {ind_of_min} is nearest the mouse.")
 
             self.nearest_decay = ax_lines[ind_of_min]
             for line in ax_lines:
@@ -1877,11 +1876,12 @@ if __name__ == '__main__':
     pem_getter = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()
-    # pem_files = pem_getter.get_pems(client='Minera', selection=4)
-    pem_files = [parser.parse(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.PEM')]
+    # pem_files = pem_getter.get_pems(random=True, number=1)
+    pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
     # pem_files = [dmp_parser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\_14_pp.DMP2')]
 
     editor = PEMPlotEditor()
+    editor.move(0, 0)
     editor.open(pem_files[0])
     # editor.auto_clean()
 
