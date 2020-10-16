@@ -17,11 +17,11 @@ import pyqtgraph as pg
 import simplekml
 import stopit
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
                              QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel, QHBoxLayout,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
-                             QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame,
+                             QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame, QGroupBox,
                              QComboBox)
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
@@ -126,7 +126,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_map = ContourMapViewer(parent=self)
         self.gps_conversion_widget = GPSConversionWidget(parent=self)
-        self.pem_list_filter = FolderFilter(parent=self)
+        self.pem_list_filter = PathFilter('PEM', parent=self)
+        self.gps_list_filter = PathFilter('GPS', parent=self)
 
         # Project tree
         self.project_dir = None
@@ -615,6 +616,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Widgets
         self.pem_list_filter.accept_sig.connect(self.fill_pem_list)
+        self.gps_list_filter.accept_sig.connect(self.fill_gps_list)
         self.unpacker.open_dmp_sig.connect(self.move_dir_tree_to)
         self.calender.clicked.connect(set_date)
 
@@ -622,6 +624,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.apply_shared_header_btn.clicked.connect(apply_header)
         self.project_dir_edit.returnPressed.connect(open_project_dir)
         self.filter_pem_list_btn.clicked.connect(self.pem_list_filter.show)
+        self.filter_gps_list_btn.clicked.connect(self.gps_list_filter.show)
 
         # Table
         self.table.viewport().installEventFilter(self)
@@ -1903,19 +1906,191 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.fill_gps_list()
             self.fill_pem_list()
 
+    # def fill_gps_list(self):
+    #     """
+    #     Populate the GPS files list based on the files found in the nearest 'GPS' folder in the project directory
+    #     """
+    #
+    #     @stopit.threading_timeoutable(default='timeout')
+    #     def find_gps_dir():
+    #         # Try to find the 'GPS' folder in the current directory
+    #         search_result = list(self.project_dir.rglob('GPS'))
+    #         if search_result:
+    #             gps_dir = search_result[0]
+    #             logger.info(f"GPS dir found: {str(gps_dir)}")
+    #             return gps_dir
+    #
+    #     def get_filtered_gps():
+    #         """
+    #         Filter the list of GPS files based on filepath names from the user inputs in GPSPathFilter.
+    #         :return: list of GPS files.
+    #         """
+    #         filtered_gps = self.available_gps
+    #
+    #         # Filter the PEM files by file name
+    #         include_files = re.sub(r'\s+', '', self.gps_list_filter.include_files_edit.text()).split(',')
+    #         logger.info(f"Include files: {include_files}")
+    #         exclude_files = re.sub(r'\s+', '', self.gps_list_filter.exclude_files_edit.text()).split(',')
+    #         logger.info(f"Include files: {exclude_files}")
+    #
+    #         # Filter the PEM files by folder names
+    #         include_folders = re.sub(r'\s+', '', self.gps_list_filter.include_folders_edit.text()).split(',')
+    #         logger.info(f"Include folders: {include_folders}")
+    #         exclude_folders = re.sub(r'\s+', '', self.gps_list_filter.exclude_folders_edit.text()).split(',')
+    #         logger.info(f"Exclude folders: {exclude_folders}")
+    #
+    #         # Inclusive files
+    #         if any(include_files):
+    #             filtered_gps = [p for p in filtered_gps if any(
+    #                 [f.strip().lower() in str(p.name).lower() for f in include_files if f]
+    #             )]
+    #
+    #         # Inclusive files
+    #         if any(exclude_files):
+    #             filtered_gps = [p for p in filtered_gps if all(
+    #                 [f.strip().lower() not in str(p.name).lower() for f in exclude_files if f]
+    #             )]
+    #
+    #         # Inclusive folders
+    #         if any(include_folders):
+    #             filtered_gps = [p for p in filtered_gps if any(
+    #                 [f.strip().lower() in str(p.parent).lower() for f in include_folders if f]
+    #             )]
+    #
+    #         # Exclusive folders
+    #         if any(exclude_folders):
+    #             filtered_gps = [p for p in filtered_gps if all(
+    #                 [f.strip().lower() not in str(p.parent).lower() for f in exclude_folders if f]
+    #             )]
+    #
+    #         include_exts = re.sub(r'\s+', '', self.gps_list_filter.include_exts_edit.text()).split(',')
+    #         logger.info(f"Include extensions: {include_exts}")
+    #         exclude_exts = re.sub(r'\s+', '', self.gps_list_filter.exclude_exts_edit.text()).split(',')
+    #         logger.info(f"Exclude extensions: {exclude_exts}")
+    #
+    #         # Filter the PEM files by file extension
+    #         # Inclusive extensions
+    #         if any(include_exts):
+    #             filtered_gps = [p for p in filtered_gps if any(
+    #                 [re.sub(r'[\*\.]', '', f.strip().lower()) == p.suffix.lower()[1:] for f in include_exts if f]
+    #             )]
+    #         # Exclusive extensions
+    #         if any(exclude_exts):
+    #             filtered_gps = [p for p in filtered_gps if all(
+    #                 [re.sub(r'[\*\.]', '', f.strip().lower()) != p.suffix.lower()[1:] for f in exclude_exts if f]
+    #             )]
+    #
+    #         return filtered_gps
+    #
+    #     if not self.project_dir:
+    #         logger.error('No projected directory selected')
+    #         self.message.information(self, 'Error', 'No project directory has been selected.')
+    #         return
+    #
+    #     self.gps_list.clear()
+    #     # Try to find a GPS folder, but time out after 1 second
+    #     gps_dir = find_gps_dir(timeout=1)
+    #
+    #     if gps_dir is None:
+    #         return
+    #     elif gps_dir == 'timeout':
+    #         logger.warning(f"Searching for GPS directory timed out.")
+    #         self.status_bar.showMessage(f"Searching for GPS directory timed out.", 1000)
+    #         return
+    #     else:
+    #         if gps_dir:
+    #             self.available_gps = list(gps_dir.rglob('*.txt'))
+    #             self.available_gps.extend(gps_dir.rglob('*.csv'))
+    #             self.available_gps.extend(gps_dir.rglob('*.gpx'))
+    #             self.available_gps.extend(gps_dir.rglob('*.xlsx'))
+    #             self.available_gps.extend(gps_dir.rglob('*.xls'))
+    #
+    #             gps_files = get_filtered_gps()
+    #             for file in gps_files:
+    #                 self.gps_list.addItem(f"{str(file.relative_to(self.project_dir))}")
+
     def fill_gps_list(self):
         """
         Populate the GPS files list based on the files found in the nearest 'GPS' folder in the project directory
         """
 
         @stopit.threading_timeoutable(default='timeout')
-        def find_gps_dir():
-            # Try to find the 'GPS' folder in the current directory
-            search_result = list(self.project_dir.rglob('GPS'))
-            if search_result:
-                gps_dir = search_result[0]
-                logger.info(f"GPS dir found: {str(gps_dir)}")
-                return gps_dir
+        def find_gps_files():
+            files = list(self.project_dir.rglob('*.txt'))
+            files.extend(self.project_dir.rglob('*.csv'))
+            files.extend(self.project_dir.rglob('*.gpx'))
+            files.extend(self.project_dir.rglob('*.xlsx'))
+            files.extend(self.project_dir.rglob('*.xls'))
+            return files
+
+        def get_filtered_gps():
+            """
+            Filter the list of GPS files based on filepath names from the user inputs in GPSPathFilter.
+            :return: list of GPS files.
+            """
+            def strip(arr):
+                """Strips all elements in an array"""
+                stripped_arr = []
+                for r in arr:
+                    stripped_arr.append(r.strip())
+                return stripped_arr
+
+            filtered_gps = self.available_gps
+
+            # Filter the GPS files by file name
+            include_files = strip(self.gps_list_filter.include_files_edit.text().split(','))
+            logger.info(f"Include files: {include_files}")
+            exclude_files = strip(self.gps_list_filter.exclude_files_edit.text().split(','))
+            logger.info(f"Include files: {exclude_files}")
+
+            # Filter the GPS files by folder names
+            include_folders = strip(self.gps_list_filter.include_folders_edit.text().split(','))
+            logger.info(f"Include folders: {include_folders}")
+            exclude_folders = strip(self.gps_list_filter.exclude_folders_edit.text().split(','))
+            logger.info(f"Exclude folders: {exclude_folders}")
+
+            # Inclusive files
+            if any(include_files):
+                filtered_gps = [p for p in filtered_gps if any(
+                    [f.lower() in str(p.name).lower() for f in include_files if f]
+                )]
+
+            # Inclusive files
+            if any(exclude_files):
+                filtered_gps = [p for p in filtered_gps if all(
+                    [f.lower() not in str(p.name).lower() for f in exclude_files if f]
+                )]
+
+            # Inclusive folders
+            if any(include_folders):
+                filtered_gps = [p for p in filtered_gps if any(
+                    [f.lower() in str(p.parent).lower() for f in include_folders if f]
+                )]
+
+            # Exclusive folders
+            if any(exclude_folders):
+                filtered_gps = [p for p in filtered_gps if all(
+                    [f.lower() not in str(p.parent).lower() for f in exclude_folders if f]
+                )]
+
+            include_exts = strip(self.gps_list_filter.include_exts_edit.text().split(','))
+            logger.info(f"Include extensions: {include_exts}")
+            exclude_exts = strip(self.gps_list_filter.exclude_exts_edit.text().split(','))
+            logger.info(f"Exclude extensions: {exclude_exts}")
+
+            # Filter the PEM files by file extension
+            # Inclusive extensions
+            if any(include_exts):
+                filtered_gps = [p for p in filtered_gps if any(
+                    [re.sub(r'[\*\.]', '', f.lower()) == p.suffix.lower()[1:] for f in include_exts if f]
+                )]
+            # Exclusive extensions
+            if any(exclude_exts):
+                filtered_gps = [p for p in filtered_gps if all(
+                    [re.sub(r'[\*\.]', '', f.lower()) != p.suffix.lower()[1:] for f in exclude_exts if f]
+                )]
+
+            return filtered_gps
 
         if not self.project_dir:
             logger.error('No projected directory selected')
@@ -1924,23 +2099,19 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.gps_list.clear()
         # Try to find a GPS folder, but time out after 1 second
-        gps_dir = find_gps_dir(timeout=1)
+        self.available_gps = find_gps_files(timeout=1)
 
-        if gps_dir is None:
+        if self.available_gps is None:
             return
-        elif gps_dir == 'timeout':
-            logger.warning(f"Searching for GPS directory timed out.")
-            self.status_bar.showMessage(f"Searching for GPS directory timed out.", 1000)
+        elif self.available_gps == 'timeout':
+            logger.warning(f"Searching for GPS files timed out.")
+            self.status_bar.showMessage(f"Searching for GPS files timed out.", 1000)
             return
         else:
-            if gps_dir:
-                self.available_gps = list(gps_dir.rglob('*.txt'))
-                self.available_gps.extend(gps_dir.rglob('*.csv'))
-                self.available_gps.extend(gps_dir.rglob('*.gpx'))
-                self.available_gps.extend(gps_dir.rglob('*.xlsx'))
-                self.available_gps.extend(gps_dir.rglob('*.xls'))
+            if self.available_gps:
 
-                for file in self.available_gps:
+                gps_files = get_filtered_gps()
+                for file in gps_files:
                     self.gps_list.addItem(f"{str(file.relative_to(self.project_dir))}")
 
     def fill_pem_list(self):
@@ -1957,6 +2128,75 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             files.extend(list(self.project_dir.rglob('*.DMP2')))
             return files
 
+        def get_filtered_pems():
+            """
+            Filter the list of PEM files based on filepath names from the user inputs in PathFilter.
+            :return: list of PEM files.
+            """
+            def strip(arr):
+                """Strips all elements in an array"""
+                stripped_arr = []
+                for r in arr:
+                    stripped_arr.append(r.strip())
+                return stripped_arr
+
+            filtered_pems = self.available_pems
+
+            # Filter the PEM files by file name
+            include_files = strip(self.pem_list_filter.include_files_edit.text().split(','))
+            logger.info(f"Include files: {include_files}")
+            exclude_files = strip(self.pem_list_filter.exclude_files_edit.text().split(','))
+            logger.info(f"Include files: {exclude_files}")
+
+            # Filter the PEM files by folder names
+            include_folders = strip(self.pem_list_filter.include_folders_edit.text().split(','))
+            logger.info(f"Include folders: {include_folders}")
+            exclude_folders = strip(self.pem_list_filter.exclude_folders_edit.text().split(','))
+            logger.info(f"Exclude folders: {exclude_folders}")
+
+            # Inclusive files
+            if any(include_files):
+                filtered_pems = [p for p in filtered_pems if any(
+                    [f.lower() in str(p.name).lower() for f in include_files if f]
+                )]
+
+            # Exclusive files
+            if any(exclude_files):
+                filtered_pems = [p for p in filtered_pems if all(
+                    [f.lower() not in str(p.name).lower() for f in exclude_files if f]
+                )]
+
+            # Inclusive folders
+            if any(include_folders):
+                filtered_pems = [p for p in filtered_pems if any(
+                    [f.lower() in str(p.parent).lower() for f in include_folders if f]
+                )]
+
+            # Exclusive folders
+            if any(exclude_folders):
+                filtered_pems = [p for p in filtered_pems if all(
+                    [f.lower() not in str(p.parent).lower() for f in exclude_folders if f]
+                )]
+
+            include_exts = strip(self.pem_list_filter.include_exts_edit.text().split(','))
+            logger.info(f"Include extensions: {include_exts}")
+            exclude_exts = strip(self.pem_list_filter.exclude_exts_edit.text().split(','))
+            logger.info(f"Exclude extensions: {exclude_exts}")
+
+            # Filter the PEM files by file extension
+            # Inclusive extensions
+            if any(include_exts):
+                filtered_pems = [p for p in filtered_pems if any(
+                    [re.sub(r'[\*\.]', '', f.lower()) == p.suffix.lower()[1:] for f in include_exts if f]
+                )]
+            # Exclusive extensions
+            if any(exclude_exts):
+                filtered_pems = [p for p in filtered_pems if all(
+                    [re.sub(r'[\*\.]', '', f.lower()) != p.suffix.lower()[1:] for f in exclude_exts if f]
+                )]
+
+            return filtered_pems
+
         if not self.project_dir:
             logger.error('No projected directory selected')
             self.message.information(self, 'Error', 'No project directory has been selected.')
@@ -1970,29 +2210,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if self.available_pems is None:
             return
         elif self.available_pems == 'timeout':
-            logger.warning(f"Searching for GPS directory timed out.")
-            self.status_bar.showMessage(f"Searching for PEM files timed out.", 1000)
+            logger.warning(f"Searching for PEM/DMP files timed out.")
+            self.status_bar.showMessage(f"Searching for PEM/DMP files timed out.", 1000)
             return
         else:
-            filtered_pems = self.available_pems
-
-            # Filter the PEM files by folder names
-            folder_filt = self.pem_list_filter.folder_filt_edit.text().split()
-            logger.info(f"Folder filter: {folder_filt}")
-            if folder_filt:
-
-                filtered_pems = [p for p in self.available_pems if any(
-                    [f.lower() in str(p).lower() for f in folder_filt]
-                )]
-            file_ext_filt = self.pem_list_filter.file_ext_edit.text().split()
-
-            # Filter the PEM files by file extension
-            if file_ext_filt:
-                filtered_pems = [p for p in filtered_pems if any(
-                    [Path(f).suffix.lower() == p.suffix.lower() for f in file_ext_filt]
-                )]
-
-            for file in filtered_pems:
+            pem_files = get_filtered_pems()
+            for file in pem_files:
                 self.pem_list.addItem(f"{str(file.relative_to(self.project_dir))}")
 
     def move_dir_tree_to(self, dir_path):
@@ -3171,23 +3394,43 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.table.setItem(row, line_name_column, name_item)
 
 
-class FolderFilter(QWidget):
+class PathFilter(QWidget):
     accept_sig = QtCore.pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, filetype, parent=None):
+        """
+        Widget that holds the filepath filtering information for the GPS list in PEMHub.
+        :param filetype: str, either 'PEM' or 'GPS'. 
+        :param parent: Qt widget object.
+        """
         super().__init__()
+        self.filetype = filetype
         self.parent = parent
-        self.setWindowTitle(f"PEM File Filter")
+        self.setWindowTitle(f"{filetype} File Filter")
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'filter.png')))
 
-        self.folder_filt_edit = QLineEdit()
-        self.folder_filt_edit.setToolTip("Separate items with [SPACE] or [,]")
+        self.include_files_edit = QLineEdit()
+        self.include_files_edit.setToolTip("Separate items with commas [,]")
 
-        self.file_ext_edit = QLineEdit()
-        self.file_ext_edit.setToolTip("Separate items with [SPACE] or [,]")
+        self.exclude_files_edit = QLineEdit('DTL, exp, Correct' if self.filetype == 'GPS' else '')
+        self.exclude_files_edit.setToolTip("Separate items with commas [,]")
 
+        self.include_folders_edit = QLineEdit('GPS, Loop 1' if self.filetype == 'GPS' else '')
+        self.include_folders_edit.setToolTip("Separate items with commas [,]")
+
+        self.exclude_folders_edit = QLineEdit()
+        self.exclude_folders_edit.setToolTip("Separate items with commas [,]")
+
+        self.include_exts_edit = QLineEdit()
+        self.include_exts_edit.setToolTip("Separate items with commas [,]")
+
+        self.exclude_exts_edit = QLineEdit()
+        self.exclude_exts_edit.setToolTip("Separate items with commas [,]")
+
+        # Buttons frame
         frame = QFrame()
         frame.setLayout(QHBoxLayout())
+        frame.setContentsMargins(0, 0, 0, 0)
         self.accept_btn = QPushButton("&Accept")
         self.accept_btn.setShortcut('Return')
         self.reset_btn = QPushButton("&Reset")
@@ -3198,12 +3441,34 @@ class FolderFilter(QWidget):
         self.setLayout(QFormLayout())
         self.layout().setContentsMargins(8, 3, 8, 3)
         self.layout().setHorizontalSpacing(10)
-        self.layout().setVerticalSpacing(5)
-        self.layout().addRow(QLabel("Include Folders:"))
-        self.layout().addRow(self.folder_filt_edit)
+        self.layout().setVerticalSpacing(2)
 
-        self.layout().addRow(QLabel("Include Extensions:"))
-        self.layout().addRow(self.file_ext_edit)
+        files_gbox = QGroupBox('Files')
+        files_gbox.setLayout(QVBoxLayout())
+        files_gbox.layout().addWidget(QLabel("Include:"))
+        files_gbox.layout().addWidget(self.include_files_edit)
+        files_gbox.layout().addWidget(QLabel("Exclude:"))
+        files_gbox.layout().addWidget(self.exclude_files_edit)
+
+        self.layout().addRow(files_gbox)
+
+        folders_gbox = QGroupBox('Folders')
+        folders_gbox.setLayout(QVBoxLayout())
+        folders_gbox.layout().addWidget(QLabel("Include:"))
+        folders_gbox.layout().addWidget(self.include_folders_edit)
+        folders_gbox.layout().addWidget(QLabel("Exclude:"))
+        folders_gbox.layout().addWidget(self.exclude_folders_edit)
+
+        self.layout().addRow(folders_gbox)
+
+        extensions_gbox = QGroupBox('Extensions')
+        extensions_gbox.setLayout(QVBoxLayout())
+        extensions_gbox.layout().addWidget(QLabel("Include:"))
+        extensions_gbox.layout().addWidget(self.include_exts_edit)
+        extensions_gbox.layout().addWidget(QLabel("Exclude:"))
+        extensions_gbox.layout().addWidget(self.exclude_exts_edit)
+
+        self.layout().addRow(extensions_gbox)
 
         self.layout().addRow(frame)
 
@@ -3214,13 +3479,18 @@ class FolderFilter(QWidget):
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
-            self.hide()
+            self.close()
 
     def reset(self):
-        self.folder_filt_edit.setText('')
-        self.file_ext_edit.setText('')
+        self.include_files_edit.setText('')
+        self.exclude_files_edit.setText('DTL, exp, Correct' if self.filetype == 'GPS' else '')
+        self.include_folders_edit.setText('GPS' if self.filetype == 'GPS' else '')
+        self.exclude_folders_edit.setText('')
+        self.include_exts_edit.setText('')
+        self.exclude_exts_edit.setText('')
 
     def close(self):
+        self.accept_sig.emit()
         self.hide()
 
 
@@ -3781,7 +4051,7 @@ class GPSShareWidget(QWidget):
 
         # Format window
         self.setWindowTitle(f"Share GPS")
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'share_gps.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'share_gps.png')))
 
         self.layout = QFormLayout()
         self.setLayout(self.layout)
@@ -4098,37 +4368,22 @@ def main():
     app = QApplication(sys.argv)
     mw = PEMHub()
     pg = PEMGetter()
-    # ff = FolderFilter()
+    pem_parser = PEMParser()
+
+    # ff = PathFilter()
     # ff.show()
 
+    pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.PEM')]
     # pem_files = pg.get_pems(client='PEM Rotation', random=True, number=3)
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='Minera', number=1)
-    pem_files = pg.get_pems(random=True, number=1)
-    # s = GPSShareWidget()
-    # s.open(pem_files, 0)
-    # s.show()
-    #
-    # file = r'N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\DMP files\DMP\Hitsatse 1\8e_10.dmp'
-    # mw.open_dmp_files(file)
+    # pem_files = pg.get_pems(random=True, number=1)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     mw.open_pem_files(pem_files)
-    # mw.open_pdf_plot_printer(selected_files=False)
-    # mw.pem_info_widgets[0].share_loop_signal.emit(mw.pem_info_widgets[0].get_loop())
-
     mw.show()
-
-    # mw.open_gps_conversion()
-    # mw.delete_merged_files_cbox.setChecked(False)
-
-    # mw.merge_pem_files(pem_files)
-    # mw.average_pem_data()
-    # mw.split_pem_channels(pem_files[0])
-    # mw.open_pdf_plot_printer(selected_files=False)
 
     app.exec_()
 
