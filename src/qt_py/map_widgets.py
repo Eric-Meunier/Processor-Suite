@@ -9,8 +9,8 @@ import numpy as np
 import plotly
 import plotly.graph_objects as go
 import pyqtgraph as pg
-from PyQt5 import (QtGui)
-from PyQt5 import uic
+from PyQt5 import (QtGui, uic)
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWidgets import (QErrorMessage, QApplication, QWidget, QFileDialog, QMessageBox, QGridLayout,
                              QAction, QMainWindow, QHBoxLayout)
@@ -264,6 +264,7 @@ class MapboxViewer(QMainWindow):
 
         self.setWindowTitle("Terrain Map")
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+        self.status_bar = self.statusBar()
         # self.resize(1000, 800)
 
         layout = QHBoxLayout()
@@ -289,6 +290,22 @@ class MapboxViewer(QMainWindow):
         self.layout().addWidget(self.map_widget)
         self.setCentralWidget(self.map_widget)
 
+    def load_page(self):
+        """
+        Plots the data by creating the HTML from the plot and setting it in the WebEngine.
+        """
+        # Create the HTML
+        html = '<html><body>'
+        html += plotly.offline.plot(self.map_figure,
+                                    output_type='div',
+                                    include_plotlyjs='cdn',
+                                    config={'displayModeBar': False}
+                                    )
+        html += '</body></html>'
+
+        # Add the plot HTML to be shown in the plot widget
+        self.map_widget.setHtml(html)
+
     def save_img(self):
         save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
                                                            'map.png',
@@ -302,7 +319,9 @@ class MapboxViewer(QMainWindow):
 
     def copy_img(self):
         QApplication.clipboard().setPixmap(self.grab())
+        self.status_bar.show()
         self.status_bar.showMessage('Image copied to clipboard.', 1000)
+        QTimer.singleShot(1000, lambda: self.status_bar.hide())
 
 
 class TerrainMapViewer(MapboxViewer):
@@ -461,19 +480,8 @@ class TerrainMapViewer(MapboxViewer):
             mapbox_style=map_style,
             mapbox_accesstoken=token)
 
-        # Create the HTML
-        html = '<html><body>'
-        html += plotly.offline.plot(self.map_figure,
-                                    output_type='div',
-                                    include_plotlyjs='cdn',
-                                    config={'displayModeBar': False}
-                                    )
-        html += '</body></html>'
-
-        t2 = time.time()
         # Add the plot HTML to be shown in the plot widget
-        self.map_widget.setHtml(html)
-        print(f'Time to set HTML: {time.time() - t2:.3f}')
+        self.load_page()
 
 
 class Map3DViewer(QMainWindow):
@@ -506,25 +514,43 @@ class Map3DViewer(QMainWindow):
         self.file_menu.addAction(self.save_img_action)
         self.file_menu.addAction(self.copy_image_action)
 
-        self.figure = go.Figure()
-        self.figure.update_layout(scene=dict(
+        self.map_figure = go.Figure()
+        self.map_figure.update_layout(scene=dict(
             xaxis_title='EASTING',
             yaxis_title='NORTHING',
             zaxis_title='ELEVATION',
             aspectmode='data'),
-            margin=dict(r=0, b=0, l=0, t=0),
+            margin={"r": 0,
+                    "t": 0,
+                    "l": 0,
+                    "b": 0},
         )
 
         # create an instance of QWebEngineView and set the html code
-        self.plot_widget = QWebEngineView()
-        self.setCentralWidget(self.plot_widget)
+        self.map_widget = QWebEngineView()
+        self.setCentralWidget(self.map_widget)
+
+    def load_page(self):
+        """
+        Plots the data by creating the HTML from the plot and setting it in the WebEngine.
+        """
+        # Create the HTML
+        html = '<html><body>'
+        html += plotly.offline.plot(self.map_figure,
+                                    output_type='div',
+                                    include_plotlyjs='cdn',
+                                    config={'displayModeBar': False}
+                                    )
+        html += '</body></html>'
+
+        # Add the plot HTML to be shown in the plot widget
+        self.map_widget.setHtml(html)
 
     def open(self, pem_files):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
-        if not pem_files:
-            raise Exception("No files to plot.")
+        assert pem_files, "No files to plot."
 
         if any([f.has_any_gps() for f in pem_files]):
             self.pem_files = pem_files
@@ -536,7 +562,7 @@ class Map3DViewer(QMainWindow):
     def plot_pems(self):
 
         def reset_figure():
-            self.figure.data = []
+            self.map_figure.data = []
             self.loops = []
             self.lines = []
             self.collars = []
@@ -548,13 +574,13 @@ class Map3DViewer(QMainWindow):
                 self.loops.append(loop.to_string())
 
                 # Plot the loop in the figure
-                self.figure.add_trace(go.Scatter3d(x=loop.Easting,
-                                                   y=loop.Northing,
-                                                   z=loop.Elevation,
-                                                   legendgroup='loop',
-                                                   mode='lines',
-                                                   name=f"Loop {pem_file.loop_name}",
-                                                   text=loop.index))
+                self.map_figure.add_trace(go.Scatter3d(x=loop.Easting,
+                                                       y=loop.Northing,
+                                                       z=loop.Elevation,
+                                                       legendgroup='loop',
+                                                       mode='lines',
+                                                       name=f"Loop {pem_file.loop_name}",
+                                                       text=loop.index))
 
         def plot_line(pem_file):
             line = pem_file.get_line()
@@ -562,14 +588,14 @@ class Map3DViewer(QMainWindow):
             if line.to_string() not in self.lines:
                 self.lines.append(line.to_string())
                 # Plot the line in the figure
-                self.figure.add_trace(go.Scatter3d(x=line.Easting,
-                                                   y=line.Northing,
-                                                   z=line.Elevation,
-                                                   legendgroup='line',
-                                                   mode='lines+markers',
-                                                   name=pem_file.line_name,
-                                                   text=line.Station
-                                                   ))
+                self.map_figure.add_trace(go.Scatter3d(x=line.Easting,
+                                                       y=line.Northing,
+                                                       z=line.Elevation,
+                                                       legendgroup='line',
+                                                       mode='lines+markers',
+                                                       name=pem_file.line_name,
+                                                       text=line.Station
+                                                       ))
 
                 # if self.label_stations_cbox.isChecked():
                 #     for row in line.itertuples():
@@ -592,27 +618,27 @@ class Map3DViewer(QMainWindow):
                 if proj.to_string() not in self.holes:
                     self.holes.append(proj.to_string())
                     # Plot the line in the figure
-                    self.figure.add_trace(go.Scatter3d(x=proj.Easting,
-                                                       y=proj.Northing,
-                                                       z=proj.Elevation,
-                                                       mode='lines+markers',
-                                                       legendgroup='hole',
-                                                       name=pem_file.line_name,
-                                                       text=proj['Relative_depth']
-                                                       ))
+                    self.map_figure.add_trace(go.Scatter3d(x=proj.Easting,
+                                                           y=proj.Northing,
+                                                           z=proj.Elevation,
+                                                           mode='lines+markers',
+                                                           legendgroup='hole',
+                                                           name=pem_file.line_name,
+                                                           text=proj['Relative_depth']
+                                                           ))
 
                 else:
                     return
 
             elif not collar.empty and collar.to_string() not in self.collars:
                 self.collars.append(collar.to_string())
-                self.figure.add_trace(go.Scatter3d(x=collar.Easting,
-                                                   y=collar.Northing,
-                                                   z=collar.Elevation,
-                                                   # legendgroup='hole',
-                                                   name=pem_file.line_name,
-                                                   text=pem_file.line_name
-                                                   ))
+                self.map_figure.add_trace(go.Scatter3d(x=collar.Easting,
+                                                       y=collar.Northing,
+                                                       z=collar.Elevation,
+                                                       # legendgroup='hole',
+                                                       name=pem_file.line_name,
+                                                       text=pem_file.line_name
+                                                       ))
 
         reset_figure()
 
@@ -627,33 +653,24 @@ class Map3DViewer(QMainWindow):
                 plot_hole(pem_file)
 
         # Set the style of the markers and lines
-        self.figure.update_traces(marker=dict(size=6,
-                                              line=dict(width=2,
+        self.map_figure.update_traces(marker=dict(size=6,
+                                                  line=dict(width=2,
                                                         color='DarkSlateGrey')),
-                                  line=dict(width=4)
-                                  )
+                                      line=dict(width=4)
+                                      )
         # TODO Format the axis ticks
-        self.figure.update_layout(yaxis_tickformat='%',
-                                  legend=dict(
+        self.map_figure.update_layout(yaxis_tickformat='%',
+                                      legend=dict(
                                       yanchor="top",
                                       y=0.99,
                                       xanchor="left",
                                       x=0.01,
                                   )
-                                  )
-
-        # Create the HTML
-        html = '<html><body>'
-        html += plotly.offline.plot(self.figure,
-                                    output_type='div',
-                                    include_plotlyjs='cdn',
-                                    config={'displayModeBar': False}
-                                    )
-        html += '</body></html>'
+                                      )
 
         t2 = time.time()
         # Add the plot HTML to be shown in the plot widget
-        self.plot_widget.setHtml(html)
+        self.load_page()
         print(f'Time to set HTML: {time.time() - t2:.3f}')
 
     def save_img(self):
@@ -663,13 +680,15 @@ class Map3DViewer(QMainWindow):
                                                            )
         if save_name:
             if 'PDF' in save_type:
-                self.plot_widget.page().printToPdf(save_name)
+                self.map_widget.page().printToPdf(save_name)
             else:
                 self.grab().save(save_name)
 
     def copy_img(self):
         QApplication.clipboard().setPixmap(self.grab())
+        self.status_bar.show()
         self.status_bar.showMessage('Image copied to clipboard.', 1000)
+        QTimer.singleShot(1000, lambda: self.status_bar.hide())
 
 
 class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):

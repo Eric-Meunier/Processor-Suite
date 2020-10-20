@@ -9,22 +9,19 @@ import math
 import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import pyqtgraph as pg
 import simplekml
-import plotly
-import plotly.graph_objects as go
-
 from PyQt5 import QtGui, QtCore, uic
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QHBoxLayout,
-                             QAction)
+from PyQt5.QtCore import QTimer
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
 
-from src.qt_py.map_widgets import MapboxViewer
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
+from src.qt_py.map_widgets import MapboxViewer
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +144,10 @@ class SurveyPlanner(QMainWindow):
         cb = QtGui.QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
         cb.setText(result, mode=cb.Clipboard)
-        self.status_bar.showMessage(f"Loop corner coordinates copied to clipboard", 2000)
+
+        self.status_bar.show()
+        self.status_bar.showMessage('Loop corner coordinates copied to clipboard.', 1000)
+        QTimer.singleShot(1000, lambda: self.status_bar.hide())
 
     def save_img(self):
         save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
@@ -176,6 +176,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.setGeometry(200, 200, 1400, 700)
 
+        self.loop_roi = None
+
         self.hole_easting = int(self.hole_easting_edit.text())
         self.hole_northing = int(self.hole_northing_edit.text())
         self.hole_elevation = int(self.hole_elevation_edit.text())
@@ -194,18 +196,16 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
         # Set up plots
-        self.hole_trace_plot = pg.PlotDataItem()
-        # self.hole_line_center = pg.ScatterPlotItem()
-        # self.hole_trace_plot.showGrid()
-        self.hole_collar_plot = pg.ScatterPlotItem()
+        self.hole_trace = pg.PlotDataItem()
+        self.hole_collar = pg.ScatterPlotItem()
         self.section_extent_line = pg.PlotDataItem()
         self.loop_plot = pg.ScatterPlotItem()
 
-        self.setup_plan_view()
-        self.setup_section_view()
+        self.init_plan_view()
+        self.init_section_view()
 
         self.plot_hole()
-        self.plan_view_plot.autoRange()
+        self.plan_view.autoRange()
 
         # Validators
         int_validator = QtGui.QIntValidator()
@@ -229,21 +229,57 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.hole_dip_edit.setValidator(dip_validator)
         self.hole_length_edit.setValidator(size_validator)
 
-        # Signals
+        self.init_signals()
+        self.init_crs()
+
+    def init_signals(self):
+
+        def change_loop_width():
+            """
+            Signal slot: Change the loop ROI dimensions from user input
+            :return: None
+            """
+            height = self.loop_roi.size()[1]
+            width = self.loop_width_edit.text()
+            width = float(width)
+            logger.info(f"Loop width changed to {width}.")
+            self.loop_roi.setSize((width, height))
+
+        def change_loop_height():
+            """
+            Signal slot: Change the loop ROI dimensions from user input
+            :return: None
+            """
+            height = self.loop_height_edit.text()
+            width = self.loop_roi.size()[0]
+            height = float(height)
+            logger.info(f"Loop height changed to {height}.")
+            self.loop_roi.setSize((width, height))
+
+        def change_loop_angle():
+            """
+            Signal slot: Change the loop ROI angle from user input
+            :return: None
+            """
+            angle = self.loop_angle_edit.text()
+            angle = float(angle)
+            logger.info(f"Loop angle changed to {angle}.")
+            self.loop_roi.setAngle(angle)
+
         # Menu
         self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
         self.actionSave_as_KMZ.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
         self.actionSave_as_GPX.triggered.connect(self.save_gpx)
         self.actionSave_as_GPX.setIcon(QtGui.QIcon(os.path.join(icons_path, 'garmin_file.png')))
-        self.view_map_action.setDisabled(True)
-        # self.view_map_action.triggered.connect(self.view_map)
-        # self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+        # self.view_map_action.setDisabled(True)
+        self.view_map_action.triggered.connect(self.view_map)
+        self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
         self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_loop_to_clipboard)
 
         # Line edits
-        self.loop_height_edit.editingFinished.connect(self.change_loop_height)
-        self.loop_width_edit.editingFinished.connect(self.change_loop_width)
-        self.loop_angle_edit.editingFinished.connect(self.change_loop_angle)
+        self.loop_height_edit.editingFinished.connect(change_loop_height)
+        self.loop_width_edit.editingFinished.connect(change_loop_width)
+        self.loop_angle_edit.editingFinished.connect(change_loop_angle)
 
         self.hole_easting_edit.editingFinished.connect(self.plot_hole)
         self.hole_northing_edit.editingFinished.connect(self.plot_hole)
@@ -251,8 +287,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.hole_az_edit.editingFinished.connect(self.plot_hole)
         self.hole_dip_edit.editingFinished.connect(self.plot_hole)
         self.hole_length_edit.editingFinished.connect(self.plot_hole)
-
-        self.init_crs()
 
     def init_crs(self):
         """
@@ -383,6 +417,79 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.gps_datum_cbox.setCurrentIndex(1)
         self.gps_zone_cbox.setCurrentIndex(17)
 
+    def init_plan_view(self):
+        """
+        Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
+        :return: None
+        """
+
+        def plan_region_changed():
+            """
+            Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
+            replots the section plot.
+            :return: None
+            """
+            self.loop_width_edit.blockSignals(True)
+            self.loop_height_edit.blockSignals(True)
+            self.loop_angle_edit.blockSignals(True)
+            x, y = self.loop_roi.pos()
+            w, h = self.loop_roi.size()
+            angle = self.loop_roi.angle()
+            self.loop_width_edit.setText(f"{w:.0f}")
+            self.loop_height_edit.setText(f"{h:.0f}")
+            self.loop_angle_edit.setText(f"{angle:.0f}")
+            self.loop_width_edit.blockSignals(False)
+            self.loop_height_edit.blockSignals(False)
+            self.loop_angle_edit.blockSignals(False)
+
+            self.plot_hole()
+
+        yaxis = CustomAxis(orientation='left')
+        xaxis = CustomAxis(orientation='bottom')
+        self.plan_view.setAxisItems({'bottom': xaxis, 'left': yaxis})
+        self.plan_view.showGrid(x=True, y=True, alpha=0.2)
+        # self.plan_view_vb.disableAutoRange('xy')
+        self.plan_view.setAspectLocked()
+        self.plan_view.hideButtons()
+        self.plan_view.getAxis('right').setWidth(15)
+        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+        self.plan_view.showLabel('right', show=False)
+        self.plan_view.showLabel('top', show=False)
+
+        # loop_roi is the loop.
+        self.loop_roi = LoopROI([self.hole_easting-250, self.hole_northing-250], [500, 500],
+                                scaleSnap=True,
+                                pen=pg.mkPen('m', width=1.5))
+        self.plan_view.addItem(self.loop_roi)
+        self.loop_roi.setZValue(10)
+        self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
+        self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
+        self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
+        self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
+        self.loop_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
+        self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
+        self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
+        self.loop_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
+        self.loop_roi.sigRegionChangeFinished.connect(plan_region_changed)
+
+    def init_section_view(self):
+        """
+        Initial set-up of the section plot. Sets the axes to have equal aspect ratios.
+        :return: None
+        """
+        self.ax.set_aspect('equal')
+        self.ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
+        self.ax.spines['top'].set_visible(False)
+        self.ax.spines['left'].set_visible(False)
+        self.ax.spines['right'].set_visible(False)
+        self.ax.spines['bottom'].set_visible(False)
+        self.ax.get_xaxis().set_visible(False)
+        self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}'))
+        self.ax.figure.subplots_adjust(left=0.1, bottom=0.1, right=1., top=1.)
+
     def plot_hole(self):
         """
         Plots the hole on the plan plot and section plot, and plots the vector magnetic field on the section plot.
@@ -434,7 +541,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
 
             # # Plot the center point to see if it's working properly
             # self.hole_line_center.setData([line_center_x], [line_center_y], pen=pg.mkPen(width=2, color=0.4))
-            # self.plan_view_plot.addItem(self.hole_line_center)
+            # self.plan_view.addItem(self.hole_line_center)
 
             # Calculate the end point coordinates of the section line
             dx = math.sin(math.radians(self.hole_az)) * (line_len / 2)
@@ -448,7 +555,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
                                              width=1,
                                              pen=pg.mkPen(color=0.5,
                                                           style=QtCore.Qt.DashLine))
-            self.plan_view_plot.addItem(self.section_extent_line)
+            self.plan_view.addItem(self.section_extent_line)
 
             return p1, p2
 
@@ -524,20 +631,32 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             :param ys: list: Y values to plot
             :return: None
             """
-            self.hole_trace_plot.setData(xs, ys, pen=pg.mkPen(width=2, color=0.5))
-            self.hole_collar_plot.setData([self.hole_easting], [self.hole_northing],
-                                          pen=pg.mkPen(width=3, color=0.5))
-            self.plan_view_plot.addItem(self.hole_trace_plot)
-            self.plan_view_plot.addItem(self.hole_collar_plot)
+            self.hole_trace.setData(xs, ys, pen=pg.mkPen(width=2, color=0.5))
+            self.hole_collar.setData([self.hole_easting], [self.hole_northing],
+                                     pen=pg.mkPen(width=3, color=0.5))
+            self.plan_view.addItem(self.hole_trace)
+            self.plan_view.addItem(self.hole_collar)
+
+        def shift_loop(dx, dy):
+            """
+            Moves the loop ROI so it is in the same position relative to the grid.
+            :param dx: Shift amount in x axis
+            :param dy: Shift amount in y axis
+            :return: None
+            """
+            self.loop_roi.blockSignals(True)
+            x, y = self.loop_roi.pos()
+            self.loop_roi.setPos(x + dx, y + dy)
+            self.loop_roi.blockSignals(False)
 
         # Shift the loop position relative to the hole position when the hole is moved
         if self.move_loop_cbox.isChecked():
             if int(self.hole_easting_edit.text()) != self.hole_easting:
                 shift_amt = int(self.hole_easting_edit.text()) - self.hole_easting
-                self.shift_loop(shift_amt, 0)
+                shift_loop(shift_amt, 0)
             if int(self.hole_northing_edit.text()) != self.hole_northing:
                 shift_amt = int(self.hole_northing_edit.text()) - self.hole_northing
-                self.shift_loop(0, shift_amt)
+                shift_loop(0, shift_amt)
 
         self.hole_easting = int(self.hole_easting_edit.text())
         self.hole_northing = int(self.hole_northing_edit.text())
@@ -546,8 +665,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.hole_dip = -int(self.hole_dip_edit.text())
         self.hole_length = int(self.hole_length_edit.text())
 
-        self.hole_trace_plot.clear()
-        self.hole_collar_plot.clear()
+        self.hole_trace.clear()
+        self.hole_collar.clear()
         self.ax.clear()
 
         xs, ys, zs = get_hole_projection()
@@ -564,100 +683,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
 
         self.section_canvas.draw()
 
-    def setup_plan_view(self):
-        """
-        Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
-        :return: None
-        """
-        yaxis = CustomAxis(orientation='left')
-        xaxis = CustomAxis(orientation='bottom')
-        self.plan_view_plot = self.plan_view_widget.addPlot(row=1, col=0, axisItems={'bottom': xaxis, 'left': yaxis})
-        self.plan_view_plot.showGrid(x=True, y=True, alpha=0.2)
-        # self.plan_view_vb.disableAutoRange('xy')
-        self.plan_view_plot.setAspectLocked()
-
-        # loop_roi is the loop.
-        self.loop_roi = LoopROI([self.hole_easting-250, self.hole_northing-250], [500, 500], scaleSnap=True, pen=pg.mkPen('m', width=1.5))
-        self.plan_view_plot.addItem(self.loop_roi)
-        self.loop_roi.setZValue(10)
-        self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
-        self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
-        self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
-        self.loop_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
-        self.loop_roi.sigRegionChangeFinished.connect(self.plan_region_changed)
-
-    def setup_section_view(self):
-        """
-        Initial set-up of the section plot. Sets the axes to have equal aspect ratios.
-        :return: None
-        """
-        self.ax.set_aspect('equal')
-        self.ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
-        self.ax.spines['top'].set_visible(False)
-        self.ax.spines['left'].set_visible(False)
-        self.ax.spines['right'].set_visible(False)
-        self.ax.spines['bottom'].set_visible(False)
-        self.ax.get_xaxis().set_visible(False)
-        self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}'))
-        self.ax.figure.subplots_adjust(left=0.1, bottom=0.1, right=1., top=1.)
-
-    def change_loop_width(self):
-        """
-        Signal slot: Change the loop ROI dimensions from user input
-        :return: None
-        """
-        height = self.loop_roi.size()[1]
-        width = self.loop_width_edit.text()
-        width = float(width)
-        print(f"Loop width changed to {width}")
-        self.loop_roi.setSize((width, height))
-
-    def change_loop_height(self):
-        """
-        Signal slot: Change the loop ROI dimensions from user input
-        :return: None
-        """
-        height = self.loop_height_edit.text()
-        width = self.loop_roi.size()[0]
-        height = float(height)
-        print(f"Loop height changed to {height}")
-        self.loop_roi.setSize((width, height))
-
-    def change_loop_angle(self):
-        """
-        Signal slot: Change the loop ROI angle from user input
-        :return: None
-        """
-        angle = self.loop_angle_edit.text()
-        angle = float(angle)
-        print(f"Loop angle changed to {angle}")
-        self.loop_roi.setAngle(angle)
-
-    def plan_region_changed(self):
-        """
-        Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
-        replots the section plot.
-        :return: None
-        """
-        self.loop_width_edit.blockSignals(True)
-        self.loop_height_edit.blockSignals(True)
-        self.loop_angle_edit.blockSignals(True)
-        x, y = self.loop_roi.pos()
-        w, h = self.loop_roi.size()
-        angle = self.loop_roi.angle()
-        self.loop_width_edit.setText(f"{w:.0f}")
-        self.loop_height_edit.setText(f"{h:.0f}")
-        self.loop_angle_edit.setText(f"{angle:.0f}")
-        self.loop_width_edit.blockSignals(False)
-        self.loop_height_edit.blockSignals(False)
-        self.loop_angle_edit.blockSignals(False)
-
-        self.plot_hole()
-
     def shift_loop(self, dx, dy):
         """
         Moves the loop ROI so it is in the same position relative to the hole.
@@ -668,7 +693,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.loop_roi.blockSignals(True)
         x, y = self.loop_roi.pos()
         self.loop_roi.setPos(x + dx, y + dy)
-        self.plan_view_plot.autoRange(items=[self.loop_roi])
+        self.plan_view.autoRange(items=[self.loop_roi])
         self.loop_roi.blockSignals(False)
 
     def get_loop_coords(self):
@@ -740,72 +765,71 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         hole['Easting'], hole['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
         return hole
 
-    # def view_map(self):
-    #     """
-    #     View the hole and loop in a Folium interactive map. A screen capture of the map can be saved with 'Ctrl+S'
-    #     or copied to the clipboard with 'Ctrl+C'
-    #     :return: None
-    #     """
-    #     loop_coords = self.get_loop_lonlat().drop('Elevation', axis=1).to_numpy()
-    #     if not loop_coords.any():
-    #         return
-    #
-    #     collar = self.get_collar_lonlat().to_numpy()
-    #     if not collar.any():
-    #         return
-    #
-    #     # Swap the lon and lat columns so it is now (lat, lon)
-    #     loop_coords[:, [0, 1]] = loop_coords[:, [1, 0]]
-    #     collar[:, [0, 1]] = collar[:, [1, 0]]
-    #
-    #     hole_name = 'Hole' if self.hole_name_edit.text() == '' else self.hole_name_edit.text()
-    #     loop_name = 'Loop' if self.loop_name_edit.text() == '' else self.loop_name_edit.text()
-    #
-    #     # tiles='Stamen Terrain', 'CartoDBPositronNoLabels'
-    #     m = folium.Map(location=collar,
-    #                    zoom_start=15,
-    #                    zoom_control=False,
-    #                    control_scale=True,
-    #                    tiles='OpenStreetMap',
-    #                    attr='testing attr'
-    #                    )
-    #
-    #     mini_map = MiniMap(toggle_display=True)
-    #
-    #     folium.raster_layers.TileLayer('OpenStreetMap').add_to(m)
-    #     folium.raster_layers.TileLayer('Stamen Toner').add_to(m)
-    #     folium.raster_layers.TileLayer('Stamen Terrain').add_to(m)
-    #     folium.raster_layers.TileLayer('Cartodb positron').add_to(m)
-    #
-    #     collar_group = FeatureGroup(name='Collar')
-    #     loop_group = FeatureGroup(name='Loop')
-    #     collar_group.add_to(m)
-    #     loop_group.add_to(m)
-    #     folium.LayerControl().add_to(m)
-    #
-    #     # Plot hole collar
-    #     folium.Marker(collar,
-    #                   popup=hole_name,
-    #                   tooltip=hole_name
-    #                   ).add_to(collar_group)
-    #
-    #     # Plot loop
-    #     folium.PolyLine(locations=loop_coords,
-    #                     popup=loop_name,
-    #                     tooltip=loop_name,
-    #                     line_opacity=0.5,
-    #                     color='magenta'
-    #                     ).add_to(loop_group)
-    #
-    #     # m.add_child(MeasureControl(toggle_display=True))
-    #     # m.add_child(mini_map)
-    #
-    #     # So the HTML can be opened in PyQt
-    #     data = io.BytesIO()
-    #     m.save(data, close_file=False)
-    #
-    #     self.win.setHtml(data.getvalue().decode())
-    #     self.win.show()
+    def view_map(self):
+        """
+        View the hole and loop in a Plotly mapbox interactive map. A screen capture of the map can be
+        saved with 'Ctrl+S' or copied to the clipboard with 'Ctrl+C'
+        """
+        global terrain_map
+        terrain_map = MapboxViewer()
+
+        loop_coords = self.get_loop_lonlat()
+        collar = self.get_collar_lonlat()
+
+        if loop_coords.empty and collar.empty:
+            logger.error(f"No GPS to plot.")
+            return
+
+        hole_name = 'Hole' if self.hole_name_edit.text() == '' else self.hole_name_edit.text()
+        loop_name = 'Loop' if self.loop_name_edit.text() == '' else self.loop_name_edit.text()
+
+        terrain_map.map_figure.add_trace(go.Scattermapbox(lon=collar.Easting,
+                                                          lat=collar.Northing,
+                                                          mode='markers',
+                                                          name=hole_name,
+                                                          text=hole_name
+                                                          ))
+
+        terrain_map.map_figure.add_trace(go.Scattermapbox(lon=loop_coords.Easting,
+                                                          lat=loop_coords.Northing,
+                                                          mode='lines+markers',
+                                                          name=loop_name,
+                                                          text=loop_coords.index
+                                                          ))
+
+        # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
+        token = open(".mapbox", 'r').read()
+        if not token:
+            logger.warning(f"No Mapbox token passed.")
+            map_style = "open-street-map"
+        else:
+            map_style = "outdoors"
+
+        # Format the figure margins and legend
+        terrain_map.map_figure.update_layout(
+            margin={"r": 0,
+                    "t": 0,
+                    "l": 0,
+                    "b": 0},
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01,
+                bordercolor="Black",
+                borderwidth=1
+            ),
+        )
+        # Add the map style and center/zoom the map
+        terrain_map.map_figure.update_layout(
+            mapbox={
+                'center': {'lon': loop_coords.Easting.mean(), 'lat': loop_coords.Northing.mean()},
+                'zoom': 13},
+            mapbox_style=map_style,
+            mapbox_accesstoken=token)
+
+        terrain_map.load_page()
+        terrain_map.show()
 
     def save_kmz(self):
         """
@@ -861,8 +885,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             except OSError:
                 logger.error(f'No application to open {kmz_save_dir}.')
                 pass
-        else:
-            self.status_bar.showMessage('Cancelled.', 2000)
 
     def save_gpx(self):
         """
@@ -961,7 +983,8 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.grid_lines_plot = pg.MultiPlotItem()
         self.grid_lines_plot.setZValue(1)
         self.init_plan_view()
-        self.plan_view_plot.autoRange()
+
+        self.plan_view.autoRange()
         self.plot_grid()
 
         # Validators
@@ -987,37 +1010,133 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.station_spacing_edit.setValidator(size_validator)
         self.line_spacing_edit.setValidator(size_validator)
 
-        # Signals
+        self.init_signals()
+        self.init_crs()
+
+    def init_signals(self):
+
+        def change_loop_width():
+            """
+            Signal slot: Change the loop ROI dimensions from user input
+            :return: None
+            """
+            height = self.loop_roi.size()[1]
+            width = self.loop_width_edit.text()
+            width = float(width)
+            logger.info(f"Loop width changed to {width}")
+            self.loop_roi.setSize((width, height))
+
+        def change_loop_height():
+            """
+            Signal slot: Change the loop ROI dimensions from user input
+            :return: None
+            """
+            height = self.loop_height_edit.text()
+            width = self.loop_roi.size()[0]
+            height = float(height)
+            logger.info(f"Loop height changed to {height}")
+            self.loop_roi.setSize((width, height))
+
+        def change_loop_angle():
+            """
+            Signal slot: Change the loop ROI angle from user input
+            :return: None
+            """
+            angle = self.loop_angle_edit.text()
+            angle = float(angle)
+            logger.info(f"Loop angle changed to {angle}")
+            self.loop_roi.setAngle(angle)
+
+        def change_grid_angle():
+            """
+            Signal slot: Change the grid ROI angle from user input. Converts from azimuth to angle
+            :return: None
+            """
+            az = int(self.grid_az_edit.text())
+            angle = 90 - az
+            logger.info(f"Grid angle changed to {az}")
+            self.grid_roi.setAngle(angle)
+
+        def change_grid_size():
+            """
+            Signal slot: Change the grid ROI dimensions from user input
+            :return: None
+            """
+            self.line_length = int(self.line_length_edit.text())
+            self.line_number = int(self.line_number_edit.text())
+            self.line_spacing = int(self.line_spacing_edit.text())
+            self.grid_roi.setSize((self.line_length, max((self.line_number - 1) * self.line_spacing, 10)))
+            logger.info(f"Grid size changed to {self.line_length} x {max((self.line_number - 1) * self.line_spacing, 10)}")
+
+        def change_grid_pos():
+            """
+            Change the position of the grid ROI based on the input from the grid easting and northing text edits.
+            :return: None
+            """
+
+            def get_corner(x, y):
+                """
+                Find the bottom-right corner given the center of the grid.
+                :param x: X coordinate of the center point
+                :param y: Y coordinate of the center point
+                :return: X, Y coordinate of the bottom-right corner.
+                """
+                a = 90 - self.grid_roi.angle()
+                w = max((self.line_number - 1) * self.line_spacing, 10)
+                h = self.line_length
+
+                hypo = math.sqrt(w ** 2 + h ** 2)
+                angle = math.degrees(math.atan(h / w)) + a
+                theta = math.radians(angle)
+                dx = (hypo / 2) * math.cos(theta)
+                dy = (hypo / 2) * math.sin(theta)
+                center = pg.ScatterPlotItem([x + dx], [y - dy], pen='y')
+                self.plan_view.addItem(center)
+                logger.info(f"Corner is at {x + dx}, {y - dy}")
+                return x + dx, y - dy
+
+            x, y = get_corner(int(self.grid_easting_edit.text()), int(self.grid_northing_edit.text()))
+            easting_shift = x - self.grid_easting
+            northing_shift = y - self.grid_northing
+            self.shift_loop(easting_shift, northing_shift)
+            self.grid_easting, self.grid_northing = x, y
+            self.grid_roi.setPos(x, y)
+
+            self.grid_east_center, self.grid_north_center = int(self.grid_easting_edit.text()), int(
+                self.grid_northing_edit.text())
+            logger.info(f"Grid position changed to {self.grid_east_center, self.grid_north_center}")
+
+            self.plot_grid()
+            self.plan_view.autoRange(items=[self.loop_roi, self.grid_roi])
+
         # Menu
         self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
         self.actionSave_as_KMZ.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
         self.actionSave_as_GPX.triggered.connect(self.save_gpx)
         self.actionSave_as_GPX.setIcon(QtGui.QIcon(os.path.join(icons_path, 'garmin_file.png')))
         # self.view_map_action.setDisabled(True)
-        # self.view_map_action.triggered.connect(self.view_map)
-        # self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
+        self.view_map_action.triggered.connect(self.view_map)
+        self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
         self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_loop_to_clipboard)
         self.actionCopy_Grid_to_Clipboard.triggered.connect(self.copy_grid_to_clipboard)
 
-        self.loop_height_edit.editingFinished.connect(self.change_loop_height)
-        self.loop_width_edit.editingFinished.connect(self.change_loop_width)
-        self.loop_angle_edit.editingFinished.connect(self.change_loop_angle)
-        self.grid_az_edit.editingFinished.connect(self.change_grid_angle)
+        self.loop_height_edit.editingFinished.connect(change_loop_height)
+        self.loop_width_edit.editingFinished.connect(change_loop_width)
+        self.loop_angle_edit.editingFinished.connect(change_loop_angle)
+        self.grid_az_edit.editingFinished.connect(change_grid_angle)
 
         self.grid_easting_edit.editingFinished.connect(self.plot_grid)
-        self.grid_easting_edit.editingFinished.connect(self.change_grid_pos)
+        self.grid_easting_edit.editingFinished.connect(change_grid_pos)
         self.grid_northing_edit.editingFinished.connect(self.plot_grid)
-        self.grid_northing_edit.editingFinished.connect(self.change_grid_pos)
+        self.grid_northing_edit.editingFinished.connect(change_grid_pos)
         self.grid_az_edit.editingFinished.connect(self.plot_grid)
         self.line_number_edit.editingFinished.connect(self.plot_grid)
-        self.line_number_edit.editingFinished.connect(self.change_grid_size)
+        self.line_number_edit.editingFinished.connect(change_grid_size)
         self.line_length_edit.editingFinished.connect(self.plot_grid)
-        self.line_length_edit.editingFinished.connect(self.change_grid_size)
+        self.line_length_edit.editingFinished.connect(change_grid_size)
         self.station_spacing_edit.editingFinished.connect(self.plot_grid)
         self.line_spacing_edit.editingFinished.connect(self.plot_grid)
-        self.line_spacing_edit.editingFinished.connect(self.change_grid_size)
-
-        self.init_crs()
+        self.line_spacing_edit.editingFinished.connect(change_grid_size)
 
     def init_crs(self):
         """
@@ -1156,13 +1275,34 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         """
 
         def set_loop():
+
+            def loop_moved():
+                """
+                Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
+                replots the section plot.
+                :return: None
+                """
+                self.loop_width_edit.blockSignals(True)
+                self.loop_height_edit.blockSignals(True)
+                self.loop_angle_edit.blockSignals(True)
+                x, y = self.loop_roi.pos()
+                w, h = self.loop_roi.size()
+                angle = self.loop_roi.angle()
+                self.loop_width_edit.setText(f"{w:.0f}")
+                self.loop_height_edit.setText(f"{h:.0f}")
+                self.loop_angle_edit.setText(f"{angle:.0f}")
+                self.loop_width_edit.blockSignals(False)
+                self.loop_height_edit.blockSignals(False)
+                self.loop_angle_edit.blockSignals(False)
+                self.plot_grid()
+
             # Create the loop ROI
             center_x, center_y = self.get_grid_center(self.grid_easting, self.grid_northing)
             self.loop_roi = LoopROI([center_x - (self.loop_width / 2),
                                      center_y - (self.loop_height / 2)],
                                     [self.loop_width, self.loop_height], scaleSnap=True,
                                     pen=pg.mkPen('m', width=1.5))
-            self.plan_view_plot.addItem(self.loop_roi)
+            self.plan_view.addItem(self.loop_roi)
             self.loop_roi.setZValue(0)
             self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
             self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
@@ -1172,24 +1312,52 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
             self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
             self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
             self.loop_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
-            self.loop_roi.sigRegionChangeFinished.connect(self.loop_moved)
+            self.loop_roi.sigRegionChangeFinished.connect(loop_moved)
 
         def set_grid():
+
+            def grid_moved():
+                """
+                Signal slot: Update the grid easting and northing text based on the new position of the grid when the ROI
+                is moved.
+                :return: None
+                """
+                self.grid_easting_edit.blockSignals(True)
+                self.grid_northing_edit.blockSignals(True)
+
+                x, y = self.grid_roi.pos()
+                self.grid_easting, self.grid_northing = x, y
+                self.grid_east_center, self.grid_north_center = self.get_grid_center(x, y)
+                self.grid_easting_edit.setText(f"{self.grid_east_center:.0f}")
+                self.grid_northing_edit.setText(f"{self.grid_north_center:.0f}")
+
+                self.grid_easting_edit.blockSignals(False)
+                self.grid_northing_edit.blockSignals(False)
+                self.plot_grid()
+
             # Create the grid
             self.grid_roi = LoopROI([self.grid_easting, self.grid_northing],
                                     [self.line_length, (self.line_number - 1) * self.line_spacing], scaleSnap=True,
                                     pen=pg.mkPen(None, width=1.5))
             self.grid_roi.setAngle(90)
-            self.plan_view_plot.addItem(self.grid_roi)
+            self.plan_view.addItem(self.grid_roi)
             self.grid_roi.sigRegionChangeStarted.connect(lambda: self.grid_roi.setPen('b'))
             self.grid_roi.sigRegionChangeFinished.connect(lambda: self.grid_roi.setPen(None))
-            self.grid_roi.sigRegionChangeFinished.connect(self.grid_moved)
+            self.grid_roi.sigRegionChangeFinished.connect(grid_moved)
 
         yaxis = CustomAxis(orientation='left')
         xaxis = CustomAxis(orientation='bottom')
-        self.plan_view_plot.setAxisItems({'bottom': xaxis, 'left': yaxis})
-        self.plan_view_plot.showGrid(x=True, y=True, alpha=0.2)
-        self.plan_view_plot.setAspectLocked()
+        self.plan_view.setAxisItems({'bottom': xaxis, 'left': yaxis})
+        self.plan_view.showGrid(x=True, y=True, alpha=0.2)
+        self.plan_view.setAspectLocked()
+        self.plan_view.hideButtons()
+        self.plan_view.getAxis('right').setWidth(15)
+        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+        self.plan_view.showLabel('right', show=False)
+        self.plan_view.showLabel('top', show=False)
         set_grid()
         set_loop()
 
@@ -1229,9 +1397,9 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
             return x - dx, y + dy
 
         def clear_plots():
-            for item in reversed(self.plan_view_plot.items()):
+            for item in reversed(self.plan_view.items()):
                 if not isinstance(item, LoopROI):
-                    self.plan_view_plot.removeItem(item)
+                    self.plan_view.removeItem(item)
 
         clear_plots()
 
@@ -1283,7 +1451,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
                                        rotateAxis=(0, 1),
                                        anchor=text_anchor)
             station_text.setPos(x_start, y_start)
-            self.plan_view_plot.addItem(station_text)
+            self.plan_view.addItem(station_text)
 
             # Add station labels
             for j, station in enumerate(range(int(self.line_length / self.station_spacing) + 1)):
@@ -1299,156 +1467,13 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
             stations_plot = pg.ScatterPlotItem(station_xs, station_ys, pen='b', brush='w')
             stations_plot.setZValue(2)
 
-            self.plan_view_plot.addItem(line_plot)
-            self.plan_view_plot.addItem(stations_plot)
+            self.plan_view.addItem(line_plot)
+            self.plan_view.addItem(stations_plot)
 
         # Plot a symbol at the center of the grid
         grid_center = pg.ScatterPlotItem([center_x],[center_y], pen='b', symbol='+')
         grid_center.setZValue(1)
-        self.plan_view_plot.addItem(grid_center)
-
-    def change_loop_width(self):
-        """
-        Signal slot: Change the loop ROI dimensions from user input
-        :return: None
-        """
-        height = self.loop_roi.size()[1]
-        width = self.loop_width_edit.text()
-        width = float(width)
-        print(f"Loop width changed to {width}")
-        self.loop_roi.setSize((width, height))
-
-    def change_loop_height(self):
-        """
-        Signal slot: Change the loop ROI dimensions from user input
-        :return: None
-        """
-        height = self.loop_height_edit.text()
-        width = self.loop_roi.size()[0]
-        height = float(height)
-        print(f"Loop height changed to {height}")
-        self.loop_roi.setSize((width, height))
-
-    def change_loop_angle(self):
-        """
-        Signal slot: Change the loop ROI angle from user input
-        :return: None
-        """
-        angle = self.loop_angle_edit.text()
-        angle = float(angle)
-        print(f"Loop angle changed to {angle}")
-        self.loop_roi.setAngle(angle)
-
-    def change_grid_angle(self):
-        """
-        Signal slot: Change the grid ROI angle from user input. Converts from azimuth to angle
-        :return: None
-        """
-        az = int(self.grid_az_edit.text())
-        angle = 90 - az
-        print(f"Grid angle changed to {az}")
-        self.grid_roi.setAngle(angle)
-
-    def change_grid_size(self):
-        """
-        Signal slot: Change the grid ROI dimensions from user input
-        :return: None
-        """
-        self.line_length = int(self.line_length_edit.text())
-        self.line_number = int(self.line_number_edit.text())
-        self.line_spacing = int(self.line_spacing_edit.text())
-        self.grid_roi.setSize((self.line_length, max((self.line_number - 1) * self.line_spacing, 10)))
-        print(f"Grid size changed to {self.line_length} x {max((self.line_number - 1) * self.line_spacing, 10)}")
-
-    def change_grid_pos(self):
-        """
-        Change the position of the grid ROI based on the input from the grid easting and northing text edits.
-        :return: None
-        """
-        def get_corner(x, y):
-            """
-            Find the bottom-right corner given the center of the grid.
-            :param x: X coordinate of the center point
-            :param y: Y coordinate of the center point
-            :return: X, Y coordinate of the bottom-right corner.
-            """
-            a = 90 - self.grid_roi.angle()
-            w = max((self.line_number - 1) * self.line_spacing, 10)
-            h = self.line_length
-
-            hypo = math.sqrt(w ** 2 + h ** 2)
-            angle = math.degrees(math.atan(h / w)) + a
-            theta = math.radians(angle)
-            dx = (hypo / 2) * math.cos(theta)
-            dy = (hypo / 2) * math.sin(theta)
-            center = pg.ScatterPlotItem([x + dx], [y - dy], pen='y')
-            self.plan_view_plot.addItem(center)
-            print(f"Corner is at {x + dx}, {y - dy}")
-            return x + dx, y - dy
-
-        x, y = get_corner(int(self.grid_easting_edit.text()), int(self.grid_northing_edit.text()))
-        easting_shift = x - self.grid_easting
-        northing_shift = y - self.grid_northing
-        self.shift_loop(easting_shift, northing_shift)
-        self.grid_easting, self.grid_northing = x, y
-        self.grid_roi.setPos(x, y)
-
-        self.grid_east_center, self.grid_north_center = int(self.grid_easting_edit.text()), int(self.grid_northing_edit.text())
-        print(f"Grid position changed to {self.grid_east_center, self.grid_north_center}")
-
-        self.plot_grid()
-        self.plan_view_plot.autoRange(items=[self.loop_roi, self.grid_roi])
-
-    def grid_moved(self):
-        """
-        Signal slot: Update the grid easting and northing text based on the new position of the grid when the ROI
-        is moved.
-        :return: None
-        """
-        self.grid_easting_edit.blockSignals(True)
-        self.grid_northing_edit.blockSignals(True)
-
-        x, y = self.grid_roi.pos()
-        self.grid_easting, self.grid_northing = x, y
-        self.grid_east_center, self.grid_north_center = self.get_grid_center(x, y)
-        self.grid_easting_edit.setText(f"{self.grid_east_center:.0f}")
-        self.grid_northing_edit.setText(f"{self.grid_north_center:.0f}")
-
-        self.grid_easting_edit.blockSignals(False)
-        self.grid_northing_edit.blockSignals(False)
-        self.plot_grid()
-
-    def loop_moved(self):
-        """
-        Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
-        replots the section plot.
-        :return: None
-        """
-        self.loop_width_edit.blockSignals(True)
-        self.loop_height_edit.blockSignals(True)
-        self.loop_angle_edit.blockSignals(True)
-        x, y = self.loop_roi.pos()
-        w, h = self.loop_roi.size()
-        angle = self.loop_roi.angle()
-        self.loop_width_edit.setText(f"{w:.0f}")
-        self.loop_height_edit.setText(f"{h:.0f}")
-        self.loop_angle_edit.setText(f"{angle:.0f}")
-        self.loop_width_edit.blockSignals(False)
-        self.loop_height_edit.blockSignals(False)
-        self.loop_angle_edit.blockSignals(False)
-        self.plot_grid()
-
-    def shift_loop(self, dx, dy):
-        """
-        Moves the loop ROI so it is in the same position relative to the grid.
-        :param dx: Shift amount in x axis
-        :param dy: Shift amount in y axis
-        :return: None
-        """
-        self.loop_roi.blockSignals(True)
-        x, y = self.loop_roi.pos()
-        self.loop_roi.setPos(x + dx, y + dy)
-        self.loop_roi.blockSignals(False)
+        self.plan_view.addItem(grid_center)
 
     def grid_to_df(self):
         """
@@ -1574,87 +1599,76 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
 
         return loop
 
-    # def view_map(self):
-    #     """
-    #     View the hole and loop in a Folium interactive map. A screen capture of the map can be saved with 'Ctrl+S'
-    #     or copied to the clipboard with 'Ctrl+C'
-    #     :return: None
-    #     """
-    #     loop_coords = self.get_loop_lonlat()
-    #
-    #     # Get the center of the loop to be used as the location of the folium map
-    #     center = loop_coords['Northing'].sum() / loop_coords.shape[0], \
-    #              loop_coords['Easting'].sum() / loop_coords.shape[0]
-    #
-    #     loop_coords = loop_coords.to_numpy()
-    #     # Swap the lon and lat columns so it is now (lat, lon)
-    #     loop_coords[:, [0, 1]] = loop_coords[:, [1, 0]]
-    #
-    #     grid_name = 'Grid' if self.grid_name_edit.text() == '' else self.grid_name_edit.text()
-    #     loop_name = 'Loop' if self.loop_name_edit.text() == '' else self.loop_name_edit.text()
-    #
-    #     # tiles='Stamen Terrain', 'CartoDBPositronNoLabels'
-    #     m = folium.Map(location=center,
-    #                    zoom_start=15,
-    #                    zoom_control=False,
-    #                    control_scale=True,
-    #                    tiles='OpenStreetMap',
-    #                    attr='testing attr'
-    #                    )
-    #
-    #     mini_map = MiniMap(toggle_display=True)
-    #
-    #     folium.raster_layers.TileLayer('OpenStreetMap').add_to(m)
-    #     folium.raster_layers.TileLayer('Stamen Toner').add_to(m)
-    #     folium.raster_layers.TileLayer('Stamen Terrain').add_to(m)
-    #     folium.raster_layers.TileLayer('Cartodb positron').add_to(m)
-    #
-    #     station_group = FeatureGroup(name='Stations')
-    #     line_group = FeatureGroup(name='Lines')
-    #     loop_group = FeatureGroup(name='Loop')
-    #     station_group.add_to(m)
-    #     line_group.add_to(m)
-    #     loop_group.add_to(m)
-    #
-    #     folium.LayerControl().add_to(m)
-    #
-    #     # Plot loop
-    #     folium.PolyLine(locations=loop_coords,
-    #                     popup=loop_name,
-    #                     tooltip=loop_name,
-    #                     line_opacity=0.5,
-    #                     color='magenta'
-    #                     ).add_to(loop_group)
-    #
-    #     # Plot the line
-    #     def grid_line_to_folium(group):
-    #         folium.PolyLine(locations=group.loc[:, ['Northing', 'Easting']].to_numpy(),
-    #                         popup=group.Line_name.unique()[0],
-    #                         tooltip=group.Line_name.unique()[0],
-    #                         line_opacity=0.5
-    #                         ).add_to(line_group)
-    #
-    #     # Plot the station markers
-    #     def grid_station_to_folium(row):
-    #         folium.Marker([row.Northing, row.Easting],
-    #                       popup=row.Station,
-    #                       tooltip=row.Station,
-    #                       size=10
-    #                       ).add_to(station_group)
-    #
-    #     grid = self.get_grid_lonlat()
-    #     grid.groupby('Line_name').apply(grid_line_to_folium)
-    #     grid.apply(grid_station_to_folium, axis=1)
-    #
-    #     # m.add_child(MeasureControl(toggle_display=True))
-    #     # m.add_child(mini_map)
-    #
-    #     # So the HTML can be opened in PyQt
-    #     data = io.BytesIO()
-    #     m.save(data, close_file=False)
-    #
-    #     self.win.setHtml(data.getvalue().decode())
-    #     self.win.show()
+    def view_map(self):
+        """
+        View the hole and loop in a Plotly mapbox interactive map. A screen capture of the map can be
+        saved with 'Ctrl+S' or copied to the clipboard with 'Ctrl+C'
+        """
+
+        def plot_line(line):
+            line_name = line.Line_name.unique()[0].strip()
+            terrain_map.map_figure.add_trace(go.Scattermapbox(lon=line.Easting,
+                                                              lat=line.Northing,
+                                                              mode='lines+markers',
+                                                              name=line_name,
+                                                              text=line.Station
+                                                              ))
+
+        global terrain_map
+        terrain_map = MapboxViewer()
+
+        loop_coords = self.get_loop_lonlat()
+        grid = self.get_grid_lonlat()
+
+        if loop_coords.empty and grid.empty:
+            logger.error(f"No GPS to plot.")
+            return
+
+        loop_name = 'Loop' if self.loop_name_edit.text() == '' else self.loop_name_edit.text()
+
+        # Plot the lines
+        grid.groupby('Line_name').apply(plot_line)
+        # Plot the loop
+        terrain_map.map_figure.add_trace(go.Scattermapbox(lon=loop_coords.Easting,
+                                                          lat=loop_coords.Northing,
+                                                          mode='lines+markers',
+                                                          name=loop_name,
+                                                          text=loop_coords.index
+                                                          ))
+
+        # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
+        token = open(".mapbox", 'r').read()
+        if not token:
+            logger.warning(f"No Mapbox token passed.")
+            map_style = "open-street-map"
+        else:
+            map_style = "outdoors"
+
+        # Format the figure margins and legend
+        terrain_map.map_figure.update_layout(
+            margin={"r": 0,
+                    "t": 0,
+                    "l": 0,
+                    "b": 0},
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01,
+                bordercolor="Black",
+                borderwidth=1
+            ),
+        )
+        # Add the map style and center/zoom the map
+        terrain_map.map_figure.update_layout(
+            mapbox={
+                'center': {'lon': loop_coords.Easting.mean(), 'lat': loop_coords.Northing.mean()},
+                'zoom': 13},
+            mapbox_style=map_style,
+            mapbox_accesstoken=token)
+
+        terrain_map.load_page()
+        terrain_map.show()
 
     def save_kmz(self):
         """
@@ -1724,14 +1738,13 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         if save_dir:
             kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
             kml.savekmz(kmz_save_dir, format=False)
+            self.status_bar.showMessage('Save complete.', 1000)
             try:
                 logger.info(f"Saving {Path(save_dir).name}.")
                 os.startfile(save_dir)
             except OSError:
                 logger.error(f'No application to open {save_dir}.')
                 pass
-        else:
-            self.status_bar.showMessage('Cancelled.', 2000)
 
     def save_gpx(self):
         """
@@ -1789,15 +1802,13 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         if save_path:
             with open(save_path, 'w') as f:
                 f.write(gpx.to_xml())
-            self.status_bar.showMessage('Save complete.', 2000)
+            self.status_bar.showMessage('Save complete.', 1000)
             try:
                 logger.info(f"Saving {Path(save_path).name}.")
                 os.startfile(save_path)
             except OSError:
                 logger.error(f'No application to open {save_path}.')
                 pass
-        else:
-            self.status_bar.showMessage('Cancelled.', 2000)
 
     def copy_grid_to_clipboard(self):
         """
@@ -1816,7 +1827,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         cb = QtGui.QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
         cb.setText(result, mode=cb.Clipboard)
-        self.status_bar.showMessage(f"Grid coordinates copied to clipboard", 2000)
+        self.status_bar.showMessage('Grid coordinates copied to clipboard', 1000)
 
 
 class LoopROI(pg.ROI):
@@ -1875,15 +1886,15 @@ class CustomAxis(pg.AxisItem):
 
 def main():
     app = QApplication(sys.argv)
-    # planner = LoopPlanner()
-    planner = GridPlanner()
+    planner = LoopPlanner()
+    # planner = GridPlanner()
 
     # planner.gps_system_cbox.setCurrentIndex(2)
     # planner.gps_datum_cbox.setCurrentIndex(1)
     # planner.gps_zone_cbox.setCurrentIndex(16)
     planner.show()
     # planner.hole_az_edit.setText('174')
-    # planner.view_map()
+    planner.view_map()
     # planner.save_gpx()
 
     app.exec_()
