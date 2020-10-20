@@ -32,9 +32,10 @@ from src.damp.db_plot import DBPlotter
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.gps.gpx_creator import GPXCreator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
-from src.pem.pem_plotter import PEMPrinter, CustomProgressBar
+from src.pem.pem_plotter import PEMPrinter
+from src.qt_py.custom_qt_widgets import CustomProgressBar
 from src.qt_py.derotator import Derotator
-from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer
+from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TerrainMapViewer
 from src.qt_py.name_editor import BatchNameEditor
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
@@ -154,6 +155,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.loop_planner = LoopPlanner(parent=self)
         self.unpacker = Unpacker(parent=self)
         self.gpx_creator = GPXCreator(parent=self)
+        self.terrain_map_viewer = TerrainMapViewer(parent=self)
         self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_map = ContourMapViewer(parent=self)
@@ -292,6 +294,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # self.actionPlan_Map.setStatusTip("Plot all PEM files on an interactive plan map")
         # self.actionPlan_Map.setToolTip("Plot all PEM files on an interactive plan map")
         # self.actionPlan_Map.setIcon(QIcon(os.path.join(icons_path, 'folium.png')))
+
+        self.actionTerrain_Map.triggered.connect(self.open_terrain_map)
 
         self.actionGoogle_Earth.triggered.connect(lambda: self.save_as_kmz(save=False))
 
@@ -815,6 +819,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if crs:
                 for pem_file in self.pem_files:
                     pem_file.crs = crs
+                    pem_file.loop.crs = crs
+                    if pem_file.is_borehole():
+                        pem_file.collar.crs = crs
+                    else:
+                        pem_file.line.crs = crs
 
         # Add the GPS system and datum drop box options
         gps_systems = ['', 'Lat/Lon', 'UTM']
@@ -1560,7 +1569,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         Open files through the file dialog
         """
-        files = self.dialog.getOpenFileNames(self, 'Open PEM Files', filter='PEM files (*.pem);;')[0]
+        files = self.dialog.getOpenFileNames(self, 'Open PEM Files', filter='PEM files (*.pem)')[0]
         if files:
             self.open_pem_files(files)
 
@@ -1779,6 +1788,20 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         ri_importer.open_pem_files(self.pem_files)
         ri_importer.acceptImportSignal.connect(open_ri_files)
         ri_importer.show()
+
+    def open_terrain_map(self):
+        """
+        Open the MapboxViewer if there's any GPS in any of the opened PEM files.
+        """
+        if not self.pem_files:
+            logger.warning(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+
+        elif not any([f.has_any_gps() for f in self.pem_files]):
+            logger.warning(f"No GPS found in any file.")
+            self.message.information(self, 'Error', 'No file has any GPS to plot.')
+        else:
+            self.terrain_map_viewer.open(self.pem_files)
 
     def open_3d_map(self):
         """

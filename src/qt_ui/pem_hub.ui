@@ -1415,6 +1415,7 @@ Warnings</string>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <addaction name="actionTerrain_Map"/>
     <addaction name="actionGoogle_Earth"/>
     <addaction name="action3D_Map"/>
     <addaction name="actionContour_Map"/>
@@ -1948,6 +1949,15 @@ Warnings</string>
    </property>
    <property name="toolTip">
     <string>View the program logs</string>
+   </property>
+  </action>
+  <action name="actionTerrain_Map">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/folium.png</normaloff>icons/folium.png</iconset>
+   </property>
+   <property name="text">
+    <string>Terrain Map</string>
    </property>
   </action>
  </widget>

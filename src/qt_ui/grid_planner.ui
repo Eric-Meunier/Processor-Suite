@@ -569,7 +569,7 @@ of Lines</string>
      </widget>
     </item>
     <item>
-     <widget class="GraphicsLayoutWidget" name="plan_view_widget">
+     <widget class="PlotWidget" name="plan_view_plot">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
         <horstretch>1</horstretch>
@@ -649,7 +649,7 @@ of Lines</string>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>GraphicsLayoutWidget</class>
+   <class>PlotWidget</class>
    <extends>QGraphicsView</extends>
    <header>pyqtgraph</header>
   </customwidget>
@@ -667,7 +667,7 @@ of Lines</string>
   <tabstop>line_spacing_edit</tabstop>
   <tabstop>station_spacing_edit</tabstop>
   <tabstop>grid_name_edit</tabstop>
-  <tabstop>plan_view_widget</tabstop>
+  <tabstop>plan_view_plot</tabstop>
  </tabstops>
  <resources/>
  <connections/>

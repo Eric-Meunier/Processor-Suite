@@ -203,8 +203,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         """
         file = self.dialog.getOpenFileNames(self, 'Open File',
                                             filter='CSV files (*.csv);;'
-                                                   'Excel files (*.xlsx);;'
-                                                   'All files(*.*)')[0]
+                                                   'Excel files (*.xlsx)')[0]
         if file:
             self.open(file)
         else:

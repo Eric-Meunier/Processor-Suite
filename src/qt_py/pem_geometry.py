@@ -165,8 +165,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                              filter='DAD files (*.dad);; '
                                                     'CSV files (*.csv);; '
                                                     'SEG files (*.seg);; '
-                                                    'TXT files (*.txt);; '
-                                                    'All files(*.*)')
+                                                    'TXT files (*.txt)')
         if files[0] != '':
             for file in files[0]:
                 if file.lower().endswith('dad') or file.lower().endswith('csv'):

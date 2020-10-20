@@ -11,13 +11,19 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 import simplekml
-from PyQt5 import QtGui, QtCore, uic, QtWebEngineWidgets
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox)
+import plotly
+import plotly.graph_objects as go
+
+from PyQt5 import QtGui, QtCore, uic
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QHBoxLayout,
+                             QAction)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
 
+from src.qt_py.map_widgets import MapboxViewer
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 
 logger = logging.getLogger(__name__)
@@ -56,7 +62,6 @@ class SurveyPlanner(QMainWindow):
         self.setGeometry(200, 200, 1400, 700)
         self.dialog = QFileDialog()
         self.message = QMessageBox()
-        self.win = FoliumWindow()
 
         self.save_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
         self.copy_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+C"), self)
@@ -68,9 +73,8 @@ class SurveyPlanner(QMainWindow):
         self.epsg_label = QLabel()
         self.epsg_label.setIndent(5)
 
-        # # Format the borders of the items in the status bar
-        # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
-        # self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
+        # Map viewer
+        self.map_viewer = MapboxViewer(parent=self)
 
     def get_epsg(self):
         """
@@ -146,11 +150,12 @@ class SurveyPlanner(QMainWindow):
         self.status_bar.showMessage(f"Loop corner coordinates copied to clipboard", 2000)
 
     def save_img(self):
-        save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
-        if save_file:
-            self.grab().save(save_file)
-        else:
-            pass
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
+                                                           'map.png',
+                                                           'PNG file (*.PNG)'
+                                                           )
+        if save_name:
+            self.grab().save(save_name)
 
     def copy_img(self):
         QApplication.clipboard().setPixmap(self.grab())
@@ -846,7 +851,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         collar = folder.newpoint(name=hole_name, coords=collar.to_numpy())
         collar.style = collar_style
 
-        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', None, 'KMZ Files (*.KMZ);; All files(*.*)')[0]
+        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', hole_name, 'KMZ Files (*.KMZ)')[0]
         if save_dir:
             kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
             kml.savekmz(kmz_save_dir, format=False)
@@ -904,7 +909,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         gpx.waypoints.append(waypoint)
 
         # Save the file
-        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', None, 'GPX Files (*.GPX);; All files(*.*)')[0]
+        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', hole_name, 'GPX Files (*.GPX)')[0]
         if save_path:
             with open(save_path, 'w') as f:
                 f.write(gpx.to_xml())
@@ -933,8 +938,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.setGeometry(200, 200, 1100, 700)
 
-        self.plan_view_plot = None
-
         self.loop_height = int(self.loop_height_edit.text())
         self.loop_width = int(self.loop_width_edit.text())
         self.loop_angle = int(self.loop_angle_edit.text())
@@ -957,11 +960,9 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         # Plots
         self.grid_lines_plot = pg.MultiPlotItem()
         self.grid_lines_plot.setZValue(1)
-
-        self.setup_plan_view()
-
-        self.plot_grid()
+        self.init_plan_view()
         self.plan_view_plot.autoRange()
+        self.plot_grid()
 
         # Validators
         int_validator = QtGui.QIntValidator()
@@ -992,7 +993,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.actionSave_as_KMZ.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
         self.actionSave_as_GPX.triggered.connect(self.save_gpx)
         self.actionSave_as_GPX.setIcon(QtGui.QIcon(os.path.join(icons_path, 'garmin_file.png')))
-        self.view_map_action.setDisabled(True)
+        # self.view_map_action.setDisabled(True)
         # self.view_map_action.triggered.connect(self.view_map)
         # self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
         self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_loop_to_clipboard)
@@ -1148,6 +1149,50 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.gps_zone_cbox.setCurrentIndex(17)
         set_epsg_label()
 
+    def init_plan_view(self):
+        """
+        Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
+        :return: None
+        """
+
+        def set_loop():
+            # Create the loop ROI
+            center_x, center_y = self.get_grid_center(self.grid_easting, self.grid_northing)
+            self.loop_roi = LoopROI([center_x - (self.loop_width / 2),
+                                     center_y - (self.loop_height / 2)],
+                                    [self.loop_width, self.loop_height], scaleSnap=True,
+                                    pen=pg.mkPen('m', width=1.5))
+            self.plan_view_plot.addItem(self.loop_roi)
+            self.loop_roi.setZValue(0)
+            self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
+            self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
+            self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
+            self.loop_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
+            self.loop_roi.sigRegionChangeFinished.connect(self.loop_moved)
+
+        def set_grid():
+            # Create the grid
+            self.grid_roi = LoopROI([self.grid_easting, self.grid_northing],
+                                    [self.line_length, (self.line_number - 1) * self.line_spacing], scaleSnap=True,
+                                    pen=pg.mkPen(None, width=1.5))
+            self.grid_roi.setAngle(90)
+            self.plan_view_plot.addItem(self.grid_roi)
+            self.grid_roi.sigRegionChangeStarted.connect(lambda: self.grid_roi.setPen('b'))
+            self.grid_roi.sigRegionChangeFinished.connect(lambda: self.grid_roi.setPen(None))
+            self.grid_roi.sigRegionChangeFinished.connect(self.grid_moved)
+
+        yaxis = CustomAxis(orientation='left')
+        xaxis = CustomAxis(orientation='bottom')
+        self.plan_view_plot.setAxisItems({'bottom': xaxis, 'left': yaxis})
+        self.plan_view_plot.showGrid(x=True, y=True, alpha=0.2)
+        self.plan_view_plot.setAspectLocked()
+        set_grid()
+        set_loop()
+
     def plot_grid(self):
         """
         Plots the stations and lines on the plan map.
@@ -1184,7 +1229,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
             return x - dx, y + dy
 
         def clear_plots():
-            for item in reversed(self.plan_view_plot.items):
+            for item in reversed(self.plan_view_plot.items()):
                 if not isinstance(item, LoopROI):
                     self.plan_view_plot.removeItem(item)
 
@@ -1261,50 +1306,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         grid_center = pg.ScatterPlotItem([center_x],[center_y], pen='b', symbol='+')
         grid_center.setZValue(1)
         self.plan_view_plot.addItem(grid_center)
-
-    def setup_plan_view(self):
-        """
-        Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
-        :return: None
-        """
-
-        def set_loop():
-            # Create the loop ROI
-            center_x, center_y = self.get_grid_center(self.grid_easting, self.grid_northing)
-            self.loop_roi = LoopROI([center_x - (self.loop_width / 2),
-                                     center_y - (self.loop_height / 2)],
-                                    [self.loop_width, self.loop_height], scaleSnap=True,
-                                    pen=pg.mkPen('m', width=1.5))
-            self.plan_view_plot.addItem(self.loop_roi)
-            self.loop_roi.setZValue(0)
-            self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
-            self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
-            self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
-            self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
-            self.loop_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
-            self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
-            self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
-            self.loop_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
-            self.loop_roi.sigRegionChangeFinished.connect(self.loop_moved)
-
-        def set_grid():
-            # Create the grid
-            self.grid_roi = LoopROI([self.grid_easting, self.grid_northing],
-                                    [self.line_length, (self.line_number - 1) * self.line_spacing], scaleSnap=True,
-                                    pen=pg.mkPen(None, width=1.5))
-            self.grid_roi.setAngle(90)
-            self.plan_view_plot.addItem(self.grid_roi)
-            self.grid_roi.sigRegionChangeStarted.connect(lambda: self.grid_roi.setPen('b'))
-            self.grid_roi.sigRegionChangeFinished.connect(lambda: self.grid_roi.setPen(None))
-            self.grid_roi.sigRegionChangeFinished.connect(self.grid_moved)
-
-        yaxis = CustomAxis(orientation='left')
-        xaxis = CustomAxis(orientation='bottom')
-        self.plan_view_plot = self.plan_view_widget.addPlot(row=1, col=0, axisItems={'bottom': xaxis, 'left': yaxis})
-        self.plan_view_plot.showGrid(x=True, y=True, alpha=0.2)
-        self.plan_view_plot.setAspectLocked()
-        set_grid()
-        set_loop()
 
     def change_loop_width(self):
         """
@@ -1719,7 +1720,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         grid = self.get_grid_lonlat()
         grid.groupby('Line_name').apply(grid_to_kmz)
 
-        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', '', 'KMZ Files (*.KMZ);; All files(*.*)')[0]
+        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', grid_name, 'KMZ Files (*.KMZ)')[0]
         if save_dir:
             kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
             kml.savekmz(kmz_save_dir, format=False)
@@ -1784,7 +1785,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         grid = self.get_grid_lonlat()
         grid.apply(grid_to_gpx, axis=1)
 
-        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', '', 'GPX Files (*.GPX);; All files(*.*)')[0]
+        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', grid_name, 'GPX Files (*.GPX)')[0]
         if save_path:
             with open(save_path, 'w') as f:
                 f.write(gpx.to_xml())
@@ -1816,39 +1817,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         cb.clear(mode=cb.Clipboard)
         cb.setText(result, mode=cb.Clipboard)
         self.status_bar.showMessage(f"Grid coordinates copied to clipboard", 2000)
-
-
-class FoliumWindow(QtWebEngineWidgets.QWebEngineView):
-
-    def __init__(self):
-        super().__init__()
-
-        self.setWindowTitle('Map')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
-        self.resize(800, 600)
-
-        self.save_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
-        self.copy_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+C"), self)
-        self.save_shortcut.activated.connect(self.save_img)
-        self.copy_shortcut.activated.connect(self.copy_img)
-
-    def save_img(self):
-        save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
-
-        if save_file:
-            size = self.contentsRect()
-            img = QtGui.QPixmap(size.width(), size.height())
-            self.render(img)
-            img.save(save_file)
-        else:
-            pass
-
-    def copy_img(self):
-        size = self.contentsRect()
-        img = QtGui.QPixmap(size.width(), size.height())
-        self.render(img)
-        img.copy(size)
-        QApplication.clipboard().setPixmap(img)
 
 
 class LoopROI(pg.ROI):
@@ -1922,16 +1890,6 @@ def main():
 
 
 if __name__ == '__main__':
-
-    def handle_exception(exc_type, exc_value, exc_traceback):
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
-
-        logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-
-    sys.excepthook = handle_exception
-
     main()
 
 

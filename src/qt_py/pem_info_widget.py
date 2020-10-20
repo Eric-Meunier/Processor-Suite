@@ -750,7 +750,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if type in ['station', 'loop', 'collar']:
             selected_path = self.dialog.getSaveFileName(self, 'Save File',
                                                         directory=default_path,
-                                                        filter='Text files (*.txt);; CSV files (*.csv);; All files(*.*)')
+                                                        filter='Text file (*.txt);; CSV file (*.csv);;')
             if selected_path[0]:
                 if selected_path[0].endswith('txt'):
                     gps_str = gps.to_string()

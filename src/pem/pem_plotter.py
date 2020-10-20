@@ -38,6 +38,7 @@ from shapely.geometry import Point
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.pem.pem_file import PEMParser, StationConverter
 from src.qt_py.ri_importer import RIFile
+from src.qt_py.custom_qt_widgets import CustomProgressBar
 
 logger = logging.getLogger(__name__)
 
@@ -3768,29 +3769,6 @@ class PEMPrinter:
         self.portrait_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True)
         ax5 = ax4.twiny()
         ax5.get_shared_x_axes().join(ax4, ax5)
-
-
-class CustomProgressBar(QProgressBar):
-
-    def __init__(self):
-        super().__init__()
-        # self.setFixedHeight(40)
-        # self.setFixedWidth(120)
-
-        COMPLETED_STYLE = """
-        QProgressBar {
-            border: 2px solid grey;
-            border-radius: 5px;
-            text-align: center;
-        }
-
-        QProgressBar::chunk {
-            background-color: #88B0EB;
-            width: 20px;
-        }
-        """
-        # '#37DA7E' for green
-        self.setStyleSheet(COMPLETED_STYLE)
 
 
 if __name__ == '__main__':

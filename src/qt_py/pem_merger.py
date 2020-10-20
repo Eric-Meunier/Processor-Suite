@@ -642,7 +642,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         default = self.pf1.filepath.parent.joinpath(f"{self.pf1.filepath.stem} & {self.pf2.filepath.stem}")
         save_file = QFileDialog.getSaveFileName(self, 'Save Image',
                                                 str(default),
-                                                'PNG Files (*.PNG);; All files(*.*)')[0]
+                                                'PNG Files (*.PNG)')[0]
         if save_file:
             self.grab().save(save_file)
 

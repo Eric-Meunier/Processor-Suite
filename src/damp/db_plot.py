@@ -166,7 +166,7 @@ class DBPlotter(QMainWindow):
                 if file.lower().endswith('log') or file.lower().endswith('txt') or file.lower().endswith('rtf'):
                     self.open(file)
                 else:
-                    nt(f"Invalid file type")
+                    logger.error(f"{file} is an invalid file type.")
         else:
             pass
 
@@ -345,7 +345,7 @@ class DBPlotter(QMainWindow):
 
         save_path = QFileDialog().getSaveFileName(self, 'Save File Name',
                                                   str(self.default_path.with_suffix('.png')),
-                                                  'PNG Files (*.PNG);; All files(*.*)')[0]
+                                                  'PNG Files (*.PNG)')[0]
 
         if save_path:
             self.grab().save(save_path)
