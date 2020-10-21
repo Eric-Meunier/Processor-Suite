@@ -1405,7 +1405,6 @@ Warnings</string>
     </property>
     <addaction name="actionSave_as_KMZ"/>
     <addaction name="actionExport_All_GPS"/>
-    <addaction name="separator"/>
     <addaction name="actionConvert_GPS"/>
    </widget>
    <widget class="QMenu" name="menuMap">
@@ -1415,10 +1414,13 @@ Warnings</string>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <addaction name="actionPlan_Map_2"/>
     <addaction name="actionTerrain_Map"/>
-    <addaction name="actionGoogle_Earth"/>
-    <addaction name="action3D_Map"/>
     <addaction name="actionContour_Map"/>
+    <addaction name="separator"/>
+    <addaction name="action3D_Map"/>
+    <addaction name="separator"/>
+    <addaction name="actionGoogle_Earth"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1680,7 +1682,7 @@ Warnings</string>
     <string>Plot all PEM files in a 3D map</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+M</string>
+    <string>Ctrl+Shift+M</string>
    </property>
   </action>
   <action name="actionContour_Map">
@@ -1957,7 +1959,25 @@ Warnings</string>
      <normaloff>icons/folium.png</normaloff>icons/folium.png</iconset>
    </property>
    <property name="text">
-    <string>Terrain Map</string>
+    <string>Tile Map</string>
+   </property>
+   <property name="toolTip">
+    <string>Interactive map with real-world basemaps</string>
+   </property>
+  </action>
+  <action name="actionPlan_Map_2">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/gps_viewer.png</normaloff>icons/gps_viewer.png</iconset>
+   </property>
+   <property name="text">
+    <string>Quick Map</string>
+   </property>
+   <property name="toolTip">
+    <string>Simple plan map</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
    </property>
   </action>
  </widget>

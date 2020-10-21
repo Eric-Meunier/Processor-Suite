@@ -93,4 +93,6 @@ class PEMGetter:
                     # pem_files.append((pem_file, None))  # Empty second item for ri_files
                     add_pem(filepath)
 
+        pem_list = '\n'.join([str(f.filepath) for f in pem_files])
+        logger.info(f"Collected PEM files: {pem_list}")
         return pem_files

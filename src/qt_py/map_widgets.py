@@ -9,11 +9,11 @@ import numpy as np
 import plotly
 import plotly.graph_objects as go
 import pyqtgraph as pg
-from PyQt5 import (QtGui, uic)
+from PyQt5 import (QtGui, QtCore, uic)
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWidgets import (QErrorMessage, QApplication, QWidget, QFileDialog, QMessageBox, QGridLayout,
-                             QAction, QMainWindow, QHBoxLayout)
+                             QAction, QMainWindow, QHBoxLayout, QShortcut)
 from mayavi import mlab
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
@@ -30,19 +30,16 @@ if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
     section3DCreatorFile = 'qt_ui\\3D_section.ui'
     contourMapCreatorFile = 'qt_ui\\contour_map.ui'
-    gpsViewerUiFile = 'qt_ui\\gps_viewer.ui'
     icons_path = 'qt_ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     section3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_section.ui')
     contourMapCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\contour_map.ui')
-    gpsViewerUiFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\gps_viewer.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 # Load Qt ui file into a class
 Ui_Section3DWidget, _ = uic.loadUiType(section3DCreatorFile)
 Ui_ContourMapCreatorFile, _ = uic.loadUiType(contourMapCreatorFile)
-Ui_GPSViewer, _ = uic.loadUiType(gpsViewerUiFile)
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -882,16 +879,26 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                 os.startfile(path)
 
 
-class GPSViewer(QMainWindow, Ui_GPSViewer):
+class GPSViewer(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
-        self.setupUi(self)
 
+        # Format the window
         self.setWindowTitle(f"GPS Viewer")
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'gps_viewer.png')))
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+
+        layout = QHBoxLayout()
+        self.plan_view = pg.PlotWidget()
+        self.setCentralWidget(self.plan_view)
+        self.setLayout(layout)
+        self.layout().setContentsMargins(0, 0, 0, 0)
 
         self.parent = parent
         self.pem_files = None
+        self.status_bar = self.statusBar()
+        self.status_bar.hide()
 
         self.loops = []
         self.lines = []
@@ -899,86 +906,259 @@ class GPSViewer(QMainWindow, Ui_GPSViewer):
         self.traces = []
 
         # Format the plots
-        self.plan_view.setTitle('Plan View')
         self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
                                      'bottom': NonScientific(orientation='bottom')})
-        # self.section_view.setTitle('Elevation View')
 
         self.plan_view.setAspectLocked()
-        # self.section_view.setAspectLocked()
-
+        self.plan_view.setMenuEnabled(False)
+        self.plan_view.showGrid(x=True, y=True, alpha=0.1)
         self.plan_view.hideButtons()  # Hide the little 'A' button at the bottom left
-        # self.section_view.hideButtons()  # Hide the little 'A' button at the bottom left
 
         self.plan_view.getAxis('left').setLabel('Northing', units='m')
         self.plan_view.getAxis('bottom').setLabel('Easting', units='m')
 
         self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
         self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        # self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        # self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
         self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
         self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-        # self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-        # self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
 
-        self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.plan_view.getAxis('right').setWidth(10)  # Move the right edge of the plot away from the window edge
         self.plan_view.showAxis('right', show=True)  # Show the axis edge line
         self.plan_view.showAxis('top', show=True)  # Show the axis edge line
         self.plan_view.showLabel('right', show=False)
         self.plan_view.showLabel('top', show=False)
 
+        # Actions
+        self.save_img_action = QShortcut("Ctrl+S", self)
+        self.save_img_action.activated.connect(self.save_img)
+        self.copy_image_action = QShortcut("Ctrl+C", self)
+        self.copy_image_action.activated.connect(self.copy_img)
+        self.auto_range_action = QShortcut(" ", self)
+        self.auto_range_action.activated.connect(lambda: self.plan_view.autoRange())
+
+    def save_img(self):
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'gps.png', 'PNG file (*.PNG)')
+        if save_name:
+            self.grab().save(save_name)
+
+    def copy_img(self):
+        QApplication.clipboard().setPixmap(self.grab())
+        self.status_bar.show()
+        self.status_bar.showMessage('Image copied to clipboard.', 1000)
+        QTimer.singleShot(1000, lambda: self.status_bar.hide())
+
     def open(self, pem_files):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
-        for pem_file in pem_files:
-            self.plot_pem(pem_file)
+        assert pem_files, f"No PEM files to plot."
+
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+
+        with pg.ProgressDialog("Plotting PEM files", 0, len(pem_files)) as dlg:
+            dlg.setWindowTitle("Plotting PEM files")
+            dlg.setBar(bar)
+
+            for pem_file in pem_files:
+                if dlg.wasCanceled():
+                    break
+
+                dlg.setLabelText(f"Plotting {pem_file.filepath.name}")
+                logger.info(f"Plotting {pem_file.filepath.name}")
+
+                self.plot_pem(pem_file)
+
+                dlg += 1
 
     def plot_pem(self, pem_file):
 
         def plot_loop():
-            if pem_file.has_loop_gps():
-                loop = pem_file.get_loop(sorted=False, closed=True)
-                loop_str = loop.to_string()
 
-                if loop_str not in self.loops:
-                    self.loops.append(loop_str)
+            def add_loop_annotation(row):
+                """Add the loop number annotation"""
+                text_item = pg.TextItem(str(row.name), color=loop_color, border=None, fill=None, anchor=(0.5, 0.5))
+                self.plan_view.addItem(text_item, ignoreBounds=True)
+                text_item.setPos(row.Easting, row.Northing)
+                text_item.setParentItem(loop_item)
+                # text_item.setFont(QtGui.QFont("Helvetica", 8, QtGui.QFont.Normal))
+                text_item.setZValue(0)
 
-                    # Plot the loop line
-                    loop_item = pg.PlotDataItem(clickable=True, pen=pg.mkPen(line_color), name=pem_file.loop_name)
-                    loop_item.setData(loop.Easting, loop.Northing)
-                    # loop_item.sigPointsClicked.connect(self.point_clicked)
+            loop = pem_file.get_loop(sorted=False, closed=True).dropna()
+            if loop.empty:
+                logger.warning(f"No loop GPS in {pem_file.filepath.name}.")
+                return
+            loop_str = loop.to_string()
 
-                    self.plan_view.addItem(loop_item)
+            if not loop.empty and loop_str not in self.loops:
+                self.loops.append(loop_str)
+
+                # Plot the loop line
+                loop_item = pg.PlotDataItem(clickable=True,
+                                            name=pem_file.loop_name,
+                                            pen=pg.mkPen(loop_color, width=1.)
+                                            )
+                loop_item.setZValue(-1)
+                loop_item.setData(loop.Easting, loop.Northing)
+
+                self.plan_view.addItem(loop_item)
+
+                # Plot the annotations
+                loop.apply(add_loop_annotation, axis=1)
+
+                # Plot the loop name annotation
+                center = pem_file.loop.get_center()
+                text_item = pg.TextItem(str(pem_file.loop_name),
+                                        color=loop_color,
+                                        anchor=(0.5, 0.5),
+                                        )
+                self.plan_view.addItem(text_item, ignoreBounds=True)
+                text_item.setPos(center[0], center[1])
+                text_item.setParentItem(loop_item)
+                text_item.setFont(QtGui.QFont("Helvetica", 8, QtGui.QFont.Normal))
+                text_item.setZValue(0)
 
         def plot_line():
-            if pem_file.has_station_gps():
-                line = pem_file.get_line()
-                line_str = line.to_string()
 
-                if line_str not in self.lines:
-                    self.lines.append(line_str)
+            # Removed, creates too much lag
+            def add_station_annotation(row):
+                """Add the station name annotation"""
+                text_item = pg.TextItem(str(row.Station),
+                                        color=line_color,
+                                        anchor=(0, 0.5),
+                                        rotateAxis=(row.Easting, row.Northing),
+                                        # angle=90
+                )
+                self.plan_view.addItem(text_item, ignoreBounds=True)
+                text_item.setPos(row.Easting, row.Northing)
+                text_item.setParentItem(line_item)
+                # text_item.setFont(QtGui.QFont("Helvetica", 8, QtGui.QFont.Normal))
+                text_item.setZValue(2)
 
-                    line_item = pg.PlotDataItem(clickable=True, pen=pg.mkPen(line_color), name=pem_file.line_name)
-                    line_item.setData(line.Easting, line.Northing)
-                    # loop_item.sigPointsClicked.connect(self.point_clicked)
+            line = pem_file.get_line().dropna()
+            if line.empty:
+                logger.warning(f"No line GPS in {pem_file.filepath.name}.")
+                return
 
-                    self.plan_view.addItem(line_item)
+            line_str = line.to_string()
 
-        def plot_collar():
-            pass
+            if not line.empty and line_str not in self.lines:
+                self.lines.append(line_str)
 
-        def plot_trace():
-            pass
+                line_item = pg.PlotDataItem(clickable=True,
+                                            name=pem_file.line_name,
+                                            symbol='o',
+                                            symbolSize=5,
+                                            symbolPen=pg.mkPen(line_color, width=1.),
+                                            symbolBrush=pg.mkBrush('w'),
+                                            pen=pg.mkPen(line_color, width=1.)
+                                            )
+                line_item.setData(line.Easting, line.Northing)
+                line_item.setZValue(1)
 
-        line_color = (28, 28, 27)
-        elevation_color = (206, 74, 126)
+                self.plan_view.addItem(line_item)
+
+                # # Add the station annotations
+                # line.apply(add_station_annotation, axis=1)
+
+                # Add the line name annotation
+                text_item = pg.TextItem(str(pem_file.line_name),
+                                        color=line_color,
+                                        anchor=(1, 0.5),
+                                        )
+                self.plan_view.addItem(text_item, ignoreBounds=True)
+                text_item.setPos(line.iloc[line.Station.argmin()].Easting,
+                                 line.iloc[line.Station.argmin()].Northing)
+                text_item.setParentItem(line_item)
+                text_item.setFont(QtGui.QFont("Helvetica", 8, QtGui.QFont.Normal))
+                text_item.setZValue(2)
+
+        def plot_hole():
+
+            collar = pem_file.get_collar().dropna()
+            if collar.empty:
+                logger.warning(f"No collar GPS in {pem_file.filepath.name}.")
+                return
+
+            geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
+            proj = geometry.get_projection(latlon=False)
+            if proj.empty:
+                logger.warning(f"No hole segments in {pem_file.filepath.name}.")
+                return
+
+            # Annotation anchor for hole name and depth. Use the azimuth near the collar for the collar name, and the
+            # azimuth at the end of the hole for the depth.
+            name_az = pem_file.segments.df.iloc[0].Azimuth if not pem_file.segments.df.empty else 180
+            name_anchor = (0.5, 1) if 90 < name_az < 270 else (0.5, 0)
+            depth_az = pem_file.segments.df.iloc[-1].Azimuth if not pem_file.segments.df.empty else 180
+            depth_anchor = (0.5, 0) if 90 < depth_az < 270 else (0.5, 1)
+
+            if collar.to_string() not in self.collars:
+                self.collars.append(collar.to_string())
+
+                collar_item = pg.PlotDataItem(clickable=True,
+                                              name=pem_file.line_name,
+                                              symbol='o',
+                                              symbolSize=10,
+                                              symbolPen=pg.mkPen(hole_color, width=1.),
+                                              symbolBrush=pg.mkBrush('w'),
+                                              pen=pg.mkPen(hole_color, width=1.5)
+                                              )
+                collar_item.setZValue(2)
+                # Don't plot the collar here
+                collar_item.setData(collar.Easting, collar.Northing)
+                self.plan_view.addItem(collar_item)
+
+                # Add the hole name annotation
+                text_item = pg.TextItem(f"{pem_file.line_name}",
+                                        color=hole_color,
+                                        anchor=name_anchor,
+                                        # anchor=anchor,
+                                        )
+                self.plan_view.addItem(text_item, ignoreBounds=True)
+                text_item.setPos(collar.iloc[0].Easting,
+                                 collar.iloc[0].Northing)
+                text_item.setParentItem(collar_item)
+                text_item.setFont(QtGui.QFont("Helvetica", 8, QtGui.QFont.Normal))
+                text_item.setZValue(2)
+
+            if proj.to_string() not in self.traces:
+                self.traces.append(proj.to_string())
+
+                trace_item = pg.PlotDataItem(clickable=True,
+                                             name=pem_file.line_name,
+                                             symbol='o',
+                                             symbolSize=2.5,
+                                             symbolPen=pg.mkPen(hole_color, width=1.),
+                                             symbolBrush=pg.mkBrush(hole_color),
+                                             pen=pg.mkPen(hole_color, width=1.1)
+                                             )
+
+                trace_item.setData(proj.Easting, proj.Northing)
+                trace_item.setZValue(1)
+                self.plan_view.addItem(trace_item)
+
+                # Add the depth annotation
+                # Add the line name annotation
+                text_item = pg.TextItem(f"{proj.iloc[-1].Relative_depth:g} m",
+                                        color=hole_color,
+                                        anchor=depth_anchor,
+                                        # angle=angle
+                                        )
+                self.plan_view.addItem(text_item, ignoreBounds=True)
+                text_item.setPos(proj.iloc[-1].Easting,
+                                 proj.iloc[-1].Northing)
+                text_item.setParentItem(trace_item)
+                text_item.setFont(QtGui.QFont("Helvetica", 8, QtGui.QFont.Normal))
+                text_item.setZValue(2)
+
+        line_color = '#2DA8D8FF'
+        loop_color = '#2A2B2DFF'
+        hole_color = '#D9514EFF'
 
         plot_loop()
         if pem_file.is_borehole():
-            plot_collar()
-            plot_trace()
+            plot_hole()
         else:
             plot_line()
 
@@ -1173,10 +1353,12 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     getter = PEMGetter()
-    files = getter.get_pems(client='Kazzinc', number=5)
+    # files = getter.get_pems(client='Kazzinc', number=5)
     # files = getter.get_pems(client='Iscaycruz', subfolder='Sante Est')
+    files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
-    m = TerrainMapViewer()
+    # m = TerrainMapViewer()
+    m = GPSViewer()
     # m = Map3DViewer()
     m.open(files)
     m.show()
