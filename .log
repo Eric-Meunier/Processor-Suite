@@ -1,0 +1,66 @@
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (project_dir_changed:1977):
+ New project directory: C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2013):
+ Include files: ['']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2015):
+ Include files: ['DTL', 'exp', 'Correct']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2019):
+ Include folders: ['GPS']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2021):
+ Exclude folders: ['']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2048):
+ Include extensions: ['']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2050):
+ Exclude extensions: ['']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2117):
+ Include files: ['']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2119):
+ Include files: ['']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2123):
+ Include folders: ['']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2125):
+ Exclude folders: ['']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2152):
+ Include extensions: ['']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2154):
+ Exclude extensions: ['']
+>>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2169):
+ Filtered pems: C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.PEM
+C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.PEM
+C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 950_16.PEM
+C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\_03_pp.PEM
+C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\[Backup]\line 650_14[-A].PEM
+C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\[Backup]\line 650_14[-S].PEM
+C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.dmp2
+C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.dmp2
+C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 950_16.dmp2
+C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\_14_pp.dmp2
+C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\_16_pp.dmp2
+>>10/21/2020 05:31:37 PM [INFO] pem_file.py (parse:1807):
+ Parsing line 850_16.PEM
+>>10/21/2020 05:31:37 PM [INFO] pem_file.py (get_crs:383):
+ line 850_16.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/21/2020 05:31:37 PM [INFO] pem_file.py (get_crs:383):
+ line 850_16.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/21/2020 05:31:37 PM [INFO] pem_hub.py (get_crs:2944):
+ Project CRS: WGS 84 / UTM zone 16N
+>>10/21/2020 05:31:37 PM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding line 850_16.PEM to the table.
+>>10/21/2020 05:31:37 PM [INFO] pem_file.py (parse:1807):
+ Parsing line 950_16.PEM
+>>10/21/2020 05:31:38 PM [INFO] pem_file.py (get_crs:383):
+ line 950_16.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/21/2020 05:31:38 PM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding line 950_16.PEM to the table.
+>>10/21/2020 05:31:39 PM [INFO] pem_file.py (parse:1807):
+ Parsing line 650_14.PEM
+>>10/21/2020 05:31:39 PM [INFO] pem_file.py (get_crs:383):
+ line 650_14.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/21/2020 05:31:39 PM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding line 650_14.PEM to the table.
+>>10/21/2020 05:31:41 PM [INFO] pem_file.py (get_crs:383):
+ line 650_14.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/21/2020 05:31:41 PM [INFO] pem_file.py (get_crs:383):
+ line 850_16.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/21/2020 05:31:41 PM [INFO] pem_file.py (get_crs:383):
+ line 950_16.PEM CRS is WGS 84 / UTM zone 16N.

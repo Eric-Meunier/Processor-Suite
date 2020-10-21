@@ -1414,8 +1414,8 @@ Warnings</string>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
-    <addaction name="actionPlan_Map_2"/>
-    <addaction name="actionTerrain_Map"/>
+    <addaction name="actionQuick_Map"/>
+    <addaction name="actionTile_Map"/>
     <addaction name="actionContour_Map"/>
     <addaction name="separator"/>
     <addaction name="action3D_Map"/>
@@ -1953,7 +1953,7 @@ Warnings</string>
     <string>View the program logs</string>
    </property>
   </action>
-  <action name="actionTerrain_Map">
+  <action name="actionTile_Map">
    <property name="icon">
     <iconset>
      <normaloff>icons/folium.png</normaloff>icons/folium.png</iconset>
@@ -1965,7 +1965,7 @@ Warnings</string>
     <string>Interactive map with real-world basemaps</string>
    </property>
   </action>
-  <action name="actionPlan_Map_2">
+  <action name="actionQuick_Map">
    <property name="icon">
     <iconset>
      <normaloff>icons/gps_viewer.png</normaloff>icons/gps_viewer.png</iconset>

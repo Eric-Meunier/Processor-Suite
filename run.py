@@ -18,7 +18,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     global error_box
     error_box = QErrorMessage()
     error_box.setWindowTitle('Error')
-    error_box.showMessage(open('logs.log').read())
+    error_box.showMessage(open('.log').read())
     # sys.exit(1)
 
 

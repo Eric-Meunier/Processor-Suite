@@ -35,7 +35,7 @@ from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py.custom_qt_widgets import CustomProgressBar
 from src.qt_py.derotator import Derotator
-from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TerrainMapViewer
+from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
 from src.qt_py.name_editor import BatchNameEditor
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
@@ -48,7 +48,7 @@ from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.11.0a'
+__version__ = '0.11.0b'
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -117,7 +117,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.pem_editor_widgets = []
         self.tab_num = 1
         self.allow_signals = True
-        self.total_opened = 0
+        # self.total_opened = 0
 
         self.converter = StationConverter()
         self.dialog = QFileDialog()
@@ -155,8 +155,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.loop_planner = LoopPlanner(parent=self)
         self.unpacker = Unpacker(parent=self)
         self.gpx_creator = GPXCreator(parent=self)
-        self.terrain_map_viewer = TerrainMapViewer(parent=self)
-        self.map_viewer_3d = Map3DViewer(parent=self)
+        # self.terrain_map_viewer = TerrainMapViewer(parent=self)
+        # self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_map = ContourMapViewer(parent=self)
         self.gps_conversion_widget = GPSConversionWidget(parent=self)
@@ -283,25 +283,19 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionReverseY_Component.triggered.connect(lambda: self.reverse_component_data(comp='Y'))
         self.actionReverseZ_Component.triggered.connect(lambda: self.reverse_component_data(comp='Z'))
 
-        # GPS menu
-        self.actionSave_as_KMZ.triggered.connect(lambda: self.save_as_kmz(save=True))
+        # Map menu
+        self.actionQuick_Map.triggered.connect(self.open_quick_map)
+        self.actionTile_Map.triggered.connect(self.open_tile_map)
+        self.actionContour_Map.triggered.connect(lambda: self.contour_map.open(self.pem_files))
+        self.action3D_Map.triggered.connect(self.open_3d_map)
+        self.actionGoogle_Earth.triggered.connect(lambda: self.save_as_kmz(save=False))
 
+        # GPS menu
         self.actionExport_All_GPS.triggered.connect(self.export_all_gps)
 
         self.actionConvert_GPS.triggered.connect(self.open_gps_conversion)
 
-        # Map menu
-        # self.actionPlan_Map.setStatusTip("Plot all PEM files on an interactive plan map")
-        # self.actionPlan_Map.setToolTip("Plot all PEM files on an interactive plan map")
-        # self.actionPlan_Map.setIcon(QIcon(os.path.join(icons_path, 'folium.png')))
-
-        self.actionTerrain_Map.triggered.connect(self.open_terrain_map)
-
-        self.actionGoogle_Earth.triggered.connect(lambda: self.save_as_kmz(save=False))
-
-        self.action3D_Map.triggered.connect(self.open_3d_map)
-
-        self.actionContour_Map.triggered.connect(lambda: self.contour_map.open(self.pem_files))
+        self.actionSave_as_KMZ.triggered.connect(lambda: self.save_as_kmz(save=True))
 
         # Tools menu
         self.actionLoop_Planner.triggered.connect(lambda: self.loop_planner.show())
@@ -549,7 +543,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         def open_project_dir():
             """
-            Open the project directory folder when the button in the status bar is clicked.
+            Move the directory tree when a path is entered in the status bar LineEdit widget.
             """
             path = Path(self.project_dir_edit.text())
             if path.exists():
@@ -577,12 +571,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             """
             Signal slot, open the selected PEM files in to the PEM list
             """
-            selected_rows = [self.pem_list.row(i) for i in self.pem_list.selectedItems()]
-            pem_filepaths = [str(self.available_pems[j]) for j in selected_rows if
-                             str(self.available_pems[j]).lower().endswith('pem')]
-            dmp_filepaths = [str(self.available_pems[j]) for j in selected_rows if
-                             str(self.available_pems[j]).lower().endswith('dmp') or
-                             str(self.available_pems[j]).lower().endswith('dmp2')]
+            selected_files = [Path(self.project_dir, i.text()) for i in self.pem_list.selectedItems()]
+
+            pem_filepaths = [j for j in selected_files if j.suffix.lower() == '.pem']
+            dmp_filepaths = [k for k in selected_files if k.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']]
+
             self.open_dmp_files(dmp_filepaths)
             self.open_pem_files(pem_filepaths)
 
@@ -590,9 +583,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             """
             Signal slot, open the selected GPS files in to the GPS list
             """
-            selected_rows = [self.gps_list.row(i) for i in self.gps_list.selectedItems()]
-            filepaths = [str(self.available_gps[j]) for j in selected_rows]
-            self.open_gps_files(filepaths)
+            selected_files = [Path(self.project_dir, i.text()) for i in self.gps_list.selectedItems()]
+            self.open_gps_files(selected_files)
 
         def remove_pem_list_files():
             """
@@ -631,7 +623,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 if file.is_borehole() and file.has_xy():
                     rotated = f"De-rotated: {file.is_rotated()}"
-                    selection_info.extend(rotated)
+                    selection_info.extend([rotated])
 
                 info_str = ' | '.join(selection_info)
             else:
@@ -653,7 +645,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Widgets
         self.pem_list_filter.accept_sig.connect(self.fill_pem_list)
         self.gps_list_filter.accept_sig.connect(self.fill_gps_list)
-        self.unpacker.open_dmp_sig.connect(self.move_dir_tree_to)
+        # self.unpacker.open_dmp_sig.connect(self.move_dir_tree_to)
         self.calender.clicked.connect(set_date)
 
         # Buttons
@@ -1261,7 +1253,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if not isinstance(dmp_files, list):
             dmp_files = [dmp_files]
 
-        parser = DMPParser()
+        dmp_files = [Path(f) for f in dmp_files]
+
+        dmp_parser = DMPParser()
         pem_files = []
         bar = CustomProgressBar()
         bar.setMaximum(len(dmp_files))
@@ -1273,16 +1267,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             for file in dmp_files:
                 if dlg.wasCanceled():
                     break
-
                 dlg.setLabelText(f"Converting {Path(file).name}")
+
+                if not file.exists():
+                    self.message.critical(self, "Error", f"{file.name} does not exist.")
+                    continue
+
                 try:
-                    if file.lower().endswith('dmp'):
-                        pem_file = parser.parse_dmp(file)
-                    else:
-                        pem_file = parser.parse_dmp2(file)
+                    pem_file = dmp_parser.parse(file)
                 except Exception as e:
                     logger.critical(f"{e}")
-                    # self.error.setWindowTitle('Error converting DMP file')
                     self.error.showMessage(f"Error converting DMP file: {str(e)}")
                     dlg += 1
                     continue
@@ -1479,8 +1473,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     if not self.pem_files:
                         share_header(pem_file)
                         # self.piw_frame.show()
-                    if self.total_opened == 0:
-                        self.move_dir_tree_to(pem_file.filepath.parent)
+                    # if self.total_opened == 0:
+                    #     self.move_dir_tree_to(pem_file.filepath.parent)
 
                     # Fill CRS from the file if project CRS currently empty
                     if self.gps_system_cbox.currentText() == '':
@@ -1496,7 +1490,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     count += 1
                     # Progress the progress bar
                     dlg += 1
-                    self.total_opened += 1
+                    # self.total_opened += 1
 
         self.allow_signals = True
         self.table.setUpdatesEnabled(True)
@@ -1789,10 +1783,32 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         ri_importer.acceptImportSignal.connect(open_ri_files)
         ri_importer.show()
 
-    def open_terrain_map(self):
+    def open_quick_map(self, selected=False):
+        """
+        Open the GPSViewer if there's any GPS in any of the opened PEM files.
+        """
+        global quick_map
+        quick_map = GPSViewer(parent=self)
+
+        pem_files, rows = self.get_pem_files(selected=selected)
+
+        if not pem_files:
+            logger.warning(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+
+        elif not any([f.has_any_gps() for f in pem_files]):
+            logger.warning(f"No GPS found in any file.")
+            self.message.information(self, 'Error', 'No file has any GPS to plot.')
+        else:
+            quick_map.open(pem_files)
+
+    def open_tile_map(self):
         """
         Open the MapboxViewer if there's any GPS in any of the opened PEM files.
         """
+        global tile_map
+        tile_map = TileMapViewer(parent=self)
+
         if not self.pem_files:
             logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
@@ -1801,12 +1817,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             logger.warning(f"No GPS found in any file.")
             self.message.information(self, 'Error', 'No file has any GPS to plot.')
         else:
-            self.terrain_map_viewer.open(self.pem_files)
+            tile_map.open(self.pem_files)
 
     def open_3d_map(self):
         """
         Open the Map3DViewer if there's any GPS in any of the opened PEM files.
         """
+        global map_3d
+        map_3d = Map3DViewer(parent=self)
+
         if not self.pem_files:
             logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
@@ -1816,7 +1835,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.message.information(self, 'Error', 'No file has any GPS to plot.')
 
         else:
-            self.map_viewer_3d.open(self.pem_files)
+            map_3d.open(self.pem_files)
 
     def open_gps_conversion(self):
         """
@@ -2146,6 +2165,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     [re.sub(r'[\*\.]', '', f.lower()) != p.suffix.lower()[1:] for f in exclude_exts if f]
                 )]
 
+            pem_str = '\n'.join([str(f) for f in filtered_pems])
+            logger.info(f"Filtered pems: {pem_str}")
             return filtered_pems
 
         if not self.project_dir:
@@ -4321,8 +4342,8 @@ def main():
     # ff = PathFilter()
     # ff.show()
 
-    pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.PEM')]
-    # pem_files = pg.get_pems(client='PEM Rotation', random=True, number=3)
+    # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.PEM')]
+    # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
@@ -4330,7 +4351,17 @@ def main():
     # pem_files = pg.get_pems(random=True, number=1)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
+
+    # mw.project_dir_edit.setText(r'C:\_Data\2020\Juno\Borehole')
+    # mw.move_dir_tree_to(r'C:\_Data\2020\Juno\Borehole')
+    # mw.pem_list_filter.exclude_files_edit.setText('XYT.pem, xyg.pem')
+    #
+    # mw.pem_list_filter.include_folders_edit.setText('final')
+    #
+    # mw.pem_list_filter.exclude_folders_edit.setText('backup')
+    # mw.pem_list_filter.accept_sig.emit()
+
     mw.show()
 
     app.exec_()

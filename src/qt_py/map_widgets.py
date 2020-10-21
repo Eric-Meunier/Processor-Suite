@@ -19,6 +19,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
 
+from src.logger import Log
 from src.qt_py.custom_qt_widgets import CustomProgressBar
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import ContourMap
@@ -259,7 +260,7 @@ class MapboxViewer(QMainWindow):
         self.lons = []  # List of all coordinates for the purpose of centering the map
         self.lats = []  # List of all coordinates for the purpose of centering the map
 
-        self.setWindowTitle("Terrain Map")
+        self.setWindowTitle("Tile Map")
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
         self.status_bar = self.statusBar()
         # self.resize(1000, 800)
@@ -321,7 +322,7 @@ class MapboxViewer(QMainWindow):
         QTimer.singleShot(1000, lambda: self.status_bar.hide())
 
 
-class TerrainMapViewer(MapboxViewer):
+class TileMapViewer(MapboxViewer):
 
     def __init__(self, parent=None):
         super().__init__()
@@ -352,9 +353,13 @@ class TerrainMapViewer(MapboxViewer):
 
     def plot_pems(self):
 
-        def plot_loop(pem_file):
-            loop = pem_file.loop.to_latlon().get_loop(closed=True)
-            if not loop.empty and loop.to_string() not in self.loops:
+        def plot_loop():
+            loop = pem_file.loop.to_latlon().get_loop(closed=True).dropna().copy()
+            if loop.empty:
+                logger.warning(f"No loop GPS in {pem_file.filepath.name}")
+                return
+
+            if loop.to_string() not in self.loops:
                 self.loops.append(loop.to_string())
 
                 self.lons.extend(loop.Easting.values)
@@ -363,15 +368,18 @@ class TerrainMapViewer(MapboxViewer):
                 # Plot the loop in the figure
                 self.map_figure.add_trace(go.Scattermapbox(lon=loop.Easting,
                                                            lat=loop.Northing,
-                                                           legendgroup='loop',
+                                                           legendgroup=pem_file.loop_name,
                                                            mode='lines',
                                                            name=f"Loop {pem_file.loop_name}",
                                                            text=loop.index))
 
-        def plot_line(pem_file):
-            line = pem_file.line.to_latlon().get_line()
+        def plot_line():
+            line = pem_file.line.to_latlon().get_line().dropna().copy()
+            if line.empty:
+                logger.warning(f"No line GPS in {pem_file.filepath.name}")
+                return
 
-            if not line.empty and line.to_string() not in self.lines:
+            if line.to_string() not in self.lines:
                 self.lines.append(line.to_string())
                 self.lons.extend(line.Easting.values)
                 self.lats.extend(line.Northing.values)
@@ -379,18 +387,25 @@ class TerrainMapViewer(MapboxViewer):
                 # Plot the line in the figure
                 self.map_figure.add_trace(go.Scattermapbox(lon=line.Easting,
                                                            lat=line.Northing,
-                                                           legendgroup='line',
+                                                           legendgroup=pem_file.loop_name,
                                                            mode='lines+markers',
                                                            name=pem_file.line_name,
                                                            text=line.Station
                                                            ))
 
-        def plot_hole(pem_file):
-            collar = pem_file.get_collar().dropna()
+        def plot_hole():
+            collar = pem_file.collar.to_latlon().get_collar().dropna().copy()
+            if collar.empty:
+                logger.warning(f"No collar GPS in {pem_file.filepath.name}")
+                return
+
             geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
             proj = geometry.get_projection(latlon=True)
+            if proj.empty:
+                logger.warning(f"Hole projection is empty for {pem_file.filepath.name}")
 
             if not proj.empty and proj.to_string() not in self.holes:
+                logger.info(f"Plotting hole trace for {pem_file.filepath.name}")
                 self.holes.append(proj.to_string())
                 self.lons.extend(proj.Easting.values)
                 self.lats.extend(proj.Northing.values)
@@ -399,22 +414,37 @@ class TerrainMapViewer(MapboxViewer):
                 self.map_figure.add_trace(go.Scattermapbox(lon=proj.Easting,
                                                            lat=proj.Northing,
                                                            mode='lines+markers',
-                                                           legendgroup='hole',
+                                                           legendgroup=pem_file.loop_name,
                                                            name=pem_file.line_name,
                                                            text=proj['Relative_depth']
                                                            ))
 
-            elif not collar.empty and collar.to_string() not in self.collars:
+            # elif proj.empty and collar.to_string() not in self.collars:
+            elif collar.to_string() not in self.collars:
                 self.collars.append(collar.to_string())
                 self.lons.extend(collar.Easting.values)
                 self.lats.extend(collar.Northing.values)
 
                 self.map_figure.add_trace(go.Scattermapbox(lon=collar.Easting,
                                                            lat=collar.Northing,
-                                                           legendgroup='hole',
+                                                           mode='markers',
+                                                           marker=go.scattermapbox.Marker(
+                                                               size=10
+                                                           ),
+                                                           legendgroup=pem_file.loop_name,
                                                            name=pem_file.line_name,
                                                            text=pem_file.line_name
                                                            ))
+
+                # self.map_figure.add_trace(go.Scattermapbox(
+                #     lat=['45.5017'],
+                #     lon=['-73.5673'],
+                #     mode='markers',
+                #     marker=go.scattermapbox.Marker(
+                #         size=14
+                #     ),
+                #     text=['Montreal'],
+                # ))
 
         bar = CustomProgressBar()
         bar.setMaximum(len(self.pem_files))
@@ -435,11 +465,11 @@ class TerrainMapViewer(MapboxViewer):
                     continue
 
                 # Plot the GPS objects
-                plot_loop(pem_file)
+                plot_loop()
                 if not pem_file.is_borehole():
-                    plot_line(pem_file)
+                    plot_line()
                 else:
-                    plot_hole(pem_file)
+                    plot_hole()
                 dlg += 1
 
         if not all([self.lons, self.lats]):
@@ -456,10 +486,10 @@ class TerrainMapViewer(MapboxViewer):
 
         # Format the figure margins and legend
         self.map_figure.update_layout(
-            margin={"r": 1,
-                    "t": 1,
-                    "l": 1,
-                    "b": 1},
+            margin={"r": 0,
+                    "t": 0,
+                    "l": 0,
+                    "b": 0},
             legend=dict(
                 yanchor="top",
                 y=0.99,
@@ -473,7 +503,10 @@ class TerrainMapViewer(MapboxViewer):
         self.map_figure.update_layout(
             mapbox={
                 'center': {'lon': np.mean(self.lons), 'lat': np.mean(self.lats)},
-                'zoom': 13},
+                # 'center': {'lon': -73.5673, 'lat': 45.5017},
+                'zoom': 13
+                },
+            autosize=True,
             mapbox_style=map_style,
             mapbox_accesstoken=token)
 
@@ -558,23 +591,24 @@ class Map3DViewer(QMainWindow):
 
     def plot_pems(self):
 
-        def reset_figure():
-            self.map_figure.data = []
-            self.loops = []
-            self.lines = []
-            self.collars = []
-            self.holes = []
+        # def reset_figure():
+        #     self.map_figure.data = []
+        #     self.loops = []
+        #     self.lines = []
+        #     self.collars = []
+        #     self.holes = []
 
         def plot_loop(pem_file):
             loop = pem_file.get_loop(closed=True)
-            if loop.to_string() not in self.loops:
+
+            if not loop.empty and loop.to_string() not in self.loops:
                 self.loops.append(loop.to_string())
 
                 # Plot the loop in the figure
                 self.map_figure.add_trace(go.Scatter3d(x=loop.Easting,
                                                        y=loop.Northing,
                                                        z=loop.Elevation,
-                                                       legendgroup='loop',
+                                                       legendgroup=pem_file.loop_name,
                                                        mode='lines',
                                                        name=f"Loop {pem_file.loop_name}",
                                                        text=loop.index))
@@ -582,13 +616,13 @@ class Map3DViewer(QMainWindow):
         def plot_line(pem_file):
             line = pem_file.get_line()
 
-            if line.to_string() not in self.lines:
+            if not line.empty and line.to_string() not in self.lines:
                 self.lines.append(line.to_string())
                 # Plot the line in the figure
                 self.map_figure.add_trace(go.Scatter3d(x=line.Easting,
                                                        y=line.Northing,
                                                        z=line.Elevation,
-                                                       legendgroup='line',
+                                                       legendgroup=pem_file.loop_name,
                                                        mode='lines+markers',
                                                        name=pem_file.line_name,
                                                        text=line.Station
@@ -611,33 +645,29 @@ class Map3DViewer(QMainWindow):
             geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
             proj = geometry.get_projection(latlon=False)
 
-            if not proj.empty:
-                if proj.to_string() not in self.holes:
+            if not proj.empty and proj.to_string() not in self.holes:
                     self.holes.append(proj.to_string())
                     # Plot the line in the figure
                     self.map_figure.add_trace(go.Scatter3d(x=proj.Easting,
                                                            y=proj.Northing,
                                                            z=proj.Elevation,
                                                            mode='lines+markers',
-                                                           legendgroup='hole',
+                                                           legendgroup=pem_file.loop_name,
                                                            name=pem_file.line_name,
                                                            text=proj['Relative_depth']
                                                            ))
-
-                else:
-                    return
 
             elif not collar.empty and collar.to_string() not in self.collars:
                 self.collars.append(collar.to_string())
                 self.map_figure.add_trace(go.Scatter3d(x=collar.Easting,
                                                        y=collar.Northing,
                                                        z=collar.Elevation,
-                                                       # legendgroup='hole',
+                                                       legendgroup=pem_file.loop_name,
                                                        name=pem_file.line_name,
                                                        text=pem_file.line_name
                                                        ))
 
-        reset_figure()
+        # reset_figure()
 
         # Plot the PEMs
         for pem_file in self.pem_files:
@@ -652,23 +682,21 @@ class Map3DViewer(QMainWindow):
         # Set the style of the markers and lines
         self.map_figure.update_traces(marker=dict(size=6,
                                                   line=dict(width=2,
-                                                        color='DarkSlateGrey')),
+                                                            color='DarkSlateGrey')),
                                       line=dict(width=4)
                                       )
         # TODO Format the axis ticks
         self.map_figure.update_layout(yaxis_tickformat='%',
                                       legend=dict(
-                                      yanchor="top",
-                                      y=0.99,
-                                      xanchor="left",
-                                      x=0.01,
-                                  )
+                                          yanchor="top",
+                                          y=0.99,
+                                          xanchor="left",
+                                          x=0.01,
+                                      )
                                       )
 
-        t2 = time.time()
         # Add the plot HTML to be shown in the plot widget
         self.load_page()
-        print(f'Time to set HTML: {time.time() - t2:.3f}')
 
     def save_img(self):
         save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
@@ -953,25 +981,11 @@ class GPSViewer(QMainWindow):
 
         assert pem_files, f"No PEM files to plot."
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
+        self.pem_files = pem_files
+        self.plot_pems()
+        self.show()
 
-        with pg.ProgressDialog("Plotting PEM files", 0, len(pem_files)) as dlg:
-            dlg.setWindowTitle("Plotting PEM files")
-            dlg.setBar(bar)
-
-            for pem_file in pem_files:
-                if dlg.wasCanceled():
-                    break
-
-                dlg.setLabelText(f"Plotting {pem_file.filepath.name}")
-                logger.info(f"Plotting {pem_file.filepath.name}")
-
-                self.plot_pem(pem_file)
-
-                dlg += 1
-
-    def plot_pem(self, pem_file):
+    def plot_pems(self):
 
         def plot_loop():
 
@@ -1156,11 +1170,27 @@ class GPSViewer(QMainWindow):
         loop_color = '#2A2B2DFF'
         hole_color = '#D9514EFF'
 
-        plot_loop()
-        if pem_file.is_borehole():
-            plot_hole()
-        else:
-            plot_line()
+        bar = CustomProgressBar()
+        bar.setMaximum(len(self.pem_files))
+
+        with pg.ProgressDialog("Plotting PEM files", 0, len(self.pem_files)) as dlg:
+            dlg.setWindowTitle("Plotting PEM files")
+            dlg.setBar(bar)
+
+            for pem_file in self.pem_files:
+                if dlg.wasCanceled():
+                    break
+
+                dlg.setLabelText(f"Plotting {pem_file.filepath.name}")
+                logger.info(f"Plotting {pem_file.filepath.name}")
+
+                plot_loop()
+                if pem_file.is_borehole():
+                    plot_hole()
+                else:
+                    plot_line()
+
+                dlg += 1
 
 
 # class FoliumMap(QMainWindow):

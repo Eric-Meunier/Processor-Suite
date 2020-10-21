@@ -7,6 +7,7 @@ from copy import deepcopy
 import math
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox,
                              QFileDialog, QErrorMessage, QHeaderView)
@@ -372,15 +373,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             merged_file = []
             gpx_editor = GPXEditor()
             for file in files:
-                if file.lower().endswith('gpx'):
+                if file.suffix.lower() == '.gpx':
                     # Convert the GPX file to string
                     gps, zone, hemisphere = gpx_editor.get_utm(file, as_string=True)
                     merged_file.extend(gps)
                 else:
-                    if file.lower().endswith('csv'):
+                    if file.suffix.lower() == '.csv':
                         contents = pd.read_csv(file, delim_whitespace=False, header=None).to_numpy()
 
-                    elif file.lower().endswith('xlsx') or file.lower().endswith('xls'):
+                    elif file.suffix.lower() in ['.xlsx', '.xls']:
                         contents = pd.read_excel(file, delim_whitespace=False, header=None).to_numpy()
 
                     else:
@@ -392,6 +393,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if not isinstance(files, list):
             files = list(files)
+
+        files = [Path(f) for f in files]
 
         file = merge_files(files)
         current_tab = self.tabs.currentWidget()

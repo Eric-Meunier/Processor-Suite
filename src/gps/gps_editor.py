@@ -59,7 +59,7 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            logger.info('No CRS')
+            logger.warning('No CRS')
             self.df = df
             return self
         elif self.df.empty:
@@ -89,11 +89,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            logger.info('No CRS')
+            logger.warning('No CRS')
             self.df = df
             return self
         elif self.df.empty:
-            logger.info('GPS dataframe is empty.')
+            logger.warning('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -123,11 +123,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            logger.info('No CRS.')
+            logger.warning('No CRS.')
             self.df = df
             return self
         elif self.df.empty:
-            logger.info('GPS dataframe is empty.')
+            logger.warning('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -157,11 +157,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            logger.info('No CRS.')
+            logger.warning('No CRS.')
             self.df = df
             return self
         elif self.df.empty:
-            logger.info('GPS dataframe is empty.')
+            logger.warning('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -196,11 +196,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            logger.info('No CRS.')
+            logger.warning('No CRS.')
             self.df = df
             return self
         elif self.df.empty:
-            logger.info('GPS dataframe is empty.')
+            logger.warning('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -238,7 +238,7 @@ class TransmitterLoop(BaseGPS):
         #     self.cull_loop()
 
     @staticmethod
-    @Log()
+    # @Log()
     def parse_loop_gps(file):
         """
         Parse a text file or data frame for loop GPS.
@@ -276,7 +276,7 @@ class TransmitterLoop(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
-            logger.error(f"Empty file passed.")
+            logger.warning(f"Empty file passed.")
             return empty_gps, pd.DataFrame(), 'Empty file passed.'
         else:
             logger.error(f"Invalid input: {file}.")
@@ -398,7 +398,7 @@ class SurveyLine(BaseGPS):
         self.df, self.errors, self.error_msg = self.parse_station_gps(line)
 
     @staticmethod
-    @Log()
+    # @Log()
     def parse_station_gps(file):
         """
         Parse a text file or data frame for station GPS.
@@ -450,7 +450,7 @@ class SurveyLine(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
-            logger.error("Empty file passed.")
+            logger.warning("Empty file passed.")
             return empty_gps, pd.DataFrame(), 'Empty file passed.'
         else:
             logger.error(f"Invalid input: {file}.")
@@ -558,7 +558,7 @@ class BoreholeCollar(BaseGPS):
         self.df, self.errors, self.error_msg = self.parse_collar(hole)
 
     @staticmethod
-    @Log()
+    # @Log()
     def parse_collar(file):
         """
         Parse a text file for collar GPS. Returns the first match found.
@@ -588,7 +588,7 @@ class BoreholeCollar(BaseGPS):
             if file:
                 gps = pd.DataFrame(file)
             else:
-                logger.error(f"Empty file passed.")
+                logger.warning(f"Empty file passed.")
                 return empty_gps, pd.DataFrame(), 'Empty file passed.'
 
         elif isinstance(file, pd.DataFrame):
@@ -600,7 +600,7 @@ class BoreholeCollar(BaseGPS):
             gps = pd.DataFrame(split_file)
 
         elif file is None:
-            logger.error(f"No file passed.")
+            logger.warning(f"No GPS passed.")
             return empty_gps, pd.DataFrame(), 'Empty file passed.'
 
         else:
@@ -676,7 +676,7 @@ class BoreholeSegments(BaseGPS):
         self.df, self.errors, self.error_msg = self.parse_segments(segments)
 
     @staticmethod
-    @Log()
+    # @Log()
     def parse_segments(file):
         """
         Parse a text file for geometry segments.
@@ -795,8 +795,11 @@ class BoreholeGeometry(BaseGPS):
         collar = self.collar.get_collar().dropna()
         segments = self.segments.get_segments().dropna()
 
-        if collar.empty or segments.empty:
-            logger.warning(f"Collar GPS or segments are empty.")
+        if collar.empty:
+            logger.warning(f"Collar GPS is empty.")
+            return projection
+        elif segments.empty:
+            logger.warning(f"Hole segments is empty.")
             return projection
 
         # Interpolate the segments
@@ -890,7 +893,7 @@ class GPXEditor:
     def get_utm(self, gpx_file, as_string=False):
         """
         Retrieve the GPS from the GPS file in UTM coordinates
-        :param gpx_file: str, filepath
+        :param gpx_file: str or Path, filepath
         :param as_string: bool, return a string instead of tuple if True
         :return: latitude, longitude, elevation, unit, stn
         """

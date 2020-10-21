@@ -2135,8 +2135,11 @@ class DMPParser:
             df['ZTS'] = df['ZTS'].astype(float)
             return df
 
-        assert Path(filepath).is_file(), f"{filepath.name} is not a file"
-        self.filepath = Path(filepath)
+        if isinstance(filepath, str):
+            filepath = Path(filepath)
+
+        assert filepath.is_file(), f"{filepath.name} is not a file"
+        self.filepath = filepath
         logger.info(f"Parsing {self.filepath.name}.")
 
         # Read the contents of the file
@@ -2492,6 +2495,26 @@ class DMPParser:
         # notes = header['Notes']
 
         pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath)
+        return pem_file
+
+    def parse(self, filepath):
+        """
+        Parse a .DMP file, including .DMP2+.
+        :param filepath: str or Path object of the DMP file
+        :return: PEMFile object
+        """
+
+        if isinstance(filepath, str):
+            filepath = Path(filepath)
+        assert filepath.is_file(), f"{filepath.name} does not exist."
+
+        if filepath.suffix.lower() == '.dmp':
+            pem_file = self.parse_dmp(filepath)
+        elif filepath.suffix.lower() == '.dmp2':
+            pem_file = self.parse_dmp2(filepath)
+        else:
+            raise NotImplementedError(f"Parsing {filepath.suffix} files not implemented yet.")
+
         return pem_file
 
 
@@ -3111,8 +3134,9 @@ if __name__ == '__main__':
     # pem = pem_file.rotate_soa(10)
     # rotated_pem = prep_pem.rotate('pp')
 
-    pem_file = pemparser.parse(r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\RAW\ddh5-01-38 flux_30.PEM')
-    pem_file.save(legacy=True)
+    # pem_file = pemparser.parse(r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\RAW\ddh5-01-38 flux_30.PEM')
+    pem_file = dparser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.dmp2')
+    # pem_file.save(legacy=True)
 
     # file = str(Path(__file__).parents[2].joinpath('sample_files/DMP files/DMP2 New/BR-32 Surface/l4200e.dmp2'))
     # pem_file = dparser.parse_dmp2(file)
@@ -3124,4 +3148,4 @@ if __name__ == '__main__':
     # out = str(Path(__file__).parents[2].joinpath(
     # 'sample_files/test results/f'{file.filepath.stem} - test conversion.pem')
     # print(file.to_string(), file=open(out, 'w'))
-    os.startfile(pem_file.filepath)
+    # os.startfile(pem_file.filepath)
