@@ -340,7 +340,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                         symbolPen='k',
                         )
 
-            profile_data = processed_pem.get_profile_data(component, converted=True)
+            profile_data = processed_pem.get_profile_data(component, converted=True, incl_deleted=False)
             if profile_data.empty:
                 raise ValueError(f'Profile data for {self.pem_file.filepath.name} is empty.')
 

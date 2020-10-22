@@ -464,18 +464,21 @@ class PEMFile:
 
         return channel_bounds
 
-    def get_profile_data(self, component, averaged=False, converted=False, ontime=True):
+    def get_profile_data(self, component, averaged=False, converted=False, ontime=True, incl_deleted=False):
         """
         Transform the readings in the data in a manner to be plotted as a profile
         :param component: str, used to filter the profile data and only keep the given component
         :param averaged: bool, average the readings of the profile
         :param converted: bool, convert the station names to int
         :param ontime: bool, keep the on-time channels
+        :param incl_deleted: bool, include readings that are flagged as deleted
         :return: pandas DataFrame object with Station as the index, and channels as columns.
         """
-        t = time.time()
         comp_filt = self.data['Component'] == component.upper()
         data = self.data[comp_filt]
+
+        if not incl_deleted:
+            data = data[~data.Deleted]
 
         if ontime is False:
             data.Reading = data.Reading.map(lambda x: x[~self.channel_times.Remove.astype(bool)])
@@ -493,7 +496,6 @@ class PEMFile:
         if averaged is True:
             profile = profile.groupby('Station').mean()
 
-        # print(f"PEMFile - Time to get profile data: {time.time() - t}")
         return profile
 
     def get_components(self):
@@ -2924,7 +2926,6 @@ class RADTool:
 
         return self
 
-    @Log()
     def get_azimuth(self):
         """
         Calculate the azimuth of the RAD tool object. Must be D7.

@@ -1,66 +1,162 @@
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (project_dir_changed:1977):
- New project directory: C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2013):
- Include files: ['']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2015):
- Include files: ['DTL', 'exp', 'Correct']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2019):
- Include folders: ['GPS']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2021):
- Exclude folders: ['']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2048):
- Include extensions: ['']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_gps:2050):
- Exclude extensions: ['']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2117):
- Include files: ['']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2119):
- Include files: ['']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2123):
- Include folders: ['']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2125):
- Exclude folders: ['']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2152):
- Include extensions: ['']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2154):
- Exclude extensions: ['']
->>10/21/2020 05:31:33 PM [INFO] pem_hub.py (get_filtered_pems:2169):
- Filtered pems: C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.PEM
-C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.PEM
-C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 950_16.PEM
-C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\_03_pp.PEM
-C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\[Backup]\line 650_14[-A].PEM
-C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\[Backup]\line 650_14[-S].PEM
-C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.dmp2
-C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.dmp2
-C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 950_16.dmp2
-C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\_14_pp.dmp2
-C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\_16_pp.dmp2
->>10/21/2020 05:31:37 PM [INFO] pem_file.py (parse:1807):
- Parsing line 850_16.PEM
->>10/21/2020 05:31:37 PM [INFO] pem_file.py (get_crs:383):
- line 850_16.PEM CRS is WGS 84 / UTM zone 16N.
->>10/21/2020 05:31:37 PM [INFO] pem_file.py (get_crs:383):
- line 850_16.PEM CRS is WGS 84 / UTM zone 16N.
->>10/21/2020 05:31:37 PM [INFO] pem_hub.py (get_crs:2944):
- Project CRS: WGS 84 / UTM zone 16N
->>10/21/2020 05:31:37 PM [INFO] pem_hub.py (pem_to_table:2787):
- Adding line 850_16.PEM to the table.
->>10/21/2020 05:31:37 PM [INFO] pem_file.py (parse:1807):
- Parsing line 950_16.PEM
->>10/21/2020 05:31:38 PM [INFO] pem_file.py (get_crs:383):
- line 950_16.PEM CRS is WGS 84 / UTM zone 16N.
->>10/21/2020 05:31:38 PM [INFO] pem_hub.py (pem_to_table:2787):
- Adding line 950_16.PEM to the table.
->>10/21/2020 05:31:39 PM [INFO] pem_file.py (parse:1807):
- Parsing line 650_14.PEM
->>10/21/2020 05:31:39 PM [INFO] pem_file.py (get_crs:383):
- line 650_14.PEM CRS is WGS 84 / UTM zone 16N.
->>10/21/2020 05:31:39 PM [INFO] pem_hub.py (pem_to_table:2787):
- Adding line 650_14.PEM to the table.
->>10/21/2020 05:31:41 PM [INFO] pem_file.py (get_crs:383):
- line 650_14.PEM CRS is WGS 84 / UTM zone 16N.
->>10/21/2020 05:31:41 PM [INFO] pem_file.py (get_crs:383):
- line 850_16.PEM CRS is WGS 84 / UTM zone 16N.
->>10/21/2020 05:31:41 PM [INFO] pem_file.py (get_crs:383):
- line 950_16.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/22/2020 11:37:52 AM [INFO] pem_file.py (parse_dmp2:2462):
+ Parsing ddh5-01-45 flux_01.dmp2.
+>>10/22/2020 11:37:52 AM [WARNING] gps_editor.py (parse_loop_gps:279):
+ Empty file passed.
+>>10/22/2020 11:37:52 AM [WARNING] gps_editor.py (parse_collar:603):
+ No GPS passed.
+>>10/22/2020 11:37:52 AM [WARNING] gps_editor.py (parse_segments:717):
+ Empty file passed.
+>>10/22/2020 11:37:52 AM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding ddh5-01-45 flux_01.PEM to the table.
+>>10/22/2020 11:37:52 AM [WARNING] gps_editor.py (parse_loop_gps:300):
+ 0 columns of values were found instead of 3.
+>>10/22/2020 11:37:58 AM [WARNING] pem_plot_editor.py (decay_plot_clicked:1072):
+ No nearest decay.
+>>10/22/2020 11:37:58 AM [WARNING] pem_plot_editor.py (decay_plot_clicked:1072):
+ No nearest decay.
+>>10/22/2020 11:37:58 AM [WARNING] pem_plot_editor.py (decay_plot_clicked:1072):
+ No nearest decay.
+>>10/22/2020 11:38:00 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A23EDF0>,), {}
+>>10/22/2020 11:38:00 AM [INFO] logger.py (decorated:93):
+ ::OUT: -99.87796165271833
+>>10/22/2020 11:38:00 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A23EDF0>,), {}
+>>10/22/2020 11:38:00 AM [INFO] logger.py (decorated:93):
+ ::OUT: -99.87796165271833
+>>10/22/2020 11:38:00 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A23EDF0>,), {}
+>>10/22/2020 11:38:00 AM [INFO] logger.py (decorated:93):
+ ::OUT: -99.87796165271833
+>>10/22/2020 11:38:00 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A23EDF0>,), {}
+>>10/22/2020 11:38:00 AM [INFO] logger.py (decorated:93):
+ ::OUT: -99.87796165271833
+>>10/22/2020 11:38:06 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A23E450>,), {}
+>>10/22/2020 11:38:06 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.30939857422142
+>>10/22/2020 11:38:06 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A23E450>,), {}
+>>10/22/2020 11:38:06 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.30939857422142
+>>10/22/2020 11:38:06 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A23E450>,), {}
+>>10/22/2020 11:38:06 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.30939857422142
+>>10/22/2020 11:38:07 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A23E450>,), {}
+>>10/22/2020 11:38:07 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.30939857422142
+>>10/22/2020 11:38:07 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261330>,), {}
+>>10/22/2020 11:38:07 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.65347692358824
+>>10/22/2020 11:38:07 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261330>,), {}
+>>10/22/2020 11:38:07 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.65347692358824
+>>10/22/2020 11:38:07 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261330>,), {}
+>>10/22/2020 11:38:07 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.65347692358824
+>>10/22/2020 11:38:08 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261330>,), {}
+>>10/22/2020 11:38:08 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.65347692358824
+>>10/22/2020 11:38:10 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261590>,), {}
+>>10/22/2020 11:38:10 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.7748807985442
+>>10/22/2020 11:38:10 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261590>,), {}
+>>10/22/2020 11:38:10 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.7748807985442
+>>10/22/2020 11:38:10 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261590>,), {}
+>>10/22/2020 11:38:10 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.7748807985442
+>>10/22/2020 11:38:11 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261590>,), {}
+>>10/22/2020 11:38:11 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.7748807985442
+>>10/22/2020 11:38:12 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A2616F0>,), {}
+>>10/22/2020 11:38:12 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.2086856606628
+>>10/22/2020 11:38:12 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A2616F0>,), {}
+>>10/22/2020 11:38:12 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.2086856606628
+>>10/22/2020 11:38:12 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A2616F0>,), {}
+>>10/22/2020 11:38:12 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.2086856606628
+>>10/22/2020 11:38:12 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A2616F0>,), {}
+>>10/22/2020 11:38:12 AM [INFO] logger.py (decorated:93):
+ ::OUT: -97.2086856606628
+>>10/22/2020 11:38:13 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261930>,), {}
+>>10/22/2020 11:38:13 AM [INFO] logger.py (decorated:93):
+ ::OUT: -96.48142730322516
+>>10/22/2020 11:38:13 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261930>,), {}
+>>10/22/2020 11:38:13 AM [INFO] logger.py (decorated:93):
+ ::OUT: -96.48142730322516
+>>10/22/2020 11:38:13 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261930>,), {}
+>>10/22/2020 11:38:13 AM [INFO] logger.py (decorated:93):
+ ::OUT: -96.48142730322516
+>>10/22/2020 11:38:14 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261930>,), {}
+>>10/22/2020 11:38:14 AM [INFO] logger.py (decorated:93):
+ ::OUT: -96.48142730322516
+>>10/22/2020 11:38:15 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261C30>,), {}
+>>10/22/2020 11:38:15 AM [INFO] logger.py (decorated:93):
+ ::OUT: -95.74123660336419
+>>10/22/2020 11:38:15 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261C30>,), {}
+>>10/22/2020 11:38:15 AM [INFO] logger.py (decorated:93):
+ ::OUT: -95.74123660336419
+>>10/22/2020 11:38:15 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261C30>,), {}
+>>10/22/2020 11:38:15 AM [INFO] logger.py (decorated:93):
+ ::OUT: -95.74123660336419
+>>10/22/2020 11:38:15 AM [INFO] logger.py (decorated:91):
+ ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x2A261C30>,), {}
+>>10/22/2020 11:38:15 AM [INFO] logger.py (decorated:93):
+ ::OUT: -95.74123660336419
+>>10/22/2020 11:38:35 AM [INFO] logger.py (decorated:91):
+ ::IN: open - (<src.qt_py.derotator.Derotator object at 0x29F020D0>, <src.pem.pem_file.PEMFile object at 0x22869FF0>), {}
+>>10/22/2020 11:38:35 AM [INFO] pem_file.py (prep_rotation:1195):
+ Preparing for XY de-rotation for ddh5-01-45 flux_01.PEM.
+>>10/22/2020 11:38:35 AM [INFO] pem_file.py (rotate:1038):
+ De-rotating data of ddh5-01-45 flux_01.PEM using acc with SOA 0.
+>>10/22/2020 11:38:35 AM [INFO] pem_file.py (rotate:1168):
+ Include PP for ddh5-01-45 flux_01.PEM: False.
+>>10/22/2020 11:38:36 AM [INFO] pem_file.py (split:875):
+ Splitting channels for ddh5-01-45 flux_01.PEM.
+>>10/22/2020 11:38:36 AM [INFO] pem_file.py (average:839):
+ Averaging ddh5-01-45 flux_01.PEM.
+>>10/22/2020 11:38:36 AM [INFO] logger.py (decorated:96):
+ Exception Profile data for ddh5-01-45 flux_01.PEM is empty.
+>>10/22/2020 11:38:36 AM [ERROR] run.py (handle_exception:16):
+ Uncaught exception
+Traceback (most recent call last):
+  File "C:\Users\Eric\PycharmProjects\PEMPro\src\qt_py\pem_hub.py", line 1622, in open_derotator
+    derotator.open(pem_file)
+  File "C:\Users\Eric\PycharmProjects\PEMPro\src\logger.py", line 97, in decorated
+    raise ex
+  File "C:\Users\Eric\PycharmProjects\PEMPro\src\logger.py", line 92, in decorated
+    result = fn(*args, **kwargs)
+  File "C:\Users\Eric\PycharmProjects\PEMPro\src\qt_py\derotator.py", line 305, in open
+    self.rotate()
+  File "C:\Users\Eric\PycharmProjects\PEMPro\src\qt_py\derotator.py", line 507, in rotate
+    self.plot_pem(self.rotated_file)
+  File "C:\Users\Eric\PycharmProjects\PEMPro\src\qt_py\derotator.py", line 486, in plot_pem
+    plot_lin('X')
+  File "C:\Users\Eric\PycharmProjects\PEMPro\src\qt_py\derotator.py", line 345, in plot_lin
+    raise ValueError(f'Profile data for {self.pem_file.filepath.name} is empty.')
+ValueError: Profile data for ddh5-01-45 flux_01.PEM is empty.

@@ -4345,13 +4345,13 @@ def main():
     # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
-    # pem_files = pg.get_pems(client='Kazzinc', number=4)
+    pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='Minera', number=1)
     # pem_files = pg.get_pems(random=True, number=1)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
-    # mw.open_pem_files(pem_files)
+    mw.open_pem_files(pem_files)
 
     # mw.project_dir_edit.setText(r'C:\_Data\2020\Juno\Borehole')
     # mw.move_dir_tree_to(r'C:\_Data\2020\Juno\Borehole')

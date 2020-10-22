@@ -684,7 +684,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         channel_bounds = file.get_channel_bounds()
 
         for component in components:
-            profile_data = file.get_profile_data(component, averaged=False, converted=True, ontime=False)
+            profile_data = file.get_profile_data(component,
+                                                 averaged=False,
+                                                 converted=True,
+                                                 ontime=False,
+                                                 incl_deleted=True)
             if profile_data.empty:
                 continue
 

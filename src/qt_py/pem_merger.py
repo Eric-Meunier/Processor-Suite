@@ -540,7 +540,8 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             profile_data = pem_file.get_profile_data(component,
                                                      averaged=False,
                                                      converted=True,
-                                                     ontime=False)
+                                                     ontime=False,
+                                                     incl_deleted=False)
 
             if profile_data.empty:
                 continue

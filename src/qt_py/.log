@@ -1,179 +1,61 @@
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (project_dir_changed:1975):
- New project directory: C:\_Data\2020\Eastern\Bonavista Resources
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_gps:2011):
- Include files: ['']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_gps:2013):
- Include files: ['DTL', 'exp', 'Correct']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_gps:2017):
- Include folders: ['GPS']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_gps:2019):
- Exclude folders: ['']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_gps:2046):
- Include extensions: ['']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_gps:2048):
- Exclude extensions: ['']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_pems:2115):
- Include files: ['']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_pems:2117):
- Include files: ['']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_pems:2121):
- Include folders: ['']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_pems:2123):
- Exclude folders: ['']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_pems:2150):
- Include extensions: ['']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_pems:2152):
- Exclude extensions: ['']
->>10/21/2020 04:00:42 PM [INFO] pem_hub.py (get_filtered_pems:2167):
- Filtered pems: C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 23, 2020\PEM\L110.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 23, 2020\PEM\PP.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 24, 2020\PEM\L110.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 24, 2020\PEM\PP.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 25, 2020\PEM\L110.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 25, 2020\PEM\PP.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 26, 2020\PEM\L110.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 26, 2020\PEM\L120.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 26, 2020\PEM\PP.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 27, 2020\Dump\100E_27.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 27, 2020\Dump\120E_27.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 27, 2020\Dump\pp_02_27_20.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\110N Ext & 120N Ext\110Av_ext.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\110N Ext & 120N Ext\120Av_ext.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\Line 100N & 120N (Feb 27)\100NAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\Line 100N & 120N (Feb 27)\120NAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\Line 100N (reprocessed)\100NAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\Line 110N\110NAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\RAW\C100N_27.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\RAW\C110N_23.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\RAW\C110N_24.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\RAW\C110N_26.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\RAW\C120N_27[M].PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\RAW\C1380S[M].PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\RAW\_23_PP.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\RAW\_24_PP.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\RAW\_25_PP.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\RAW\_26_PP.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\DUMP\March 05, 2020\PEM\PP.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\DUMP\March 05, 2020\PEM\SOA.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\DUMP\March 05, 2020\PEM\XY.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\DUMP\March 05, 2020\PEM\Z.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\Final\HP-20-01 XYT.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\Final\HP-20-01 ZAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\Final\HP-20-01\HP-20-01 XYT.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\Final\HP-20-01\HP-20-01 ZAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\RAW\CXY_05.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\RAW\CZ_05.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\RAW\XYG.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\RAW\XYT.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\RAW\_05_PP.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 23, 2020\Dump\L110.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 23, 2020\Dump\PP.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 24, 2020\Dump\L110.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 24, 2020\Dump\PP.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 25, 2020\Dump\L110.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 25, 2020\Dump\PP.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 26, 2020\Dump\L110.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 26, 2020\Dump\L120.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 26, 2020\Dump\PP.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 27, 2020\Dump\pp_02_27_20.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 27, 2020\Dump\SPEM_L100E_02_27_20.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Dump\February 27, 2020\Dump\SPEM_L120E_02_27_20.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\DUMP\March 05, 2020\Dump\PP.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\DUMP\March 05, 2020\Dump\SOA.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\DUMP\March 05, 2020\Dump\XY.DMP
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\DUMP\March 05, 2020\Dump\Z.DMP
->>10/21/2020 04:00:45 PM [INFO] pem_hub.py (get_filtered_pems:2115):
- Include files: ['']
->>10/21/2020 04:00:45 PM [INFO] pem_hub.py (get_filtered_pems:2117):
- Include files: ['']
->>10/21/2020 04:00:45 PM [INFO] pem_hub.py (get_filtered_pems:2121):
- Include folders: ['Final']
->>10/21/2020 04:00:45 PM [INFO] pem_hub.py (get_filtered_pems:2123):
- Exclude folders: ['']
->>10/21/2020 04:00:45 PM [INFO] pem_hub.py (get_filtered_pems:2150):
- Include extensions: ['']
->>10/21/2020 04:00:45 PM [INFO] pem_hub.py (get_filtered_pems:2152):
- Exclude extensions: ['']
->>10/21/2020 04:00:45 PM [INFO] pem_hub.py (get_filtered_pems:2167):
- Filtered pems: C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\110N Ext & 120N Ext\110Av_ext.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\110N Ext & 120N Ext\120Av_ext.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\Line 100N & 120N (Feb 27)\100NAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\Line 100N & 120N (Feb 27)\120NAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\Line 100N (reprocessed)\100NAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\Hickeys pond\Loop 1\Final\Line 110N\110NAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\Final\HP-20-01 XYT.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\Final\HP-20-01 ZAv.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\Final\HP-20-01\HP-20-01 XYT.PEM
-C:\_Data\2020\Eastern\Bonavista Resources\HP-20-01\Final\HP-20-01\HP-20-01 ZAv.PEM
->>10/21/2020 04:00:47 PM [INFO] pem_file.py (parse:1807):
- Parsing 110Av_ext.PEM
->>10/21/2020 04:00:47 PM [INFO] pem_file.py (get_crs:413):
- 110Av_ext.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:00:47 PM [INFO] pem_file.py (get_crs:413):
- 110Av_ext.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:00:47 PM [INFO] pem_hub.py (get_crs:2942):
- Project CRS: NAD83 / UTM zone 21N
->>10/21/2020 04:00:47 PM [INFO] pem_hub.py (pem_to_table:2785):
- Adding 110Av_ext.PEM to the table.
->>10/21/2020 04:00:47 PM [INFO] pem_file.py (parse:1807):
- Parsing 120Av_ext.PEM
->>10/21/2020 04:00:47 PM [INFO] pem_file.py (get_crs:413):
- 120Av_ext.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:00:47 PM [INFO] pem_hub.py (pem_to_table:2785):
- Adding 120Av_ext.PEM to the table.
->>10/21/2020 04:00:47 PM [INFO] pem_file.py (parse:1807):
- Parsing 100NAv.PEM
->>10/21/2020 04:00:47 PM [INFO] pem_file.py (get_crs:413):
- 100NAv.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:00:48 PM [INFO] pem_hub.py (pem_to_table:2785):
- Adding 100NAv.PEM to the table.
->>10/21/2020 04:00:48 PM [INFO] pem_file.py (parse:1807):
- Parsing 120NAv.PEM
->>10/21/2020 04:00:48 PM [INFO] pem_file.py (get_crs:413):
- 120NAv.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:00:48 PM [INFO] pem_hub.py (pem_to_table:2785):
- Adding 120NAv.PEM to the table.
->>10/21/2020 04:00:48 PM [INFO] pem_file.py (parse:1807):
- Parsing 100NAv.PEM
->>10/21/2020 04:00:48 PM [INFO] pem_file.py (get_crs:413):
- 100NAv.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:00:48 PM [INFO] pem_hub.py (pem_to_table:2785):
- Adding 100NAv.PEM to the table.
->>10/21/2020 04:00:48 PM [INFO] pem_file.py (parse:1807):
- Parsing 110NAv.PEM
->>10/21/2020 04:00:48 PM [INFO] pem_file.py (get_crs:413):
- 110NAv.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:00:48 PM [INFO] pem_hub.py (pem_to_table:2785):
- Adding 110NAv.PEM to the table.
->>10/21/2020 04:00:49 PM [INFO] map_widgets.py (plot_pems:1185):
- Plotting 100NAv.PEM
->>10/21/2020 04:00:49 PM [INFO] map_widgets.py (plot_pems:1185):
- Plotting 100NAv.PEM
->>10/21/2020 04:00:50 PM [INFO] map_widgets.py (plot_pems:1185):
- Plotting 110Av_ext.PEM
->>10/21/2020 04:00:50 PM [INFO] map_widgets.py (plot_pems:1185):
- Plotting 110NAv.PEM
->>10/21/2020 04:00:50 PM [INFO] map_widgets.py (plot_pems:1185):
- Plotting 120Av_ext.PEM
->>10/21/2020 04:00:50 PM [INFO] map_widgets.py (plot_pems:1185):
- Plotting 120NAv.PEM
->>10/21/2020 04:01:04 PM [INFO] pem_file.py (get_crs:413):
- 100NAv.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:01:04 PM [INFO] pem_file.py (get_crs:413):
- 100NAv.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:01:04 PM [INFO] pem_file.py (get_crs:413):
- 110Av_ext.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:01:05 PM [INFO] pem_file.py (get_crs:413):
- 110NAv.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:01:05 PM [INFO] pem_file.py (get_crs:413):
- 120Av_ext.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:01:05 PM [INFO] pem_file.py (get_crs:413):
- 120NAv.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:01:47 PM [INFO] pem_file.py (get_crs:413):
- 100NAv.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:01:47 PM [INFO] pem_file.py (get_crs:413):
- 110Av_ext.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:01:47 PM [INFO] pem_file.py (get_crs:413):
- 120Av_ext.PEM CRS is NAD83 / UTM zone 21N
->>10/21/2020 04:01:47 PM [INFO] pem_file.py (get_crs:413):
- 120NAv.PEM CRS is NAD83 / UTM zone 21N
+>>10/22/2020 10:49:27 AM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7400NAv.PEM.
+>>10/22/2020 10:49:27 AM [INFO] pem_file.py (parse:1807):
+ Parsing 7400NAv.PEM
+>>10/22/2020 10:49:27 AM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>10/22/2020 10:49:27 AM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7500NAv.PEM.
+>>10/22/2020 10:49:27 AM [INFO] pem_file.py (parse:1807):
+ Parsing 7500NAv.PEM
+>>10/22/2020 10:49:27 AM [INFO] pem_file.py (get_crs:383):
+ 7500NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>10/22/2020 10:49:27 AM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7600NAv.PEM.
+>>10/22/2020 10:49:27 AM [INFO] pem_file.py (parse:1807):
+ Parsing 7600NAv.PEM
+>>10/22/2020 10:49:27 AM [INFO] pem_file.py (get_crs:383):
+ 7600NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>10/22/2020 10:49:27 AM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7700NAv.PEM.
+>>10/22/2020 10:49:27 AM [INFO] pem_file.py (parse:1807):
+ Parsing 7700NAv.PEM
+>>10/22/2020 10:49:27 AM [INFO] pem_file.py (get_crs:383):
+ 7700NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>10/22/2020 10:49:27 AM [INFO] pem_getter.py (get_pems:97):
+ Collected PEM files: C:\Users\Eric\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM
+C:\Users\Eric\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7500NAv.PEM
+C:\Users\Eric\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7600NAv.PEM
+C:\Users\Eric\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7700NAv.PEM
+>>10/22/2020 10:49:27 AM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>10/22/2020 10:49:27 AM [INFO] pem_hub.py (get_crs:2944):
+ Project CRS: WGS 84 / UTM zone 44N
+>>10/22/2020 10:49:27 AM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding 7400NAv.PEM to the table.
+>>10/22/2020 10:49:27 AM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding 7500NAv.PEM to the table.
+>>10/22/2020 10:49:28 AM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding 7600NAv.PEM to the table.
+>>10/22/2020 10:49:28 AM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding 7700NAv.PEM to the table.
+>>10/22/2020 10:49:30 AM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>10/22/2020 10:49:31 AM [INFO] pem_file.py (get_crs:383):
+ 7500NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>10/22/2020 10:49:31 AM [INFO] pem_file.py (get_crs:383):
+ 7600NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>10/22/2020 10:49:31 AM [INFO] pem_file.py (get_crs:383):
+ 7700NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>10/22/2020 10:49:38 AM [INFO] map_widgets.py (plot_pems:1184):
+ Plotting 7400NAv.PEM
+>>10/22/2020 10:49:39 AM [INFO] map_widgets.py (plot_pems:1184):
+ Plotting 7500NAv.PEM
+>>10/22/2020 10:49:39 AM [INFO] map_widgets.py (plot_pems:1184):
+ Plotting 7600NAv.PEM
+>>10/22/2020 10:49:39 AM [INFO] map_widgets.py (plot_pems:1184):
+ Plotting 7700NAv.PEM
+>>10/22/2020 10:49:50 AM [INFO] pem_planner.py (change_loop_height:256):
+ Loop height changed to 500.0.
+>>10/22/2020 10:50:45 AM [INFO] pem_planner.py (save_kmz:883):
+ Saving test.kmz.

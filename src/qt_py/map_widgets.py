@@ -2,7 +2,6 @@ import logging
 import os
 import re
 import sys
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,7 +13,6 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWidgets import (QErrorMessage, QApplication, QWidget, QFileDialog, QMessageBox, QGridLayout,
                              QAction, QMainWindow, QHBoxLayout, QShortcut)
-from mayavi import mlab
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
@@ -354,7 +352,7 @@ class TileMapViewer(MapboxViewer):
     def plot_pems(self):
 
         def plot_loop():
-            loop = pem_file.loop.to_latlon().get_loop(closed=True).dropna().copy()
+            loop = pem_file.loop.to_latlon().get_loop(closed=True).dropna()
             if loop.empty:
                 logger.warning(f"No loop GPS in {pem_file.filepath.name}")
                 return
@@ -374,7 +372,7 @@ class TileMapViewer(MapboxViewer):
                                                            text=loop.index))
 
         def plot_line():
-            line = pem_file.line.to_latlon().get_line().dropna().copy()
+            line = pem_file.line.to_latlon().get_line().dropna()
             if line.empty:
                 logger.warning(f"No line GPS in {pem_file.filepath.name}")
                 return
@@ -394,7 +392,7 @@ class TileMapViewer(MapboxViewer):
                                                            ))
 
         def plot_hole():
-            collar = pem_file.collar.to_latlon().get_collar().dropna().copy()
+            collar = pem_file.collar.to_latlon().get_collar().dropna()
             if collar.empty:
                 logger.warning(f"No collar GPS in {pem_file.filepath.name}")
                 return
@@ -455,6 +453,7 @@ class TileMapViewer(MapboxViewer):
 
             # Plot the PEMs
             for pem_file in self.pem_files:
+                pem_file = pem_file.copy()
                 if dlg.wasCanceled():
                     break
                 dlg.setLabelText(f"Plotting {pem_file.filepath.name}")
@@ -1383,12 +1382,12 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     getter = PEMGetter()
-    # files = getter.get_pems(client='Kazzinc', number=5)
+    files = getter.get_pems(client='Kazzinc', number=5)
     # files = getter.get_pems(client='Iscaycruz', subfolder='Sante Est')
-    files = getter.get_pems(client="Iscaycruz", number=10, random=True)
+    # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
-    # m = TerrainMapViewer()
-    m = GPSViewer()
+    m = TileMapViewer()
+    # m = GPSViewer()
     # m = Map3DViewer()
     m.open(files)
     m.show()
