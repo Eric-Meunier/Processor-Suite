@@ -13,6 +13,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QCheckBox,
                              QHeaderView, QLabel)
 
+from src.qt_py.custom_qt_widgets import NonScientific
 from src.gps.gps_editor import TransmitterLoop, SurveyLine
 from src.pem.pem_file import StationConverter
 
@@ -847,17 +848,6 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
             self.section_view.addItem(self.section_highlight)
             self.section_view.addItem(self.section_lx)
             self.section_view.addItem(self.section_ly)
-
-
-class NonScientific(pg.AxisItem):
-    def __init__(self, *args, **kwargs):
-        super(NonScientific, self).__init__(*args, **kwargs)
-
-    def tickStrings(self, values, scale, spacing):
-        return [int(value*1) for value in values]  # This line return the NonScientific notation value
-
-    def logTickStrings(self, values, scale, spacing):
-        return [int(value*1) for value in values]  # This line return the NonScientific notation value
 
 
 def main():
