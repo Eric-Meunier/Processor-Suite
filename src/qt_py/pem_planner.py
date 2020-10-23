@@ -11,11 +11,12 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.ROI import Handle
 import simplekml
 from PyQt5 import QtGui, QtCore, uic
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer, QPointF
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QInputDialog,
-                             QLineEdit, QFormLayout, QWidget, QFrame)
+                             QLineEdit, QFormLayout, QWidget, QFrame, QPushButton)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from pyproj import CRS
@@ -166,9 +167,10 @@ class SurveyPlanner(QMainWindow):
     def copy_img(self):
         QApplication.clipboard().setPixmap(self.grab())
 
-
+# TODO Add ability to remove
 class HoleWidget(QWidget):
     name_changed_sig = QtCore.pyqtSignal()
+    plot_hole_sig = QtCore.pyqtSignal()
 
     def __init__(self, properties, plot_widget, name=''):
         """
@@ -237,20 +239,32 @@ class HoleWidget(QWidget):
         self.hole_length_edit.setValidator(self.size_validator)
 
         # Plotting
-        self.select_pen = pg.mkPen('b', width=2.)
+        self.select_pen = pg.mkPen('b', width=1.5)
         self.deselect_pen = pg.mkPen('k', width=1.)
 
         self.hole_collar = pg.ScatterPlotItem(clickable=True,
+                                              pen=self.deselect_pen,
                                               symbol='o',
-                                              brush=pg.mkBrush('w')
+                                              brush=pg.mkBrush('w'),
                                               )
-        self.hole_collar.setZValue(10)
-        self.hole_collar.sigClicked.connect(self.select)
-        self.hole_trace = pg.PlotCurveItem()
-        self.hole_trace.setZValue(5)
+        self.hole_collar.setZValue(5)
+
+        self.hole_trace = pg.PlotCurveItem(clickable=True, pen=self.deselect_pen)
+        self.hole_trace.setZValue(4)
+
+        # The end bar
+        self.hole_end = pg.ArrowItem(headLen=0,
+                                     tailLen=0,
+                                     tailWidth=15,
+                                     pen=self.deselect_pen,
+                                     )
+        # Give a temporary position for auto range
+        self.hole_end.setPos(int(properties.get('easting')), int(properties.get('northing')))
+        self.hole_end.setZValue(4)
 
         self.plan_view.addItem(self.hole_collar)
         self.plan_view.addItem(self.hole_trace)
+        self.plan_view.addItem(self.hole_end)
 
         self.draw_hole()
 
@@ -263,20 +277,18 @@ class HoleWidget(QWidget):
         self.hole_dip_edit.editingFinished.connect(self.draw_hole)
         self.hole_length_edit.editingFinished.connect(self.draw_hole)
 
-    @Log()
     def get_hole_projection(self):
         """
         Calculates the 3D projection of the hole.
         :return: list of (x, y, z) tuples of the 3D hole trace.
         """
-
         x = int(self.hole_easting_edit.text())
         y = int(self.hole_northing_edit.text())
         z = int(self.hole_elevation_edit.text())
 
         delta_surf = int(self.hole_length_edit.text()) * math.cos(math.radians(int(self.hole_dip_edit.text())))
-        dx = delta_surf * math.sin(math.radians(int(self.hole_az_edit.text())))
-        dy = delta_surf * math.cos(math.radians(int(self.hole_az_edit.text())))
+        dx = delta_surf * math.sin(math.radians(int(self.hole_azimuth_edit.text())))
+        dy = delta_surf * math.cos(math.radians(int(self.hole_azimuth_edit.text())))
         dz = int(self.hole_length_edit.text()) * math.sin(math.radians(int(self.hole_dip_edit.text())))
         x = [x, int(self.hole_easting_edit.text()) + dx]
         y = [y, int(self.hole_northing_edit.text()) + dy]
@@ -294,23 +306,39 @@ class HoleWidget(QWidget):
         xs, ys, zs = self.get_hole_projection()
         self.hole_trace.setData(xs, ys)
 
+        # Plot the end of the hole
+        self.hole_end.setPos(xs[-1], ys[-1])
+        self.hole_end.setStyle(angle=int(self.hole_azimuth_edit.text()) - 90,
+                               pen=self.hole_trace.opts['pen'])
+
+        self.plot_hole_sig.emit()
+
     def select(self):
-        print(f'Hole collar clicked.')
         self.hole_collar.setPen(self.select_pen)
-        self.hole_collar.setShadowPen(pg.mkPen('w', width=4.))
+        self.hole_collar.setSize(12)
+        self.hole_collar.setZValue(10)
+        # self.hole_collar.setShadowPen(pg.mkPen('w', width=4.))
+
         self.hole_trace.setPen(self.select_pen)
-        self.hole_trace.setShadowPen(pg.mkPen('w', width=4.))
-        self.hole_collar.setSize(14)
+        self.hole_trace.setShadowPen(pg.mkPen('w', width=3.))
+        self.hole_trace.setZValue(9)
+
+        self.hole_end.setPen(self.select_pen)
+        # self.hole_end.setSize(7)
 
     def deselect(self):
-        print(f'Hole collar deselect.')
         self.hole_collar.setPen(self.deselect_pen)
-        self.hole_collar.setShadowPen(None)
+        self.hole_collar.setSize(11)
+        self.hole_collar.setZValue(5)
+        # self.hole_collar.setShadowPen(None)
+
         self.hole_trace.setPen(self.deselect_pen)
         self.hole_trace.setShadowPen(None)
-        self.hole_collar.setSize(12)
+        self.hole_trace.setZValue(4)
 
-    @Log()
+        self.hole_end.setPen(self.deselect_pen)
+        # self.hole_end.setSize(6)
+
     def get_properties(self):
         """Return a dictionary of hole properties"""
         return {
@@ -327,11 +355,11 @@ class LoopWidget(QWidget):
     name_changed_sig = QtCore.pyqtSignal()
     plot_hole_sig = QtCore.pyqtSignal()
 
-    def __init__(self, properties, pos, plot_widget, name=''):
+    def __init__(self, properties, center, plot_widget, name=''):
         """
         Widget representing a loop as tab in Loop Planner.
         :param properties: dict, properties of a previous loop to be used as a starting point.
-        :param pos: tuple of int, centre position of the loop ROI.
+        :param center: tuple of int, centre position of the loop ROI.
         :param plot_widget: pyqtgraph plot widget to plot on.
         :param name: str, name of the loop.
         """
@@ -369,8 +397,15 @@ class LoopWidget(QWidget):
 
         self.layout().addRow('Name', self.loop_name_edit)
 
+        h_line2 = QFrame()
+        h_line2.setFrameShape(QFrame().HLine)
+        h_line2.setFrameShadow(QFrame().Sunken)
+        self.layout().addRow(h_line2)
+
+        self.copy_loop_btn = QPushButton("Copy Loop Coordinates")
+        self.layout().addRow(self.copy_loop_btn)
+
         # Validators
-        self.int_validator = QtGui.QIntValidator()
         self.size_validator = QtGui.QIntValidator()
         self.size_validator.setBottom(1)
         self.loop_angle_validator = QtGui.QIntValidator()
@@ -379,36 +414,58 @@ class LoopWidget(QWidget):
         # Set all validators
         self.loop_height_edit.setValidator(self.size_validator)
         self.loop_width_edit.setValidator(self.size_validator)
-        self.loop_angle_edit.setValidator(self.int_validator)
+        self.loop_angle_edit.setValidator(self.loop_angle_validator)
 
         # Loop ROI
         self.selected_pen = pg.mkPen('b', width=2.)
         self.unselected_pen = pg.mkPen('k', width=1.)
 
+        # Set the position of the loop by the center (and not the bottom-left corner)
+        h = int(properties.get('height'))
+        w = int(properties.get('width'))
+        pos = QPointF(center.x() - (w / 2), center.y() - (h / 2))  # Adjusted position for the center
+
         self.loop_roi = LoopROI(pos,
-                                closed=True,
-                                size=(int(properties.get('height')), int(properties.get('height'))),
+                                size=(h, w),
                                 scaleSnap=True,
                                 pen=self.unselected_pen,
-                                centered=True)
+                                centered=True,
+                                )
 
-        self.loop_roi.setZValue(-10)
-        self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
-        self.loop_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
-        self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
-        self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
-        self.loop_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
+        self.loop_roi.setZValue(15)
+        self.loop_roi.addScaleHandle(pos=[0, 0], center=[0.5, 0.5], lockAspect=True)
+        self.loop_roi.addScaleHandle(pos=[1, 0], center=[0.5, 0.5], lockAspect=True)
+        self.loop_roi.addScaleHandle(pos=[1, 1], center=[0.5, 0.5], lockAspect=True)
+        self.loop_roi.addScaleHandle(pos=[0, 1], center=[0.5, 0.5], lockAspect=True)
+        self.loop_roi.addRotateHandle(pos=[1, 0.5], center=[0.5, 0.5])
+        self.loop_roi.addRotateHandle(pos=[0.5, 0], center=[0.5, 0.5])
+        self.loop_roi.addRotateHandle(pos=[0.5, 1], center=[0.5, 0.5])
+        self.loop_roi.addRotateHandle(pos=[0, 0.5], center=[0.5, 0.5])
         self.loop_roi.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
 
         self.plan_view.addItem(self.loop_roi)
 
+        # Add loop center symbol
+        self.loop_center = pg.ScatterPlotItem([center.x()], [center.y()],
+                                              symbol='+',
+                                              pen=pg.mkPen((10, 10, 10), width=0.1),
+                                              size=10,
+                                              )
+        self.loop_center.setZValue(50)
+        self.plan_view.addItem(self.loop_center)
+
+        # self.loop_corners = pg.ScatterPlotItem(pen=pg.mkPen('m'))
+        # self.plan_view.addItem(self.loop_corners)
+
         # Signals
+        self.loop_height_edit.editingFinished.connect(self.update_loop_roi)
+        self.loop_width_edit.editingFinished.connect(self.update_loop_roi)
+        self.loop_angle_edit.editingFinished.connect(self.update_loop_roi)
+
         self.loop_name_edit.textChanged.connect(self.name_changed_sig.emit)
-        self.loop_roi.sigRegionChangeStarted.connect(self.update_loop_values)
-        self.loop_roi.sigClicked.connect(self.select)
+        self.loop_roi.sigRegionChanged.connect(self.update_loop_values)
+        self.loop_roi.sigRegionChanged.connect(self.plot_loop_center)
+        self.loop_roi.sigRegionChangeFinished.connect(self.plot_hole_sig.emit)
 
     def select(self):
         """When the loop is selected"""
@@ -417,21 +474,62 @@ class LoopWidget(QWidget):
     def deselect(self):
         self.loop_roi.setPen(self.unselected_pen)
 
-    @Log()
     def get_loop_coords(self):
-        pass
+        x, y = self.loop_roi.pos()
+        w, h = self.loop_roi.size()
+        angle = self.loop_roi.angle()
+
+        c1 = QPointF(x, y)
+        c2 = QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
+        c3 = QPointF(c2.x() - h * (math.sin(math.radians(angle))), c2.y() + h * (math.sin(math.radians(90-angle))))
+        c4 = QPointF(c3.x() + w * (math.cos(math.radians(180-angle))), c3.y() - w * (math.sin(math.radians(180-angle))))
+        corners = [c1, c2, c3, c4]
+
+        # self.loop_corners.setData([c.x() for c in corners], [c.y() for c in corners])
+        return corners
+
+    def get_loop_center(self):
+        corners = self.get_loop_coords()
+        xs = np.array([c.x() for c in corners])
+        ys = np.array([c.y() for c in corners])
+
+        center = QPointF(xs.mean(), ys.mean())
+        return center
+
+    def plot_loop_center(self):
+        center = self.get_loop_center()
+        self.loop_center.setData([center.x()], [center.y()])
+
+    def update_loop_roi(self):
+        """
+        Signal slot, change the loop ROI object based on the user input values.
+        """
+        self.loop_roi.blockSignals(True)
+
+        # Change the loop ROI
+        h = int(self.loop_height_edit.text())
+        w = int(self.loop_width_edit.text())
+        a = int(self.loop_angle_edit.text())
+
+        self.loop_roi.setSize((h, w))
+        self.loop_roi.setAngle(a)
+
+        # Update the loop center
+        self.plot_loop_center()
+
+        self.loop_roi.blockSignals(False)
+
+        # Update the section plot
+        self.plot_hole_sig.emit()
 
     def update_loop_values(self):
         """
         Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
         replots the section plot.
-        :return: None
         """
-        self.select()
         self.loop_width_edit.blockSignals(True)
         self.loop_height_edit.blockSignals(True)
         self.loop_angle_edit.blockSignals(True)
-        x, y = self.loop_roi.pos()
         w, h = self.loop_roi.size()
         angle = self.loop_roi.angle()
         self.loop_width_edit.setText(f"{w:.0f}")
@@ -440,8 +538,6 @@ class LoopWidget(QWidget):
         self.loop_width_edit.blockSignals(False)
         self.loop_height_edit.blockSignals(False)
         self.loop_angle_edit.blockSignals(False)
-
-        self.plot_hole_sig.emit()
 
     def get_properties(self):
         """Return a dictionary of loop properties"""
@@ -468,7 +564,7 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         self.setGeometry(200, 200, 1400, 700)
 
         # Status bar
-        self.status_bar.addPermanentWidget(self.spacer_label, 1)
+        # self.status_bar.addPermanentWidget(self.spacer_label, 1)
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
         # Plotting
@@ -478,8 +574,8 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         self.loop_plot_items = []
         self.hole_plot_items = []
 
-        self.hole_traces = []  #pg.PlotDataItem()
-        self.hole_collars = []  #pg.ScatterPlotItem()
+        self.hole_traces = []
+        self.hole_collars = []
 
         self.section_figure = Figure()
         self.ax = self.section_figure.add_subplot()
@@ -501,27 +597,62 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         self.add_hole_btn.clicked.connect(self.add_hole)
         self.add_loop_btn.clicked.connect(self.add_loop)
 
-        def hole_tab_changed(ind):
-            print(f"Hole tab {ind} selected")
-            self.selected_hole = self.hole_widgets[ind]
-            self.selected_hole.select()
+        # Signals
+        # Tabs
+        self.hole_tab_widget.currentChanged.connect(self.select_hole)
+        self.loop_tab_widget.currentChanged.connect(self.select_loop)
 
-        def loop_tab_changed(ind):
-            print(f"Loop tab {ind} selected")
-            self.selected_loop = self.hole_widgets[ind]
-            self.selected_loop.select()
+        # Menu
+        self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
+        self.actionSave_as_KMZ.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
+        self.actionSave_as_GPX.triggered.connect(self.save_gpx)
+        self.actionSave_as_GPX.setIcon(QtGui.QIcon(os.path.join(icons_path, 'garmin_file.png')))
+        # self.view_map_action.setDisabled(True)
+        self.view_map_action.triggered.connect(self.view_map)
+        self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
 
-        self.hole_tab_widget.currentChanged.connect(hole_tab_changed)
-        self.loop_tab_widget.currentChanged.connect(loop_tab_changed)
+        # Checkbox
+        self.show_grid_cbox.toggled.connect(lambda: self.plan_view.showGrid(x=self.show_grid_cbox.isChecked(),
+                                                                            y=self.show_grid_cbox.isChecked()))
 
+        self.init_crs()
         self.init_plan_view()
-        # self.init_section_view()
-        #
-        # self.plot_hole()
+        self.init_section_view()
+
+        self.plot_hole()
         # self.plan_view.autoRange()
 
-        # self.init_signals()
-        self.init_crs()
+    def select_hole(self, ind):
+        """
+        Select a hole, ensuring the hole widget is highlighted and the tab is set to the correct page.
+        :param ind: int, index of the hole
+        """
+        print(f"Hole {ind} selected")
+        self.selected_hole = self.hole_widgets[ind]
+
+        for i, widget in enumerate(self.hole_widgets):
+            if i == ind:
+                widget.select()
+            else:
+                widget.deselect()
+
+        self.plot_hole()
+
+    def select_loop(self, ind):
+        """
+        Select a loop, ensuring the loop widget is highlighted and the tab is set to the correct page.
+        :param ind: int, index of the hole
+        """
+        print(f"loop {ind} selected")
+        self.selected_loop = self.loop_widgets[ind]
+
+        for i, widget in enumerate(self.loop_widgets):
+            if i == ind:
+                widget.select()
+            else:
+                widget.deselect()
+
+        self.plot_hole()
 
     def add_hole(self, name=None):
         """
@@ -542,8 +673,15 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
             De-select all other holes.
             :param widget: The hole widget that was clicked
             """
+            # Change the tab
+            ind = self.hole_widgets.index(widget)
+            self.hole_tab_widget.setCurrentIndex(ind)
+
+            # Select the object
             for w in self.hole_widgets:
-                if w != widget:
+                if w == widget:
+                    w.select()
+                else:
                     w.deselect()
 
         if not name:
@@ -563,10 +701,12 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
             self.hole_widgets.append(hole_widget)
             hole_widget.name_changed_sig.connect(lambda: name_changed(hole_widget))
             hole_widget.hole_collar.sigClicked.connect(lambda: hole_clicked(hole_widget))
+            hole_widget.plot_hole_sig.connect(self.plot_hole)
             self.hole_tab_widget.addTab(hole_widget, name)
 
-            # self.plan_view.addItem(hole_widget.hole_collar)
-            # self.plan_view.addItem(hole_widget.hole_trace)
+            # Select the hole if it is the only one open
+            if len(self.hole_tab_widget) == 1:
+                self.select_hole(0)
 
     def add_loop(self, name=None):
         """
@@ -587,9 +727,42 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
             De-select all other loops.
             :param widget: The loop widget that was clicked
             """
+            # Change the tab
+            ind = self.loop_widgets.index(widget)
+            self.loop_tab_widget.setCurrentIndex(ind)
+
+            # Select the object
             for w in self.loop_widgets:
-                if w != widget:
+                if w == widget:
+                    widget.select()
+                else:
                     w.deselect()
+
+        def loop_copied(widget):
+            """
+            Copy the loop coordinates to the clipboard.
+            :param widget: Loop widget object
+            """
+            epsg = self.get_epsg()
+            if epsg:
+                crs_str = CRS.from_epsg(self.get_epsg()).name
+            else:
+                crs_str = 'No CRS selected'
+
+            # Create a string from the loop corners
+            result = crs_str + '\n'
+            corners = widget.get_loop_coords()
+            for point in corners:
+                easting = f"{point.x():.0f} E"
+                northing = f"{point.y():.0f} N"
+                result += easting + ', ' + northing + '\n'
+
+            # Add the string to the clipboard
+            cb = QtGui.QApplication.clipboard()
+            cb.clear(mode=cb.Clipboard)
+            cb.setText(result, mode=cb.Clipboard)
+
+            self.status_bar.showMessage('Loop corner coordinates copied to clipboard.', 1000)
 
         if not name:
             name, ok_pressed = QInputDialog.getText(self, "Add Loop", "Loop name:", QLineEdit.Normal, "")
@@ -613,67 +786,14 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
             loop_widget.plot_hole_sig.connect(self.plot_hole)
             loop_widget.loop_roi.sigClicked.connect(lambda: loop_clicked(loop_widget))
             loop_widget.loop_roi.sigRegionChangeStarted.connect(lambda: loop_clicked(loop_widget))
+            loop_widget.copy_loop_btn.clicked.connect(lambda: loop_copied(loop_widget))
 
             self.loop_tab_widget.addTab(loop_widget, name)
 
-            # # Add the loop ROI to the plan view
-            # self.plan_view.addItem(loop_widget.loop_roi)
-
-    def init_signals(self):
-
-        def change_loop_width():
-            """
-            Signal slot: Change the loop ROI dimensions from user input
-            :return: None
-            """
-            height = self.loop_roi.size()[1]
-            width = self.loop_width_edit.text()
-            width = float(width)
-            logger.info(f"Loop width changed to {width}.")
-            self.loop_roi.setSize((width, height))
-
-        def change_loop_height():
-            """
-            Signal slot: Change the loop ROI dimensions from user input
-            :return: None
-            """
-            height = self.loop_height_edit.text()
-            width = self.loop_roi.size()[0]
-            height = float(height)
-            logger.info(f"Loop height changed to {height}.")
-            self.loop_roi.setSize((width, height))
-
-        def change_loop_angle():
-            """
-            Signal slot: Change the loop ROI angle from user input
-            :return: None
-            """
-            angle = self.loop_angle_edit.text()
-            angle = float(angle)
-            logger.info(f"Loop angle changed to {angle}.")
-            self.loop_roi.setAngle(angle)
-
-        # Menu
-        self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
-        self.actionSave_as_KMZ.setIcon(QtGui.QIcon(os.path.join(icons_path, 'google_earth.png')))
-        self.actionSave_as_GPX.triggered.connect(self.save_gpx)
-        self.actionSave_as_GPX.setIcon(QtGui.QIcon(os.path.join(icons_path, 'garmin_file.png')))
-        # self.view_map_action.setDisabled(True)
-        self.view_map_action.triggered.connect(self.view_map)
-        self.view_map_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
-        self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_loop_to_clipboard)
-
-        # Line edits
-        self.loop_height_edit.editingFinished.connect(change_loop_height)
-        self.loop_width_edit.editingFinished.connect(change_loop_width)
-        self.loop_angle_edit.editingFinished.connect(change_loop_angle)
-
-        self.hole_easting_edit.editingFinished.connect(self.plot_hole)
-        self.hole_northing_edit.editingFinished.connect(self.plot_hole)
-        self.hole_elevation_edit.editingFinished.connect(self.plot_hole)
-        self.hole_az_edit.editingFinished.connect(self.plot_hole)
-        self.hole_dip_edit.editingFinished.connect(self.plot_hole)
-        self.hole_length_edit.editingFinished.connect(self.plot_hole)
+            # Select the loop if it is the only one open
+            if len(self.loop_tab_widget) == 1:
+                self.select_loop(0)
+                self.ax.get_yaxis().set_visible(True)
 
     def init_crs(self):
         """
@@ -809,8 +929,8 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
         :return: None
         """
-        self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
-                                     'bottom': NonScientific(orientation='bottom')})
+        # self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
+        #                              'bottom': NonScientific(orientation='bottom')})
         self.plan_view.showGrid(x=True, y=True, alpha=0.2)
         self.plan_view.getViewBox().disableAutoRange('xy')
         self.plan_view.setAspectLocked()
@@ -820,8 +940,10 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)
         self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)
         self.plan_view.getAxis('right').setWidth(15)
-        self.plan_view.getAxis('bottom').setHeight(45)
         self.plan_view.getAxis('top').setHeight(15)
+        # self.plan_view.getAxis('bottom').setHeight(45)
+
+        # Add the right and top borders
         self.plan_view.getAxis('right').setStyle(showValues=False)  # Disable showing the values of axis
         self.plan_view.getAxis('top').setStyle(showValues=False)  # Disable showing the values of axis
         self.plan_view.showAxis('right', show=True)  # Show the axis edge line
@@ -843,6 +965,7 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         self.ax.get_xaxis().set_visible(False)
         self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}'))
         self.ax.figure.subplots_adjust(left=0.1, bottom=0.1, right=1., top=1.)
+        self.ax.get_yaxis().set_visible(False)  # Hide the section plot until a loop is added.
 
     def plot_hole(self):
         """
@@ -850,7 +973,6 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         :return: None
         """
 
-        @Log()
         def get_hole_projection():
             """
             Calculates the 3D projection of the hole.
@@ -866,7 +988,6 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
             z = [z, hole_elevation + dz]
             return x, y, z
 
-        @Log()
         def get_section_extents(x, y, z):
             """
             Calculates the two coordinates to be used for the section plot.
@@ -963,7 +1084,8 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
             :param c2: (x, y, z) tuple: Opposite corner of the 2D section to plot the mag on.
             :return: None
             """
-            wire_coords = self.selected_loop.get_loop_coords()
+            corners = self.selected_loop.get_loop_coords()
+            wire_coords = [(c.x(), c.y(), 0) for c in corners]
             mag_calculator = MagneticFieldCalculator(wire_coords)
             xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)
             self.ax.quiver(xx, zz, plotx, plotz,
@@ -989,14 +1111,18 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
             self.loop_roi.setPos(x + dx, y + dy)
             self.loop_roi.blockSignals(False)
 
+        self.ax.clear()
+
+        if not self.selected_loop:
+            logger.warning(f"Cannot plot hole without a loop.")
+            return
+
         hole_easting = int(self.selected_hole.hole_easting_edit.text())
         hole_northing = int(self.selected_hole.hole_northing_edit.text())
         hole_elevation = int(self.selected_hole.hole_elevation_edit.text())
-        hole_az = int(self.selected_hole.hole_az_edit.text())
+        hole_az = int(self.selected_hole.hole_azimuth_edit.text())
         hole_dip = -int(self.selected_hole.hole_dip_edit.text())
         hole_length = int(self.selected_hole.hole_length_edit.text())
-
-        self.ax.clear()
 
         xs, ys, zs = get_hole_projection()
         p1, p2 = get_section_extents(xs, ys, zs)
@@ -2076,7 +2202,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.lines = []
 
         # Status bar
-        self.status_bar.addPermanentWidget(self.spacer_label, 1)
+        # self.status_bar.addPermanentWidget(self.spacer_label, 1)
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
         # Plots
@@ -2930,19 +3056,23 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.status_bar.showMessage('Grid coordinates copied to clipboard', 1000)
 
 
-class LoopROI(pg.PolyLineROI):
+class LoopROI(pg.RectROI):
     """
     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.handleSize = 5
+        self.handlePen = pg.mkPen(50, 50, 50, 100)
+        # self.handlePen = pg.mkPen(102, 0, 204)
+        self.handleHoverPen = pg.mkPen(102, 0, 300)
 
     def _makePen(self):
         # Generate the pen color for this ROI based on its current state.
         if self.mouseHovering:
             # style=QtCore.Qt.DashLine,
-            return pg.mkPen(self.pen.color(), width=2)
+            return pg.mkPen(self.pen.color(), width=1.5)
         else:
             return self.pen
 
