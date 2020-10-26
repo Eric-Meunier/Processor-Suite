@@ -52,10 +52,16 @@
         <item>
          <widget class="QTabWidget" name="hole_tab_widget">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>100</height>
+           </size>
           </property>
           <property name="currentIndex">
            <number>-1</number>
@@ -81,6 +87,12 @@
           </property>
           <property name="alignment">
            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
            <item row="0" column="2">
@@ -214,6 +226,10 @@
           <property name="text">
            <string>Add Hole</string>
           </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>icons/add.png</normaloff>icons/add.png</iconset>
+          </property>
          </widget>
         </item>
        </layout>
@@ -295,10 +311,16 @@
         <item>
          <widget class="QTabWidget" name="loop_tab_widget">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>100</height>
+           </size>
           </property>
           <property name="maximumSize">
            <size>
@@ -322,16 +344,6 @@
          </spacer>
         </item>
         <item>
-         <widget class="QCheckBox" name="show_grid_cbox">
-          <property name="text">
-           <string>Show Grid</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QPushButton" name="add_loop_btn">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -341,6 +353,10 @@
           </property>
           <property name="text">
            <string>Add Loop</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>icons/add.png</normaloff>icons/add.png</iconset>
           </property>
          </widget>
         </item>
@@ -370,6 +386,9 @@
     <property name="title">
      <string>View</string>
     </property>
+    <addaction name="show_annotations_cbox"/>
+    <addaction name="show_grid_cbox"/>
+    <addaction name="separator"/>
     <addaction name="view_map_action"/>
    </widget>
    <addaction name="menuFile"/>
@@ -377,16 +396,34 @@
   </widget>
   <widget class="QStatusBar" name="status_bar"/>
   <action name="actionSave_as_KMZ">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/google_earth.png</normaloff>icons/google_earth.png</iconset>
+   </property>
    <property name="text">
     <string>Save as KMZ...</string>
    </property>
+   <property name="toolTip">
+    <string>Save all GPS to a Google Earth KMZ file</string>
+   </property>
   </action>
   <action name="actionSave_as_GPX">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/garmin_file.png</normaloff>icons/garmin_file.png</iconset>
+   </property>
    <property name="text">
     <string>Save as GPX...</string>
    </property>
+   <property name="toolTip">
+    <string>Save all GPS to a Garming GPX file</string>
+   </property>
   </action>
   <action name="view_map_action">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/folium.png</normaloff>icons/folium.png</iconset>
+   </property>
    <property name="text">
     <string>Map</string>
    </property>
@@ -394,6 +431,31 @@
   <action name="actionCopy_Loop_to_Clipboard">
    <property name="text">
     <string>Copy to Clipboard</string>
+   </property>
+  </action>
+  <action name="show_grid_cbox">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Plan View Grid</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the grid in the plan view</string>
+   </property>
+  </action>
+  <action name="show_annotations_cbox">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Annotations</string>
    </property>
   </action>
  </widget>

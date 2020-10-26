@@ -296,7 +296,7 @@ class TransmitterLoop(BaseGPS):
         gps = gps.drop(cols_to_drop, axis=1)
 
         if len(gps.columns) < 3:
-            error_msg = f"{len(gps.columns)} columns of values were found instead of 3."
+            error_msg = f"{len(gps.columns)} column(s) of values were found instead of 3."
             logger.warning(error_msg)
             # print("Fewer than 3 columns were found.")
             return empty_gps, gps, error_msg
@@ -470,7 +470,7 @@ class SurveyLine(BaseGPS):
         gps = gps.drop(cols_to_drop, axis=1)
 
         if len(gps.columns) < 4:
-            error_msg = f"{len(gps.columns)} columns of values were found instead of 4."
+            error_msg = f"{len(gps.columns)} column(s) of values were found instead of 4."
             logger.warning(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 4:
@@ -562,7 +562,7 @@ class BoreholeCollar(BaseGPS):
     def parse_collar(file):
         """
         Parse a text file for collar GPS. Returns the first match found.
-        :param file: Union (str filepath, dataframe, list), GPS data
+        :param file: Union (str filepath, dataframe, list), GPS data. If list is passed, should be a nested list.
         :return: Pandas DataFrame of the GPS.
         """
         def has_na(series):
@@ -609,6 +609,7 @@ class BoreholeCollar(BaseGPS):
 
         # If more than 1 collar GPS is found, only keep the first row and all other rows are errors
         if len(gps) > 1:
+            logger.warning(f"{len(gps)} row(s) found instead of 1. Removing the extra rows.")
             gps = gps.drop(gps.iloc[1:].index)
 
         gps = gps.astype(str)
@@ -619,15 +620,17 @@ class BoreholeCollar(BaseGPS):
                 continue
             # Remove P tag column
             if col.map(lambda x: str(x).startswith('<')).all():
+                logger.info(f"Removing P-tag column.")
                 cols_to_drop.append(i)
             # Remove units column
             elif col.map(lambda x: str(x) == '0').all():
+                logger.info(f"Removing column of 0s.")
                 cols_to_drop.append(i)
 
         gps = gps.drop(cols_to_drop, axis=1)
 
         if len(gps.columns) < 3:
-            error_msg = f"{len(gps.columns)} columns of values were found instead of 3."
+            error_msg = f"{len(gps.columns)} column(s) of values were found instead of 3."
             logger.warning(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
@@ -731,7 +734,7 @@ class BoreholeSegments(BaseGPS):
         gps = gps.drop(cols_to_drop, axis=1)
 
         if len(gps.columns) < 5:
-            error_msg = f"{len(gps.columns)} columns of values were found instead of 5."
+            error_msg = f"{len(gps.columns)} column(s) of values were found instead of 5."
             logger.warning(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 5:
