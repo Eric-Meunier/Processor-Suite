@@ -299,7 +299,7 @@ class HoleWidget(QWidget):
                                      tailWidth=15,
                                      pen=pg.mkPen(default_color, width=1.),
                                      )
-        self.hole_end.setZValue(4)
+        self.hole_end.setZValue(5)
 
         # Hole name
         self.hole_name = pg.TextItem(name, anchor=(-0.15, 0.5), color=(0, 0, 0, 150))
@@ -343,18 +343,19 @@ class HoleWidget(QWidget):
         # Editing
         self.hole_name_edit.textChanged.connect(self.name_changed_sig.emit)
         self.hole_name_edit.textChanged.connect(lambda: self.hole_name.setText(self.hole_name_edit.text()))
-        self.hole_easting_edit.editingFinished.connect(self.draw_hole)
+
         self.hole_easting_edit.editingFinished.connect(self.calc_hole_projection)
-        self.hole_northing_edit.editingFinished.connect(self.draw_hole)
+        self.hole_easting_edit.editingFinished.connect(self.draw_hole)
         self.hole_northing_edit.editingFinished.connect(self.calc_hole_projection)
-        self.hole_elevation_edit.editingFinished.connect(self.draw_hole)
+        self.hole_northing_edit.editingFinished.connect(self.draw_hole)
         self.hole_elevation_edit.editingFinished.connect(self.calc_hole_projection)
-        self.hole_azimuth_edit.editingFinished.connect(self.draw_hole)
+        self.hole_elevation_edit.editingFinished.connect(self.draw_hole)
         self.hole_azimuth_edit.editingFinished.connect(self.calc_hole_projection)
-        self.hole_dip_edit.editingFinished.connect(self.draw_hole)
+        self.hole_azimuth_edit.editingFinished.connect(self.draw_hole)
         self.hole_dip_edit.editingFinished.connect(self.calc_hole_projection)
-        self.hole_length_edit.editingFinished.connect(self.draw_hole)
+        self.hole_dip_edit.editingFinished.connect(self.draw_hole)
         self.hole_length_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_length_edit.editingFinished.connect(self.draw_hole)
 
     def select(self):
         selection_color = (0, 0, 255, 200)
@@ -405,11 +406,13 @@ class HoleWidget(QWidget):
             'length': self.hole_length_edit.text(),
         }
 
-    @Log()
     def calc_hole_projection(self):
         """
         Calculate and update the 3D projection of the hole.
         """
+        # Reset the current projection, so there isn't a length error later
+        self.projection = self.projection.iloc[0:0]
+
         x = int(self.hole_easting_edit.text())
         y = int(self.hole_northing_edit.text())
         z = int(self.hole_elevation_edit.text())
@@ -457,10 +460,14 @@ class HoleWidget(QWidget):
 
         x, y, z = self.get_hole_projection()
 
-        azimuth = int(self.hole_azimuth_edit.text())
+        azimuth = self.get_azimuth()
 
         # Calculate the length of the cross-section
-        line_len = math.ceil(int(self.hole_length_edit.text()) / 400) * 400
+        if self.manual_geometry_rbtn.isChecked():
+            hole_length = int(self.hole_length_edit.text())
+        else:
+            hole_length = int(self.segments.df.Depth.iloc[-1])
+        line_len = math.ceil(hole_length / 100) * 100  # Nearest 100
 
         # Find the coordinate that is 80% down the hole
         if 90 < azimuth < 180:
@@ -488,32 +495,12 @@ class HoleWidget(QWidget):
 
         return p1, p2
 
-    def draw_hole(self):
-        """
-        Draw the hole in the plan view.
-        """
-        # Plot the collar
-        self.hole_collar.setData([int(self.hole_easting_edit.text())], [int(self.hole_northing_edit.text())])
-
-        # Plot the name
-        self.hole_name.setPos(int(self.hole_easting_edit.text()), int(self.hole_northing_edit.text()))
-
-        if not self.projection.empty:
-            # Plot the trace
-            xs, ys, zs = self.get_hole_projection()
-            self.hole_trace.setData(xs, ys)
-            self.hole_trace.show()
-
-            # Plot the end of the hole
-            self.hole_end.setPos(xs[-1], ys[-1])
-            self.hole_end.show()
-            self.hole_end.setStyle(angle=int(self.hole_azimuth_edit.text()) - 90,
-                                   pen=self.hole_trace.opts['pen'])
-        else:
-            self.hole_trace.hide()
-            self.hole_end.hide()
-
-        self.plot_hole_sig.emit()
+    def get_azimuth(self):
+        xs, ys, zs = self.get_hole_projection()
+        azimuth = math.degrees(math.atan2((xs[-1] - xs[-2]), (ys[-1] - ys[-2])))
+        if azimuth < 0:
+            azimuth = azimuth + 360
+        return azimuth
 
     def get_dad_file(self):
         """
@@ -549,6 +536,8 @@ class HoleWidget(QWidget):
                 if all([d == float for d in df.dtypes]):
                     # Update the dad file path
                     self.dad_file_edit.setText(filepath)
+                    # Flip the dip so down is positive
+                    df.Dip = df.Dip * -1
                     # Create a BoreholeSegment object from the DAD file, to more easily calculate the projection
                     segmenter = Segmenter()
                     self.segments = segmenter.dad_to_seg(df.dropna())
@@ -572,6 +561,34 @@ class HoleWidget(QWidget):
                                                            )
         if file_name != '':
             open_dad_file(file_name)
+
+    def draw_hole(self):
+        """
+        Draw the hole in the plan view.
+        """
+        # Plot the collar
+        self.hole_collar.setData([int(self.hole_easting_edit.text())], [int(self.hole_northing_edit.text())])
+
+        # Plot the name
+        self.hole_name.setPos(int(self.hole_easting_edit.text()), int(self.hole_northing_edit.text()))
+
+        if not self.projection.empty:
+            # Plot the trace
+            xs, ys, zs = self.get_hole_projection()
+            self.hole_trace.setData(xs, ys)
+            self.hole_trace.show()
+
+            # Plot the end of the hole
+            self.hole_end.setPos(xs[-1], ys[-1])
+            angle = self.get_azimuth()
+            self.hole_end.show()
+            self.hole_end.setStyle(angle=angle + 90,
+                                   pen=self.hole_trace.opts['pen'])
+        else:
+            self.hole_trace.hide()
+            self.hole_end.hide()
+
+        self.plot_hole_sig.emit()
 
 
 class LoopWidget(QWidget):
@@ -1254,6 +1271,7 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
             def get_magnitude(vector):
                 return math.sqrt(sum(i ** 2 for i in vector))
 
+            # Projecting the 3D trace to a 2D plane
             p = np.array([p1[0], p1[1], 0])
             vec = [p2[0] - p1[0], p2[1] - p1[1], 0]
             normal_plane = np.cross(vec, [0, 0, -1])
@@ -1262,7 +1280,6 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
             plotx = []
             plotz = []
 
-            # Projecting the 3D trace to a 2D plane
             for coordinate in hole_projection:
                 q = np.array(coordinate)
                 q_proj = q - np.dot(q - p, normal_plane) * normal_plane

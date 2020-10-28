@@ -392,15 +392,11 @@ class TileMapViewer(MapboxViewer):
                                                            ))
 
         def plot_hole():
-            collar = pem_file.collar.to_latlon().get_collar().dropna()
-            if collar.empty:
-                logger.warning(f"No collar GPS in {pem_file.filepath.name}")
-                return
-
             geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
             proj = geometry.get_projection(latlon=True)
             if proj.empty:
                 logger.warning(f"Hole projection is empty for {pem_file.filepath.name}")
+            collar = pem_file.collar.to_latlon().get_collar().dropna()
 
             if not proj.empty and proj.to_string() not in self.holes:
                 logger.info(f"Plotting hole trace for {pem_file.filepath.name}")
@@ -453,7 +449,7 @@ class TileMapViewer(MapboxViewer):
 
             # Plot the PEMs
             for pem_file in self.pem_files:
-                pem_file = pem_file.copy()
+                pem_file = pem_file.copy()  # Copy the PEM file so GPS conversions don't affect the original file
                 if dlg.wasCanceled():
                     break
                 dlg.setLabelText(f"Plotting {pem_file.filepath.name}")
@@ -483,6 +479,7 @@ class TileMapViewer(MapboxViewer):
         else:
             map_style = "outdoors"
 
+        # TODO Decide what to do with tokens
         # Format the figure margins and legend
         self.map_figure.update_layout(
             margin={"r": 0,

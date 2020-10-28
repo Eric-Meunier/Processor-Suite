@@ -426,18 +426,22 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 current_row, current_col = row, col
 
             elif col == self.table_columns.index('Suffix\nWarnings'):
-                warnings = pem_file.get_suffix_warnings()
+                if self.table.item(row, col).text() != '0' and not pem_file.is_borehole():
 
-                global suffix_viewer
-                suffix_viewer = WarningViewer(pem_file, warning_type='suffix')
-                suffix_viewer.accept_sig.connect(accept_change)
+                    global suffix_viewer
+                    suffix_viewer = WarningViewer(pem_file, warning_type='suffix')
+                    suffix_viewer.accept_sig.connect(accept_change)
+                else:
+                    self.status_bar.showMessage(f"No suffix warnings to show.", 1000)
 
             elif col == self.table_columns.index('Repeat\nWarnings'):
-                warnings = pem_file.get_repeats()
+                if self.table.item(row, col).text() != '0':
 
-                global repeat_viewer
-                repeat_viewer = WarningViewer(pem_file, warning_type='repeats')
-                repeat_viewer.accept_sig.connect(accept_change)
+                    global repeat_viewer
+                    repeat_viewer = WarningViewer(pem_file, warning_type='repeat')
+                    repeat_viewer.accept_sig.connect(accept_change)
+                else:
+                    self.status_bar.showMessage(f"No repeats to show.", 1000)
 
         def set_date(date):
             """
@@ -463,59 +467,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if self.share_loop_cbox.isChecked():
                 for row in range(self.table.rowCount()):
                     self.table.item(row, 5).setText(self.loop_edit.text())
-
-        def set_shared_header(header):
-            """
-            Signal slot, change the header information for each file in the table when the shared header LineEdits are
-            changed
-            :param header: str, either 'client', 'grid', or 'loop'.
-            """
-
-            self.allow_signals = False
-            self.table.blockSignals(True)
-
-            bold_font, normal_font = QtGui.QFont(), QtGui.QFont()
-            bold_font.setBold(True)
-            normal_font.setBold(False)
-
-            files, rows = self.pem_files, np.arange(self.table.rowCount())
-            column = self.table_columns.index(header.title())
-
-            for file, row in zip(files, rows):
-                item = self.table.item(row, column)
-
-                if header == 'client':
-                    client = self.client_edit.text() if self.share_client_cbox.isChecked() else file.client
-
-                    item.setText(str(client))
-                    if client != file.client:
-                        item.setFont(bold_font)
-                    else:
-                        item.setFont(normal_font)
-
-                elif header == 'grid':
-                    grid = self.grid_edit.text() if self.share_grid_cbox.isChecked() else file.grid
-
-                    item.setText(str(grid))
-                    if grid != file.grid:
-                        item.setFont(bold_font)
-                    else:
-                        item.setFont(normal_font)
-
-                elif header == 'loop':
-                    loop = self.loop_edit.text() if self.share_loop_cbox.isChecked() else file.loop_name
-
-                    item.setText(str(loop))
-                    if loop != file.loop_name:
-                        item.setFont(bold_font)
-                    else:
-                        item.setFont(normal_font)
-
-                else:
-                    raise ValueError(f"{header} is not a valid header")
-
-            self.table.blockSignals(False)
-            self.allow_signals = True
 
         def toggle_pem_list_buttons():
             """
@@ -768,6 +719,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 self.epsg_edit.setEnabled(True)
 
+            update_pem_files_crs()
+
         def check_epsg():
             """
             Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
@@ -810,12 +763,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             crs = self.get_crs()
             if crs:
                 for pem_file in self.pem_files:
-                    pem_file.crs = crs
-                    pem_file.loop.crs = crs
-                    if pem_file.is_borehole():
-                        pem_file.collar.crs = crs
-                    else:
-                        pem_file.line.crs = crs
+                    pem_file.set_crs(crs)
 
         # Add the GPS system and datum drop box options
         gps_systems = ['', 'Lat/Lon', 'UTM']
@@ -845,6 +793,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Line edit
         self.epsg_edit.editingFinished.connect(check_epsg)
+        self.epsg_edit.editingFinished.connect(update_pem_files_crs)
 
     def contextMenuEvent(self, event):
         """
@@ -1847,12 +1796,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             Convert the GPS of all GPS objects to the new EPSG code.
             :param epsg_code: int
             """
-            # Set the EPSG text in the status bar and click the EPSG radio button
-            self.epsg_edit.setText(str(epsg_code))
-            self.epsg_edit.editingFinished.emit()
-            self.epsg_rbtn.click()
-
-            logger.info(f"Converting to EPSG:{epsg_code}")
+            logger.info(f"Converting all GPS to EPSG:{epsg_code} ({CRS(epsg_code).name})")
 
             # Set up the progress bar
             bar = CustomProgressBar()
@@ -1867,24 +1811,29 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     if dlg.wasCanceled():
                         break
 
+                    pem_file.set_crs(crs)  # Ensure the current CRS is set
                     dlg.setLabelText(f"Converting GPS of {pem_file.filepath.name}")
+                    logger.info(f"Converting GPS of {pem_file.filepath.name}")
 
                     if not pem_file.loop.df.empty:
-                        pem_file.loop.crs = crs
                         pem_file.loop = pem_file.loop.to_epsg(epsg_code)
 
                     if pem_file.is_borehole():
                         if not pem_file.collar.df.empty:
-                            pem_file.collar.crs = crs
                             pem_file.collar = pem_file.collar.to_epsg(epsg_code)
 
                     else:
                         if not pem_file.line.df.empty:
-                            pem_file.line.crs = crs
                             pem_file.line = pem_file.line.to_epsg(epsg_code)
 
                     self.refresh_pem(pem_file)
                     dlg += 1
+
+                # Set the EPSG text in the status bar and click the EPSG radio button after conversion is complete,
+                # or else changing the text in the epsg_edit will trigger signals and change the pem_file's CRS.
+                self.epsg_edit.setText(str(epsg_code))
+                self.epsg_edit.editingFinished.emit()
+                self.epsg_rbtn.click()
 
                 self.status_bar.showMessage(f"Process complete. GPS converted to {crs.to_string()}.", 2000)
 
@@ -2358,7 +2307,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Grouping up the loops, lines and boreholes into lists.
         for pem_file in pem_files:
-            pem_file.loop.crs = crs
+            pem_file = pem_file.copy()  # Copy the PEM file so the GPS conversions don't affect the original
+            pem_file.set_crs(crs)
 
             # Save the loop
             loop_gps = pem_file.loop.to_latlon().get_loop(closed=True)
@@ -2371,7 +2321,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             # Save the line
             if not pem_file.is_borehole():
-                pem_file.line.crs = crs
                 line_gps = pem_file.line.to_latlon().get_line()
                 line_name = pem_file.line_name
 
@@ -2382,7 +2331,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             else:
                 # Save the borehole collar and trace
                 if pem_file.has_collar_gps():
-                    pem_file.collar.crs = crs
                     pem_file.geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
                     bh_projection = pem_file.geometry.get_projection(num_segments=100, latlon=True)
                     hole_name = pem_file.line_name
@@ -4263,11 +4211,11 @@ class WarningViewer(QMainWindow):
                 new_station = re.sub(r'[NSEWnsew]', mode, station)
                 return new_station
 
-            self.warnings = self.pem_file.get_repeats().Station.to_frame()
+            self.warnings = self.pem_file.get_suffix_warnings().Station.to_frame()
             self.warnings[''] = '→'
             mode = self.pem_file.get_suffix_mode()
             self.warnings['To'] = self.warnings.Station.map(get_new_name)
-            self.setWindowTitle(f"Suffix Warnings Viewer - {pem_file.filepath.name}")
+            self.setWindowTitle(f"Suffix Warnings - {pem_file.filepath.name}")
 
         else:
 
@@ -4286,10 +4234,10 @@ class WarningViewer(QMainWindow):
                 new_station = re.sub(r'\d+', station_num, station)
                 return new_station
 
-            self.warnings = self.pem_file.get_suffix_warnings().Station.to_frame()
+            self.warnings = self.pem_file.get_repeats().Station.to_frame()
             self.warnings[''] = '→'
             self.warnings['To'] = self.warnings.Station.map(get_new_name)
-            self.setWindowTitle(f"Repeat Warnings Viewer - {pem_file.filepath.name}")
+            self.setWindowTitle(f"Repeat Warnings - {pem_file.filepath.name}")
 
         if self.warnings.empty:
             logger.error(f"No warnings to view in {pem_file.filepath.name}.")
@@ -4311,7 +4259,7 @@ class WarningViewer(QMainWindow):
         self.accept_btn = QPushButton('Rename')
         self.widget.layout().addWidget(self.accept_btn)
 
-        self.table.setData(self.repeats.to_dict('index'))
+        self.table.setData(self.warnings.to_dict('index'))
         self.format_table()
 
         # Init the signals
@@ -4320,7 +4268,7 @@ class WarningViewer(QMainWindow):
 
     def accept_rename(self):
         data = self.pem_file.data
-        data.loc[self.repeats.index, 'Station'] = self.repeats['To']
+        data.loc[self.warnings.index, 'Station'] = self.warnings['To']
         self.accept_sig.emit(data)
         self.close()
 
@@ -4342,16 +4290,22 @@ def main():
     # ff = PathFilter()
     # ff.show()
 
-    # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 650_14.PEM')]
+    pem_files = [pem_parser.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\Kevin\Bill\Heinz\CS-19-08W4 XYT_OUT.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
-    pem_files = pg.get_pems(client='Kazzinc', number=4)
+    # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='Minera', number=1)
     # pem_files = pg.get_pems(random=True, number=1)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     mw.open_pem_files(pem_files)
+    mw.gps_conversion_widget.gps_system_cbox.setCurrentText('UTM')
+    mw.gps_conversion_widget.gps_datum_cbox.setCurrentText('NAD 1927')
+    mw.gps_conversion_widget.gps_zone_cbox.setCurrentText('17 North')
+    mw.open_gps_conversion()
+    mw.gps_conversion_widget.accept()
+    # mw.open_tile_map()
 
     # mw.project_dir_edit.setText(r'C:\_Data\2020\Juno\Borehole')
     # mw.move_dir_tree_to(r'C:\_Data\2020\Juno\Borehole')

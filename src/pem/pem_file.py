@@ -573,7 +573,6 @@ class PEMFile:
         Return the survey type in title format
         :return: str
         """
-
         file_survey_type = re.sub('\s+', '_', self.survey_type.casefold())
 
         if any(['s-coil' in file_survey_type,
@@ -591,6 +590,7 @@ class PEMFile:
                   'bh_z' in file_survey_type,
                   'bh_fast_rad' in file_survey_type,
                   'bh_z_probe' in file_survey_type,
+                  'xy_magnum' in file_survey_type,
                   'radtool' in file_survey_type]):
             survey_type = 'Borehole Induction'
 
@@ -701,6 +701,19 @@ class PEMFile:
         eligible_data = data[~data.Remove.astype(bool)].drop(['Remove'], axis=1)
         ineligible_stations = data[data.Remove].drop(['Remove'], axis=1)
         return eligible_data, ineligible_stations
+
+    def set_crs(self, crs):
+        """
+        Set the CRS of all GPS objects
+        :param crs: CRS object
+        """
+        logger.info(f"Setting CRS of {self.filepath.name} to {crs.name}.")
+        self.crs = crs
+        self.loop.crs = crs
+        if self.is_borehole():
+            self.collar.crs = crs
+        else:
+            self.line.crs = crs
 
     def to_string(self, legacy=False):
         """

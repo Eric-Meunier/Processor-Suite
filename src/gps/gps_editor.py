@@ -192,6 +192,7 @@ class BaseGPS:
     def to_epsg(self, epsg_code):
         """
         Convert the data frame coordinates to WGS 1984.
+        :param epsg_code: int, EPSG code to convert to.
         :return: GPS object
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
@@ -783,6 +784,7 @@ class BoreholeGeometry(BaseGPS):
         self.collar = collar
         self.segments = segments
 
+    # TODO projection with projected CRS?
     def get_projection(self, num_segments=None, stations=None, latlon=False):
         """
         Uses the segments to create a 3D projection of a borehole trace. Can be broken up into segments and interpolated.
@@ -791,10 +793,14 @@ class BoreholeGeometry(BaseGPS):
         :param latlon: bool, whether to return the projection as latlon
         :return: pandas DataFrame: Projected easting, northing, elevation, and relative depth from collar
         """
-        self.crs = self.collar.crs
-
         # Create the data frame
         projection = gpd.GeoDataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative_depth'])
+
+        self.crs = self.collar.crs
+        if CRS(self.crs).is_geographic:
+            logger.error(f"CRS must be projected, not geographic.")
+            return projection
+
         collar = self.collar.get_collar().dropna()
         segments = self.segments.get_segments().dropna()
 
