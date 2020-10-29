@@ -261,6 +261,7 @@ class MapboxViewer(QMainWindow):
         self.setWindowTitle("Tile Map")
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
         self.status_bar = self.statusBar()
+        self.status_bar.show()
         # self.resize(1000, 800)
 
         layout = QHBoxLayout()
@@ -315,9 +316,9 @@ class MapboxViewer(QMainWindow):
 
     def copy_img(self):
         QApplication.clipboard().setPixmap(self.grab())
-        self.status_bar.show()
+        # self.status_bar.show()
         self.status_bar.showMessage('Image copied to clipboard.', 1000)
-        QTimer.singleShot(1000, lambda: self.status_bar.hide())
+        # QTimer.singleShot(1000, lambda: self.status_bar.hide())
 
 
 class TileMapViewer(MapboxViewer):
