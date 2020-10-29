@@ -27,7 +27,7 @@ from shapely.geometry import asMultiPoint
 from src.logger import Log
 from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.geometry.segment import Segmenter
-from src.qt_py.custom_qt_widgets import NonScientific
+from src.qt_py.custom_qt_widgets import NonScientific, PlanMapAxis
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.qt_py.map_widgets import TileMapViewer
 
@@ -1680,7 +1680,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.lines = []
 
         # Status bar
-        # self.status_bar.addPermanentWidget(self.spacer_label, 1)
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
         # Plots
@@ -2049,8 +2048,8 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
             self.grid_roi.sigRegionChangeFinished.connect(lambda: self.grid_roi.setPen(None))
             self.grid_roi.sigRegionChangeFinished.connect(grid_moved)
 
-        yaxis = CustomAxis(orientation='left')
-        xaxis = CustomAxis(orientation='bottom')
+        yaxis = PlanMapAxis(orientation='left')
+        xaxis = PlanMapAxis(orientation='bottom')
         self.plan_view.setAxisItems({'bottom': xaxis, 'left': yaxis})
         self.plan_view.showGrid(x=True, y=True, alpha=0.2)
         self.plan_view.setAspectLocked()
@@ -2231,7 +2230,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         theta = math.radians(angle)
         dx = (hypo / 2) * math.cos(theta)
         dy = (hypo / 2) * math.sin(theta)
-        # print(f"Center is at {x - dx}, {y + dy}")
         return x - dx, y + dy
 
     def get_grid_lonlat(self):
@@ -2311,15 +2309,15 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
 
         def plot_line(line):
             line_name = line.Line_name.unique()[0].strip()
-            terrain_map.map_figure.add_trace(go.Scattermapbox(lon=line.Easting,
-                                                              lat=line.Northing,
-                                                              mode='lines+markers',
-                                                              name=line_name,
-                                                              text=line.Station
-                                                              ))
+            tile_map.map_figure.add_trace(go.Scattermapbox(lon=line.Easting,
+                                                           lat=line.Northing,
+                                                           mode='lines+markers',
+                                                           name=line_name,
+                                                           text=line.Station
+                                                           ))
 
-        global terrain_map
-        terrain_map = MapboxViewer()
+        global tile_map
+        tile_map = TileMapViewer()
 
         loop_coords = self.get_loop_lonlat()
         grid = self.get_grid_lonlat()
@@ -2333,12 +2331,12 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         # Plot the lines
         grid.groupby('Line_name').apply(plot_line)
         # Plot the loop
-        terrain_map.map_figure.add_trace(go.Scattermapbox(lon=loop_coords.Easting,
-                                                          lat=loop_coords.Northing,
-                                                          mode='lines+markers',
-                                                          name=loop_name,
-                                                          text=loop_coords.index
-                                                          ))
+        tile_map.map_figure.add_trace(go.Scattermapbox(lon=loop_coords.Easting,
+                                                       lat=loop_coords.Northing,
+                                                       mode='lines+markers',
+                                                       name=loop_name,
+                                                       text=loop_coords.index
+                                                       ))
 
         # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
         token = open(".mapbox", 'r').read()
@@ -2349,7 +2347,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
             map_style = "outdoors"
 
         # Format the figure margins and legend
-        terrain_map.map_figure.update_layout(
+        tile_map.map_figure.update_layout(
             margin={"r": 0,
                     "t": 0,
                     "l": 0,
@@ -2364,15 +2362,15 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
             ),
         )
         # Add the map style and center/zoom the map
-        terrain_map.map_figure.update_layout(
+        tile_map.map_figure.update_layout(
             mapbox={
                 'center': {'lon': loop_coords.Easting.mean(), 'lat': loop_coords.Northing.mean()},
                 'zoom': 13},
             mapbox_style=map_style,
             mapbox_accesstoken=token)
 
-        terrain_map.load_page()
-        terrain_map.show()
+        tile_map.load_page()
+        tile_map.show()
 
     def save_kmz(self):
         """
@@ -2573,47 +2571,10 @@ class LoopROI(pg.RectROI):
             return self.pen
 
 
-class CustomAxis(pg.AxisItem):
-    """
-    Custom pyqtgraph axis used for Loop Planner plan view
-    """
-
-    def __init__(self, *args, **kwargs):
-        pg.AxisItem.__init__(self, *args, **kwargs)
-
-    def tickStrings(self, values, scale, spacing):
-        """Return the strings that should be placed next to ticks. This method is called
-        when redrawing the axis and is a good method to override in subclasses.
-        The method is called with a list of tick values, a scaling factor (see below), and the
-        spacing between ticks (this is required since, in some instances, there may be only
-        one tick and thus no other way to determine the tick spacing)
-
-        The scale argument is used when the axis label is displaying units which may have an SI scaling prefix.
-        When determining the text to display, use value*scale to correctly account for this prefix.
-        For example, if the axis label's units are set to 'V', then a tick value of 0.001 might
-        be accompanied by a scale value of 1000. This indicates that the label is displaying 'mV', and
-        thus the tick should display 0.001 * 1000 = 1.
-        """
-        if self.logMode:
-            return self.logTickStrings(values, scale, spacing)
-
-        letter = 'N' if self.orientation == 'left' else 'E'
-        places = max(0, np.ceil(-np.log10(spacing * scale)))
-        strings = []
-        for v in values:
-            vs = v * scale
-            if abs(vs) < .001 or abs(vs) >= 10000:
-                vstr = f"{vs:.0f}{letter}"
-            else:
-                vstr = ("%%0.%df" % places) % vs
-            strings.append(vstr)
-        return strings
-
-
 def main():
     app = QApplication(sys.argv)
-    planner = LoopPlanner()
-    # planner = GridPlanner()
+    # planner = LoopPlanner()
+    planner = GridPlanner()
 
     # planner.gps_system_cbox.setCurrentIndex(2)
     # planner.gps_datum_cbox.setCurrentIndex(1)

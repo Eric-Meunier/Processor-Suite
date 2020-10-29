@@ -1,0 +1,129 @@
+>>10/29/2020 04:37:33 PM [INFO] gps_editor.py (parse_collar:628):
+ Removing column of 0s.
+>>10/29/2020 04:37:33 PM [WARNING] gps_editor.py (get_projection:801):
+ No CRS passed.
+>>10/29/2020 04:37:33 PM [WARNING] pem_planner.py (plot_hole:1379):
+ Cannot plot hole without a loop.
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (project_dir_changed:1926):
+ New project directory: C:\Users\Mortulo\Downloads\Data
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_gps:1962):
+ Include files: ['']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_gps:1964):
+ Include files: ['DTL', 'exp', 'Correct']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_gps:1968):
+ Include folders: ['GPS']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_gps:1970):
+ Exclude folders: ['']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_gps:1997):
+ Include extensions: ['']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_gps:1999):
+ Exclude extensions: ['']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_pems:2066):
+ Include files: ['']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_pems:2068):
+ Include files: ['']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_pems:2072):
+ Include folders: ['']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_pems:2074):
+ Exclude folders: ['']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_pems:2101):
+ Include extensions: ['']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_pems:2103):
+ Exclude extensions: ['']
+>>10/29/2020 04:37:57 PM [INFO] pem_hub.py (get_filtered_pems:2118):
+ Filtered pems: C:\Users\Mortulo\Downloads\Data\Dump\September 09, 2020\Dump\LINE 1A.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 09, 2020\Dump\LINE 3.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 09, 2020\Dump\PP.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 11, 2020\Dump\LINE 1.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 11, 2020\Dump\LINE 2.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 11, 2020\Dump\LINE 3.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 12, 2020\Dump\ELR20-012XYZ.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 12, 2020\Dump\PP-COIL.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 12, 2020\Dump\sELR20-012XYZ.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 12, 2020\Dump\SOA012.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 13, 2020\Dump\7.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 14, 2020\Dump\ELR20-018XYZ.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 14, 2020\Dump\PP-COIL.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 14, 2020\Dump\sELR20-018XYZ.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 14, 2020\Dump\SOA018.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 15, 2020\Dump\ELR20-017AXYZ.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 15, 2020\Dump\PP-COIL.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 15, 2020\Dump\sELR20-017AXYZ.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 15, 2020\Dump\SOA017A.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\Dump\ELR20-013AXYZ.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\Dump\PP-COIL.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\Dump\sELR20-013AXYZ.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\Dump\SOA013A.PEM
+C:\Users\Mortulo\Downloads\Data\Dump\September 18, 2020\Dump\3790XYZ.PEM
+C:\Users\Mortulo\Downloads\Data\Eastern\RAW\XY28_29.PEM
+C:\Users\Mortulo\Downloads\Data\Eastern\RAW\Z merged.PEM
+C:\Users\Mortulo\Downloads\Data\Eastern\RAW\_29_pp28.PEM
+C:\Users\Mortulo\Downloads\Data\RAW\elr20-013axyz_16.PEM
+C:\Users\Mortulo\Downloads\Data\Eastern\Dump\October 29, 2020\DMP\pp28.DMP
+C:\Users\Mortulo\Downloads\Data\Eastern\Dump\October 29, 2020\DMP\SOA28.DMP
+C:\Users\Mortulo\Downloads\Data\Eastern\Dump\October 29, 2020\DMP\XY28.DMP
+C:\Users\Mortulo\Downloads\Data\Eastern\Dump\October 29, 2020\DMP\Z28B.DMP
+C:\Users\Mortulo\Downloads\Data\Eastern\Dump\October 29, 2020\DMP\Z28C.DMP
+C:\Users\Mortulo\Downloads\Data\Eastern\RAW\XY28_29.DMP
+C:\Users\Mortulo\Downloads\Data\Eastern\RAW\Z28B_29.DMP
+C:\Users\Mortulo\Downloads\Data\Eastern\RAW\Z28C_29.DMP
+C:\Users\Mortulo\Downloads\Data\Eastern\RAW\_29_pp28.DMP
+C:\Users\Mortulo\Downloads\Data\Dump\September 07, 2020\DMP\4.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 07, 2020\DMP\8.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 07, 2020\DMP\pp.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 08, 2020\DMP\4.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 08, 2020\DMP\5.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 08, 2020\DMP\6.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 08, 2020\DMP\pp.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 09, 2020\DMP\line 1a.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 09, 2020\DMP\line 3.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 09, 2020\DMP\pp.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 11, 2020\DMP\line 1.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 11, 2020\DMP\line 2.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 11, 2020\DMP\line 3.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 11, 2020\DMP\pp.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 12, 2020\DMP\elr20-012xyz.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 12, 2020\DMP\pp-coil.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 12, 2020\DMP\soa012.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 13, 2020\DMP\7.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 13, 2020\DMP\pp.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 14, 2020\DMP\elr20-018xyz.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 14, 2020\DMP\pp-coil.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 14, 2020\DMP\soa018.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 15, 2020\DMP\elr20-017axyz.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 15, 2020\DMP\pp-coil.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 15, 2020\DMP\soa017a.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\elr20-013axyz.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\soa013a.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 18, 2020\DMP\3790xyz.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 18, 2020\DMP\pp.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 18, 2020\DMP\soa.dmp2
+C:\Users\Mortulo\Downloads\Data\Dump\September 18, 2020\DMP\soaa.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\3790xyz_18.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\4_07.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\4_08.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\5_08.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\6_08.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\7_13.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\8_07.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\elr20-012xyz_12.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\elr20-013axyz_16.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\elr20-017axyz_15.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\elr20-018xyz_14.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\line 1a_09.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\line 1_11.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\line 2_11.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\line 3_09.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\line 3_11.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\_07_pp.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\_08_pp.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\_09_pp.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\_11_pp.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\_12_pp-coil.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\_13_pp.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\_14_pp-coil.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\_15_pp-coil.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\_16_pp-coil.dmp2
+C:\Users\Mortulo\Downloads\Data\RAW\_18_pp.dmp2
