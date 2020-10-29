@@ -1,6 +1,6 @@
->>10/28/2020 08:59:20 AM [WARNING] pem_planner.py (plot_hole:1331):
+>>10/29/2020 01:52:03 PM [INFO] gps_editor.py (parse_collar:628):
+ Removing column of 0s.
+>>10/29/2020 01:52:03 PM [WARNING] gps_editor.py (get_projection:801):
+ No CRS passed.
+>>10/29/2020 01:52:03 PM [WARNING] pem_planner.py (plot_hole:1388):
  Cannot plot hole without a loop.
->>10/28/2020 08:59:38 AM [INFO] gps_editor.py (parse_collar:628):
- Removing column of 0s.
->>10/28/2020 08:59:38 AM [INFO] gps_editor.py (parse_collar:628):
- Removing column of 0s.

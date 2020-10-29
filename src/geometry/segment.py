@@ -1,6 +1,7 @@
 from src.gps.gps_editor import BoreholeSegments
 import logging
-import sys
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -13,12 +14,22 @@ class Segmenter:
     @staticmethod
     def dad_to_seg(df, units='m'):
         """
-        Create a segment data frame from a DAD data frame
+        Create a segment data frame from a DAD data frame. DAD data is split into 1m intervals.
         :param df: pandas DataFrame with Depth, Azimuth, Dip columns
         :param units: str, units of the segments, either 'm' or 'ft'
         :return: pandas DataFrame with Azimuth, Dip, segment length, unit, and depth columns
         """
         units = 2 if units == 'm' else 0
+
+        # Interpolate the DAD to 1m segments
+        depth = df.Depth.to_numpy()
+        azimuth = df.Azimuth.to_numpy()
+        dip = df.Dip.to_numpy()
+
+        i_depth = np.arange(depth[0], depth[-1] + 1)
+        i_azimuth = np.interp(i_depth, depth, azimuth)
+        i_dip = np.interp(i_depth, depth, dip)
+        df = pd.DataFrame(zip(i_depth, i_azimuth, i_dip), columns=df.columns)
 
         # Create the segment data frame
         seg = df.head(0).copy()

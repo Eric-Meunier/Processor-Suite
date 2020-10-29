@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1126</width>
-    <height>870</height>
+    <height>783</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="QFrame" name="frame_2">
+      <widget class="QFrame" name="hole_frame">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
          <horstretch>0</horstretch>
@@ -234,7 +234,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QFrame" name="frame">
+      <widget class="QFrame" name="section_frame">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
          <horstretch>30</horstretch>
@@ -294,7 +294,7 @@
         <enum>QFrame::Sunken</enum>
        </property>
       </widget>
-      <widget class="QFrame" name="frame_3">
+      <widget class="QFrame" name="loop_frame">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
          <horstretch>0</horstretch>

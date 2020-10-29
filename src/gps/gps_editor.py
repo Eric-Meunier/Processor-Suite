@@ -797,7 +797,9 @@ class BoreholeGeometry(BaseGPS):
         projection = gpd.GeoDataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative_depth'])
 
         self.crs = self.collar.crs
-        if CRS(self.crs).is_geographic:
+        if not self.crs:
+            logger.warning(f"No CRS passed.")
+        elif self.crs.is_geographic:
             logger.error(f"CRS must be projected, not geographic.")
             return projection
 

@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 
 import geopandas as gpd
-import pandas as pd
 import gpxpy
 import math
 import matplotlib.ticker as ticker
@@ -20,6 +19,8 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, 
                              QGridLayout)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib import patheffects
+import matplotlib.transforms as mtransforms
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
 
@@ -55,6 +56,9 @@ pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
+
+default_color = (0, 0, 0, 150)
+selection_color = '#1976D2'
 
 
 class SurveyPlanner(QMainWindow):
@@ -183,12 +187,14 @@ class HoleWidget(QWidget):
         :param name: str, name of the hole.
         """
         super().__init__()
+        self.segmenter = Segmenter()
 
         layout = QFormLayout()
         self.setLayout(layout)
         self.plan_view = plot_widget
-        self.projection = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation'])
+        self.projection = pd.DataFrame()
         self.segments = None
+        self.section_length = None
 
         if not properties:
             properties = {
@@ -279,8 +285,6 @@ class HoleWidget(QWidget):
         self.hole_length_edit.setValidator(self.size_validator)
 
         # Plotting
-        default_color = (0, 0, 0, 150)
-
         # Hole collar
         self.hole_collar = pg.ScatterPlotItem(clickable=True,
                                               pen=pg.mkPen(default_color, width=1.),
@@ -358,8 +362,6 @@ class HoleWidget(QWidget):
         self.hole_length_edit.editingFinished.connect(self.draw_hole)
 
     def select(self):
-        selection_color = (0, 0, 255, 200)
-
         self.hole_collar.setPen(pg.mkPen(selection_color, width=1.5))
         self.hole_collar.setSize(12)
         self.hole_collar.setZValue(10)
@@ -370,11 +372,9 @@ class HoleWidget(QWidget):
 
         self.hole_end.setPen(pg.mkPen(selection_color, width=1.5))
 
-        self.hole_name.setColor((0, 0, 255, 200))
+        self.hole_name.setColor(selection_color)
 
     def deselect(self):
-        default_color = (0, 0, 0, 150)
-
         self.hole_collar.setPen(pg.mkPen(default_color, width=1.))
         self.hole_collar.setSize(11)
         self.hole_collar.setZValue(5)
@@ -385,7 +385,7 @@ class HoleWidget(QWidget):
 
         self.hole_end.setPen(pg.mkPen(default_color, width=1.))
 
-        self.hole_name.setColor((0, 0, 0, 150))
+        self.hole_name.setColor(default_color)
 
     def remove(self):
         self.plan_view.removeItem(self.hole_collar)
@@ -413,52 +413,46 @@ class HoleWidget(QWidget):
         # Reset the current projection, so there isn't a length error later
         self.projection = self.projection.iloc[0:0]
 
-        x = int(self.hole_easting_edit.text())
-        y = int(self.hole_northing_edit.text())
-        z = int(self.hole_elevation_edit.text())
+        x = float(self.hole_easting_edit.text())
+        y = float(self.hole_northing_edit.text())
+        z = float(self.hole_elevation_edit.text())
+        collar = BoreholeCollar([[x, y, z, '0']])  # Float so it doesn't get removed when parsing collar
 
         if self.manual_geometry_rbtn.isChecked():
-            delta_surf = int(self.hole_length_edit.text()) * math.cos(math.radians(int(self.hole_dip_edit.text())))
-            dx = delta_surf * math.sin(math.radians(int(self.hole_azimuth_edit.text())))
-            dy = delta_surf * math.cos(math.radians(int(self.hole_azimuth_edit.text())))
-            dz = int(self.hole_length_edit.text()) * math.sin(math.radians(int(self.hole_dip_edit.text())))
-            xs = [x, int(self.hole_easting_edit.text()) + dx]
-            ys = [y, int(self.hole_northing_edit.text()) + dy]
-            zs = [z, int(self.hole_elevation_edit.text()) - dz]
+            # delta_surf = int(self.hole_length_edit.text()) * math.cos(math.radians(int(self.hole_dip_edit.text())))
+            # dx = delta_surf * math.sin(math.radians(int(self.hole_azimuth_edit.text())))
+            # dy = delta_surf * math.cos(math.radians(int(self.hole_azimuth_edit.text())))
+            # dz = int(self.hole_length_edit.text()) * math.sin(math.radians(int(self.hole_dip_edit.text())))
+            # xs = [x, int(self.hole_easting_edit.text()) + dx]
+            # ys = [y, int(self.hole_northing_edit.text()) + dy]
+            # zs = [z, int(self.hole_elevation_edit.text()) - dz]
+            length = float(self.hole_length_edit.text())
+            azimuth = float(self.hole_azimuth_edit.text())
+            dip = float(self.hole_dip_edit.text())
+            df = pd.DataFrame({'Depth': [z, length],
+                               'Azimuth': [azimuth] * 2,
+                               'Dip': [dip] * 2})
+            segments = self.segmenter.dad_to_seg(df)
         else:
             if not self.segments:
                 logger.warning(f"Cannot calculate hole project without segments.")
                 self.projection = self.projection.iloc[0:0]
                 return
 
-            # Get projection of DAD file by creating a BoreholeGeometry object
-            collar = BoreholeCollar([[x, y, float(z), '0']])  # Float z so it doesn't get removed when parsing collar
-            geometry = BoreholeGeometry(collar, self.segments)
-            proj = geometry.get_projection()
-            xs, ys, zs = proj.Easting.to_list(), proj.Northing.to_list(), proj.Elevation.to_list()
+            segments = self.segments
 
-        self.projection.Easting = xs
-        self.projection.Northing = ys
-        self.projection.Elevation = zs
-
-    def get_hole_projection(self):
-        """
-        Return the hole's projection
-        """
-        x = self.projection.Easting.to_list()
-        y = self.projection.Northing.to_list()
-        z = self.projection.Elevation.to_list()
-        return x, y, z
+        # Get projection of DAD file by creating a BoreholeGeometry object
+        geometry = BoreholeGeometry(collar, segments)
+        self.projection = geometry.get_projection()
 
     def get_section_extents(self):
         """
         Calculates the two coordinates to be used for the section plot.
         :return: (x, y) tuples of the two end-points.
         """
+
         if self.projection.empty:
             return None, None
-
-        x, y, z = self.get_hole_projection()
 
         azimuth = self.get_azimuth()
 
@@ -467,27 +461,35 @@ class HoleWidget(QWidget):
             hole_length = int(self.hole_length_edit.text())
         else:
             hole_length = int(self.segments.df.Depth.iloc[-1])
-        line_len = math.ceil(hole_length / 100) * 100  # Nearest 100
+        self.section_length = math.ceil(hole_length / 100) * 100  # Nearest 100
+
+        # Distance of the hole collar to the bottom of the hole as projected on the surface
+        dist = math.hypot(self.projection.Easting.iloc[-1] - self.projection.Easting.iloc[0],
+                          self.projection.Northing.iloc[-1] - self.projection.Northing.iloc[0])
+
+        # Ensure the section length is at least twice the length of dist to make sure the collar is within the section
+        while not self.section_length >= 2 * dist:
+            self.section_length *= 2
 
         # Find the coordinate that is 80% down the hole
         if 90 < azimuth < 180:
-            line_center_x = np.percentile(x, 80)
-            line_center_y = np.percentile(y, 20)
+            line_center_x = np.percentile(self.projection.Easting, 80)
+            line_center_y = np.percentile(self.projection.Northing, 20)
         elif 180 < azimuth < 270:
-            line_center_x = np.percentile(x, 20)
-            line_center_y = np.percentile(y, 20)
+            line_center_x = np.percentile(self.projection.Easting, 20)
+            line_center_y = np.percentile(self.projection.Northing, 20)
         elif 270 < azimuth < 360:
-            line_center_x = np.percentile(x, 20)
-            line_center_y = np.percentile(y, 80)
+            line_center_x = np.percentile(self.projection.Easting, 20)
+            line_center_y = np.percentile(self.projection.Northing, 80)
         else:
-            line_center_x = np.percentile(x, 80)
-            line_center_y = np.percentile(y, 80)
+            line_center_x = np.percentile(self.projection.Easting, 80)
+            line_center_y = np.percentile(self.projection.Northing, 80)
 
         # Calculate the end point coordinates of the section line
-        dx = math.sin(math.radians(azimuth)) * (line_len / 2)
-        dy = math.cos(math.radians(azimuth)) * (line_len / 2)
-        p1 = (line_center_x - dx, line_center_y - dy)
-        p2 = (line_center_x + dx, line_center_y + dy)
+        dx = math.sin(math.radians(azimuth)) * (self.section_length / 2)
+        dy = math.cos(math.radians(azimuth)) * (self.section_length / 2)
+        p1 = np.array([line_center_x - dx, line_center_y - dy])
+        p2 = np.array([line_center_x + dx, line_center_y + dy])
 
         # Plot the section line
         self.section_extent_line.setData([line_center_x - dx, line_center_x + dx],
@@ -496,7 +498,7 @@ class HoleWidget(QWidget):
         return p1, p2
 
     def get_azimuth(self):
-        xs, ys, zs = self.get_hole_projection()
+        xs, ys = self.projection.Easting.to_numpy(), self.projection.Northing.to_numpy()
         azimuth = math.degrees(math.atan2((xs[-1] - xs[-2]), (ys[-1] - ys[-2])))
         if azimuth < 0:
             azimuth = azimuth + 360
@@ -539,13 +541,14 @@ class HoleWidget(QWidget):
                     # Flip the dip so down is positive
                     df.Dip = df.Dip * -1
                     # Create a BoreholeSegment object from the DAD file, to more easily calculate the projection
-                    segmenter = Segmenter()
-                    self.segments = segmenter.dad_to_seg(df.dropna())
+                    self.segments = self.segmenter.dad_to_seg(df.dropna())
                     # Update the hole projection
                     self.calc_hole_projection()
                     # Draw the hole and update the section plot
                     self.draw_hole()
                     self.plot_hole_sig.emit()
+
+                    self.window().status_bar.showMessage(f"DAD file imported successfully.", 1000)
 
                 else:
                     logger.error(f'Data in {Path(filepath).name} is not float. Make sure there is no header row.')
@@ -574,12 +577,11 @@ class HoleWidget(QWidget):
 
         if not self.projection.empty:
             # Plot the trace
-            xs, ys, zs = self.get_hole_projection()
-            self.hole_trace.setData(xs, ys)
+            self.hole_trace.setData(self.projection.Easting.to_numpy(), self.projection.Northing.to_numpy())
             self.hole_trace.show()
 
             # Plot the end of the hole
-            self.hole_end.setPos(xs[-1], ys[-1])
+            self.hole_end.setPos(self.projection.Easting.iloc[-1], self.projection.Northing.iloc[-1])
             angle = self.get_azimuth()
             self.hole_end.show()
             self.hole_end.setStyle(angle=angle + 90,
@@ -704,14 +706,10 @@ class LoopWidget(QWidget):
 
     def select(self):
         """When the loop is selected"""
-        selection_color = (0, 0, 255, 200)
-
         self.loop_roi.setPen(selection_color, width=1.5)
         self.loop_name.setColor(selection_color)
 
     def deselect(self):
-        default_color = (0, 0, 0, 150)
-
         self.loop_roi.setPen(pg.mkPen(default_color), width=1.)
         self.loop_name.setColor(default_color)
 
@@ -818,7 +816,6 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         self.resize(1500, 800)
 
         # Status bar
-        # self.status_bar.addPermanentWidget(self.spacer_label, 1)
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
         self.plan_view.setMenuEnabled(False)
@@ -853,7 +850,6 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         self.view_map_action.triggered.connect(self.view_map)
 
         # Checkbox
-
         def toggle_annotations():
             for hole in self.hole_widgets:
                 if self.show_annotations_cbox.isChecked():
@@ -875,11 +871,12 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         self.add_hole_btn.clicked.connect(self.add_hole)
         self.add_loop_btn.clicked.connect(self.add_loop)
 
+        # Qt size change
+        # self.section_frame.resizeEvent = self.event
+
         self.init_crs()
         self.init_plan_view()
         self.init_section_view()
-
-        self.plot_hole()
 
     def init_crs(self):
         """
@@ -1050,8 +1047,14 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         self.ax.spines['bottom'].set_visible(False)
         self.ax.get_xaxis().set_visible(False)
         self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}'))
-        self.ax.figure.subplots_adjust(left=0.1, bottom=0.1, right=1., top=1.)
+        self.ax.figure.subplots_adjust(left=0.1, bottom=0.02, right=0.98, top=0.98)
         self.ax.get_yaxis().set_visible(False)  # Hide the section plot until a loop is added.
+
+    def event(self, e):
+        if e.type() in [QtCore.QEvent.Show]:  # , QtCore.QEvent.Resize):
+            self.plot_hole()
+
+        return QMainWindow.event(self, e)
 
     def select_hole(self, ind):
         """
@@ -1061,7 +1064,6 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         if ind == -1:
             print(f"No hole selected")
             self.selected_hole = None
-            # self.ax.clear()
         else:
             print(f"Hole {ind} selected")
             self.selected_hole = self.hole_widgets[ind]
@@ -1259,49 +1261,103 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
         :return: None
         """
 
-        def plot_hole_section(p1, p2, hole_projection):
+        def plot_hole_section(proj):
             """
-            Plot the hole trace in the section plot.
-            :param p1: (x, y) tuple: Coordinate of one end of the section's extent.
-            :param p2: (x, y) tuple: Coordinate of the other end of the section's extent.
-            :param hole_projection: list of (x, y, z) tuples: 3D projection of the borehole geometry.
-            :return: None
+            Plot the hole trace
+            :param proj: pd DataFrame, 3D projected hole trace of the geometry
             """
 
-            def get_magnitude(vector):
-                return math.sqrt(sum(i ** 2 for i in vector))
+            def get_plane_projection(p1, p2, proj):
+                """
+                Projects each 3D point in proj to the plane defined by p1 and p2.
+                :param p1: tuple, (x, y) point
+                :param p2: tuple, (x, y) point
+                :param proj: dataframe, 3D projected borehole trace
+                :return: list of x, z tuples
+                """
 
-            # Projecting the 3D trace to a 2D plane
-            p = np.array([p1[0], p1[1], 0])
-            vec = [p2[0] - p1[0], p2[1] - p1[1], 0]
-            normal_plane = np.cross(vec, [0, 0, -1])
-            normal_plane = normal_plane / get_magnitude(normal_plane)
+                def project(row):
+                    """
+                    Project the 3D point to a 2D plane
+                    :param row: proj DataFrame row
+                    :return: projected x, z coordinate tuple
+                    """
+                    q = row.loc[['Easting', 'Northing', 'Relative_depth']].to_numpy()  # The point being projected
+                    q_proj = q - np.dot(q - p, plane_normal) * plane_normal
+                    distvec = np.array(q_proj - p)[:-1]
+                    dist = np.sqrt(distvec.dot(distvec))
+                    return dist, q_proj[2]
 
-            plotx = []
-            plotz = []
+                p = np.append(p1, 0)
+                vec = np.append(p2 - p1, 0)  # Calculate the vector
+                plane_normal = np.cross(vec, [0, 0, -1])  # Find the orthogonal plane to the vector
+                plane_normal = plane_normal / math.sqrt(sum(i ** 2 for i in plane_normal))
 
-            for coordinate in hole_projection:
-                q = np.array(coordinate)
-                q_proj = q - np.dot(q - p, normal_plane) * normal_plane
-                distvec = np.array([q_proj[0] - p[0], q_proj[1] - p[1]])
-                dist = np.sqrt(distvec.dot(distvec))
+                plane_proj = proj.apply(project, axis=1).to_numpy()
+                return plane_proj
 
-                plotx.append(dist)
-                plotz.append(q_proj[2])
+            # Get the 2D projected coordinates onto the plane defined by points p1 and p2
+            plane_projection = get_plane_projection(p1, p2, proj)
 
-            # Plot the collar
-            self.ax.plot(plotx[0], plotz[0], 'o',
-                         mfc='w',
-                         markeredgecolor='dimgray',
-                         zorder=10)
+            buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
+            hole_len = self.selected_hole.projection.Relative_depth.iloc[-1]
+            collar_elevation = 0.
+
+            # Plotz is the collar elevation minus the relative depth
+            plotx, plotz = [p[0] for p in plane_projection], [collar_elevation - p[1] for p in plane_projection]
+
             # Plot the hole section line
             self.ax.plot(plotx, plotz,
-                         color='dimgray',
+                         color=selection_color,
                          lw=1,
-                         zorder=1)
+                         # path_effects=buffer,
+                         zorder=10)
+
+            # Circle at top of hole
+            self.ax.plot([plotx[0]], collar_elevation, 'o',
+                         markerfacecolor='w',
+                         markeredgecolor=selection_color,
+                         markersize=8,
+                         zorder=11)
+
+            # Label hole name
+            hole_name = self.selected_hole.hole_name_edit.text()
+            trans = mtransforms.blended_transform_factory(self.ax.transData, self.ax.transAxes)
+            self.ax.annotate(f"{hole_name}", (plotx[0], collar_elevation),
+                             xytext=(0, 12),
+                             textcoords='offset pixels',
+                             color=selection_color,
+                             ha='center',
+                             size=9,
+                             transform=trans,
+                             path_effects=buffer,
+                             zorder=10)
+
+            # Label end-of-hole depth
+            angle = math.degrees(math.atan2(plotz[-1] - plotz[-2], plotx[-1] - plotx[-2])) + 90
+            self.ax.text(plotx[-1] + self.selected_hole.section_length * .01, plotz[-1], f" {hole_len:.0f} m ",
+                         color=selection_color,
+                         ha='left',
+                         size=8,
+                         rotation=angle,
+                         path_effects=buffer,
+                         zorder=10,
+                         rotation_mode='anchor')
+
+            # Plot the end of hole tick
+            self.ax.scatter(plotx[-1], plotz[-1],
+                            marker=(2, 0, angle + 90),
+                            color=selection_color,
+                            s=100,  # Size
+                            zorder=12)
+
+            # Add the horizontal line
             self.ax.axhline(y=0,
-                            color='dimgray', lw=0.6,
-                            zorder=9)
+                            color='dimgray',
+                            lw=0.6,
+                            path_effects=buffer,
+                            zorder=0
+                            )
 
         def plot_mag(c1, c2):
             """
@@ -1318,7 +1374,7 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
                            color='dimgray',
                            label='Field',
                            pivot='middle',
-                           zorder=0,
+                           zorder=1,
                            units='dots',
                            scale=.050,
                            width=.8,
@@ -1327,6 +1383,7 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
 
         self.ax.clear()
 
+        proj = self.selected_hole.projection
         if not self.selected_loop:
             logger.warning(f"Cannot plot hole without a loop.")
             self.ax.get_yaxis().set_visible(False)
@@ -1337,24 +1394,25 @@ class LoopPlanner2(SurveyPlanner, Ui_LoopPlannerWindow2):
             self.ax.get_yaxis().set_visible(False)
             self.section_canvas.draw()
             return
-        elif self.selected_hole.projection.empty:
+        elif proj.empty:
             logger.warning(f"Cannot plot hole without hole geometry.")
             self.ax.get_yaxis().set_visible(False)
             self.section_canvas.draw()
             return
 
-        xs, ys, zs = self.selected_hole.get_hole_projection()
         p1, p2 = self.selected_hole.get_section_extents()
-
-        self.ax.get_yaxis().set_visible(True)
-        plot_hole_section(p1, p2, list(zip(xs, ys, zs)))
+        # plot_hole_section(p1, p2, list(zip(xs, ys, zs)))
+        plot_hole_section(proj)
 
         # Get the corners of the 2D section to plot the mag on
-        c1, c2 = list(p1), list(p2)
-        c1.append(max(self.ax.get_ylim()[1], 0))  # Add the max Z
-        c2.append(self.ax.get_ylim()[0])  # Add the min Z
+        max_z = max(self.ax.get_ylim()[1], 0)
+        ratio = self.section_frame.height() / (self.section_frame.width() * 0.9)
+        min_z = max_z - (self.selected_hole.section_length * ratio)  # Try to fill the entire plot
+        c1 = np.append(p1, max_z)  # Add the max Z
+        c2 = np.append(p2, min_z)  # Add the min Z
         plot_mag(c1, c2)
 
+        self.ax.get_yaxis().set_visible(True)
         self.section_canvas.draw()
 
     def get_loop_coords(self):

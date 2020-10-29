@@ -990,7 +990,11 @@ Warnings</string>
                          <string>Add the selected PEM files to the project</string>
                         </property>
                         <property name="text">
-                         <string>+</string>
+                         <string/>
+                        </property>
+                        <property name="icon">
+                         <iconset>
+                          <normaloff>icons/add.png</normaloff>icons/add.png</iconset>
                         </property>
                        </widget>
                       </item>
@@ -1207,7 +1211,11 @@ Warnings</string>
                          <string>Add the selected GPS files to the currently selected PEM file and Information tab.</string>
                         </property>
                         <property name="text">
-                         <string>+</string>
+                         <string/>
+                        </property>
+                        <property name="icon">
+                         <iconset>
+                          <normaloff>icons/add.png</normaloff>icons/add.png</iconset>
                         </property>
                        </widget>
                       </item>

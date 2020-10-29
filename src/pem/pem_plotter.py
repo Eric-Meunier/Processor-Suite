@@ -1450,7 +1450,7 @@ class SectionPlot(MapPlotter):
 
     def plot(self, pem_file, figure, stations=None, hole_depth=None, label_ticks=False):
         """
-        :param pem_files: list or PEMFile object, PEMFile to plot
+        :param pem_file: PEMFile to plot
         :param figure: Matplotlib figure object to plot on
         :param stations: list, stations for tick markers
         :param hole_depth: int, depth of the hole
