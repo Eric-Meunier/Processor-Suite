@@ -53,6 +53,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.parent = parent
         self.setupUi(self)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.installEventFilter(self)
+        self.activateWindow()
         self.setWindowTitle('PEM Plot Editor')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'plot_editor.png')))
 
@@ -121,6 +123,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.active_decay_axes = []
 
         for ax in self.decay_axes:
+            ax.vb.installEventFilter(self)
             ax.vb.box_select_signal.connect(self.box_select_decay_lines)
             ax.hideButtons()
             ax.setMenuEnabled(False)
@@ -163,6 +166,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Configure each axes
         for ax in self.profile_axes:
+            ax.vb.installEventFilter(self)
             ax.vb.box_select_signal.connect(self.box_select_profile_plot)
             ax.hideButtons()
             ax.setMenuEnabled(False)
@@ -284,13 +288,26 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         elif event.key() == QtCore.Qt.Key_Escape:
             self.clear_selection()
 
+    def eventFilter(self, watched, event):
+        if event.type() == QtCore.QEvent.GraphicsSceneWheel:
+            # print(f"Wheel event")
+            self.pyqtgraphWheelEvent(event)
+            return True
+        return super().eventFilter(watched, event)
+
+    def pyqtgraphWheelEvent(self, evt):
+        y = evt.delta()
+        if y < 0:
+            self.cycle_station('down')
+        else:
+            self.cycle_station('up')
+
     def wheelEvent(self, evt):
-        if not keyboard.is_pressed('shift'):
-            y = evt.angleDelta().y()
-            if y < 0:
-                self.cycle_station('down')
-            else:
-                self.cycle_station('up')
+        y = evt.angleDelta().y()
+        if y < 0:
+            self.cycle_station('down')
+        else:
+            self.cycle_station('up')
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
@@ -1712,6 +1729,7 @@ class DecayViewBox(pg.ViewBox):
 
     def __init__(self, *args, **kwds):
         pg.ViewBox.__init__(self, *args, **kwds)
+        self.setFocusPolicy(QtCore.Qt.NoFocus)
         # self.setMouseMode(self.RectMode)
         brush = QtGui.QBrush(QtGui.QColor('blue'))
         pen = QtGui.QPen(brush, 1)
@@ -1880,8 +1898,8 @@ if __name__ == '__main__':
     pem_getter = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()
-    # pem_files = pem_getter.get_pems(random=True, number=1)
-    pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
+    pem_files = pem_getter.get_pems(random=True, number=1)
+    # pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
     # pem_files = [dmp_parser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\_14_pp.DMP2')]
 
     editor = PEMPlotEditor()

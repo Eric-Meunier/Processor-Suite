@@ -283,6 +283,10 @@ class TransmitterLoop(BaseGPS):
             logger.error(f"Invalid input: {file}.")
             raise TypeError(f'{file} is not a valid input for loop GPS parsing.')
 
+        # TODO continue here. Converting to str is breaking hasnan.
+        # TODO Loop and collar GPS is enough to make the rows white in PEMPro.
+        # TODO Geometry azimuth not right.
+        # Just try processing Eastern's hole.
         gps = gps.astype(str)
         # Remove P tags and units columns
         cols_to_drop = []

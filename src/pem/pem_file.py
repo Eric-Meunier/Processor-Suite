@@ -1926,7 +1926,7 @@ class DMPParser:
             header['Line_name'] = text[7]
             header['Loop_name'] = text[10]
             header['Date'] = datetime.strptime(re.sub(r'\s+', '', text[14]), '%m/%d/%y').strftime('%B %d, %Y')
-            header['Survey type'] = text[6]
+            header['Survey type'] = re.sub('\s+', '_', text[6].casefold())
             header['Convention'] = text[15]
             header['Sync'] = text[18]
             header['Timebase'] = float(text[16].split('ms')[0]) if 'ms' in text[16] else float(text[16].split()[0])
@@ -2939,6 +2939,7 @@ class RADTool:
 
         return self
 
+    @Log()
     def get_azimuth(self):
         """
         Calculate the azimuth of the RAD tool object. Must be D7.
@@ -2952,8 +2953,8 @@ class RADTool:
         denumer = self.Hx * (self.gy ** 2 + self.gz ** 2) - (self.Hy * self.gx * self.gy) - (self.Hz * self.gx * self.gz)
         # TODO check that the azimuth is correct
         azimuth = math.degrees(math.atan2(numer, denumer))
-        # if azimuth < 0:
-        #     azimuth = 360 + azimuth
+        if azimuth < 0:
+            azimuth = 360 + azimuth
         return azimuth
 
     def get_dip(self):
@@ -3148,8 +3149,9 @@ if __name__ == '__main__':
     # pem = pem_file.rotate_soa(10)
     # rotated_pem = prep_pem.rotate('pp')
 
-    # pem_file = pemparser.parse(r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\RAW\ddh5-01-38 flux_30.PEM')
-    pem_file = dparser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.dmp2')
+    # pem_file = pemparser.parse(r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\RAW\XY29_29.PEM')
+    pem_file = dparser.parse(r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\RAW\XY29_29.DMP')
+    # pem_file = dparser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.dmp2')
     # pem_file.save(legacy=True)
 
     # file = str(Path(__file__).parents[2].joinpath('sample_files/DMP files/DMP2 New/BR-32 Surface/l4200e.dmp2'))

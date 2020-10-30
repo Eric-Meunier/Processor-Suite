@@ -1,2 +1,26 @@
->>10/29/2020 04:15:50 PM [INFO] pem_planner.py (change_loop_height:1741):
- Loop height changed to 1000.0
+>>10/30/2020 10:43:24 AM [INFO] pem_getter.py (add_pem:36):
+ Getting File _1330S_2.PEM.
+>>10/30/2020 10:43:24 AM [INFO] pem_file.py (parse:1822):
+ Parsing _1330S_2.PEM
+>>10/30/2020 10:43:24 AM [INFO] pem_getter.py (get_pems:97):
+ Collected PEM files: C:\Users\Eric\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1330S_2.PEM
+>>10/30/2020 10:43:33 AM [INFO] pem_plot_editor.py (eval_decay:1626):
+ Max removable limit reached.
+>>10/30/2020 10:43:33 AM [INFO] pem_plot_editor.py (eval_decay:1636):
+ Max removable limit reached.
+>>10/30/2020 10:43:33 AM [INFO] pem_plot_editor.py (eval_decay:1626):
+ Max removable limit reached.
+>>10/30/2020 10:43:33 AM [INFO] pem_plot_editor.py (eval_decay:1636):
+ Max removable limit reached.
+>>10/30/2020 10:43:33 AM [INFO] pem_plot_editor.py (eval_decay:1626):
+ Max removable limit reached.
+>>10/30/2020 10:43:33 AM [INFO] pem_plot_editor.py (eval_decay:1636):
+ Max removable limit reached.
+>>10/30/2020 10:43:33 AM [INFO] pem_plot_editor.py (eval_decay:1626):
+ Max removable limit reached.
+>>10/30/2020 10:43:33 AM [INFO] pem_plot_editor.py (eval_decay:1636):
+ Max removable limit reached.
+>>10/30/2020 10:43:33 AM [INFO] pem_plot_editor.py (eval_decay:1626):
+ Max removable limit reached.
+>>10/30/2020 10:43:33 AM [INFO] pem_plot_editor.py (eval_decay:1636):
+ Max removable limit reached.
