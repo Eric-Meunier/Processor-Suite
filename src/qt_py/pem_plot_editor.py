@@ -184,16 +184,17 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             selected_v_line.setPen(color, width=2.)
 
             # Add the text annotations for the vertical lines
-            hover_v_line_text = pg.TextItem("", anchor=(0, 0))
+            hover_v_line_text = pg.TextItem("")
             hover_v_line_text.setParentItem(ax.vb)
+            hover_v_line_text.setAnchor((0, 0))
             hover_v_line_text.setPos(0, 0)
             hover_v_line_text.setColor(color)
             hover_v_line_text.setFont(font)
             # hover_v_line_text.setColor((102, 178, 255, 100))
 
             ax.addItem(hover_v_line, ignoreBounds=True)
-            ax.addItem(selected_v_line, ignoreBounds=True)
             ax.addItem(hover_v_line_text, ignoreBounds=True)
+            ax.addItem(selected_v_line, ignoreBounds=True)
 
             # Connect the mouse moved signal
             ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
@@ -805,7 +806,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Move the selected vertical line
         for ax in self.profile_axes:
-            selected_v_line = ax.items[1]
+            selected_v_line = ax.items[2]  # Clicked vertical station line
             selected_v_line.setPos(station)
 
         index_of_selected = []
@@ -1036,9 +1037,14 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         nearest_station = self.find_nearest_station(int(mouse_point.x()))
 
         for ax in self.active_profile_axes:
-            ax.items[0].setPos(nearest_station)  # Move the click vertical line
-            ax.items[2].setPos(nearest_station, ax.viewRange()[1][1])  # Move the hover vertical like
-            ax.items[2].setText(str(nearest_station))
+            ax.items[0].setPos(nearest_station)  # Move the hover line
+            ax.items[1].setPos(nearest_station, ax.viewRange()[1][1])  # Move the hover text
+            # Change the anchor of the text for the later stations so they don't get clipped
+            if len(self.stations) > 1 and nearest_station in self.stations[-math.floor(len(self.stations) / 2):]:
+                ax.items[1].setAnchor((1, 0))
+            else:
+                ax.items[1].setAnchor((0, 0))
+            ax.items[1].setText(str(nearest_station))  # Chang text to the be the station number
 
     def profile_plot_clicked(self, evt):
         """
