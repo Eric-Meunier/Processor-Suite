@@ -1,68 +1,258 @@
->>10/30/2020 09:20:27 AM [INFO] gps_editor.py (parse_collar:632):
+>>10/30/2020 04:20:10 PM [INFO] gps_editor.py (parse_collar:643):
  Removing column of 0s.
->>10/30/2020 09:20:27 AM [WARNING] gps_editor.py (get_projection:805):
+>>10/30/2020 04:20:10 PM [WARNING] gps_editor.py (get_projection:815):
  No CRS passed.
->>10/30/2020 09:20:27 AM [WARNING] pem_planner.py (plot_hole:1379):
+>>10/30/2020 04:20:10 PM [WARNING] pem_planner.py (plot_hole:1379):
  Cannot plot hole without a loop.
->>10/30/2020 09:20:47 AM [INFO] pem_file.py (parse_dmp:2158):
- Parsing XY29_29.DMP.
->>10/30/2020 09:20:47 AM [INFO] pem_file.py (parse_dmp:2167):
- XY29_29.DMP is a new style DMP file.
->>10/30/2020 09:20:47 AM [WARNING] gps_editor.py (parse_loop_gps:280):
- Empty file passed.
->>10/30/2020 09:20:47 AM [WARNING] gps_editor.py (parse_collar:608):
- No GPS passed.
->>10/30/2020 09:20:47 AM [WARNING] gps_editor.py (parse_segments:725):
- Empty file passed.
->>10/30/2020 09:20:47 AM [INFO] pem_hub.py (pem_to_table:2735):
- Adding XY29_29.PEM to the table.
->>10/30/2020 09:20:47 AM [WARNING] gps_editor.py (parse_loop_gps:305):
- 0 column(s) of values were found instead of 3.
->>10/30/2020 09:20:49 AM [INFO] pem_file.py (save:803):
- Saving XY29_29.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>10/30/2020 09:20:49 AM [INFO] pem_hub.py (refresh_pem:2777):
- Refreshing XY29_29.PEM.
->>10/30/2020 09:20:49 AM [INFO] pem_hub.py (pem_to_table:2735):
- Adding XY29_29.PEM to the table.
->>10/30/2020 09:20:49 AM [WARNING] gps_editor.py (parse_loop_gps:305):
- 0 column(s) of values were found instead of 3.
->>10/30/2020 09:20:49 AM [WARNING] gps_editor.py (parse_loop_gps:305):
- 0 column(s) of values were found instead of 3.
->>10/30/2020 09:20:56 AM [INFO] pem_file.py (parse:1822):
- Parsing XY29_29.PEM
->>10/30/2020 09:20:56 AM [WARNING] gps_editor.py (parse_loop_gps:305):
- 0 column(s) of values were found instead of 3.
->>10/30/2020 09:20:56 AM [INFO] gps_editor.py (parse_collar:628):
+>>10/30/2020 04:20:14 PM [INFO] pem_file.py (parse:1822):
+ Parsing M-20-54 XY_Collar_21.PEM
+>>10/30/2020 04:20:14 PM [INFO] pem_file.py (get_crs:383):
+ M-20-54 XY_Collar_21.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 04:20:14 PM [INFO] gps_editor.py (parse_collar:639):
  Removing P-tag column.
->>10/30/2020 09:20:56 AM [WARNING] gps_editor.py (parse_collar:639):
- 0 column(s) of values were found instead of 3.
->>10/30/2020 09:20:56 AM [WARNING] gps_editor.py (parse_segments:743):
- 0 column(s) of values were found instead of 5.
->>10/30/2020 09:20:56 AM [INFO] pem_hub.py (pem_to_table:2735):
- Adding XY29_29.PEM to the table.
->>10/30/2020 09:20:56 AM [WARNING] gps_editor.py (parse_loop_gps:305):
- 0 column(s) of values were found instead of 3.
->>10/30/2020 09:21:23 AM [INFO] logger.py (decorated:91):
- ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x233DE910>,), {}
->>10/30/2020 09:21:23 AM [INFO] logger.py (decorated:93):
- ::OUT: 221.18907207115592
->>10/30/2020 09:21:23 AM [INFO] logger.py (decorated:91):
- ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x233DE910>,), {}
->>10/30/2020 09:21:23 AM [INFO] logger.py (decorated:93):
- ::OUT: 221.18907207115592
->>10/30/2020 09:21:23 AM [INFO] logger.py (decorated:91):
- ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x233DE910>,), {}
->>10/30/2020 09:21:23 AM [INFO] logger.py (decorated:93):
- ::OUT: 221.18907207115592
->>10/30/2020 09:21:24 AM [INFO] logger.py (decorated:91):
- ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x233DE910>,), {}
->>10/30/2020 09:21:24 AM [INFO] logger.py (decorated:93):
- ::OUT: 221.18907207115592
->>10/30/2020 09:21:24 AM [INFO] logger.py (decorated:91):
- ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x233DE910>,), {}
->>10/30/2020 09:21:24 AM [INFO] logger.py (decorated:93):
- ::OUT: 221.18907207115592
->>10/30/2020 09:21:24 AM [INFO] logger.py (decorated:91):
- ::IN: get_azimuth - (<src.pem.pem_file.RADTool object at 0x233DE910>,), {}
->>10/30/2020 09:21:24 AM [INFO] logger.py (decorated:93):
- ::OUT: 221.18907207115592
+>>10/30/2020 04:20:14 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:15 PM [INFO] pem_file.py (get_crs:383):
+ M-20-54 XY_Collar_21.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 04:20:15 PM [INFO] pem_hub.py (get_crs:2929):
+ Project CRS: WGS 84 / UTM zone 16N
+>>10/30/2020 04:20:15 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding M-20-54 XY_Collar_21.PEM to the table.
+>>10/30/2020 04:20:15 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:15 PM [INFO] pem_file.py (parse:1822):
+ Parsing M-20-54 XY_Out_22.PEM
+>>10/30/2020 04:20:15 PM [INFO] pem_file.py (get_crs:383):
+ M-20-54 XY_Out_22.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 04:20:15 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 04:20:15 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:15 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding M-20-54 XY_Out_22.PEM to the table.
+>>10/30/2020 04:20:15 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:15 PM [INFO] pem_file.py (parse:1822):
+ Parsing M-20-54 Z_Collar_21.PEM
+>>10/30/2020 04:20:15 PM [INFO] pem_file.py (get_crs:383):
+ M-20-54 Z_Collar_21.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 04:20:15 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 04:20:15 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:15 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding M-20-54 Z_Collar_21.PEM to the table.
+>>10/30/2020 04:20:15 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:15 PM [INFO] pem_file.py (parse:1822):
+ Parsing M-20-54 Z_Out_22.PEM
+>>10/30/2020 04:20:15 PM [INFO] pem_file.py (get_crs:383):
+ M-20-54 Z_Out_22.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 04:20:15 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 04:20:15 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:15 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding M-20-54 Z_Out_22.PEM to the table.
+>>10/30/2020 04:20:16 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:20 PM [INFO] pem_hub.py (reverse_component_data:3111):
+ Reversing X data of M-20-54 Z_Out_22.PEM.
+>>10/30/2020 04:20:20 PM [WARNING] pem_hub.py (reverse_component_data:3122):
+ M-20-54 Z_Out_22.PEM has no X data.
+>>10/30/2020 04:20:20 PM [INFO] pem_hub.py (reverse_component_data:3111):
+ Reversing X data of M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:20:20 PM [INFO] pem_hub.py (refresh_pem:2814):
+ Refreshing M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:20:20 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding M-20-54 XY_Out_22.PEM to the table.
+>>10/30/2020 04:20:20 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:20 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:25 PM [INFO] pem_hub.py (reverse_component_data:3111):
+ Reversing Y data of M-20-54 Z_Out_22.PEM.
+>>10/30/2020 04:20:25 PM [WARNING] pem_hub.py (reverse_component_data:3122):
+ M-20-54 Z_Out_22.PEM has no Y data.
+>>10/30/2020 04:20:25 PM [INFO] pem_hub.py (reverse_component_data:3111):
+ Reversing Y data of M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:20:25 PM [INFO] pem_hub.py (refresh_pem:2814):
+ Refreshing M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:20:25 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding M-20-54 XY_Out_22.PEM to the table.
+>>10/30/2020 04:20:25 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:25 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:30 PM [INFO] pem_hub.py (reverse_component_data:3111):
+ Reversing Z data of M-20-54 Z_Out_22.PEM.
+>>10/30/2020 04:20:30 PM [INFO] pem_hub.py (refresh_pem:2814):
+ Refreshing M-20-54 Z_Out_22.PEM.
+>>10/30/2020 04:20:30 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding M-20-54 Z_Out_22.PEM to the table.
+>>10/30/2020 04:20:30 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:30 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:30 PM [INFO] pem_hub.py (reverse_component_data:3111):
+ Reversing Z data of M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:20:30 PM [WARNING] pem_hub.py (reverse_component_data:3122):
+ M-20-54 XY_Out_22.PEM has no Z data.
+>>10/30/2020 04:20:35 PM [INFO] logger.py (decorated:91):
+ ::IN: open - (<src.qt_py.derotator.Derotator object at 0x38E9B490>, <src.pem.pem_file.PEMFile object at 0x399E2650>), {}
+>>10/30/2020 04:20:35 PM [INFO] pem_file.py (prep_rotation:1206):
+ Preparing for XY de-rotation for M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:20:36 PM [INFO] pem_file.py (rotate:1049):
+ De-rotating data of M-20-54 XY_Out_22.PEM using acc with SOA 0.
+>>10/30/2020 04:20:36 PM [INFO] pem_file.py (rotate:1179):
+ Include PP for M-20-54 XY_Out_22.PEM: True.
+>>10/30/2020 04:20:37 PM [INFO] pem_file.py (split:886):
+ Splitting channels for M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:20:37 PM [INFO] pem_file.py (average:850):
+ Averaging M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:20:37 PM [INFO] logger.py (decorated:93):
+ ::OUT: None
+>>10/30/2020 04:20:43 PM [INFO] pem_hub.py (refresh_pem:2814):
+ Refreshing M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:20:43 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding M-20-54 XY_Out_22.PEM to the table.
+>>10/30/2020 04:20:43 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:44 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:47 PM [INFO] logger.py (decorated:91):
+ ::IN: open - (<src.qt_py.derotator.Derotator object at 0x2F657F80>, <src.pem.pem_file.PEMFile object at 0x399D0C70>), {}
+>>10/30/2020 04:20:47 PM [INFO] pem_file.py (prep_rotation:1206):
+ Preparing for XY de-rotation for M-20-54 XY_Collar_21.PEM.
+>>10/30/2020 04:20:48 PM [INFO] pem_file.py (rotate:1049):
+ De-rotating data of M-20-54 XY_Collar_21.PEM using acc with SOA 0.
+>>10/30/2020 04:20:48 PM [INFO] pem_file.py (rotate:1179):
+ Include PP for M-20-54 XY_Collar_21.PEM: True.
+>>10/30/2020 04:20:49 PM [INFO] pem_file.py (split:886):
+ Splitting channels for M-20-54 XY_Collar_21.PEM.
+>>10/30/2020 04:20:49 PM [INFO] pem_file.py (average:850):
+ Averaging M-20-54 XY_Collar_21.PEM.
+>>10/30/2020 04:20:49 PM [INFO] logger.py (decorated:93):
+ ::OUT: None
+>>10/30/2020 04:20:52 PM [INFO] pem_hub.py (refresh_pem:2814):
+ Refreshing M-20-54 XY_Collar_21.PEM.
+>>10/30/2020 04:20:52 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding M-20-54 XY_Collar_21.PEM to the table.
+>>10/30/2020 04:20:52 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:52 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:20:56 PM [INFO] pem_hub.py (get_crs:2929):
+ Project CRS: WGS 84 / UTM zone 16N
+>>10/30/2020 04:21:15 PM [INFO] pem_hub.py (export_pem_files:2516):
+ Exporting M-20-54 XY_Collar_21.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (save:803):
+ Saving M-20-54 XY_Collar_21.PEM. (Legacy: False. Processed: True. Backup: False. Tag: )
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (split:886):
+ Splitting channels for M-20-54 XY_Collar_21.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (average:850):
+ Averaging M-20-54 XY_Collar_21.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_hub.py (export_pem_files:2516):
+ Exporting M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (save:803):
+ Saving M-20-54 XY_Out_22.PEM. (Legacy: False. Processed: True. Backup: False. Tag: )
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (split:886):
+ Splitting channels for M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (average:850):
+ Averaging M-20-54 XY_Out_22.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_hub.py (export_pem_files:2516):
+ Exporting M-20-54 Z_Collar_21.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (save:803):
+ Saving M-20-54 Z_Collar_21.PEM. (Legacy: False. Processed: True. Backup: False. Tag: )
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (split:886):
+ Splitting channels for M-20-54 Z_Collar_21.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (average:850):
+ Averaging M-20-54 Z_Collar_21.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_hub.py (export_pem_files:2516):
+ Exporting M-20-54 Z_Out_22.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (save:803):
+ Saving M-20-54 Z_Out_22.PEM. (Legacy: False. Processed: True. Backup: False. Tag: )
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (split:886):
+ Splitting channels for M-20-54 Z_Out_22.PEM.
+>>10/30/2020 04:21:15 PM [INFO] pem_file.py (average:850):
+ Averaging M-20-54 Z_Out_22.PEM.
+>>10/30/2020 04:24:13 PM [INFO] pem_file.py (parse:1822):
+ Parsing XYCol.PEM
+>>10/30/2020 04:24:13 PM [INFO] pem_file.py (get_crs:383):
+ XYCol.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 04:24:13 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 04:24:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:24:13 PM [INFO] pem_file.py (get_crs:383):
+ XYCol.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 04:24:13 PM [INFO] pem_hub.py (get_crs:2929):
+ Project CRS: WGS 84 / UTM zone 16N
+>>10/30/2020 04:24:13 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding XYCol.PEM to the table.
+>>10/30/2020 04:24:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:24:13 PM [INFO] pem_file.py (parse:1822):
+ Parsing XYOut.PEM
+>>10/30/2020 04:24:13 PM [INFO] pem_file.py (get_crs:383):
+ XYOut.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 04:24:13 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 04:24:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:24:13 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding XYOut.PEM to the table.
+>>10/30/2020 04:24:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:24:13 PM [INFO] pem_file.py (parse:1822):
+ Parsing XYTCol.PEM
+>>10/30/2020 04:24:13 PM [CRITICAL] pem_hub.py (open_pem_files:1428):
+ Invalid projection: WGS 84 / UTM zone 16: (Internal Proj Error: proj_create: several objects matching this name: WGS 84 / UTM zone 16N, WGS 84 / UTM zone 16S, WGS 84 / BLM 16N (ftUS))
+>>10/30/2020 04:24:13 PM [INFO] pem_file.py (parse:1822):
+ Parsing XYTOut.PEM
+>>10/30/2020 04:24:13 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 04:24:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:24:13 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding XYTOut.PEM to the table.
+>>10/30/2020 04:24:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:25:13 PM [INFO] pem_file.py (parse:1822):
+ Parsing XYCol.PEM
+>>10/30/2020 04:25:13 PM [INFO] pem_file.py (get_crs:383):
+ XYCol.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 04:25:13 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 04:25:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:25:13 PM [INFO] pem_hub.py (is_opened:1274):
+ XYCol.PEM is already opened.
+>>10/30/2020 04:25:13 PM [INFO] pem_file.py (parse:1822):
+ Parsing XYOut.PEM
+>>10/30/2020 04:25:13 PM [INFO] pem_file.py (get_crs:383):
+ XYOut.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 04:25:13 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 04:25:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:25:13 PM [INFO] pem_hub.py (is_opened:1274):
+ XYOut.PEM is already opened.
+>>10/30/2020 04:25:13 PM [INFO] pem_file.py (parse:1822):
+ Parsing XYTCol.PEM
+>>10/30/2020 04:25:13 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 04:25:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:25:13 PM [INFO] pem_hub.py (pem_to_table:2772):
+ Adding XYTCol.PEM to the table.
+>>10/30/2020 04:25:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:25:13 PM [INFO] pem_file.py (parse:1822):
+ Parsing XYTOut.PEM
+>>10/30/2020 04:25:13 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 04:25:13 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 04:25:13 PM [INFO] pem_hub.py (is_opened:1274):
+ XYTOut.PEM is already opened.

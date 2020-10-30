@@ -402,6 +402,7 @@ class TileMapViewer(MapboxViewer):
             if not proj.empty and proj.to_string() not in self.holes:
                 logger.info(f"Plotting hole trace for {pem_file.filepath.name}")
                 self.holes.append(proj.to_string())
+                self.collars.append(collar.to_string())
                 self.lons.extend(proj.Easting.values)
                 self.lats.extend(proj.Northing.values)
 
@@ -414,8 +415,7 @@ class TileMapViewer(MapboxViewer):
                                                            text=proj['Relative_depth']
                                                            ))
 
-            # elif proj.empty and collar.to_string() not in self.collars:
-            elif collar.to_string() not in self.collars:
+            elif not collar.empty and collar.to_string() not in self.collars:
                 self.collars.append(collar.to_string())
                 self.lons.extend(collar.Easting.values)
                 self.lats.extend(collar.Northing.values)
@@ -588,13 +588,6 @@ class Map3DViewer(QMainWindow):
 
     def plot_pems(self):
 
-        # def reset_figure():
-        #     self.map_figure.data = []
-        #     self.loops = []
-        #     self.lines = []
-        #     self.collars = []
-        #     self.holes = []
-
         def plot_loop(pem_file):
             loop = pem_file.get_loop(closed=True)
 
@@ -643,16 +636,17 @@ class Map3DViewer(QMainWindow):
             proj = geometry.get_projection(latlon=False)
 
             if not proj.empty and proj.to_string() not in self.holes:
-                    self.holes.append(proj.to_string())
-                    # Plot the line in the figure
-                    self.map_figure.add_trace(go.Scatter3d(x=proj.Easting,
-                                                           y=proj.Northing,
-                                                           z=proj.Elevation,
-                                                           mode='lines+markers',
-                                                           legendgroup=pem_file.loop_name,
-                                                           name=pem_file.line_name,
-                                                           text=proj['Relative_depth']
-                                                           ))
+                self.holes.append(proj.to_string())
+                self.collars.append(collar.to_string())
+                # Plot the line in the figure
+                self.map_figure.add_trace(go.Scatter3d(x=proj.Easting,
+                                                       y=proj.Northing,
+                                                       z=proj.Elevation,
+                                                       mode='lines+markers',
+                                                       legendgroup=pem_file.loop_name,
+                                                       name=pem_file.line_name,
+                                                       text=proj['Relative_depth']
+                                                       ))
 
             elif not collar.empty and collar.to_string() not in self.collars:
                 self.collars.append(collar.to_string())

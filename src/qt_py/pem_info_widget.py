@@ -581,8 +581,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             """
             def series_to_items(x):
                 if isinstance(x, float):
-                    # return QTableWidgetItem(f"{x:.2f}")
-                    return QTableWidgetItem(f"{x}")
+                    return QTableWidgetItem(f"{x:.2f}")
+                    # return QTableWidgetItem(f"{x}")
                 else:
                     return QTableWidgetItem(str(x))
 

@@ -1432,6 +1432,10 @@ Warnings</string>
      <property name="title">
       <string>Reverse Polarity</string>
      </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>icons/reverse.png</normaloff>icons/reverse.png</iconset>
+     </property>
      <addaction name="actionReverseX_Component"/>
      <addaction name="actionReverseY_Component"/>
      <addaction name="actionReverseZ_Component"/>

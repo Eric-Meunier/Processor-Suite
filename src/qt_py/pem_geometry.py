@@ -379,9 +379,12 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             Plot all the tool values (azimuth, dip, map and roll angles)
             """
             global tool_az, tool_dip, stations
-            tool_az = self.df.RAD_tool.map(lambda x: x.get_azimuth())
-            if not tool_az.empty:
-                tool_az = tool_az + self.mag_dec_sbox.value()
+            tool_az = self.df.RAD_tool.map(lambda x: x.get_azimuth(allow_negative=True))
+            # If all azimuth values are negative, make them positive.
+            if all(tool_az < 0):
+                tool_az = tool_az + 360
+            tool_az = tool_az + self.mag_dec_sbox.value()  # Add the magnetic declination
+
             tool_dip = self.df.RAD_tool.map(lambda x: x.get_dip())
             mag = self.df.RAD_tool.map(lambda x: x.get_mag_strength())
             acc_roll = self.df.RAD_tool.map(lambda x: x.get_acc_roll())

@@ -264,7 +264,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             return
 
         # Check that the file hasn't already been de-rotated.
-        if self.pem_file.is_rotated():
+        if self.pem_file.is_derotated():
             response = self.message.question(self, 'File already de-rotated',
                                              f"{pem_file.filepath.name} is already de-rotated. " +
                                              'Do you wish to de-rotate again?',

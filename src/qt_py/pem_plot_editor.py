@@ -47,6 +47,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
     save_sig = QtCore.pyqtSignal(object)
     close_sig = QtCore.pyqtSignal(object)
+    reset_file_sig = QtCore.pyqtSignal(object)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -328,7 +329,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             parser = PEMParser()
             pem_file = parser.parse(pem_file)
 
-        self.fallback_file = copy.deepcopy(pem_file)
+        self.fallback_file = pem_file.copy()
         self.pem_file = pem_file
         self.setWindowTitle(f"PEM Plot Editor' - {pem_file.filepath.name}")
 
@@ -1722,6 +1723,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                                          'Are you sure you wish to continue?',
                                          self.message.Yes | self.message.No)
         if response == self.message.Yes:
+            self.reset_file_sig.emit((self.pem_file, self.fallback_file))
             self.open(self.fallback_file)
             self.status_bar.showMessage('File reset.', 1000)
 

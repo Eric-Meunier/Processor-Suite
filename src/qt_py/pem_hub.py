@@ -72,6 +72,8 @@ Ui_PlanMapOptionsWidget, _ = uic.loadUiType(planMapOptionsCreatorFile)
 Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 
+# TODO Change precision of tables
+
 
 def get_icon(filepath):
     ext = filepath.suffix.lower()
@@ -279,9 +281,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
         self.actionAuto_Merge_All_Files.triggered.connect(self.auto_merge_pem_files)
 
-        self.actionReverseX_Component.triggered.connect(lambda: self.reverse_component_data(comp='X'))
-        self.actionReverseY_Component.triggered.connect(lambda: self.reverse_component_data(comp='Y'))
-        self.actionReverseZ_Component.triggered.connect(lambda: self.reverse_component_data(comp='Z'))
+        self.actionReverseX_Component.triggered.connect(lambda: self.reverse_component_data(comp='X', selected=False))
+        self.actionReverseY_Component.triggered.connect(lambda: self.reverse_component_data(comp='Y', selected=False))
+        self.actionReverseZ_Component.triggered.connect(lambda: self.reverse_component_data(comp='Z', selected=False))
 
         # Map menu
         self.actionQuick_Map.triggered.connect(self.open_quick_map)
@@ -573,7 +575,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 selection_info.extend([timebase, survey_type])
 
                 if file.is_borehole() and file.has_xy():
-                    rotated = f"De-rotated: {file.is_rotated()}"
+                    rotated = f"De-rotated: {file.is_derotated()}"
                     selection_info.extend([rotated])
 
                 info_str = ' | '.join(selection_info)
@@ -596,7 +598,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Widgets
         self.pem_list_filter.accept_sig.connect(self.fill_pem_list)
         self.gps_list_filter.accept_sig.connect(self.fill_gps_list)
-        # self.unpacker.open_dmp_sig.connect(self.move_dir_tree_to)
+        self.unpacker.open_project_folder_sig.connect(self.move_dir_tree_to)
         self.calender.clicked.connect(set_date)
 
         # Buttons
@@ -906,6 +908,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
                 scale_ca_action.setIcon(QIcon(os.path.join(icons_path, 'coil.png')))
 
+                # Reversing component data
+                reverse_x_component_action = QAction("X Component", self)
+                reverse_x_component_action.triggered.connect(
+                    lambda: self.reverse_component_data(comp='X', selected=True))
+                reverse_y_component_action = QAction("Y Component", self)
+                reverse_y_component_action.triggered.connect(
+                    lambda: self.reverse_component_data(comp='Y', selected=True))
+                reverse_z_component_action = QAction("Z Component", self)
+                reverse_z_component_action.triggered.connect(
+                    lambda: self.reverse_component_data(comp='Z', selected=True))
+
                 derotate_action = QAction("&De-rotate XY", self)
                 derotate_action.triggered.connect(self.open_derotator)
                 derotate_action.setIcon(QIcon(os.path.join(icons_path, 'derotate.png')))
@@ -987,6 +1000,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     menu.addAction(export_pem_action)
 
                 menu.addSeparator()
+                # Plot
                 menu.addAction(open_plot_editor_action)
                 menu.addSeparator()
 
@@ -994,10 +1008,19 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 if len(self.table.selectionModel().selectedRows()) == 2:
                     menu.addAction(merge_action)
 
+                # Data editing
                 menu.addAction(average_action)
                 menu.addAction(split_action)
                 menu.addAction(scale_current_action)
                 menu.addAction(scale_ca_action)
+                menu.addSeparator()
+
+                # Reverse data menu
+                share_menu = menu.addMenu('Reverse')
+                share_menu.setIcon(QIcon(os.path.join(icons_path, 'reverse.png')))
+                share_menu.addAction(reverse_x_component_action)
+                share_menu.addAction(reverse_y_component_action)
+                share_menu.addAction(reverse_z_component_action)
                 menu.addSeparator()
 
                 # For boreholes only, do-rotate and geometry
@@ -1477,7 +1500,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             crs = dict()
             crs['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
             crs['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
-            crs['Datum'] = re.search(r'Datum:\W+(?P<Datum>.*)', file).group(1)
+            crs['Datum'] = re.search(r'Datum:\W+(?P<Datum>.*)', file).group(1).split(' (')[0]
             logger.info(f"Parsing INF file: System: {crs['System']}. Zone: {crs['Zone']}. Datum: {crs['Datum']}")
             return crs
 
@@ -1535,6 +1558,18 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             """
             self.pem_editor_widgets.remove(editor)
 
+        def reset_file(files):
+            """
+            Reset the PEM file. Ensures the reset file is in self.pem_files for when the file is refreshed.
+            :param files: tuple, current PEMFile and fallback PEMFile objects
+            """
+            pem_file = files[0]
+            fallback_file = files[1]
+
+            ind = self.pem_files.index(pem_file)
+            self.pem_files[ind] = fallback_file
+            self.refresh_pem(fallback_file)
+
         pem_files, rows = self.get_pem_files(selected=True)
         # Open individual editors for each PEMFile
         for pem_file in pem_files:
@@ -1543,6 +1578,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             # Connect the 'save' and 'close' signals
             editor.save_sig.connect(save_editor_pem)
             editor.close_sig.connect(close_editor)
+            editor.reset_file_sig.connect(reset_file)
             editor.open(pem_file)
 
     def open_derotator(self):
@@ -2602,6 +2638,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 if piw_widget.pem_file.is_borehole():
                     if any([piw_widget.get_loop().df.dropna().empty,
                             piw_widget.get_collar().df.dropna().empty,
+                            piw_widget.get_segments().df.dropna().empty,
                             ]):
                         return False
                     else:
@@ -2924,7 +2961,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 dlg.setLabelText(f"Averaging {pem_file.filepath.name}")
 
-                if pem_file.is_borehole() and pem_file.has_xy() and not pem_file.is_rotated():
+                if pem_file.is_borehole() and pem_file.has_xy() and not pem_file.is_derotated():
                     logger.warning(f"{pem_file.filepath.name} is a borehole file with rotated XY data.")
                     response = self.message.question(self, 'Rotated PEM File',
                                                      f"{pem_file.filepath.name} has not been de-rotated. "
@@ -3057,18 +3094,21 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.status_bar.showMessage(f"Process complete. "
                                         f"Current of {len(pem_files)} PEM files scaled to {current}.", 2000)
 
-    def reverse_component_data(self, comp):
+    def reverse_component_data(self, comp, selected=False):
         """
         Reverse the polarity of all data of a given component for all opened PEM files.
         :param comp: str, either Z, X, or Y
+        :param selected: bool, only use selected PEMFiles or not.
         """
-        pem_files, rows = self.get_pem_files(selected=False)
+        pem_files, rows = self.get_pem_files(selected=selected)
+
         if not pem_files:
             logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        for pem_file in self.pem_files:
+        for pem_file in pem_files:
+            logger.info(f"Reversing {comp} data of {pem_file.filepath.name}.")
             filt = pem_file.data.Component == comp.upper()
 
             if filt.any():
@@ -3115,7 +3155,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 return False
 
             # If the files aren't all de-rotated
-            if not all([f.is_rotated() == pem_files[0].is_rotated() for f in pem_files]):
+            if not all([f.is_derotated() == pem_files[0].is_derotated() for f in pem_files]):
                 logger.warning(f"Mixed states of XY de-rotation between {f1.filepath.name} and {f2.filepath.name}.")
                 self.message.warning(self, 'Warning - Different states of XY de-rotation',
                                      'There is a mix of XY de-rotation in the selected files.')
@@ -3200,8 +3240,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         return
 
                 # If the files aren't all de-rotated
-                if any([pem_file.is_rotated() for pem_file in pem_files]) and any(
-                        [not pem_file.is_rotated() for pem_file in pem_files]):
+                if any([pem_file.is_derotated() for pem_file in pem_files]) and any(
+                        [not pem_file.is_derotated() for pem_file in pem_files]):
                     self.message.information(self, 'Error - Different states of XY de-rotation',
                                              'There is a mix of XY de-rotation in the selected files.')
 
@@ -3338,7 +3378,7 @@ class PathFilter(QWidget):
         self.include_folders_edit = QLineEdit('GPS' if self.filetype == 'GPS' else '')
         self.include_folders_edit.setToolTip("Separate items with commas [,]")
 
-        self.exclude_folders_edit = QLineEdit()
+        self.exclude_folders_edit = QLineEdit('DUMP')
         self.exclude_folders_edit.setToolTip("Separate items with commas [,]")
 
         self.include_exts_edit = QLineEdit()
@@ -4290,7 +4330,7 @@ def main():
     # ff = PathFilter()
     # ff.show()
 
-    pem_files = [pem_parser.parse(r'N:\GeophysicsShare\Dave\Eric\Norman\Kevin\Bill\Heinz\CS-19-08W4 XYT_OUT.PEM')]
+    pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
@@ -4300,12 +4340,6 @@ def main():
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     mw.open_pem_files(pem_files)
-    mw.gps_conversion_widget.gps_system_cbox.setCurrentText('UTM')
-    mw.gps_conversion_widget.gps_datum_cbox.setCurrentText('NAD 1927')
-    mw.gps_conversion_widget.gps_zone_cbox.setCurrentText('17 North')
-    mw.open_gps_conversion()
-    mw.gps_conversion_widget.accept()
-    # mw.open_tile_map()
 
     # mw.project_dir_edit.setText(r'C:\_Data\2020\Juno\Borehole')
     # mw.move_dir_tree_to(r'C:\_Data\2020\Juno\Borehole')

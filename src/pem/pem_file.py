@@ -256,7 +256,7 @@ class PEMFile:
         else:
             return False
 
-    def is_rotated(self):
+    def is_derotated(self):
         if self.is_borehole():
             filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
             xy_data = self.data[filt]
@@ -810,7 +810,7 @@ class PEMFile:
             if not self.is_averaged():
                 self.average()
             if self.is_borehole():
-                if self.has_xy() and not self.is_rotated():
+                if self.has_xy() and not self.is_derotated():
                     if not self.prepped_for_rotation:
                         self.prep_rotation()
                     self.rotate('acc')
@@ -2638,12 +2638,26 @@ class PEMSerializer:
             times.append(table.iloc[-1].End)
             return times
 
+        survey_type = self.pem_file.get_survey_type()
+        if survey_type == 'Surface Induction':
+            survey_str = 'Surface'
+        elif survey_type == 'Borehole Induction':
+            survey_str = 'Borehole'
+        elif survey_type == 'Surface Fluxgate':
+            survey_str = 'S-Flux'
+        elif survey_type == 'Borehole Fluxgate':
+            survey_str = 'BH-Flux'
+        elif survey_type == 'SQUID':
+            survey_str = 'SQUID'
+        else:
+            raise ValueError(f"{survey_type} is not a valid survey type.")
+
         result_list = [str(self.pem_file.client),
                        str(self.pem_file.grid),
                        str(self.pem_file.line_name),
                        str(self.pem_file.loop_name),
                        str(self.pem_file.date),
-                       ' '.join([str(self.pem_file.survey_type),
+                       ' '.join([survey_str,
                                  str(self.pem_file.convention),
                                  str(self.pem_file.sync),
                                  str(self.pem_file.timebase),
@@ -2939,10 +2953,11 @@ class RADTool:
 
         return self
 
-    @Log()
-    def get_azimuth(self):
+    # @Log()
+    def get_azimuth(self, allow_negative=False):
         """
         Calculate the azimuth of the RAD tool object. Must be D7.
+        :param allow_negative: bool, allow negative azimuth values or only allow values within 0 - 360.
         :return: float, azimuth
         """
         if not self.has_tool_values():
@@ -2951,10 +2966,12 @@ class RADTool:
         g = math.sqrt(sum([self.gx ** 2, self.gy ** 2, self.gz ** 2]))
         numer = ((self.Hz * self.gy) - (self.Hy * self.gz)) * g
         denumer = self.Hx * (self.gy ** 2 + self.gz ** 2) - (self.Hy * self.gx * self.gy) - (self.Hz * self.gx * self.gz)
+
         # TODO check that the azimuth is correct
         azimuth = math.degrees(math.atan2(numer, denumer))
-        if azimuth < 0:
-            azimuth = 360 + azimuth
+        if not allow_negative:
+            if azimuth < 0:
+                azimuth = 360 + azimuth
         return azimuth
 
     def get_dip(self):
@@ -3030,7 +3047,7 @@ class RADTool:
         else:
             return False
 
-    def is_rotated(self):
+    def is_derotated(self):
         return True if self.angle_used is not None else False
 
     def to_string(self, legacy=False):
@@ -3039,6 +3056,7 @@ class RADTool:
         :param legacy: bool, if True, return D5 values instead of D7 for compatibility with Step.
         :return: str
         """
+        # If the input D value is already D5
         if self.D == 'D5':
             result = [self.D]
             if self.rotation_type is None:
@@ -3046,7 +3064,7 @@ class RADTool:
                 result.append(f"{self.y:g}")
                 result.append(f"{self.z:g}")
 
-            elif self.rotation_type == 'acc':
+            elif self.rotation_type == 'acc' or self.rotation_type.lower() == 'pp':
                 result.append(f"{self.gx:g}")
                 result.append(f"{self.gy:g}")
                 result.append(f"{self.gz:g}")
@@ -3058,29 +3076,32 @@ class RADTool:
 
             result.append(f"{self.roll_angle:g}")
             result.append(f"{self.dip:g}")
+            result.append(self.R)
+            result.append(f"{self.angle_used:g}")
 
         else:
 
             # Create the D5 RAD tool line that is compatible with Step (just for borehole XY).
             if legacy:
 
-                if self.rotation_type == 'mag':  # Only mag de-rotation uses the mag values. Everything else uses acc.
-                    x, y, z = f"{self.Hx:g}", f"{self.Hy:g}", f"{self.Hz:g}"
-                else:
-                    x, y, z = f"{self.gx:g}", f"{self.gy:g}", f"{self.gz:g}"
+                if self.is_derotated():
+                    if self.rotation_type == 'mag':  # Only mag de-rotation uses the mag values. Everything is acc.
+                        x, y, z = f"{self.Hx:g}", f"{self.Hy:g}", f"{self.Hz:g}"
+                    else:
+                        x, y, z = f"{self.gx:g}", f"{self.gy:g}", f"{self.gz:g}"
 
-                # For de-rotated XY RADs
-                if all([self.roll_angle, self.dip, self.angle_used, self.R]):
-                    result = [
-                        'D5',
-                        x,
-                        y,
-                        z,
-                        f"{self.roll_angle:g}",
-                        f"{self.dip:g}",
-                        self.R,
-                        f"{self.angle_used:g}"
-                    ]
+                    # For de-rotated XY RADs
+                    if all([self.roll_angle, self.dip, self.angle_used, self.R]):
+                        result = [
+                            'D5',
+                            x,
+                            y,
+                            z,
+                            f"{self.roll_angle:g}",
+                            f"{self.dip:g}",
+                            self.R,
+                            f"{self.angle_used:g}"
+                        ]
 
                 # For rotated and Z RADs
                 else:
@@ -3095,6 +3116,7 @@ class RADTool:
                         f"{self.T:g}" if self.T is not None else '0'
                     ]
 
+            # Non legacy
             else:
                 if self.D == 'D7' or self.D == 'D6':
                     result = [

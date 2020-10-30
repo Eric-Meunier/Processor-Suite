@@ -31,7 +31,7 @@ Ui_UnpackerCreator, QtBaseClass = uic.loadUiType(unpackerCreatorFile)
 
 
 class Unpacker(QMainWindow, Ui_UnpackerCreator):
-    open_dmp_sig = QtCore.pyqtSignal(object)
+    open_project_folder_sig = QtCore.pyqtSignal(object)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -495,7 +495,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         # self.status_bar.showMessage('Complete.', 2000)
 
         # Change the project directory of PEMPro
-        self.open_dmp_sig.emit(new_folder.parents[1])
+        self.open_project_folder_sig.emit(new_folder.parents[1])
 
         self.reset(tables_only=True)
 

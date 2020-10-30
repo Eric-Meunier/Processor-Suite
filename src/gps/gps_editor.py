@@ -283,10 +283,15 @@ class TransmitterLoop(BaseGPS):
             logger.error(f"Invalid input: {file}.")
             raise TypeError(f'{file} is not a valid input for loop GPS parsing.')
 
-        # TODO continue here. Converting to str is breaking hasnan.
         # TODO Loop and collar GPS is enough to make the rows white in PEMPro.
         # TODO Geometry azimuth not right.
-        # Just try processing Eastern's hole.
+        # Capture rows with NaN in the first three columns
+        nan_rows = gps.iloc[:, 0: 2].apply(has_na, axis=1)
+        error_gps = gps.loc[nan_rows].copy()
+
+        # Remove NaN before converting to str
+        gps = gps[~nan_rows]
+
         gps = gps.astype(str)
         # Remove P tags and units columns
         cols_to_drop = []
@@ -309,10 +314,6 @@ class TransmitterLoop(BaseGPS):
             gps = gps.drop(gps.columns[3:], axis=1)
 
         gps.columns = range(gps.shape[1])  # Reset the columns
-
-        # Find any rows where there is a NaN
-        bad_rows = gps.apply(has_na, axis=1)
-        error_gps = gps.loc[bad_rows].copy()
 
         # Add the units column
         gps.insert(3, 'Unit', '0')
@@ -461,6 +462,13 @@ class SurveyLine(BaseGPS):
             logger.error(f"Invalid input: {file}.")
             raise TypeError(f'{file} is not a valid input for station GPS parsing.')
 
+        # Capture rows with NaN in the first three columns
+        nan_rows = gps.iloc[:, 0: 2].apply(has_na, axis=1)
+        error_gps = gps.loc[nan_rows].copy()
+
+        # Remove NaN before converting to str
+        gps = gps[~nan_rows]
+
         gps = gps.astype(str)
         # Remove P tags and units columns
         cols_to_drop = []
@@ -481,10 +489,6 @@ class SurveyLine(BaseGPS):
         elif len(gps.columns) > 4:
             gps = gps.drop(gps.columns[4:], axis=1)
         gps.columns = range(gps.shape[1])  # Reset the columns
-
-        # Find any rows where there is a NaN
-        bad_rows = gps.apply(has_na, axis=1)
-        error_gps = gps.loc[bad_rows].copy()
 
         # Add the units column
         gps.insert(3, 'Unit', '0')
@@ -617,6 +621,13 @@ class BoreholeCollar(BaseGPS):
             logger.warning(f"{len(gps)} row(s) found instead of 1. Removing the extra rows.")
             gps = gps.drop(gps.iloc[1:].index)
 
+        # Capture rows with NaN in the first three columns
+        nan_rows = gps.iloc[:, 0: 2].apply(has_na, axis=1)
+        error_gps = gps.loc[nan_rows].copy()
+
+        # Remove NaN before converting to str
+        gps = gps[~nan_rows]
+
         gps = gps.astype(str)
         # Remove P tags and units columns
         cols_to_drop = []
@@ -642,10 +653,6 @@ class BoreholeCollar(BaseGPS):
             gps = gps.drop(gps.columns[3:], axis=1)  # Remove extra columns
 
         gps.columns = range(gps.shape[1])  # Reset the columns
-
-        # Find any rows where there is a NaN
-        bad_rows = gps.apply(has_na, axis=1)
-        error_gps = gps.loc[bad_rows].copy()
 
         # Add the units column
         gps.insert(3, 'Unit', '0')
@@ -728,6 +735,13 @@ class BoreholeSegments(BaseGPS):
             logger.warning(f"Invalid input: {file}.")
             raise TypeError(f'{file} is not a valid input for segments parsing')
 
+        # Capture rows with NaN in the first three columns
+        nan_rows = gps.iloc[:, 0: 2].apply(has_na, axis=1)
+        error_gps = gps.loc[nan_rows].copy()
+
+        # Remove NaN before converting to str
+        gps = gps[~nan_rows]
+
         gps = gps.astype(str)
         # Remove P tags and units columns
         cols_to_drop = []
@@ -746,10 +760,6 @@ class BoreholeSegments(BaseGPS):
             gps = gps.drop(gps.columns[5:], axis=1)
 
         gps.columns = range(gps.shape[1])  # Reset the columns
-
-        # Find any rows where there is a NaN
-        bad_rows = gps.apply(has_na, axis=1)
-        error_gps = gps.loc[bad_rows].copy()
 
         cols = {
             0: 'Azimuth',
@@ -951,10 +961,10 @@ if __name__ == '__main__':
 
     # gps_parser = GPSParser()
     # gpx_editor = GPXEditor()
-    crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
+    # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\src\gps\sample_files\45-1.csv'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\AF19003 loop and collar.txt'
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\92-21A~1.SEG'
+    file = r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\GPS\ERLOOP1_28.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\PERKOA SW LOOP 1.txt'
@@ -962,10 +972,10 @@ if __name__ == '__main__':
     # segments = BoreholeSegments(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\718-3759gyro.seg')
     # geometry = BoreholeGeometry(collar, segments)
     # geometry.get_projection(num_segments=1000)
-    # loop = TransmitterLoop(pem_files[0].loop.df, crs=crs)
+    loop = TransmitterLoop(file)
     # loop.to_nad83()
     # line = SurveyLine(file, name=os.path.basename(file))
     # print(loop.get_sorted_loop(), '\n', loop.get_loop())
     # collar = BoreholeCollar(file)
-    seg = BoreholeSegments(file)
+    # seg = BoreholeSegments(file)
     # gps_parser.parse_collar_gps(file)

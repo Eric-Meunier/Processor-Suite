@@ -1,12 +1,30 @@
->>10/30/2020 11:23:25 AM [INFO] pem_getter.py (add_pem:36):
- Getting File SAN-0246-19 ZAv.PEM.
->>10/30/2020 11:23:25 AM [INFO] pem_file.py (parse:1822):
- Parsing SAN-0246-19 ZAv.PEM
->>10/30/2020 11:23:25 AM [INFO] pem_file.py (get_crs:413):
- SAN-0246-19 ZAv.PEM CRS is WGS 84 / UTM zone 18S
->>10/30/2020 11:23:25 AM [INFO] gps_editor.py (parse_collar:628):
- Removing P-tag column.
->>10/30/2020 11:23:25 AM [INFO] gps_editor.py (parse_collar:632):
+>>10/30/2020 01:00:20 PM [INFO] gps_editor.py (parse_collar:643):
  Removing column of 0s.
->>10/30/2020 11:23:25 AM [INFO] pem_getter.py (get_pems:97):
- Collected PEM files: C:\Users\Eric\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\SAN-0246-19 ZAv.PEM
+>>10/30/2020 01:00:20 PM [WARNING] gps_editor.py (get_projection:815):
+ No CRS passed.
+>>10/30/2020 01:00:20 PM [WARNING] pem_planner.py (plot_hole:1379):
+ Cannot plot hole without a loop.
+>>10/30/2020 01:00:20 PM [INFO] pem_file.py (parse:1822):
+ Parsing tme-08-02 flux_13.PEM
+>>10/30/2020 01:00:20 PM [INFO] pem_file.py (get_crs:383):
+ tme-08-02 flux_13.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 01:00:20 PM [INFO] gps_editor.py (parse_collar:639):
+ Removing P-tag column.
+>>10/30/2020 01:00:20 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 01:00:20 PM [INFO] pem_file.py (get_crs:383):
+ tme-08-02 flux_13.PEM CRS is WGS 84 / UTM zone 16N.
+>>10/30/2020 01:00:20 PM [INFO] pem_hub.py (get_crs:2908):
+ Project CRS: WGS 84 / UTM zone 16N
+>>10/30/2020 01:00:20 PM [INFO] pem_hub.py (pem_to_table:2751):
+ Adding tme-08-02 flux_13.PEM to the table.
+>>10/30/2020 01:00:20 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 01:00:31 PM [INFO] pem_hub.py (refresh_pem:2793):
+ Refreshing tme-08-02 flux_13.PEM.
+>>10/30/2020 01:00:31 PM [INFO] pem_hub.py (pem_to_table:2751):
+ Adding tme-08-02 flux_13.PEM to the table.
+>>10/30/2020 01:00:31 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
+>>10/30/2020 01:00:31 PM [INFO] gps_editor.py (parse_collar:643):
+ Removing column of 0s.
