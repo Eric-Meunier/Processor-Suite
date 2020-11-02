@@ -694,11 +694,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Clear the plots of the components that are to be plotted only
         clear_plots(components)
 
-        global averaging_time, lin_plotting_time, scatter_plotting_time
-        averaging_time = 0
-        lin_plotting_time = 0
-        scatter_plotting_time = 0
-
         # Calculate the lin plot axes channel bounds
         channel_bounds = file.get_channel_bounds()
 
@@ -707,7 +702,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                                                  averaged=False,
                                                  converted=True,
                                                  ontime=False,
-                                                 incl_deleted=True)
+                                                 incl_deleted=True).dropna()
             if profile_data.empty:
                 continue
 
@@ -1906,13 +1901,13 @@ if __name__ == '__main__':
     pem_getter = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()
-    pem_files = pem_getter.get_pems(random=True, number=1)
+    # pem_files = pem_getter.get_pems(random=True, number=1)
     # pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
-    # pem_files = [dmp_parser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\_14_pp.DMP2')]
+    pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
 
     editor = PEMPlotEditor()
     editor.move(0, 0)
-    editor.open(pem_files[0])
+    editor.open(pem_files)
     # editor.auto_clean()
 
     app.exec_()

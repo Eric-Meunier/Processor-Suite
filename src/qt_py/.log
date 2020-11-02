@@ -1,30 +1,12 @@
->>10/30/2020 01:00:20 PM [INFO] gps_editor.py (parse_collar:643):
- Removing column of 0s.
->>10/30/2020 01:00:20 PM [WARNING] gps_editor.py (get_projection:815):
- No CRS passed.
->>10/30/2020 01:00:20 PM [WARNING] pem_planner.py (plot_hole:1379):
- Cannot plot hole without a loop.
->>10/30/2020 01:00:20 PM [INFO] pem_file.py (parse:1822):
- Parsing tme-08-02 flux_13.PEM
->>10/30/2020 01:00:20 PM [INFO] pem_file.py (get_crs:383):
- tme-08-02 flux_13.PEM CRS is WGS 84 / UTM zone 16N.
->>10/30/2020 01:00:20 PM [INFO] gps_editor.py (parse_collar:639):
- Removing P-tag column.
->>10/30/2020 01:00:20 PM [INFO] gps_editor.py (parse_collar:643):
- Removing column of 0s.
->>10/30/2020 01:00:20 PM [INFO] pem_file.py (get_crs:383):
- tme-08-02 flux_13.PEM CRS is WGS 84 / UTM zone 16N.
->>10/30/2020 01:00:20 PM [INFO] pem_hub.py (get_crs:2908):
- Project CRS: WGS 84 / UTM zone 16N
->>10/30/2020 01:00:20 PM [INFO] pem_hub.py (pem_to_table:2751):
- Adding tme-08-02 flux_13.PEM to the table.
->>10/30/2020 01:00:20 PM [INFO] gps_editor.py (parse_collar:643):
- Removing column of 0s.
->>10/30/2020 01:00:31 PM [INFO] pem_hub.py (refresh_pem:2793):
- Refreshing tme-08-02 flux_13.PEM.
->>10/30/2020 01:00:31 PM [INFO] pem_hub.py (pem_to_table:2751):
- Adding tme-08-02 flux_13.PEM to the table.
->>10/30/2020 01:00:31 PM [INFO] gps_editor.py (parse_collar:643):
- Removing column of 0s.
->>10/30/2020 01:00:31 PM [INFO] gps_editor.py (parse_collar:643):
- Removing column of 0s.
+>>11/02/2020 12:40:22 PM [INFO] pem_file.py (parse_dmp2:2482):
+ Parsing xyz_25.DMP2.
+>>11/02/2020 12:40:22 PM [ERROR] pem_file.py (parse_data:2471):
+ Following stations had Inf readings: 
+    Station Component  Reading_number
+141   1050N         X              48
+142   1050N         Y              48
+143   1050N         Z              48
+>>11/02/2020 12:40:22 PM [WARNING] gps_editor.py (parse_loop_gps:280):
+ Empty file passed.
+>>11/02/2020 12:40:22 PM [WARNING] gps_editor.py (parse_station_gps:459):
+ Empty file passed.

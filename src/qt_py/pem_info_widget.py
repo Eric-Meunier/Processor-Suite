@@ -357,7 +357,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.add_gps(files)
 
-    def open_gps_files(self, files, crs=None):
+    def open_gps_files(self, files):
         """
         Open GPS files
         :param files: list or str, filepath(s) of GPS files
@@ -402,15 +402,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # Add survey line GPS
         if current_tab == self.station_gps_tab:
 
-            def loop_accept_sig_wrapper(data):
+            def line_accept_sig_wrapper(data):
                 self.fill_gps_table(data, self.line_table)
 
             global line_adder
             line_adder = LineAdder(parent=self)
-            line_adder.accept_sig.connect(loop_accept_sig_wrapper)
+            line_adder.accept_sig.connect(line_accept_sig_wrapper)
             line_adder.accept_sig.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
             try:
-                line = SurveyLine(file, crs=crs)
+                line = SurveyLine(file)
                 if line.df.empty:
                     self.message.information(self, 'No GPS Found', f"{line.error_msg}.")
                 else:
@@ -422,7 +422,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # Add borehole collar GPS
         elif current_tab == self.geometry_tab:
             try:
-                collar = BoreholeCollar(file, crs=crs)
+                collar = BoreholeCollar(file)
                 errors = collar.get_errors()
                 if not errors.empty:
                     self.message.warning(self, 'Parsing Error',
@@ -448,7 +448,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             loop_adder.accept_sig.connect(lambda: self.gps_object_changed(self.loop_table, refresh=True))
 
             try:
-                loop = TransmitterLoop(file, crs=crs)
+                loop = TransmitterLoop(file)
                 if loop.df.empty:
                     self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
                 loop_adder.open(loop, name=self.pem_file.loop_name)

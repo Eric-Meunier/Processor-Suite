@@ -281,7 +281,7 @@ class DBPlotter(QMainWindow):
                     if len(lines) < 3:  # Meaning it is only the command and no data following
                         continue
 
-                    if len(lines[0]) != 4:  # Meaning it is a ramp reading
+                    if len(lines[0].strip()) != 4:  # Meaning it is a ramp reading
                         continue
 
                     data_str = '\n'.join(lines)

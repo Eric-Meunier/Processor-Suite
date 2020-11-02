@@ -375,7 +375,10 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             global db_plot
             db_plot = DBPlotter(parent=self)
             db_plot.open(damp_files)
-            db_plot.show()
+            if db_plot.db_widgets:
+                db_plot.show()
+            else:
+                logger.warning(f"No DB widgets were created.")
 
     def accept_changes(self):
         """
@@ -490,8 +493,13 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         make_move('Geometry', self.geometry_table)
         make_move('Other', self.other_table)
 
+        # Delete the input folder
         if self.input_path.resolve() != new_folder.resolve() and delete_old_folder is True:
-            rmtree(self.input_path)
+            if self.input_path.resolve() in new_folder.resolve().parents:
+                logger.info(f"Not removing directory {self.input_path.resolve()} as it is a part of the new folder.")
+            else:
+                logger.warning(f"Removing directory {self.input_path.resolve()}.")
+                rmtree(self.input_path)
         # self.status_bar.showMessage('Complete.', 2000)
 
         # Change the project directory of PEMPro

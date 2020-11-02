@@ -2202,7 +2202,7 @@ class DMPParser:
             f"{self.filepath.name}: Header claims {header_readings} readings but {len(data)} was found."
 
         pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath, notes=notes)
-        return pem_file
+        return pem_file, pd.DataFrame()  # Empty data_error data frame. Errors not implemented yet for .DMP files.
 
     def parse_dmp2(self, filepath):
         """
@@ -2463,7 +2463,16 @@ class DMPParser:
             pem_df.loc[overload_filt, 'Deleted'] = True
 
             pem_df['Timestamp'] = df['Date_Time'].map(str_to_datetime)
-            return pem_df
+
+            # Remove Inf readings
+            inf_filt = pem_df.Reading.map(lambda x: np.isinf(x).any())
+            inf_readings = pem_df[inf_filt]
+            if not inf_readings.empty:
+                logger.error(f"Following stations had Inf readings: "
+                             f"\n{inf_readings.loc[:, ['Station', 'Component', 'Reading_number']].to_string()}")
+
+            pem_df = pem_df[~inf_filt]
+            return pem_df, inf_readings
 
         if isinstance(filepath, str):
             filepath = Path(filepath)
@@ -2505,12 +2514,12 @@ class DMPParser:
             raise ValueError(f'No data found in {self.filepath.name}.')
 
         header = parse_header(scontents[0])
-        data = parse_data(scontents[1], units=header.get('Units'))
+        data, data_errors = parse_data(scontents[1], units=header.get('Units'))
         channel_table = parse_channel_times(units=header.get('Units'))
         # notes = header['Notes']
 
         pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath)
-        return pem_file
+        return pem_file, data_errors
 
     def parse(self, filepath):
         """
@@ -2524,13 +2533,13 @@ class DMPParser:
         assert filepath.is_file(), f"{filepath.name} does not exist."
 
         if filepath.suffix.lower() == '.dmp':
-            pem_file = self.parse_dmp(filepath)
+            pem_file, inf_errors = self.parse_dmp(filepath)
         elif filepath.suffix.lower() == '.dmp2':
-            pem_file = self.parse_dmp2(filepath)
+            pem_file, inf_errors = self.parse_dmp2(filepath)
         else:
             raise NotImplementedError(f"Parsing {filepath.suffix} files not implemented yet.")
 
-        return pem_file
+        return pem_file, inf_errors
 
 
 class PEMSerializer:
