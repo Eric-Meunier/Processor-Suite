@@ -827,7 +827,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.section_view_layout.addWidget(self.section_canvas)
 
         self.add_hole('Hole')
-        self.add_loop('Loop')
+        # self.add_loop('Loop')
 
         # Signals
         # Tabs
