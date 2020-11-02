@@ -1,8 +1,83 @@
->>11/02/2020 03:09:37 PM [INFO] gps_editor.py (parse_collar:643):
+>>11/02/2020 04:55:10 PM [INFO] gps_editor.py (parse_collar:660):
  Removing column of 0s.
->>11/02/2020 03:09:37 PM [WARNING] gps_editor.py (get_projection:815):
+>>11/02/2020 04:55:10 PM [WARNING] gps_editor.py (get_projection:832):
  No CRS passed.
->>11/02/2020 03:09:37 PM [WARNING] pem_planner.py (plot_hole:1379):
+>>11/02/2020 04:55:10 PM [WARNING] pem_planner.py (plot_hole:1379):
  Cannot plot hole without a loop.
->>11/02/2020 03:09:41 PM [WARNING] pem_planner.py (plot_hole:1379):
- Cannot plot hole without a loop.
+>>11/02/2020 04:55:13 PM [INFO] pem_file.py (parse:1822):
+ Parsing 1370S.PEM
+>>11/02/2020 04:55:13 PM [INFO] pem_file.py (get_crs:413):
+ 1370S.PEM CRS is WGS 84 / UTM zone 18S
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (project_dir_changed:1977):
+ New project directory: C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_gps:2013):
+ Include files: ['']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_gps:2015):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_gps:2019):
+ Include folders: ['GPS']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_gps:2021):
+ Exclude folders: ['DUMP']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_gps:2048):
+ Include extensions: ['']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_gps:2050):
+ Exclude extensions: ['']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_pems:2117):
+ Include files: ['']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_pems:2119):
+ Include files: ['']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_pems:2123):
+ Include folders: ['']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_pems:2125):
+ Exclude folders: ['DUMP']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_pems:2152):
+ Include extensions: ['']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_pems:2154):
+ Exclude extensions: ['']
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_filtered_pems:2169):
+ Filtered pems: C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\1370S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\1380S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\1390S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\1400S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\1410S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\1420S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\SAN-0246-19 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\SAN-0246-19 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF1\1280S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF1\1290S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF1\1300S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF1\C1280S_2.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF1\C1280S_24.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF1\C1290S_2.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF1\C1290S_24.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF1\C1300S_22.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF1\C1300S_23.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\1300S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\1310S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\1320S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\1330S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\1340S.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1300S_18.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1300S_19.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1310S_18.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1310S_7.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1310S_8.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1320S_6.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1320S_7.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1330S_2.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1330S_3.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1330S_5.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1340S_3.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Trevali Peru\OFF4\_1340S_5.PEM
+>>11/02/2020 04:55:13 PM [INFO] pem_file.py (get_crs:413):
+ 1370S.PEM CRS is WGS 84 / UTM zone 18S
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (get_crs:2944):
+ Project CRS: WGS 84 / UTM zone 18S
+>>11/02/2020 04:55:13 PM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding 1370S.PEM to the table.
+>>11/02/2020 04:55:15 PM [INFO] pem_hub.py (get_crs:2944):
+ Project CRS: WGS 84 / UTM zone 18S
+>>11/02/2020 04:55:15 PM [INFO] pem_file.py (get_crs:413):
+ 1370S.PEM CRS is WGS 84 / UTM zone 18S
+>>11/02/2020 04:55:15 PM [INFO] pem_file.py (get_crs:413):
+ 1370S.PEM CRS is WGS 84 / UTM zone 18S

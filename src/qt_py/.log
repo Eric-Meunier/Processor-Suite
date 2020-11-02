@@ -1,12 +1,130 @@
->>11/02/2020 12:40:22 PM [INFO] pem_file.py (parse_dmp2:2482):
- Parsing xyz_25.DMP2.
->>11/02/2020 12:40:22 PM [ERROR] pem_file.py (parse_data:2471):
- Following stations had Inf readings: 
-    Station Component  Reading_number
-141   1050N         X              48
-142   1050N         Y              48
-143   1050N         Z              48
->>11/02/2020 12:40:22 PM [WARNING] gps_editor.py (parse_loop_gps:280):
- Empty file passed.
->>11/02/2020 12:40:22 PM [WARNING] gps_editor.py (parse_station_gps:459):
- Empty file passed.
+>>11/02/2020 04:53:13 PM [INFO] gps_editor.py (parse_collar:660):
+ Removing column of 0s.
+>>11/02/2020 04:53:13 PM [WARNING] gps_editor.py (get_projection:832):
+ No CRS passed.
+>>11/02/2020 04:53:13 PM [WARNING] pem_planner.py (plot_hole:1379):
+ Cannot plot hole without a loop.
+>>11/02/2020 04:53:14 PM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7400NAv.PEM.
+>>11/02/2020 04:53:14 PM [INFO] pem_file.py (parse:1822):
+ Parsing 7400NAv.PEM
+>>11/02/2020 04:53:14 PM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/02/2020 04:53:14 PM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7500NAv.PEM.
+>>11/02/2020 04:53:14 PM [INFO] pem_file.py (parse:1822):
+ Parsing 7500NAv.PEM
+>>11/02/2020 04:53:14 PM [INFO] pem_file.py (get_crs:383):
+ 7500NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/02/2020 04:53:14 PM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7600NAv.PEM.
+>>11/02/2020 04:53:14 PM [INFO] pem_file.py (parse:1822):
+ Parsing 7600NAv.PEM
+>>11/02/2020 04:53:14 PM [INFO] pem_file.py (get_crs:383):
+ 7600NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/02/2020 04:53:14 PM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7700NAv.PEM.
+>>11/02/2020 04:53:14 PM [INFO] pem_file.py (parse:1822):
+ Parsing 7700NAv.PEM
+>>11/02/2020 04:53:14 PM [INFO] pem_file.py (get_crs:383):
+ 7700NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/02/2020 04:53:14 PM [INFO] pem_getter.py (get_pems:97):
+ Collected PEM files: C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7700NAv.PEM
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (project_dir_changed:1977):
+ New project directory: C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_gps:2013):
+ Include files: ['']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_gps:2015):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_gps:2019):
+ Include folders: ['GPS']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_gps:2021):
+ Exclude folders: ['DUMP']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_gps:2048):
+ Include extensions: ['']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_gps:2050):
+ Exclude extensions: ['']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_pems:2117):
+ Include files: ['']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_pems:2119):
+ Include files: ['']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_pems:2123):
+ Include folders: ['']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_pems:2125):
+ Exclude folders: ['DUMP']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_pems:2152):
+ Include extensions: ['']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_pems:2154):
+ Exclude extensions: ['']
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_filtered_pems:2169):
+ Filtered pems: C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7900NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\MANO-19-004 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\MANO-19-004 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\MANO-19-004.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\SAPR-19-006 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\SAPR-19-006 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\test save as.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\z7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\z7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\z7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\z7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\z7900NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\7900NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\MANO-19-004 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\MANO-19-004 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\SAPR-19-006 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\SAPR-19-006 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\z7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\z7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\z7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\z7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\z7900NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export\74NAV.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export\75NAV.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export\7600NAV.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export\7700NAV.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export test 2\7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export test 2\7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\7900NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\MANO-19-004 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\MANO-19-004 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\SAPR-19-006 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\SAPR-19-006 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\z7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\z7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\z7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\z7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\z7900NAv.PEM
+>>11/02/2020 04:53:14 PM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (get_crs:2944):
+ Project CRS: WGS 84 / UTM zone 44N
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding 7400NAv.PEM to the table.
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding 7500NAv.PEM to the table.
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding 7600NAv.PEM to the table.
+>>11/02/2020 04:53:14 PM [INFO] pem_hub.py (pem_to_table:2787):
+ Adding 7700NAv.PEM to the table.
+>>11/02/2020 04:53:15 PM [INFO] pem_hub.py (get_crs:2944):
+ Project CRS: WGS 84 / UTM zone 44N
+>>11/02/2020 04:53:15 PM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/02/2020 04:53:15 PM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.

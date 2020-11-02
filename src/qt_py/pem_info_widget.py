@@ -16,7 +16,7 @@ from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, Bore
     GPXEditor
 from src.pem.pem_file import StationConverter
 from src.qt_py.pem_geometry import PEMGeometry
-from src.qt_py.gps_adder import LoopAdder, LineAdder
+from src.gps.gps_adder import LoopAdder, LineAdder
 from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
