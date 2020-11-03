@@ -1235,7 +1235,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Force the range to use existing stations
         x0 = self.find_nearest_station(range[0])
         x1 = self.find_nearest_station(range[1])
-        logger.info(f"Selecting stations from {x0} to {x1}")
+        # logger.info(f"Selecting stations from {x0} to {x1}")
 
         ind, comp = self.get_active_component()
         comp_profile_axes = get_comp_profile(comp)

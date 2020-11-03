@@ -1137,6 +1137,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             hole_widget.hole_collar.sigClicked.connect(lambda: hole_clicked(hole_widget))
             hole_widget.plot_hole_sig.connect(self.plot_hole)
             self.hole_tab_widget.addTab(hole_widget, name)
+            self.hole_tab_widget.setCurrentIndex(len(self.hole_widgets) - 1)
 
             # Select the hole if it is the only one open
             if len(self.hole_tab_widget) == 1:
@@ -1223,6 +1224,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             loop_widget.copy_loop_btn.clicked.connect(lambda: loop_copied(loop_widget))
 
             self.loop_tab_widget.addTab(loop_widget, name)
+            self.loop_tab_widget.setCurrentIndex(len(self.loop_widgets) - 1)
 
             # Select the loop if it is the only one open
             if len(self.loop_tab_widget) == 1:
@@ -2573,8 +2575,8 @@ class LoopROI(pg.RectROI):
 
 def main():
     app = QApplication(sys.argv)
-    # planner = LoopPlanner()
-    planner = GridPlanner()
+    planner = LoopPlanner()
+    # planner = GridPlanner()
 
     # planner.gps_system_cbox.setCurrentIndex(2)
     # planner.gps_datum_cbox.setCurrentIndex(1)
