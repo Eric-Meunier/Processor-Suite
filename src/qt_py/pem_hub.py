@@ -35,16 +35,16 @@ from src.gps.gpx_creator import GPXCreator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py.custom_qt_widgets import CustomProgressBar
-from src.qt_py.derotator import Derotator
+from src.pem.derotator import Derotator
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
 from src.qt_py.name_editor import BatchNameEditor
 from src.geometry.pem_geometry import PEMGeometry
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
-from src.qt_py.pem_merger import PEMMerger
+from src.pem.pem_merger import PEMMerger
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
-from src.qt_py.pem_plot_editor import PEMPlotEditor
+from src.pem.pem_plot_editor import PEMPlotEditor
 from src.qt_py.ri_importer import BatchRIImporter
-from src.qt_py.station_splitter import StationSplitter
+from src.pem.station_splitter import StationSplitter
 from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
