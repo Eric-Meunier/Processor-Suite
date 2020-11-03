@@ -813,7 +813,6 @@ class BoreholeGeometry(BaseGPS):
         self.collar = collar
         self.segments = segments
 
-    # TODO projection with projected CRS?
     def get_projection(self, num_segments=None, stations=None, latlon=False):
         """
         Uses the segments to create a 3D projection of a borehole trace. Can be broken up into segments and interpolated.
@@ -828,6 +827,9 @@ class BoreholeGeometry(BaseGPS):
         self.crs = self.collar.crs
         if not self.crs:
             logger.warning(f"No CRS passed.")
+            if latlon:
+                logger.error(f"Cannot project as latlon without CRS.")
+                return projection
         elif self.crs.is_geographic:
             logger.error(f"CRS must be projected, not geographic.")
             return projection

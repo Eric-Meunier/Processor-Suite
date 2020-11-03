@@ -73,8 +73,6 @@ Ui_PlanMapOptionsWidget, _ = uic.loadUiType(planMapOptionsCreatorFile)
 Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 
-# TODO Merging XY and Z file gives incorrect error about de-rotation states.
-
 
 def get_icon(filepath):
     ext = filepath.suffix.lower()

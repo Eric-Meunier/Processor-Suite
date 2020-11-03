@@ -260,16 +260,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     return True
 
         elif source is self.ri_table:
-            if event.type() == QtCore.QEvent.Wheel:
-                # TODO Make sideways scrolling work correctly. Won't scroll sideways without also going vertically
-                if event.modifiers() == QtCore.Qt.ShiftModifier:
-                    pos = self.ri_table.horizontalScrollBar().value()
-                    if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
-                        self.ri_table.horizontalScrollBar().setValue(pos + 2)
-                    else:
-                        self.ri_table.horizontalScrollBar().setValue(pos - 2)
-                    return True
-            elif event.type() == QtCore.QEvent.FocusIn:
+            # if event.type() == QtCore.QEvent.Wheel:
+            #     if event.modifiers() == QtCore.Qt.ShiftModifier:
+            #         pos = self.ri_table.horizontalScrollBar().value()
+            #         if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
+            #             self.ri_table.horizontalScrollBar().setValue(pos + 2)
+            #         else:
+            #             self.ri_table.horizontalScrollBar().setValue(pos - 2)
+            #         return True
+            if event.type() == QtCore.QEvent.FocusIn:
                 self.ri_table.remove_ri_file_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
                 self.ri_table.remove_ri_file_action.setEnabled(False)
