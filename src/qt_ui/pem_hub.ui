@@ -974,6 +974,12 @@ Warnings</string>
                         <property name="enabled">
                          <bool>false</bool>
                         </property>
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
                         <property name="minimumSize">
                          <size>
                           <width>0</width>
@@ -982,8 +988,8 @@ Warnings</string>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>20</width>
-                          <height>16777215</height>
+                          <width>23</width>
+                          <height>23</height>
                          </size>
                         </property>
                         <property name="toolTip">
@@ -1012,6 +1018,12 @@ Warnings</string>
                         <property name="enabled">
                          <bool>false</bool>
                         </property>
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
                         <property name="minimumSize">
                          <size>
                           <width>0</width>
@@ -1020,8 +1032,8 @@ Warnings</string>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>20</width>
-                          <height>16777215</height>
+                          <width>23</width>
+                          <height>23</height>
                          </size>
                         </property>
                         <property name="toolTip">
@@ -1217,6 +1229,12 @@ Warnings</string>
                         <property name="enabled">
                          <bool>false</bool>
                         </property>
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
                         <property name="minimumSize">
                          <size>
                           <width>0</width>
@@ -1225,8 +1243,8 @@ Warnings</string>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>20</width>
-                          <height>16777215</height>
+                          <width>23</width>
+                          <height>23</height>
                          </size>
                         </property>
                         <property name="toolTip">
@@ -1255,6 +1273,12 @@ Warnings</string>
                         <property name="enabled">
                          <bool>false</bool>
                         </property>
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
                         <property name="minimumSize">
                          <size>
                           <width>0</width>
@@ -1263,8 +1287,8 @@ Warnings</string>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>20</width>
-                          <height>16777215</height>
+                          <width>23</width>
+                          <height>23</height>
                          </size>
                         </property>
                         <property name="toolTip">
@@ -2018,7 +2042,7 @@ Warnings</string>
     <string>Tile Map</string>
    </property>
    <property name="toolTip">
-    <string>Interactive map with real-world basemaps</string>
+    <string>Interactive map with real-world basemaps (Requires internet connection)</string>
    </property>
   </action>
   <action name="actionQuick_Map">

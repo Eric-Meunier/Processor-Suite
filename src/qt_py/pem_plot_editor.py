@@ -1207,10 +1207,11 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.highlight_lines()
         self.get_selected_decay_data()
 
-    def box_select_profile_plot(self, range):
+    def box_select_profile_plot(self, range, start):
         """
         Signal slot, select stations from the profile plot when click-and-dragged
         :param range: tuple, range of the linearRegionItem
+        :param start: bool, if box select has just been started
         """
 
         def get_comp_profile(comp):
@@ -1222,24 +1223,19 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 return self.z_layout_axes
 
         """
-        Using the range given by the signal doesn't always work properly. As a work-around, we calculate the distance 
-        of the range, and subtract it from the hover station as the left-most point, with the right-most point being
-        the hover station. UPDATE: Not sued.
+        Using the range given by the signal doesn't always work properly when the click begins off-plot. 
         """
-        # diff = round_up(np.diff(range)[0], 5)
-        # logger.info(F"Box selecting distance {diff}")
-        #
-        # hover_station = self.profile_axes[0].items[2].x()  # The station hover line
-        # logger.info(f"Hover station: {hover_station}")
-
-        range = (min(range), max(range))
-        # range = (hover_station - diff, hover_station)
-        # logger.info(f"Selecting range from {hover_station:.2f} to {hover_station - diff:.2f}")
+        if start:
+            # If it's the start of the select, use the hover station since it seems to work better
+            hover_station = self.profile_axes[0].items[1].x()  # The station hover line
+            range = np.hstack([range, [hover_station]]).min(), np.hstack([range, [hover_station]]).max()
+        else:
+            range = (min(range), max(range))
 
         # Force the range to use existing stations
         x0 = self.find_nearest_station(range[0])
         x1 = self.find_nearest_station(range[1])
-        # logger.info(f"Selecting stations from {x0} to {x1}")
+        logger.info(f"Selecting stations from {x0} to {x1}")
 
         ind, comp = self.get_active_component()
         comp_profile_axes = get_comp_profile(comp)
@@ -1823,7 +1819,8 @@ class ProfileViewBox(pg.ViewBox):
     """
     Custom ViewBox for profile plots. Click and drag creates a linear region selector.
     """
-    box_select_signal = QtCore.pyqtSignal(object)
+    box_select_signal = QtCore.pyqtSignal(object, object)
+    box_select_started_signal = QtCore.pyqtSignal()
 
     def __init__(self, *args, **kwds):
         pg.ViewBox.__init__(self, *args, **kwds)
@@ -1831,7 +1828,7 @@ class ProfileViewBox(pg.ViewBox):
         brush = QtGui.QBrush(QtGui.QColor(color))
         pen = QtGui.QPen(brush, 1)
 
-        self.lr = pg.LinearRegionItem([-100, 100], movable=False)
+        self.lr = pg.LinearRegionItem([-100, 100], movable=False, pen=pg.mkPen('k'))
         self.lr.setZValue(-10)
         self.lr.setBrush(brush)
         self.lr.setOpacity(0.5)
@@ -1843,14 +1840,11 @@ class ProfileViewBox(pg.ViewBox):
             ev.accept()
             range = [self.mapToView(ev.buttonDownPos()).x(), self.mapToView(ev.pos()).x()]
 
-            if ev.isFinish():  # This is the final move in the drag
-                self.box_select_signal.emit(range)
-            else:
-                # update region of the LinearRegionItem
-                self.lr.show()
-                self.lr.setRegion(range)
-                self.box_select_signal.emit(range)
-                ev.accept()
+            # update region of the LinearRegionItem
+            self.lr.show()
+            # self.lr.setRegion(range)  # Doesn't seem to be required.
+            self.box_select_signal.emit(range, ev.start)
+            ev.accept()
         else:
             pg.ViewBox.mouseDragEvent(self, ev)
 
@@ -1901,13 +1895,13 @@ if __name__ == '__main__':
     pem_getter = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()
-    # pem_files = pem_getter.get_pems(random=True, number=1)
+    pem_files = pem_getter.get_pems(random=True, number=1)
     # pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
-    pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
+    # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
 
     editor = PEMPlotEditor()
     editor.move(0, 0)
-    editor.open(pem_files)
+    editor.open(pem_files[0])
     # editor.auto_clean()
 
     app.exec_()
