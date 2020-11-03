@@ -300,8 +300,6 @@ class TransmitterLoop(BaseGPS):
             logger.error(f"Invalid input: {file}.")
             raise TypeError(f'{file} is not a valid input for loop GPS parsing.')
 
-        # TODO Loop and collar GPS is enough to make the rows white in PEMPro.
-        # TODO Geometry azimuth not right.
         # Capture rows with NaN in the first three columns
         nan_rows = gps.iloc[:, 0: 2].apply(has_na, axis=1)
         error_gps = gps.loc[nan_rows].copy()

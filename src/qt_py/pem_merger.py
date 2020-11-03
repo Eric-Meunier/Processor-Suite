@@ -123,6 +123,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             ax.setXLink(self.x_ax0)
             ax.hideButtons()
             ax.setMenuEnabled(False)
+            ax.getAxis('left').setWidth(60)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
         self.init_signals()

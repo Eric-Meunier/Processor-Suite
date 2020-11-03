@@ -2976,7 +2976,6 @@ class RADTool:
         numer = ((self.Hz * self.gy) - (self.Hy * self.gz)) * g
         denumer = self.Hx * (self.gy ** 2 + self.gz ** 2) - (self.Hy * self.gx * self.gy) - (self.Hz * self.gx * self.gz)
 
-        # TODO check that the azimuth is correct
         azimuth = math.degrees(math.atan2(numer, denumer))
         if not allow_negative:
             if azimuth < 0:

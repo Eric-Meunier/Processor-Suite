@@ -23,7 +23,6 @@ else:
     icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
 
 
-# TODO Add cartopy earth map
 class MagDeclinationCalculator(QMainWindow):
     """
     Converts the first coordinates found into lat lon. Must have GPS information in order to convert to lat lon.
@@ -35,7 +34,7 @@ class MagDeclinationCalculator(QMainWindow):
         self.setWindowTitle('Magnetic Declination')
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'mag_field.png')))
         # self.setLayout(QVBoxLayout())
-        # self.setGeometry(600, 300, 300, 100)
+        self.resize(400, 400)
         self.status_bar = self.statusBar()
 
         self.pos_label = QLabel()
@@ -101,6 +100,7 @@ class MagDeclinationCalculator(QMainWindow):
         self.tf_edit.setText(f"{mag.ti:.2f}")
         self.pos_label.setText(f"Latitude: {mag.lat:5f}°  Longitude: {mag.lon:.5f}°")
 
+        # Draw the globe map
         ax = self.figure.add_subplot(projection=ccrs.Orthographic(mag.lon, mag.lat))
         ax.plot(mag.lon, mag.lat, 'o', color='red', markeredgecolor='black', transform=ccrs.Geodetic())
         ax.add_feature(cartopy.feature.OCEAN, zorder=0)

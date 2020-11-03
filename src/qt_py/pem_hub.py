@@ -27,7 +27,6 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
-from src.logger import Log
 from src.mag_field.mag_dec_widget import MagDeclinationCalculator
 from src.damp.db_plot import DBPlotter
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry,
@@ -39,7 +38,7 @@ from src.qt_py.custom_qt_widgets import CustomProgressBar
 from src.qt_py.derotator import Derotator
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
 from src.qt_py.name_editor import BatchNameEditor
-from src.qt_py.pem_geometry import PEMGeometry
+from src.geometry.pem_geometry import PEMGeometry
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.qt_py.pem_merger import PEMMerger
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
@@ -121,7 +120,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.pem_editor_widgets = []
         self.tab_num = 1
         self.allow_signals = True
-        # self.total_opened = 0
 
         self.converter = StationConverter()
         self.dialog = QFileDialog()
@@ -159,8 +157,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.loop_planner = LoopPlanner(parent=self)
         self.unpacker = Unpacker(parent=self)
         self.gpx_creator = GPXCreator(parent=self)
-        # self.terrain_map_viewer = TerrainMapViewer(parent=self)
-        # self.map_viewer_3d = Map3DViewer(parent=self)
         self.freq_con = FrequencyConverter(parent=self)
         self.contour_map = ContourMapViewer(parent=self)
         self.gps_conversion_widget = GPSConversionWidget(parent=self)
@@ -857,7 +853,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # Merge PEM files
                 merge_action = QAction("&Merge", self)
                 merge_action.setIcon(QIcon(os.path.join(icons_path, 'pem_merger.png')))
-                merge_action.triggered.connect(self.merge_pem_files)
+                merge_action.triggered.connect(self.open_pem_merger)
 
                 # Print PDFs
                 print_plots_action = QAction("&Print Plots", self)
@@ -1638,6 +1634,74 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_geometry = PEMGeometry(parent=self)
         pem_geometry.accepted_sig.connect(accept_geometry)
         pem_geometry.open(pem_files)
+
+    def open_pem_merger(self):
+        """
+        Merge two PEM files with PEMMerger.
+        """
+
+        def check_pems():
+
+            f1, f2 = pem_files[0], pem_files[1]
+
+            if not f1.is_borehole() == f2.is_borehole():
+                logger.error(f"{f1.filepath.name} is a {f1.get_survey_type()} and"
+                             f" {f2.filepath.name} is a {f2.get_survey_type()}.")
+                self.message.information(self, 'Error', f"Cannot merge a borehole survey with a surface survey.")
+                return False
+            if not f1.is_fluxgate() == f2.is_fluxgate():
+                logger.error(f"{f1.filepath.name} is a {f1.get_survey_type()} and"
+                             f" {f2.filepath.name} is a {f2.get_survey_type()}.")
+                self.message.information(self, 'Error', f"Cannot merge a fluxgate survey with an induction survey.")
+                return False
+            if not f1.timebase == f2.timebase:
+                logger.error(f"{f1.filepath.name} has a timebase of {f1.timebase} and"
+                             f" {f2.filepath.name} has a timebase of {f2.timebase}.")
+                self.message.information(self, 'Error', f"Both files must have the same timebase.")
+                return False
+            if not f1.number_of_channels == f2.number_of_channels:
+                logger.error(f"{f1.filepath.name} has {len(f1.channel_table)} channels and"
+                             f" {f2.filepath.name} has {len(f2.channel_table)} channels.")
+                self.message.information(self, 'Error', f"Both files must have the same number of channels.")
+                return False
+
+            # If the files aren't all de-rotated (only for XY files)
+            if all([f1.has_xy(), f2.has_xy()]) and all([f1.is_borehole(), f2.is_borehole()]):
+                if not all([f.is_derotated() == pem_files[0].is_derotated() for f in pem_files]):
+                    logger.warning(f"Mixed states of XY de-rotation between {f1.filepath.name} and {f2.filepath.name}.")
+                    self.message.warning(self, 'Warning - Different states of XY de-rotation',
+                                         'There is a mix of XY de-rotation in the selected files.')
+
+            if f1.ramp != f2.ramp:
+                logger.warning(
+                    f"{f1.filepath.name} has a ramp of {f1.ramp}. {f2.filepath.name} has a ramp of {f2.ramp}.")
+                self.message.warning(self, 'Warning - Different ramp lengths.',
+                                     'The two files have different ramp lengths.')
+
+            return True
+
+        def accept_merge(filepath):
+            """
+            Open the new merged PEMFile, and remove the old ones if the delete_merged_files_cbox is checked.
+            :param filepath: Path object.
+            """
+
+            if self.delete_merged_files_cbox.isChecked():
+                self.remove_file(rows)
+
+            self.open_pem_files(filepath)
+
+        pem_files, rows = self.get_pem_files(selected=True)
+        if len(pem_files) != 2:
+            logger.error(f"PEMMerger must have two PEM files, not {len(pem_files)}.")
+            self.message.critical(self, 'Error', f'Must select two PEM Files, not {len(pem_files)}.')
+            return
+
+        if check_pems():
+            global merger
+            merger = PEMMerger(parent=self)
+            merger.accept_sig.connect(accept_merge)
+            merger.open(pem_files)
 
     def open_pdf_plot_printer(self, selected_files=False):
         """
@@ -3139,73 +3203,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.status_bar.showMessage(f"Process complete. "
                                     f"{comp.upper()} of {len(pem_files)} PEM file(s) reversed.", 2000)
 
-    def merge_pem_files(self):
-        """
-        Merge two PEM files with PEMMerger.
-        """
-
-        def check_pems():
-
-            f1, f2 = pem_files[0], pem_files[1]
-
-            if not f1.is_borehole() == f2.is_borehole():
-                logger.error(f"{f1.filepath.name} is a {f1.get_survey_type()} and"
-                             f" {f2.filepath.name} is a {f2.get_survey_type()}.")
-                self.message.information(self, 'Error', f"Cannot merge a borehole survey with a surface survey.")
-                return False
-            if not f1.is_fluxgate() == f2.is_fluxgate():
-                logger.error(f"{f1.filepath.name} is a {f1.get_survey_type()} and"
-                             f" {f2.filepath.name} is a {f2.get_survey_type()}.")
-                self.message.information(self, 'Error', f"Cannot merge a fluxgate survey with an induction survey.")
-                return False
-            if not f1.timebase == f2.timebase:
-                logger.error(f"{f1.filepath.name} has a timebase of {f1.timebase} and"
-                             f" {f2.filepath.name} has a timebase of {f2.timebase}.")
-                self.message.information(self, 'Error', f"Both files must have the same timebase.")
-                return False
-            if not f1.number_of_channels == f2.number_of_channels:
-                logger.error(f"{f1.filepath.name} has {len(f1.channel_table)} channels and"
-                             f" {f2.filepath.name} has {len(f2.channel_table)} channels.")
-                self.message.information(self, 'Error', f"Both files must have the same number of channels.")
-                return False
-
-            # If the files aren't all de-rotated
-            if not all([f.is_derotated() == pem_files[0].is_derotated() for f in pem_files]):
-                logger.warning(f"Mixed states of XY de-rotation between {f1.filepath.name} and {f2.filepath.name}.")
-                self.message.warning(self, 'Warning - Different states of XY de-rotation',
-                                     'There is a mix of XY de-rotation in the selected files.')
-
-            if f1.ramp != f2.ramp:
-                logger.warning(
-                    f"{f1.filepath.name} has a ramp of {f1.ramp}. {f2.filepath.name} has a ramp of {f2.ramp}.")
-                self.message.warning(self, 'Warning - Different ramp lengths.',
-                                     'The two files have different ramp lengths.')
-
-            return True
-
-        def accept_merge(filepath):
-            """
-            Open the new merged PEMFile, and remove the old ones if the delete_merged_files_cbox is checked.
-            :param filepath: Path object.
-            """
-
-            if self.delete_merged_files_cbox.isChecked():
-                self.remove_file(rows)
-
-            self.open_pem_files(filepath)
-
-        pem_files, rows = self.get_pem_files(selected=True)
-        if len(pem_files) != 2:
-            logger.error(f"PEMMerger must have two PEM files, not {len(pem_files)}.")
-            self.message.critical(self, 'Error', f'Must select two PEM Files, not {len(pem_files)}.')
-            return
-
-        if check_pems():
-            global merger
-            merger = PEMMerger(parent=self)
-            merger.accept_sig.connect(accept_merge)
-            merger.open(pem_files)
-
     def auto_merge_pem_files(self):
 
         def merge_pems(pem_files):
@@ -4089,7 +4086,6 @@ def main():
 
 
 if __name__ == '__main__':
-    from src.logger import Log
     logger = logging.getLogger(__name__)
 
     main()

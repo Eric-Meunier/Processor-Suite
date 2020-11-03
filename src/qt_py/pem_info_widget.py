@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox,
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXEditor
 from src.pem.pem_file import StationConverter
-from src.qt_py.pem_geometry import PEMGeometry
+from src.geometry.pem_geometry import PEMGeometry
 from src.gps.gps_adder import LoopAdder, LineAdder
 from src.qt_py.ri_importer import RIFile
 
