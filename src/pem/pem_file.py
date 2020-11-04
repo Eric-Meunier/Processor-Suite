@@ -3180,7 +3180,7 @@ if __name__ == '__main__':
     # rotated_pem = prep_pem.rotate('pp')
 
     # pem_file = pemparser.parse(r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\RAW\XY29_29.PEM')
-    pem_file = dparser.parse(r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\RAW\XY29_29.DMP')
+    pem_file = dparser.parse(r'C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\xy03_03.DMP')
     # pem_file = dparser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.dmp2')
     # pem_file.save(legacy=True)
 

@@ -762,7 +762,7 @@ class LoopWidget(QWidget):
         w = int(self.loop_width_edit.text())
         a = int(self.loop_angle_edit.text())
 
-        self.loop_roi.setSize((h, w))
+        self.loop_roi.setSize((w, h))
         self.loop_roi.setAngle(a)
 
         # Update the loop name position
