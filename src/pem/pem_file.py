@@ -707,7 +707,8 @@ class PEMFile:
         Set the CRS of all GPS objects
         :param crs: CRS object
         """
-        logger.info(f"Setting CRS of {self.filepath.name} to {crs.name}.")
+        logger.info(f"Setting CRS of {self.filepath.name} to {crs.name if crs else 'None'}.")
+
         self.crs = crs
         self.loop.crs = crs
         if self.is_borehole():

@@ -1,8 +1,144 @@
->>11/04/2020 10:53:25 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:53:25 AM [WARNING] gps_editor.py (get_projection:829):
- No CRS passed.
->>11/04/2020 10:53:25 AM [WARNING] pem_planner.py (plot_hole:1381):
- Cannot plot hole without a loop.
->>11/04/2020 10:53:25 AM [WARNING] pem_planner.py (plot_hole:1381):
- Cannot plot hole without a loop.
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_resistance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
+ ::IN: get_r_1000 - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
+ ::OUT: 1.0987900000000002
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
+ ::OUT: 62745.59999999999
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
+ ::OUT: 5.745353152
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_inductance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
+ ::OUT: 62745.59999999999
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_wire_diameter - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
+ ::OUT: 0.1019
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
+ ::OUT: 3.7824359543016333
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_voltage - (), {}
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
+ ::OUT: 39.5101909307315
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_inductance - (), {}
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
+ ::OUT: 63.451173502899984
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_power - (), {}
+>>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
+ ::OUT: 28.904286564369713
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_resistance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
+ ::IN: get_r_1000 - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
+ ::OUT: 1.0987900000000002
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
+ ::OUT: 62745.59999999999
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
+ ::OUT: 11.490706304
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_inductance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
+ ::OUT: 62745.59999999999
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_wire_diameter - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
+ ::OUT: 0.1019
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
+ ::OUT: 15.129743817206533
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_voltage - (), {}
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
+ ::OUT: 19.75509546536575
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_inductance - (), {}
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
+ ::OUT: 15.862793375724996
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_power - (), {}
+>>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
+ ::OUT: 14.452143282184856
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_resistance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
+ ::IN: get_r_1000 - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
+ ::OUT: 1.0987900000000002
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
+ ::OUT: 62745.59999999999
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
+ ::OUT: 5.745353152
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_inductance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
+ ::OUT: 62745.59999999999
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_wire_diameter - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
+ ::OUT: 0.1019
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
+ ::OUT: 3.7824359543016333
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_voltage - (), {}
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
+ ::OUT: 39.5101909307315
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_inductance - (), {}
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
+ ::OUT: 63.451173502899984
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_power - (), {}
+>>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
+ ::OUT: 28.904286564369713
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_resistance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
+ ::IN: get_r_1000 - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
+ ::OUT: 1.0987900000000002
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
+ ::OUT: 62745.59999999999
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
+ ::OUT: 11.490706304
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_inductance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
+ ::OUT: 62745.59999999999
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
+ ::IN: get_loop_wire_diameter - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
+ ::OUT: 0.1019
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
+ ::OUT: 15.129743817206533
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_voltage - (), {}
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
+ ::OUT: 19.75509546536575
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_inductance - (), {}
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
+ ::OUT: 15.862793375724996
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
+ ::IN: get_current_by_power - (), {}
+>>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
+ ::OUT: 14.452143282184856

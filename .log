@@ -1,448 +1,224 @@
->>11/04/2020 10:38:20 AM [INFO] gps_editor.py (parse_collar:658):
+>>11/05/2020 10:11:24 AM [INFO] gps_editor.py (parse_collar:658):
  Removing column of 0s.
->>11/04/2020 10:38:20 AM [WARNING] gps_editor.py (get_projection:829):
+>>11/05/2020 10:11:24 AM [WARNING] gps_editor.py (get_projection:829):
  No CRS passed.
->>11/04/2020 10:38:20 AM [WARNING] pem_planner.py (plot_hole:1381):
+>>11/05/2020 10:11:24 AM [WARNING] pem_planner.py (plot_hole:1381):
  Cannot plot hole without a loop.
->>11/04/2020 10:38:27 AM [INFO] pem_file.py (parse:1822):
- Parsing DOM-91-1 xy_03.PEM
->>11/04/2020 10:38:27 AM [INFO] pem_file.py (get_crs:383):
- DOM-91-1 xy_03.PEM CRS is NAD83 / UTM zone 19N.
->>11/04/2020 10:38:27 AM [INFO] gps_editor.py (parse_collar:654):
- Removing P-tag column.
->>11/04/2020 10:38:27 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (project_dir_changed:2039):
- New project directory: C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Eastern\Dominique\DOM-91-4\GPS
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2075):
  Include files: ['']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2077):
  Include files: ['DTL', 'exp', 'Correct']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2081):
  Include folders: ['GPS']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2083):
  Exclude folders: ['DUMP']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2110):
  Include extensions: ['']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2112):
  Exclude extensions: ['']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2179):
  Include files: ['']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2181):
  Include files: ['']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2185):
  Include folders: ['']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2187):
  Exclude folders: ['DUMP']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2214):
  Include extensions: ['']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2216):
  Exclude extensions: ['']
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_filtered_pems:2231):
- Filtered pems: C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\DOM-91-1 xy_03.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\DOM-91-1 Z_02.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_02_PP02.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\xy03_03.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\Z02_02.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_02_PP02.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_03_PP03.DMP
->>11/04/2020 10:38:27 AM [INFO] pem_file.py (get_crs:383):
- DOM-91-1 xy_03.PEM CRS is NAD83 / UTM zone 19N.
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy_03.PEM to the table.
->>11/04/2020 10:38:27 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:38:27 AM [INFO] pem_file.py (parse:1822):
- Parsing DOM-91-1 Z_02.PEM
->>11/04/2020 10:38:27 AM [INFO] pem_file.py (get_crs:383):
- DOM-91-1 Z_02.PEM CRS is NAD83 / UTM zone 19N.
->>11/04/2020 10:38:27 AM [INFO] gps_editor.py (parse_collar:654):
- Removing P-tag column.
->>11/04/2020 10:38:27 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:38:27 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 Z_02.PEM to the table.
->>11/04/2020 10:38:27 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (project_dir_changed:2039):
- New project directory: C:\_Data\2020\Eastern\Dominique\_DOM-91-1
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+>>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: 
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Eastern\Dominique\DOM-91-4
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2075):
  Include files: ['']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2077):
  Include files: ['DTL', 'exp', 'Correct']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2081):
  Include folders: ['GPS']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2083):
  Exclude folders: ['DUMP']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2110):
  Include extensions: ['']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2112):
  Exclude extensions: ['']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2179):
  Include files: ['']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2181):
  Include files: ['']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2185):
  Include folders: ['']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2187):
  Exclude folders: ['DUMP']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2214):
  Include extensions: ['']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2216):
  Exclude extensions: ['']
->>11/04/2020 10:38:30 AM [INFO] pem_hub.py (get_filtered_pems:2231):
- Filtered pems: C:\_Data\2020\Eastern\Dominique\_DOM-91-1\Final\DOM-91-1 xy.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\Final\DOM-91-1 Z.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\DOM-91-1 xy_03.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\DOM-91-1 Z_02.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_02_PP02.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\xy03_03.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\Z02_02.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_02_PP02.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_03_PP03.DMP
->>11/04/2020 10:38:51 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+>>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\XY_04.PEM
+C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\Z_04.PEM
+C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\XY04_04.DMP
+C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\Z04_04.DMP
+C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\_04_PP04.DMP
+>>11/05/2020 10:11:35 AM [INFO] pem_file.py (parse:1823):
+ Parsing XY_04.PEM
+>>11/05/2020 10:11:35 AM [INFO] gps_editor.py (parse_collar:654):
+ Removing P-tag column.
+>>11/05/2020 10:11:35 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/05/2020 10:11:35 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding XY_04.PEM to the table.
+>>11/05/2020 10:11:35 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/05/2020 10:11:35 AM [INFO] pem_file.py (parse:1823):
+ Parsing Z_04.PEM
+>>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/05/2020 10:11:35 AM [INFO] gps_editor.py (parse_collar:654):
+ Removing P-tag column.
+>>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_collar:665):
+ 0 column(s) of values were found instead of 3.
+>>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/05/2020 10:11:35 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding Z_04.PEM to the table.
+>>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Eastern\Dominique\DOM-91-4\DUMP
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2075):
  Include files: ['']
->>11/04/2020 10:38:51 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2077):
  Include files: ['DTL', 'exp', 'Correct']
->>11/04/2020 10:38:51 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2081):
  Include folders: ['GPS']
->>11/04/2020 10:38:51 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2083):
  Exclude folders: ['DUMP']
->>11/04/2020 10:38:51 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2110):
  Include extensions: ['']
->>11/04/2020 10:38:51 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2112):
  Exclude extensions: ['']
->>11/04/2020 10:38:53 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:38:54 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 xy_03.PEM.
->>11/04/2020 10:38:54 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy_03.PEM to the table.
->>11/04/2020 10:38:54 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:38:54 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:38:54 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:38:54 AM [INFO] pem_file.py (set_crs:710):
- Setting CRS of DOM-91-1 xy_03.PEM to NAD83 / UTM zone 19N.
->>11/04/2020 10:39:00 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:02 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 xy_03.PEM.
->>11/04/2020 10:39:02 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy_03.PEM to the table.
->>11/04/2020 10:39:02 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:02 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:02 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:02 AM [INFO] pem_file.py (set_crs:710):
- Setting CRS of DOM-91-1 xy_03.PEM to NAD83 / UTM zone 19N.
->>11/04/2020 10:39:05 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:05 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:05 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:05 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 xy_03.PEM.
->>11/04/2020 10:39:05 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy_03.PEM to the table.
->>11/04/2020 10:39:05 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:05 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:05 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:05 AM [INFO] pem_file.py (set_crs:710):
- Setting CRS of DOM-91-1 xy_03.PEM to NAD83 / UTM zone 19N.
->>11/04/2020 10:39:10 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:10 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:10 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:10 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 Z_02.PEM.
->>11/04/2020 10:39:10 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 Z_02.PEM to the table.
->>11/04/2020 10:39:10 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:10 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:10 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:10 AM [INFO] pem_file.py (set_crs:710):
- Setting CRS of DOM-91-1 Z_02.PEM to NAD83 / UTM zone 19N.
->>11/04/2020 10:39:12 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:13 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 Z_02.PEM.
->>11/04/2020 10:39:13 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 Z_02.PEM to the table.
->>11/04/2020 10:39:14 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:14 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:14 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:14 AM [INFO] pem_file.py (set_crs:710):
- Setting CRS of DOM-91-1 Z_02.PEM to NAD83 / UTM zone 19N.
->>11/04/2020 10:39:16 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:16 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 xy_03.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>11/04/2020 10:39:16 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 xy_03.PEM.
->>11/04/2020 10:39:16 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy_03.PEM to the table.
->>11/04/2020 10:39:16 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:16 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:16 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 Z_02.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>11/04/2020 10:39:16 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 Z_02.PEM.
->>11/04/2020 10:39:16 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 Z_02.PEM to the table.
->>11/04/2020 10:39:16 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:16 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:21 AM [INFO] pem_file.py (average:850):
- Averaging DOM-91-1 xy_03.PEM.
->>11/04/2020 10:39:30 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:47 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:39:47 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 xy_03.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>11/04/2020 10:39:47 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 xy_03.PEM.
->>11/04/2020 10:39:47 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy_03.PEM to the table.
->>11/04/2020 10:39:47 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:47 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:47 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 Z_02.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>11/04/2020 10:39:47 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 Z_02.PEM.
->>11/04/2020 10:39:47 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 Z_02.PEM to the table.
->>11/04/2020 10:39:47 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:39:47 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:52:01 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:52:01 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 xy_03.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>11/04/2020 10:52:01 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 xy_03.PEM.
->>11/04/2020 10:52:01 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy_03.PEM to the table.
->>11/04/2020 10:52:01 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:52:01 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:52:01 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 Z_02.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>11/04/2020 10:52:01 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 Z_02.PEM.
->>11/04/2020 10:52:01 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 Z_02.PEM to the table.
->>11/04/2020 10:52:01 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:52:01 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:55:54 AM [INFO] logger.py (decorated:91):
- ::IN: open - (<src.pem.derotator.Derotator object at 0x2A563300>, <src.pem.pem_file.PEMFile object at 0x2EAE5F10>), {}
->>11/04/2020 10:55:54 AM [INFO] pem_file.py (prep_rotation:1206):
- Preparing for XY de-rotation for DOM-91-1 xy_03.PEM.
->>11/04/2020 10:55:55 AM [INFO] pem_file.py (rotate:1049):
- De-rotating data of DOM-91-1 xy_03.PEM using acc with SOA 0.
->>11/04/2020 10:55:55 AM [INFO] pem_file.py (rotate:1179):
- Include PP for DOM-91-1 xy_03.PEM: True.
->>11/04/2020 10:55:55 AM [INFO] pem_file.py (split:886):
- Splitting channels for DOM-91-1 xy_03.PEM.
->>11/04/2020 10:55:55 AM [INFO] pem_file.py (average:850):
- Averaging DOM-91-1 xy_03.PEM.
->>11/04/2020 10:55:56 AM [INFO] logger.py (decorated:93):
- ::OUT: None
->>11/04/2020 10:56:11 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 xy_03.PEM.
->>11/04/2020 10:56:11 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy_03.PEM to the table.
->>11/04/2020 10:56:11 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:56:11 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:56:17 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:56:17 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 xy_03.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>11/04/2020 10:56:17 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 xy_03.PEM.
->>11/04/2020 10:56:17 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy_03.PEM to the table.
->>11/04/2020 10:56:17 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:56:17 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:56:17 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 Z_02.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>11/04/2020 10:56:17 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 Z_02.PEM.
->>11/04/2020 10:56:17 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 Z_02.PEM to the table.
->>11/04/2020 10:56:17 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:56:17 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:56:19 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:56:22 AM [INFO] pem_hub.py (export_pem_files:2593):
- Exporting DOM-91-1 xy_03.PEM.
->>11/04/2020 10:56:22 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 xy_03.PEM. (Legacy: False. Processed: True. Backup: False. Tag: )
->>11/04/2020 10:56:22 AM [INFO] pem_file.py (split:886):
- Splitting channels for DOM-91-1 xy_03.PEM.
->>11/04/2020 10:56:22 AM [INFO] pem_file.py (average:850):
- Averaging DOM-91-1 xy_03.PEM.
->>11/04/2020 10:56:22 AM [INFO] pem_hub.py (export_pem_files:2593):
- Exporting DOM-91-1 Z_02.PEM.
->>11/04/2020 10:56:22 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 Z_02.PEM. (Legacy: False. Processed: True. Backup: False. Tag: )
->>11/04/2020 10:56:22 AM [INFO] pem_file.py (split:886):
- Splitting channels for DOM-91-1 Z_02.PEM.
->>11/04/2020 10:56:22 AM [INFO] pem_file.py (average:850):
- Averaging DOM-91-1 Z_02.PEM.
->>11/04/2020 10:56:33 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2179):
  Include files: ['']
->>11/04/2020 10:56:33 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2181):
  Include files: ['']
->>11/04/2020 10:56:33 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2185):
  Include folders: ['']
->>11/04/2020 10:56:33 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2187):
  Exclude folders: ['DUMP']
->>11/04/2020 10:56:33 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2214):
  Include extensions: ['']
->>11/04/2020 10:56:33 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2216):
  Exclude extensions: ['']
->>11/04/2020 10:56:33 AM [INFO] pem_hub.py (get_filtered_pems:2231):
- Filtered pems: C:\_Data\2020\Eastern\Dominique\_DOM-91-1\Final\DOM-91-1 xy.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\Final\DOM-91-1 Z.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\DOM-91-1 xy_03.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\DOM-91-1 Z_02.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_02_PP02.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\xy03_03.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\Z02_02.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_02_PP02.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_03_PP03.DMP
->>11/04/2020 10:56:35 AM [INFO] pem_file.py (parse:1822):
- Parsing DOM-91-1 xy.PEM
->>11/04/2020 10:56:35 AM [INFO] pem_file.py (get_crs:383):
- DOM-91-1 xy.PEM CRS is NAD83 / UTM zone 19N.
->>11/04/2020 10:56:35 AM [INFO] gps_editor.py (parse_collar:654):
- Removing P-tag column.
->>11/04/2020 10:56:35 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:56:35 AM [INFO] pem_file.py (get_crs:383):
- DOM-91-1 xy.PEM CRS is NAD83 / UTM zone 19N.
->>11/04/2020 10:56:35 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:56:35 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy.PEM to the table.
->>11/04/2020 10:56:35 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:56:35 AM [INFO] pem_file.py (parse:1822):
- Parsing DOM-91-1 Z.PEM
->>11/04/2020 10:56:35 AM [INFO] pem_file.py (get_crs:383):
- DOM-91-1 Z.PEM CRS is NAD83 / UTM zone 19N.
->>11/04/2020 10:56:35 AM [INFO] gps_editor.py (parse_collar:654):
- Removing P-tag column.
->>11/04/2020 10:56:35 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:56:35 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 Z.PEM to the table.
->>11/04/2020 10:56:35 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:57:05 AM [INFO] pem_file.py (scale_coil_area:907):
- Scaling coil area of DOM-91-1 Z.PEM to 7300.
->>11/04/2020 10:57:05 AM [INFO] pem_file.py (scale_coil_area:916):
- DOM-91-1 Z.PEM coil area scaled to 7300 from 7000.0.
->>11/04/2020 10:57:05 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing DOM-91-1 Z.PEM.
->>11/04/2020 10:57:05 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 Z.PEM to the table.
->>11/04/2020 10:57:05 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:57:05 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:57:12 AM [INFO] pem_file.py (save:803):
- Saving DOM-91-1 Z.PEM. (Legacy: True. Processed: False. Backup: False. Tag: )
->>11/04/2020 10:57:12 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+>>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: 
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Eastern\Dominique\DOM-91-4\GPS
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2075):
  Include files: ['']
->>11/04/2020 10:57:12 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2179):
  Include files: ['']
->>11/04/2020 10:57:12 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2185):
  Include folders: ['']
->>11/04/2020 10:57:12 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2187):
  Exclude folders: ['DUMP']
->>11/04/2020 10:57:12 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2214):
  Include extensions: ['']
->>11/04/2020 10:57:12 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2216):
  Exclude extensions: ['']
->>11/04/2020 10:57:12 AM [INFO] pem_hub.py (get_filtered_pems:2231):
- Filtered pems: C:\_Data\2020\Eastern\Dominique\_DOM-91-1\Final\DOM-91-1 xy.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\Final\DOM-91-1 Z.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\DOM-91-1 xy_03.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\DOM-91-1 Z_02.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_02_PP02.PEM
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\xy03_03.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\Z02_02.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_02_PP02.DMP
-C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\_03_PP03.DMP
->>11/04/2020 10:57:21 AM [INFO] pem_file.py (parse:1822):
- Parsing DOM-91-1 xy.PEM
->>11/04/2020 10:57:21 AM [INFO] pem_file.py (get_crs:383):
- DOM-91-1 xy.PEM CRS is NAD83 / UTM zone 19N.
->>11/04/2020 10:57:21 AM [INFO] gps_editor.py (parse_collar:654):
- Removing P-tag column.
->>11/04/2020 10:57:21 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:57:21 AM [INFO] pem_file.py (get_crs:383):
- DOM-91-1 xy.PEM CRS is NAD83 / UTM zone 19N.
->>11/04/2020 10:57:21 AM [INFO] pem_hub.py (get_crs:3006):
+>>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: 
+>>11/05/2020 10:11:42 AM [INFO] pem_hub.py (get_inf_crs:1512):
+ Parsing INF file: System: UTM. Zone: 19 North. Datum: NAD 1983
+>>11/05/2020 10:11:42 AM [INFO] pem_hub.py (get_crs:3006):
  Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:57:21 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 xy.PEM to the table.
->>11/04/2020 10:57:21 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:57:21 AM [INFO] pem_file.py (parse:1822):
- Parsing DOM-91-1 Z.PEM
->>11/04/2020 10:57:21 AM [INFO] pem_file.py (get_crs:383):
- DOM-91-1 Z.PEM CRS is NAD83 / UTM zone 19N.
->>11/04/2020 10:57:21 AM [INFO] gps_editor.py (parse_collar:654):
- Removing P-tag column.
->>11/04/2020 10:57:21 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:57:21 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding DOM-91-1 Z.PEM to the table.
->>11/04/2020 10:57:21 AM [INFO] gps_editor.py (parse_collar:658):
- Removing column of 0s.
->>11/04/2020 10:57:29 AM [INFO] pem_hub.py (get_crs:3006):
+>>11/05/2020 10:11:42 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of XY_04.PEM to NAD83 / UTM zone 19N.
+>>11/05/2020 10:11:42 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of Z_04.PEM to NAD83 / UTM zone 19N.
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Eastern\Dominique\DOM-91-4
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['DUMP']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\XY_04.PEM
+C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\Z_04.PEM
+C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\XY04_04.DMP
+C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\Z04_04.DMP
+C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\_04_PP04.DMP
+>>11/05/2020 10:11:48 AM [INFO] pem_file.py (average:851):
+ Averaging XY_04.PEM.
+>>11/05/2020 10:11:53 AM [INFO] pem_hub.py (get_crs:3006):
  Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:57:29 AM [INFO] pem_hub.py (get_crs:3006):
- Project CRS: NAD83 / UTM zone 19N
->>11/04/2020 10:57:33 AM [INFO] pem_plotter.py (count_pdf_pages:3662):
- Number of PDF pages: 11
->>11/04/2020 10:57:35 AM [INFO] pem_plotter.py (get_section_end_points:1679):
- Section azimuth for DOM-91-1 Z.PEM: 9°
+>>11/05/2020 10:11:53 AM [INFO] pem_file.py (save:804):
+ Saving XY_04.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/05/2020 10:11:53 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing XY_04.PEM.
+>>11/05/2020 10:11:54 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding XY_04.PEM to the table.
+>>11/05/2020 10:11:54 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/05/2020 10:11:54 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/05/2020 10:11:54 AM [INFO] pem_file.py (save:804):
+ Saving Z_04.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/05/2020 10:11:54 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing Z_04.PEM.
+>>11/05/2020 10:11:54 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding Z_04.PEM to the table.
+>>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
