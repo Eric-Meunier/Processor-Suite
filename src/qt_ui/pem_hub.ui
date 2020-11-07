@@ -1514,6 +1514,7 @@ Warnings</string>
     <addaction name="separator"/>
     <addaction name="actionLoop_Planner"/>
     <addaction name="actionGrid_Planner"/>
+    <addaction name="actionLoop_Current_Calculator"/>
     <addaction name="separator"/>
     <addaction name="actionConvert_Timebase_Frequency"/>
     <addaction name="actionGPX_Creator"/>
@@ -2058,6 +2059,15 @@ Warnings</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+M</string>
+   </property>
+  </action>
+  <action name="actionLoop_Current_Calculator">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/voltmeter.png</normaloff>icons/voltmeter.png</iconset>
+   </property>
+   <property name="text">
+    <string>Loop Current Calculator</string>
    </property>
   </action>
  </widget>

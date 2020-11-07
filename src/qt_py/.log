@@ -1,144 +1,130 @@
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_resistance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
- ::IN: get_r_1000 - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
- ::OUT: 1.0987900000000002
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
- ::OUT: 62745.59999999999
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
- ::OUT: 5.745353152
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_inductance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
- ::OUT: 62745.59999999999
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_wire_diameter - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
- ::OUT: 0.1019
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
- ::OUT: 3.7824359543016333
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_voltage - (), {}
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
- ::OUT: 39.5101909307315
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_inductance - (), {}
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
- ::OUT: 63.451173502899984
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_power - (), {}
->>11/05/2020 04:07:12 PM [INFO] logger.py (decorated:93):
- ::OUT: 28.904286564369713
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_resistance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
- ::IN: get_r_1000 - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
- ::OUT: 1.0987900000000002
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
- ::OUT: 62745.59999999999
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
- ::OUT: 11.490706304
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_inductance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
- ::OUT: 62745.59999999999
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_wire_diameter - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
- ::OUT: 0.1019
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
- ::OUT: 15.129743817206533
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_voltage - (), {}
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
- ::OUT: 19.75509546536575
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_inductance - (), {}
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
- ::OUT: 15.862793375724996
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_power - (), {}
->>11/05/2020 04:07:14 PM [INFO] logger.py (decorated:93):
- ::OUT: 14.452143282184856
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_resistance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
- ::IN: get_r_1000 - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
- ::OUT: 1.0987900000000002
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
- ::OUT: 62745.59999999999
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
- ::OUT: 5.745353152
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_inductance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
- ::OUT: 62745.59999999999
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_wire_diameter - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
- ::OUT: 0.1019
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
- ::OUT: 3.7824359543016333
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_voltage - (), {}
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
- ::OUT: 39.5101909307315
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_inductance - (), {}
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
- ::OUT: 63.451173502899984
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_power - (), {}
->>11/05/2020 04:07:16 PM [INFO] logger.py (decorated:93):
- ::OUT: 28.904286564369713
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_resistance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
- ::IN: get_r_1000 - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
- ::OUT: 1.0987900000000002
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
- ::OUT: 62745.59999999999
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
- ::OUT: 11.490706304
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_inductance - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_length - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
- ::OUT: 62745.59999999999
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
- ::IN: get_loop_wire_diameter - (<__main__.LoopCalculator object at 0x0D1BA3A0>,), {}
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
- ::OUT: 0.1019
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
- ::OUT: 15.129743817206533
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_voltage - (), {}
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
- ::OUT: 19.75509546536575
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_inductance - (), {}
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
- ::OUT: 15.862793375724996
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:91):
- ::IN: get_current_by_power - (), {}
->>11/05/2020 04:07:33 PM [INFO] logger.py (decorated:93):
- ::OUT: 14.452143282184856
+>>11/06/2020 07:52:20 PM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/06/2020 07:52:20 PM [WARNING] gps_editor.py (get_projection:829):
+ No CRS passed.
+>>11/06/2020 07:52:20 PM [WARNING] pem_planner.py (plot_hole:1381):
+ Cannot plot hole without a loop.
+>>11/06/2020 07:52:20 PM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7400NAv.PEM.
+>>11/06/2020 07:52:20 PM [INFO] pem_file.py (parse:1823):
+ Parsing 7400NAv.PEM
+>>11/06/2020 07:52:21 PM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/06/2020 07:52:21 PM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7500NAv.PEM.
+>>11/06/2020 07:52:21 PM [INFO] pem_file.py (parse:1823):
+ Parsing 7500NAv.PEM
+>>11/06/2020 07:52:21 PM [INFO] pem_file.py (get_crs:383):
+ 7500NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/06/2020 07:52:21 PM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7600NAv.PEM.
+>>11/06/2020 07:52:21 PM [INFO] pem_file.py (parse:1823):
+ Parsing 7600NAv.PEM
+>>11/06/2020 07:52:21 PM [INFO] pem_file.py (get_crs:383):
+ 7600NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/06/2020 07:52:21 PM [INFO] pem_getter.py (add_pem:36):
+ Getting File 7700NAv.PEM.
+>>11/06/2020 07:52:21 PM [INFO] pem_file.py (parse:1823):
+ Parsing 7700NAv.PEM
+>>11/06/2020 07:52:21 PM [INFO] pem_file.py (get_crs:383):
+ 7700NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/06/2020 07:52:21 PM [INFO] pem_getter.py (get_pems:97):
+ Collected PEM files: C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7700NAv.PEM
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (project_dir_changed:2043):
+ New project directory: C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_gps:2079):
+ Include files: ['']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_gps:2085):
+ Include folders: ['GPS']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_gps:2087):
+ Exclude folders: ['DUMP']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_gps:2114):
+ Include extensions: ['']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_gps:2116):
+ Exclude extensions: ['']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_pems:2183):
+ Include files: ['']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include files: ['']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_pems:2189):
+ Include folders: ['']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_pems:2191):
+ Exclude folders: ['DUMP']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_pems:2218):
+ Include extensions: ['']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_pems:2220):
+ Exclude extensions: ['']
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_filtered_pems:2235):
+ Filtered pems: C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\7900NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\MANO-19-004 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\MANO-19-004 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\MANO-19-004.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\SAPR-19-006 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\SAPR-19-006 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\test save as.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\z7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\z7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\z7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\z7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\z7900NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\7900NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\MANO-19-004 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\MANO-19-004 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\SAPR-19-006 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\SAPR-19-006 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\z7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\z7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\z7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\z7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\Copy\z7900NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export\74NAV.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export\75NAV.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export\7600NAV.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export\7700NAV.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export test 2\7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\export test 2\7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\7900NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\MANO-19-004 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\MANO-19-004 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\SAPR-19-006 XYT.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\SAPR-19-006 ZAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\z7400NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\z7500NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\z7600NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\z7700NAv.PEM
+C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\PEMGetter files\Kazzinc\[Backup]\z7900NAv.PEM
+>>11/06/2020 07:52:21 PM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (get_crs:3010):
+ Project CRS: WGS 84 / UTM zone 44N
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (pem_to_table:2853):
+ Adding 7400NAv.PEM to the table.
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (pem_to_table:2853):
+ Adding 7500NAv.PEM to the table.
+>>11/06/2020 07:52:21 PM [INFO] pem_hub.py (pem_to_table:2853):
+ Adding 7600NAv.PEM to the table.
+>>11/06/2020 07:52:22 PM [INFO] pem_hub.py (pem_to_table:2853):
+ Adding 7700NAv.PEM to the table.
+>>11/06/2020 07:52:22 PM [INFO] pem_hub.py (get_crs:3010):
+ Project CRS: WGS 84 / UTM zone 44N
+>>11/06/2020 07:52:22 PM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.
+>>11/06/2020 07:52:22 PM [INFO] pem_file.py (get_crs:383):
+ 7400NAv.PEM CRS is WGS 84 / UTM zone 44N.

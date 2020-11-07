@@ -31,6 +31,7 @@ from src.mag_field.mag_dec_widget import MagDeclinationCalculator
 from src.damp.db_plot import DBPlotter
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry,
                                 GPSConversionWidget)
+from src.qt_py.loop_calculator import LoopCalculator
 from src.gps.gpx_creator import GPXCreator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
 from src.pem.pem_plotter import PEMPrinter
@@ -39,7 +40,7 @@ from src.pem.derotator import Derotator
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
 from src.qt_py.name_editor import BatchNameEditor
 from src.geometry.pem_geometry import PEMGeometry
-from src.qt_py.pem_info_widget import PEMFileInfoWidget
+from src.pem.pem_info_widget import PEMFileInfoWidget
 from src.pem.pem_merger import PEMMerger
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 from src.pem.pem_plot_editor import PEMPlotEditor
@@ -160,6 +161,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.gps_conversion_widget = GPSConversionWidget(parent=self)
         self.pem_list_filter = PathFilter('PEM', parent=self)
         self.gps_list_filter = PathFilter('GPS', parent=self)
+        self.loop_calculator = LoopCalculator()
 
         # Project tree
         self.project_dir = None
@@ -299,6 +301,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionLoop_Planner.triggered.connect(lambda: self.loop_planner.show())
 
         self.actionGrid_Planner.triggered.connect(lambda: self.grid_planner.show())
+
+        self.actionLoop_Current_Calculator.triggered.connect(lambda: self.loop_calculator.show())
 
         self.actionConvert_Timebase_Frequency.triggered.connect(lambda: self.freq_con.show())
 
