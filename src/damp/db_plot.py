@@ -518,7 +518,7 @@ if __name__ == '__main__':
 
     samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Damping box files'))
 
-    files = str(Path(samples_folder).joinpath('08_247-20200914-200332.log'))
+    files = str(Path(samples_folder).joinpath('YAT-Log-20201106-165508_box231.txt'))
     mw.open(files)
     mw.show()
 

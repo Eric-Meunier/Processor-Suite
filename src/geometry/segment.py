@@ -19,7 +19,12 @@ class Segmenter:
         :param units: str, units of the segments, either 'm' or 'ft'
         :return: pandas DataFrame with Azimuth, Dip, segment length, unit, and depth columns
         """
-        units = 2 if units == 'm' else 0
+        if units == 'm':
+            units = 2
+        elif units == 'ft':
+            units = 0
+        else:
+            raise NotImplemented(f"{units} is not implemented as a unit for segments.")
 
         # Interpolate the DAD to 1m segments
         depth = df.Depth.to_numpy()

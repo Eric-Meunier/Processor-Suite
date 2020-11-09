@@ -1,224 +1,1658 @@
->>11/05/2020 10:11:24 AM [INFO] gps_editor.py (parse_collar:658):
+>>11/08/2020 11:09:37 AM [INFO] gps_editor.py (parse_collar:658):
  Removing column of 0s.
->>11/05/2020 10:11:24 AM [WARNING] gps_editor.py (get_projection:829):
+>>11/08/2020 11:09:37 AM [WARNING] gps_editor.py (get_projection:829):
  No CRS passed.
->>11/05/2020 10:11:24 AM [WARNING] pem_planner.py (plot_hole:1381):
+>>11/08/2020 11:09:37 AM [WARNING] pem_planner.py (plot_hole:1381):
  Cannot plot hole without a loop.
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (project_dir_changed:2039):
- New project directory: C:\_Data\2020\Eastern\Dominique\DOM-91-4\GPS
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2075):
- Include files: ['']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2077):
- Include files: ['DTL', 'exp', 'Correct']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2081):
- Include folders: ['GPS']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2083):
- Exclude folders: ['DUMP']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2110):
- Include extensions: ['']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_gps:2112):
- Exclude extensions: ['']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2179):
- Include files: ['']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2181):
- Include files: ['']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2185):
- Include folders: ['']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2187):
- Exclude folders: ['DUMP']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2214):
- Include extensions: ['']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2216):
- Exclude extensions: ['']
->>11/05/2020 10:11:30 AM [INFO] pem_hub.py (get_filtered_pems:2231):
- Filtered pems: 
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (project_dir_changed:2039):
- New project directory: C:\_Data\2020\Eastern\Dominique\DOM-91-4
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2075):
- Include files: ['']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2077):
- Include files: ['DTL', 'exp', 'Correct']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2081):
- Include folders: ['GPS']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2083):
- Exclude folders: ['DUMP']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2110):
- Include extensions: ['']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_gps:2112):
- Exclude extensions: ['']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2179):
- Include files: ['']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2181):
- Include files: ['']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2185):
- Include folders: ['']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2187):
- Exclude folders: ['DUMP']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2214):
- Include extensions: ['']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2216):
- Exclude extensions: ['']
->>11/05/2020 10:11:33 AM [INFO] pem_hub.py (get_filtered_pems:2231):
- Filtered pems: C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\XY_04.PEM
-C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\Z_04.PEM
-C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\XY04_04.DMP
-C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\Z04_04.DMP
-C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\_04_PP04.DMP
->>11/05/2020 10:11:35 AM [INFO] pem_file.py (parse:1823):
- Parsing XY_04.PEM
->>11/05/2020 10:11:35 AM [INFO] gps_editor.py (parse_collar:654):
+>>11/08/2020 11:10:09 AM [INFO] pem_file.py (parse:1823):
+ Parsing XY.PEM
+>>11/08/2020 11:10:10 AM [INFO] gps_editor.py (parse_collar:654):
  Removing P-tag column.
->>11/05/2020 10:11:35 AM [INFO] gps_editor.py (parse_collar:658):
+>>11/08/2020 11:10:10 AM [INFO] gps_editor.py (parse_collar:658):
  Removing column of 0s.
->>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_segments:772):
- 0 column(s) of values were found instead of 5.
->>11/05/2020 10:11:35 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding XY_04.PEM to the table.
->>11/05/2020 10:11:35 AM [INFO] gps_editor.py (parse_collar:658):
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: N:\GeophysicsShare\Dave
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: N:\GeophysicsShare\Dave\xy-040.PEM
+N:\GeophysicsShare\Dave\XY.PEM
+N:\GeophysicsShare\Dave\z40_06.PEM
+N:\GeophysicsShare\Dave\ZAv.PEM
+N:\GeophysicsShare\Dave\2019 Sturgeon Lake\Report\Client Data\F-19-156\F-19-156 XYT.PEM
+N:\GeophysicsShare\Dave\2019 Sturgeon Lake\Report\Client Data\F-19-156\F-19-156 ZAv.PEM
+N:\GeophysicsShare\Dave\2019 Sturgeon Lake\Report\Client Data\F-19-157\F-19-157 XYT.PEM
+N:\GeophysicsShare\Dave\2019 Sturgeon Lake\Report\Client Data\F-19-157\F-19-157 ZAv.PEM
+N:\GeophysicsShare\Dave\2019 Sturgeon Lake\Report\Client Data\F-19-161\F-19-161 XYT.PEM
+N:\GeophysicsShare\Dave\2019 Sturgeon Lake\Report\Client Data\F-19-161\F-19-161 ZAv.PEM
+N:\GeophysicsShare\Dave\2019 Sturgeon Lake\Report\Client Data\F-19-163\F-19-163 XYT.PEM
+N:\GeophysicsShare\Dave\2019 Sturgeon Lake\Report\Client Data\F-19-163\F-19-163 ZAv.PEM
+N:\GeophysicsShare\Dave\2019 Sturgeon Lake\Report\Client Data\SL-19-01\SL-19-01 XYT.PEM
+N:\GeophysicsShare\Dave\2019 Sturgeon Lake\Report\Client Data\SL-19-01\SL-19-01 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\CTOS-5104A-19 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\CTOS-5106-19 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\ESPN-5153-19 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\OC-5109-19 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\OC-5116-19 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\PY-5102-18 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\PY-5113-19 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\PY-5118-19 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\PY-5157-19 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\QVA-5088-19A ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Hole Collars\QVA-5151-19 ZAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\0NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\10000NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\1000SAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\10200NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\10400NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\11000NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\11200N.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\1200NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\200NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\2400NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\400NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\4500NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\500NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\7600NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\800NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\8200NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\8400NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\9000NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\9200NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\9800NAv.PEM
+N:\GeophysicsShare\Dave\Aguilar\Surface Loops\ESP-SW 7400NAv.PEM
+N:\GeophysicsShare\Dave\Eric\L10000N_8 - Copy.PEM
+N:\GeophysicsShare\Dave\Eric\L10000N_8.PEM
+N:\GeophysicsShare\Dave\Eric\L11000N 114_6.PEM
+N:\GeophysicsShare\Dave\Eric\L11000N(1)_11.PEM
+N:\GeophysicsShare\Dave\Eric\L11000N_11.PEM
+N:\GeophysicsShare\Dave\Eric\L11000N_12.PEM
+N:\GeophysicsShare\Dave\Eric\L11000N_6.PEM
+N:\GeophysicsShare\Dave\Eric\L11000N_8.PEM
+N:\GeophysicsShare\Dave\Eric\L11200N AM_9.PEM
+N:\GeophysicsShare\Dave\Eric\L11200N PM_9.PEM
+N:\GeophysicsShare\Dave\Eric\L11200N_1.PEM
+N:\GeophysicsShare\Dave\Eric\L11200N_12.PEM
+N:\GeophysicsShare\Dave\Eric\L11200N_2.PEM
+N:\GeophysicsShare\Dave\Eric\L11200N_9.PEM
+N:\GeophysicsShare\Dave\Eric\L11200_8.PEM
+N:\GeophysicsShare\Dave\Eric\L11400N_1.PEM
+N:\GeophysicsShare\Dave\Eric\L11400N_2.PEM
+N:\GeophysicsShare\Dave\Eric\L11400N_5.PEM
+N:\GeophysicsShare\Dave\Eric\L11400N_7.PEM
+N:\GeophysicsShare\Dave\Eric\L11400N_9.PEM
+N:\GeophysicsShare\Dave\Eric\L11600N_1.PEM
+N:\GeophysicsShare\Dave\Eric\L11600N_30.PEM
+N:\GeophysicsShare\Dave\Eric\L11600N_31.PEM
+N:\GeophysicsShare\Dave\Eric\L11600N_5.PEM
+N:\GeophysicsShare\Dave\Eric\L11600N_7.PEM
+N:\GeophysicsShare\Dave\Eric\L11600N_8.PEM
+N:\GeophysicsShare\Dave\Eric\L11800NRG7V2_30.PEM
+N:\GeophysicsShare\Dave\Eric\L11800NRG7V2_31.PEM
+N:\GeophysicsShare\Dave\Eric\L11800N_1.PEM
+N:\GeophysicsShare\Dave\Eric\L11800N_4.PEM
+N:\GeophysicsShare\Dave\Eric\L12000N2_30.PEM
+N:\GeophysicsShare\Dave\Eric\L12000N_1.PEM
+N:\GeophysicsShare\Dave\Eric\L12000N_30.PEM
+N:\GeophysicsShare\Dave\Eric\L12000N_4.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\NAD27.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\NAD83.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\TC170199XYT.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\UrsaMaj.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\GPS\M-19-536 ZAv.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\HoleM-20-539\GPS\M-19-536 ZAv.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\Bill\L8570E_05[full waveform].PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\Bill\L8770E_04[full waveform].PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\Bill\Heinz\CS-19-08W4 XYT_OUT.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\Bill\Heinz\CS-19-08W4 ZAv_OUT.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\GPS\M-19-536 ZAv.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\PEM\Collar\XYT.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\PEM\Collar\ZAv.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\PEM\Out\XYT.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\PEM\Out\XYT5.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\PEM\Out\XYT9.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\PEM\Out\ZAv - e.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\PEM\Out\ZAv.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\COLLAR\XY.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\COLLAR\XYG.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\COLLAR\Z.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\OUT\XY.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\OUT\XYG.PEM
+N:\GeophysicsShare\Dave\Eric\Norman\Kevin\M-20-539 (new dec)\RAW\OUT\Z.PEM
+N:\GeophysicsShare\Dave\Report\Client Data\F-19-156\F-19-156 XYT.PEM
+N:\GeophysicsShare\Dave\Report\Client Data\F-19-156\F-19-156 ZAv.PEM
+N:\GeophysicsShare\Dave\Report\Client Data\F-19-157\F-19-157 XYT.PEM
+N:\GeophysicsShare\Dave\Report\Client Data\F-19-157\F-19-157 ZAv.PEM
+N:\GeophysicsShare\Dave\Report\Client Data\F-19-161\F-19-161 XYT.PEM
+N:\GeophysicsShare\Dave\Report\Client Data\F-19-161\F-19-161 ZAv.PEM
+N:\GeophysicsShare\Dave\Report\Client Data\F-19-163\F-19-163 XYT.PEM
+N:\GeophysicsShare\Dave\Report\Client Data\F-19-163\F-19-163 ZAv.PEM
+N:\GeophysicsShare\Dave\Report\Client Data\SL-19-01\SL-19-01 XYT.PEM
+N:\GeophysicsShare\Dave\Report\Client Data\SL-19-01\SL-19-01 ZAv.PEM
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding XY.PEM to the table.
+>>11/08/2020 11:10:10 AM [INFO] gps_editor.py (parse_collar:658):
  Removing column of 0s.
->>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_segments:772):
- 0 column(s) of values were found instead of 5.
->>11/05/2020 10:11:35 AM [INFO] pem_file.py (parse:1823):
- Parsing Z_04.PEM
->>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_loop_gps:325):
- 0 column(s) of values were found instead of 3.
->>11/05/2020 10:11:35 AM [INFO] gps_editor.py (parse_collar:654):
+>>11/08/2020 11:10:10 AM [INFO] pem_file.py (parse:1823):
+ Parsing ZAv.PEM
+>>11/08/2020 11:10:10 AM [INFO] gps_editor.py (parse_collar:654):
  Removing P-tag column.
->>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_collar:665):
+>>11/08/2020 11:10:10 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:10:10 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding ZAv.PEM to the table.
+>>11/08/2020 11:10:10 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:12:24 AM [INFO] map_widgets.py (plot_pems:1176):
+ Plotting XY.PEM
+>>11/08/2020 11:12:24 AM [WARNING] gps_editor.py (get_projection:829):
+ No CRS passed.
+>>11/08/2020 11:12:24 AM [INFO] map_widgets.py (plot_pems:1176):
+ Plotting ZAv.PEM
+>>11/08/2020 11:12:24 AM [WARNING] gps_editor.py (get_projection:829):
+ No CRS passed.
+>>11/08/2020 11:13:51 AM [INFO] pem_hub.py (export_pem_files:2593):
+ Exporting XY.PEM.
+>>11/08/2020 11:13:51 AM [INFO] pem_file.py (save:804):
+ Saving XY.PEM. (Legacy: False. Processed: True. Backup: False. Tag: )
+>>11/08/2020 11:13:51 AM [INFO] pem_hub.py (export_pem_files:2593):
+ Exporting ZAv.PEM.
+>>11/08/2020 11:13:51 AM [INFO] pem_file.py (save:804):
+ Saving ZAv.PEM. (Legacy: False. Processed: True. Backup: False. Tag: )
+>>11/08/2020 11:18:20 AM [INFO] pem_file.py (parse_dmp2:2483):
+ Parsing xy-040.dmp2.
+>>11/08/2020 11:18:20 AM [WARNING] gps_editor.py (parse_loop_gps:297):
+ Empty file passed.
+>>11/08/2020 11:18:20 AM [WARNING] gps_editor.py (parse_collar:627):
+ No GPS passed.
+>>11/08/2020 11:18:20 AM [WARNING] gps_editor.py (parse_segments:747):
+ Empty file passed.
+>>11/08/2020 11:18:20 AM [INFO] pem_file.py (parse_dmp2:2483):
+ Parsing z40_06.dmp2.
+>>11/08/2020 11:18:20 AM [WARNING] gps_editor.py (parse_loop_gps:297):
+ Empty file passed.
+>>11/08/2020 11:18:20 AM [WARNING] gps_editor.py (parse_collar:627):
+ No GPS passed.
+>>11/08/2020 11:18:20 AM [WARNING] gps_editor.py (parse_segments:747):
+ Empty file passed.
+>>11/08/2020 11:18:20 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy-040.PEM to the table.
+>>11/08/2020 11:18:20 AM [WARNING] gps_editor.py (parse_loop_gps:325):
  0 column(s) of values were found instead of 3.
->>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_segments:772):
+>>11/08/2020 11:18:20 AM [WARNING] gps_editor.py (parse_segments:772):
  0 column(s) of values were found instead of 5.
->>11/05/2020 10:11:35 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding Z_04.PEM to the table.
->>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+>>11/08/2020 11:18:20 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z40_06.PEM to the table.
+>>11/08/2020 11:18:20 AM [WARNING] gps_editor.py (parse_loop_gps:325):
  0 column(s) of values were found instead of 3.
->>11/05/2020 10:11:35 AM [WARNING] gps_editor.py (parse_segments:772):
+>>11/08/2020 11:18:20 AM [WARNING] gps_editor.py (parse_segments:772):
  0 column(s) of values were found instead of 5.
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (project_dir_changed:2039):
- New project directory: C:\_Data\2020\Eastern\Dominique\DOM-91-4\DUMP
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+>>11/08/2020 11:18:35 AM [INFO] pem_hub.py (get_filtered_gps:2075):
  Include files: ['']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+>>11/08/2020 11:18:35 AM [INFO] pem_hub.py (get_filtered_gps:2077):
  Include files: ['DTL', 'exp', 'Correct']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+>>11/08/2020 11:18:35 AM [INFO] pem_hub.py (get_filtered_gps:2081):
  Include folders: ['GPS']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2083):
- Exclude folders: ['DUMP']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+>>11/08/2020 11:18:35 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP', 'Eric']
+>>11/08/2020 11:18:35 AM [INFO] pem_hub.py (get_filtered_gps:2110):
  Include extensions: ['']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+>>11/08/2020 11:18:35 AM [INFO] pem_hub.py (get_filtered_gps:2112):
  Exclude extensions: ['']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+>>11/08/2020 11:18:37 AM [INFO] pem_hub.py (get_filtered_gps:2075):
  Include files: ['']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2181):
- Include files: ['']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2185):
- Include folders: ['']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2187):
- Exclude folders: ['DUMP']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2214):
- Include extensions: ['']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2216):
- Exclude extensions: ['']
->>11/05/2020 10:11:38 AM [INFO] pem_hub.py (get_filtered_pems:2231):
- Filtered pems: 
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (project_dir_changed:2039):
- New project directory: C:\_Data\2020\Eastern\Dominique\DOM-91-4\GPS
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2075):
- Include files: ['']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+>>11/08/2020 11:18:37 AM [INFO] pem_hub.py (get_filtered_gps:2077):
  Include files: ['DTL', 'exp', 'Correct']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+>>11/08/2020 11:18:37 AM [INFO] pem_hub.py (get_filtered_gps:2081):
  Include folders: ['GPS']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2083):
- Exclude folders: ['DUMP']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+>>11/08/2020 11:18:37 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP', 'Eric']
+>>11/08/2020 11:18:37 AM [INFO] pem_hub.py (get_filtered_gps:2110):
  Include extensions: ['']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+>>11/08/2020 11:18:37 AM [INFO] pem_hub.py (get_filtered_gps:2112):
  Exclude extensions: ['']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_gps:2075):
  Include files: ['']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP', 'Eric']
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_pems:2179):
  Include files: ['']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_pems:2185):
  Include folders: ['']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_pems:2187):
  Exclude folders: ['DUMP']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_pems:2214):
  Include extensions: ['']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_pems:2216):
  Exclude extensions: ['']
->>11/05/2020 10:11:39 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+>>11/08/2020 11:23:55 AM [INFO] pem_hub.py (get_filtered_pems:2231):
  Filtered pems: 
->>11/05/2020 10:11:42 AM [INFO] pem_hub.py (get_inf_crs:1512):
+>>11/08/2020 11:24:31 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:24:31 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:24:31 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:24:31 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:24:31 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:24:31 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:24:31 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\PP-NOV06.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\PP.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\Z40.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP-SCOIL.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP-Z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP50-Z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP50MS-COIL.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\SOA.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\XY-040.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\Z-056X.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\pp-nov06.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\pp.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\z40.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp-scoil.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp-z.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp50-z.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp50ms-coil.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\soa.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\z-056x.dmp2
+>>11/08/2020 11:24:34 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:24:34 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:24:34 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:24:34 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:24:34 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:24:34 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:24:42 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:24:42 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:24:42 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:24:42 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP', 'Eric']
+>>11/08/2020 11:24:42 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:24:42 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:24:46 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:24:46 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:24:46 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:24:46 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:24:46 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:24:46 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:24:56 AM [INFO] pem_file.py (parse_dmp2:2483):
+ Parsing xy-040.dmp2.
+>>11/08/2020 11:24:56 AM [WARNING] gps_editor.py (parse_loop_gps:297):
+ Empty file passed.
+>>11/08/2020 11:24:56 AM [WARNING] gps_editor.py (parse_collar:627):
+ No GPS passed.
+>>11/08/2020 11:24:56 AM [WARNING] gps_editor.py (parse_segments:747):
+ Empty file passed.
+>>11/08/2020 11:24:56 AM [INFO] pem_file.py (parse_dmp2:2483):
+ Parsing z-056x.dmp2.
+>>11/08/2020 11:24:56 AM [WARNING] gps_editor.py (parse_loop_gps:297):
+ Empty file passed.
+>>11/08/2020 11:24:56 AM [WARNING] gps_editor.py (parse_collar:627):
+ No GPS passed.
+>>11/08/2020 11:24:56 AM [WARNING] gps_editor.py (parse_segments:747):
+ Empty file passed.
+>>11/08/2020 11:24:56 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy-040.PEM to the table.
+>>11/08/2020 11:24:56 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:24:56 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:24:56 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z-056x.PEM to the table.
+>>11/08/2020 11:24:56 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:24:56 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:25:09 AM [INFO] pem_file.py (parse_dmp2:2483):
+ Parsing z40.dmp2.
+>>11/08/2020 11:25:09 AM [WARNING] gps_editor.py (parse_loop_gps:297):
+ Empty file passed.
+>>11/08/2020 11:25:09 AM [WARNING] gps_editor.py (parse_collar:627):
+ No GPS passed.
+>>11/08/2020 11:25:09 AM [WARNING] gps_editor.py (parse_segments:747):
+ Empty file passed.
+>>11/08/2020 11:25:09 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z40.PEM to the table.
+>>11/08/2020 11:25:09 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:25:09 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:25:39 AM [ERROR] pem_hub.py (check_pems:1656):
+ z-056x.PEM has a timebase of 50.0 and z40.PEM has a timebase of 16.66.
+>>11/08/2020 11:25:46 AM [INFO] pem_file.py (save:804):
+ Saving xy-040.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:25:47 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy-040.PEM.
+>>11/08/2020 11:25:47 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy-040.PEM to the table.
+>>11/08/2020 11:25:47 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:25:47 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:25:47 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:25:47 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:25:47 AM [INFO] pem_file.py (save:804):
+ Saving z40.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:25:47 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing z40.PEM.
+>>11/08/2020 11:25:47 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z40.PEM to the table.
+>>11/08/2020 11:25:47 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:25:47 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:25:47 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:25:47 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:25:50 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 1 and column 0
+>>11/08/2020 11:25:50 AM [INFO] pem_hub.py (table_value_changed:347):
+ Renaming z40.PEM to z.PEM
+>>11/08/2020 11:25:50 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:25:50 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:25:52 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 0 and column 0
+>>11/08/2020 11:25:52 AM [INFO] pem_hub.py (table_value_changed:347):
+ Renaming xy-040.PEM to xy.PEM
+>>11/08/2020 11:25:52 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:25:52 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:25:56 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 0 and column 4
+>>11/08/2020 11:25:56 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:25:56 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:25:58 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 1 and column 4
+>>11/08/2020 11:25:58 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:25:58 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:03 AM [INFO] pem_file.py (save:804):
+ Saving xy.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:26:03 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:26:03 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:26:03 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:03 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:03 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:03 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:03 AM [INFO] pem_file.py (save:804):
+ Saving z.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:26:03 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing z.PEM.
+>>11/08/2020 11:26:03 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z.PEM to the table.
+>>11/08/2020 11:26:03 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:03 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:03 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:03 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:05 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 0 and column 2
+>>11/08/2020 11:26:05 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:05 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:05 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 1 and column 2
+>>11/08/2020 11:26:05 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:05 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:05 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 1 and column 5
+>>11/08/2020 11:26:05 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:05 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:06 AM [INFO] pem_file.py (save:804):
+ Saving xy.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:26:06 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:26:06 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:26:06 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:06 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:06 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:06 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:06 AM [INFO] pem_file.py (save:804):
+ Saving z.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:26:06 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing z.PEM.
+>>11/08/2020 11:26:06 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z.PEM to the table.
+>>11/08/2020 11:26:06 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:06 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:06 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:06 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:19 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:26:19 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:26:19 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:19 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:19 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of xy.PEM to None.
+>>11/08/2020 11:26:22 AM [INFO] gps_editor.py (parse_collar:654):
+ Removing P-tag column.
+>>11/08/2020 11:26:22 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:22 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:22 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:26:22 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:26:23 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:23 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:23 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:23 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:23 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of xy.PEM to None.
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040\GPS
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:26:24 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: 
+>>11/08/2020 11:26:27 AM [INFO] pem_hub.py (get_inf_crs:1512):
  Parsing INF file: System: UTM. Zone: 19 North. Datum: NAD 1983
->>11/05/2020 10:11:42 AM [INFO] pem_hub.py (get_crs:3006):
+>>11/08/2020 11:26:27 AM [INFO] pem_hub.py (get_crs:3006):
  Project CRS: NAD83 / UTM zone 19N
->>11/05/2020 10:11:42 AM [INFO] pem_file.py (set_crs:710):
- Setting CRS of XY_04.PEM to NAD83 / UTM zone 19N.
->>11/05/2020 10:11:42 AM [INFO] pem_file.py (set_crs:710):
- Setting CRS of Z_04.PEM to NAD83 / UTM zone 19N.
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (project_dir_changed:2039):
- New project directory: C:\_Data\2020\Eastern\Dominique\DOM-91-4
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+>>11/08/2020 11:26:27 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of xy.PEM to NAD83 / UTM zone 19N.
+>>11/08/2020 11:26:27 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of z.PEM to NAD83 / UTM zone 19N.
+>>11/08/2020 11:26:29 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:26:29 AM [INFO] pem_file.py (save:804):
+ Saving xy.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:26:29 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:26:29 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:26:29 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:29 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:29 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:29 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:29 AM [INFO] pem_file.py (save:804):
+ Saving z.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:26:29 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing z.PEM.
+>>11/08/2020 11:26:29 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z.PEM to the table.
+>>11/08/2020 11:26:29 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:29 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:29 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:26:29 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:34 AM [INFO] pem_file.py (average:851):
+ Averaging xy.PEM.
+>>11/08/2020 11:26:43 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:26:43 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:26:43 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:43 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:43 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:26:43 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of xy.PEM to NAD83 / UTM zone 19N.
+>>11/08/2020 11:26:47 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:26:47 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:26:47 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:47 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:47 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:26:47 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of xy.PEM to NAD83 / UTM zone 19N.
+>>11/08/2020 11:26:47 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing z.PEM.
+>>11/08/2020 11:26:47 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z.PEM to the table.
+>>11/08/2020 11:26:47 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:47 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:47 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:26:47 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of z.PEM to NAD83 / UTM zone 19N.
+>>11/08/2020 11:26:49 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:50 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:50 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:26:50 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:26:50 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:50 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:50 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:26:50 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of xy.PEM to NAD83 / UTM zone 19N.
+>>11/08/2020 11:26:50 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:50 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing z.PEM.
+>>11/08/2020 11:26:50 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z.PEM to the table.
+>>11/08/2020 11:26:50 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:50 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:50 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:50 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:26:50 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:26:50 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of z.PEM to NAD83 / UTM zone 19N.
+>>11/08/2020 11:26:52 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:26:52 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:26:52 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:52 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:52 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:26:52 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of xy.PEM to NAD83 / UTM zone 19N.
+>>11/08/2020 11:26:52 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing z.PEM.
+>>11/08/2020 11:26:52 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z.PEM to the table.
+>>11/08/2020 11:26:52 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:53 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:53 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:26:53 AM [INFO] pem_file.py (set_crs:710):
+ Setting CRS of z.PEM to NAD83 / UTM zone 19N.
+>>11/08/2020 11:26:53 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:26:53 AM [INFO] pem_file.py (save:804):
+ Saving xy.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:26:53 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:26:53 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:26:53 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:53 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:53 AM [INFO] pem_file.py (save:804):
+ Saving z.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:26:54 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing z.PEM.
+>>11/08/2020 11:26:54 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z.PEM to the table.
+>>11/08/2020 11:26:54 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:26:54 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:27:18 AM [INFO] map_widgets.py (plot_pems:1176):
+ Plotting xy.PEM
+>>11/08/2020 11:27:18 AM [INFO] map_widgets.py (plot_pems:1176):
+ Plotting z.PEM
+>>11/08/2020 11:27:31 AM [INFO] logger.py (decorated:91):
+ ::IN: open - (<src.pem.derotator.Derotator object at 0x3B3BE850>, <src.pem.pem_file.PEMFile object at 0x2BD53990>), {}
+>>11/08/2020 11:27:31 AM [INFO] pem_file.py (prep_rotation:1207):
+ Preparing for XY de-rotation for xy.PEM.
+>>11/08/2020 11:27:32 AM [INFO] pem_file.py (rotate:1050):
+ De-rotating data of xy.PEM using acc with SOA 0.
+>>11/08/2020 11:27:32 AM [INFO] pem_file.py (rotate:1180):
+ Include PP for xy.PEM: True.
+>>11/08/2020 11:27:33 AM [INFO] pem_file.py (split:887):
+ Splitting channels for xy.PEM.
+>>11/08/2020 11:27:33 AM [INFO] pem_file.py (average:851):
+ Averaging xy.PEM.
+>>11/08/2020 11:27:33 AM [INFO] logger.py (decorated:93):
+ ::OUT: None
+>>11/08/2020 11:27:37 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:27:37 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:27:37 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:27:37 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1624):
+ Max removable limit reached.
+>>11/08/2020 11:27:49 AM [INFO] pem_plot_editor.py (eval_decay:1634):
+ Max removable limit reached.
+>>11/08/2020 11:28:55 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:28:55 AM [INFO] pem_file.py (save:804):
+ Saving xy.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:28:55 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:28:55 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:28:55 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:28:55 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:28:55 AM [INFO] pem_file.py (save:804):
+ Saving z.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:28:55 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing z.PEM.
+>>11/08/2020 11:28:55 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z.PEM to the table.
+>>11/08/2020 11:28:55 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:28:55 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:18 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 0 and column 2
+>>11/08/2020 11:29:18 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:18 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 1 and column 2
+>>11/08/2020 11:29:18 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:18 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 0 and column 3
+>>11/08/2020 11:29:18 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:18 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 1 and column 3
+>>11/08/2020 11:29:18 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:19 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 0 and column 5
+>>11/08/2020 11:29:19 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:19 AM [INFO] pem_hub.py (table_value_changed:334):
+ Table value changed at row 1 and column 5
+>>11/08/2020 11:29:19 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:19 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:29:19 AM [INFO] pem_file.py (save:804):
+ Saving xy.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:29:19 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:29:19 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:29:19 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:19 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:19 AM [INFO] pem_file.py (save:804):
+ Saving z.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:29:19 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing z.PEM.
+>>11/08/2020 11:29:19 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z.PEM to the table.
+>>11/08/2020 11:29:20 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:20 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_gps:2075):
  Include files: ['']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_gps:2077):
  Include files: ['DTL', 'exp', 'Correct']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_gps:2081):
  Include folders: ['GPS']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_gps:2083):
  Exclude folders: ['DUMP']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_gps:2110):
  Include extensions: ['']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_gps:2112):
  Exclude extensions: ['']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_pems:2179):
  Include files: ['']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_pems:2181):
  Include files: ['']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_pems:2185):
  Include folders: ['']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2187):
- Exclude folders: ['DUMP']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_pems:2214):
  Include extensions: ['']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_pems:2216):
  Exclude extensions: ['']
->>11/05/2020 10:11:44 AM [INFO] pem_hub.py (get_filtered_pems:2231):
- Filtered pems: C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\XY_04.PEM
-C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\Z_04.PEM
-C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\XY04_04.DMP
-C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\Z04_04.DMP
-C:\_Data\2020\Eastern\Dominique\DOM-91-4\RAW\_04_PP04.DMP
->>11/05/2020 10:11:48 AM [INFO] pem_file.py (average:851):
- Averaging XY_04.PEM.
->>11/05/2020 10:11:53 AM [INFO] pem_hub.py (get_crs:3006):
+>>11/08/2020 11:29:26 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\PP-NOV06.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\PP.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\Z40.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP-SCOIL.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP-Z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP50-Z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP50MS-COIL.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\SOA.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\XY-040.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\Z-056X.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\pp-nov06.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\pp.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\z40.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp-scoil.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp-z.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp50-z.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp50ms-coil.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\soa.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\z-056x.dmp2
+>>11/08/2020 11:29:30 AM [INFO] pem_hub.py (get_crs:3006):
  Project CRS: NAD83 / UTM zone 19N
->>11/05/2020 10:11:53 AM [INFO] pem_file.py (save:804):
- Saving XY_04.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>11/05/2020 10:11:53 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing XY_04.PEM.
->>11/05/2020 10:11:54 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding XY_04.PEM to the table.
->>11/05/2020 10:11:54 AM [INFO] gps_editor.py (parse_collar:658):
+>>11/08/2020 11:29:36 AM [INFO] pem_hub.py (export_pem_files:2593):
+ Exporting xy.PEM.
+>>11/08/2020 11:29:36 AM [INFO] pem_file.py (save:804):
+ Saving xy.PEM. (Legacy: False. Processed: True. Backup: False. Tag: )
+>>11/08/2020 11:29:36 AM [INFO] pem_file.py (split:887):
+ Splitting channels for xy.PEM.
+>>11/08/2020 11:29:36 AM [INFO] pem_file.py (average:851):
+ Averaging xy.PEM.
+>>11/08/2020 11:29:36 AM [INFO] pem_hub.py (export_pem_files:2593):
+ Exporting z.PEM.
+>>11/08/2020 11:29:36 AM [INFO] pem_file.py (save:804):
+ Saving z.PEM. (Legacy: False. Processed: True. Backup: False. Tag: )
+>>11/08/2020 11:29:36 AM [INFO] pem_file.py (split:887):
+ Splitting channels for z.PEM.
+>>11/08/2020 11:29:36 AM [INFO] pem_file.py (average:851):
+ Averaging z.PEM.
+>>11/08/2020 11:46:54 AM [INFO] pem_file.py (scale_coil_area:908):
+ Scaling coil area of xy.PEM to 2600.
+>>11/08/2020 11:46:54 AM [INFO] pem_file.py (scale_coil_area:917):
+ xy.PEM coil area scaled to 2600 from 3150.0.
+>>11/08/2020 11:46:54 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:46:55 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:46:55 AM [INFO] gps_editor.py (parse_collar:658):
  Removing column of 0s.
->>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_segments:772):
- 0 column(s) of values were found instead of 5.
->>11/05/2020 10:11:54 AM [INFO] gps_editor.py (parse_collar:658):
+>>11/08/2020 11:46:55 AM [INFO] gps_editor.py (parse_collar:658):
  Removing column of 0s.
->>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_segments:772):
- 0 column(s) of values were found instead of 5.
->>11/05/2020 10:11:54 AM [INFO] pem_file.py (save:804):
- Saving Z_04.PEM. (Legacy: False. Processed: False. Backup: False. Tag: )
->>11/05/2020 10:11:54 AM [INFO] pem_hub.py (refresh_pem:2891):
- Refreshing Z_04.PEM.
->>11/05/2020 10:11:54 AM [INFO] pem_hub.py (pem_to_table:2849):
- Adding Z_04.PEM to the table.
->>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040\Final
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:48:26 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Wolfden\G-040\Final\xy.PEM
+C:\_Data\2020\Wolfden\G-040\Final\z.PEM
+>>11/08/2020 11:48:27 AM [INFO] pem_file.py (parse:1823):
+ Parsing xy.PEM
+>>11/08/2020 11:48:27 AM [INFO] pem_file.py (get_crs:383):
+ xy.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 11:48:27 AM [INFO] gps_editor.py (parse_collar:654):
+ Removing P-tag column.
+>>11/08/2020 11:48:27 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:48:27 AM [INFO] pem_file.py (get_crs:383):
+ xy.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 11:48:27 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:48:27 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:48:27 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:48:31 AM [INFO] pem_file.py (scale_coil_area:908):
+ Scaling coil area of xy.PEM to 2600.
+>>11/08/2020 11:48:31 AM [INFO] pem_file.py (scale_coil_area:917):
+ xy.PEM coil area scaled to 2600 from 3150.0.
+>>11/08/2020 11:48:31 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy.PEM.
+>>11/08/2020 11:48:31 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy.PEM to the table.
+>>11/08/2020 11:48:31 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:48:31 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:48:36 AM [INFO] pem_file.py (save:804):
+ Saving xy.PEM. (Legacy: True. Processed: False. Backup: False. Tag: )
+>>11/08/2020 11:48:36 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:48:36 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:48:36 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:48:36 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:48:36 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:48:36 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:48:36 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Wolfden\G-040\Final\xy.PEM
+C:\_Data\2020\Wolfden\G-040\Final\z.PEM
+>>11/08/2020 11:49:01 AM [INFO] pem_file.py (parse:1823):
+ Parsing z.PEM
+>>11/08/2020 11:49:01 AM [INFO] pem_file.py (get_crs:383):
+ z.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 11:49:01 AM [INFO] gps_editor.py (parse_collar:654):
+ Removing P-tag column.
+>>11/08/2020 11:49:01 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:49:01 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding z.PEM to the table.
+>>11/08/2020 11:49:01 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:49:08 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:49:08 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:49:12 AM [INFO] pem_plotter.py (count_pdf_pages:3662):
+ Number of PDF pages: 11
+>>11/08/2020 11:49:13 AM [INFO] pem_plotter.py (get_section_end_points:1679):
+ Section azimuth for z.PEM: 320°
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040\RAW
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:13 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: 
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040\GPS
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:14 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: 
+>>11/08/2020 11:51:16 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:51:16 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:51:16 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:51:16 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:51:16 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:51:16 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:16 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: 
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040\Final
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Wolfden\G-040\Final\xy.PEM
+C:\_Data\2020\Wolfden\G-040\Final\z.PEM
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040\DUMP
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:17 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\PP-NOV06.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\PP.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\Z40.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP-SCOIL.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP-Z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP50-Z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP50MS-COIL.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\SOA.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\XY-040.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\Z-056X.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\pp-nov06.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\pp.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\z40.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp-scoil.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp-z.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp50-z.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp50ms-coil.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\soa.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\z-056x.dmp2
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:51:18 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\PP-NOV06.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\PP.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\Dump\Z40.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP-SCOIL.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP-Z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP50-Z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\PP50MS-COIL.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\SOA.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\XY-040.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\Dump\Z-056X.PEM
+C:\_Data\2020\Wolfden\G-040\Final\xy.PEM
+C:\_Data\2020\Wolfden\G-040\Final\z.PEM
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\pp-nov06.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\pp.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 06, 2020\DMP\z40.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp-scoil.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp-z.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp50-z.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\pp50ms-coil.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\soa.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.dmp2
+C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\z-056x.dmp2
+>>11/08/2020 11:51:22 AM [INFO] pem_file.py (parse_dmp2:2483):
+ Parsing xy-040.dmp2.
+>>11/08/2020 11:51:22 AM [WARNING] gps_editor.py (parse_loop_gps:297):
+ Empty file passed.
+>>11/08/2020 11:51:22 AM [WARNING] gps_editor.py (parse_collar:627):
+ No GPS passed.
+>>11/08/2020 11:51:22 AM [WARNING] gps_editor.py (parse_segments:747):
+ Empty file passed.
+>>11/08/2020 11:51:22 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy-040.PEM to the table.
+>>11/08/2020 11:51:22 AM [WARNING] gps_editor.py (parse_loop_gps:325):
  0 column(s) of values were found instead of 3.
->>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_segments:772):
+>>11/08/2020 11:51:22 AM [WARNING] gps_editor.py (parse_segments:772):
  0 column(s) of values were found instead of 5.
->>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+>>11/08/2020 11:51:29 AM [INFO] logger.py (decorated:91):
+ ::IN: open - (<src.pem.derotator.Derotator object at 0x45806E40>, <src.pem.pem_file.PEMFile object at 0x4C5102D0>), {}
+>>11/08/2020 11:51:29 AM [INFO] pem_file.py (prep_rotation:1207):
+ Preparing for XY de-rotation for xy-040.PEM.
+>>11/08/2020 11:51:30 AM [INFO] pem_file.py (rotate:1050):
+ De-rotating data of xy-040.PEM using acc with SOA 0.
+>>11/08/2020 11:51:30 AM [INFO] pem_file.py (rotate:1180):
+ Include PP for xy-040.PEM: False.
+>>11/08/2020 11:51:31 AM [INFO] pem_file.py (split:887):
+ Splitting channels for xy-040.PEM.
+>>11/08/2020 11:51:31 AM [INFO] pem_file.py (average:851):
+ Averaging xy-040.PEM.
+>>11/08/2020 11:51:31 AM [INFO] logger.py (decorated:93):
+ ::OUT: None
+>>11/08/2020 11:51:32 AM [INFO] pem_hub.py (refresh_pem:2891):
+ Refreshing xy-040.PEM.
+>>11/08/2020 11:51:32 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding xy-040.PEM to the table.
+>>11/08/2020 11:51:32 AM [WARNING] gps_editor.py (parse_loop_gps:325):
  0 column(s) of values were found instead of 3.
->>11/05/2020 10:11:54 AM [WARNING] gps_editor.py (parse_segments:772):
+>>11/08/2020 11:51:32 AM [WARNING] gps_editor.py (parse_segments:772):
  0 column(s) of values were found instead of 5.
+>>11/08/2020 11:51:32 AM [WARNING] gps_editor.py (parse_loop_gps:325):
+ 0 column(s) of values were found instead of 3.
+>>11/08/2020 11:51:32 AM [WARNING] gps_editor.py (parse_segments:772):
+ 0 column(s) of values were found instead of 5.
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040\RAW
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:56:50 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: 
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040\Final
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 11:57:31 AM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Wolfden\G-040\Final\G-040\G-040 XY.PEM
+C:\_Data\2020\Wolfden\G-040\Final\G-040\G-040 Z.PEM
+>>11/08/2020 11:57:33 AM [INFO] pem_file.py (parse:1823):
+ Parsing G-040 XY.PEM
+>>11/08/2020 11:57:33 AM [INFO] pem_file.py (get_crs:383):
+ G-040 XY.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 11:57:33 AM [INFO] gps_editor.py (parse_collar:654):
+ Removing P-tag column.
+>>11/08/2020 11:57:33 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:57:33 AM [INFO] pem_file.py (get_crs:383):
+ G-040 XY.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 11:57:33 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:57:33 AM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding G-040 XY.PEM to the table.
+>>11/08/2020 11:57:33 AM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 11:57:34 AM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 11:57:34 AM [INFO] pem_file.py (get_crs:383):
+ G-040 XY.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 11:57:35 AM [INFO] pem_file.py (get_crs:383):
+ G-040 XY.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 12:03:35 PM [INFO] pem_file.py (parse:1823):
+ Parsing G-040 Z.PEM
+>>11/08/2020 12:03:35 PM [INFO] pem_file.py (get_crs:383):
+ G-040 Z.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 12:03:35 PM [INFO] gps_editor.py (parse_collar:654):
+ Removing P-tag column.
+>>11/08/2020 12:03:35 PM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 12:03:36 PM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding G-040 Z.PEM to the table.
+>>11/08/2020 12:03:36 PM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (project_dir_changed:2039):
+ New project directory: C:\_Data\2020\Wolfden\G-040\RAW
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_gps:2075):
+ Include files: ['']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_gps:2077):
+ Include files: ['DTL', 'exp', 'Correct']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_gps:2081):
+ Include folders: ['GPS']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_gps:2083):
+ Exclude folders: ['DUMP']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_gps:2110):
+ Include extensions: ['']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_gps:2112):
+ Exclude extensions: ['']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_pems:2179):
+ Include files: ['']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_pems:2181):
+ Include files: ['']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_pems:2185):
+ Include folders: ['']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_pems:2187):
+ Exclude folders: ['']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_pems:2214):
+ Include extensions: ['']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_pems:2216):
+ Exclude extensions: ['']
+>>11/08/2020 12:04:08 PM [INFO] pem_hub.py (get_filtered_pems:2231):
+ Filtered pems: C:\_Data\2020\Wolfden\G-040\RAW\XY.PEM
+C:\_Data\2020\Wolfden\G-040\RAW\Z.PEM
+>>11/08/2020 12:04:09 PM [INFO] pem_file.py (parse:1823):
+ Parsing XY.PEM
+>>11/08/2020 12:04:09 PM [INFO] pem_file.py (get_crs:383):
+ XY.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 12:04:09 PM [INFO] gps_editor.py (parse_collar:654):
+ Removing P-tag column.
+>>11/08/2020 12:04:09 PM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 12:04:09 PM [INFO] pem_file.py (get_crs:383):
+ XY.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 12:04:09 PM [INFO] pem_hub.py (get_crs:3006):
+ Project CRS: NAD83 / UTM zone 19N
+>>11/08/2020 12:04:09 PM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding XY.PEM to the table.
+>>11/08/2020 12:04:09 PM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 12:04:09 PM [INFO] pem_file.py (parse:1823):
+ Parsing Z.PEM
+>>11/08/2020 12:04:09 PM [INFO] pem_file.py (get_crs:383):
+ Z.PEM CRS is NAD83 / UTM zone 19N.
+>>11/08/2020 12:04:09 PM [INFO] gps_editor.py (parse_collar:654):
+ Removing P-tag column.
+>>11/08/2020 12:04:09 PM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 12:04:10 PM [INFO] pem_hub.py (pem_to_table:2849):
+ Adding Z.PEM to the table.
+>>11/08/2020 12:04:10 PM [INFO] gps_editor.py (parse_collar:658):
+ Removing column of 0s.
+>>11/08/2020 12:04:11 PM [INFO] pem_file.py (average:851):
+ Averaging XY.PEM.
+>>11/08/2020 12:04:11 PM [INFO] pem_file.py (get_crs:383):
+ XY.PEM CRS is NAD83 / UTM zone 19N.
