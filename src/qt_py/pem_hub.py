@@ -50,7 +50,7 @@ from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.11.0d'
+__version__ = '0.11.0e'
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -1176,6 +1176,25 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         elif len(urls) == 1 and (Path(urls[0]).is_dir() or Path(urls[0]).suffix.lower() in ['.zip', '.7z', '.rar']):
             self.open_unpacker(folder=urls[0])
 
+    def is_opened(self, file):
+        """
+        Check if the PEMFile is currently opened.
+        :param file: Union, PEMFile object or Path object
+        """
+        if isinstance(file, PEMFile):
+            file = file.filepath
+
+        if self.pem_files:
+            existing_filepaths = [file.filepath.absolute for file in self.pem_files]
+            if file.absolute in existing_filepaths:
+                logger.info(f"{file.name} is already opened.")
+                self.status_bar.showMessage(f"{file.name} is already opened", 2000)
+                return True
+            else:
+                return False
+        else:
+            return False
+
     def change_pem_info_tab(self, tab_num):
         """
         Slot: Change the tab for each pemInfoWidget to the same
@@ -1274,20 +1293,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Action of opening a PEM file. Will not open a PEM file if it is already opened.
         :param pem_files: list, Filepaths for the PEM Files
         """
-        def is_opened(path):
-            if isinstance(path, PEMFile):
-                path = path.filepath
-
-            if self.pem_files:
-                existing_filepaths = [file.filepath.absolute for file in self.pem_files]
-                if path.absolute in existing_filepaths:
-                    logger.info(f"{path.name} is already opened.")
-                    self.status_bar.showMessage(f"{path.name} is already opened", 2000)
-                    return True
-                else:
-                    return False
-            else:
-                return False
 
         def add_piw_widget(pem_file):
             """
@@ -1444,7 +1449,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         continue
 
                 # Check if the file is already opened in the table. Won't open if it is.
-                if is_opened(pem_file):
+                if self.is_opened(pem_file):
                     self.status_bar.showMessage(f"{pem_file.filepath.name} is already opened", 2000)
                     dlg += 1
                 else:
@@ -1967,6 +1972,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
     def open_gps_share(self, gps_object, source_widget):
         """
         Open the GPSShare widget to select PEMFiles.
+        :param gps_object: BaseGPS Object to be shared.
+        :param source_widget: PEMInfoWidget object of the file that is being shared.
         """
 
         def share_gps(mask):
@@ -2338,6 +2345,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             new_pem.save(legacy='legacy' in save_type.lower())
 
             self.status_bar.showMessage(f'Save Complete. PEM file saved as {new_pem.filepath.name}', 2000)
+
+            # Open the new PEM. If it is already opened, refresh it. This way the file remembers to save as legacy.
+            if self.is_opened(new_pem):
+                ind = self.pem_files.index(pem_file)
+                self.pem_files[ind] = new_pem
+                self.refresh_pem(new_pem)
+            else:
+                self.open_pem_files(new_pem)
 
             # Refresh the PEM list
             self.fill_pem_list()
@@ -3114,16 +3129,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param coil_area: int:  coil area to scale to
         :param selected: bool, True will only export selected rows.
         """
-        if not coil_area:
-            coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:")
-            if not ok_pressed:
-                return
-
         pem_files, rows = self.get_pem_files(selected=selected)
         if not pem_files:
             logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
+
+        if not coil_area:
+            default = pem_files[0].coil_area
+            coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", default)
+            if not ok_pressed:
+                return
 
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
@@ -3156,7 +3172,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        current, ok_pressed = QInputDialog.getDouble(self, "Scale Current", "Current:")
+        default = pem_files[0].current
+        current, ok_pressed = QInputDialog.getDouble(self, "Scale Current", "Current:", default)
         if ok_pressed:
             bar = CustomProgressBar()
             bar.setMaximum(len(pem_files))
@@ -4061,17 +4078,19 @@ def main():
     # ff = PathFilter()
     # ff.show()
 
+    pem_files = [r'C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.DMP2']
     # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
-    pem_files = pg.get_pems(client='Kazzinc', number=4)
+    # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='Minera', number=1)
     # pem_files = pg.get_pems(random=True, number=1)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
-    mw.open_pem_files(pem_files)
-    mw.open_mag_dec(mw.pem_files[0])
+    mw.open_dmp_files(pem_files)
+    # mw.open_pem_files(pem_files)
+    # mw.open_mag_dec(mw.pem_files[0])
 
     # mw.project_dir_edit.setText(r'C:\_Data\2020\Juno\Borehole')
     # mw.move_dir_tree_to(r'C:\_Data\2020\Juno\Borehole')
@@ -4082,7 +4101,7 @@ def main():
     # mw.pem_list_filter.exclude_folders_edit.setText('backup')
     # mw.pem_list_filter.accept_sig.emit()
 
-    # mw.show()
+    mw.show()
 
     app.exec_()
 

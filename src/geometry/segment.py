@@ -2,6 +2,7 @@ from src.gps.gps_editor import BoreholeSegments
 import logging
 import numpy as np
 import pandas as pd
+from src.logger import Log
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +20,12 @@ class Segmenter:
         :param units: str, units of the segments, either 'm' or 'ft'
         :return: pandas DataFrame with Azimuth, Dip, segment length, unit, and depth columns
         """
-        if units == 'm':
+        if units == 'm' or units is None:
             units = 2
         elif units == 'ft':
             units = 0
         else:
-            raise NotImplemented(f"{units} is not implemented as a unit for segments.")
+            raise NotImplementedError(f"{units} is not implemented as a unit for segments.")
 
         # Interpolate the DAD to 1m segments
         depth = df.Depth.to_numpy()

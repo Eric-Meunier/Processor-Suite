@@ -101,6 +101,7 @@ class PEMFile:
         self.total_scale_factor = 0.
         self.pp_table = None
         self.prepped_for_rotation = False
+        self.legacy = False
 
     def from_pem(self, tags, loop_coords, line_coords, notes, header, channel_table, data, filepath=None):
         """
@@ -804,6 +805,10 @@ class PEMFile:
         logger.info(f"Saving {self.filepath.name}. (Legacy: {legacy}. Processed: {processed}. Backup: {backup}. "
                     f"Tag: {tag})")
 
+        # Once legacy is saved once, it will always save as legacy.
+        if legacy is True:
+            self.legacy = True
+
         if processed is True:
             # Make sure the file is averaged and split and de-rotated
             if not self.is_split():
@@ -825,7 +830,8 @@ class PEMFile:
 
             self.filepath = self.filepath.with_name(file_name)
 
-        text = self.to_string(legacy=any([processed, legacy]))
+        print(f"self.legacy: {self.legacy}")
+        text = self.to_string(legacy=any([processed, legacy, self.legacy]))
 
         if backup:
             backup_path = self.filepath.parent.joinpath('[Backup]').joinpath(
