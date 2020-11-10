@@ -32,8 +32,6 @@ else:
 # Load Qt ui file into a class
 Ui_PemGeometry, QtBaseClass = uic.loadUiType(pemGeometryCreatorFile)
 
-# TODO Dip in polar plot needs to be positive.
-
 
 class PEMGeometry(QMainWindow, Ui_PemGeometry):
     # plt.style.use('seaborn-white')
@@ -105,6 +103,14 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.polar_ax = self.polar_figure.add_subplot(projection="polar")
         self.polar_ax.set_theta_zero_location("N")
         self.polar_ax.set_theta_direction(-1)
+        self.polar_ax.set_rlabel_position(0)
+        self.polar_ax.grid(linestyle='dashed', linewidth=0.5)
+        self.polar_ax.grid(True, linestyle='-', linewidth=1, which='minor')
+        self.polar_ax.set_xticks(np.pi / 180. * np.linspace(0, 360, 24, endpoint=False))
+
+        # tick = [self.polar_ax.get_rmax(), self.polar_ax.get_rmax() * 0.97]
+        # for t in np.deg2rad(np.arange(0, 360, 5)):
+        #     self.polar_ax.plot([t, t], tick, lw=0.72, color="k")
 
         self.polar_canvas = FigureCanvas(self.polar_figure)
         self.polar_canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
@@ -370,12 +376,12 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                                          zorder=1)
 
                 # Plot in the polar plot
-                self.collar_dip_line_p, = self.dip_ax.plot([math.radians(dip) for dip in collar_dip], collar_depths,
-                                                           color='blue',
-                                                           linestyle=(0, (5, 10)),
-                                                           label='Fixed Dip',
-                                                           lw=0.8,
-                                                           zorder=1)
+                self.collar_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in collar_dip], collar_depths,
+                                                             color='blue',
+                                                             linestyle=(0, (5, 10)),
+                                                             label='Fixed Dip',
+                                                             lw=0.8,
+                                                             zorder=1)
 
                 # Add the lines to the legend
                 self.dip_lines.append(self.collar_dip_line)
@@ -421,7 +427,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                                               lw=0.8,
                                                               zorder=1)
 
-                self.existing_dip_line_p, = self.polar_ax.plot([math.radians(dip) for dip in seg_dip], seg_depth,
+                self.existing_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in seg_dip], seg_depth,
                                                                color='dodgerblue',
                                                                linestyle='-.',
                                                                label='Existing Dip',
@@ -492,7 +498,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                                       lw=0.9,
                                                       zorder=2)
 
-            self.tool_dip_line_p, = self.polar_ax.plot([math.radians(dip) for dip in tool_dip], stations, '-b',
+            self.tool_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in tool_dip], stations, '-b',
                                                        label='Tool Dip',
                                                        lw=0.9,
                                                        zorder=1)
@@ -604,9 +610,26 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                                        label='Imported Dip',
                                                        lw=0.8,
                                                        zorder=1)
+
+            # Add the lines to the polar plot
+            self.imported_az_line_p, = self.polar_ax.plot([math.radians(z) for z in az], depths,
+                                                          color='crimson',
+                                                          ls='dashed',
+                                                          label='Imported Azimuth',
+                                                          lw=0.8,
+                                                          zorder=1)
+
+            self.imported_dip_line_p, = self.polar_ax.plot([-math.radians(z) for z in dip], depths,
+                                                           color='dodgerblue',
+                                                           ls='dashed',
+                                                           label='Imported Dip',
+                                                           lw=0.8,
+                                                           zorder=1)
             # Add the lines to the legend
             self.az_lines.append(self.imported_az_line)
             self.dip_lines.append(self.imported_dip_line)
+            self.polar_lines.append(self.imported_az_line_p)
+            self.polar_lines.append(self.imported_dip_line_p)
 
             self.az_output_combo.addItem('Imported')
             self.dip_output_combo.addItem('Imported')
@@ -614,6 +637,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             # Update the data
             self.imported_az_line.set_data(az, depths)
             self.imported_dip_line.set_data(dip, depths)
+            self.imported_az_line_p.set_data([math.radians(z) for z in az], depths)
+            self.imported_dip_line_p.set_data([-math.radians(z) for z in dip], depths)
 
         self.toggle_imported_geom()
         self.update_plots()
@@ -685,7 +710,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         """
         v = [self.collar_dip_sbox.value()] * 2
         self.collar_dip_line.set_data(v, collar_depths)
-        self.collar_dip_line_p.set_data([math.radians(x) for x in v], collar_depths)
+        self.collar_dip_line_p.set_data([-math.radians(x) for x in v], collar_depths)
         self.update_plots(self.dip_ax)
 
     def toggle_az_spline(self):
