@@ -99,7 +99,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.polar_widget.setLayout(QVBoxLayout())
         self.polar_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.polar_figure = plt.figure()
-        self.polar_figure.subplots_adjust(left=0.01, bottom=0.08, right=0.80, top=0.92)
+        self.polar_figure.subplots_adjust(left=0.03, bottom=0.08, right=0.82, top=0.92)
         self.polar_ax = self.polar_figure.add_subplot(projection="polar")
         self.polar_ax.set_theta_zero_location("N")
         self.polar_ax.set_theta_direction(-1)
@@ -108,15 +108,10 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.polar_ax.grid(True, linestyle='-', linewidth=1, which='minor')
         self.polar_ax.set_xticks(np.pi / 180. * np.linspace(0, 360, 24, endpoint=False))
 
-        # tick = [self.polar_ax.get_rmax(), self.polar_ax.get_rmax() * 0.97]
-        # for t in np.deg2rad(np.arange(0, 360, 5)):
-        #     self.polar_ax.plot([t, t], tick, lw=0.72, color="k")
-
         self.polar_canvas = FigureCanvas(self.polar_figure)
         self.polar_canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.polar_widget.layout().addWidget(self.polar_canvas)
         self.polar_plot_layout.addWidget(self.polar_canvas)
-        # self.polar_widget.show()
 
         # Format the axes
         self.mag_ax.invert_yaxis()
@@ -148,7 +143,6 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         # Signals
         self.actionOpen_Geometry_File.triggered.connect(self.open_file_dialog)
-        self.actionPolar_Plot.triggered.connect(self.polar_widget.show)
 
         self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.update_plots)
@@ -1045,7 +1039,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         angle = np.deg2rad(0)
         self.polar_ax.legend(self.polar_lines, [l.get_label() for l in self.polar_lines],
                              loc="lower left",
-                             bbox_to_anchor=(0.5 + np.cos(angle) / 2, 0.9 + np.sin(angle) / 2)
+                             bbox_to_anchor=(0.5 + np.cos(angle) / 2, 0.8 + np.sin(angle) / 2)
                              )
 
 
