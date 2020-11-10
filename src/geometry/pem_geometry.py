@@ -5,11 +5,13 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import mplcursors
+import math
 import numpy as np
 import pandas as pd
 from PyQt5 import (uic, QtGui, QtCore)
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QShortcut, QFileDialog, QMessageBox, QErrorMessage)
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QShortcut, QFileDialog, QMessageBox, QErrorMessage, QWidget,
+                             QVBoxLayout)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from src.geometry.segment import Segmenter
@@ -29,6 +31,8 @@ else:
 
 # Load Qt ui file into a class
 Ui_PemGeometry, QtBaseClass = uic.loadUiType(pemGeometryCreatorFile)
+
+# TODO Dip in polar plot needs to be positive.
 
 
 class PEMGeometry(QMainWindow, Ui_PemGeometry):
@@ -52,6 +56,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.pem_file = None
         self.dialog = QFileDialog()
 
+        # Initialize the plot lines
         self.tool_az_line = None
         self.tool_mag_line = None
         self.tool_dip_line = None
@@ -63,6 +68,16 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.collar_az_line = None
         self.collar_dip_line = None
 
+        # Polar lines
+        self.tool_az_line_p = None
+        self.tool_dip_line_p = None
+        self.existing_az_line_p = None
+        self.existing_dip_line_p = None
+        self.imported_az_line_p = None
+        self.imported_dip_line_p = None
+        self.collar_az_line_p = None
+        self.collar_dip_line_p = None
+
         self.background = None
         self.df = None
 
@@ -72,19 +87,34 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.az_lines = []
         self.dip_lines = []
         self.roll_lines = []
+        self.polar_lines = []
 
+        # Create the main plots
         self.figure, (self.mag_ax, self.dip_ax, self.roll_ax) = plt.subplots(1, 3, sharey=True)
         self.figure.subplots_adjust(left=0.07, bottom=0.08, right=0.94, top=0.92)
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.plots_layout.addWidget(self.canvas)
 
-        # self.mag_ax.use_sticky_edges = False
-        # self.dip_ax.use_sticky_edges = False
-        # self.roll_ax.use_sticky_edges = False
+        # Create the polar plot
+        self.polar_widget = QWidget()
+        self.polar_widget.setLayout(QVBoxLayout())
+        self.polar_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.polar_figure = plt.figure()
+        self.polar_figure.subplots_adjust(left=0.01, bottom=0.08, right=0.80, top=0.92)
+        self.polar_ax = self.polar_figure.add_subplot(projection="polar")
+        self.polar_ax.set_theta_zero_location("N")
+        self.polar_ax.set_theta_direction(-1)
+
+        self.polar_canvas = FigureCanvas(self.polar_figure)
+        self.polar_canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.polar_widget.layout().addWidget(self.polar_canvas)
+        self.polar_plot_layout.addWidget(self.polar_canvas)
+        # self.polar_widget.show()
+
+        # Format the axes
         self.mag_ax.invert_yaxis()
         self.az_ax = self.mag_ax.twiny()
-
         self.axes = [self.az_ax, self.mag_ax, self.dip_ax, self.roll_ax]
 
         self.az_ax.set_xlabel('Azimuth (°)', color='r')
@@ -112,6 +142,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         # Signals
         self.actionOpen_Geometry_File.triggered.connect(self.open_file_dialog)
+        self.actionPolar_Plot.triggered.connect(self.polar_widget.show)
 
         self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.update_plots)
@@ -298,8 +329,17 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                                        lw=0.8,
                                                        zorder=1)
 
+                # Plot the line in the polar plot
+                self.collar_az_line_p, = self.polar_ax.plot([math.radians(az) for az in collar_az], collar_depths,
+                                                            color='crimson',
+                                                            linestyle=(0, (5, 10)),
+                                                            label='Fixed Azimuth',
+                                                            lw=0.8,
+                                                            zorder=1)
+
                 # Add the lines to the legend
                 self.az_lines.append(self.collar_az_line)
+                self.polar_lines.append(self.collar_az_line_p)
                 self.az_output_combo.addItem('Fixed')
 
                 # Ensure the visibility of the lines are correct
@@ -329,8 +369,17 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                                          lw=0.8,
                                                          zorder=1)
 
+                # Plot in the polar plot
+                self.collar_dip_line_p, = self.dip_ax.plot([math.radians(dip) for dip in collar_dip], collar_depths,
+                                                           color='blue',
+                                                           linestyle=(0, (5, 10)),
+                                                           label='Fixed Dip',
+                                                           lw=0.8,
+                                                           zorder=1)
+
                 # Add the lines to the legend
                 self.dip_lines.append(self.collar_dip_line)
+                self.polar_lines.append(self.collar_dip_line_p)
                 self.dip_output_combo.addItem('Fixed')
 
                 # Ensure the visibility of the lines are correct
@@ -363,9 +412,28 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                                            label='Existing Dip',
                                                            lw=0.8,
                                                            zorder=1)
+
+                # Plot the lines in the polar plot
+                self.existing_az_line_p, = self.polar_ax.plot([math.radians(az) for az in seg_az], seg_depth,
+                                                              color='crimson',
+                                                              linestyle='-.',
+                                                              label='Existing Azimuth',
+                                                              lw=0.8,
+                                                              zorder=1)
+
+                self.existing_dip_line_p, = self.polar_ax.plot([math.radians(dip) for dip in seg_dip], seg_depth,
+                                                               color='dodgerblue',
+                                                               linestyle='-.',
+                                                               label='Existing Dip',
+                                                               lw=0.8,
+                                                               zorder=1)
+
                 # Add the lines to the legend
                 self.az_lines.append(self.existing_az_line)
                 self.dip_lines.append(self.existing_dip_line)
+                self.polar_lines.append(self.existing_az_line_p)
+                self.polar_lines.append(self.existing_dip_line_p)
+
                 self.az_output_combo.addItem('Existing')
                 self.dip_output_combo.addItem('Existing')
 
@@ -418,9 +486,21 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                                lw=0.9,
                                                zorder=1)
 
+            # Plot the information in the polar plot
+            self.tool_az_line_p, = self.polar_ax.plot([math.radians(az) for az in tool_az], stations, '-r',
+                                                      label='Tool Azimuth',
+                                                      lw=0.9,
+                                                      zorder=2)
+
+            self.tool_dip_line_p, = self.polar_ax.plot([math.radians(dip) for dip in tool_dip], stations, '-b',
+                                                       label='Tool Dip',
+                                                       lw=0.9,
+                                                       zorder=1)
+
             self.az_lines = [self.tool_az_line, self.tool_mag_line]
             self.dip_lines = [self.tool_dip_line]
             self.roll_lines = [acc_roll_line, mag_roll_line]
+            self.polar_lines = [self.tool_az_line_p, self.tool_dip_line_p]
 
             self.az_output_combo.addItem('Tool')
             self.dip_output_combo.addItem('Tool')
@@ -587,6 +667,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         """
         v = self.mag_dec_sbox.value()
         self.tool_az_line.set_data(tool_az + v, stations)
+        self.tool_az_line_p.set_data([math.radians(x + v) for x in tool_az], stations)
         self.update_plots(self.az_ax)
 
     def redraw_collar_az_line(self):
@@ -595,6 +676,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         """
         v = [self.collar_az_sbox.value()] * 2
         self.collar_az_line.set_data(v, collar_depths)
+        self.collar_az_line_p.set_data([math.radians(x) for x in v], collar_depths)
         self.update_plots(self.az_ax)
 
     def redraw_collar_dip_line(self):
@@ -603,6 +685,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         """
         v = [self.collar_dip_sbox.value()] * 2
         self.collar_dip_line.set_data(v, collar_depths)
+        self.collar_dip_line_p.set_data([math.radians(x) for x in v], collar_depths)
         self.update_plots(self.dip_ax)
 
     def toggle_az_spline(self):
@@ -637,22 +720,32 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         if self.show_tool_geom_cbox.isChecked():
             self.tool_az_line.set_visible(True)
             self.tool_dip_line.set_visible(True)
+            self.tool_az_line_p.set_visible(True)
+            self.tool_dip_line_p.set_visible(True)
             if self.tool_az_line not in self.az_lines:
                 # Add the lines back for the legend
                 self.az_lines.append(self.tool_az_line)
                 self.dip_lines.append(self.tool_dip_line)
+                self.polar_lines.append(self.tool_az_line_p)
+                self.polar_lines.append(self.tool_dip_line_p)
         else:
             self.tool_az_line.set_visible(False)
             self.tool_dip_line.set_visible(False)
+            self.tool_az_line_p.set_visible(False)
+            self.tool_dip_line_p.set_visible(False)
             # Remove the lines from the legend
             self.az_lines.remove(self.tool_az_line)
             self.dip_lines.remove(self.tool_dip_line)
+            self.polar_lines.remove(self.tool_az_line_p)
+            self.polar_lines.remove(self.tool_dip_line_p)
 
         # Update the legends
         self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
         self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+        self.update_polar_legend()
 
         self.canvas.draw_idle()
+        self.polar_canvas.draw_idle()
 
     def toggle_existing_geom(self):
         """
@@ -665,22 +758,32 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         if self.show_existing_geom_cbox.isChecked():
             self.existing_az_line.set_visible(True)
             self.existing_dip_line.set_visible(True)
+            self.existing_az_line_p.set_visible(True)
+            self.existing_dip_line_p.set_visible(True)
             if self.existing_az_line not in self.az_lines:
                 # Add the lines back for the legend
                 self.az_lines.append(self.existing_az_line)
                 self.dip_lines.append(self.existing_dip_line)
+                self.polar_lines.append(self.existing_az_line_p)
+                self.polar_lines.append(self.existing_dip_line_p)
         else:
             self.existing_az_line.set_visible(False)
             self.existing_dip_line.set_visible(False)
+            self.existing_az_line_p.set_visible(False)
+            self.existing_dip_line_p.set_visible(False)
             # Remove the lines from the legend
             self.az_lines.remove(self.existing_az_line)
             self.dip_lines.remove(self.existing_dip_line)
+            self.polar_lines.remove(self.existing_az_line_p)
+            self.polar_lines.remove(self.existing_dip_line_p)
 
         # Update the legends
         self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
         self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+        self.update_polar_legend()
 
         self.canvas.draw_idle()
+        self.polar_canvas.draw_idle()
 
     def toggle_imported_geom(self):
         """
@@ -692,22 +795,32 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         if self.show_imported_geom_cbox.isChecked():
             self.imported_az_line.set_visible(True)
             self.imported_dip_line.set_visible(True)
+            self.imported_az_line_p.set_visible(True)
+            self.imported_dip_line_p.set_visible(True)
             if self.imported_az_line not in self.az_lines:
                 # Add the lines back for the legend
                 self.az_lines.append(self.imported_az_line)
                 self.dip_lines.append(self.imported_dip_line)
+                self.polar_lines.append(self.imported_az_line_p)
+                self.polar_lines.append(self.imported_dip_line_p)
         else:
             self.imported_az_line.set_visible(False)
             self.imported_dip_line.set_visible(False)
+            self.imported_az_line_p.set_visible(False)
+            self.imported_dip_line_p.set_visible(False)
             # Remove the lines from the legend
             self.az_lines.remove(self.imported_az_line)
             self.dip_lines.remove(self.imported_dip_line)
+            self.polar_lines.remove(self.imported_az_line_p)
+            self.polar_lines.remove(self.imported_dip_line_p)
 
         # Update the legends
         self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
         self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+        self.update_polar_legend()
 
         self.canvas.draw_idle()
+        self.polar_canvas.draw_idle()
 
     def toggle_collar_az(self):
         """
@@ -715,16 +828,23 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         """
         if self.collar_az_cbox.isChecked():
             self.collar_az_line.set_visible(True)
+            self.collar_az_line_p.set_visible(True)
             if self.collar_az_line not in self.az_lines:
                 # Add the lines back for the legend
                 self.az_lines.append(self.collar_az_line)
+                self.polar_lines.append(self.collar_az_line_p)
         else:
             self.collar_az_line.set_visible(False)
+            self.collar_az_line_p.set_visible(False)
             self.az_lines.remove(self.collar_az_line)
+            self.polar_lines.remove(self.collar_az_line_p)
 
         # Update the legends
         self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
+        self.update_polar_legend()
+
         self.canvas.draw_idle()
+        self.polar_canvas.draw_idle()
 
     def toggle_collar_dip(self):
         """
@@ -732,16 +852,23 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         """
         if self.collar_dip_cbox.isChecked():
             self.collar_dip_line.set_visible(True)
+            self.collar_dip_line_p.set_visible(True)
             if self.collar_dip_line not in self.dip_lines:
                 # Add the lines back for the legend
                 self.dip_lines.append(self.collar_dip_line)
+                self.polar_lines.append(self.collar_dip_line_p)
         else:
             self.collar_dip_line.set_visible(False)
+            self.collar_dip_line_p.set_visible(False)
             self.dip_lines.remove(self.collar_dip_line)
+            self.polar_lines.remove(self.collar_dip_line_p)
 
         # Update the legends
         self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+        self.update_polar_legend()
+
         self.canvas.draw_idle()
+        self.polar_canvas.draw_idle()
 
     def toggle_mag(self):
         """
@@ -874,14 +1001,27 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             axes = self.axes
 
         for ax in axes:
+            # Update the legends
             if ax == self.az_ax:
                 self.az_ax.legend(self.az_lines, [l.get_label() for l in self.az_lines])
             elif ax == self.dip_ax:
                 self.dip_ax.legend(self.dip_lines, [l.get_label() for l in self.dip_lines])
+
             ax.relim()
             ax.autoscale_view()
 
+        self.update_polar_legend()
+
         self.canvas.draw_idle()
+        self.polar_canvas.draw()
+
+    def update_polar_legend(self):
+        # Update the legend of the polar plot
+        angle = np.deg2rad(0)
+        self.polar_ax.legend(self.polar_lines, [l.get_label() for l in self.polar_lines],
+                             loc="lower left",
+                             bbox_to_anchor=(0.5 + np.cos(angle) / 2, 0.9 + np.sin(angle) / 2)
+                             )
 
 
 if __name__ == '__main__':
@@ -891,14 +1031,12 @@ if __name__ == '__main__':
 
     pg = PEMGetter()
     parser = PEMParser()
-    # files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
     # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
-    files = parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\with marks.PEM')
-    dad = r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\RADTool dad.dad'
 
     win = PEMGeometry()
     win.open(files)
-    win.open_dad_file(dad)
+    # win.open_dad_file(dad)
     # win.az_output_combo.setCurrentIndex(1)
     # win.dip_output_combo.setCurrentIndex(1)
     # win.add_dad(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\BR01.dad')
