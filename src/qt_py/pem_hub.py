@@ -821,8 +821,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 gps_obj = piw_widget.get_line()
             elif obj_str == 'collar':
                 gps_obj = piw_widget.get_collar()
-            else:
+            elif obj_str == 'segments':
                 gps_obj = piw_widget.get_segments()
+            else:
+                obj_str = 'all'
 
             self.open_gps_share(gps_obj, piw_widget)
 
@@ -832,62 +834,64 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 # Create all the actions
                 # Remove, open, and save PEM files
-                remove_file_action = QAction("&Remove", self)
+                remove_file_action = QAction("Remove", self)
                 remove_file_action.triggered.connect(self.remove_file)
                 remove_file_action.setIcon(QIcon(os.path.join(icons_path, 'remove.png')))
-                open_file_action = QAction("&Open", self)
+                open_file_action = QAction("Open", self)
                 open_file_action.triggered.connect(self.open_in_text_editor)
                 open_file_action.setIcon(QIcon(os.path.join(icons_path, 'txt_file.png')))
-                save_file_action = QAction("&Save", self)
+                save_file_action = QAction("Save", self)
                 save_file_action.setIcon(QIcon(os.path.join(icons_path, 'save.png')))
                 save_file_action.triggered.connect(lambda: self.save_pem_files(selected=True))
-                export_pem_action = QAction("&Export...", self)
+                export_pem_action = QAction("Export...", self)
                 export_pem_action.setIcon(QIcon(os.path.join(icons_path, 'export.png')))
                 export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True, processed=False))
-                save_file_as_action = QAction("&Save As...", self)
+                save_file_as_action = QAction("Save As...", self)
                 save_file_as_action.setIcon(QIcon(os.path.join(icons_path, 'save_as.png')))
                 save_file_as_action.triggered.connect(self.save_pem_file_as)
 
                 # View channel table
-                action_view_channels = QAction("&Channel Table", self)
+                action_view_channels = QAction("Channel Table", self)
                 action_view_channels.triggered.connect(self.open_channel_table_viewer)
 
                 # Merge PEM files
-                merge_action = QAction("&Merge", self)
+                merge_action = QAction("Merge", self)
                 merge_action.setIcon(QIcon(os.path.join(icons_path, 'pem_merger.png')))
                 merge_action.triggered.connect(self.open_pem_merger)
 
                 # Print PDFs
-                print_plots_action = QAction("&Print Plots", self)
+                print_plots_action = QAction("Print Plots", self)
                 print_plots_action.setIcon(QIcon(os.path.join(icons_path, 'pdf.png')))
                 print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected_files=True))
 
                 # Extract stations
-                extract_stations_action = QAction("&Extract Stations", self)
+                extract_stations_action = QAction("Extract Stations", self)
                 extract_stations_action.setIcon(QIcon(os.path.join(icons_path, 'station_splitter.png')))
                 extract_stations_action.triggered.connect(
                     lambda: self.station_splitter.open(selected_pems[0]))
 
                 # Magnetic declination calculator
-                calc_mag_dec_action = QAction("&Magnetic Declination", self)
+                calc_mag_dec_action = QAction("Magnetic Declination", self)
                 calc_mag_dec_action.setIcon(QIcon(os.path.join(icons_path, 'mag_field.png')))
                 calc_mag_dec_action.triggered.connect(lambda: self.open_mag_dec(selected_pems[0]))
 
                 # View GPS
-                view_loop_action = QAction("&Loop GPS", self)
+                view_loop_action = QAction("Loop GPS", self)
                 view_loop_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].edit_loop())
-                view_line_action = QAction("&Line GPS", self)
+                view_line_action = QAction("Line GPS", self)
                 view_line_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].edit_line())
 
                 # Share GPS
-                share_loop_action = QAction("&Loop GPS", self)
+                share_loop_action = QAction("Loop GPS", self)
                 share_loop_action.triggered.connect(lambda: share_gps('loop'))
-                share_line_action = QAction("&Line GPS", self)
+                share_line_action = QAction("Line GPS", self)
                 share_line_action.triggered.connect(lambda: share_gps('line'))
-                share_collar_action = QAction("&Collar GPS", self)
+                share_collar_action = QAction("Collar GPS", self)
                 share_collar_action.triggered.connect(lambda: share_gps('collar'))
-                share_segments_action = QAction("&Segments", self)
+                share_segments_action = QAction("Segments", self)
                 share_segments_action.triggered.connect(lambda: share_gps('segments'))
+                share_all_action = QAction("All", self)
+                share_all_action.triggered.connect(lambda: share_gps('all'))
 
                 # self.table.view_3d_section_action = QAction("&View 3D Section", self)
                 # self.table.view_3d_section_action.setIcon(QIcon(os.path.join(icons_path, 'section_3d.png')))
@@ -899,16 +903,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 open_plot_editor_action.setIcon(QIcon(os.path.join(icons_path, 'plot_editor.png')))
 
                 # Data editing/processing
-                average_action = QAction("&Average", self)
+                average_action = QAction("Average", self)
                 average_action.triggered.connect(lambda: self.average_pem_data(selected=True))
                 average_action.setIcon(QIcon(os.path.join(icons_path, 'average.png')))
-                split_action = QAction("&Split Channels", self)
+                split_action = QAction("Split Channels", self)
                 split_action.triggered.connect(lambda: self.split_pem_channels(selected=True))
                 split_action.setIcon(QIcon(os.path.join(icons_path, 'split.png')))
-                scale_current_action = QAction("&Scale Current", self)
+                scale_current_action = QAction("Scale Current", self)
                 scale_current_action.triggered.connect(lambda: self.scale_pem_current(selected=True))
                 scale_current_action.setIcon(QIcon(os.path.join(icons_path, 'current.png')))
-                scale_ca_action = QAction("&Scale Coil Area", self)
+                scale_ca_action = QAction("Scale Coil Area", self)
                 scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
                 scale_ca_action.setIcon(QIcon(os.path.join(icons_path, 'coil.png')))
 
@@ -924,19 +928,19 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     lambda: self.reverse_component_data(comp='Z', selected=True))
 
                 # Derotation
-                derotate_action = QAction("&De-rotate XY", self)
+                derotate_action = QAction("De-rotate XY", self)
                 derotate_action.triggered.connect(self.open_derotator)
                 derotate_action.setIcon(QIcon(os.path.join(icons_path, 'derotate.png')))
 
                 # Borehole geometry
-                get_geometry_action = QAction("&Geometry", self)
+                get_geometry_action = QAction("Geometry", self)
                 get_geometry_action.triggered.connect(self.open_pem_geometry)
                 get_geometry_action.setIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
 
                 # Rename lines and files
-                rename_lines_action = QAction("&Rename Lines/Holes", self)
+                rename_lines_action = QAction("Rename Lines/Holes", self)
                 rename_lines_action.triggered.connect(lambda: self.open_name_editor('Line', selected=True))
-                rename_files_action = QAction("&Rename Files", self)
+                rename_files_action = QAction("Rename Files", self)
                 rename_files_action.triggered.connect(lambda: self.open_name_editor('File', selected=True))
 
                 # Create a menu
@@ -1002,6 +1006,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                             share_collar_action.setDisabled(True)
                         if not pem_file.has_geometry():
                             share_segments_action.setDisabled(True)
+
+                    share_menu.addSeparator()
+                    share_menu.addAction(share_all_action)
+                    if not pem_file.has_any_gps():
+                        share_all_action.setDisabled(True)
                 else:
                     menu.addAction(export_pem_action)
 
@@ -1983,40 +1992,68 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             """
             pem_info_widgets = np.array(piws)[mask]  # Filtered PIWs
 
-            if isinstance(gps_object, TransmitterLoop):
+            if gps_object == 'all':
+                # Share each GPS object
                 for widget in pem_info_widgets:
-                    widget.fill_gps_table(gps_object.df, widget.loop_table)
-                    widget.gps_object_changed(widget.loop_table, refresh=True)
+                    # Share the collar and segments if the source is a borehole
+                    if source_widget.pem_file.is_borehole():
+                        widget.fill_gps_table(source_widget.get_collar(), widget.collar_table)
+                        widget.fill_gps_table(source_widget.get_segments(), widget.segments_table)
+                        widget.gps_object_changed(widget.collar_table, refresh=False)
+                        widget.gps_object_changed(widget.segments_table, refresh=False)
+                    # Share the line GPS if it's a surface line
+                    else:
+                        widget.fill_gps_table(source_widget.get_line(), widget.line_table)
+                        widget.gps_object_changed(widget.line_table, refresh=False)
+
+                    # Share the loop
+                    widget.fill_gps_table(source_widget.get_loop(), widget.loop_table)
+                    widget.gps_object_changed(widget.loop_table, refresh=True)  # Only refresh at the end
+
+            else:
+                if isinstance(gps_object, TransmitterLoop):
+                    for widget in pem_info_widgets:
+                        widget.fill_gps_table(gps_object.df, widget.loop_table)
+                        widget.gps_object_changed(widget.loop_table, refresh=True)
+
+                elif isinstance(gps_object, SurveyLine):
+                    for widget in pem_info_widgets:
+                        widget.fill_gps_table(gps_object.df, widget.line_table)
+                        widget.gps_object_changed(widget.line_table, refresh=True)
+
+                elif isinstance(gps_object, BoreholeCollar):
+                    for widget in pem_info_widgets:
+                        widget.fill_gps_table(gps_object.df, widget.collar_table)
+                        widget.gps_object_changed(widget.collar_table, refresh=True)
+
+                elif isinstance(gps_object, BoreholeSegments):
+                    for widget in pem_info_widgets:
+                        widget.fill_gps_table(gps_object.df, widget.segments_table)
+                        widget.gps_object_changed(widget.segments_table, refresh=True)
+
+        if gps_object == 'all':
+            survey_type = source_widget.pem_file.get_survey_type()
+            # Filter PEM files to only include the same survey type as the selected file.
+            pem_files, piws = zip(*filter(lambda x: x.get_survey_type() == survey_type,
+                                          zip(self.pem_files, self.pem_info_widgets)))
+        else:
+            # Filter the PEM Files and PIWs based on the GPS object
+            if isinstance(gps_object, TransmitterLoop):
+                pem_files, piws = self.pem_files, self.pem_info_widgets
 
             elif isinstance(gps_object, SurveyLine):
-                for widget in pem_info_widgets:
-                    widget.fill_gps_table(gps_object.df, widget.line_table)
-                    widget.gps_object_changed(widget.line_table, refresh=True)
+                pem_files, piws = zip(*filter(lambda x: not x[0].is_borehole(),
+                                              zip(self.pem_files, self.pem_info_widgets)))
 
             elif isinstance(gps_object, BoreholeCollar):
-                for widget in pem_info_widgets:
-                    widget.fill_gps_table(gps_object.df, widget.collar_table)
-                    widget.gps_object_changed(widget.collar_table, refresh=True)
+                pem_files, piws = zip(*filter(lambda x: x[0].is_borehole(),
+                                              zip(self.pem_files, self.pem_info_widgets)))
 
             elif isinstance(gps_object, BoreholeSegments):
-                for widget in pem_info_widgets:
-                    widget.fill_gps_table(gps_object.df, widget.segments_table)
-                    widget.gps_object_changed(widget.segments_table, refresh=True)
-
-        # Filter the PEM Files and PIWs based on the GPS object
-        if isinstance(gps_object, TransmitterLoop):
-            pem_files, piws = self.pem_files, self.pem_info_widgets
-
-        elif isinstance(gps_object, SurveyLine):
-            pem_files, piws = zip(*filter(lambda x: not x[0].is_borehole(), zip(self.pem_files, self.pem_info_widgets)))
-
-        elif isinstance(gps_object, BoreholeCollar):
-            pem_files, piws = zip(*filter(lambda x: x[0].is_borehole(), zip(self.pem_files, self.pem_info_widgets)))
-
-        elif isinstance(gps_object, BoreholeSegments):
-            pem_files, piws = zip(*filter(lambda x: x[0].is_borehole(), zip(self.pem_files, self.pem_info_widgets)))
-        else:
-            pem_files = []
+                pem_files, piws = zip(*filter(lambda x: x[0].is_borehole(),
+                                              zip(self.pem_files, self.pem_info_widgets)))
+            else:
+                pem_files = []
 
         source_index = piws.index(source_widget)
 
@@ -4078,6 +4115,7 @@ def main():
     # ff = PathFilter()
     # ff.show()
 
+    mw.show()
     pem_files = [r'C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.DMP2']
     # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
@@ -4100,8 +4138,6 @@ def main():
     #
     # mw.pem_list_filter.exclude_folders_edit.setText('backup')
     # mw.pem_list_filter.accept_sig.emit()
-
-    mw.show()
 
     app.exec_()
 
