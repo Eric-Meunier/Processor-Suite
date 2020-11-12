@@ -836,17 +836,42 @@ class MapPlotter:
             # Add the hole label at the collar
             if label:
                 if pem_file.has_geometry():
-                    angle = math.degrees(math.atan2(projection.iloc[-1]['Northing'] - projection.iloc[0]['Northing'],
-                                                    projection.iloc[-1]['Easting'] - projection.iloc[-1]['Easting']))
+                    azimuth = pem_file.get_segments().iloc[0].Azimuth
                 else:
-                    angle = 0
-                align = 'left' if angle > 90 or angle < -90 else 'right'
-                collar_label = ax.text(collar_x, collar_y, f"  {pem_file.line_name}  ",
-                                       va='center',
-                                       ha=align,
-                                       color=color,
-                                       zorder=5,
-                                       path_effects=self.label_buffer)
+                    azimuth = 0
+
+                vo = 0  # Vertical offset for when the label is placed beneath the collar
+                ho = 0  # Horizontal offset
+                if 0 <= azimuth < 45:
+                    ha = 'center'
+                    va = 'top'
+                elif 45 <= azimuth < 135:
+                    ha = 'right'
+                    ho = -6
+                    va = 'center'
+                elif 135 <= azimuth < 225:
+                    ha = 'center'
+                    va = 'bottom'
+                elif 225 < azimuth < 315:
+                    ha = 'left'
+                    ho = 6
+                    va = 'center'
+                else:
+                    ha = 'center'
+                    va = 'top'
+                    vo = -6
+
+                if 45 < azimuth < 225:
+                   pass
+
+                collar_label = ax.annotate(f"{pem_file.line_name}", (collar_x, collar_y),
+                                           xytext=(ho, vo),
+                                           textcoords='offset points',
+                                           ha=ha,
+                                           va=va,
+                                           color=color,
+                                           zorder=5,
+                                           path_effects=self.label_buffer)
 
             if not projection.empty and plot_trace:
                 seg_x, seg_y = projection['Easting'].to_numpy(), projection['Northing'].to_numpy()
@@ -3799,7 +3824,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Kazzinc', number=1)
+    pem_files = pem_getter.get_pems(client='PEM Rotation', file='_PU-340 XY.PEM')
 
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
