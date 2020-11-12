@@ -33,6 +33,8 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 
+# TODO Add tool that shows difference in tool rotation value and PP
+
 
 class Derotator(QMainWindow, Ui_Derotator):
     """
@@ -272,8 +274,8 @@ class Derotator(QMainWindow, Ui_Derotator):
             if response == self.message.No:
                 return
 
-        # Disable the EXE PP de-rotation button until we know it works correctly.
-        if self.pem_file.has_loop_gps() and self.pem_file.has_geometry() and not getattr(sys, 'frozen', False):
+        # Disable PP de-rotation if it's lacking all necessary GPS
+        if self.pem_file.has_loop_gps() and self.pem_file.has_geometry():
             self.pp_btn.setEnabled(True)
         else:
             self.pp_btn.setEnabled(False)
@@ -530,8 +532,8 @@ def main():
 
     pg = PEMGetter()
     parser = PEMParser()
-    # pem_files = pg.get_pems(client='PEM Rotation', file='PU-340 XY.PEM')
-    pem_files = parser.parse(r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\RAW\ddh5-01-38 flux_30.PEM')
+    pem_files = pg.get_pems(client='PEM Rotation', file='SAN-0246-19 PP (Cross).PEM')
+    # pem_files = parser.parse(r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\RAW\ddh5-01-38 flux_30.PEM')
     mw.open(pem_files)
 
     # mw.export_stats()

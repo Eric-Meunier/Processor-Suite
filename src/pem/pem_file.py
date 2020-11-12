@@ -479,7 +479,7 @@ class PEMFile:
         data = self.data[comp_filt]
 
         if not incl_deleted:
-            data = data[~data.Deleted]
+            data = data[~data.Deleted.astype(bool)]
 
         if ontime is False:
             data.Reading = data.Reading.map(lambda x: x[~self.channel_times.Remove.astype(bool)])
@@ -3179,7 +3179,7 @@ if __name__ == '__main__':
     dparser = DMPParser()
     pemparser = PEMParser()
     pem_g = PEMGetter()
-    # pem_file = pem_g.get_pems(client='PEM Rotation', file='BX-081.PEM')[0]
+    pem_file = pem_g.get_pems(client='PEM Rotation', file='BX-081 PP (Cross).PEM')[0]
     # pem_file = pem_g.get_pems(client='Kazzinc', number=1)[0]
     # pem_file.to_xyz()
     # prep_pem, _ = pem_file.prep_rotation()
@@ -3187,7 +3187,7 @@ if __name__ == '__main__':
     # rotated_pem = prep_pem.rotate('pp')
 
     # pem_file = pemparser.parse(r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\RAW\XY29_29.PEM')
-    pem_file = dparser.parse(r'C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\xy03_03.DMP')
+    # pem_file = dparser.parse(r'C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\xy03_03.DMP')
     # pem_file = dparser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.dmp2')
     # pem_file.save(legacy=True)
 

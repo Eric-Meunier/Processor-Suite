@@ -824,7 +824,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             elif obj_str == 'segments':
                 gps_obj = piw_widget.get_segments()
             else:
-                obj_str = 'all'
+                gps_obj = 'all'
 
             self.open_gps_share(gps_obj, piw_widget)
 
@@ -1992,49 +1992,82 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             """
             pem_info_widgets = np.array(piws)[mask]  # Filtered PIWs
 
-            if gps_object == 'all':
+            bar = CustomProgressBar()
+            bar.setMaximum(len(pem_files))
+
+            with pg.ProgressDialog('Sharing GPS...', 0, len(pem_info_widgets)) as dlg:
+                dlg.setBar(bar)
+                dlg.setWindowTitle('Sharing GPS')
+
                 # Share each GPS object
-                for widget in pem_info_widgets:
-                    # Share the collar and segments if the source is a borehole
-                    if source_widget.pem_file.is_borehole():
-                        widget.fill_gps_table(source_widget.get_collar(), widget.collar_table)
-                        widget.fill_gps_table(source_widget.get_segments(), widget.segments_table)
-                        widget.gps_object_changed(widget.collar_table, refresh=False)
-                        widget.gps_object_changed(widget.segments_table, refresh=False)
-                    # Share the line GPS if it's a surface line
-                    else:
-                        widget.fill_gps_table(source_widget.get_line(), widget.line_table)
-                        widget.gps_object_changed(widget.line_table, refresh=False)
-
-                    # Share the loop
-                    widget.fill_gps_table(source_widget.get_loop(), widget.loop_table)
-                    widget.gps_object_changed(widget.loop_table, refresh=True)  # Only refresh at the end
-
-            else:
-                if isinstance(gps_object, TransmitterLoop):
+                if gps_object == 'all':
                     for widget in pem_info_widgets:
-                        widget.fill_gps_table(gps_object.df, widget.loop_table)
-                        widget.gps_object_changed(widget.loop_table, refresh=True)
+                        if dlg.wasCanceled():
+                            break
+                        dlg.setLabelText(f"Setting GPS of {widget.pem_file.filepath.name}")
 
-                elif isinstance(gps_object, SurveyLine):
-                    for widget in pem_info_widgets:
-                        widget.fill_gps_table(gps_object.df, widget.line_table)
-                        widget.gps_object_changed(widget.line_table, refresh=True)
+                        # Share the collar and segments if the source is a borehole
+                        if source_widget.pem_file.is_borehole():
+                            widget.fill_gps_table(source_widget.get_collar().df, widget.collar_table)
+                            widget.fill_gps_table(source_widget.get_segments().df, widget.segments_table)
+                            widget.gps_object_changed(widget.collar_table, refresh=False)
+                            widget.gps_object_changed(widget.segments_table, refresh=False)
+                        # Share the line GPS if it's a surface line
+                        else:
+                            widget.fill_gps_table(source_widget.get_line().df, widget.line_table)
+                            widget.gps_object_changed(widget.line_table, refresh=False)
 
-                elif isinstance(gps_object, BoreholeCollar):
-                    for widget in pem_info_widgets:
-                        widget.fill_gps_table(gps_object.df, widget.collar_table)
-                        widget.gps_object_changed(widget.collar_table, refresh=True)
+                        # Share the loop
+                        widget.fill_gps_table(source_widget.get_loop().df, widget.loop_table)
+                        widget.gps_object_changed(widget.loop_table, refresh=True)  # Only refresh at the end
+                        dlg += 1
 
-                elif isinstance(gps_object, BoreholeSegments):
-                    for widget in pem_info_widgets:
-                        widget.fill_gps_table(gps_object.df, widget.segments_table)
-                        widget.gps_object_changed(widget.segments_table, refresh=True)
+                else:
+                    # Detect what kind of GPS object is being shared and share that object.
+                    if isinstance(gps_object, TransmitterLoop):
+                        for widget in pem_info_widgets:
+                            if dlg.wasCanceled():
+                                break
+                            dlg.setLabelText(f"Setting GPS of {widget.pem_file.filepath.name}")
+
+                            widget.fill_gps_table(gps_object.df, widget.loop_table)
+                            widget.gps_object_changed(widget.loop_table, refresh=True)
+                            dlg += 1
+
+                    elif isinstance(gps_object, SurveyLine):
+                        for widget in pem_info_widgets:
+                            if dlg.wasCanceled():
+                                break
+                            dlg.setLabelText(f"Setting GPS of {widget.pem_file.filepath.name}")
+
+                            widget.fill_gps_table(gps_object.df, widget.line_table)
+                            widget.gps_object_changed(widget.line_table, refresh=True)
+                            dlg += 1
+
+                    elif isinstance(gps_object, BoreholeCollar):
+                        for widget in pem_info_widgets:
+                            if dlg.wasCanceled():
+                                break
+                            dlg.setLabelText(f"Setting GPS of {widget.pem_file.filepath.name}")
+
+                            widget.fill_gps_table(gps_object.df, widget.collar_table)
+                            widget.gps_object_changed(widget.collar_table, refresh=True)
+                            dlg += 1
+
+                    elif isinstance(gps_object, BoreholeSegments):
+                        for widget in pem_info_widgets:
+                            if dlg.wasCanceled():
+                                break
+                            dlg.setLabelText(f"Setting GPS of {widget.pem_file.filepath.name}")
+
+                            widget.fill_gps_table(gps_object.df, widget.segments_table)
+                            widget.gps_object_changed(widget.segments_table, refresh=True)
+                            dlg += 1
 
         if gps_object == 'all':
-            survey_type = source_widget.pem_file.get_survey_type()
+            is_borehole = source_widget.pem_file.is_borehole()
             # Filter PEM files to only include the same survey type as the selected file.
-            pem_files, piws = zip(*filter(lambda x: x.get_survey_type() == survey_type,
+            pem_files, piws = zip(*filter(lambda x: x[0].is_borehole() == is_borehole,
                                           zip(self.pem_files, self.pem_info_widgets)))
         else:
             # Filter the PEM Files and PIWs based on the GPS object
@@ -4123,11 +4156,11 @@ def main():
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='Minera', number=1)
-    # pem_files = pg.get_pems(random=True, number=1)
+    pem_files = pg.get_pems(random=True, number=10)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
-    mw.open_dmp_files(pem_files)
-    # mw.open_pem_files(pem_files)
+    # mw.open_dmp_files(pem_files)
+    mw.open_pem_files(pem_files)
     # mw.open_mag_dec(mw.pem_files[0])
 
     # mw.project_dir_edit.setText(r'C:\_Data\2020\Juno\Borehole')

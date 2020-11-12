@@ -1006,7 +1006,9 @@ class MapPlotter:
     def set_size(ax, figure, crs):
         """
         Re-size the extents to make the axes 11" by 8.5"
+        :param ax: Matplotlib Axes object
         :param figure: Matplotlib Figure object
+        :param crs: CRS of the map
         """
         bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
         xmin, xmax, ymin, ymax = ax.get_extent()
@@ -1016,8 +1018,8 @@ class MapPlotter:
 
         if current_ratio < (bbox.width / bbox.height):
             new_height = map_height
-            new_width = new_height * (
-                    bbox.width / bbox.height)  # Set the new width to be the correct ratio larger than height
+            # Set the new width to be the correct ratio larger than height
+            new_width = new_height * (bbox.width / bbox.height)
 
         else:
             new_width = map_width
@@ -1025,6 +1027,7 @@ class MapPlotter:
 
         x_offset = 0
         y_offset = 0.06 * new_height
+        # y_offset = 0.07 * new_height
         new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
         new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
         new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
@@ -1036,19 +1039,25 @@ class MapPlotter:
     def set_scale(ax, figure, crs):
         """
         Changes the extent of the plot such that the scale is an acceptable value.
-        :return: None
+        :param ax: Matplotlib Axes object
+        :param figure: Matplotlib Figure object
+        :param crs: CRS of the map
         """
 
         def get_scale_factor():
+            """Return an appropriate scale for the map."""
             # num_digit = len(str(int(current_scale)))  # number of digits in number
             num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
             scale_nums = [1., 1.25, 1.5, 2., 2.5, 5.]
             possible_scales = [num * 10 ** num_digit for num in
                                scale_nums + list(map(lambda x: x * 10, scale_nums))]
-            new_scale = min(filter(lambda x: x > current_scale * 1.30, possible_scales),
-                            key=lambda x: x - current_scale * 1.30)
+
+            # Calculate the new scale using a 40 % buffer
+            new_scale = min(filter(lambda x: x > current_scale * 1.40, possible_scales),
+                            key=lambda x: x - current_scale * 1.40)
             if new_scale == 1500:
                 new_scale = 2000
+
             scale_factor = new_scale / current_scale
             return scale_factor, new_scale
 
@@ -1135,6 +1144,17 @@ class PlanMap(MapPlotter):
 
         self.pem_files = pem_files
         self.crs = crs
+        # Get the units of the GPS of each file
+        gps_units = np.array([f.get_gps_units() for f in self.pem_files])
+        # Remove None values
+        gps_units = np.unique(gps_units[gps_units != np.array(None)])
+        # Make sure all GPS units are the same
+        if len(gps_units) > 1:
+            raise ValueError(f"A mix of GPS units was passed.")
+        elif not gps_units:
+            raise ValueError(f"No GPS units were found.")
+        else:
+            self.gps_units = gps_units[0]
 
         self.loops = []
         self.loop_names = []
@@ -1186,7 +1206,7 @@ class PlanMap(MapPlotter):
                 logger.warning(
                     f"{pem_file.filepath.name} is not the correct survey type: {pem_file.get_survey_type()} vs "
                     f"{survey_type}")
-                self.pem_files.pop(pem_file)
+                self.pem_files.remove(pem_file)
                 break
 
             # Plot the surface lines
@@ -1418,10 +1438,12 @@ class PlanMap(MapPlotter):
         self.ax.yaxis.set_visible(True)
         self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
         if 'UTM' in self.crs.name:
-            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m'))
-            self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m'))
-            # self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
-            # self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
+            if self.gps_units == 'm':
+                self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} N'))
+                self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} E'))
+            elif self.gps_units == 'ft':
+                self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}ft N'))
+                self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}ft E'))
         self.ax.xaxis.set_ticks_position('top')
         plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
         plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
@@ -3776,7 +3798,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='Nantou', file='PUX-021 XYT.PEM')
+    pem_files = pem_getter.get_pems(random=True, number=6)
 
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
@@ -3784,7 +3806,7 @@ if __name__ == '__main__':
 
     map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
     map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
-    map_plot.show()
+    plt.show()
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
     # fig = plt.figure(figsize=(8.5, 11), dpi=100)
