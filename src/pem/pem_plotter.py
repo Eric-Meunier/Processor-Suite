@@ -1003,15 +1003,16 @@ class MapPlotter:
                 zorder=9)
 
     @staticmethod
-    def set_size(ax, figure, crs):
+    def set_size(ax, figure):
         """
         Re-size the extents to make the axes 11" by 8.5"
         :param ax: Matplotlib Axes object
         :param figure: Matplotlib Figure object
-        :param crs: CRS of the map
         """
         bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
-        xmin, xmax, ymin, ymax = ax.get_extent()
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        # xmin, xmax, ymin, ymax = ax.get_extent()
         map_width, map_height = xmax - xmin, ymax - ymin
 
         current_ratio = map_width / map_height
@@ -1027,21 +1028,21 @@ class MapPlotter:
 
         x_offset = 0
         y_offset = 0.06 * new_height
-        # y_offset = 0.07 * new_height
         new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
         new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
         new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
         new_ymax = (ymax + y_offset) + ((new_height - map_height) / 2)
 
-        ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=crs)
+        ax.set_xlim(new_xmin, new_xmax)
+        ax.set_ylim(new_ymin, new_ymax)
+        # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=crs)
 
     @staticmethod
-    def set_scale(ax, figure, crs):
+    def set_scale(ax, figure):
         """
         Changes the extent of the plot such that the scale is an acceptable value.
         :param ax: Matplotlib Axes object
         :param figure: Matplotlib Figure object
-        :param crs: CRS of the map
         """
 
         def get_scale_factor():
@@ -1061,7 +1062,9 @@ class MapPlotter:
             scale_factor = new_scale / current_scale
             return scale_factor, new_scale
 
-        xmin, xmax, ymin, ymax = ax.get_extent()
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        # xmin, xmax, ymin, ymax = ax.get_extent()
         map_width, map_height = xmax - xmin, ymax - ymin
         bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
         current_scale = map_width / (bbox.width * .0254)
@@ -1074,7 +1077,9 @@ class MapPlotter:
         new_ymin = ymin - ((new_map_height - map_height) / 2)
         new_ymax = ymax + ((new_map_height - map_height) / 2)
 
-        ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=crs)
+        ax.set_xlim(new_xmin, new_xmax)
+        ax.set_ylim(new_ymin, new_ymax)
+        # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=crs)
         return new_map_scale
 
     @staticmethod
@@ -1153,8 +1158,6 @@ class PlanMap(MapPlotter):
             raise ValueError(f"A mix of GPS units was passed.")
         elif not gps_units:
             raise ValueError(f"No GPS units were found.")
-        else:
-            self.gps_units = gps_units[0]
 
         self.loops = []
         self.loop_names = []
@@ -1188,11 +1191,13 @@ class PlanMap(MapPlotter):
 
         assert self.crs, 'No CRS'
 
-        if self.crs.is_projected:
-            self.map_crs = ccrs.epsg(self.crs.to_epsg())
-        else:
-            self.map_crs = ccrs.PlateCarree()
-        self.ax = self.figure.add_subplot(projection=self.map_crs)
+        # When using Cartopy. Disabled for now since it doesn't support North arrows and UTM gridline labels
+        # if self.crs.is_projected:
+        #     self.map_crs = ccrs.epsg(self.crs.to_epsg())
+        # else:
+        #     self.map_crs = ccrs.PlateCarree()
+        # self.ax = self.figure.add_subplot(projection=self.map_crs)
+        self.ax = self.figure.add_subplot()
 
     def plot(self):
         """
@@ -1387,16 +1392,14 @@ class PlanMap(MapPlotter):
         self.figure.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.95)
 
         # Resize the figure to be 11" x 8.5"
-        self.set_size(self.ax, self.figure, self.map_crs)
+        self.set_size(self.ax, self.figure)
 
         # Calculate and set the scale of the map
-        self.map_scale = self.set_scale(self.ax, self.figure, self.map_crs)
+        self.map_scale = self.set_scale(self.ax, self.figure)
 
         # Add the grid
         if self.draw_grid:
-            # self.ax.grid(True)
-            # self.ax.gridlines(crs=self.map_crs, x_inline=True)
-            self.ax.grid(linestyle='dotted', zorder=0)
+            self.ax.grid(True, linestyle='dotted', zorder=0)
         else:
             self.ax.grid(False)
 
@@ -1438,12 +1441,10 @@ class PlanMap(MapPlotter):
         self.ax.yaxis.set_visible(True)
         self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
         if 'UTM' in self.crs.name:
-            if self.gps_units == 'm':
-                self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} N'))
-                self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} E'))
-            elif self.gps_units == 'ft':
-                self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}ft N'))
-                self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}ft E'))
+            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
+            self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
+        else:
+            raise NotImplemented(f"{self.crs.name} is not currently supported for map creation.")
         self.ax.xaxis.set_ticks_position('top')
         plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
         plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
@@ -3798,7 +3799,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(random=True, number=6)
+    pem_files = pem_getter.get_pems(client='Kazzinc', number=1)
 
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
