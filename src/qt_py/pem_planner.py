@@ -57,6 +57,8 @@ pg.setConfigOption('crashWarning', True)
 default_color = (0, 0, 0, 150)
 selection_color = '#1976D2'
 
+# TODO add feature to import loop with corner coordinates (and disable width and height).
+
 
 class SurveyPlanner(QMainWindow):
     """

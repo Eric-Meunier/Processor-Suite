@@ -15,6 +15,21 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="spacing">
+     <number>3</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item>
      <widget class="QFrame" name="frame">
       <property name="sizePolicy">
@@ -477,6 +492,12 @@
            <widget class="QDoubleSpinBox" name="soa_sbox_1">
             <property name="enabled">
              <bool>false</bool>
+            </property>
+            <property name="minimum">
+             <double>-99.000000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>99.000000000000000</double>
             </property>
            </widget>
           </item>
@@ -999,6 +1020,12 @@
           </item>
           <item row="1" column="1">
            <widget class="QDoubleSpinBox" name="current_sbox_2">
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
             <property name="suffix">
              <string>A</string>
             </property>
@@ -1059,6 +1086,12 @@
            <widget class="QDoubleSpinBox" name="soa_sbox_2">
             <property name="enabled">
              <bool>false</bool>
+            </property>
+            <property name="minimum">
+             <double>-99.000000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>99.000000000000000</double>
             </property>
            </widget>
           </item>

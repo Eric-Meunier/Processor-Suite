@@ -352,10 +352,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                     try:
                         os.rename(str(old_path), str(new_path))
-                    except OSError:
+                    except Exception as e:
                         # Keep the old name if the new file name already exists
-                        logger.error(f"{new_path.name} already exists.")
-                        self.message.critical(self, 'File Error', f"{new_path.name} already exists.")
+                        logger.error(f"{e}.")
+                        self.message.critical(self, 'File Error', f"{e}.")
                         item = QTableWidgetItem(str(old_path.name))
                         item.setTextAlignment(QtCore.Qt.AlignCenter)
                         self.table.setItem(row, col, item)
@@ -898,9 +898,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # self.table.view_3d_section_action.triggered.connect(self.show_section_3d_viewer)
 
                 # Plot editor
-                open_plot_editor_action = QAction("&Plot", self)
+                open_plot_editor_action = QAction("Plot", self)
                 open_plot_editor_action.triggered.connect(self.open_pem_plot_editor)
                 open_plot_editor_action.setIcon(QIcon(os.path.join(icons_path, 'plot_editor.png')))
+
+                # Quick Map
+                open_quick_map_action = QAction("Quick Map", self)
+                open_quick_map_action.triggered.connect(lambda: self.open_quick_map(selected=True))
+                open_quick_map_action.setIcon(QIcon(os.path.join(icons_path, 'gps_viewer.png')))
 
                 # Data editing/processing
                 average_action = QAction("Average", self)
@@ -1017,6 +1022,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 menu.addSeparator()
                 # Plot
                 menu.addAction(open_plot_editor_action)
+                menu.addAction(open_quick_map_action)
                 menu.addSeparator()
 
                 # Merge PEMs
@@ -1547,6 +1553,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         pem_files, rows = self.get_pem_files(selected=True)
         for pem_file in pem_files:
             # pem_str = pem_file.to_string()
+            if not pem_file.filepath.is_file():
+                logger.warning(f"{pem_file.filepath} does not exist.")
+                self.status_bar.showMessage(f"{pem_file.filepath} does not exist.", 2000)
+                return
+
             with open(str(pem_file.filepath), 'r') as file:
                 pem_str = file.read()
             browser = QTextBrowser()
@@ -1676,8 +1687,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.message.information(self, 'Error', f"Both files must have the same timebase.")
                 return False
             if not f1.number_of_channels == f2.number_of_channels:
-                logger.error(f"{f1.filepath.name} has {len(f1.channel_table)} channels and"
-                             f" {f2.filepath.name} has {len(f2.channel_table)} channels.")
+                logger.error(f"{f1.filepath.name} has {len(f1.channel_times)} channels and"
+                             f" {f2.filepath.name} has {len(f2.channel_times)} channels.")
                 self.message.information(self, 'Error', f"Both files must have the same number of channels.")
                 return False
 
@@ -1886,6 +1897,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         Open the MapboxViewer if there's any GPS in any of the opened PEM files.
         """
+        if not self.get_crs():
+            self.status_bar.showMessage(f"No CRS selected.", 2000)
+            return
+
         global tile_map
         tile_map = TileMapViewer(parent=self)
 
@@ -3160,10 +3175,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        # Zip the pem_files and rows so they can be filtered together
-        pems_rows = zip(pem_files, rows)
         # Filter the pem_files to only keep un-averaged files
-        filt_list = list(filter(lambda x: not x[0].is_split(), pems_rows))
+        filt_list = [f for f in pem_files if not f.is_split()]
 
         if len(filt_list) == 0:
             logger.warning(f"No un-split PEM files opened.")
@@ -3171,7 +3184,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return
 
         bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
+        bar.setMaximum(len(filt_list))
 
         with pg.ProgressDialog('Splitting PEM Files...', 0, len(filt_list)) as dlg:
             dlg.setBar(bar)

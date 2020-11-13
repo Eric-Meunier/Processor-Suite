@@ -88,6 +88,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         for ax in self.x_view_axes[1:]:
             ax.setXLink(self.x_ax0)
+            ax.getAxis('left').setWidth(60)
 
         # Configure the lin plot
         self.y_view.ci.layout.setSpacing(10)  # Spacing between plots
@@ -101,6 +102,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         for ax in self.y_view_axes[1:]:
             ax.setXLink(self.y_ax0)
+            ax.getAxis('left').setWidth(60)
 
         # Create the rotation angle plot
         self.rot_ax = self.rotation_view.addPlot(0, 0)

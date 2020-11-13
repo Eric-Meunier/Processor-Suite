@@ -1242,11 +1242,10 @@ class PEMFile:
             ramp = self.ramp / 10 ** 6
             mag_calc = MagneticFieldCalculator(loop)
 
-            # TODO Remove the last channel of full waveform (currently this channel is already removed when splitting)
             # Only keep off-time channels with PP
             ch_times = self.channel_times[~self.channel_times.Remove.astype(bool)]
-            # Normalize the channel times so they start from turn off
-            # ch_times.loc[:, 'Start':'Center'] = ch_times.loc[:, 'Start':'Center'].applymap(lambda x: x + ramp)
+            # Normalize the channel times so they start from turn off. Look at MRC-067 for proof
+            ch_times.loc[:, 'Start':'Center'] = ch_times.loc[:, 'Start':'Center'].applymap(lambda x: x + ramp)
 
             pp_ch = ch_times.iloc[0]
             # Make sure the PP channel is within the ramp
