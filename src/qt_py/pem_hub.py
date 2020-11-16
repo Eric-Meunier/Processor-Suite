@@ -50,7 +50,7 @@ from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.11.0e'
+__version__ = '0.11.0f'
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -3190,7 +3190,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             dlg.setBar(bar)
             dlg.setWindowTitle('Splitting PEM File Channels')
 
-            for pem_file, row in filt_list:
+            for pem_file in filt_list:
                 if dlg.wasCanceled():
                     break
 
