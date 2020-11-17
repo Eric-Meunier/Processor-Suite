@@ -1512,6 +1512,18 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         crs = self.get_crs()
         pem_info_widget.open_gps_files(gps_files)
 
+        # Set the project CRS if a .inf or .log file is in the directory and the project CRS is currently empty
+        if crs is None:
+            crs_files = list(gps_files[0].parent.glob('*.inf'))
+            crs_files.extend(gps_files[0].parent.glob('*.log'))
+            if crs_files:
+                self.open_inf_file(crs_files[0])
+                self.status_bar.showMessage(F"Project CRS automatically filled using information from {crs_files[0]}.",
+                                            2000)
+                # crs = self.parse_crs(crs_files[0])
+            else:
+                print(f"No CRS files found.")
+
     def open_ri_file(self, ri_files):
         """
         Adds RI file information to the associated PEMFile object. Only accepts 1 file.
@@ -1526,17 +1538,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Parses a .INF file to extract the CRS information in ti and set the CRS drop-down values.
         :param inf_file: str, .INF filepath
         """
-        def get_inf_crs(filepath):
-            with open(filepath, 'rt') as f:
-                file = f.read()
-            crs = dict()
-            crs['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
-            crs['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
-            crs['Datum'] = re.search(r'Datum:\W+(?P<Datum>.*)', file).group(1).split(' (')[0]
-            logger.info(f"Parsing INF file: System: {crs['System']}. Zone: {crs['Zone']}. Datum: {crs['Datum']}")
-            return crs
-
-        crs = get_inf_crs(inf_file)
+        crs = self.parse_crs(inf_file)
         coord_sys = crs.get('System')
         coord_zone = crs.get('Zone')
         datum = crs.get('Datum')
@@ -2227,6 +2229,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             return
 
         self.gps_list.clear()
+
         # Try to find a GPS folder, but time out after 1 second
         self.available_gps = find_gps_files(timeout=1)
 
@@ -2347,6 +2350,21 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             pem_files = get_filtered_pems()
             for file in pem_files:
                 self.pem_list.addItem(QListWidgetItem(get_icon(file), f"{str(file.relative_to(self.project_dir))}"))
+
+    def parse_crs(self, filepath):
+        """
+        Read and extract CRs information from a .inf or .log file output by pathfinder.
+        :param filepath: str
+        :return: dict with crs system, zone, and datum
+        """
+        with open(filepath, 'rt') as f:
+            file = f.read()
+        crs = dict()
+        crs['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
+        crs['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
+        crs['Datum'] = re.search(r'Datum:\W+(?P<Datum>.*)', file).group(1).split(' (')[0]
+        logger.info(f"Parsing INF file: System: {crs['System']}. Zone: {crs['Zone']}. Datum: {crs['Datum']}")
+        return crs
 
     def move_dir_tree_to(self, dir_path):
         """
@@ -4162,21 +4180,21 @@ def main():
     # ff.show()
 
     mw.show()
-    pem_files = [r'C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.DMP2']
+    # pem_files = [r'C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.DMP2']
     # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='Minera', number=1)
-    pem_files = pg.get_pems(random=True, number=10)
+    # pem_files = pg.get_pems(random=True, number=10)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     # mw.open_dmp_files(pem_files)
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
     # mw.open_mag_dec(mw.pem_files[0])
 
-    # mw.project_dir_edit.setText(r'C:\_Data\2020\Juno\Borehole')
+    mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')
     # mw.move_dir_tree_to(r'C:\_Data\2020\Juno\Borehole')
     # mw.pem_list_filter.exclude_files_edit.setText('XYT.pem, xyg.pem')
     #
