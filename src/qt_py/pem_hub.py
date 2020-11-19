@@ -1520,7 +1520,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.open_inf_file(crs_files[0])
                 self.status_bar.showMessage(F"Project CRS automatically filled using information from {crs_files[0]}.",
                                             2000)
-                # crs = self.parse_crs(crs_files[0])
             else:
                 print(f"No CRS files found.")
 
