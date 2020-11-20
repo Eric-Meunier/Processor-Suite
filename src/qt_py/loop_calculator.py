@@ -245,7 +245,7 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         # Plot only the Z component as it will always encompass the largest value
         self.mag_z.setData(y=np.abs(mag_values), x=distances)
 
-        # Update the label in case of units change
+        # Update the plot label in case of units change
         self.plot_widget.setLabel('left', 'Z-Component Magnetic Field Strength', units=units)
         self.plot_widget.autoRange()
 
