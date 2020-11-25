@@ -79,25 +79,30 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         h_line = pg.InfiniteLine(pos=200000, angle=0, pen=pg.mkPen('r'))
         self.plot_widget.addItem(h_line, ignoreBounds=True)
 
-        self.update()
-
         # Connect all the signals
-        self.tx_setup_combo.currentIndexChanged.connect(self.update)
-        self.num_tx_turns_sbox.valueChanged.connect(self.update)
-        self.loop_h_sbox.valueChanged.connect(self.update)
-        self.loop_w_sbox.valueChanged.connect(self.update)
-        self.loop_gauge_sbox.valueChanged.connect(self.update)
-        self.loop_quality_sbox.valueChanged.connect(self.update)
-        self.num_parallel_sbox.valueChanged.connect(self.update)
-        self.ramp_sbox.valueChanged.connect(self.update)
-        self.voltage_sbox.valueChanged.connect(self.update)
+        self.tx_setup_combo.currentIndexChanged.connect(self.calculate_current)
+        self.num_tx_turns_sbox.valueChanged.connect(self.calculate_current)
+        self.loop_h_sbox.valueChanged.connect(self.calculate_current)
+        self.loop_w_sbox.valueChanged.connect(self.calculate_current)
+        self.loop_gauge_sbox.valueChanged.connect(self.calculate_current)
+        self.loop_quality_sbox.valueChanged.connect(self.calculate_current)
+        self.num_parallel_sbox.valueChanged.connect(self.calculate_current)
+        self.ramp_sbox.valueChanged.connect(self.calculate_current)
+        self.voltage_sbox.valueChanged.connect(self.calculate_current)
 
-        self.units_combo.currentIndexChanged.connect(self.update)
+        self.units_combo.currentIndexChanged.connect(self.calculate_current)
+        self.units_combo.currentIndexChanged.connect(self.calculate_mag)
+
+        self.current_sbox.valueChanged.connect(self.calculate_mag)
+        self.distance_sbox.valueChanged.connect(self.calculate_mag)
 
         self.save_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
         self.copy_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+C"), self)
         self.save_shortcut.activated.connect(self.save_img)
         self.copy_shortcut.activated.connect(self.copy_img)
+
+        self.calculate_current()
+        self.calculate_mag()
 
     def keyPressEvent(self, evt):
         if evt.key() == QtCore.Qt.Key_Space:
@@ -207,13 +212,13 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         current_by_voltage = get_current_by_voltage()
         current_by_inductance = get_current_by_inductance()
         current_by_power = get_current_by_power()
-        self.current = min([current_by_voltage, current_by_inductance, current_by_power, 30])
+        max_current = min([current_by_voltage, current_by_inductance, current_by_power, 30])
 
         self.max_voltage_label.setText(f"(Maximum induced voltage: {max_voltage})")
         self.max_current_voltage_label.setText(f"{current_by_voltage:.1f}V")
         self.max_current_inductance_label.setText(f"{current_by_inductance:.1f}V")
         self.max_current_power_label.setText(f"{current_by_power:.1f}V")
-        self.max_current_label.setText(f"{self.current:.1f}V")
+        self.max_current_label.setText(f"{max_current:.1f}V")
 
     def calculate_mag(self):
         """
@@ -232,7 +237,7 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         ramp = self.ramp_sbox.value() / 1000
         mag_values = []
         for dist, pos in zip(distances, positions):
-            mx, my, mz = calculator.calc_total_field(pos[0], pos[1], pos[2], self.current,
+            mx, my, mz = calculator.calc_total_field(pos[0], pos[1], pos[2], self.current_sbox.value(),
                                                      out_units=units,
                                                      ramp=ramp)
             mag_values.append(mz)
@@ -240,16 +245,20 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         # Plot only the Z component as it will always encompass the largest value
         self.mag_z.setData(y=np.abs(mag_values), x=distances)
 
-        # Update the label in case of units change
+        # Update the plot label in case of units change
         self.plot_widget.setLabel('left', 'Z-Component Magnetic Field Strength', units=units)
         self.plot_widget.autoRange()
 
-    def update(self):
-        """
-        Signal slot, update the current calculations and the mag plot
-        """
-        self.calculate_current()
-        self.calculate_mag()
+        # Update the EM response label
+        pos = (self.distance_sbox.value(), h / 2, 0.1)
+        mx, my, mz = calculator.calc_total_field(pos[0], pos[1], pos[2], self.current_sbox.value(),
+                                                 out_units=units,
+                                                 ramp=ramp)
+        self.response_label.setText(f"{abs(mz):,.0f} {units}")
+        if abs(mz) >= 200000:
+            self.response_label.setStyleSheet("color: red")
+        else:
+            self.response_label.setStyleSheet("color: black")
 
 
 if __name__ == '__main__':
