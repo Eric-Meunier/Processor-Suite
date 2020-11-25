@@ -439,6 +439,23 @@ class PEMFile:
             data = self.data
         return data
 
+    def get_dad(self):
+        """
+        Return the DAD of a borehole file
+        :return: Dataframe
+        """
+        assert self.is_borehole(), f"Can only get DAD from borehole surveys."
+
+        dads = []
+        data = self.data.drop_duplicates(subset='Station')
+
+        for ind, reading in data.iterrows():
+            rad = reading.RAD_tool
+            dad = [reading.Station, rad.get_azimuth(), rad.get_dip()]
+            dads.append(dad)
+        df = pd.DataFrame(dads, columns=['Depth', 'Azimuth', 'Dip']).astype(float)
+        return df
+
     def get_channel_bounds(self):
         """
         Create tuples of start and end channels to be plotted per axes for LIN plots
@@ -3178,7 +3195,8 @@ if __name__ == '__main__':
     dparser = DMPParser()
     pemparser = PEMParser()
     pem_g = PEMGetter()
-    pem_file = pem_g.get_pems(client='PEM Rotation', file='BX-081 PP (Cross).PEM')[0]
+    pem_file = pem_g.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')[0]
+    pem_file.get_dad()
     # pem_file = pem_g.get_pems(client='Kazzinc', number=1)[0]
     # pem_file.to_xyz()
     # prep_pem, _ = pem_file.prep_rotation()

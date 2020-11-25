@@ -375,7 +375,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 if file.suffix.lower() == '.gpx':
                     # Convert the GPX file to string
                     gps, zone, hemisphere = gpx_editor.get_utm(file, as_string=True)
-                    merged_file.extend(gps)
+                    contents = [c.strip().split() for c in gps]
                 else:
                     if file.suffix.lower() == '.csv':
                         contents = pd.read_csv(file, delim_whitespace=False, header=None).to_numpy()
@@ -387,7 +387,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                         contents = open(file, mode='rt').readlines()
                         contents = [c.strip().split() for c in contents]
 
-                    merged_file.extend(contents)
+                merged_file.extend(contents)
             return merged_file
 
         if not isinstance(files, list):

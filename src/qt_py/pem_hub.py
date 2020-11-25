@@ -291,7 +291,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionGoogle_Earth.triggered.connect(lambda: self.save_as_kmz(save=False))
 
         # GPS menu
-        self.actionExport_All_GPS.triggered.connect(self.export_all_gps)
+        self.actionExport_All_GPS.triggered.connect(lambda: self.export_gps(selected=False))
 
         self.actionConvert_GPS.triggered.connect(self.open_gps_conversion)
 
@@ -843,12 +843,22 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 save_file_action = QAction("Save", self)
                 save_file_action.setIcon(QIcon(os.path.join(icons_path, 'save.png')))
                 save_file_action.triggered.connect(lambda: self.save_pem_files(selected=True))
-                export_pem_action = QAction("Export...", self)
-                export_pem_action.setIcon(QIcon(os.path.join(icons_path, 'export.png')))
-                export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True, processed=False))
                 save_file_as_action = QAction("Save As...", self)
                 save_file_as_action.setIcon(QIcon(os.path.join(icons_path, 'save_as.png')))
                 save_file_as_action.triggered.connect(self.save_pem_file_as)
+
+                # Exports
+                export_pem_action = QAction("PEM", self)
+                export_pem_action.setIcon(QIcon(os.path.join(icons_path, 'crone_logo.png')))
+                export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True, processed=False))
+
+                export_dad_action = QAction("DAD", self)
+                # export_pem_action.setIcon(QIcon(os.path.join(icons_path, 'export.png')))
+                export_dad_action.triggered.connect(self.export_dad)
+
+                export_gps_action = QAction("GPS", self)
+                # export_pem_action.setIcon(QIcon(os.path.join(icons_path, 'export.png')))
+                export_gps_action.triggered.connect(lambda: self.export_gps(selected=True))
 
                 # View channel table
                 action_view_channels = QAction("Channel Table", self)
@@ -988,6 +998,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                     menu.addSeparator()
 
+                    # Add the export menu
+                    export_menu = menu.addMenu('Export...')
+                    export_menu.setIcon(QIcon(os.path.join(icons_path, 'export.png')))
+                    export_menu.addAction(export_pem_action)
+                    export_menu.addAction(export_dad_action)
+                    export_menu.addAction(export_gps_action)
+
                     # Share menu
                     share_menu = menu.addMenu('Share')
                     share_menu.setIcon(QIcon(os.path.join(icons_path, 'share_gps.png')))
@@ -1016,8 +1033,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     share_menu.addAction(share_all_action)
                     if not pem_file.has_any_gps():
                         share_all_action.setDisabled(True)
-                else:
-                    menu.addAction(export_pem_action)
+                # else:
+                #     menu.addAction(export_pem_action)
 
                 menu.addSeparator()
                 # Plot
@@ -2719,14 +2736,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.status_bar.showMessage(f"Save complete. {len(pem_files)} PEM file(s) exported", 2000)
 
-    def export_all_gps(self):
+    def export_gps(self, selected=False):
         """
         Exports all GPS from all opened PEM files to separate CSV files. Creates folders for each loop.
         Doesn't repeat if a line/hole/loop has been done already.
-        :return: None
+        :param selected: Bool, only use selected PEM files.
         """
-        if not self.pem_files:
-            logger.error(f"No PEM files opened.")
+        pem_files, rows = self.get_pem_files(selected=selected)
+        if not pem_files:
+            logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
@@ -2741,17 +2759,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         lines = []
         collars = []
 
-        default_path = os.path.dirname(self.pem_files[0].filepath)
+        default_path = str(pem_files[0].filepath.parent)
         export_folder = self.dialog.getExistingDirectory(self, 'Select Destination Folder', default_path)
 
         if export_folder:
             bar = CustomProgressBar()
-            bar.setMaximum(len(self.pem_files))
-            with pg.ProgressDialog("Exporting GPS...", 0, len(self.pem_files)) as dlg:
+            bar.setMaximum(len(pem_files))
+            with pg.ProgressDialog("Exporting GPS...", 0, len(pem_files)) as dlg:
                 dlg.setBar(bar)
                 dlg.setWindowTitle('Exporting GPS')
 
-                for loop, pem_files in groupby(self.pem_files, key=lambda x: x.loop_name):
+                for loop, pem_files in groupby(pem_files, key=lambda x: x.loop_name):
                     if dlg.wasCanceled():
                         break
 
@@ -2768,7 +2786,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                 loop_name = pem_file.loop_name
                                 logger.info(f"Creating CSV file for loop {loop_name}.")
                                 loops.append(loop.to_string())
-                                csv_filepath = str(folder.joinpath(loop_name).with_suffix('csv'))
+                                csv_filepath = str(folder.joinpath(loop_name).with_suffix('.csv'))
 
                                 with open(csv_filepath, 'w') as csvfile:
                                     filewriter = csv.writer(csvfile,
@@ -2787,7 +2805,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                 line_name = pem_file.line_name
                                 logger.info(f"Creating CSV file for line {line_name}.")
                                 lines.append(line.to_string())
-                                csv_filepath = str(folder.joinpath(line_name).with_suffix('csv'))
+                                csv_filepath = str(folder.joinpath(line_name).with_suffix('.csv'))
 
                                 with open(csv_filepath, 'w') as csvfile:
                                     filewriter = csv.writer(csvfile,
@@ -2807,7 +2825,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                 hole_name = pem_file.line_name
                                 logger.info(f"Creating CSV file for hole {hole_name}.")
                                 collars.append(collar.to_string())
-                                csv_filepath = str(folder.joinpath(hole_name).with_suffix('csv'))
+                                csv_filepath = str(folder.joinpath(hole_name).with_suffix('.csv'))
 
                                 with open(csv_filepath, 'w') as csvfile:
                                     filewriter = csv.writer(csvfile,
@@ -2823,6 +2841,44 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         dlg += 1
 
             self.status_bar.showMessage("Export complete.", 2000)
+
+    def export_dad(self):
+        """
+        Export the DAD information of a borehole survey to a CSV file.
+        """
+        pem_files, rows = self.get_pem_files(selected=True)
+        if not pem_files:
+            logger.warning(f"No PEM files opened.")
+            return
+
+        file_dir = self.dialog.getExistingDirectory(self, '', str(self.project_dir))
+        if not file_dir:
+            self.status_bar.showMessage('Cancelled.', 2000)
+            return
+
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+        with pg.ProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle('Exporting PEM Files')
+
+            for pem_file, row in zip(pem_files, rows):
+                if dlg.wasCanceled():
+                    break
+                elif not pem_file.is_borehole():
+                    dlg += 1
+                    continue
+
+                dad = pem_file.get_dad()
+                dad.to_csv(Path(file_dir).joinpath(pem_file.filepath.with_suffix('.csv').name),
+                           float_format='%.2f',
+                           index=False,
+                           header=True,
+                           na_rep='None')
+
+                dlg += 1
+
+        self.status_bar.showMessage('Export complete.', 1000)
 
     def format_row(self, row):
 
@@ -4183,17 +4239,17 @@ def main():
     # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
-    # pem_files = pg.get_pems(client='Kazzinc', number=4)
+    pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
-    # pem_files = pg.get_pems(client='Minera', number=1)
+    # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     # pem_files = pg.get_pems(random=True, number=10)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     # mw.open_dmp_files(pem_files)
-    # mw.open_pem_files(pem_files)
+    mw.open_pem_files(pem_files)
     # mw.open_mag_dec(mw.pem_files[0])
 
-    mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')
+    # mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')
     # mw.move_dir_tree_to(r'C:\_Data\2020\Juno\Borehole')
     # mw.pem_list_filter.exclude_files_edit.setText('XYT.pem, xyg.pem')
     #
