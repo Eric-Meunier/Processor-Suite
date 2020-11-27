@@ -89,16 +89,20 @@ class MagneticFieldCalculator:
         # Square the displacement vector -> |r'|^2 in Biot Savart's eq.
         cross_sqrt = np.sqrt((cross ** 2).sum(axis=-1)) ** 2
 
-        # Calculate the Biot Savart equation
-        top = (dot1 / r_AP - dot2 / r_BP) * u0 * amps
-        bottom = cross_sqrt * 4 * np.pi
-        factor = top / bottom
-        factor = factor[..., np.newaxis]
+        # Suppress divide by 0 errors
+        with np.errstate(divide='ignore', invalid='ignore'):
 
-        # Calculate the field magnetic from each segment
-        field = cross * factor
-        # Sum the contribution of each segment
-        field = field.sum(axis=0)
+            # Calculate the Biot Savart equation
+            top = (dot1 / r_AP - dot2 / r_BP) * u0 * amps
+            bottom = cross_sqrt * 4 * np.pi
+            factor = top / bottom
+            factor = factor[..., np.newaxis]
+
+            # Calculate the field magnetic from each segment
+            field = cross * factor
+
+        # Sum the contribution of each segment. Replaces NaN with 0
+        field = np.nan_to_num(field.sum(axis=0))
 
         if out_units:
             if out_units == 'nT':
@@ -114,7 +118,6 @@ class MagneticFieldCalculator:
                 raise ValueError('Invalid output unit')
 
         return field[0], field[1], field[2]
-        # return field[1], -field[0], field[2]
 
     # def calc_total_field(self, x, y, z, amps=1, out_units='pT', ramp=None):
     #     """

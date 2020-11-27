@@ -51,7 +51,7 @@ class LoopCalculator(QMainWindow, loopCalcUi):
 
         self.current = None
 
-        # Format the plot
+        # Format the mag response plot
         self.mag_z = pg.PlotDataItem(pen=pg.mkPen('k'),
                                      symbol=None,
                                      symbolPen=pg.mkPen('k'),
@@ -63,7 +63,7 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         self.plot_widget.hideButtons()
         self.plot_widget.setMenuEnabled(False)
         """Y label is changed during plotting"""
-        self.plot_widget.setLabel('bottom', 'Distance From Loop Edge', units='m')
+        self.plot_widget.setLabel('bottom', 'Distance From Loop Center', units='m')
         self.plot_widget.getAxis("bottom").nudge -= 10  # Move the label so it doesn't get clipped
 
         self.plot_widget.getAxis('left').setWidth(60)
@@ -75,9 +75,45 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         self.plot_widget.showLabel('right', show=False)
         self.plot_widget.showLabel('top', show=False)
         self.plot_widget.getAxis('left').enableAutoSIPrefix(enable=False)
-        self.plot_widget.setLimits(xMin=5, xMax=100, yMin=0)
-        h_line = pg.InfiniteLine(pos=200000, angle=0, pen=pg.mkPen('r'))
+        self.plot_widget.setLimits(xMin=-1000, xMax=1000, yMin=-300000, yMax=300000)
+        self.plot_widget.setXRange(-200, 200)
+        h_line = pg.InfiniteLine(pos=200000, angle=0, pen=pg.mkPen('r', style=QtCore.Qt.DashLine))
+        h_line2 = pg.InfiniteLine(pos=-200000, angle=0, pen=pg.mkPen('r', style=QtCore.Qt.DashLine))
         self.plot_widget.addItem(h_line, ignoreBounds=True)
+        self.plot_widget.addItem(h_line2, ignoreBounds=True)
+
+        # Format the plan map
+        # Format the plot
+        self.loop_item = pg.PlotCurveItem(pen=pg.mkPen('b'))
+        self.station_item = pg.ScatterPlotItem(pen=pg.mkPen('k'),
+                                               brush=pg.mkBrush('w'),
+                                               symbol='+',
+                                               size=13)
+        self.plan_widget.addItem(self.loop_item)
+        self.plan_widget.addItem(self.station_item)
+
+        self.plan_widget.setAxisItems({'left': NonScientific(orientation='left'),
+                                       'bottom': NonScientific(orientation='bottom')})
+        self.plan_widget.hideButtons()
+        self.plan_widget.setMenuEnabled(False)
+        """Y label is changed during plotting"""
+        self.plan_widget.setLabel('left', 'Northing', units='m')
+        self.plan_widget.setLabel('bottom', 'Easting', units='m')
+        self.plan_widget.getAxis("bottom").nudge -= 10  # Move the label so it doesn't get clipped
+
+        self.plan_widget.getAxis('left').setWidth(60)
+        self.plan_widget.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.plan_widget.showAxis('right', show=True)  # Show the axis edge line
+        self.plan_widget.showAxis('top', show=True)  # Show the axis edge line
+        self.plan_widget.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_widget.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_widget.showLabel('right', show=False)
+        self.plan_widget.showLabel('top', show=False)
+        self.plan_widget.getAxis('left').enableAutoSIPrefix(enable=False)
+        self.plan_widget.setAspectLocked()
+
+        # Link the X axis of the mag plot and plan map
+        # self.plan_widget.setXLink(self.plot_widget)
 
         # Connect all the signals
         self.tx_setup_combo.currentIndexChanged.connect(self.calculate_current)
@@ -89,6 +125,9 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         self.num_parallel_sbox.valueChanged.connect(self.calculate_current)
         self.ramp_sbox.valueChanged.connect(self.calculate_current)
         self.voltage_sbox.valueChanged.connect(self.calculate_current)
+
+        self.loop_h_sbox.valueChanged.connect(self.calculate_mag)  # Update the plot when the loop size is changed
+        self.loop_w_sbox.valueChanged.connect(self.calculate_mag)  # Update the plot when the loop size is changed
 
         self.units_combo.currentIndexChanged.connect(self.calculate_current)
         self.units_combo.currentIndexChanged.connect(self.calculate_mag)
@@ -107,6 +146,7 @@ class LoopCalculator(QMainWindow, loopCalcUi):
     def keyPressEvent(self, evt):
         if evt.key() == QtCore.Qt.Key_Space:
             self.plot_widget.autoRange()
+            self.plan_widget.autoRange()
 
     def save_img(self):
         save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
@@ -123,9 +163,9 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         """Create a loop (list of coordinates) for the magnetic field calculator"""
         h, w = self.loop_h_sbox.value(), self.loop_w_sbox.value()
         loop = np.array([(0, 0, 0),
-                         (0, h, 0),
-                         (-w, h, 0),
-                         (-w, 0, 0)])
+                         (w, 0, 0),
+                         (w, h, 0),
+                         (0, h, 0)])
         return loop
 
     def get_loop_wire_diameter(self):
@@ -225,12 +265,13 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         Calculate and plot the magnetic field strength value of the Z component for a range of distances from the
         loop edge.
         """
-        calculator = MagneticFieldCalculator(self.get_loop())
+        loop_coords = self.get_loop()
+        calculator = MagneticFieldCalculator(loop_coords)
 
         # Create a list of positions that range from 5m from the loop edge (at the loop length half-way point) to 100m
-        h = self.loop_h_sbox.value()
-        distances = np.arange(5, 105, 5)
-        positions = [(d, h / 2, 0.1) for d in distances]
+        h, w = self.loop_h_sbox.value(), self.loop_w_sbox.value()
+        distances = np.arange(-1005, 1005, 5)
+        positions = [(d + (w / 2), h / 2, 0.) for d in distances]
 
         # Calculate the magnetic field strength at each position
         units = self.units_combo.currentText()
@@ -243,22 +284,31 @@ class LoopCalculator(QMainWindow, loopCalcUi):
             mag_values.append(mz)
 
         # Plot only the Z component as it will always encompass the largest value
-        self.mag_z.setData(y=np.abs(mag_values), x=distances)
+        self.mag_z.setData(y=mag_values, x=distances)
 
         # Update the plot label in case of units change
         self.plot_widget.setLabel('left', 'Z-Component Magnetic Field Strength', units=units)
         self.plot_widget.autoRange()
 
         # Update the EM response label
-        pos = (self.distance_sbox.value(), h / 2, 0.1)
+        dist = self.distance_sbox.value()
+        pos = (dist, h / 2, 0.)
         mx, my, mz = calculator.calc_total_field(pos[0], pos[1], pos[2], self.current_sbox.value(),
                                                  out_units=units,
                                                  ramp=ramp)
+
         self.response_label.setText(f"{abs(mz):,.0f} {units}")
         if abs(mz) >= 200000:
             self.response_label.setStyleSheet("color: red")
         else:
             self.response_label.setStyleSheet("color: black")
+
+        # Plot the plan map
+        # Loop
+        loop_coords = np.vstack((loop_coords, loop_coords[0]))
+        self.loop_item.setData(loop_coords[:, 0], loop_coords[:, 1])
+        x, y = dist, h / 2
+        self.station_item.setData([x], [y])
 
 
 if __name__ == '__main__':

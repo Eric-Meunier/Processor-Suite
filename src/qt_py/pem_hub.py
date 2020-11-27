@@ -50,7 +50,7 @@ from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.11.0f'
+__version__ = '0.11.1'
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
