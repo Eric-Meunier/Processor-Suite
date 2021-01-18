@@ -412,8 +412,8 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             self.sync_label_1.setText(self.pf1.sync)
             self.zts_label_1.setText(', '.join(self.pf1.data.ZTS.astype(str).unique()))
 
-            self.coil_area_sbox_1.setValue(self.pf1.coil_area)
-            self.current_sbox_1.setValue(self.pf1.current)
+            self.coil_area_sbox_1.setValue(float(self.pf1.coil_area))
+            self.current_sbox_1.setValue(float(self.pf1.current))
 
             self.file_label_2.setText(self.pf2.filepath.name)
             self.client_label_2.setText(self.pf2.client)
@@ -429,8 +429,8 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             self.sync_label_2.setText(self.pf2.sync)
             self.zts_label_2.setText(', '.join(self.pf1.data.ZTS.astype(str).unique()))
 
-            self.coil_area_sbox_2.setValue(self.pf2.coil_area)
-            self.current_sbox_2.setValue(self.pf2.current)
+            self.coil_area_sbox_2.setValue(float(self.pf2.coil_area))
+            self.current_sbox_2.setValue(float(self.pf2.current))
 
             self.coil_area_sbox_1.blockSignals(False)
             self.coil_area_sbox_2.blockSignals(False)

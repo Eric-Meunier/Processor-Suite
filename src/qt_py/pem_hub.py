@@ -107,6 +107,10 @@ def get_icon(filepath):
     return icon
 
 
+# TODO add .gdb and .gpx to GPS files list
+# TODO Idea: Plot mag on top of profile data
+# TODO Fix step plot range
+
 class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
     def __init__(self, parent=None):

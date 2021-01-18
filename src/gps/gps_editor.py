@@ -654,6 +654,7 @@ class BoreholeCollar(BaseGPS):
                 logger.info(f"Removing P-tag column.")
                 cols_to_drop.append(i)
             # Remove units column
+            # TODO A collar GPS with east, north, and 0 for elevation will fail because of this.
             elif col.map(lambda x: str(x) == '0').all():
                 logger.info(f"Removing column of 0s.")
                 cols_to_drop.append(i)

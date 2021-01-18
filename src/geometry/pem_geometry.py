@@ -192,19 +192,15 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         """
         Open files through the file dialog
         """
-        files = self.dialog.getOpenFileNames(self, 'Open File',
-                                             filter='DAD files (*.dad);; '
-                                                    'CSV files (*.csv);; '
-                                                    'SEG files (*.seg);; '
-                                                    'TXT files (*.txt)')
-        if files[0] != '':
-            for file in files[0]:
-                if file.lower().endswith('dad') or file.lower().endswith('csv'):
+        files, ext = self.dialog.getOpenFileNames(self, 'Open File',
+                                                  filter='DAD files (*.dad; *.csv; *.xlsx; *.xls; *.txt);; '
+                                                         'SEG files (*.seg; *.txt)')
+        if files != '':
+            for file in files:
+                if 'dad' in ext.lower():
                     self.open_dad_file(file)
-                elif file.lower().endswith('seg'):
-                    self.open_seg_file(file)
                 else:
-                    pass
+                    self.open_seg_file(file)
         else:
             pass
 
@@ -663,12 +659,20 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                    header=None,
                                    dtype=float)
             else:
-                df = pd.read_csv(filepath,
-                                 delim_whitespace=True,
-                                 usecols=[0, 1, 2],
-                                 names=['Depth', 'Azimuth', 'Dip'],
-                                 header=None,
-                                 dtype=float)
+                if filepath.endswith('txt'):
+                    df = pd.read_csv(filepath,
+                                     delim_whitespace=True,
+                                     usecols=[0, 1, 2],
+                                     names=['Depth', 'Azimuth', 'Dip'],
+                                     header=None,
+                                     dtype=float)
+                else:
+                    df = pd.read_csv(filepath,
+                                     # delim_whitespace=True,
+                                     usecols=[0, 1, 2],
+                                     names=['Depth', 'Azimuth', 'Dip'],
+                                     header=None,
+                                     dtype=float)
         except Exception as e:
             logger.critical(f"The following error occurred trying to read {Path(filepath).name}:{str(e)}")
             self.error.showMessage(f"The following error occurred trying to read {Path(filepath).name}:{str(e)}")
@@ -1050,11 +1054,13 @@ if __name__ == '__main__':
 
     pg = PEMGetter()
     parser = PEMParser()
-    files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    # files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
+    files = [parser.parse(r'C:\_Data\2020\Iscaycruz\Borehole\SE-20-02A\RAW\xy_11.pem')]
     # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
 
     win = PEMGeometry()
     win.open(files)
+    dad = r'C:\_Data\2020\Iscaycruz\Borehole\SE-20-02A\RAW\gyro.csv'
     # win.open_dad_file(dad)
     # win.az_output_combo.setCurrentIndex(1)
     # win.dip_output_combo.setCurrentIndex(1)

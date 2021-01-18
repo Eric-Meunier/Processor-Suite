@@ -1,0 +1,7 @@
+Grid	UTM
+Datum	WGS 84
+
+Header	Name	Description	Type	Position	Altitude	Depth	Proximity	Temperature	Display Mode	Color	Symbol	Facility	City	State	Country	Date Modified	Link	Categories
+
+Waypoint	1338-19-036		User Waypoint	17 U 643857 5519848					Symbol	Unknown	Waypoint					1/16/2021 12:02:05 PM 		
+

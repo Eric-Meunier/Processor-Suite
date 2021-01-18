@@ -268,6 +268,7 @@ class LoopCalculator(QMainWindow, loopCalcUi):
         loop_coords = self.get_loop()
         calculator = MagneticFieldCalculator(loop_coords)
 
+        # TODO At loop edge z component reading is worse than when using elev. of 0.001
         # Create a list of positions that range from 5m from the loop edge (at the loop length half-way point) to 100m
         h, w = self.loop_h_sbox.value(), self.loop_w_sbox.value()
         distances = np.arange(-1005, 1005, 5)
