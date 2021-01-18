@@ -391,7 +391,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             return merged_file
 
         if not isinstance(files, list):
-            files = list(files)
+            files = [files]
 
         files = [Path(f) for f in files]
 

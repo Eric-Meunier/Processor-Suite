@@ -107,7 +107,6 @@ def get_icon(filepath):
     return icon
 
 
-# TODO add .gdb and .gpx to GPS files list
 # TODO Idea: Plot mag on top of profile data
 # TODO Fix step plot range
 
@@ -4243,7 +4242,8 @@ def main():
     # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
-    pem_files = pg.get_pems(client='Kazzinc', number=4)
+    # pem_files = pg.get_pems(client='Kazzinc', number=4)
+    pem_files = [r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\TMC holes\1338-19-036\RAW\XY_16.PEM']
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     # pem_files = pg.get_pems(random=True, number=10)

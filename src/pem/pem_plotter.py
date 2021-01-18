@@ -570,6 +570,17 @@ class STEPPlotter(ProfilePlotter):
 
         add_ylabel()
         self.format_figure(component)
+
+        # Fix the Y axis scaling for the second plot
+        ax = self.figure.axes[1]
+        y_limits = ax.get_ylim()
+        if y_limits[1] < 10 or y_limits[0] > -10:
+            new_high = math.ceil(max(y_limits[1] + 6, 0))
+            new_low = math.floor(min(y_limits[0] - 6, 0))
+            ax.set_ylim(new_low, new_high)
+            ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', integer=True, steps=[1, 2, 5, 10]))
+            ax.set_yticks(ax.get_yticks())
+
         return self.figure
 
 
@@ -3830,9 +3841,9 @@ if __name__ == '__main__':
     # editor.show()
     # planner = LoopPlanner()
 
-    map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
-    map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
-    plt.show()
+    # map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
+    # map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
+    # plt.show()
 
     # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
     # fig = plt.figure(figsize=(8.5, 11), dpi=100)
@@ -3855,14 +3866,16 @@ if __name__ == '__main__':
     # log_plot.plot('X')
     # plt.show()
 
-    # step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    # ax5 = ax4.twiny()
-    # ax5.get_shared_x_axes().join(ax4, ax5)
+    step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    ax5 = ax4.twiny()
+    ax5.get_shared_x_axes().join(ax4, ax5)
     # pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01NAv.PEM'
     # ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01N.RI2'
-    # step_plot = STEPPlotter(pem, ri, step_fig)
-    # step_plot.plot('X')
-    # plt.show()
+    pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\1338-18-19 XY.PEM'  # Step near 0
+    ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\1338-18-19.RI2'
+    step_plot = STEPPlotter(pem, ri, step_fig)
+    step_plot.plot('X')
+    plt.show()
 
     # map = GeneralMap(pem_files, fig).get_map()
     # map = SectionPlot(pem_files, fig).get_section_plot()

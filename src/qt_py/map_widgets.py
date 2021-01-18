@@ -848,7 +848,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
     def save_figure(self):
         """
-        Svae to PDF the current selected channel or a list of channels.
+        Save to PDF the current selected channel or a list of channels.
         :return: None
         """
         if self.pem_files:
@@ -873,6 +873,13 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                     else:
                         channels = [self.channel_spinbox.value()]
 
+                    # TODO instead of re-plotting, create a copy of the figure with...
+                    # # Create a copy of the figure
+                    # buf = io.BytesIO()
+                    # pickle.dump(self.fem_figure, buf)
+                    # buf.seek(0)
+                    # save_figure = pickle.load(buf)
+
                     for channel in channels:
                         channel_time = self.channel_times.loc[channel]['Center']
                         fig = cmap_save.plot_contour(self.pem_files, self.get_selected_component(),
@@ -894,6 +901,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
                         pdf.savefig(fig, orientation='landscape')
                         fig.clear()
+
                     plt.close(fig)
                 os.startfile(path)
 
