@@ -36,14 +36,14 @@ logger = logging.getLogger(__name__)
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
-    loopPlannerCreatorFile = 'qt_ui\\loop_planner.ui'
-    gridPlannerCreatorFile = 'qt_ui\\grid_planner.ui'
-    icons_path = 'qt_ui\\icons'
+    loopPlannerCreatorFile = 'ui\\loop_planner.ui'
+    gridPlannerCreatorFile = 'ui\\grid_planner.ui'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    loopPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\loop_planner.ui')
-    gridPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\grid_planner.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    loopPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\loop_planner.ui')
+    gridPlannerCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\grid_planner.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 # Load Qt ui file into a class
 Ui_LoopPlannerWindow, _ = uic.loadUiType(loopPlannerCreatorFile)

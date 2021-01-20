@@ -24,12 +24,12 @@ logger = logging.getLogger(__name__)
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
-    gpsConversionWindow = 'qt_ui\\gps_conversion.ui'
-    icons_path = 'qt_ui\\icons'
+    gpsConversionWindow = 'ui\\gps_conversion.ui'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    gpsConversionWindow = os.path.join(os.path.dirname(application_path), 'qt_ui\\gps_conversion.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    gpsConversionWindow = os.path.join(os.path.dirname(application_path), 'ui\\gps_conversion.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 # Load Qt ui file into a class
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)

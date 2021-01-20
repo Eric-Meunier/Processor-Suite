@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QEvent
 import os
 
 # # Load Qt ui file into a class
-# qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/pem_file_form.ui")
+# qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../ui/pem_file_form.ui")
 # Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 

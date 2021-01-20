@@ -55,18 +55,18 @@ __version__ = '0.11.1'
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
-    pemhubWindowCreatorFile = 'qt_ui\\pem_hub.ui'
-    planMapOptionsCreatorFile = 'qt_ui\\plan_map_options.ui'
-    pdfPrintOptionsCreatorFile = 'qt_ui\\pdf_plot_printer.ui'
-    gpsConversionWindow = 'qt_ui\\gps_conversion.ui'
-    icons_path = 'qt_ui\\icons'
+    pemhubWindowCreatorFile = 'ui\\pem_hub.ui'
+    planMapOptionsCreatorFile = 'ui\\plan_map_options.ui'
+    pdfPrintOptionsCreatorFile = 'ui\\pdf_plot_printer.ui'
+    gpsConversionWindow = 'ui\\gps_conversion.ui'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    pemhubWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_hub.ui')
-    planMapOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\plan_map_options.ui')
-    pdfPrintOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pdf_plot_printer.ui')
-    gpsConversionWindow = os.path.join(os.path.dirname(application_path), 'qt_ui\\gps_conversion.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    pemhubWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\pem_hub.ui')
+    planMapOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\plan_map_options.ui')
+    pdfPrintOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\pdf_plot_printer.ui')
+    gpsConversionWindow = os.path.join(os.path.dirname(application_path), 'ui\\gps_conversion.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PEMHubWindow, _ = uic.loadUiType(pemhubWindowCreatorFile)

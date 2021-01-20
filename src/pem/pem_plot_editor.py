@@ -13,7 +13,7 @@ import pyqtgraph as pg
 from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtCore import QPointF
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                             QPushButton)
+                             QPushButton, QShortcut)
 from pyqtgraph.Point import Point
 from scipy import spatial
 
@@ -27,12 +27,12 @@ logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
-    plotEditorCreatorFile = 'qt_ui\\pem_plot_editor.ui'
-    icons_path = 'qt_ui\\icons'
+    plotEditorCreatorFile = 'ui\\pem_plot_editor.ui'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    plotEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_plot_editor.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    plotEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\pem_plot_editor.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PlotEditorWindow, QtBaseClass = uic.loadUiType(plotEditorCreatorFile)
@@ -133,9 +133,46 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             ax.scene().sigMouseMoved.connect(self.decay_mouse_moved)
             ax.scene().sigMouseClicked.connect(self.decay_plot_clicked)
 
+        # Configure mag plots
+        """Add the mag plots first so they are in the background and cannot be interacted with"""
+        self.x_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
+        self.mag_x_ax0 = self.x_profile_layout.addPlot(0, 0)
+        self.mag_x_ax1 = self.x_profile_layout.addPlot(1, 0)
+        self.mag_x_ax2 = self.x_profile_layout.addPlot(2, 0)
+        self.mag_x_ax3 = self.x_profile_layout.addPlot(3, 0)
+        self.mag_x_ax4 = self.x_profile_layout.addPlot(4, 0)
+
+        # Y axis lin plots
+        self.y_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
+        self.mag_y_ax0 = self.y_profile_layout.addPlot(0, 0)
+        self.mag_y_ax1 = self.y_profile_layout.addPlot(1, 0)
+        self.mag_y_ax2 = self.y_profile_layout.addPlot(2, 0)
+        self.mag_y_ax3 = self.y_profile_layout.addPlot(3, 0)
+        self.mag_y_ax4 = self.y_profile_layout.addPlot(4, 0)
+
+        # Z axis lin plots
+        self.z_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
+        self.mag_z_ax0 = self.z_profile_layout.addPlot(0, 0)
+        self.mag_z_ax1 = self.z_profile_layout.addPlot(1, 0)
+        self.mag_z_ax2 = self.z_profile_layout.addPlot(2, 0)
+        self.mag_z_ax3 = self.z_profile_layout.addPlot(3, 0)
+        self.mag_z_ax4 = self.z_profile_layout.addPlot(4, 0)
+
+        self.mag_x_layout_axes = [self.mag_x_ax0, self.mag_x_ax1, self.mag_x_ax2, self.mag_x_ax3, self.mag_x_ax4]
+        self.mag_y_layout_axes = [self.mag_y_ax0, self.mag_y_ax1, self.mag_y_ax2, self.mag_y_ax3, self.mag_y_ax4]
+        self.mag_z_layout_axes = [self.mag_z_ax0, self.mag_z_ax1, self.mag_z_ax2, self.mag_z_ax3, self.mag_z_ax4]
+        self.mag_profile_axes = np.concatenate([self.mag_x_layout_axes, self.mag_y_layout_axes, self.mag_z_layout_axes])
+
+        # Format the mag plots
+        for ax in self.mag_profile_axes:
+            ax.hideButtons()
+            ax.setMenuEnabled(False)
+            ax.getAxis('left').setWidth(60)
+            ax.showAxis('left', show=False)  # Show the axis edge line
+            ax.showAxis('bottom', show=False)  # Show the axis edge line
+
         # Configure the plots
         # X axis lin plots
-        self.x_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
         self.x_ax0 = self.x_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
         self.x_ax1 = self.x_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
         self.x_ax2 = self.x_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
@@ -143,7 +180,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.x_ax4 = self.x_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
 
         # Y axis lin plots
-        self.y_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
         self.y_ax0 = self.y_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
         self.y_ax1 = self.y_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
         self.y_ax2 = self.y_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
@@ -151,7 +187,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.y_ax4 = self.y_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
 
         # Z axis lin plots
-        self.z_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
         self.z_ax0 = self.z_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
         self.z_ax1 = self.z_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
         self.z_ax2 = self.z_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
@@ -202,6 +237,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
 
         # Signals
+        # Shortcuts
+        self.actionSave_Screenshot.triggered.connect(self.save_img)
+        self.actionCopy_Screenshot.triggered.connect(self.copy_img)
+
         # Checkboxes
         self.show_average_cbox.toggled.connect(lambda: self.plot_profiles('all'))
         self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles('all'))
@@ -319,6 +358,18 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
     def dropEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
         self.open(urls[0])
+
+    def save_img(self):
+        """Save an image of the window """
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
+        if save_name:
+            self.grab().save(save_name)
+            self.status_bar.showMessage(f"Image saved.", 1500)
+
+    def copy_img(self):
+        """Take an image of the window and copy it to the clipboard"""
+        QApplication.clipboard().setPixmap(self.grab())
+        self.status_bar.showMessage(f"Image saved to clipboard.", 1500)
 
     def open(self, pem_file):
         """
@@ -715,6 +766,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 axes = self.z_layout_axes
 
             plot_lin(profile_data, axes)
+
+            avg = profile_data.iloc[:, 3].groupby('Station').mean()
+            self.mag_x_ax0.plot(x=avg.index, y=avg, pen=pg.mkPen('g', width=4.))
 
     def plot_station(self, station, preserve_selection=False):
         """
@@ -1890,18 +1944,23 @@ class ProfileViewBox(pg.ViewBox):
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser, DMPParser
+    from pathlib import Path
+
+    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()
-    pem_files = pem_getter.get_pems(random=True, number=1)
+    # pem_files = pem_getter.get_pems(random=True, number=1)
+
     # pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
     # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
+    pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
 
     editor = PEMPlotEditor()
     editor.move(0, 0)
-    editor.open(pem_files[0])
+    editor.open(pem_file)
     # editor.auto_clean()
 
     app.exec_()

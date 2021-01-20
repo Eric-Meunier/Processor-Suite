@@ -26,10 +26,10 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = os.path.dirname(sys.executable)
-    icons_path = 'qt_ui\\icons'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 
 class DBPlotter(QMainWindow):

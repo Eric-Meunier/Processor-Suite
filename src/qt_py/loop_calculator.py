@@ -22,12 +22,12 @@ pg.setConfigOption('crashWarning', True)
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
-    loopCalcUIFile = 'qt_ui\\loop_calculator.ui'
-    icons_path = 'qt_ui\\icons'
+    loopCalcUIFile = 'ui\\loop_calculator.ui'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    loopCalcUIFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\loop_calculator.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    loopCalcUIFile = os.path.join(os.path.dirname(application_path), 'ui\\loop_calculator.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 # Load Qt ui file into a class
 loopCalcUi, _ = uic.loadUiType(loopCalcUIFile)
@@ -149,14 +149,13 @@ class LoopCalculator(QMainWindow, loopCalcUi):
             self.plan_widget.autoRange()
 
     def save_img(self):
-        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
-                                                           'map.png',
-                                                           'PNG file (*.PNG)'
-                                                           )
+        """Save a screenshot of the window """
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
         if save_name:
             self.grab().save(save_name)
 
     def copy_img(self):
+        """Take a screenshot of the window and save it to the clipboard"""
         QApplication.clipboard().setPixmap(self.grab())
 
     def get_loop(self):

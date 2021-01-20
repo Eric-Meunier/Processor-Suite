@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
-    icons_path = 'qt_ui\\icons'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 
 class MagDeclinationCalculator(QMainWindow):

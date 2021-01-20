@@ -16,7 +16,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 logger = Logger(__name__)
 # Load Qt ui file into a class
-# qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../qt_ui/pem_file_widget.ui")
+# qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../ui/pem_file_widget.ui")
 # Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 class PEMFileWidget(QWidget):

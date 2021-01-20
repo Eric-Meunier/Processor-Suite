@@ -18,12 +18,12 @@ logger = logging.getLogger(__name__)
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
-    icons_path = 'qt_ui\\icons'
-    derotatorCreatorFile = 'qt_ui\\derotator.ui'
+    icons_path = 'ui\\icons'
+    derotatorCreatorFile = 'ui\\derotator.ui'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
-    derotatorCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\derotator.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    derotatorCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\derotator.ui')
 
 # Load Qt ui file into a class
 Ui_Derotator, QtBaseClass = uic.loadUiType(derotatorCreatorFile)

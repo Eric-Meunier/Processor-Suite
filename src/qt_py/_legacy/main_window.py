@@ -21,12 +21,12 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = os.path.dirname(sys.executable)
-    MW_CreatorFile = 'qt_ui\\main_window.ui'
-    icons_path = 'qt_ui\\icons'
+    MW_CreatorFile = 'ui\\main_window.ui'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\main_window.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\main_window.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_CreatorFile)
 

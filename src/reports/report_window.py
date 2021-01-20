@@ -12,12 +12,12 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = os.path.dirname(sys.executable)
-    reportGeneratorDesignerFile = 'qt_ui\\report_generator.ui'
-    icons_path = 'qt_ui\\icons'
+    reportGeneratorDesignerFile = 'ui\\report_generator.ui'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    reportGeneratorDesignerFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\report_generator.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    reportGeneratorDesignerFile = os.path.join(os.path.dirname(application_path), 'ui\\report_generator.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 # Load Qt ui file into a class
 Ui_ReportGenerator, QtBaseClass = uic.loadUiType(reportGeneratorDesignerFile)

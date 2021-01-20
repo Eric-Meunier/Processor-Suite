@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
-    mergerCreatorFile = 'qt_ui\\pem_merger.ui'
-    icons_path = 'qt_ui\\icons'
+    mergerCreatorFile = 'ui\\pem_merger.ui'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    mergerCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\pem_merger.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    mergerCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\pem_merger.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PlotMergerWindow, QtBaseClass = uic.loadUiType(mergerCreatorFile)

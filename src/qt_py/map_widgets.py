@@ -27,14 +27,14 @@ logger = logging.getLogger(__name__)
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
-    section3DCreatorFile = 'qt_ui\\3D_section.ui'
-    contourMapCreatorFile = 'qt_ui\\contour_map.ui'
-    icons_path = 'qt_ui\\icons'
+    section3DCreatorFile = 'ui\\3D_section.ui'
+    contourMapCreatorFile = 'ui\\contour_map.ui'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    section3DCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\3D_section.ui')
-    contourMapCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\contour_map.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    section3DCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\3D_section.ui')
+    contourMapCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\contour_map.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 # Load Qt ui file into a class
 Ui_Section3DWidget, _ = uic.loadUiType(section3DCreatorFile)

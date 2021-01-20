@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
-    gpxCreatorFile = 'qt_ui\\gpx_creator.ui'
-    icons_path = 'qt_ui\\icons'
+    gpxCreatorFile = 'ui\\gpx_creator.ui'
+    icons_path = 'ui\\icons'
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
-    gpxCreatorFile = os.path.join(os.path.dirname(application_path), 'qt_ui\\gpx_creator.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "qt_ui\\icons")
+    gpxCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\gpx_creator.ui')
+    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
 # Load Qt ui file into a class
 Ui_GPXCreator, QtBaseClass = uic.loadUiType(gpxCreatorFile)
