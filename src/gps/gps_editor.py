@@ -930,7 +930,8 @@ class GPXEditor:
         gpx = gpxpy.parse(gpx_file)
         gps = []
         for waypoint in gpx.waypoints:
-            gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', waypoint.name])
+            name = re.sub(r'\s', '_', waypoint.name)
+            gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', name])
         return gps
 
     def get_utm(self, gpx_file, as_string=False):
@@ -949,18 +950,18 @@ class GPXEditor:
             lon = row[1]
             elevation = row[2]
             units = row[3]
-            name = row[4]
-            stn = re.findall('\d+', re.split('-', name)[-1])
-            stn = stn[0] if stn else ''
+            name = row[4]  # Station name usually
+            # stn = re.findall('\d+', re.split('-', name)[-1])
+            # stn = stn[0] if stn else ''
             u = utm.from_latlon(lat, lon)
             zone = u[2]
             letter = u[3]
             hemisphere = 'north' if lat >= 0 else 'south'  # Used in PEMEditor
 
             if as_string is True:
-                utm_gps.append(' '.join([str(u[0]), str(u[1]), str(elevation), units, stn]))
+                utm_gps.append(' '.join([str(u[0]), str(u[1]), str(elevation), units, name]))
             else:
-                utm_gps.append([u[0], u[1], elevation, units, stn])
+                utm_gps.append([u[0], u[1], elevation, units, name])
 
         return utm_gps, zone, hemisphere
 
@@ -1181,13 +1182,17 @@ if __name__ == '__main__':
     # from src.pem.pem_getter import PEMGetter
     # pg = PEMGetter()
     # pem_files = pg.get_pems(client='Raglan', number=1)
+    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     # gps_parser = GPSParser()
-    # gpx_editor = GPXEditor()
+    gpx_editor = GPXEditor()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\src\gps\sample_files\45-1.csv'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\AF19003 loop and collar.txt'
-    file = r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\GPS\ERLOOP1_28.txt'
+    gpx_file = samples_folder.joinpath(r'GPX files\L500E.gpx')
+
+    result = gpx_editor.get_utm(gpx_file)
+
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\PERKOA SW LOOP 1.txt'
@@ -1195,7 +1200,7 @@ if __name__ == '__main__':
     # segments = BoreholeSegments(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\718-3759gyro.seg')
     # geometry = BoreholeGeometry(collar, segments)
     # geometry.get_projection(num_segments=1000)
-    loop = TransmitterLoop(file)
+    # loop = TransmitterLoop(file)
     # loop.to_nad83()
     # line = SurveyLine(file, name=os.path.basename(file))
     # print(loop.get_sorted_loop(), '\n', loop.get_loop())

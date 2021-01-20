@@ -395,7 +395,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         files = [Path(f) for f in files]
 
-        file = merge_files(files)
+        file_contents = merge_files(files)
         current_tab = self.tabs.currentWidget()
 
         # Add survey line GPS
@@ -409,7 +409,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             line_adder.accept_sig.connect(line_accept_sig_wrapper)
             line_adder.accept_sig.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
             try:
-                line = SurveyLine(file)
+                line = SurveyLine(file_contents)
                 if line.df.empty:
                     self.message.information(self, 'No GPS Found', f"{line.error_msg}.")
                 else:
@@ -421,7 +421,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # Add borehole collar GPS
         elif current_tab == self.geometry_tab:
             try:
-                collar = BoreholeCollar(file)
+                collar = BoreholeCollar(file_contents)
                 errors = collar.get_errors()
                 if not errors.empty:
                     self.message.warning(self, 'Parsing Error',

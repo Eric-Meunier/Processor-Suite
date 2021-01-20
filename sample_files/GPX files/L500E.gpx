@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx
+ xmlns="http://www.topografix.com/GPX/1/1"
+ creator="OziExplorer Version 3956f - http://www.oziexplorer.com"
+ version="1.1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+ <time>2021-01-16T22:10:30Z</time>
+ <bounds minlat="52.278439" minlon="-72.097430" maxlat="52.310800" maxlon="-72.032507"/>
+</metadata>
+<wpt lat="52.2807370" lon="-72.0527510">
+ <ele>492.252014</ele>
+ <time>2021-01-16T14:44:46.000Z</time>
+ <name>500 50</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2812180" lon="-72.0527280">
+ <ele>496.824005</ele>
+ <time>2021-01-16T14:54:37.996Z</time>
+ <name>500 100</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2816250" lon="-72.0527090">
+ <ele>494.080811</ele>
+ <time>2021-01-16T15:01:26.003Z</time>
+ <name>500 150</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2820810" lon="-72.0526870">
+ <ele>494.385590</ele>
+ <time>2021-01-16T15:06:16.004Z</time>
+ <name>500 200</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2825160" lon="-72.0526420">
+ <ele>494.385590</ele>
+ <time>2021-01-16T15:10:30.996Z</time>
+ <name>500 250</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2829750" lon="-72.0526120">
+ <ele>497.128815</ele>
+ <time>2021-01-16T15:14:17.002Z</time>
+ <name>500 300</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2834180" lon="-72.0525810">
+ <ele>498.043213</ele>
+ <time>2021-01-16T15:24:12.997Z</time>
+ <name>500 350</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2838710" lon="-72.0525670">
+ <ele>499.872009</ele>
+ <time>2021-01-16T15:29:40.998Z</time>
+ <name>500 400</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2843270" lon="-72.0525030">
+ <ele>501.395996</ele>
+ <time>2021-01-16T15:36:02.998Z</time>
+ <name>500 450</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2847500" lon="-72.0524850">
+ <ele>499.262390</ele>
+ <time>2021-01-16T15:42:50.996Z</time>
+ <name>500 500</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2852140" lon="-72.0524180">
+ <ele>498.043213</ele>
+ <time>2021-01-16T15:54:25.998Z</time>
+ <name>500 550</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2856650" lon="-72.0524190">
+ <ele>524.865601</ele>
+ <time>2021-01-16T16:03:44.004Z</time>
+ <name>500 600</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2861220" lon="-72.0523950">
+ <ele>525.475220</ele>
+ <time>2021-01-16T16:19:29.004Z</time>
+ <name>500 650</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2865560" lon="-72.0523980">
+ <ele>514.502380</ele>
+ <time>2021-01-16T16:28:08.000Z</time>
+ <name>500 700</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2874620" lon="-72.0523080">
+ <ele>519.379211</ele>
+ <time>2021-01-16T16:42:18.996Z</time>
+ <name>500 800</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2870080" lon="-72.0523090">
+ <ele>494.995209</ele>
+ <time>2021-01-16T16:43:08.003Z</time>
+ <name>500 750</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2879110" lon="-72.0522600">
+ <ele>526.694397</ele>
+ <time>2021-01-16T16:51:26.004Z</time>
+ <name>500 850</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2883460" lon="-72.0522460">
+ <ele>523.341614</ele>
+ <time>2021-01-16T16:55:10.004Z</time>
+ <name>500 900</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2888120" lon="-72.0522020">
+ <ele>526.999207</ele>
+ <time>2021-01-16T17:06:20.002Z</time>
+ <name>500 950</name>
+ <sym>Crossing</sym>
+</wpt>
+</gpx>

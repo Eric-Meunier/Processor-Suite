@@ -108,7 +108,6 @@ def get_icon(filepath):
 
 
 # TODO Idea: Plot mag on top of profile data
-# TODO Fix step plot range
 
 class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
@@ -1326,7 +1325,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
     def open_pem_files(self, pem_files):
         """
         Action of opening a PEM file. Will not open a PEM file if it is already opened.
-        :param pem_files: list, Filepaths for the PEM Files
+        :param pem_files: list or str/Path, Filepaths for the PEM Files
         """
 
         def add_piw_widget(pem_file):
@@ -1454,6 +1453,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
+        pem_files = [Path(file) for file in pem_files]
+
         count = 0
         parser = PEMParser()
         self.table.blockSignals(True)
@@ -1530,6 +1531,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         pem_info_widget = self.stackedWidget.currentWidget()
         crs = self.get_crs()
+
+        if not isinstance(gps_files, list):
+            gps_files = [gps_files]
+
+        gps_files = [Path(file) for file in gps_files]
         pem_info_widget.open_gps_files(gps_files)
 
         # Set the project CRS if a .inf or .log file is in the directory and the project CRS is currently empty
@@ -4233,24 +4239,34 @@ def main():
     mw = PEMHub()
     pg = PEMGetter()
     pem_parser = PEMParser()
+    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     # ff = PathFilter()
     # ff.show()
 
     mw.show()
+
+    gpx_file = samples_folder.joinpath(r'GPX files\L500E.gpx')
+    pem_file = samples_folder.joinpath(r'GPX files\500E.PEM')
+
+    mw.open_pem_files(pem_file)
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    mw.open_gps_files(gpx_file)
+
     # pem_files = [r'C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.DMP2']
     # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
     # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
-    pem_files = [r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\TMC holes\1338-19-036\RAW\XY_16.PEM']
+    # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
+    # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     # pem_files = pg.get_pems(random=True, number=10)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     # mw.open_dmp_files(pem_files)
-    mw.open_pem_files(pem_files)
+    # mw.open_pem_files(pem_files)
     # mw.open_mag_dec(mw.pem_files[0])
 
     # mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')
