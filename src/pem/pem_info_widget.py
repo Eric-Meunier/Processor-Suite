@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox,
+from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate,
                              QFileDialog, QErrorMessage, QHeaderView)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
@@ -186,6 +186,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table.cellChanged.connect(self.check_station_duplicates)
         self.line_table.cellChanged.connect(self.color_line_table)
         self.line_table.cellChanged.connect(self.check_missing_gps)
+        # self.line_table.cellChanged.connect(cell_changed)
         self.line_table.itemSelectionChanged.connect(self.calc_distance)
         self.line_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
         self.line_table.itemSelectionChanged.connect(lambda: save_selected_row(self.line_table))
@@ -210,6 +211,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if not self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.geometry_tab))
             self.line_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            # self.line_table.setItemDelegate(FloatDelegate(2))
 
         elif self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.station_gps_tab))
@@ -579,11 +581,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             :return: None
             """
             def series_to_items(x):
-                if isinstance(x, float):
-                    return QTableWidgetItem(f"{x:.2f}")
+                # if isinstance(x, float):
+                    # item = QTableWidgetItem(f"{x:.2f}")
+                item = QTableWidgetItem()
+                item.setData(QtCore.Qt.EditRole, x)
+                return item
                     # return QTableWidgetItem(f"{x}")
-                else:
-                    return QTableWidgetItem(str(x))
+                # else:
+                #     return QTableWidgetItem(str(x))
 
             # Add a new row to the table
             row_pos = table.rowCount()
@@ -637,9 +642,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         station_col = self.line_table_columns.index('Station')
 
         for row in range(self.line_table.rowCount()):
-            if self.line_table.item(row, station_col) and stations[row] > sorted_stations[row]:
+            table_value = stations[row]
+            sorted_value = sorted_stations[row]
+            if self.line_table.item(row, station_col) and table_value > sorted_value:
                 self.line_table.item(row, station_col).setBackground(blue_color)
-            elif self.line_table.item(row, station_col) and stations[row] < sorted_stations[row]:
+            elif self.line_table.item(row, station_col) and table_value < sorted_value:
                 self.line_table.item(row, station_col).setBackground(red_color)
             else:
                 self.line_table.item(row, station_col).setBackground(QtGui.QColor('white'))
@@ -1055,3 +1062,17 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if refresh:
             self.refresh_row_signal.emit()
+
+
+class FloatDelegate(QItemDelegate):
+    def __init__(self, decimals, parent=None):
+        QItemDelegate.__init__(self, parent=parent)
+        self.nDecimals = decimals
+
+    def paint(self, painter, option, index):
+        value = index.model().data(index, QtCore.Qt.EditRole)
+        # try:
+        number = float(value)
+        painter.drawText(option.rect, QtCore.Qt.AlignCenter, f"{number:.{self.nDecimals}f}")
+        # except Exception:
+        #     QItemDelegate.paint(self, painter, option, index)

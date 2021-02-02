@@ -74,6 +74,11 @@ Ui_PlanMapOptionsWidget, _ = uic.loadUiType(planMapOptionsCreatorFile)
 Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 
+# TODO Can't edit line GPS elevation
+# TODO Idea: Color code first and last station columns (maybe use channel times coloring)
+# TODO Adding bulk RI files isn't being done correctly (use TMC Loop G)
+# TODO Add Save option to the File menu in DB plotter.
+
 
 def get_icon(filepath):
     ext = filepath.suffix.lower()
@@ -1453,8 +1458,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
-        pem_files = [Path(file) for file in pem_files]
-
         count = 0
         parser = PEMParser()
         self.table.blockSignals(True)
@@ -2172,11 +2175,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         @stopit.threading_timeoutable(default='timeout')
         def find_gps_files():
-            files = list(self.project_dir.rglob('*.txt'))
-            files.extend(self.project_dir.rglob('*.csv'))
-            files.extend(self.project_dir.rglob('*.gpx'))
-            files.extend(self.project_dir.rglob('*.xlsx'))
-            files.extend(self.project_dir.rglob('*.xls'))
+            files = list(natsort.os_sorted(self.project_dir.rglob('*.txt')))
+            files.extend(natsort.os_sorted(self.project_dir.rglob('*.csv')))
+            files.extend(natsort.os_sorted(self.project_dir.rglob('*.gpx')))
+            files.extend(natsort.os_sorted(self.project_dir.rglob('*.xlsx')))
+            files.extend(natsort.os_sorted(self.project_dir.rglob('*.xls')))
             return files
 
         def get_filtered_gps():
@@ -2279,9 +2282,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         def find_pem_files():
             files = []
             # Find all .PEM, .DMP, and .DMP2 files in the project directory
-            files.extend(list(self.project_dir.rglob('*.PEM')))
-            files.extend(list(self.project_dir.rglob('*.DMP')))
-            files.extend(list(self.project_dir.rglob('*.DMP2')))
+            files.extend(natsort.os_sorted(list(self.project_dir.rglob('*.PEM'))))
+            files.extend(natsort.os_sorted(list(self.project_dir.rglob('*.DMP'))))
+            files.extend(natsort.os_sorted(list(self.project_dir.rglob('*.DMP2'))))
             return files
 
         def get_filtered_pems():
@@ -4246,17 +4249,17 @@ def main():
 
     mw.show()
 
-    gpx_file = samples_folder.joinpath(r'GPX files\L500E.gpx')
-    pem_file = samples_folder.joinpath(r'GPX files\500E.PEM')
-
-    mw.open_pem_files(pem_file)
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    mw.open_gps_files(gpx_file)
+    # gpx_file = samples_folder.joinpath(r'GPX files\L500E.gpx')
+    # pem_file = samples_folder.joinpath(r'GPX files\500E.PEM')
+    # 
+    # mw.open_pem_files(pem_file)
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.open_gps_files(gpx_file)
 
     # pem_files = [r'C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.DMP2']
     # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
-    # pem_files = pg.get_pems(client='Raglan', file='718-3755 XYZT.PEM')
+    pem_files = pg.get_pems(client='TMC', file='1000e.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
@@ -4266,7 +4269,7 @@ def main():
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     # mw.open_dmp_files(pem_files)
-    # mw.open_pem_files(pem_files)
+    mw.open_pem_files(pem_files)
     # mw.open_mag_dec(mw.pem_files[0])
 
     # mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')
