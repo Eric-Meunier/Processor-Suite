@@ -1458,6 +1458,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
+        # pem_files = [Path(file) for file in pem_files]
+
         count = 0
         parser = PEMParser()
         self.table.blockSignals(True)
@@ -4251,7 +4253,7 @@ def main():
 
     # gpx_file = samples_folder.joinpath(r'GPX files\L500E.gpx')
     # pem_file = samples_folder.joinpath(r'GPX files\500E.PEM')
-    # 
+    #
     # mw.open_pem_files(pem_file)
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.open_gps_files(gpx_file)

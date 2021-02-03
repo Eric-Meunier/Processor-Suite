@@ -131,29 +131,29 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             row = table.selectionModel().selectedRows()[0].row()
             self.selected_row_info = [table.item(row, j).text() for j in range(table.columnCount())]
 
-        def cell_changed(row, col):
-            """
-            Signal slot, ensure the new value is a number. Replaces the value with the saved value if it's not.
-            :param row: int
-            :param col: int
-            """
-            self.active_table.blockSignals(True)
-            value = self.active_table.item(row, col).text()
-            try:
-                float(value)
-            except ValueError:
-                # Replace with the saved information
-                logger.error(f"{value} is not a number.")
-                self.message.critical(self, 'Error', f"{value} is not a number.")
-                item = QTableWidgetItem(self.selected_row_info[col])
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.active_table.setItem(row, col, item)
-            else:
-                self.gps_object_changed(self.active_table, refresh=True)
-            finally:
-                # Save the information of the row
-                save_selected_row(self.active_table)
-                self.active_table.blockSignals(False)
+        # def cell_changed(row, col):
+        #     """
+        #     Signal slot, ensure the new value is a number. Replaces the value with the saved value if it's not.
+        #     :param row: int
+        #     :param col: int
+        #     """
+        #     self.active_table.blockSignals(True)
+        #     value = self.active_table.item(row, col).text()
+        #     try:
+        #         float(value)
+        #     except ValueError:
+        #         # Replace with the saved information
+        #         logger.error(f"{value} is not a number.")
+        #         self.message.critical(self, 'Error', f"{value} is not a number.")
+        #         item = QTableWidgetItem(self.selected_row_info[col])
+        #         item.setTextAlignment(QtCore.Qt.AlignCenter)
+        #         self.active_table.setItem(row, col, item)
+        #     else:
+        #         self.gps_object_changed(self.active_table, refresh=True)
+        #     finally:
+        #         # Save the information of the row
+        #         save_selected_row(self.active_table)
+        #         self.active_table.blockSignals(False)
 
         # Buttons
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
@@ -189,14 +189,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # self.line_table.cellChanged.connect(cell_changed)
         self.line_table.itemSelectionChanged.connect(self.calc_distance)
         self.line_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
-        self.line_table.itemSelectionChanged.connect(lambda: save_selected_row(self.line_table))
+        # self.line_table.itemSelectionChanged.connect(lambda: save_selected_row(self.line_table))
 
-        self.loop_table.cellChanged.connect(cell_changed)
+        # self.loop_table.cellChanged.connect(cell_changed)
         self.loop_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shift_elevation_spinbox))
-        self.loop_table.itemSelectionChanged.connect(lambda: save_selected_row(self.loop_table))
+        # self.loop_table.itemSelectionChanged.connect(lambda: save_selected_row(self.loop_table))
 
-        self.collar_table.cellChanged.connect(cell_changed)
-        self.collar_table.itemSelectionChanged.connect(lambda: save_selected_row(self.collar_table))
+        # self.collar_table.cellChanged.connect(cell_changed)
+        # self.collar_table.itemSelectionChanged.connect(lambda: save_selected_row(self.collar_table))
 
         # Spinboxes
         self.shiftStationGPSSpinbox.valueChanged.connect(self.shift_gps_station_numbers)
@@ -208,17 +208,27 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         self.tabs.removeTab(4)
+        float_delegate = FloatDelegate(2)  # Must keep this reference or else it is garbage collected
+
         if not self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.geometry_tab))
             self.line_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            # self.line_table.setItemDelegate(FloatDelegate(2))
+            self.line_table.setItemDelegateForColumn(0, float_delegate)
+            self.line_table.setItemDelegateForColumn(1, float_delegate)
+            self.line_table.setItemDelegateForColumn(2, float_delegate)
 
         elif self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.station_gps_tab))
             self.segments_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
             self.collar_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.collar_table.setItemDelegateForColumn(0, float_delegate)
+            self.collar_table.setItemDelegateForColumn(1, float_delegate)
+            self.collar_table.setItemDelegateForColumn(2, float_delegate)
 
         self.loop_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.loop_table.setItemDelegateForColumn(0, float_delegate)
+        self.loop_table.setItemDelegateForColumn(1, float_delegate)
+        self.loop_table.setItemDelegateForColumn(2, float_delegate)
 
     def eventFilter(self, source, event):
         if source is self.line_table:  # Makes the 'Del' shortcut work when the table is in focus
@@ -1071,8 +1081,11 @@ class FloatDelegate(QItemDelegate):
 
     def paint(self, painter, option, index):
         value = index.model().data(index, QtCore.Qt.EditRole)
-        # try:
-        number = float(value)
-        painter.drawText(option.rect, QtCore.Qt.AlignCenter, f"{number:.{self.nDecimals}f}")
-        # except Exception:
+        # if index in [0, 1]:
+        try:
+            number = float(value)
+            painter.drawText(option.rect, QtCore.Qt.AlignCenter, f"{number:.{self.nDecimals}f}")
+        except Exception:
+            QItemDelegate.paint(self, painter, option, index)
+        # else:
         #     QItemDelegate.paint(self, painter, option, index)

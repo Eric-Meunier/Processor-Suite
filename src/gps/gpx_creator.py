@@ -341,6 +341,11 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
             self.message.critical(self, 'Invalid file type', f"{self.filepath.name} is not a valid file.")
             return
 
+        if not all([header in data.columns for header in ['Easting', 'Northing', 'Comment']]):
+            self.message.information(self, f"Error parsing {filepath.name}",
+                                     "The CSV data columns must have headers 'Easting', 'Northing', and 'Comment'")
+            return
+
         data.loc[:, ['Easting', 'Northing']] = data.loc[:, ['Easting', 'Northing']].astype(float)
         data.loc[:, 'Comment'] = data.loc[:, 'Comment'].astype(str)
         df_to_table(data)
