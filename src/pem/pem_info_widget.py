@@ -35,6 +35,16 @@ Ui_PEMInfoWidget, QtBaseClass = uic.loadUiType(pemInfoWidgetCreatorFile)
 logger = logging.getLogger(__name__)
 
 
+def clear_table(table):
+    """
+    Clear a given table
+    """
+    table.blockSignals(True)
+    while table.rowCount() > 0:
+        table.removeRow(0)
+    table.blockSignals(False)
+
+
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     refresh_row_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to refresh its main table.
 
@@ -140,8 +150,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.export_collar_gps_btn.clicked.connect(lambda: self.export_gps('collar'))
         self.export_segments_btn.clicked.connect(lambda: self.export_gps('segments'))
 
-        self.edit_loop_btn.clicked.connect(self.edit_loop)
-        self.edit_line_btn.clicked.connect(self.edit_line)
+        self.edit_loop_btn.clicked.connect(lambda: self.add_loop(loop_content=self.get_loop()))
+        self.edit_line_btn.clicked.connect(lambda: self.add_line(line_content=self.get_line()))
 
         self.share_loop_gps_btn.clicked.connect(lambda: self.share_loop_signal.emit(self.get_loop()))
         self.share_line_gps_btn.clicked.connect(lambda: self.share_line_signal.emit(self.get_line()))
@@ -152,14 +162,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table.cellChanged.connect(self.check_station_duplicates)
         self.line_table.cellChanged.connect(self.color_line_table)
         self.line_table.cellChanged.connect(self.check_missing_gps)
-        self.line_table.cellChanged.connect(self.gps_object_changed)
+        self.line_table.cellChanged.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
         self.line_table.itemSelectionChanged.connect(self.calc_distance)
         self.line_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
 
         self.loop_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shift_elevation_spinbox))
-        self.loop_table.cellChanged.connect(self.gps_object_changed)
+        self.loop_table.cellChanged.connect(lambda: self.gps_object_changed(self.loop_table, refresh=True))
 
-        self.collar_table.cellChanged.connect(self.gps_object_changed)
+        self.collar_table.cellChanged.connect(lambda: self.gps_object_changed(self.collar_table, refresh=True))
 
         # Spinboxes
         self.shiftStationGPSSpinbox.valueChanged.connect(self.shift_gps_station_numbers)
@@ -295,7 +305,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.ri_table.setHorizontalHeaderLabels(columns)
 
         def fill_ri_table():
-            self.clear_table(self.ri_table)
+            clear_table(self.ri_table)
 
             for i, row in enumerate(self.ri_file.data):
                 row_pos = self.ri_table.rowCount()
@@ -375,23 +385,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         # Add survey line GPS
         if current_tab == self.station_gps_tab:
-
-            def line_accept_sig_wrapper(data):
-                self.fill_gps_table(data, self.line_table)
-
-            global line_adder
-            line_adder = LineAdder(parent=self)
-            line_adder.accept_sig.connect(line_accept_sig_wrapper)
-            line_adder.accept_sig.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
-            try:
-                line = SurveyLine(file_contents)
-                if line.df.empty:
-                    self.message.information(self, 'No GPS Found', f"{line.error_msg}.")
-                else:
-                    line_adder.open(line, name=self.pem_file.line_name)
-            except Exception as e:
-                logger.critical(str(e))
-                self.error.showMessage(f"Error adding line: {str(e)}.")
+            self.add_line(file_contents)
 
         # Add borehole collar GPS
         elif current_tab == self.geometry_tab:
@@ -412,23 +406,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         # Add loop GPS
         elif current_tab == self.loop_gps_tab:
+            self.add_loop(file_contents)
 
-            def loop_accept_sig_wrapper(data):
-                self.fill_gps_table(data, self.loop_table)
-
-            global loop_adder
-            loop_adder = LoopAdder(parent=self)
-            loop_adder.accept_sig.connect(loop_accept_sig_wrapper)
-            loop_adder.accept_sig.connect(lambda: self.gps_object_changed(self.loop_table, refresh=True))
-
-            try:
-                loop = TransmitterLoop(file)
-                if loop.df.empty:
-                    self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
-                loop_adder.open(loop, name=self.pem_file.loop_name)
-            except Exception as e:
-                logger.critical(f"{e}.")
-                self.error.showMessage(f"Error adding loop: {str(e)}")
         else:
             pass
 
@@ -446,45 +425,67 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         pem_geometry.accepted_sig.connect(accept_geometry)
         pem_geometry.open(self.pem_file)
 
-    def edit_loop(self):
+    def add_line(self, line_content=None):
         """
-        Open the LoopAdder widget and open the current loop into it.
+        Open the LineAdder and add the SurveyLine
+        :param line_content: str or Path, SurveyLine object, or pd DataFrame. If None is passed, will take the line
+        in the line_table.
         """
-        loop = self.get_loop()
-        if loop.df.empty:
-            return
 
-        global loop_adder
-        loop_adder = LoopAdder(parent=self)
-        loop_adder.open(loop, name=self.pem_file.loop_name)
-
-    def edit_line(self):
-        """
-        Open the LineAdder widget and open the current line into it.
-        """
-        line = self.get_line()
-        if line.df.empty:
-            return
+        def line_accept_sig_wrapper(data):
+            self.fill_gps_table(data, self.line_table)
 
         global line_adder
         line_adder = LineAdder(parent=self)
-        line_adder.open(line, name=self.pem_file.line_name)
+        line_adder.accept_sig.connect(line_accept_sig_wrapper)
+        line_adder.accept_sig.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
 
-    def clear_table(self, table):
+        if line_content is None:
+            line_content = self.get_line()
+
+        try:
+            line = SurveyLine(line_content)
+            if line.df.empty:
+                self.message.information(self, 'No GPS Found', f"{line.error_msg}.")
+            else:
+                line_adder.open(line, name=self.pem_file.line_name)
+        except Exception as e:
+            logger.critical(str(e))
+            self.error.showMessage(f"Error adding line: {str(e)}.")
+
+    def add_loop(self, loop_content=None):
         """
-        Clear a given table
+        Open the LoopAdder and add the TransmitterLoop
+        :param loop_content: str or Path, TransmitterLoop object, or pd DataFrame. If None is passed, will take the loop
+        in the loop_table.
         """
-        table.blockSignals(True)
-        while table.rowCount() > 0:
-            table.removeRow(0)
-        table.blockSignals(False)
+
+        def loop_accept_sig_wrapper(data):
+            self.fill_gps_table(data, self.loop_table)
+
+        global loop_adder
+        loop_adder = LoopAdder(parent=self)
+        loop_adder.accept_sig.connect(loop_accept_sig_wrapper)
+        loop_adder.accept_sig.connect(lambda: self.gps_object_changed(self.loop_table, refresh=True))
+
+        if loop_content is None:
+            loop_content = self.get_loop()
+
+        try:
+            loop = TransmitterLoop(loop_content)
+            if loop.df.empty:
+                self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
+            loop_adder.open(loop, name=self.pem_file.loop_name)
+        except Exception as e:
+            logger.critical(f"{e}.")
+            self.error.showMessage(f"Error adding loop: {str(e)}")
 
     def fill_info_tab(self):
         """
         Adds all information from the header, tags, and notes into the info_table.
         :return: None
         """
-        self.clear_table(self.info_table)
+        clear_table(self.info_table)
         bold_font = QtGui.QFont()
         bold_font.setBold(True)
         f = self.pem_file
@@ -578,7 +579,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             return
 
         # data.reset_index(inplace=True)
-        self.clear_table(table)
+        clear_table(table)
         table.blockSignals(True)
 
         if table == self.loop_table:
@@ -1033,6 +1034,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         elif table == self.segments_table:
             self.pem_file.segments = self.get_segments()
+
+        else:
+            logger.error(f"{table} is not a valid PIW table.")
+            return
 
         if refresh:
             self.refresh_row_signal.emit()

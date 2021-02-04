@@ -45,6 +45,7 @@ class Derotator(QMainWindow, Ui_Derotator):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
+        self.installEventFilter(self)
         self.parent = parent
         self.pem_file = None
         self.rotated_file = None
@@ -141,6 +142,11 @@ class Derotator(QMainWindow, Ui_Derotator):
         # Signals
         self.actionPEM_File.triggered.connect(self.export_pem_file)
         self.actionStats.triggered.connect(self.export_stats)
+
+    def eventFilter(self, watched, event):
+        if event.type() == QtCore.QEvent.Close:  # Close the viewboxes when the window is closed
+            self.deleteLater()
+        return super().eventFilter(watched, event)
 
     def export_stats(self):
         """

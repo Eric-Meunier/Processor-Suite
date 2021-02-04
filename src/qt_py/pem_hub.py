@@ -894,9 +894,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 # View GPS
                 view_loop_action = QAction("Loop GPS", self)
-                view_loop_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].edit_loop())
+                view_loop_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].add_loop())
                 view_line_action = QAction("Line GPS", self)
-                view_line_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].edit_line())
+                view_line_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].add_line())
 
                 # Share GPS
                 share_loop_action = QAction("Loop GPS", self)

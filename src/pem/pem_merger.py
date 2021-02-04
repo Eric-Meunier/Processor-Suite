@@ -40,6 +40,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         super().__init__()
         self.parent = parent
         self.setupUi(self)
+        self.installEventFilter(self)
         self.message = QMessageBox()
 
         # Format window
@@ -249,6 +250,11 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
 
         elif event.key() == QtCore.Qt.Key_Space:
             self.reset_range()
+
+    def eventFilter(self, watched, event):
+        if event.type() == QtCore.QEvent.Close:  # Close the viewboxes when the window is closed
+            self.deleteLater()
+        return super().eventFilter(watched, event)
 
     def reset_range(self):
         for ax in self.profile_axes:

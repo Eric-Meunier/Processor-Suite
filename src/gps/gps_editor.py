@@ -284,7 +284,10 @@ class TransmitterLoop(BaseGPS):
 
         error_msg = ''
 
-        if isinstance(file, list):
+        if isinstance(file, TransmitterLoop):
+            logger.info(f"TransmitterLoop passed.")
+            return file.df, file.errors, ''
+        elif isinstance(file, list):
             # split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(file)
         elif isinstance(file, pd.DataFrame):
@@ -461,7 +464,10 @@ class SurveyLine(BaseGPS):
 
         error_msg = ''
 
-        if isinstance(file, list):
+        if isinstance(file, SurveyLine):
+            logger.info(f"SurveyLine passed.")
+            return file.df, file.errors, ''
+        elif isinstance(file, list):
             # split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(file)
         elif isinstance(file, pd.DataFrame):
