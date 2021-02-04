@@ -121,40 +121,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def init_signals(self):
 
-        def save_selected_row(table):
-            """
-            Save the information of the selected row of table, so the information may be used to re-fill an invalid
-            user input value.
-            :param table: QTableWidget table
-            """
-            self.active_table = table
-            row = table.selectionModel().selectedRows()[0].row()
-            self.selected_row_info = [table.item(row, j).text() for j in range(table.columnCount())]
-
-        # def cell_changed(row, col):
-        #     """
-        #     Signal slot, ensure the new value is a number. Replaces the value with the saved value if it's not.
-        #     :param row: int
-        #     :param col: int
-        #     """
-        #     self.active_table.blockSignals(True)
-        #     value = self.active_table.item(row, col).text()
-        #     try:
-        #         float(value)
-        #     except ValueError:
-        #         # Replace with the saved information
-        #         logger.error(f"{value} is not a number.")
-        #         self.message.critical(self, 'Error', f"{value} is not a number.")
-        #         item = QTableWidgetItem(self.selected_row_info[col])
-        #         item.setTextAlignment(QtCore.Qt.AlignCenter)
-        #         self.active_table.setItem(row, col, item)
-        #     else:
-        #         self.gps_object_changed(self.active_table, refresh=True)
-        #     finally:
-        #         # Save the information of the row
-        #         save_selected_row(self.active_table)
-        #         self.active_table.blockSignals(False)
-
         # Buttons
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
 
@@ -186,17 +152,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table.cellChanged.connect(self.check_station_duplicates)
         self.line_table.cellChanged.connect(self.color_line_table)
         self.line_table.cellChanged.connect(self.check_missing_gps)
-        # self.line_table.cellChanged.connect(cell_changed)
+        self.line_table.cellChanged.connect(self.gps_object_changed)
         self.line_table.itemSelectionChanged.connect(self.calc_distance)
         self.line_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
-        # self.line_table.itemSelectionChanged.connect(lambda: save_selected_row(self.line_table))
 
-        # self.loop_table.cellChanged.connect(cell_changed)
         self.loop_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shift_elevation_spinbox))
-        # self.loop_table.itemSelectionChanged.connect(lambda: save_selected_row(self.loop_table))
+        self.loop_table.cellChanged.connect(self.gps_object_changed)
 
-        # self.collar_table.cellChanged.connect(cell_changed)
-        # self.collar_table.itemSelectionChanged.connect(lambda: save_selected_row(self.collar_table))
+        self.collar_table.cellChanged.connect(self.gps_object_changed)
 
         # Spinboxes
         self.shiftStationGPSSpinbox.valueChanged.connect(self.shift_gps_station_numbers)
@@ -984,6 +947,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Create a TransmitterLoop object using the information in the loop_table
         :return: TransmitterLoop object
         """
+        print(f"PIW - Getting loop")
         gps = []
         for row in range(self.loop_table.rowCount()):
             gps_row = list()
