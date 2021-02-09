@@ -3856,7 +3856,7 @@ if __name__ == '__main__':
     lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
     ax6 = ax5.twiny()
     ax6.get_shared_x_axes().join(ax5, ax6)
-    pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
+    # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
     lin_plot = LINPlotter(pem, lin_fig)
     lin_plot.plot('X')
     plt.show()

@@ -31,8 +31,8 @@ class RIFile:
         self.header = {}
         self.data = []
         self.columns = ['Station', 'Component', 'Gain', 'Theoretical PP', 'Measured PP', 'S1', 'Last Step',
-                       '(M-T)*100/Tot', '(S1-T)*100/Tot', '(LS-T)*100/Tot', '(S2-S1)*100/Tot', 'S3%', 'S4%',
-                       'S5%', 'S6%', 'S7%', 'S8%', 'S9%', 'S10%']
+                        '(M-T)*100/Tot', '(S1-T)*100/Tot', '(LS-T)*100/Tot', '(S2-S1)*100/Tot', 'S3%', 'S4%',
+                        'S5%', 'S6%', 'S7%', 'S8%', 'S9%', 'S10%']
         self.survey_type = None
 
     def open(self, filepath):
@@ -205,7 +205,7 @@ class BatchRIImporter(QWidget):
             self.table.setItem(row_pos, 0, item)
 
     def open_ri_files(self, ri_filepaths):
-        ri_filepaths.sort(key=lambda path: natsort.humansorted(os.path.basename(path)), reverse=False)
+        ri_filepaths = natsort.os_sorted(ri_filepaths)
         self.ri_files = []
 
         if len(ri_filepaths) == len(self.pem_files):

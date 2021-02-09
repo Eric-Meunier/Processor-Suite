@@ -4262,13 +4262,12 @@ def main():
     # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
     # pem_files = pg.get_pems(client='TMC', file='1000e.PEM')
-    # pem_files = pg.get_pems(client='Kazzinc', number=4)
+    pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     # pem_files = pg.get_pems(random=True, number=10)
-    pem_files = [r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM']
 
     # mw.open_dmp_files(pem_files)
     mw.open_pem_files(pem_files)
