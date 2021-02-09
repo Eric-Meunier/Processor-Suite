@@ -251,7 +251,7 @@ class ProfilePlotter:
 
     def get_interp_data(self, x, y):
         """
-        Interpolate the data into 1000 segments
+        Interpolate the data into 1000 segments. Can be increasing or decreasing X values.
         :param x: arr, base X values
         :param y: arr, base Y values
         :return: arr tuple, interpolated X and Y arrays with gaps masked if enabled
@@ -286,13 +286,15 @@ class ProfilePlotter:
 
             return interp_x, interp_y
 
-        # # Check that the stations are monotonically increasing.
-        # if not np.all(x[1:] >= x[:-1], axis=0):
-        #     raise Exception(f"{self.pem_file.filepath.name} - Stations must be increasing for interpolation.")
-
         # Interpolate the x and y data
-        interp_x = np.linspace(x.min(), x.max() + 1, num=1000)
-        interp_y = np.interp(np.abs(interp_x), np.abs(x), y)  # Take the absolute values for negative stations.
+        interp_x = np.linspace(x[0], x[-1] + 1, num=1000)
+
+        # Check that the stations are monotonically increasing.
+        if np.all(interp_x[1:] >= interp_x[:-1], axis=0):
+            interp_y = np.interp(interp_x, x, y)
+        else:
+            # If it is not increasing, flip the X array
+            interp_y = np.interp(np.flip(interp_x), np.flip(x), y)  # Output is the correct orientation
 
         # Mask the data in gaps
         if self.hide_gaps:
@@ -3851,12 +3853,13 @@ if __name__ == '__main__':
     # sp.plot(pem_files[0], figure=fig)
     # plt.show()
 
-    # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    # ax6 = ax5.twiny()
-    # ax6.get_shared_x_axes().join(ax5, ax6)
-    # lin_plot = LINPlotter(pem_files[0], lin_fig)
-    # lin_plot.plot('X')
-    # plt.show()
+    lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    ax6 = ax5.twiny()
+    ax6.get_shared_x_axes().join(ax5, ax6)
+    pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
+    lin_plot = LINPlotter(pem, lin_fig)
+    lin_plot.plot('X')
+    plt.show()
 
     # log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
     # ax2 = ax.twiny()
@@ -3866,16 +3869,16 @@ if __name__ == '__main__':
     # log_plot.plot('X')
     # plt.show()
 
-    step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    ax5 = ax4.twiny()
-    ax5.get_shared_x_axes().join(ax4, ax5)
-    # pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01NAv.PEM'
-    # ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01N.RI2'
-    pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\1338-18-19 XY.PEM'  # Step near 0
-    ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\1338-18-19.RI2'
-    step_plot = STEPPlotter(pem, ri, step_fig)
-    step_plot.plot('X')
-    plt.show()
+    # step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    # ax5 = ax4.twiny()
+    # ax5.get_shared_x_axes().join(ax4, ax5)
+    # # pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01NAv.PEM'
+    # # ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01N.RI2'
+    # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'  # Step near 0
+    # ri = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.RI2'
+    # step_plot = STEPPlotter(pem, ri, step_fig)
+    # step_plot.plot('X')
+    # plt.show()
 
     # map = GeneralMap(pem_files, fig).get_map()
     # map = SectionPlot(pem_files, fig).get_section_plot()

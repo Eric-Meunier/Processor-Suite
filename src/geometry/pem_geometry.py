@@ -659,7 +659,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
                                    header=None,
                                    dtype=float)
             else:
-                if filepath.endswith('txt'):
+                if filepath.endswith('txt') or filepath.endswith('dad'):
                     df = pd.read_csv(filepath,
                                      delim_whitespace=True,
                                      usecols=[0, 1, 2],
