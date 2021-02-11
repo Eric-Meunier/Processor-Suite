@@ -335,6 +335,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.pyqtgraphWheelEvent(event)
             return True
         elif event.type() == QtCore.QEvent.Close:
+            event.accept()
             self.deleteLater()
         return super().eventFilter(watched, event)
 

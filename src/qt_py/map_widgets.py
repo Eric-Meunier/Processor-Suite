@@ -756,6 +756,10 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.toolbar.setFixedHeight(30)
         self.map_layout.addWidget(self.canvas)
 
+    def closeEvent(self, e):
+        e.accept()
+        self.deleteLater()
+
     def open(self, pem_files):
         """
         Open the PEMFiles and plot the map
@@ -1386,18 +1390,18 @@ if __name__ == '__main__':
     # files = getter.get_pems(client='Iscaycruz', subfolder='Sante Est')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
-    m = TileMapViewer()
-    # m = GPSViewer()
-    # m = Map3DViewer()
-    m.open(files)
-    m.show()
+    # m = TileMapViewer()
+    # # m = GPSViewer()
+    # # m = Map3DViewer()
+    # m.open(files)
+    # m.show()
 
     # map = Map3DViewer()
     # map.show()
     # map.open(files)
 
-    # cmap = ContourMapViewer()
-    # cmap.open(files)
-    # cmap.show()
+    cmap = ContourMapViewer()
+    cmap.open(files)
+    cmap.show()
 
     app.exec_()

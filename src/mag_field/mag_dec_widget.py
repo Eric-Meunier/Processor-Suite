@@ -1,10 +1,8 @@
 import logging
-import logging
 import os
 import sys
 
 import cartopy
-import cartopy.crs as ccrs
 from PyQt5 import (QtGui)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QFrame, QMainWindow, QLabel, QPushButton, QFormLayout, QVBoxLayout)
@@ -66,6 +64,11 @@ class MagDeclinationCalculator(QMainWindow):
         canvas = FigureCanvas(self.figure)
         main_widget.layout().addWidget(canvas)
 
+    def closeEvent(self, e):
+        plt.close(self.figure)
+        e.accept()
+        self.deleteLater()
+
     def copy_text(self, str_value):
         """
         Copy the str_value to the clipboard
@@ -101,8 +104,8 @@ class MagDeclinationCalculator(QMainWindow):
         self.pos_label.setText(f"Latitude: {mag.lat:5f}°  Longitude: {mag.lon:.5f}°")
 
         # Draw the globe map
-        ax = self.figure.add_subplot(projection=ccrs.Orthographic(mag.lon, mag.lat))
-        ax.plot(mag.lon, mag.lat, 'o', color='red', markeredgecolor='black', transform=ccrs.Geodetic())
+        ax = self.figure.add_subplot(projection=cartopy.crs.Orthographic(mag.lon, mag.lat))
+        ax.plot(mag.lon, mag.lat, 'o', color='red', markeredgecolor='black', transform=cartopy.crs.Geodetic())
         ax.add_feature(cartopy.feature.OCEAN, zorder=0)
         # ax.add_feature(cartopy.feature.COASTLINE, zorder=0, edgecolor='black', linewidth=0.8)
         ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')

@@ -55,6 +55,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def __init__(self, parent=None):
         super().__init__()
+        self.setupUi(self)
+
         self.parent = parent
         self.pem_file = None
         self.ri_file = None
@@ -71,14 +73,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
 
-        self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Units', 'Station']
-        self.loop_table_columns = ['Easting', 'Northing', 'Elevation', 'Units']
-
-        self.setupUi(self)
-        self.init_actions()
-        self.init_signals()
-
-    def init_actions(self):
+        self.installEventFilter(self)
         self.loop_table.installEventFilter(self)
         self.line_table.installEventFilter(self)
         self.collar_table.installEventFilter(self)
@@ -90,6 +85,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.segments_table.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.ri_table.setFocusPolicy(QtCore.Qt.StrongFocus)
 
+        self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Units', 'Station']
+        self.loop_table_columns = ['Easting', 'Northing', 'Elevation', 'Units']
+
+        self.init_actions()
+        self.init_signals()
+
+    def init_actions(self):
         self.loop_table.remove_row_action = QAction("&Remove", self)
         self.addAction(self.loop_table.remove_row_action)
         self.loop_table.remove_row_action.triggered.connect(lambda: self.remove_table_row(self.loop_table))
@@ -130,7 +132,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.ri_table.remove_ri_file_action.setEnabled(False)
 
     def init_signals(self):
-
         # Buttons
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
 
@@ -204,6 +205,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loop_table.setItemDelegateForColumn(2, float_delegate)
 
     def eventFilter(self, source, event):
+        if event.type() == QtCore.QEvent.Close:
+            print(f"Closing PIW")
+            event.accept()
+            self.deleteLater()
+
         if source is self.line_table:  # Makes the 'Del' shortcut work when the table is in focus
             if event.type() == QtCore.QEvent.FocusIn:
                 self.line_table.remove_row_action.setEnabled(True)
@@ -245,14 +251,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     return True
 
         elif source is self.ri_table:
-            # if event.type() == QtCore.QEvent.Wheel:
-            #     if event.modifiers() == QtCore.Qt.ShiftModifier:
-            #         pos = self.ri_table.horizontalScrollBar().value()
-            #         if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
-            #             self.ri_table.horizontalScrollBar().setValue(pos + 2)
-            #         else:
-            #             self.ri_table.horizontalScrollBar().setValue(pos - 2)
-            #         return True
             if event.type() == QtCore.QEvent.FocusIn:
                 self.ri_table.remove_ri_file_action.setEnabled(True)
             elif event.type() == QtCore.QEvent.FocusOut:
@@ -948,7 +946,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Create a TransmitterLoop object using the information in the loop_table
         :return: TransmitterLoop object
         """
-        print(f"PIW - Getting loop")
         gps = []
         for row in range(self.loop_table.rowCount()):
             gps_row = list()

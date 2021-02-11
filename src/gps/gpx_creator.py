@@ -7,7 +7,7 @@ from pathlib import Path
 import geopandas as gpd
 import gpxpy
 import pandas as pd
-from PyQt5 import (QtGui, uic)
+from PyQt5 import (QtGui, QtCore, uic)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction, QLabel)
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
@@ -39,6 +39,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.setWindowTitle("GPX Creator")
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'gpx_creator_4.svg')))
+
         self.dialog = QFileDialog()
         self.message = QMessageBox()
         self.setAcceptDrops(True)
@@ -197,17 +198,9 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
 
         self.epsg_edit.editingFinished.connect(check_epsg)
 
-    def open_file_dialog(self):
-        """
-        Open files through the file dialog
-        """
-        file = self.dialog.getOpenFileNames(self, 'Open File',
-                                            filter='CSV files (*.csv);;'
-                                                   'Excel files (*.xlsx)')[0]
-        if file:
-            self.open(file)
-        else:
-            pass
+    def closeEvent(self, e):
+        self.deleteLater()
+        e.accept()
 
     def dragEnterEvent(self, e):
         e.accept()
@@ -222,6 +215,18 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
             e.accept()
         else:
             e.ignore()
+
+    def open_file_dialog(self):
+        """
+        Open files through the file dialog
+        """
+        file = self.dialog.getOpenFileNames(self, 'Open File',
+                                            filter='CSV files (*.csv);;'
+                                                   'Excel files (*.xlsx)')[0]
+        if file:
+            self.open(file)
+        else:
+            pass
 
     def remove_row(self):
         rows = [model.row() for model in self.table.selectionModel().selectedRows()]

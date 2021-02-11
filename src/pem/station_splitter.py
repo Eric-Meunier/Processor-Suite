@@ -15,9 +15,9 @@ class StationSplitter(QWidget):
     """
     Class that will extract selected stations from a PEM File and save them as a new PEM File.
     """
-    def __init__(self, parent=None):
+    def __init__(self, pem_file, parent=None):
         super().__init__()
-        self.pem_file = None
+        self.pem_file = pem_file
         self.parent = parent
 
         self.setWindowTitle('Station Splitter')
@@ -49,13 +49,10 @@ class StationSplitter(QWidget):
         self.layout.addWidget(self.extract_btn, 1, 0)
         self.layout.addWidget(self.cancel_btn, 1, 1)
 
-    def open(self, pem_file):
-        self.pem_file = pem_file
         self.fill_table()
-        self.show()
 
     def closeEvent(self, e):
-        # self.table.clear()
+        self.deleteLater()
         e.accept()
 
     def keyPressEvent(self, e):

@@ -77,6 +77,10 @@ class GPSAdder(QMainWindow):
 
         self.message = QMessageBox()
 
+    def closeEvent(self, e):
+        e.accept()
+        self.deleteLater()
+
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Delete:
             self.del_row()
@@ -124,9 +128,9 @@ class GPSAdder(QMainWindow):
         self.accept_sig.emit(self.table_to_df().dropna())
         self.hide()
 
-    def close(self):
-        self.clear_table()
-        self.hide()
+    # def close(self):
+    #     self.clear_table()
+    #     self.hide()
 
     def clear_table(self):
         self.table.blockSignals(True)
@@ -856,13 +860,13 @@ def main():
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
 
-    mw = LoopAdder()
-    # mw = LineAdder()
+    # mw = LoopAdder()
+    mw = LineAdder()
     mw.show()
 
     pg = PEMGetter()
-    # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
-    file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
+    file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
+    # file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
 
     # loop = TransmitterLoop(file)
     # line = SurveyLine(file)

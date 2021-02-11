@@ -1115,6 +1115,10 @@ class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
 
+    def closeEvent(self, e):
+        self.deleteLater()
+        e.accept()
+
     def accept(self):
         """
         Signal slot, emit the EPSG code.

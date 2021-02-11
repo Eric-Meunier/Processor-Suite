@@ -252,7 +252,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             self.reset_range()
 
     def eventFilter(self, watched, event):
-        if event.type() == QtCore.QEvent.Close:  # Close the viewboxes when the window is closed
+        if event.type() == QtCore.QEvent.Close:
             self.deleteLater()
         return super().eventFilter(watched, event)
 

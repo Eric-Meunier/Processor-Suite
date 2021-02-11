@@ -148,6 +148,10 @@ class LoopCalculator(QMainWindow, loopCalcUi):
             self.plot_widget.autoRange()
             self.plan_widget.autoRange()
 
+    def closeEvent(self, e):
+        self.deleteLater()
+        e.accept()
+
     def save_img(self):
         """Save a screenshot of the window """
         save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')

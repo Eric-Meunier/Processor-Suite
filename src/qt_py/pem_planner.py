@@ -807,6 +807,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.setWindowTitle('Loop Planner')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.resize(1500, 800)
+        # self.installEventFilter(self)
         self.status_bar.show()
 
         # Status bar
@@ -1049,6 +1050,10 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             self.plot_hole()
 
         return QMainWindow.event(self, e)
+
+    def closeEvent(self, e):
+        self.deleteLater()
+        e.accept()
 
     def select_hole(self, ind):
         """
@@ -1667,6 +1672,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.setWindowTitle('Grid Planner')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.setGeometry(200, 200, 1100, 700)
+        # self.installEventFilter(self)
 
         self.loop_height = int(self.loop_height_edit.text())
         self.loop_width = int(self.loop_width_edit.text())
@@ -2067,6 +2073,10 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.plan_view.showLabel('top', show=False)
         set_grid()
         set_loop()
+
+    def closeEvent(self, e):
+        self.deleteLater()
+        e.accept()
 
     def plot_grid(self):
         """

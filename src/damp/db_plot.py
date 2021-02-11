@@ -126,6 +126,10 @@ class DBPlotter(QMainWindow):
         # self.scroll_area_widget.setLayout(self.vbox)
         # self.scroll_area.setWidget(self.scroll_area_widget)
 
+    def closeEvent(self, e):
+        e.accept()
+        self.deleteLater()
+
     def keyPressEvent(self, event):
         # Remove the widget
         if event.key() == QtCore.Qt.Key_Delete:

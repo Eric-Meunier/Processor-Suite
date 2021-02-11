@@ -161,7 +161,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         self.calendar_widget.setSelectedDate(QtCore.QDate.currentDate())
 
     def closeEvent(self, e):
-        self.reset()
+        self.deleteLater()
         e.accept()
 
     def clear_table(self, table):
