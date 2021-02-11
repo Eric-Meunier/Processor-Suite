@@ -1863,7 +1863,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             ri_filepaths = ri_importer.ri_files
             if len(ri_filepaths) > 0:
                 for i, ri_filepath in enumerate(ri_filepaths):
-                    self.pem_info_widgets[i].add_ri_file(ri_filepath)
+                    self.pem_info_widgets[i].open_ri_file(ri_filepath)
                 self.status_bar.showMessage(f"Imported {len(ri_filepaths)} RI files", 2000)
             else:
                 pass
@@ -3918,6 +3918,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         if save_dir:
 
             save_dir = os.path.splitext(save_dir)[0]
+            global printer
             printer = PEMPrinter(parent=self, **plot_kwargs)
 
             try:
