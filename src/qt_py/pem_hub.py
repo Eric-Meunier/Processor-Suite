@@ -963,20 +963,34 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     self.view_menu.addAction(self.view_loop_action)
                     if not pem_file.has_loop_gps():
                         self.view_loop_action.setDisabled(True)
+                    else:
+                        self.view_loop_action.setDisabled(False)
 
                     # View Line
                     if not pem_file.is_borehole():
                         self.view_menu.addAction(self.view_line_action)
                         if not pem_file.has_station_gps():
                             self.view_line_action.setDisabled(True)
+                        else:
+                            self.view_line_action.setDisabled(False)
 
                     self.menu.addSeparator()
 
                     # Add the export menu
                     self.menu.addMenu(self.export_menu)
                     self.export_menu.addAction(self.export_pem_action)
-                    self.export_menu.addAction(self.export_dad_action)
+                    if pem_file.is_borehole():
+                        self.export_menu.addAction(self.export_dad_action)
+                        # Disable the export dad button if there's no geometry and it's not an XY file
+                        if not any([pem_file.has_geometry(), pem_file.has_xy()]):
+                            self.export_dad_action.setDisabled(True)
+                        else:
+                            self.export_dad_action.setDisabled(False)
                     self.export_menu.addAction(self.export_gps_action)
+                    if not pem_file.has_any_gps():
+                        self.export_gps_action.setDisabled(True)
+                    else:
+                        self.export_gps_action.setDisabled(False)
 
                     # Add the share menu
                     self.menu.addMenu(self.share_menu)
@@ -985,12 +999,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     self.share_menu.addAction(self.share_loop_action)
                     if not pem_file.has_loop_gps():
                         self.share_loop_action.setDisabled(True)
+                    else:
+                        self.share_loop_action.setDisabled(False)
 
                     # Share line GPS
                     if not pem_file.is_borehole():
                         self.share_menu.addAction(self.share_line_action)
                         if not pem_file.has_station_gps():
                             self.share_line_action.setDisabled(True)
+                        else:
+                            self.share_line_action.setDisabled(False)
 
                     # Share Collar and Segments
                     else:
@@ -998,13 +1016,19 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         self.share_menu.addAction(self.share_segments_action)
                         if not pem_file.has_collar_gps():
                             self.share_collar_action.setDisabled(True)
+                        else:
+                            self.share_collar_action.setDisabled(False)
                         if not pem_file.has_geometry():
                             self.share_segments_action.setDisabled(True)
+                        else:
+                            self.share_segments_action.setDisabled(False)
 
                     self.share_menu.addSeparator()
                     self.share_menu.addAction(self.share_all_action)
                     if not pem_file.has_any_gps():
                         self.share_all_action.setDisabled(True)
+                    else:
+                        self.share_all_action.setDisabled(False)
                 # else:
                 #     menu.addAction(export_pem_action)
 
@@ -1038,6 +1062,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         self.menu.addAction(self.derotate_action)
                         if not pem_file.has_xy():
                             self.derotate_action.setDisabled(True)
+                        else:
+                            self.derotate_action.setDisabled(False)
                     self.menu.addAction(self.get_geometry_action)
                     self.menu.addSeparator()
 
@@ -2251,15 +2277,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             # Filter the GPS files by file name
             include_files = strip(self.gps_list_filter.include_files_edit.text().split(','))
-            logger.info(f"Include files: {include_files}")
+            # logger.info(f"Include files: {include_files}")
             exclude_files = strip(self.gps_list_filter.exclude_files_edit.text().split(','))
-            logger.info(f"Include files: {exclude_files}")
+            # logger.info(f"Include files: {exclude_files}")
 
             # Filter the GPS files by folder names
             include_folders = strip(self.gps_list_filter.include_folders_edit.text().split(','))
-            logger.info(f"Include folders: {include_folders}")
+            # logger.info(f"Include folders: {include_folders}")
             exclude_folders = strip(self.gps_list_filter.exclude_folders_edit.text().split(','))
-            logger.info(f"Exclude folders: {exclude_folders}")
+            # logger.info(f"Exclude folders: {exclude_folders}")
 
             # Inclusive files
             if any(include_files):
@@ -2286,9 +2312,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 )]
 
             include_exts = strip(self.gps_list_filter.include_exts_edit.text().split(','))
-            logger.info(f"Include extensions: {include_exts}")
+            # logger.info(f"Include extensions: {include_exts}")
             exclude_exts = strip(self.gps_list_filter.exclude_exts_edit.text().split(','))
-            logger.info(f"Exclude extensions: {exclude_exts}")
+            # logger.info(f"Exclude extensions: {exclude_exts}")
 
             # Filter the PEM files by file extension
             # Inclusive extensions
@@ -2934,7 +2960,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             for pem_file, row in zip(pem_files, rows):
                 if dlg.wasCanceled():
                     break
-                elif not pem_file.is_borehole():
+                elif all([not pem_file.is_borehole(), not pem_file.has_geometry(), not pem_file.has_xy()]):
                     dlg += 1
                     continue
 
@@ -4344,11 +4370,11 @@ def main():
     # pem_files = [r'C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.DMP2']
     # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
     # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
-    pem_files = pg.get_pems(client='TMC', file='1000e.PEM')
+    # pem_files = pg.get_pems(client='TMC', file='1000e.PEM')
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
-    # pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', number=4)
+    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', file='XY_14.PEM')
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     # pem_files = pg.get_pems(random=True, number=10)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']

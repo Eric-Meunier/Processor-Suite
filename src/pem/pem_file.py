@@ -441,20 +441,32 @@ class PEMFile:
 
     def get_dad(self):
         """
-        Return the DAD of a borehole file
+        Return the DAD of a borehole file. Will use the segments if available, other will use the RAD for XY files.
         :return: Dataframe
         """
         assert self.is_borehole(), f"Can only get DAD from borehole surveys."
+        assert any([self.has_xy(), self.has_geometry()]), f"File must either have geometry or be an XY file."
 
-        dads = []
-        data = self.data.drop_duplicates(subset='Station')
+        if self.has_geometry():
+            # Create the DAD from the geometry
+            seg = self.segments.df
 
-        for ind, reading in data.iterrows():
-            rad = reading.RAD_tool
-            dad = [reading.Station, rad.get_azimuth(), rad.get_dip()]
-            dads.append(dad)
-        df = pd.DataFrame(dads, columns=['Depth', 'Azimuth', 'Dip']).astype(float)
-        return df
+            # Interpolate the data to 1m segment lengths and starting from depth 0
+            xi = np.arange(0, seg.Depth.max() + 1, 1)
+            i_az = np.interp(xi, seg.Depth, seg.Azimuth)
+            i_dip = np.interp(xi, seg.Depth, seg.Dip)
+        else:
+            # Create the DAD from the RAD Tool data
+            data = self.data.drop_duplicates(subset='Station')
+            depths = data.loc[:, "Station"].astype(int)
+            azimuths = data.RAD_tool.apply(lambda x: x.get_azimuth()).astype(float)
+            dips = data.RAD_tool.apply(lambda x: x.get_dip()).astype(float)
+
+            xi = np.arange(0, depths.max() + 1, 1)
+            i_az = np.interp(xi, depths, azimuths)
+            i_dip = np.interp(xi, depths, dips)
+
+        return pd.DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
 
     def get_channel_bounds(self):
         """

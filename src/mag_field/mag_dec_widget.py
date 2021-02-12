@@ -65,8 +65,6 @@ class MagDeclinationCalculator(QMainWindow):
         main_widget.layout().addWidget(canvas)
 
     def closeEvent(self, e):
-        plt.close(self.figure)
-        e.accept()
         self.deleteLater()
 
     def copy_text(self, str_value):
@@ -104,12 +102,12 @@ class MagDeclinationCalculator(QMainWindow):
         self.pos_label.setText(f"Latitude: {mag.lat:5f}°  Longitude: {mag.lon:.5f}°")
 
         # Draw the globe map
-        ax = self.figure.add_subplot(projection=cartopy.crs.Orthographic(mag.lon, mag.lat))
-        ax.plot(mag.lon, mag.lat, 'o', color='red', markeredgecolor='black', transform=cartopy.crs.Geodetic())
-        ax.add_feature(cartopy.feature.OCEAN, zorder=0)
-        # ax.add_feature(cartopy.feature.COASTLINE, zorder=0, edgecolor='black', linewidth=0.8)
-        ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
-        ax.add_feature(cartopy.feature.BORDERS, zorder=0, edgecolor='gray', linewidth=0.5)
+        self.ax = self.figure.add_subplot(projection=cartopy.crs.Orthographic(mag.lon, mag.lat))
+        self.ax.plot(mag.lon, mag.lat, 'o', color='red', markeredgecolor='black', transform=cartopy.crs.Geodetic())
+        self.ax.add_feature(cartopy.feature.OCEAN, zorder=0)
+        #  self.ax.add_feature(cartopy.feature.COASTLINE, zorder=0, edgecolor='black', linewidth=0.8)
+        self.ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
+        self.ax.add_feature(cartopy.feature.BORDERS, zorder=0, edgecolor='gray', linewidth=0.5)
 
-        ax.set_global()
-        ax.gridlines(color='black', linewidth=0.4)
+        self.ax.set_global()
+        self.ax.gridlines(color='black', linewidth=0.4)
