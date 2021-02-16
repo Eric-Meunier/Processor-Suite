@@ -1318,9 +1318,14 @@ class PEMFile:
                         :param row: PEM data DataFrame row
                         :return: float, cleaned PP value
                         """
+                        # Get the list of ch_times indexes so the cleaned_pp can be selected by index.
+                        # Needed for when channels are split before hand.
+                        cleaned_pp_channels = ch_times.index.to_list()
+
                         cleaned_pp = row.Reading[0]
                         for num in ch_numbers:
-                            cleaned_pp += row.Reading[num]
+                            ind = cleaned_pp_channels.index(num)
+                            cleaned_pp += row.Reading[ind]
                         return cleaned_pp
 
                     # Add the PP information (theoretical PP, cleaned PP, roll angle) to the new RAD Tool object

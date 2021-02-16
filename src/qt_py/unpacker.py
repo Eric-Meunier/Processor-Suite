@@ -370,6 +370,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                 else:
                     add_to_table(file, root, self.other_table, icon)
 
+        self.show()  # Show here so db_plot can show on-top
         # Plot the damping box files
         if self.open_damp_files_cbox.isChecked() and damp_files:
             global db_plot
@@ -575,7 +576,6 @@ def main():
 
     up = Unpacker()
     up.move(app.desktop().screen().rect().center() - up.rect().center())
-    up.show()
     # folder = r'C:\Users\Mortulo\Desktop\Aug4DataGaribaldiResourcesNickelMountainLoop1Holes2&8Complete.zip'
     # zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
     # up.open_folder(folder)

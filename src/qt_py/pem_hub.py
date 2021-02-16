@@ -2186,7 +2186,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         unpacker.open_project_folder_sig.connect(open_unpacker_dir)
         if folder:
             unpacker.open_folder(folder, project_dir=self.project_dir)
-        unpacker.show()
+        # unpacker.show()
 
     def open_gpx_creator(self):
         """Open the GPX Creator"""
@@ -3866,6 +3866,9 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
             self.close()
         elif e.key() == QtCore.Qt.Key_Enter:
             self.print_pdfs()
+
+    def closeEvent(self, e):
+        self.deleteLater()
 
     def open(self, pem_files, ri_files=None, crs=None):
 

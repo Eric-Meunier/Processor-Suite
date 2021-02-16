@@ -143,6 +143,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         # Signals
         self.actionOpen_Geometry_File.triggered.connect(self.open_file_dialog)
+        self.actionAllow_Negative_Azimuth.triggered.connect(lambda: self.plot_tool_values(update=True))
 
         self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.update_plots)
@@ -438,77 +439,6 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
                 self.show_existing_geom_cbox.setEnabled(True)
 
-        def plot_tool_values():
-            """
-            Plot all the tool values (azimuth, dip, map and roll angles)
-            """
-            global tool_az, tool_dip, stations
-            tool_az = self.df.RAD_tool.map(lambda x: x.get_azimuth(allow_negative=True))
-            tool_az = tool_az + self.mag_dec_sbox.value()  # Add the magnetic declination
-            # If all azimuth values are negative, make them positive.
-            if all(tool_az < 0):
-                tool_az = tool_az + 360
-
-            tool_dip = self.df.RAD_tool.map(lambda x: x.get_dip())
-            mag = self.df.RAD_tool.map(lambda x: x.get_mag_strength())
-            acc_roll = self.df.RAD_tool.map(lambda x: x.get_acc_roll())
-            mag_roll = self.df.RAD_tool.map(lambda x: x.get_mag_roll())
-            stations = self.df.Station.astype(int)
-
-            # Plot the tool information
-            self.tool_az_line, = self.az_ax.plot(tool_az, stations, '-r',
-                                                 label='Tool Azimuth',
-                                                 lw=0.9,
-                                                 zorder=2)
-
-            self.tool_mag_line, = self.mag_ax.plot(mag, stations,
-                                                   color='green',
-                                                   label='Total Magnetic Field',
-                                                   lw=0.3,
-                                                   zorder=1)
-
-            self.tool_dip_line, = self.dip_ax.plot(tool_dip, stations, '-b',
-                                                   label='Tool Dip',
-                                                   lw=0.9,
-                                                   zorder=1)
-
-            acc_roll_line, = self.roll_ax.plot(acc_roll, stations, '-b',
-                                               label='Accelerometer',
-                                               lw=0.9,
-                                               zorder=1)
-
-            mag_roll_line, = self.roll_ax.plot(mag_roll, stations, '-r',
-                                               label='Magnetometer',
-                                               lw=0.9,
-                                               zorder=1)
-
-            # Plot the information in the polar plot
-            self.tool_az_line_p, = self.polar_ax.plot([math.radians(az) for az in tool_az], stations, '-r',
-                                                      label='Tool Azimuth',
-                                                      lw=0.9,
-                                                      zorder=2)
-
-            self.tool_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in tool_dip], stations, '-b',
-                                                       label='Tool Dip',
-                                                       lw=0.9,
-                                                       zorder=1)
-
-            self.az_lines = [self.tool_az_line, self.tool_mag_line]
-            self.dip_lines = [self.tool_dip_line]
-            self.roll_lines = [acc_roll_line, mag_roll_line]
-            self.polar_lines = [self.tool_az_line_p, self.tool_dip_line_p]
-
-            self.az_output_combo.addItem('Tool')
-            self.dip_output_combo.addItem('Tool')
-
-            self.mag_dec_sbox.setEnabled(True)
-            self.show_tool_geom_cbox.setEnabled(True)
-            self.show_mag_cbox.setEnabled(True)
-
-            mag = self.pem_file.get_mag_dec()
-            if mag:
-                self.mag_dec_sbox.setValue(mag.dec)
-
         def set_cursor():
             """
             Create the mplcursor object and set some custom properties
@@ -542,7 +472,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
 
         az, dip, depth = pd.Series(dtype=float), pd.Series(dtype=float), pd.Series(dtype=float)
         if self.pem_file.has_d7() and self.pem_file.has_xy():
-            plot_tool_values()
+            self.plot_tool_values(update=False)
 
             # Only add the roll axes legend since it won't change
             self.roll_ax.legend(self.roll_lines, [l.get_label() for l in self.roll_lines])
@@ -566,6 +496,88 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         set_cursor()
 
         self.update_plots()
+
+    def plot_tool_values(self, update=False):
+        """
+        Plot all the tool values (azimuth, dip, map and roll angles). Moved out of "plot_pem" so it can be updated alone
+        :param update: Bool, whether to update the plot afterwards
+        """
+        # Clear the tool azimuth line if it's an update
+        if update:
+            self.az_ax.lines.remove(self.tool_az_line)
+
+        global tool_az, tool_dip, stations
+        tool_az = self.df.RAD_tool.map(lambda x: x.get_azimuth(
+            allow_negative=self.actionAllow_Negative_Azimuth.isChecked()))
+        tool_az = tool_az + self.mag_dec_sbox.value()  # Add the magnetic declination
+
+        # If all azimuth values are negative, make them positive.
+        if all(tool_az < 0):
+            tool_az = tool_az + 360
+
+        tool_dip = self.df.RAD_tool.map(lambda x: x.get_dip())
+        mag = self.df.RAD_tool.map(lambda x: x.get_mag_strength())
+        acc_roll = self.df.RAD_tool.map(lambda x: x.get_acc_roll())
+        mag_roll = self.df.RAD_tool.map(lambda x: x.get_mag_roll())
+        stations = self.df.Station.astype(int)
+
+        # Plot the tool information
+        self.tool_az_line, = self.az_ax.plot(tool_az, stations, '-r',
+                                             label='Tool Azimuth',
+                                             lw=0.9,
+                                             zorder=2)
+
+        self.tool_mag_line, = self.mag_ax.plot(mag, stations,
+                                               color='green',
+                                               label='Total Magnetic Field',
+                                               lw=0.3,
+                                               zorder=1)
+
+        self.tool_dip_line, = self.dip_ax.plot(tool_dip, stations, '-b',
+                                               label='Tool Dip',
+                                               lw=0.9,
+                                               zorder=1)
+
+        acc_roll_line, = self.roll_ax.plot(acc_roll, stations, '-b',
+                                           label='Accelerometer',
+                                           lw=0.9,
+                                           zorder=1)
+
+        mag_roll_line, = self.roll_ax.plot(mag_roll, stations, '-r',
+                                           label='Magnetometer',
+                                           lw=0.9,
+                                           zorder=1)
+
+        # Plot the information in the polar plot
+        self.tool_az_line_p, = self.polar_ax.plot([math.radians(az) for az in tool_az], stations, '-r',
+                                                  label='Tool Azimuth',
+                                                  lw=0.9,
+                                                  zorder=2)
+
+        self.tool_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in tool_dip], stations, '-b',
+                                                   label='Tool Dip',
+                                                   lw=0.9,
+                                                   zorder=1)
+
+        self.az_lines = [self.tool_az_line, self.tool_mag_line]
+        self.dip_lines = [self.tool_dip_line]
+        self.roll_lines = [acc_roll_line, mag_roll_line]
+        self.polar_lines = [self.tool_az_line_p, self.tool_dip_line_p]
+
+        self.az_output_combo.addItem('Tool')
+        self.dip_output_combo.addItem('Tool')
+
+        self.mag_dec_sbox.setEnabled(True)
+        self.show_tool_geom_cbox.setEnabled(True)
+        self.show_mag_cbox.setEnabled(True)
+
+        mag = self.pem_file.get_mag_dec()
+        if mag:
+            self.mag_dec_sbox.setValue(mag.dec)
+
+        if update:
+            self.canvas.draw_idle()
+            self.polar_canvas.draw()
 
     def plot_df(self, df, source):
         """
@@ -1034,7 +1046,6 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             ax.autoscale_view()
 
         self.update_polar_legend()
-
         self.canvas.draw_idle()
         self.polar_canvas.draw()
 
@@ -1055,7 +1066,8 @@ if __name__ == '__main__':
     pg = PEMGetter()
     parser = PEMParser()
     # files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    files = [parser.parse(r'C:\_Data\2020\Iscaycruz\Borehole\SE-20-02A\RAW\xy_11.pem')]
+    # files = [parser.parse(r'C:\_Data\2020\Iscaycruz\Borehole\SE-20-02A\RAW\xy_11.pem')]
+    files = [parser.parse(r'C:\_Data\2021\TMC\Vanicom\SR21-08\RAW\SR-21-08 XY.PEM')]
     # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
 
     win = PEMGeometry()
