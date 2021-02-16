@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx
+ xmlns="http://www.topografix.com/GPX/1/1"
+ creator="OziExplorer Version 3956f - http://www.oziexplorer.com"
+ version="1.1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+ <time>2021-01-17T21:58:27Z</time>
+ <bounds minlat="52.278439" minlon="-72.092339" maxlat="52.306550" maxlon="-72.032507"/>
+</metadata>
+<wpt lat="52.2834810" lon="-72.0554960">
+ <ele>497.128815</ele>
+ <time>2021-01-17T14:16:41.000Z</time>
+ <name>300 350</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2839440" lon="-72.0554700">
+ <ele>503.529602</ele>
+ <time>2021-01-17T14:25:35.000Z</time>
+ <name>300 400</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2844030" lon="-72.0555110">
+ <ele>514.197571</ele>
+ <time>2021-01-17T14:39:46.000Z</time>
+ <name>300 450</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2848500" lon="-72.0554290">
+ <ele>505.358398</ele>
+ <time>2021-01-17T14:43:14.000Z</time>
+ <name>300 500</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2852930" lon="-72.0553870">
+ <ele>504.139191</ele>
+ <time>2021-01-17T14:49:38.000Z</time>
+ <name>300 550</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2857420" lon="-72.0553750">
+ <ele>511.149597</ele>
+ <time>2021-01-17T14:55:20.000Z</time>
+ <name>300 600</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2862090" lon="-72.0553340">
+ <ele>517.550415</ele>
+ <time>2021-01-17T14:59:51.000Z</time>
+ <name>300 650</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2866460" lon="-72.0553120">
+ <ele>514.197571</ele>
+ <time>2021-01-17T15:06:26.000Z</time>
+ <name>300 700</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2870760" lon="-72.0552710">
+ <ele>513.892822</ele>
+ <time>2021-01-17T15:10:31.000Z</time>
+ <name>300 750</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2808140" lon="-72.0556860">
+ <ele>507.796814</ele>
+ <time>2021-01-16T17:42:32.996Z</time>
+ <name>300 50</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2812420" lon="-72.0556770">
+ <ele>512.064026</ele>
+ <time>2021-01-16T18:17:46.003Z</time>
+ <name>300 100</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2817140" lon="-72.0556420">
+ <ele>521.208008</ele>
+ <time>2021-01-16T18:22:38.001Z</time>
+ <name>300 150</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2821810" lon="-72.0555700">
+ <ele>527.608826</ele>
+ <time>2021-01-16T18:36:40.997Z</time>
+ <name>300 200</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2825920" lon="-72.0555900">
+ <ele>526.084778</ele>
+ <time>2021-01-16T18:39:34.998Z</time>
+ <name>300 250</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2830450" lon="-72.0555210">
+ <ele>504.748810</ele>
+ <time>2021-01-16T18:53:57.002Z</time>
+ <name>300 300</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+</gpx>

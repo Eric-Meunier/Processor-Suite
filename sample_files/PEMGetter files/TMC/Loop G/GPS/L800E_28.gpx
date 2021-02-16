@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx
+ xmlns="http://www.topografix.com/GPX/1/1"
+ creator="OziExplorer Version 3956f - http://www.oziexplorer.com"
+ version="1.1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+ <time>2021-01-28T22:36:53Z</time>
+ <bounds minlat="52.278439" minlon="-72.100883" maxlat="52.311161" maxlon="-72.033008"/>
+</metadata>
+<wpt lat="52.2931750" lon="-72.0475530">
+ <ele>494.995209</ele>
+ <time>2021-01-27T17:40:17.003Z</time>
+ <name>800 1450</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.2806300" lon="-72.0483650">
+ <ele>501.091187</ele>
+ <time>2021-01-17T16:23:13.998Z</time>
+ <name>800 50</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2810490" lon="-72.0483300">
+ <ele>500.481598</ele>
+ <time>2021-01-17T16:25:04.996Z</time>
+ <name>800 100</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2814980" lon="-72.0482910">
+ <ele>495.909607</ele>
+ <time>2021-01-17T16:27:27.996Z</time>
+ <name>800 150</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2819710" lon="-72.0482590">
+ <ele>493.776001</ele>
+ <time>2021-01-17T16:29:15.003Z</time>
+ <name>800 200</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2823970" lon="-72.0482320">
+ <ele>492.556793</ele>
+ <time>2021-01-17T16:32:51.996Z</time>
+ <name>800 250</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2828430" lon="-72.0482180">
+ <ele>497.433594</ele>
+ <time>2021-01-17T16:35:22.004Z</time>
+ <name>800 300</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2833020" lon="-72.0481970">
+ <ele>498.652802</ele>
+ <time>2021-01-17T16:37:43.000Z</time>
+ <name>800 350</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2837540" lon="-72.0481550">
+ <ele>498.043213</ele>
+ <time>2021-01-17T16:40:04.999Z</time>
+ <name>800 400</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2842030" lon="-72.0481150">
+ <ele>495.604797</ele>
+ <time>2021-01-17T16:41:51.003Z</time>
+ <name>800 450</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2846590" lon="-72.0480970">
+ <ele>501.700806</ele>
+ <time>2021-01-17T16:46:12.000Z</time>
+ <name>800 500</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2850970" lon="-72.0480590">
+ <ele>507.187195</ele>
+ <time>2021-01-17T17:00:02.002Z</time>
+ <name>800 550</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2855620" lon="-72.0480230">
+ <ele>510.235199</ele>
+ <time>2021-01-17T17:31:29.997Z</time>
+ <name>800 600</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2860050" lon="-72.0480060">
+ <ele>507.796814</ele>
+ <time>2021-01-17T17:36:54.999Z</time>
+ <name>800 650</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2864500" lon="-72.0479620">
+ <ele>508.406403</ele>
+ <time>2021-01-17T17:40:59.002Z</time>
+ <name>800 700</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2869100" lon="-72.0479300">
+ <ele>505.358398</ele>
+ <time>2021-01-17T17:43:25.000Z</time>
+ <name>800 750</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2873340" lon="-72.0479050">
+ <ele>501.091187</ele>
+ <time>2021-01-17T17:45:41.003Z</time>
+ <name>800 800</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2878040" lon="-72.0478760">
+ <ele>493.471191</ele>
+ <time>2021-01-17T17:51:17.004Z</time>
+ <name>800 850</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2882350" lon="-72.0478500">
+ <ele>496.519196</ele>
+ <time>2021-01-17T18:21:34.004Z</time>
+ <name>800 900</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2886760" lon="-72.0478370">
+ <ele>512.368774</ele>
+ <time>2021-01-17T18:37:22.996Z</time>
+ <name>800 950</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2891350" lon="-72.0477930">
+ <ele>518.464783</ele>
+ <time>2021-01-17T18:51:18.000Z</time>
+ <name>800 1000</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2895700" lon="-72.0477540">
+ <ele>505.967987</ele>
+ <time>2021-01-17T19:02:06.000Z</time>
+ <name>800 1050</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2900130" lon="-72.0477480">
+ <ele>497.128815</ele>
+ <time>2021-01-17T19:09:08.997Z</time>
+ <name>800 1100</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2904580" lon="-72.0476980">
+ <ele>490.118408</ele>
+ <time>2021-01-17T19:19:08.000Z</time>
+ <name>800 1150</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2908980" lon="-72.0476650">
+ <ele>497.433594</ele>
+ <time>2021-01-17T19:22:48.000Z</time>
+ <name>800 1200</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2913720" lon="-72.0476440">
+ <ele>505.053589</ele>
+ <time>2021-01-17T19:31:42.997Z</time>
+ <name>800 1250</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2918530" lon="-72.0475890">
+ <ele>504.748810</ele>
+ <time>2021-01-17T19:43:43.997Z</time>
+ <name>800 1300</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2923080" lon="-72.0476300">
+ <ele>490.423187</ele>
+ <time>2021-01-17T20:03:31.997Z</time>
+ <name>800 1350</name>
+ <sym>Crossing</sym>
+</wpt>
+<wpt lat="52.2927310" lon="-72.0475320">
+ <ele>488.899200</ele>
+ <time>2021-01-17T20:10:07.000Z</time>
+ <name>800 1400</name>
+ <sym>Crossing</sym>
+</wpt>
+</gpx>
