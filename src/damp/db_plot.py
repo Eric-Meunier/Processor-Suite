@@ -88,6 +88,10 @@ class DBPlotter(QMainWindow):
 
         self.open_file_action = QAction('Open', self.file_menu)
         self.open_file_action.triggered.connect(self.open_file_dialog)
+        self.actionSave_Screenshot = QAction("Save Screenshot")
+        self.actionCopy_Screenshot = QAction("Copy Screenshot")
+        self.actionSave_Screenshot.triggered.connect(self.save_img)
+        self.actionCopy_Screenshot.triggered.connect(self.copy_img)
 
         self.show_lr_action = QtGui.QAction('Show Sliding Window', self.view_menu, checkable=True)
         self.show_lr_action.setChecked(True)
@@ -100,31 +104,13 @@ class DBPlotter(QMainWindow):
         self.show_symbols_action.triggered.connect(toggle_symbols)
 
         self.file_menu.addAction(self.open_file_action)
+        self.file_menu.addSeparator()
+        self.file_menu.addActions([self.actionCopy_Screenshot, self.actionSave_Screenshot])
         self.view_menu.addAction(self.show_lr_action)
         self.view_menu.addAction(self.show_symbols_action)
 
         self.menuBar().addMenu(self.file_menu)
         self.menuBar().addMenu(self.view_menu)
-
-        # Actions
-        self.save_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
-        self.copy_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+C"), self)
-        self.save_shortcut.activated.connect(self.save_img)
-        self.copy_shortcut.activated.connect(self.copy_img)
-
-        # self.scroll_area = QScrollArea()
-        # self.scroll_area.setLayout(QVBoxLayout())
-        # self.scroll_area.layout().setContentsMargins(0, 0, 0, 0)
-        # # self.scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
-        # self.scroll_area.setWidgetResizable(True)
-        # # self.scroll_area.setGeometry(10, 10, 200, 200)
-        # self.layout().addWidget(self.scroll_area)
-        # self.setCentralWidget(self.scroll_area)
-        #
-        # self.scroll_area_widget = QWidget()
-        # self.vbox = QVBoxLayout()
-        # self.scroll_area_widget.setLayout(self.vbox)
-        # self.scroll_area.setWidget(self.scroll_area_widget)
 
     def closeEvent(self, e):
         e.accept()

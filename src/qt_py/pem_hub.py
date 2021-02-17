@@ -75,8 +75,6 @@ Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 
 # TODO Idea: Color code first and last station columns (maybe use channel times coloring)
-# TODO Adding bulk RI files isn't being done correctly (use TMC Loop G)
-# TODO Add Save option to the File menu in DB plotter.
 # TODO Test contour map
 # TODO Idea: Plot mag on top of profile data
 
@@ -540,6 +538,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     pem_file.coil_area = value
 
             self.format_row(row)
+            self.color_table_numbers()
 
             if self.allow_signals:
                 self.table.blockSignals(False)
@@ -1479,6 +1478,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     dlg += 1
                     # self.total_opened += 1
 
+        self.color_table_numbers()
+
         self.allow_signals = True
         self.table.setUpdatesEnabled(True)
         self.table.blockSignals(False)
@@ -1520,7 +1521,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         ri_file = ri_files[0]
         pem_info_widget = self.stackedWidget.currentWidget()
-        pem_info_widget.add_ri_file(ri_file)
+        pem_info_widget.open_ri_file(ri_file)
 
     def remove_pem_file(self, rows=None):
         """
@@ -1554,6 +1555,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.grid_edit.setText('')
             self.loop_edit.setText('')
             reset_crs()
+        else:
+            # Only color the number columns if there are PEM files left
+            self.color_table_numbers()
 
         self.setUpdatesEnabled(True)
 
@@ -3110,6 +3114,119 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if self.allow_signals:
             self.table.blockSignals(False)
 
+    def color_table_numbers(self):
+        """
+        Color the background of the cells based on their values for the current, coil area, and station ranges.
+        """
+        self.table.blockSignals(True)
+        mpl_red, mpl_blue = np.array([34, 79, 214]) / 256, np.array([247, 42, 42]) / 256
+        alpha = 250
+
+        def color_currents():
+            current_col = self.table_columns.index("Current")
+            currents = np.array([self.table.item(row, current_col).text() for row in range(self.table.rowCount())],
+                                dtype=float)
+
+            # Normalize column values for color mapping
+            mn, mx, count = currents.min(), currents.max(), len(currents)
+            norm = plt.Normalize(mn, mx)
+
+            # Create a custom color map
+            cm = LCMap.from_list('Custom', [mpl_red, mpl_blue])
+
+            # Apply the color map to the values in the column
+            colors = cm(norm(currents))
+
+            for row in range(self.table.rowCount()):
+                item = self.table.item(row, current_col)
+
+                # Color the text
+                item.setForeground(QtGui.QColor(255, 255, 255))
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+
+                # Color the background based on the value
+                color = QtGui.QColor(colors[row][0] * 255,
+                                     colors[row][1] * 255,
+                                     colors[row][2] * 255,
+                                     alpha)
+                item.setBackground(color)
+
+                count += 1
+
+        def color_coil_areas():
+            coil_area_col = self.table_columns.index("Coil\nArea")
+            coil_areas = np.array([self.table.item(row, coil_area_col).text() for row in range(self.table.rowCount())],
+                                  dtype=float)
+
+            # Normalize column values for color mapping
+            mn, mx, count = coil_areas.min(), coil_areas.max(), len(coil_areas)
+            norm = plt.Normalize(mn, mx)
+
+            # Create a custom color map
+            cm = LCMap.from_list('Custom', [mpl_red, mpl_blue])
+
+            # Apply the color map to the values in the column
+            colors = cm(norm(coil_areas))
+
+            for row in range(self.table.rowCount()):
+                item = self.table.item(row, coil_area_col)
+
+                # Color the text
+                item.setForeground(QtGui.QColor(255, 255, 255))
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+
+                # Color the background based on the value
+                color = QtGui.QColor(colors[row][0] * 255,
+                                     colors[row][1] * 255,
+                                     colors[row][2] * 255,
+                                     alpha)
+                item.setBackground(color)
+
+                count += 1
+
+        def color_station_ranges():
+            start_col = self.table_columns.index("First\nStation")
+            end_col = self.table_columns.index("Last\nStation")
+
+            station_starts = np.array([self.table.item(row, start_col).text() for row in range(self.table.rowCount())],
+                                      dtype=float)
+            station_ends = np.array([self.table.item(row, end_col).text() for row in range(self.table.rowCount())],
+                                    dtype=float)
+
+            # Normalize column values for color mapping
+            mn, mx, count = station_starts.min(), station_ends.max(), len(station_starts)
+            norm = plt.Normalize(mn, mx)
+
+            # Create a custom color map
+            cm = LCMap.from_list('Custom', [mpl_red, mpl_blue])
+
+            # Apply the color map to the values in the column
+            colors = cm(norm(np.concatenate([station_starts, station_ends])))
+            count = 0  # For retrieving the index of colors
+
+            for ind, column in enumerate([start_col, end_col]):
+                for row in range(self.table.rowCount()):
+                    item = self.table.item(row, column)
+
+                    # Color the text
+                    item.setForeground(QtGui.QColor(255, 255, 255))
+                    item.setTextAlignment(QtCore.Qt.AlignCenter)
+
+                    # Color the background based on the value
+                    color = QtGui.QColor(colors[count][0] * 255,
+                                         colors[count][1] * 255,
+                                         colors[count][2] * 255,
+                                         alpha)
+                    item.setBackground(color)
+
+                    count += 1
+
+        color_currents()
+        color_coil_areas()
+        color_station_ranges()
+
+        self.table.blockSignals(False)
+
     def pem_to_table(self, pem_file, row):
         """
         Adds the information from a PEM file to the main table. Blocks the table signals while doing so.
@@ -3165,6 +3282,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.pem_info_widgets[ind].open_file(pem_file)
             self.pem_to_table(pem_file, ind)
             self.format_row(ind)
+            self.color_table_numbers()
         else:
             logger.error(f"PEMFile ID {id(pem_file)} is not in the table.")
             raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table.")
@@ -4377,7 +4495,7 @@ def main():
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
-    pem_files = pg.get_pems(client='Minera', subfolder='CPA-5051', file='XY_14.PEM')
+    pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=5)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     # pem_files = pg.get_pems(random=True, number=10)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
