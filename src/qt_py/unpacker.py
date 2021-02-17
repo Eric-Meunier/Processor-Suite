@@ -425,7 +425,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                     # Copy the rest of the files to their respective folders
                     else:
                         ext = file.suffix
-                        date_str = date.toString('dd')
+                        date_str = date.toString('MMdd')
                         # Rename damp files to include the date
                         if folder_name.lower() == 'damp':
                             new_file_name = f"{date_str}_{file_name}{ext}"
@@ -573,9 +573,11 @@ class UnpackerTable(QTableWidget):
 
 def main():
     app = QApplication(sys.argv)
+    samples_folder = Path(__file__).parents[2].joinpath(r"sample_files\Unpacker files")
 
     up = Unpacker()
     up.move(app.desktop().screen().rect().center() - up.rect().center())
+    up.open_folder(samples_folder.joinpath(r"Feb 17.7z"))
     # folder = r'C:\Users\Mortulo\Desktop\Aug4DataGaribaldiResourcesNickelMountainLoop1Holes2&8Complete.zip'
     # zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
     # up.open_folder(folder)

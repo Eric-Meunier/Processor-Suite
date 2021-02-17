@@ -74,9 +74,9 @@ Ui_PlanMapOptionsWidget, _ = uic.loadUiType(planMapOptionsCreatorFile)
 Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 
-# TODO Idea: Color code first and last station columns (maybe use channel times coloring)
 # TODO Test contour map
 # TODO Idea: Plot mag on top of profile data
+# TODO Add month to filenames
 
 
 def get_icon(filepath):
@@ -3184,46 +3184,74 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 count += 1
 
-        def color_station_ranges():
+        def color_station_starts():
             start_col = self.table_columns.index("First\nStation")
-            end_col = self.table_columns.index("Last\nStation")
 
             station_starts = np.array([self.table.item(row, start_col).text() for row in range(self.table.rowCount())],
                                       dtype=float)
-            station_ends = np.array([self.table.item(row, end_col).text() for row in range(self.table.rowCount())],
-                                    dtype=float)
 
             # Normalize column values for color mapping
-            mn, mx, count = station_starts.min(), station_ends.max(), len(station_starts)
+            mn, mx, count = station_starts.min(), station_starts.max(), len(station_starts)
             norm = plt.Normalize(mn, mx)
 
             # Create a custom color map
             cm = LCMap.from_list('Custom', [mpl_red, mpl_blue])
 
             # Apply the color map to the values in the column
-            colors = cm(norm(np.concatenate([station_starts, station_ends])))
-            count = 0  # For retrieving the index of colors
+            colors = cm(norm(station_starts))
 
-            for ind, column in enumerate([start_col, end_col]):
-                for row in range(self.table.rowCount()):
-                    item = self.table.item(row, column)
+            for row in range(self.table.rowCount()):
+                item = self.table.item(row, start_col)
 
-                    # Color the text
-                    item.setForeground(QtGui.QColor(255, 255, 255))
-                    item.setTextAlignment(QtCore.Qt.AlignCenter)
+                # Color the text
+                item.setForeground(QtGui.QColor(255, 255, 255))
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
 
-                    # Color the background based on the value
-                    color = QtGui.QColor(colors[count][0] * 255,
-                                         colors[count][1] * 255,
-                                         colors[count][2] * 255,
-                                         alpha)
-                    item.setBackground(color)
+                # Color the background based on the value
+                color = QtGui.QColor(colors[row][0] * 255,
+                                     colors[row][1] * 255,
+                                     colors[row][2] * 255,
+                                     alpha)
+                item.setBackground(color)
 
-                    count += 1
+                count += 1
+
+        def color_station_ends():
+            end_col = self.table_columns.index("Last\nStation")
+
+            station_ends = np.array([self.table.item(row, end_col).text() for row in range(self.table.rowCount())],
+                                      dtype=float)
+
+            # Normalize column values for color mapping
+            mn, mx, count = station_ends.min(), station_ends.max(), len(station_ends)
+            norm = plt.Normalize(mn, mx)
+
+            # Create a custom color map
+            cm = LCMap.from_list('Custom', [mpl_red, mpl_blue])
+
+            # Apply the color map to the values in the column
+            colors = cm(norm(station_ends))
+
+            for row in range(self.table.rowCount()):
+                item = self.table.item(row, end_col)
+
+                # Color the text
+                item.setForeground(QtGui.QColor(255, 255, 255))
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+
+                # Color the background based on the value
+                color = QtGui.QColor(colors[row][0] * 255,
+                                     colors[row][1] * 255,
+                                     colors[row][2] * 255,
+                                     alpha)
+                item.setBackground(color)
+
+                count += 1
 
         color_currents()
         color_coil_areas()
-        color_station_ranges()
+        color_station_starts()
+        color_station_ends()
 
         self.table.blockSignals(False)
 
@@ -4502,6 +4530,7 @@ def main():
 
     # mw.open_dmp_files(pem_files)
     mw.add_pem_files(pem_files)
+    mw.open_contour_map()
     # mw.open_mag_dec(mw.pem_files[0])
 
     # mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')

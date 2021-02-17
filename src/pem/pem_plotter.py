@@ -2037,10 +2037,10 @@ class ContourMap(MapPlotter):
             self.ax.grid(False)
 
         # Move the Y tick labels to the right
-        self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=0, va='center')
-        self.ax.set_xticklabels(self.ax.get_xticklabels(), rotation=90, ha='center')
-        self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}N'))
-        self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}E'))
+        # self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=0, va='center')
+        # self.ax.set_xticklabels(self.ax.get_xticklabels(), rotation=90, ha='center')
+        # self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}N'))
+        # self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}E'))
 
     def plot_contour(self, pem_files, component, channel,
                      channel_time=None, plot_loops=True, label_loops=False, label_lines=True,

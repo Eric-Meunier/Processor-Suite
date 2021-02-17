@@ -851,7 +851,7 @@ class PEMFile:
                     self.rotate('acc')
 
             # Remove underscore-dates and tags
-            file_name = re.sub(r'_\d+', '', re.sub(r'\[-?\w\]', '', self.filepath.name))
+            file_name = re.sub(r'_\d{4}', '', re.sub(r'\[-?\w\]', '', self.filepath.name))
             if not self.is_borehole():
                 file_name = file_name.upper()
                 if file_name.lower()[0] == 'c':
