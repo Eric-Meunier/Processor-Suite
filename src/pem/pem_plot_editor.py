@@ -99,6 +99,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.fallback_file = None
         self.units = None
         self.stations = np.array([])
+        self.mag_df = pd.DataFrame()
 
         self.line_selected = False
         self.selected_station = None
@@ -162,14 +163,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.mag_y_layout_axes = [self.mag_y_ax0, self.mag_y_ax1, self.mag_y_ax2, self.mag_y_ax3, self.mag_y_ax4]
         self.mag_z_layout_axes = [self.mag_z_ax0, self.mag_z_ax1, self.mag_z_ax2, self.mag_z_ax3, self.mag_z_ax4]
         self.mag_profile_axes = np.concatenate([self.mag_x_layout_axes, self.mag_y_layout_axes, self.mag_z_layout_axes])
-
-        # Format the mag plots
-        for ax in self.mag_profile_axes:
-            ax.hideButtons()
-            ax.setMenuEnabled(False)
-            ax.getAxis('left').setWidth(60)
-            ax.showAxis('left', show=False)  # Show the axis edge line
-            ax.showAxis('bottom', show=False)  # Show the axis edge line
 
         # Configure the plots
         # X axis lin plots
@@ -235,6 +228,15 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             # Connect the mouse moved signal
             ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
             ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
+
+        # Format the mag plots
+        for ax in self.mag_profile_axes:
+            ax.hideButtons()
+            ax.setMenuEnabled(False)
+            # ax.getAxis('left').setWidth(60)
+            ax.showAxis('left', show=False)  # Hide the axis edge line
+            ax.showAxis('bottom', show=False)  # Hide the axis edge line
+            ax.setXLink(self.x_ax0)
 
         # Signals
         # Shortcuts
@@ -401,6 +403,17 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.plot_ontime_decays_cbox.setEnabled(False)
         else:
             self.plot_ontime_decays_cbox.setEnabled(True)
+
+        # Disable the plot mag button if it's not applicable
+        if self.plot_mag_cbox.isChecked() and self.pem_file.is_borehole() and self.pem_file.has_xy():
+            self.mag_df = self.pem_file.get_mag()
+            if self.mag_df.Mag.any():
+                self.plot_mag_cbox.setEnabled(True)
+                # TODO This
+                # self.mag_curve =
+                self.mag_x_ax0.plot(x=mag_df.Station, y=mag_df.Mag, pen=pg.mkPen('g', width=3.))
+            else:
+                self.plot_mag_cbox.setEnabled(False)
 
         # Set the units of the decay plots
         self.units = self.pem_file.units
@@ -770,9 +783,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
             plot_lin(profile_data, axes)
 
-            avg = profile_data.iloc[:, 3].groupby('Station').mean()
-            self.mag_x_ax0.plot(x=avg.index, y=avg, pen=pg.mkPen('g', width=4.))
-
     def plot_station(self, station, preserve_selection=False):
         """
         Plot the decay lines for each component of the given station
@@ -918,6 +928,14 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             for ax in self.active_decay_axes:
                 ax.autoRange()
 
+    def toggle_mag(self):
+        if self.plot_mag_cbox.isEnabled():
+            mag_df = self.pem_file.get_mag()
+            if mag_df.Mag.any():
+                self.mag_x_ax0.plot(x=mag_df.Station, y=mag_df.Mag, pen=pg.mkPen('g', width=3.))
+            else:
+                logger.info(f"{self.pem_file.name} RAD tool cannot calculate magnetic field strength.")
+
     def highlight_lines(self):
         """
         Highlight the line selected and un-highlight any previously highlighted line.
@@ -1007,7 +1025,8 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.flip_decay_btn.setEnabled(False)
 
         # Change the color of the plotted lines
-        for line, Deleted, overload in zip(self.plotted_decay_lines, self.plotted_decay_data.Deleted, self.plotted_decay_data.Overload):
+        for line, Deleted, overload in zip(self.plotted_decay_lines, self.plotted_decay_data.Deleted,
+                                           self.plotted_decay_data.Overload):
 
             # Change the pen if the data is flagged for deletion
             if Deleted is False:
@@ -1962,7 +1981,7 @@ if __name__ == '__main__':
     pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
 
     editor = PEMPlotEditor()
-    editor.move(0, 0)
+    # editor.move(0, 0)
     editor.open(pem_file)
     # editor.auto_clean()
 

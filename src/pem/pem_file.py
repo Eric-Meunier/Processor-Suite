@@ -468,6 +468,21 @@ class PEMFile:
 
         return pd.DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
 
+    def get_mag(self):
+        """
+        Return the magnetic field strenght of a borehole file.
+        :return: Dataframe
+        """
+        assert self.is_borehole(), f"Can only get DAD from borehole surveys."
+        assert any([self.has_xy(), self.has_geometry()]), f"File must either have geometry or be an XY file."
+
+        # Create the DAD from the RAD Tool data
+        data = self.data.drop_duplicates(subset='Station')
+        stations = data.loc[:, "Station"].astype(int)
+        mag = data.RAD_tool.apply(lambda x: x.get_mag_strength()).astype(float)
+
+        return pd.DataFrame({'Station': stations, 'Mag': mag})
+
     def get_channel_bounds(self):
         """
         Create tuples of start and end channels to be plotted per axes for LIN plots
