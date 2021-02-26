@@ -2389,6 +2389,9 @@ class DMPParser:
             header['Survey type'] = re.sub(r'\s+', '_', s['Survey_Type'])
             header['Convention'] = 'Metric'
             header['Sync'] = re.sub(r'\s+', '-', s['Sync_Type'])
+            # Some DMP2 files can have just "Crystal" as sync type, which causes issues with Step.
+            if header['Sync'] == "Crystal":
+                header['Sync'] = "Crystal-Master"
             header['Timebase'] = float(s['Time_Base'].split()[0])
             header['Ramp'] = float(s['Ramp_Length'])
             header['Number of channels'] = len(s['Channel_Time']) - 1

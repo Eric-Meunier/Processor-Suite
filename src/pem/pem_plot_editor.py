@@ -404,16 +404,16 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         else:
             self.plot_ontime_decays_cbox.setEnabled(True)
 
-        # Disable the plot mag button if it's not applicable
-        if self.plot_mag_cbox.isChecked() and self.pem_file.is_borehole() and self.pem_file.has_xy():
-            self.mag_df = self.pem_file.get_mag()
-            if self.mag_df.Mag.any():
-                self.plot_mag_cbox.setEnabled(True)
-                # TODO This
-                # self.mag_curve =
-                self.mag_x_ax0.plot(x=mag_df.Station, y=mag_df.Mag, pen=pg.mkPen('g', width=3.))
-            else:
-                self.plot_mag_cbox.setEnabled(False)
+        # # Disable the plot mag button if it's not applicable
+        # if self.plot_mag_cbox.isChecked() and self.pem_file.is_borehole() and self.pem_file.has_xy():
+        #     self.mag_df = self.pem_file.get_mag()
+        #     if self.mag_df.Mag.any():
+        #         self.plot_mag_cbox.setEnabled(True)
+        #         # TODO This
+        #         # self.mag_curve =
+        #         # self.mag_x_ax0.plot(x=mag_df.Station, y=mag_df.Mag, pen=pg.mkPen('g', width=3.))
+        #     else:
+        #         self.plot_mag_cbox.setEnabled(False)
 
         # Set the units of the decay plots
         self.units = self.pem_file.units

@@ -935,9 +935,19 @@ class GPXEditor:
         gpx_file = open(filepath, 'r')
         gpx = gpxpy.parse(gpx_file)
         gps = []
-        for waypoint in gpx.waypoints:
-            name = re.sub(r'\s', '_', waypoint.name)
-            gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', name])
+
+        # Use Route points if no waypoints exist
+        if gpx.waypoints:
+            for waypoint in gpx.waypoints:
+                name = re.sub(r'\s', '_', waypoint.name)
+                gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', name])
+        elif gpx.routes:
+            route = gpx.routes[0]
+            for point in route.points:
+                name = re.sub(r'\s', '_', point.name)
+                gps.append([point.latitude, point.longitude, 0., '0', name])  # Routes have no elevation data, thus 0.
+        else:
+            raise ValueError(F"No waypoints or routes found in {Path(filepath).name}.")
         return gps
 
     def get_utm(self, gpx_file, as_string=False):

@@ -76,6 +76,7 @@ Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 
 # TODO Test contour map
 # TODO Idea: Plot mag on top of profile data
+# TODO changing loop elevation numbers manually crashed program.
 
 
 def get_icon(filepath):
