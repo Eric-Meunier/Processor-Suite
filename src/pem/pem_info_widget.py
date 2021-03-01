@@ -491,6 +491,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             'Operator': f.operator,
             'Format': f.format,
             'Units': f.units,
+            'Tools': ', '.join(f.probes.values()),
             'Timebase': f.timebase,
             'Ramp': f.ramp,
             'Number of Channels': f.number_of_channels,

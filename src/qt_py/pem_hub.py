@@ -50,7 +50,7 @@ from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.11.1'
+__version__ = '0.11.2'
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -75,8 +75,6 @@ Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 
 # TODO Test contour map
-# TODO Add probe numbers in info panel
-# TODO Idea: Plot mag on top of profile data
 
 
 def get_icon(filepath):
@@ -4530,7 +4528,7 @@ def main():
 
     # mw.open_dmp_files(pem_files)
     mw.add_pem_files(pem_files)
-    mw.open_contour_map()
+    # mw.open_contour_map()
     # mw.open_mag_dec(mw.pem_files[0])
 
     # mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')
