@@ -75,6 +75,7 @@ Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 
 # TODO Test contour map
+# TODO Add probe numbers in info panel
 # TODO Idea: Plot mag on top of profile data
 
 

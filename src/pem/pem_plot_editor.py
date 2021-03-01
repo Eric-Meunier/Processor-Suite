@@ -136,34 +136,33 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             ax.scene().sigMouseClicked.connect(self.decay_plot_clicked)
 
         # Configure mag plots
-        """Add the mag plots first so they are in the background and cannot be interacted with"""
         self.x_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
-        # self.mag_x_ax0 = self.x_profile_layout.addPlot(0, 0)
-        self.mag_x_ax1 = self.x_profile_layout.addPlot(1, 0)
-        self.mag_x_ax2 = self.x_profile_layout.addPlot(2, 0)
-        self.mag_x_ax3 = self.x_profile_layout.addPlot(3, 0)
-        self.mag_x_ax4 = self.x_profile_layout.addPlot(4, 0)
+        self.mag_x_ax0 = pg.ViewBox()
+        self.mag_x_ax1 = pg.ViewBox()
+        self.mag_x_ax2 = pg.ViewBox()
+        self.mag_x_ax3 = pg.ViewBox()
+        self.mag_x_ax4 = pg.ViewBox()
 
         # Y axis lin plots
         self.y_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
-        self.mag_y_ax0 = self.y_profile_layout.addPlot(0, 0)
-        self.mag_y_ax1 = self.y_profile_layout.addPlot(1, 0)
-        self.mag_y_ax2 = self.y_profile_layout.addPlot(2, 0)
-        self.mag_y_ax3 = self.y_profile_layout.addPlot(3, 0)
-        self.mag_y_ax4 = self.y_profile_layout.addPlot(4, 0)
+        self.mag_y_ax0 = pg.ViewBox()
+        self.mag_y_ax1 = pg.ViewBox()
+        self.mag_y_ax2 = pg.ViewBox()
+        self.mag_y_ax3 = pg.ViewBox()
+        self.mag_y_ax4 = pg.ViewBox()
 
         # Z axis lin plots
         self.z_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
-        self.mag_z_ax0 = self.z_profile_layout.addPlot(0, 0)
-        self.mag_z_ax1 = self.z_profile_layout.addPlot(1, 0)
-        self.mag_z_ax2 = self.z_profile_layout.addPlot(2, 0)
-        self.mag_z_ax3 = self.z_profile_layout.addPlot(3, 0)
-        self.mag_z_ax4 = self.z_profile_layout.addPlot(4, 0)
+        self.mag_z_ax0 = pg.ViewBox()
+        self.mag_z_ax1 = pg.ViewBox()
+        self.mag_z_ax2 = pg.ViewBox()
+        self.mag_z_ax3 = pg.ViewBox()
+        self.mag_z_ax4 = pg.ViewBox()
 
-        # self.mag_x_layout_axes = [self.mag_x_ax0, self.mag_x_ax1, self.mag_x_ax2, self.mag_x_ax3, self.mag_x_ax4]
-        # self.mag_y_layout_axes = [self.mag_y_ax0, self.mag_y_ax1, self.mag_y_ax2, self.mag_y_ax3, self.mag_y_ax4]
-        # self.mag_z_layout_axes = [self.mag_z_ax0, self.mag_z_ax1, self.mag_z_ax2, self.mag_z_ax3, self.mag_z_ax4]
-        # self.mag_profile_axes = np.concatenate([self.mag_x_layout_axes, self.mag_y_layout_axes, self.mag_z_layout_axes])
+        self.mag_x_layout_axes = [self.mag_x_ax0, self.mag_x_ax1, self.mag_x_ax2, self.mag_x_ax3, self.mag_x_ax4]
+        self.mag_y_layout_axes = [self.mag_y_ax0, self.mag_y_ax1, self.mag_y_ax2, self.mag_y_ax3, self.mag_y_ax4]
+        self.mag_z_layout_axes = [self.mag_z_ax0, self.mag_z_ax1, self.mag_z_ax2, self.mag_z_ax3, self.mag_z_ax4]
+        self.mag_profile_axes = np.concatenate([self.mag_x_layout_axes, self.mag_y_layout_axes, self.mag_z_layout_axes])
 
         # Configure the plots
         # X axis lin plots
@@ -194,14 +193,21 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.profile_axes = np.concatenate([self.x_layout_axes, self.y_layout_axes, self.z_layout_axes])
         self.active_profile_axes = []
 
-        # Configure each axes
-        for ax in self.profile_axes:
+        def update_views(mag_axes, axes):
+            print(f"View updated")
+            for mag_ax, ax in zip(mag_axes, axes):
+                mag_ax.setGeometry(ax.vb.sceneBoundingRect())
+                mag_ax.linkedViewChanged(ax.vb, mag_ax.XAxis)
+
+        # Configure each axes, including the mag plots
+        for mag_ax, ax in zip(self.mag_profile_axes, self.profile_axes):
             ax.vb.installEventFilter(self)
             ax.vb.box_select_signal.connect(self.box_select_profile_plot)
             ax.hideButtons()
             ax.setMenuEnabled(False)
             ax.getAxis('left').setWidth(60)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
+            ax.getAxis('right').enableAutoSIPrefix(enable=False)
 
             # Add the vertical selection line
             color = (23, 23, 23, 100)
@@ -230,29 +236,34 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
             ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
 
-        # # Format the mag plots
-        # for ax in self.mag_profile_axes:
-        #     ax.hideButtons()
-        #     ax.setMenuEnabled(False)
-        #     # ax.getAxis('left').setWidth(60)
-        #     ax.showAxis('left', show=False)  # Hide the axis edge line
-        #     # ax.showAxis('right', show=True)  # Hide the axis edge line
-        #     ax.showAxis('bottom', show=False)  # Hide the axis edge line
-        #     ax.setXLink(self.x_ax0)
+            # Add the mag plot into the profile plot
+            ax.showAxis("right")
+            ax.scene().addItem(mag_ax)
+            mag_ax.setXLink(self.x_ax0)
+            ax.getAxis("right").linkToView(mag_ax)
+            ax.getAxis("right").setLabel("Total Magnetic Field", color='1DD219', units="pT")
+            ax.getAxis("right").setPen(pg.mkPen(color='1DD219'))
+            ax.getAxis("right").setTextPen(pg.mkPen(color='1DD219'))
 
-        self.mag_x_ax0 = pg.ViewBox()
-        self.x_ax0.showAxis("right")
-        self.x_ax0.scene().addItem(self.mag_x_ax0)
-        self.x_ax0.getAxis("right").linkToView(self.mag_x_ax0)
-        self.mag_x_ax0.setXLink(self.x_ax0)
-        self.x_ax0.getAxis("right").setLabel("Mag axis", color="g")
+        # Signal for when the view is updated. Required, or else the mag plots aren't placed correctly.
+        self.x_ax0.vb.sigResized.connect(lambda: update_views(self.mag_x_layout_axes, self.x_layout_axes))
+        self.y_ax0.vb.sigResized.connect(lambda: update_views(self.mag_y_layout_axes, self.y_layout_axes))
+        self.z_ax0.vb.sigResized.connect(lambda: update_views(self.mag_z_layout_axes, self.z_layout_axes))
 
-        self.mag_x_layout_axes = [self.mag_x_ax0, self.mag_x_ax1, self.mag_x_ax2, self.mag_x_ax3, self.mag_x_ax4]
-        self.mag_y_layout_axes = [self.mag_y_ax0, self.mag_y_ax1, self.mag_y_ax2, self.mag_y_ax3, self.mag_y_ax4]
-        self.mag_z_layout_axes = [self.mag_z_ax0, self.mag_z_ax1, self.mag_z_ax2, self.mag_z_ax3, self.mag_z_ax4]
-        self.mag_profile_axes = np.concatenate([self.mag_x_layout_axes, self.mag_y_layout_axes, self.mag_z_layout_axes])
+        """Signals"""
 
-        # Signals
+        def toggle_mag_plots():
+            if self.plot_mag_cbox.isChecked():
+                for curve in self.mag_curves:
+                    curve.show()
+                for ax in self.profile_axes:
+                    ax.getAxis("right").show()
+            else:
+                for curve in self.mag_curves:
+                    curve.hide()
+                for ax in self.profile_axes:
+                    ax.getAxis("right").hide()
+
         # Shortcuts
         self.actionSave_Screenshot.triggered.connect(self.save_img)
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
@@ -260,9 +271,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         # Checkboxes
         self.show_average_cbox.toggled.connect(lambda: self.plot_profiles('all'))
         self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles('all'))
-        self.plot_mag_cbox.toggled.connect(
-            lambda: [mag.show() for mag in self.mag_curves] if self.plot_mag_cbox.isChecked() else
-            [mag.hide() for mag in self.mag_curves])
+        self.plot_mag_cbox.toggled.connect(toggle_mag_plots)
         self.auto_range_cbox.toggled.connect(self.reset_range)
         self.plot_ontime_decays_cbox.toggled.connect(lambda: self.plot_station(self.selected_station,
                                                                                preserve_selection=True))
@@ -2013,8 +2022,9 @@ if __name__ == '__main__':
 
     # pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
     # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
-    pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
+    # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
     # pem_file = pem_getter.get_pems(client="PEM Rotation", random=True, number=1)[0]
+    pem_file = pem_getter.get_pems(client="Minera", random=True, number=1)[0]
 
     editor = PEMPlotEditor()
     # editor.move(0, 0)
