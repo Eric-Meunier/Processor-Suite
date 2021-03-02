@@ -2765,7 +2765,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     if dlg.wasCanceled():
                         break
 
-                    file_name = str(pem_file.filepath.with_suffix('.xyz'))
+                    file_name = str(Path(file_dir).joinpath(pem_file.filepath.name).with_suffix(".XYZ"))
                     dlg.setLabelText(f"Exporting {file_name}")
                     try:
                         xyz_file = pem_file.to_xyz()
@@ -3407,7 +3407,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         return epsg_code
 
-    @Log()
     def get_crs(self):
         """
         Return a CRS object based on the CRS information in the PEM Editor window
@@ -4524,13 +4523,14 @@ def main():
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
-    pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=1)
+    pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=6)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     # pem_files = pg.get_pems(random=True, number=10)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     # mw.open_dmp_files(pem_files)
     mw.add_pem_files(pem_files)
+    mw.export_as_xyz()
     # mw.open_contour_map()
     # mw.open_mag_dec(mw.pem_files[0])
 
