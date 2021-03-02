@@ -47,6 +47,7 @@ from src.pem.pem_plot_editor import PEMPlotEditor
 from src.qt_py.ri_importer import BatchRIImporter
 from src.pem.station_splitter import StationSplitter
 from src.qt_py.unpacker import Unpacker
+from src.logger import Log
 
 logger = logging.getLogger(__name__)
 
@@ -3406,11 +3407,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         return epsg_code
 
+    @Log()
     def get_crs(self):
         """
         Return a CRS object based on the CRS information in the PEM Editor window
         :return: CRS object
         """
+        print(f"Getting CRS")
         epsg_code = self.get_epsg()
         if epsg_code:
             try:
@@ -4521,7 +4524,7 @@ def main():
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
-    pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=5)
+    pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=1)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     # pem_files = pg.get_pems(random=True, number=10)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
