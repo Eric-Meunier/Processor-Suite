@@ -47,10 +47,11 @@ from src.pem.pem_plot_editor import PEMPlotEditor
 from src.qt_py.ri_importer import BatchRIImporter
 from src.pem.station_splitter import StationSplitter
 from src.qt_py.unpacker import Unpacker
+from src.logger import Log
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.11.1'
+__version__ = '0.11.2'
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -75,8 +76,6 @@ Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 
 # TODO Test contour map
-# TODO Idea: Plot mag on top of profile data
-# TODO changing loop elevation numbers manually crashed program.
 
 
 def get_icon(filepath):
@@ -2766,7 +2765,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     if dlg.wasCanceled():
                         break
 
-                    file_name = str(pem_file.filepath.with_suffix('.xyz'))
+                    file_name = str(Path(file_dir).joinpath(pem_file.filepath.name).with_suffix(".XYZ"))
                     dlg.setLabelText(f"Exporting {file_name}")
                     try:
                         xyz_file = pem_file.to_xyz()
@@ -3413,6 +3412,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Return a CRS object based on the CRS information in the PEM Editor window
         :return: CRS object
         """
+        print(f"Getting CRS")
         epsg_code = self.get_epsg()
         if epsg_code:
             try:
@@ -4523,7 +4523,7 @@ def main():
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
-    pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=5)
+    pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=6)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     # pem_files = pg.get_pems(random=True, number=10)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']

@@ -88,6 +88,19 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Units', 'Station']
         self.loop_table_columns = ['Easting', 'Northing', 'Elevation', 'Units']
 
+        float_delegate = FloatDelegate(2)  # Must keep this reference or else it is garbage collected
+        self.line_table.setItemDelegateForColumn(0, float_delegate)
+        self.line_table.setItemDelegateForColumn(1, float_delegate)
+        self.line_table.setItemDelegateForColumn(2, float_delegate)
+
+        self.collar_table.setItemDelegateForColumn(0, float_delegate)
+        self.collar_table.setItemDelegateForColumn(1, float_delegate)
+        self.collar_table.setItemDelegateForColumn(2, float_delegate)
+
+        self.loop_table.setItemDelegateForColumn(0, float_delegate)
+        self.loop_table.setItemDelegateForColumn(1, float_delegate)
+        self.loop_table.setItemDelegateForColumn(2, float_delegate)
+
         self.init_actions()
         self.init_signals()
 
@@ -181,28 +194,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Adds the columns and formats each table.
         :return: None
         """
-        self.tabs.removeTab(4)
-        float_delegate = FloatDelegate(2)  # Must keep this reference or else it is garbage collected
-
         if not self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.geometry_tab))
             self.line_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            self.line_table.setItemDelegateForColumn(0, float_delegate)
-            self.line_table.setItemDelegateForColumn(1, float_delegate)
-            self.line_table.setItemDelegateForColumn(2, float_delegate)
 
         elif self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.station_gps_tab))
             self.segments_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
             self.collar_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            self.collar_table.setItemDelegateForColumn(0, float_delegate)
-            self.collar_table.setItemDelegateForColumn(1, float_delegate)
-            self.collar_table.setItemDelegateForColumn(2, float_delegate)
 
         self.loop_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.loop_table.setItemDelegateForColumn(0, float_delegate)
-        self.loop_table.setItemDelegateForColumn(1, float_delegate)
-        self.loop_table.setItemDelegateForColumn(2, float_delegate)
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.Close:
@@ -274,6 +275,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
         spinbox.blockSignals(False)
+
+    # def refresh(self):
+    #     """
+    #     Updates all information in the widget. Used to prevent a crash when changing loop elevation values that arises
+    #     in init_tables().
+    #     """
 
     def open_file(self, pem_file):
         """
@@ -491,6 +498,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             'Operator': f.operator,
             'Format': f.format,
             'Units': f.units,
+            'Tools': ', '.join(f.probes.values()),
             'Timebase': f.timebase,
             'Ramp': f.ramp,
             'Number of Channels': f.number_of_channels,

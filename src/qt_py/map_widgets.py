@@ -1,26 +1,34 @@
 import logging
+import math
 import os
 import re
 import sys
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+import natsort
 import numpy as np
 import plotly
 import plotly.graph_objects as go
 import pyqtgraph as pg
+import pandas as pd
 from PyQt5 import (QtGui, QtCore, uic)
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWidgets import (QErrorMessage, QApplication, QWidget, QFileDialog, QMessageBox, QGridLayout,
+from PyQt5.QtWidgets import (QApplication)
+from PyQt5.QtWidgets import (QErrorMessage, QWidget, QFileDialog, QMessageBox, QGridLayout,
                              QAction, QMainWindow, QHBoxLayout, QShortcut)
+from matplotlib import patches
+from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
+from scipy import interpolate as interp
 
-from src.logger import Log
-from src.qt_py.custom_qt_widgets import CustomProgressBar
+from src.pem.pem_plotter import MapPlotter
 from src.gps.gps_editor import BoreholeGeometry
-from src.pem.pem_plotter import ContourMap
+from src.qt_py.custom_qt_widgets import CustomProgressBar
 
 logger = logging.getLogger(__name__)
 
@@ -707,6 +715,15 @@ class Map3DViewer(QMainWindow):
         QTimer.singleShot(1000, lambda: self.status_bar.hide())
 
 
+class ContourMapToolbar(NavigationToolbar):
+    """
+    Custom Matplotlib toolbar for ContourMap.
+    """
+    # only display the buttons we need
+    toolitems = [t for t in NavigationToolbar.toolitems if
+                 t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
+
+
 class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
     """
     Widget to display contour maps. Filters the given PEMFiles to only include surface surveys. Either all files
@@ -720,17 +737,72 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map3.png')))
         self.channel_list_edit.setEnabled(False)
 
+        self.error = QErrorMessage()
+        self.message = QMessageBox()
+        self.map_plotter = MapPlotter()
         self.parent = parent
+
         self.pem_files = None
         self.components = None
         self.channel_times = None
         self.channel_pairs = None
+        self.loops = []
+        self.loop_names = []
+        self.lines = []
 
-        self.error = QErrorMessage()
-        self.message = QMessageBox()
-        self.cmap = ContourMap()
+        """Figure and canvas"""
+        self.figure = Figure(figsize=(11, 8.5))
+        rect = patches.Rectangle(xy=(0.02, 0.02),
+                                 width=0.96,
+                                 height=0.96,
+                                 linewidth=0.7,
+                                 edgecolor='black',
+                                 facecolor='none',
+                                 transform=self.figure.transFigure)
+        self.figure.patches.append(rect)
 
-        # Signals
+        self.canvas = FigureCanvas(self.figure)
+        self.toolbar = ContourMapToolbar(self.canvas, self)
+        self.toolbar_layout.addWidget(self.toolbar)
+        self.toolbar.setFixedHeight(30)
+        self.map_layout.addWidget(self.canvas)
+        self.label_buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
+        self.color = 'k'
+
+        # Create a large grid in order to specify the placement of the colorbar
+        self.ax = plt.subplot2grid((90, 110), (0, 0),
+                                   rowspan=90,
+                                   colspan=90,
+                                   fig=self.figure)
+        self.ax.spines['top'].set_visible(False)
+        self.ax.spines['left'].set_visible(False)
+        self.ax.set_aspect('equal')
+        self.ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
+        self.ax.yaxis.tick_right()
+
+        self.cbar_ax = plt.subplot2grid((90, 110), (0, 108),
+                                        rowspan=90,
+                                        colspan=2,
+                                        fig=self.figure)
+
+        # Creating a custom colormap that imitates the Geosoft colors
+        # Blue > Teal > Green > Yellow > Red > Orange > Magenta > Light pink
+        custom_colors = [(0, 0, 1), (0, 1, 1), (0, 1, 0), (1, 1, 0), (1, 0.5, 0), (1, 0, 0), (1, 0, 1), (1, .8, 1)]
+        custom_cmap = mpl.colors.LinearSegmentedColormap.from_list('custom', custom_colors)
+        custom_cmap.set_under('blue')
+        custom_cmap.set_over('magenta')
+        self.colormap = custom_cmap
+
+        """Signals"""
+
+        def toggle_grid():
+            # Draw the grid
+            if self.grid_cbox.isChecked():
+                self.ax.grid()
+            else:
+                self.ax.grid(False)
+            self.canvas.draw_idle()
+
         self.channel_spinbox.valueChanged.connect(self.draw_map)
         self.z_rbtn.clicked.connect(self.draw_map)
         self.x_rbtn.clicked.connect(self.draw_map)
@@ -743,18 +815,17 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.label_lines_cbox.toggled.connect(self.draw_map)
         self.label_stations_cbox.toggled.connect(self.draw_map)
         self.plot_elevation_cbox.toggled.connect(self.draw_map)
-        self.grid_cbox.toggled.connect(self.draw_map)
+        self.grid_cbox.toggled.connect(toggle_grid)
         self.title_box_cbox.toggled.connect(self.draw_map)
         self.channel_list_rbtn.toggled.connect(
             lambda: self.channel_list_edit.setEnabled(self.channel_list_rbtn.isChecked()))
         self.save_figure_btn.clicked.connect(self.save_figure)
 
-        # Figure and canvas
-        self.canvas = FigureCanvas(self.cmap.figure)
-        self.toolbar = ContourMapToolbar(self.canvas, self)
-        self.toolbar_layout.addWidget(self.toolbar)
-        self.toolbar.setFixedHeight(30)
-        self.map_layout.addWidget(self.canvas)
+        # Move the Y tick labels to the right
+        # self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=0, va='center')
+        # self.ax.set_xticklabels(self.ax.get_xticklabels(), rotation=90, ha='center')
+        # self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}N'))
+        # self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}E'))
 
     def closeEvent(self, e):
         e.accept()
@@ -769,14 +840,16 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         survey_type = pem_files[0].get_survey_type()
         self.pem_files = [file for file in pem_files if not file.is_borehole() and file.get_survey_type() == survey_type]
 
-        # Must be at least 2 eligible surface PEM files.
         if len(self.pem_files) < 2:
             self.message.information(self, 'Insufficient PEM Files', 'Must have at least 2 surface PEM files to plot')
             return
+        elif not all([file.is_fluxgate() == self.pem_files[0].is_fluxgate() for file in self.pem_files]):
+            self.message.information(self, 'Mixed Survey Types', 'Not all survey types are the same.')
+            return
 
         # Averages any file not already averaged.
-        for pem_file in self.pem_files:
-            if not pem_file.is_averaged():
+        if not all([pem_file.is_averaged() for pem_file in self.pem_files]):
+            for pem_file in self.pem_files:
                 pem_file = pem_file.average()
 
         # Either all files must be split or all un-split
@@ -784,7 +857,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             for pem_file in self.pem_files:
                 pem_file = pem_file.split()
 
-        self.components = np.append(np.unique(np.array([file.get_components() for file in self.pem_files])), 'TF')
+        self.components = np.append(np.unique(np.hstack(np.array([file.get_components() for file in self.pem_files],
+                                                        dtype=object))), 'TF')
 
         # Disables the radio buttons of any component for which there is no data.
         if 'Z' not in self.components:
@@ -806,39 +880,312 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.draw_map()
         self.show()
 
+    def contour_data_to_arrays(self):
+        """
+        Create contour data (GPS + channel reading) for all PEMFiles.
+        :return: pandas DataFrame
+        """
+        eastings = []
+        northings = []
+        elevations = []
+        xs = []
+        ys = []
+        zs = []
+        tfs = []
+
+        for pem_file in self.pem_files:
+            print(f"Plotting {pem_file.filepath.name}.")
+            # TODO Continue here.
+            pem_data = pem_file.get_contour_data()
+            line_gps = pem_file.get_line()
+            # Filter the GPS to only keep those that are in the data
+            line_gps = line_gps[line_gps.Station.isin(pem_file.get_stations(converted=True))]
+
+            if line_gps.empty:
+                logger.warning(f"Skipping {pem_file.filepath.name} because it has no line GPS.")
+                continue
+
+            for row in line_gps.itertuples():
+                easting = row.Easting
+                northing = row.Northing
+                elevation = row.Elevation
+                station_num = self.map_plotter.converter.convert_station(row.Station)
+
+                station_data = pem_data[pem_data['Station'].map(
+                    self.map_plotter.converter.convert_station) == station_num]
+                if component.upper() == 'TF':
+                    # Get the channel reading for each component
+                    all_channel_data = station_data.Reading.map(lambda x: x[channel]).to_numpy()
+                    # Calculate the total field
+                    data = math.sqrt(sum([d ** 2 for d in all_channel_data]))
+                else:
+                    # Get the channel reading for the component
+                    component_data = station_data[station_data['Component'] == component.upper()]
+                    if not component_data.empty:
+                        data = component_data.iloc[0]['Reading'][channel]
+                    else:
+                        logger.warning(f"No data for channel {channel} of station {station_num} ({component} component) \
+                                                                            in file {pem_file.filepath.name}")
+                        return
+
+                # Loop name appended here in-case no data is being plotted for the current PEM file
+                if pem_file.loop_name not in self.loop_names:
+                    self.loop_names.append(pem_file.loop_name)
+
+                eastings.append(easting)
+                northings.append(northing)
+                elevations.append(elevation)
+                ds.append(data)
+
+        contour_df = pd.DataFrame({"Easting": xs, "Northing": ys, "Elevation": zs, "Response": ds})
+        return contour_df
+
     def draw_map(self):
         """
         Plot the map on the canvas
         """
+
+        def plot_pem_gps():
+            """
+            Plots the GPS information (lines, stations, loops) from the PEM files
+            """
+            for pem_file in self.pem_files:
+                # Plot the line
+                line = pem_file.line
+                if all([pem_file.has_station_gps(),
+                        self.plot_lines_cbox.isChecked(),
+                        line not in self.lines]):
+                    self.lines.append(line)
+                    self.map_plotter.plot_line(pem_file, self.figure,
+                                               annotate=bool(
+                                                   self.label_stations_cbox.isChecked() and
+                                                   self.label_stations_cbox.isEnabled()),
+                                               label=bool(
+                                                   self.label_loops_cbox.isChecked() and
+                                                   self.label_loops_cbox.isEnabled()),
+                                               plot_ticks=bool(
+                                                   self.plot_stations_cbox.isChecked() and
+                                                   self.plot_stations_cbox.isEnabled()),
+                                               color=self.color)
+
+                # Plot the loop
+                loop = pem_file.loop
+                if all([pem_file.has_loop_gps(),
+                        self.plot_loops_cbox.isChecked(),
+                        loop not in self.loops]):
+                    self.loops.append(loop)
+                    self.map_plotter.plot_loop(pem_file, self.figure,
+                                               annotate=False,
+                                               label=bool(
+                                                   self.label_loops_cbox.isChecked() and
+                                                   self.label_loops_cbox.isEnabled()),
+                                               color=self.color)
+
+        # def contour_data_to_arrays(component, channel):
+        #     """
+        #     Append the contour data (GPS + channel reading) to the object's arrays (xs, ys, zs, ds)
+        #     :param component: str, which component's data to retrieve. Either X, Y, Z, or TF
+        #     :param channel: int, which channel's data to retrieve
+        #     :return: pandas Series of tuples
+        #     """
+        #     xs = []
+        #     ys = []
+        #     zs = []
+        #     ds = []
+        #
+        #     for pem_file in self.pem_files:
+        #
+        #         if channel > pem_file.number_of_channels:
+        #             logger.warning(f"Channel {channel} not in file {pem_file.filepath.name}.")
+        #             continue
+        #
+        #         if component != 'TF' and component not in pem_file.get_components():
+        #             logger.warning(f"{pem_file.filepath.name} has no {component} data.")
+        #             continue
+        #
+        #         pem_data = pem_file.data
+        #         line_gps = pem_file.get_line()
+        #         # Filter the GPS to only keep those that are in the data
+        #         line_gps = line_gps[line_gps.Station.isin(pem_file.get_stations(converted=True))]
+        #
+        #         if line_gps.empty:
+        #             logger.warning(f"Skipping {pem_file.filepath.name} because it has no line GPS.")
+        #             continue
+        #
+        #         for row in line_gps.itertuples():
+        #             easting = row.Easting
+        #             northing = row.Northing
+        #             elevation = row.Elevation
+        #             station_num = self.map_plotter.converter.convert_station(row.Station)
+        #
+        #             station_data = pem_data[pem_data['Station'].map(self.map_plotter.converter.convert_station) == station_num]
+        #             if component.upper() == 'TF':
+        #                 # Get the channel reading for each component
+        #                 all_channel_data = station_data.Reading.map(lambda x: x[channel]).to_numpy()
+        #                 # Calculate the total field
+        #                 data = math.sqrt(sum([d ** 2 for d in all_channel_data]))
+        #             else:
+        #                 # Get the channel reading for the component
+        #                 component_data = station_data[station_data['Component'] == component.upper()]
+        #                 if not component_data.empty:
+        #                     data = component_data.iloc[0]['Reading'][channel]
+        #                 else:
+        #                     logger.warning(f"No data for channel {channel} of station {station_num} ({component} component) \
+        #                                                                     in file {pem_file.filepath.name}")
+        #                     return
+        #
+        #             # Loop name appended here in-case no data is being plotted for the current PEM file
+        #             if pem_file.loop_name not in self.loop_names:
+        #                 self.loop_names.append(pem_file.loop_name)
+        #
+        #             xs.append(easting)
+        #             ys.append(northing)
+        #             zs.append(elevation)
+        #             ds.append(data)
+        #
+        #     contour_df = pd.DataFrame({"Easting": xs, "Northing": ys, "Elevation": zs, "Response": ds})
+        #     return contour_df
+
+        def add_title():
+            """
+            Adds the title box to the plot. Removes any existing text first.
+            """
+            # Remove any previous title texts
+            for text in reversed(self.figure.texts):
+                text.remove()
+
+            # Draw the title
+            if self.title_box_cbox.isChecked():
+                center_pos = 0.5
+                top_pos = 0.95
+
+                client = self.pem_files[0].client
+                grid = self.pem_files[0].grid
+                loops = natsort.os_sorted(self.loop_names)
+                if len(loops) > 3:
+                    loop_text = f"Loop: {loops[0]} to {loops[-1]}"
+                else:
+                    loop_text = f"Loop: {', '.join(loops)}"
+
+                # coord_sys = f"{system}{' Zone ' + zone.title() if zone else ''}, {datum.upper()}"
+                # scale = f"1:{map_scale:,.0f}"
+
+                crone_text = self.figure.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
+                                              fontname='Century Gothic',
+                                              fontsize=11,
+                                              ha='center',
+                                              zorder=10)
+
+                survey_type = self.pem_files[0].get_survey_type()
+                survey_text = self.figure.text(center_pos, top_pos - 0.036, f"Cubic-Interpolation Contour Map"
+                                                                            f"\n{survey_type} Pulse EM "
+                                                                            f"Survey",
+                                               family='cursive',
+                                               style='italic',
+                                               fontname='Century Gothic',
+                                               fontsize=9,
+                                               ha='center',
+                                               zorder=10)
+
+                header_text = self.figure.text(center_pos, top_pos - 0.046, f"{client}\n{grid}\n{loop_text}",
+                                               fontname='Century Gothic',
+                                               fontsize=9.5,
+                                               va='top',
+                                               ha='center',
+                                               zorder=10)
+
         component = self.get_selected_component().upper()
         if component not in self.components:
             return
+
+        # Reset the arrays
+        self.loops = []
+        self.loop_names = []
+        self.lines = []
+        self.ax.cla()
+        self.cbar_ax.cla()
 
         channel = self.channel_spinbox.value()
         channel_time = self.channel_times.loc[channel]['Center']
         self.time_label.setText(f"{channel_time * 1000:.3f}ms")
 
-        try:
-            self.cmap.plot_contour(self.pem_files, component, channel,
-                                   draw_grid=self.grid_cbox.isChecked(),
-                                   channel_time=channel_time,
-                                   plot_loops=self.plot_loops_cbox.isChecked(),
-                                   plot_lines=self.plot_lines_cbox.isChecked(),
-                                   plot_stations=bool(
-                                       self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
-                                   label_lines=bool(
-                                       self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
-                                   label_loops=bool(
-                                       self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
-                                   label_stations=bool(
-                                       self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
-                                   elevation_contours=self.plot_elevation_cbox.isChecked(),
-                                   title_box=self.title_box_cbox.isChecked())
-        except Exception as e:
-            logger.critical(str(e))
-            self.error.showMessage(f"The following error occurred while creating the contour plot:\n{str(e)}")
-        else:
-            self.canvas.draw()
+        add_title()
+        plot_pem_gps()
+
+        # Create the data for the contour map
+        # df = contour_data_to_arrays(component, channel)
+        df = self.contour_data_to_arrays()
+        if df.empty:
+            self.message.information(self, "No Data Found", f"No valid contour data was found.")
+            return
+
+        # Creating a 2D grid for the interpolation
+        numcols, numrows = 100, 100
+        xi = np.linspace(df.Easting.min(), df.Easting.max(), numcols)
+        yi = np.linspace(df.Northing.min(), df.Northing.max(), numrows)
+        xx, yy = np.meshgrid(xi, yi)
+
+        # Interpolating the 2D grid data
+        di = interp.griddata((df.Easting, df.Northing), df.Response, (xx, yy), method='cubic')
+
+        # Add elevation contour lines
+        if self.plot_elevation_cbox.isChecked():
+            zi = interp.griddata((df.Easting, df.Northing), df.Elevation, (xx, yy),
+                                 method='cubic')
+            contour = self.ax.contour(xi, yi, zi,
+                                      colors='black',
+                                      alpha=0.8)
+            # contourf = ax.contourf(xi, yi, zi, cmap=colormap)
+            self.ax.clabel(contour,
+                           fontsize=6,
+                           inline=True,
+                           inline_spacing=0.5,
+                           fmt='%d')
+
+        # Add the filled contour plot
+        contourf = self.ax.contourf(xi, yi, di,
+                                    cmap=self.colormap,
+                                    levels=50)
+
+        # Add colorbar for the data contours
+        cbar = self.figure.colorbar(contourf, cax=self.cbar_ax)
+        self.cbar_ax.set_xlabel(f"{'pT' if self.pem_files[0].is_fluxgate() else 'nT/s'}")
+        cbar.ax.get_xaxis().labelpad = 10
+
+        # Add component and channel text at the top right of the figure
+        component_text = f"{component.upper()} Component" if component != 'TF' else 'Total Field'
+        info_text = self.figure.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
+                                     transform=self.cbar_ax.transAxes,
+                                     color='k',
+                                     fontname='Century Gothic',
+                                     fontsize=9,
+                                     va='bottom',
+                                     ha='center',
+                                     zorder=10)
+
+        self.canvas.draw()
+
+        # try:
+        #     self.plot_contour(self.pem_files, component, channel,
+        #                       draw_grid=self.grid_cbox.isChecked(),
+        #                       channel_time=channel_time,
+        #                       plot_loops=self.plot_loops_cbox.isChecked(),
+        #                       plot_lines=self.plot_lines_cbox.isChecked(),
+        #                       plot_stations=bool(
+        #                           self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
+        #                       label_lines=bool(
+        #                           self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
+        #                       label_loops=bool(
+        #                           self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
+        #                       label_stations=bool(
+        #                           self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
+        #                       elevation_contours=self.plot_elevation_cbox.isChecked(),
+        #                       title_box=self.title_box_cbox.isChecked())
+        # except Exception as e:
+        #     logger.critical(str(e))
+        #     self.error.showMessage(f"The following error occurred while creating the contour plot:\n{str(e)}")
+        # else:
+        #     self.canvas.draw()
 
     def get_selected_component(self):
         if self.z_rbtn.isChecked():
@@ -861,7 +1208,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                                                     'PDF Files (*.PDF);;PNG Files (*.PNG);;JPG Files (*.JPG')
             if path:
                 # Create a new instance of ContourMap
-                cmap_save = ContourMap()
                 logger.info(f"Saving PDF to {path}.")
                 with PdfPages(path) as pdf:
                     # Print plots from the list of channels if it's enabled
@@ -886,22 +1232,22 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
                     for channel in channels:
                         channel_time = self.channel_times.loc[channel]['Center']
-                        fig = cmap_save.plot_contour(self.pem_files, self.get_selected_component(),
-                                                     channel,
-                                                     draw_grid=self.grid_cbox.isChecked(),
-                                                     channel_time=channel_time,
-                                                     plot_loops=self.plot_loops_cbox.isChecked(),
-                                                     plot_lines=self.plot_lines_cbox.isChecked(),
-                                                     plot_stations=bool(
-                                                         self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
-                                                     label_lines=bool(
-                                                         self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
-                                                     label_loops=bool(
-                                                         self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
-                                                     label_stations=bool(
-                                                         self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
-                                                     elevation_contours=self.plot_elevation_cbox.isChecked(),
-                                                     title_box=self.title_box_cbox.isChecked())
+                        fig = self.plot_contour(self.pem_files, self.get_selected_component(),
+                                                channel,
+                                                draw_grid=self.grid_cbox.isChecked(),
+                                                channel_time=channel_time,
+                                                plot_loops=self.plot_loops_cbox.isChecked(),
+                                                plot_lines=self.plot_lines_cbox.isChecked(),
+                                                plot_stations=bool(
+                                                    self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
+                                                label_lines=bool(
+                                                    self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
+                                                label_loops=bool(
+                                                    self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
+                                                label_stations=bool(
+                                                    self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
+                                                elevation_contours=self.plot_elevation_cbox.isChecked(),
+                                                title_box=self.title_box_cbox.isChecked())
 
                         pdf.savefig(fig, orientation='landscape')
                         fig.clear()
@@ -1196,179 +1542,6 @@ class GPSViewer(QMainWindow):
                 dlg += 1
 
 
-# class FoliumMap(QMainWindow):
-#
-#     def __init__(self):
-#         super().__init__()
-#         self.pem_files = None
-#         self.crs = None
-#         self.map = None
-#         self.win = None
-#         # start_location is used as the zoom-point when the map is opened
-#         self.start_location = None
-#
-#         self.error = QErrorMessage()
-#         layout = QGridLayout()
-#         self.setLayout(layout)
-#         self.setWindowTitle('Map')
-#         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'folium.png')))
-#
-#         self.save_img_action = QAction('Save Image')
-#         self.save_img_action.setShortcut("Ctrl+S")
-#         self.save_img_action.triggered.connect(self.save_img)
-#         self.copy_image_action = QAction('Copy Image')
-#         self.copy_image_action.setShortcut("Ctrl+C")
-#         self.copy_image_action.triggered.connect(self.copy_img)
-#
-#         self.file_menu = self.menuBar().addMenu('&File')
-#         self.file_menu.addAction(self.save_img_action)
-#         self.file_menu.addAction(self.copy_image_action)
-#
-#         # create an instance of QWebEngineView and set the html code
-#         self.web_engine_widget = QWebEngineView()
-#         self.setCentralWidget(self.web_engine_widget)
-#
-#     def open(self, pem_files, crs):
-#         self.pem_files = pem_files
-#         self.crs = crs
-#         self.error = QErrorMessage()
-#
-#         if self.crs.is_valid():
-#             self.plot_pems()
-#
-#             # Add the map to a QWebEngineView
-#             data = io.BytesIO()
-#             self.map.save(data, close_file=False)
-#             self.web_engine_widget.setHtml(data.getvalue().decode())
-#
-#             self.show()
-#
-#     def plot_pems(self):
-#
-#         def plot_borehole(pem_file):
-#             if pem_file.has_collar_gps():
-#                 # Add the CRS to the collar and retrieve the lat lon coordinates
-#                 pem_file.collar.crs = self.crs
-#                 collar = pem_file.collar.to_latlon().df
-#
-#                 if collar.to_string() not in collars:
-#                     collars.append(collar.to_string())
-#                     if self.start_location is None:
-#                         self.start_location = collar.loc[0, ['Northing', 'Easting']]
-#
-#                     # Plot the collar
-#                     folium.Marker(collar.loc[0, ['Northing', 'Easting']],
-#                                   popup=pem_file.line_name,
-#                                   tooltip=pem_file.line_name
-#                                   ).add_to(collar_group)
-#
-#         def plot_line(pem_file):
-#             if pem_file.has_station_gps():
-#                 # Add the CRS to the line and retrieve the lat lon coordinates
-#                 pem_file.line.crs = self.crs
-#                 line = pem_file.line.to_latlon().df
-#
-#                 if line.to_string() not in lines:
-#                     lines.append(line.to_string())
-#                     if self.start_location is None:
-#                         self.start_location = line.loc[0, ['Northing', 'Easting']]
-#
-#                     # Plot the line
-#                     folium.PolyLine(locations=line.loc[:, ['Northing', 'Easting']],
-#                                     popup=pem_file.line_name,
-#                                     tooltip=pem_file.line_name,
-#                                     line_opacity=0.5,
-#                                     color='blue'
-#                                     ).add_to(line_group)
-#
-#                     # Plot the stations markers
-#                     for row in line.itertuples():
-#                         folium.Marker((row.Northing, row.Easting),
-#                                       popup=row.Station,
-#                                       tooltip=row.Station,
-#                                       size=10
-#                                       ).add_to(station_group)
-#
-#         def plot_loop(pem_file):
-#             if pem_file.has_loop_gps():
-#                 # Add the CRS to the loop and retrieve the lat lon coordinates
-#                 pem_file.loop.crs = self.crs
-#                 loop = pem_file.loop.to_latlon().get_loop(closed=True)
-#
-#                 if loop.to_string() not in loops:
-#                     loops.append(loop.to_string())
-#                     if self.start_location is None:
-#                         self.start_location = loop.loc[0, ['Northing', 'Easting']]
-#                     # Plot loop
-#                     folium.PolyLine(locations=loop.loc[:, ['Northing', 'Easting']],
-#                                     popup=pem_file.loop_name,
-#                                     tooltip=pem_file.loop_name,
-#                                     line_opacity=0.5,
-#                                     color='magenta'
-#                                     ).add_to(loop_group)
-#
-#         station_group = folium.FeatureGroup(name='Stations')
-#         line_group = folium.FeatureGroup(name='Lines')
-#         loop_group = folium.FeatureGroup(name='Loop')
-#         collar_group = folium.FeatureGroup(name='Collars')
-#         loops = []
-#         collars = []
-#         lines = []
-#
-#         for pem_file in self.pem_files:
-#             if pem_file.is_borehole():
-#                 plot_borehole(pem_file)
-#             else:
-#                 plot_line(pem_file)
-#
-#             plot_loop(pem_file)
-#
-#         self.map = folium.Map(location=self.start_location,
-#                               zoom_start=15,
-#                               zoom_control=False,
-#                               control_scale=True,
-#                               tiles='OpenStreetMap',
-#                               attr='testing attr'
-#                               )
-#
-#         folium.raster_layers.TileLayer('OpenStreetMap').add_to(self.map)
-#         folium.raster_layers.TileLayer('Stamen Toner').add_to(self.map)
-#         folium.raster_layers.TileLayer('Stamen Terrain').add_to(self.map)
-#         folium.raster_layers.TileLayer('Cartodb positron').add_to(self.map)
-#         station_group.add_to(self.map)
-#         line_group.add_to(self.map)
-#         loop_group.add_to(self.map)
-#         collar_group.add_to(self.map)
-#         folium.LayerControl().add_to(self.map)
-#
-#     def save_img(self):
-#         save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
-#
-#         if save_file:
-#             size = self.contentsRect()
-#             img = QtGui.QPixmap(size.width(), size.height())
-#             self.render(img)
-#             img.save(save_file)
-#         else:
-#             pass
-#
-#     def copy_img(self):
-#         size = self.contentsRect()
-#         img = QtGui.QPixmap(size.width(), size.height())
-#         self.render(img)
-#         img.copy(size)
-#         QApplication.clipboard().setPixmap(img)
-
-
-class ContourMapToolbar(NavigationToolbar):
-    """
-    Custom Matplotlib toolbar for ContourMap.
-    """
-    # only display the buttons we need
-    toolitems = [t for t in NavigationToolbar.toolitems if
-                 t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
-
-
 class NonScientific(pg.AxisItem):
     def __init__(self, *args, **kwargs):
         super(NonScientific, self).__init__(*args, **kwargs)
@@ -1386,7 +1559,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     getter = PEMGetter()
-    files = getter.get_pems(client='Kazzinc', number=5)
+    files = getter.get_pems(client='TMC', subfolder=r"Loop G\Final\Loop G", number=5)
     # files = getter.get_pems(client='Iscaycruz', subfolder='Sante Est')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 

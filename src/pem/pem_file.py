@@ -543,6 +543,42 @@ class PEMFile:
 
         return profile
 
+    def get_contour_data(self):
+        """
+        Create a data frame which includes GPS position and columns for each channel.
+        :return: DataFrame object
+        """
+
+        def add_gps(row):
+            """Add the GPS for a given station"""
+            gps = line_gps[line_gps.Station == row.Station]
+            if not gps.empty:
+                row.Easting = gps.Easting.values[0]
+                row.Northing = gps.Northing.values[0]
+                row.Elevation = gps.Elevation.values[0]
+            return row
+
+        converter = StationConverter()
+        global line_gps
+        line_gps = self.get_line()
+        # Filter the GPS to only keep those that are in the data
+        line_gps = line_gps[line_gps.Station.isin(self.get_stations(converted=True))]
+
+        if line_gps.empty:
+            logger.warning(f"Skipping {pem_file.filepath.name} because it has no line GPS.")
+            return pd.DataFrame()
+
+        readings = pd.DataFrame.from_dict(
+            dict(zip(self.data.loc[:, "Reading"].index, self.data.loc[:, "Reading"].values))).T
+        data = pd.concat([self.data.loc[:, ["Station", "Component"]], readings], axis=1)
+        data.Station = data.Station.map(converter.convert_station)
+        data["Easting"] = None
+        data["Northing"] = None
+        data["Elevation"] = None
+
+        data = data.apply(add_gps, axis=1)
+        return data
+
     def get_components(self):
         components = list(self.data['Component'].unique())
         return components
