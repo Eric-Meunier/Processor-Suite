@@ -880,6 +880,66 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.draw_map()
         self.show()
 
+    def contour_data_to_arrays(self):
+        """
+        Create contour data (GPS + channel reading) for all PEMFiles.
+        :return: pandas DataFrame
+        """
+        eastings = []
+        northings = []
+        elevations = []
+        xs = []
+        ys = []
+        zs = []
+        tfs = []
+
+        for pem_file in self.pem_files:
+            print(f"Plotting {pem_file.filepath.name}.")
+            # TODO Continue here.
+            pem_data = pem_file.get_contour_data()
+            line_gps = pem_file.get_line()
+            # Filter the GPS to only keep those that are in the data
+            line_gps = line_gps[line_gps.Station.isin(pem_file.get_stations(converted=True))]
+
+            if line_gps.empty:
+                logger.warning(f"Skipping {pem_file.filepath.name} because it has no line GPS.")
+                continue
+
+            for row in line_gps.itertuples():
+                easting = row.Easting
+                northing = row.Northing
+                elevation = row.Elevation
+                station_num = self.map_plotter.converter.convert_station(row.Station)
+
+                station_data = pem_data[pem_data['Station'].map(
+                    self.map_plotter.converter.convert_station) == station_num]
+                if component.upper() == 'TF':
+                    # Get the channel reading for each component
+                    all_channel_data = station_data.Reading.map(lambda x: x[channel]).to_numpy()
+                    # Calculate the total field
+                    data = math.sqrt(sum([d ** 2 for d in all_channel_data]))
+                else:
+                    # Get the channel reading for the component
+                    component_data = station_data[station_data['Component'] == component.upper()]
+                    if not component_data.empty:
+                        data = component_data.iloc[0]['Reading'][channel]
+                    else:
+                        logger.warning(f"No data for channel {channel} of station {station_num} ({component} component) \
+                                                                            in file {pem_file.filepath.name}")
+                        return
+
+                # Loop name appended here in-case no data is being plotted for the current PEM file
+                if pem_file.loop_name not in self.loop_names:
+                    self.loop_names.append(pem_file.loop_name)
+
+                eastings.append(easting)
+                northings.append(northing)
+                elevations.append(elevation)
+                ds.append(data)
+
+        contour_df = pd.DataFrame({"Easting": xs, "Northing": ys, "Elevation": zs, "Response": ds})
+        return contour_df
+
     def draw_map(self):
         """
         Plot the map on the canvas
@@ -921,70 +981,70 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                                                    self.label_loops_cbox.isEnabled()),
                                                color=self.color)
 
-        def contour_data_to_arrays(component, channel):
-            """
-            Append the contour data (GPS + channel reading) to the object's arrays (xs, ys, zs, ds)
-            :param component: str, which component's data to retrieve. Either X, Y, Z, or TF
-            :param channel: int, which channel's data to retrieve
-            :return: pandas Series of tuples
-            """
-            xs = []
-            ys = []
-            zs = []
-            ds = []
-
-            for pem_file in self.pem_files:
-
-                if channel > pem_file.number_of_channels:
-                    logger.warning(f"Channel {channel} not in file {pem_file.filepath.name}.")
-                    continue
-
-                if component != 'TF' and component not in pem_file.get_components():
-                    logger.warning(f"{pem_file.filepath.name} has no {component} data.")
-                    continue
-
-                pem_data = pem_file.data
-                line_gps = pem_file.get_line()
-                # Filter the GPS to only keep those that are in the data
-                line_gps = line_gps[line_gps.Station.isin(pem_file.get_stations(converted=True))]
-
-                if line_gps.empty:
-                    logger.warning(f"Skipping {pem_file.filepath.name} because it has no line GPS.")
-                    continue
-
-                for row in line_gps.itertuples():
-                    easting = row.Easting
-                    northing = row.Northing
-                    elevation = row.Elevation
-                    station_num = self.map_plotter.converter.convert_station(row.Station)
-
-                    station_data = pem_data[pem_data['Station'].map(self.map_plotter.converter.convert_station) == station_num]
-                    if component.upper() == 'TF':
-                        # Get the channel reading for each component
-                        all_channel_data = station_data.Reading.map(lambda x: x[channel]).to_numpy()
-                        # Calculate the total field
-                        data = math.sqrt(sum([d ** 2 for d in all_channel_data]))
-                    else:
-                        # Get the channel reading for the component
-                        component_data = station_data[station_data['Component'] == component.upper()]
-                        if not component_data.empty:
-                            data = component_data.iloc[0]['Reading'][channel]
-                        else:
-                            logger.warning(f"No data for channel {channel} of station {station_num} ({component} component) \
-                                                                            in file {pem_file.filepath.name}")
-                            return
-
-                    # Loop name appended here in-case no data is being plotted for the current PEM file
-                    if pem_file.loop_name not in self.loop_names:
-                        self.loop_names.append(pem_file.loop_name)
-
-                    xs.append(easting)
-                    ys.append(northing)
-                    zs.append(elevation)
-                    ds.append(data)
-
-            contour_df = pd.DataFrame({"Easting": xs, "Northing": ys, "Elevation": zs, "Response": ds})
-            return contour_df
+        # def contour_data_to_arrays(component, channel):
+        #     """
+        #     Append the contour data (GPS + channel reading) to the object's arrays (xs, ys, zs, ds)
+        #     :param component: str, which component's data to retrieve. Either X, Y, Z, or TF
+        #     :param channel: int, which channel's data to retrieve
+        #     :return: pandas Series of tuples
+        #     """
+        #     xs = []
+        #     ys = []
+        #     zs = []
+        #     ds = []
+        #
+        #     for pem_file in self.pem_files:
+        #
+        #         if channel > pem_file.number_of_channels:
+        #             logger.warning(f"Channel {channel} not in file {pem_file.filepath.name}.")
+        #             continue
+        #
+        #         if component != 'TF' and component not in pem_file.get_components():
+        #             logger.warning(f"{pem_file.filepath.name} has no {component} data.")
+        #             continue
+        #
+        #         pem_data = pem_file.data
+        #         line_gps = pem_file.get_line()
+        #         # Filter the GPS to only keep those that are in the data
+        #         line_gps = line_gps[line_gps.Station.isin(pem_file.get_stations(converted=True))]
+        #
+        #         if line_gps.empty:
+        #             logger.warning(f"Skipping {pem_file.filepath.name} because it has no line GPS.")
+        #             continue
+        #
+        #         for row in line_gps.itertuples():
+        #             easting = row.Easting
+        #             northing = row.Northing
+        #             elevation = row.Elevation
+        #             station_num = self.map_plotter.converter.convert_station(row.Station)
+        #
+        #             station_data = pem_data[pem_data['Station'].map(self.map_plotter.converter.convert_station) == station_num]
+        #             if component.upper() == 'TF':
+        #                 # Get the channel reading for each component
+        #                 all_channel_data = station_data.Reading.map(lambda x: x[channel]).to_numpy()
+        #                 # Calculate the total field
+        #                 data = math.sqrt(sum([d ** 2 for d in all_channel_data]))
+        #             else:
+        #                 # Get the channel reading for the component
+        #                 component_data = station_data[station_data['Component'] == component.upper()]
+        #                 if not component_data.empty:
+        #                     data = component_data.iloc[0]['Reading'][channel]
+        #                 else:
+        #                     logger.warning(f"No data for channel {channel} of station {station_num} ({component} component) \
+        #                                                                     in file {pem_file.filepath.name}")
+        #                     return
+        #
+        #             # Loop name appended here in-case no data is being plotted for the current PEM file
+        #             if pem_file.loop_name not in self.loop_names:
+        #                 self.loop_names.append(pem_file.loop_name)
+        #
+        #             xs.append(easting)
+        #             ys.append(northing)
+        #             zs.append(elevation)
+        #             ds.append(data)
+        #
+        #     contour_df = pd.DataFrame({"Easting": xs, "Northing": ys, "Elevation": zs, "Response": ds})
+        #     return contour_df
 
         def add_title():
             """
@@ -1034,36 +1094,27 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                                                ha='center',
                                                zorder=10)
 
-        def format_figure():
-            # Clear the axes and color bar
-            self.ax.cla()
-            self.cbar_ax.cla()
-
-            # # Draw the grid
-            # if self.grid_cbox.isChecked():
-            #     self.ax.grid()
-            # else:
-            #     self.ax.grid(False)
+        component = self.get_selected_component().upper()
+        if component not in self.components:
+            return
 
         # Reset the arrays
         self.loops = []
         self.loop_names = []
         self.lines = []
-
-        component = self.get_selected_component().upper()
-        if component not in self.components:
-            return
+        self.ax.cla()
+        self.cbar_ax.cla()
 
         channel = self.channel_spinbox.value()
         channel_time = self.channel_times.loc[channel]['Center']
         self.time_label.setText(f"{channel_time * 1000:.3f}ms")
 
         add_title()
-        format_figure()
         plot_pem_gps()
 
         # Create the data for the contour map
-        df = contour_data_to_arrays(component, channel)
+        # df = contour_data_to_arrays(component, channel)
+        df = self.contour_data_to_arrays()
         if df.empty:
             self.message.information(self, "No Data Found", f"No valid contour data was found.")
             return
@@ -1508,7 +1559,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     getter = PEMGetter()
-    files = getter.get_pems(client='Kazzinc', number=5)
+    files = getter.get_pems(client='TMC', subfolder=r"Loop G\Final\Loop G", number=5)
     # files = getter.get_pems(client='Iscaycruz', subfolder='Sante Est')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
