@@ -548,6 +548,7 @@ class PEMFile:
         Create a data frame which includes GPS position and columns for each channel.
         :return: DataFrame object
         """
+        print(F"Retrieving contour data for {self.filepath.name}.")
 
         def add_gps(row):
             """Add the GPS for a given station"""
@@ -558,8 +559,19 @@ class PEMFile:
                 row.Elevation = gps.Elevation.values[0]
             return row
 
+        def get_tf(row):
+
+            def calculate_tf(col):
+                return math.sqrt(sum(col ** 2))
+
+            channels = range(0, self.number_of_channels)
+            tf = row.loc[:, channels].apply(calculate_tf).to_numpy()
+            tf_row = row.iloc[0].copy().to_frame().T
+            tf_row.Component = 'TF'
+            tf_row.loc[:, channels] = tf
+            return tf_row
+
         converter = StationConverter()
-        global line_gps
         line_gps = self.get_line()
         # Filter the GPS to only keep those that are in the data
         line_gps = line_gps[line_gps.Station.isin(self.get_stations(converted=True))]
@@ -572,11 +584,14 @@ class PEMFile:
             dict(zip(self.data.loc[:, "Reading"].index, self.data.loc[:, "Reading"].values))).T
         data = pd.concat([self.data.loc[:, ["Station", "Component"]], readings], axis=1)
         data.Station = data.Station.map(converter.convert_station)
+        data["Line"] = self.line_name
         data["Easting"] = None
         data["Northing"] = None
         data["Elevation"] = None
 
         data = data.apply(add_gps, axis=1)
+        tf = data.groupby("Station").apply(get_tf)
+        data = data.append(tf).dropna().reset_index(drop=True)
         return data
 
     def get_components(self):
