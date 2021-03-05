@@ -4530,7 +4530,7 @@ def main():
 
     # mw.open_dmp_files(pem_files)
     mw.add_pem_files(pem_files)
-    mw.open_contour_map()
+    # mw.open_contour_map()
     # mw.open_mag_dec(mw.pem_files[0])
 
     # mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')

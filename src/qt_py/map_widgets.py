@@ -749,21 +749,9 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.components = None
         self.channel_times = None
         self.channel_pairs = None
-        self.loops = []
-        self.loop_names = []
-        self.lines = []
 
         """Figure and canvas"""
-        self.figure = Figure(figsize=(11, 8.5))
-        rect = patches.Rectangle(xy=(0.02, 0.02),
-                                 width=0.96,
-                                 height=0.96,
-                                 linewidth=0.7,
-                                 edgecolor='black',
-                                 facecolor='none',
-                                 transform=self.figure.transFigure)
-        self.figure.patches.append(rect)
-
+        self.figure, self.ax, self.cbar_ax = self.get_figure()
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = ContourMapToolbar(self.canvas, self)
         self.toolbar_layout.addWidget(self.toolbar)
@@ -771,22 +759,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.map_layout.addWidget(self.canvas)
         self.label_buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
         self.color = 'k'
-
-        # Create a large grid in order to specify the placement of the colorbar
-        self.ax = plt.subplot2grid((90, 110), (0, 0),
-                                   rowspan=90,
-                                   colspan=90,
-                                   fig=self.figure)
-        self.ax.spines['top'].set_visible(False)
-        self.ax.spines['left'].set_visible(False)
-        self.ax.set_aspect('equal')
-        self.ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
-        self.ax.yaxis.tick_right()
-
-        self.cbar_ax = plt.subplot2grid((90, 110), (0, 108),
-                                        rowspan=90,
-                                        colspan=2,
-                                        fig=self.figure)
 
         # Creating a custom colormap that imitates the Geosoft colors
         # Blue > Teal > Green > Yellow > Red > Orange > Magenta > Light pink
@@ -806,20 +778,20 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                 self.ax.grid(False)
             self.canvas.draw_idle()
 
-        self.channel_spinbox.valueChanged.connect(self.draw_map)
-        self.z_rbtn.clicked.connect(self.draw_map)
-        self.x_rbtn.clicked.connect(self.draw_map)
-        self.y_rbtn.clicked.connect(self.draw_map)
-        self.tf_rbtn.clicked.connect(self.draw_map)
-        self.plot_loops_cbox.toggled.connect(self.draw_map)
-        self.plot_lines_cbox.toggled.connect(self.draw_map)
-        self.plot_stations_cbox.toggled.connect(self.draw_map)
-        self.label_loops_cbox.toggled.connect(self.draw_map)
-        self.label_lines_cbox.toggled.connect(self.draw_map)
-        self.label_stations_cbox.toggled.connect(self.draw_map)
-        self.plot_elevation_cbox.toggled.connect(self.draw_map)
+        self.channel_spinbox.valueChanged.connect(lambda: self.draw_map(self.figure))
+        self.z_rbtn.clicked.connect(lambda: self.draw_map(self.figure))
+        self.x_rbtn.clicked.connect(lambda: self.draw_map(self.figure))
+        self.y_rbtn.clicked.connect(lambda: self.draw_map(self.figure))
+        self.tf_rbtn.clicked.connect(lambda: self.draw_map(self.figure))
+        self.plot_loops_cbox.toggled.connect(lambda: self.draw_map(self.figure))
+        self.plot_lines_cbox.toggled.connect(lambda: self.draw_map(self.figure))
+        self.plot_stations_cbox.toggled.connect(lambda: self.draw_map(self.figure))
+        self.label_loops_cbox.toggled.connect(lambda: self.draw_map(self.figure))
+        self.label_lines_cbox.toggled.connect(lambda: self.draw_map(self.figure))
+        self.label_stations_cbox.toggled.connect(lambda: self.draw_map(self.figure))
+        self.plot_elevation_cbox.toggled.connect(lambda: self.draw_map(self.figure))
         self.grid_cbox.toggled.connect(toggle_grid)
-        self.title_box_cbox.toggled.connect(self.draw_map)
+        self.title_box_cbox.toggled.connect(lambda: self.draw_map(self.figure))
         self.channel_list_rbtn.toggled.connect(
             lambda: self.channel_list_edit.setEnabled(self.channel_list_rbtn.isChecked()))
         self.save_figure_btn.clicked.connect(self.save_figure)
@@ -833,6 +805,39 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
     def closeEvent(self, e):
         e.accept()
         self.deleteLater()
+
+    @staticmethod
+    def get_figure():
+        """
+        Create the figure and axes for plotting. Required for saving the plots.
+        """
+        figure = Figure(figsize=(11, 8.5))
+        rect = patches.Rectangle(xy=(0.02, 0.02),
+                                 width=0.96,
+                                 height=0.96,
+                                 linewidth=0.7,
+                                 edgecolor='black',
+                                 facecolor='none',
+                                 transform=figure.transFigure)
+        figure.patches.append(rect)
+
+        # Create a large grid in order to specify the placement of the colorbar
+        ax = plt.subplot2grid((90, 110), (0, 0),
+                              rowspan=90,
+                              colspan=90,
+                              fig=figure)
+        ax.spines['top'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.set_aspect('equal')
+        ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
+        ax.yaxis.tick_right()
+
+        cbar_ax = plt.subplot2grid((90, 110), (0, 108),
+                                   rowspan=90,
+                                   colspan=2,
+                                   fig=figure)
+
+        return figure, ax, cbar_ax
 
     def open(self, pem_files):
         """
@@ -881,7 +886,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.channel_times = self.pem_files[np.argmax(pem_file_channels)].channel_times
 
         self.get_contour_data()
-        self.draw_map()
+        self.draw_map(self.figure)
         self.show()
 
     def get_contour_data(self):
@@ -894,7 +899,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             pem_data = pem_file.get_contour_data()
             self.data = self.data.append(pem_data)
 
-    def draw_map(self):
+    def draw_map(self, figure, channel=None):
         """
         Plot the map on the canvas
         """
@@ -903,20 +908,23 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             """
             Plots the GPS information (lines, stations, loops) from the PEM files
             """
+            loops = []
+            lines = []
+
             for pem_file in self.pem_files:
                 # Plot the line
                 line = pem_file.line
                 if all([pem_file.has_station_gps(),
                         self.plot_lines_cbox.isChecked(),
-                        line not in self.lines]):
-                    self.lines.append(line)
-                    self.map_plotter.plot_line(pem_file, self.figure,
+                        line not in lines]):
+                    lines.append(line)
+                    self.map_plotter.plot_line(pem_file, figure,
                                                annotate=bool(
                                                    self.label_stations_cbox.isChecked() and
                                                    self.label_stations_cbox.isEnabled()),
                                                label=bool(
-                                                   self.label_loops_cbox.isChecked() and
-                                                   self.label_loops_cbox.isEnabled()),
+                                                   self.label_lines_cbox.isChecked() and
+                                                   self.label_lines_cbox.isEnabled()),
                                                plot_ticks=bool(
                                                    self.plot_stations_cbox.isChecked() and
                                                    self.plot_stations_cbox.isEnabled()),
@@ -926,9 +934,9 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                 loop = pem_file.loop
                 if all([pem_file.has_loop_gps(),
                         self.plot_loops_cbox.isChecked(),
-                        loop not in self.loops]):
-                    self.loops.append(loop)
-                    self.map_plotter.plot_loop(pem_file, self.figure,
+                        loop not in loops]):
+                    loops.append(loop)
+                    self.map_plotter.plot_loop(pem_file, figure,
                                                annotate=False,
                                                label=bool(
                                                    self.label_loops_cbox.isChecked() and
@@ -940,7 +948,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
             Adds the title box to the plot. Removes any existing text first.
             """
             # Remove any previous title texts
-            for text in reversed(self.figure.texts):
+            for text in reversed(figure.texts):
                 text.remove()
 
             # Draw the title
@@ -950,7 +958,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
                 client = self.pem_files[0].client
                 grid = self.pem_files[0].grid
-                loops = natsort.os_sorted(self.loop_names)
+                loops = natsort.os_sorted(np.unique(np.array([f.loop_name for f in self.pem_files])))
                 if len(loops) > 3:
                     loop_text = f"Loop: {loops[0]} to {loops[-1]}"
                 else:
@@ -959,43 +967,43 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                 # coord_sys = f"{system}{' Zone ' + zone.title() if zone else ''}, {datum.upper()}"
                 # scale = f"1:{map_scale:,.0f}"
 
-                crone_text = self.figure.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
-                                              fontname='Century Gothic',
-                                              fontsize=11,
-                                              ha='center',
-                                              zorder=10)
+                crone_text = figure.text(center_pos, top_pos, 'Crone Geophysics & Exploration Ltd.',
+                                         fontname='Century Gothic',
+                                         fontsize=11,
+                                         ha='center',
+                                         zorder=10)
 
                 survey_type = self.pem_files[0].get_survey_type()
-                survey_text = self.figure.text(center_pos, top_pos - 0.036, f"Cubic-Interpolation Contour Map"
-                                                                            f"\n{survey_type} Pulse EM "
-                                                                            f"Survey",
-                                               family='cursive',
-                                               style='italic',
-                                               fontname='Century Gothic',
-                                               fontsize=9,
-                                               ha='center',
-                                               zorder=10)
+                survey_text = figure.text(center_pos, top_pos - 0.036, f"Cubic-Interpolation Contour Map"
+                                                                       f"\n{survey_type} Pulse EM "
+                                                                       f"Survey",
+                                          family='cursive',
+                                          style='italic',
+                                          fontname='Century Gothic',
+                                          fontsize=9,
+                                          ha='center',
+                                          zorder=10)
 
-                header_text = self.figure.text(center_pos, top_pos - 0.046, f"{client}\n{grid}\n{loop_text}",
-                                               fontname='Century Gothic',
-                                               fontsize=9.5,
-                                               va='top',
-                                               ha='center',
-                                               zorder=10)
+                header_text = figure.text(center_pos, top_pos - 0.046, f"{client}\n{grid}\n{loop_text}",
+                                          fontname='Century Gothic',
+                                          fontsize=9.5,
+                                          va='top',
+                                          ha='center',
+                                          zorder=10)
 
-        # Reset the arrays
-        self.loops = []
-        self.loop_names = []
-        self.lines = []
-        self.ax.cla()
-        self.cbar_ax.cla()
+        ax = figure.axes[0]
+        cbar_ax = figure.axes[1]
+        ax.cla()
+        cbar_ax.cla()
 
         component = self.get_selected_component().upper()
         if component not in self.components:
             self.message.information(self, "Missing Component",
                                      f"'{component}' component is not in the available components.")
             return
-        channel = self.channel_spinbox.value()
+
+        if channel is None:
+            channel = self.channel_spinbox.value()
         channel_time = self.channel_times.loc[channel]['Center']
         self.time_label.setText(f"{channel_time * 1000:.3f}ms")
 
@@ -1021,36 +1029,36 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         if self.plot_elevation_cbox.isChecked():
             zi = interp.griddata((comp_data.Easting, comp_data.Northing), comp_data.Elevation, (xx, yy),
                                  method='cubic')
-            contour = self.ax.contour(xi, yi, zi,
-                                      colors='black',
-                                      alpha=0.8)
+            contour = ax.contour(xi, yi, zi,
+                                 colors='black',
+                                 alpha=0.8)
             # contourf = ax.contourf(xi, yi, zi, cmap=colormap)
-            self.ax.clabel(contour,
-                           fontsize=6,
-                           inline=True,
-                           inline_spacing=0.5,
-                           fmt='%d')
+            ax.clabel(contour,
+                      fontsize=6,
+                      inline=True,
+                      inline_spacing=0.5,
+                      fmt='%d')
 
         # Add the filled contour plot
-        contourf = self.ax.contourf(xi, yi, di,
-                                    cmap=self.colormap,
-                                    levels=50)
+        contourf = ax.contourf(xi, yi, di,
+                               cmap=self.colormap,
+                               levels=50)
 
         # Add colorbar for the data contours
-        cbar = self.figure.colorbar(contourf, cax=self.cbar_ax)
-        self.cbar_ax.set_xlabel(f"{'pT' if self.pem_files[0].is_fluxgate() else 'nT/s'}")
+        cbar = figure.colorbar(contourf, cax=cbar_ax)
+        cbar_ax.set_xlabel(f"{'pT' if self.pem_files[0].is_fluxgate() else 'nT/s'}")
         cbar.ax.get_xaxis().labelpad = 10
 
         # Add component and channel text at the top right of the figure
         component_text = f"{component.upper()} Component" if component != 'TF' else 'Total Field'
-        info_text = self.figure.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
-                                     transform=self.cbar_ax.transAxes,
-                                     color='k',
-                                     fontname='Century Gothic',
-                                     fontsize=9,
-                                     va='bottom',
-                                     ha='center',
-                                     zorder=10)
+        info_text = figure.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
+                                transform=cbar_ax.transAxes,
+                                color='k',
+                                fontname='Century Gothic',
+                                fontsize=9,
+                                va='bottom',
+                                ha='center',
+                                zorder=10)
 
         self.canvas.draw()
 
@@ -1070,7 +1078,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         :return: None
         """
         if self.pem_files:
-            default_path = self.pem_files[0].filepath.absolute()
+            default_path = self.pem_files[0].filepath.parent.with_suffix(".PDF")
             path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', str(default_path),
                                                     'PDF Files (*.PDF);;PNG Files (*.PNG);;JPG Files (*.JPG')
             if path:
@@ -1081,7 +1089,22 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                     if self.channel_list_edit.isEnabled():
                         text = self.channel_list_edit.text()
                         try:
-                            channels = [int(re.match(r"\d+", text)[0]) for text in re.split(r",| ", text)]
+                            channels = []
+                            for split_text in re.split(r",| ", text):
+                                if split_text == '':
+                                    continue
+                                ch_match = re.match(r"\d+", split_text)
+                                if not ch_match:
+                                    self.message.information(self, "Invalid Channel",
+                                                             f"No integer value found in '{split_text}'.")
+                                    continue
+                                try:
+                                    ch = int(ch_match[0])
+                                except ValueError:
+                                    self.message.information(self, "Invalid Channel",
+                                                             f"{ch_match[0]} is not an integer value.")
+                                else:
+                                    channels.append(ch)
                             logger.info(f"Saving contour map plots for channels {channels}.")
                         except IndexError:
                             logger.critical(f"No numbers found in the list of channels.")
@@ -1090,38 +1113,17 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                     else:
                         channels = [self.channel_spinbox.value()]
 
-                    # TODO instead of re-plotting, create a copy of the figure with...
-                    # # Create a copy of the figure
-                    # buf = io.BytesIO()
-                    # pickle.dump(self.fem_figure, buf)
-                    # buf.seek(0)
-                    # save_figure = pickle.load(buf)
-
-                    save_fig, ax = plt.subplots()
+                    # Use a separate figure just for saving
+                    save_fig, ax, cbar_ax = self.get_figure()
 
                     for channel in channels:
-                        # channel_time = self.channel_times.loc[channel]['Center']
-                        # fig = self.plot_contour(self.pem_files, self.get_selected_component(),
-                        #                         channel,
-                        #                         draw_grid=self.grid_cbox.isChecked(),
-                        #                         channel_time=channel_time,
-                        #                         plot_loops=self.plot_loops_cbox.isChecked(),
-                        #                         plot_lines=self.plot_lines_cbox.isChecked(),
-                        #                         plot_stations=bool(
-                        #                             self.plot_stations_cbox.isChecked() and self.plot_stations_cbox.isEnabled()),
-                        #                         label_lines=bool(
-                        #                             self.label_lines_cbox.isChecked() and self.label_lines_cbox.isEnabled()),
-                        #                         label_loops=bool(
-                        #                             self.label_loops_cbox.isChecked() and self.label_loops_cbox.isEnabled()),
-                        #                         label_stations=bool(
-                        #                             self.label_stations_cbox.isChecked() and self.label_stations_cbox.isEnabled()),
-                        #                         elevation_contours=self.plot_elevation_cbox.isChecked(),
-                        #                         title_box=self.title_box_cbox.isChecked())
+                        if channel not in self.data.columns:
+                            self.message.information(self, "Invalid Channel", f"Channel {channel} is not in the data.")
+                            continue
+                        self.draw_map(save_fig, channel)
+                        pdf.savefig(save_fig, orientation='landscape')
 
-                        pdf.savefig(fig, orientation='landscape')
-                        fig.clear()
-
-                    plt.close(fig)
+                    plt.close(save_fig)
                 os.startfile(path)
 
 
@@ -1445,5 +1447,8 @@ if __name__ == '__main__':
     cmap = ContourMapViewer()
     cmap.open(files)
     cmap.show()
+    # cmap.channel_list_edit.setText("1, 3, 100, 4")
+    # cmap.channel_list_rbtn.setChecked(True)
+    # cmap.save_figure()
 
     app.exec_()
