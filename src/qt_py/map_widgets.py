@@ -1203,19 +1203,8 @@ class GPSViewer(QMainWindow):
         assert pem_files, f"No PEM files to plot."
 
         self.pem_files = pem_files
-        self.get_contour_data()
         self.plot_pems()
         self.show()
-
-    def get_contour_data(self):
-        """
-        Create contour data (GPS + channel reading) for all PEMFiles.
-        :return: pandas DataFrame
-        """
-        self.contour_data = pd.DataFrame()
-        for pem_file in self.pem_files:
-            pem_data = pem_file.get_contour_data()
-            self.contour_data = self.contour_data.append(pem_data)
 
     def plot_pems(self):
 
@@ -1447,18 +1436,18 @@ if __name__ == '__main__':
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
     # m = TileMapViewer()
-    # m = GPSViewer()
+    m = GPSViewer()
     # # m = Map3DViewer()
-    # m.open(files)
-    # m.show()
+    m.open(files)
+    m.show()
 
     # map = Map3DViewer()
     # map.show()
     # map.open(files)
 
-    cmap = ContourMapViewer()
-    cmap.open(files)
-    cmap.show()
+    # cmap = ContourMapViewer()
+    # cmap.open(files)
+    # cmap.show()
     # cmap.channel_list_edit.setText("1, 3, 100, 4")
     # cmap.channel_list_rbtn.setChecked(True)
     # cmap.save_figure()
