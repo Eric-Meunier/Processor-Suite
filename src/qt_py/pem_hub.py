@@ -2200,7 +2200,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         global contour_map
         contour_map = ContourMapViewer(parent=self)
         contour_map.open(self.pem_files)
-        contour_map.show()
 
     def open_freq_converter(self):
         """Open the Frequency Converter"""

@@ -846,12 +846,16 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         """
         survey_type = pem_files[0].get_survey_type()
         self.pem_files = [file for file in pem_files if not file.is_borehole() and file.get_survey_type() == survey_type]
+        self.get_contour_data()
 
         if len(self.pem_files) < 2:
             self.message.information(self, 'Insufficient PEM Files', 'Must have at least 2 surface PEM files to plot')
             return
         elif not all([file.is_fluxgate() == self.pem_files[0].is_fluxgate() for file in self.pem_files]):
             self.message.information(self, 'Mixed Survey Types', 'Not all survey types are the same.')
+            return
+        elif self.data.empty:
+            self.message.information(self, "No Data Found", f"No valid contour data was found.")
             return
 
         # Averages any file not already averaged.
@@ -884,7 +888,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.channel_spinbox.setMaximum(max_channels - 1)
         self.channel_times = self.pem_files[np.argmax(pem_file_channels)].channel_times
 
-        self.get_contour_data()
         self.draw_map(self.figure)
         self.show()
 
@@ -1003,12 +1006,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
         if channel is None:
             channel = self.channel_spinbox.value()
-        channel_time = self.channel_times.loc[channel]['Center']
+        channel_time = self.channel_times.iloc[channel]['Center']
         self.time_label.setText(f"{channel_time * 1000:.3f}ms")
-
-        if self.data.empty:
-            self.message.information(self, "No Data Found", f"No valid contour data was found.")
-            return
 
         add_title()
         plot_pem_gps()
