@@ -577,7 +577,7 @@ class PEMFile:
         line_gps = line_gps[line_gps.Station.isin(self.get_stations(converted=True))]
 
         if line_gps.empty:
-            logger.warning(f"Skipping {pem_file.filepath.name} because it has no line GPS.")
+            logger.warning(f"Skipping {self.filepath.name} because it has no line GPS.")
             return pd.DataFrame()
 
         readings = pd.DataFrame.from_dict(

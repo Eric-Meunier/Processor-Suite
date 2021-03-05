@@ -2821,6 +2821,14 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 if dlg.wasCanceled():
                     break
 
+                if pem_file.is_borehole() and pem_file.has_xy() and not pem_file.is_derotated():
+                    response = self.message.question(self, 'Rotated XY',
+                                                     f'File {pem_file.filepath.name} has not been de-rotated. '
+                                                     f'Do you wish to automatically de-rotated it?',
+                                                     self.message.Yes | self.message.No)
+                    if response == self.message.No:
+                        continue
+
                 file_name = pem_file.filepath.name
                 pem_file = pem_file.copy()
                 logger.info(f"Exporting {file_name}.")

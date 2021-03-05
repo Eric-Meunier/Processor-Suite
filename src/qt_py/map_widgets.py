@@ -26,6 +26,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
+from matplotlib.ticker import MaxNLocator
 from scipy import interpolate as interp
 
 from src.pem.pem_plotter import MapPlotter
@@ -799,8 +800,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         # Move the Y tick labels to the right
         # self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=0, va='center')
         # self.ax.set_xticklabels(self.ax.get_xticklabels(), rotation=90, ha='center')
-        # self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}N'))
-        # self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}E'))
 
     def closeEvent(self, e):
         e.accept()
@@ -1060,6 +1059,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                                 ha='center',
                                 zorder=10)
 
+        ax.yaxis.get_major_formatter().set_scientific(False)
         self.canvas.draw()
 
     def get_selected_component(self):
@@ -1436,18 +1436,18 @@ if __name__ == '__main__':
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
     # m = TileMapViewer()
-    m = GPSViewer()
+    # m = GPSViewer()
     # # m = Map3DViewer()
-    m.open(files)
-    m.show()
+    # m.open(files)
+    # m.show()
 
     # map = Map3DViewer()
     # map.show()
     # map.open(files)
 
-    # cmap = ContourMapViewer()
-    # cmap.open(files)
-    # cmap.show()
+    cmap = ContourMapViewer()
+    cmap.open(files)
+    cmap.show()
     # cmap.channel_list_edit.setText("1, 3, 100, 4")
     # cmap.channel_list_rbtn.setChecked(True)
     # cmap.save_figure()
