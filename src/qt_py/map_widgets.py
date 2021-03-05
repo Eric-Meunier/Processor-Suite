@@ -812,14 +812,14 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         Create the figure and axes for plotting. Required for saving the plots.
         """
         figure = Figure(figsize=(11, 8.5))
-        rect = patches.Rectangle(xy=(0.02, 0.02),
-                                 width=0.96,
-                                 height=0.96,
-                                 linewidth=0.7,
-                                 edgecolor='black',
-                                 facecolor='none',
-                                 transform=figure.transFigure)
-        figure.patches.append(rect)
+        # rect = patches.Rectangle(xy=(0.02, 0.02),
+        #                          width=0.96,
+        #                          height=0.96,
+        #                          linewidth=0.7,
+        #                          edgecolor='black',
+        #                          facecolor='none',
+        #                          transform=figure.transFigure)
+        # figure.patches.append(rect)
 
         # Create a large grid in order to specify the placement of the colorbar
         ax = plt.subplot2grid((90, 110), (0, 0),
@@ -1145,6 +1145,7 @@ class GPSViewer(QMainWindow):
 
         self.parent = parent
         self.pem_files = None
+        self.contour_data = pd.DataFrame()
         self.status_bar = self.statusBar()
         self.status_bar.hide()
 
@@ -1202,8 +1203,19 @@ class GPSViewer(QMainWindow):
         assert pem_files, f"No PEM files to plot."
 
         self.pem_files = pem_files
+        self.get_contour_data()
         self.plot_pems()
         self.show()
+
+    def get_contour_data(self):
+        """
+        Create contour data (GPS + channel reading) for all PEMFiles.
+        :return: pandas DataFrame
+        """
+        self.contour_data = pd.DataFrame()
+        for pem_file in self.pem_files:
+            pem_data = pem_file.get_contour_data()
+            self.contour_data = self.contour_data.append(pem_data)
 
     def plot_pems(self):
 
@@ -1435,7 +1447,7 @@ if __name__ == '__main__':
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
     # m = TileMapViewer()
-    # # m = GPSViewer()
+    # m = GPSViewer()
     # # m = Map3DViewer()
     # m.open(files)
     # m.show()
