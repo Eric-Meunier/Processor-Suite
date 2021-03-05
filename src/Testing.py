@@ -1,65 +1,74 @@
+# -*- coding: utf-8 -*-
 """
-Demonstrates a way to put multiple axes around a single plot.
-
-(This will eventually become a built-in feature of PlotItem)
-
+This example uses the isosurface function to convert a scalar field
+(a hydrogen orbital) into a mesh for 3D display.
 """
-import pyqtgraph as pg
+
+## Add path to library (just for examples; you do not need this)
+
 from pyqtgraph.Qt import QtCore, QtGui
+import pyqtgraph as pg
+import pyqtgraph.opengl as gl
+
+app = QtGui.QApplication([])
+w = gl.GLViewWidget()
+w.show()
+w.setWindowTitle('pyqtgraph example: GLIsosurface')
+
+w.setCameraPosition(distance=40)
+
+g = gl.GLGridItem()
+g.scale(2,2,1)
+w.addItem(g)
+
 import numpy as np
 
-pg.mkQApp()
+## Define a scalar field from which we will generate an isosurface
+def psi(i, j, k, offset=(25, 25, 50)):
+    x = i-offset[0]
+    y = j-offset[1]
+    z = k-offset[2]
+    th = np.arctan2(z, (x**2+y**2)**0.5)
+    phi = np.arctan2(y, x)
+    r = (x**2 + y**2 + z **2)**0.5
+    a0 = 1
+    #ps = (1./81.) * (2./np.pi)**0.5 * (1./a0)**(3/2) * (6 - r/a0) * (r/a0) * np.exp(-r/(3*a0)) * np.cos(th)
+    ps = (1./81.) * 1./(6.*np.pi)**0.5 * (1./a0)**(3/2) * (r/a0)**2 * np.exp(-r/(3*a0)) * (3 * np.cos(th)**2 - 1)
 
-pw = pg.PlotWidget()
-pw.show()
-pw.setWindowTitle('pyqtgraph example: MultiplePlotAxes')
-p1 = pw.plotItem
-p1.setLabels(left='axis 1')
+    return ps
 
-## create a new ViewBox, link the right axis to its coordinate system
-p2 = pg.ViewBox()
-p1.showAxis('right')
-p1.scene().addItem(p2)
-p1.getAxis('right').linkToView(p2)
-p2.setXLink(p1)
-p1.getAxis('right').setLabel('axis2', color='#0000ff')
-
-## create third ViewBox.
-## this time we need to create a new axis as well.
-p3 = pg.ViewBox()
-ax3 = pg.AxisItem('right')
-p1.layout.addItem(ax3, 2, 3)
-p1.scene().addItem(p3)
-ax3.linkToView(p3)
-p3.setXLink(p1)
-ax3.setZValue(-10000)
-ax3.setLabel('axis 3', color='#ff0000')
+    #return ((1./81.) * (1./np.pi)**0.5 * (1./a0)**(3/2) * (r/a0)**2 * (r/a0) * np.exp(-r/(3*a0)) * np.sin(th) * np.cos(th) * np.exp(2 * 1j * phi))**2
 
 
-## Handle view resizing
-def updateViews():
-    ## view has resized; update auxiliary views to match
-    global p1, p2, p3
-    p2.setGeometry(p1.vb.sceneBoundingRect())
-    p3.setGeometry(p1.vb.sceneBoundingRect())
-
-    ## need to re-update linked axes since this was called
-    ## incorrectly while views had different shapes.
-    ## (probably this should be handled in ViewBox.resizeEvent)
-    p2.linkedViewChanged(p1.vb, p2.XAxis)
-    p3.linkedViewChanged(p1.vb, p3.XAxis)
+print("Generating scalar field..")
+data = np.abs(np.fromfunction(psi, (50,50,100)))
 
 
-updateViews()
-p1.vb.sigResized.connect(updateViews)
+print("Generating isosurface..")
+verts, faces = pg.isosurface(data, data.max()/4.)
 
-p1.plot([1, 2, 4, 8, 16, 32])
-p2.addItem(pg.PlotCurveItem([10, 20, 40, 80, 40, 20], pen='b'))
-p3.addItem(pg.PlotCurveItem([3200, 1600, 800, 400, 200, 100], pen='r'))
+md = gl.MeshData(vertexes=verts, faces=faces)
 
-## Start Qt event loop unless running in interactive mode or using pyside.
+colors = np.ones((md.faceCount(), 4), dtype=float)
+colors[:,3] = 0.2
+colors[:,2] = np.linspace(0, 1, colors.shape[0])
+md.setFaceColors(colors)
+m1 = gl.GLMeshItem(meshdata=md, smooth=False, shader='balloon')
+m1.setGLOptions('additive')
+
+#w.addItem(m1)
+m1.translate(-25, -25, -20)
+
+m2 = gl.GLMeshItem(meshdata=md, smooth=True, shader='balloon')
+m2.setGLOptions('additive')
+
+w.addItem(m2)
+m2.translate(-25, -25, -50)
+
+
+
+## Start Qt event loop unless running in interactive mode.
 if __name__ == '__main__':
     import sys
-
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()

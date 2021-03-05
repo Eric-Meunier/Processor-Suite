@@ -75,8 +75,6 @@ Ui_PlanMapOptionsWidget, _ = uic.loadUiType(planMapOptionsCreatorFile)
 Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 
-# TODO Test contour map
-
 
 def get_icon(filepath):
     ext = filepath.suffix.lower()
@@ -2504,7 +2502,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
     def save_pem_files(self, selected=False):
         """
-        Save all selected PEM files.
+        Save PEM files.
         :param selected: Bool: if True, saves all opened PEM files instead of only the selected ones.
         """
         def add_crs_tag():
@@ -2544,6 +2542,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 dlg += 1
 
         bar.deleteLater()
+        self.fill_pem_list()
         self.status_bar.showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
 
     def save_pem_file_as(self):
@@ -4530,7 +4529,7 @@ def main():
 
     # mw.open_dmp_files(pem_files)
     mw.add_pem_files(pem_files)
-    mw.open_contour_map()
+    # mw.open_contour_map()
     # mw.open_mag_dec(mw.pem_files[0])
 
     # mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')
