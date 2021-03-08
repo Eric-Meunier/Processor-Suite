@@ -135,7 +135,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             ax.scene().sigMouseMoved.connect(self.decay_mouse_moved)
             ax.scene().sigMouseClicked.connect(self.decay_plot_clicked)
 
-        # Configure mag plots
+        # Create mag plots
         self.x_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
         self.mag_x_ax0 = pg.ViewBox()
         self.mag_x_ax1 = pg.ViewBox()

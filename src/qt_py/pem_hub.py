@@ -53,6 +53,9 @@ logger = logging.getLogger(__name__)
 
 __version__ = '0.11.2'
 
+
+# TODO DLT files in unpacker should be GPS.
+
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
