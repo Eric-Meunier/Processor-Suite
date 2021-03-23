@@ -3278,11 +3278,16 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     import os
 
+    sample_folder = Path(__file__).parents[2].joinpath("sample_files")
+
     dparser = DMPParser()
     pemparser = PEMParser()
     pem_g = PEMGetter()
-    pem_file = pem_g.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')[0]
-    pem_file.get_dad()
+
+    file = sample_folder.joinpath(r"")
+
+    # pem_file = pem_g.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')[0]
+    # pem_file.get_dad()
     # pem_file = pem_g.get_pems(client='Kazzinc', number=1)[0]
     # pem_file.to_xyz()
     # prep_pem, _ = pem_file.prep_rotation()

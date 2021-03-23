@@ -1,0 +1,94 @@
+Searching for base files...
+ 
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\NRCAN, FLIN CACS-GSD Hourly\flin080t.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\NRCAN, FLIN CACS-GSD Hourly\flin080t.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\NRCAN, FLIN CACS-GSD Hourly\flin080t.21g.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\NRCAN, FLIN CACS-GSD Hourly\flin080u.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\NRCAN, FLIN CACS-GSD Hourly\flin080u.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\NRCAN, FLIN CACS-GSD Hourly\flin080u.21g.Z downloaded.
+Successfully found or downloaded 6 of 6 files.
+Search complete.
+ 
+--------Base Data Details:--------------------
+Using reference position from base provider: 
+  Name: NRCAN, FLIN CACS-GSD Hourly
+  Position: 54°43'32.07421"N,  101°58'40.86840"W,  312.22 m
+Source: C:\Users\Eric\Documents\GNSS Projects\Default\base\NRCAN, FLIN CACS-GSD Hourly
+  flin080t.21d.Z
+    Local time: 2021-03-21 2:59:42 PM to 2021-03-21 3:59:12 PM
+    Position: 54°43'32.10328"N, 101°58'40.91694"W, 311.66 m, 0.15 m Antenna height
+    Distance from base provider: 1.25m
+  flin080u.21d.Z
+    Local time: 2021-03-21 3:59:42 PM to 2021-03-21 4:59:12 PM
+    Position: 54°43'32.10328"N, 101°58'40.91694"W, 311.66 m, 0.15 m Antenna height
+    Distance from base provider: 1.25m
+ 
+--------Coverage Details:--------------------
+Rover file: FLC-2021-24_0322.SSF
+  Local time: 2021-03-21 4:34:03 PM to 2021-03-21 4:37:38 PM
+100% total coverage
+  100% coverage by flin080u.21d.Z
+ 
+Rover file: LP 2021-24_0322.SSF
+  Local time: 2021-03-21 2:31:40 PM to 2021-03-21 4:29:01 PM
+100% total coverage
+  63% coverage by flin080t.21d.Z
+  37% coverage by flin080u.21d.Z
+ 
+--------------------------------------------------
+Differentially correcting...
+  Differential correction settings:
+    Use smart automatic filtering: On
+    Re-correct real-time positions: On
+    Output positions: Corrected and uncorrected
+
+--------------------------------------------------
+Processing rover file, FLC-2021-24_0322.SSF ...
+...to output file, C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-24\GPS\FLC-2021-24_0322.cor
+    Carrier processing...
+        Selected 208 positions for post-processing
+        Corrected 207 positions
+        Failed to correct 1 positions
+            1 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 208 positions for post-processing
+        Corrected 208 positions
+    Chose 46 code solutions over the carrier solutions
+        46 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, LP 2021-24_0322.SSF ...
+...to output file, C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-24\GPS\LP 2021-24_0322.cor
+    Carrier processing...
+        Selected 1604 positions for post-processing
+        Corrected 1595 positions
+        Failed to correct 9 positions
+              1 of these were due to missing base data
+            8 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1604 positions for post-processing
+        Corrected 1604 positions
+    Chose 403 code solutions over the carrier solutions
+        403 code solutions were of higher quality
+ 
+--------------------------------------------------
+Differential Correction Summary:
+    2 files processed.  In these files:
+        1812 (100.00%) of 1812 selected positions were code corrected by post-processing
+        1802 (99.45%) of 1812 selected positions were carrier corrected by post-processing
+        449 (24.92%) of code positions chosen over carrier, as they were of higher quality
+
+    Estimated accuracies for 1812 corrected positions are as follows:
+            Range	Percentage
+            ----------	----------
+              0-5cm	     -
+             5-15cm	     -
+            15-30cm	38.52%
+            30-50cm	46.85%
+             0.5-1m	14.57%
+               1-2m	 0.06%
+               2-5m	     -
+                >5m	     -
+
+Differential correction complete.
+ 

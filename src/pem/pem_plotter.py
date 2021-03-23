@@ -204,9 +204,9 @@ class ProfilePlotter:
                             new_high = math.ceil(max(y_limits[1], 0))
                             new_low = math.floor(min(y_limits[0], 0))
                     else:
-                        if y_limits[1] < 30 or y_limits[0] > -30:
-                            new_high = math.ceil(max(y_limits[1] + 10, 0))
-                            new_low = math.floor(min(y_limits[0] - 10, 0))
+                        if y_limits[1] < 6 or y_limits[0] > -6:
+                            new_high = math.ceil(max(y_limits[1] + 3, 0))
+                            new_low = math.floor(min(y_limits[0] - 3, 0))
                         else:
                             new_high = math.ceil(max(y_limits[1], 0))
                             new_low = math.floor(min(y_limits[0], 0))
@@ -335,7 +335,13 @@ class LINPlotter(ProfilePlotter):
     def plot(self, component):
 
         def add_ylabels():
-            units = 'nT/s' if not self.pem_file.is_fluxgate() else 'pT'
+            if self.pem_file.is_fluxgate():
+                if float(self.pem_file.current) == 1.:
+                    units = "pT/A"
+                else:
+                    units = "pT"
+            else:
+                units = 'nT/s'
             for i, ax in enumerate(self.figure.axes[:-1]):
                 if i == 0:
                     ax.set_ylabel(f"Primary Pulse\n({units})")
@@ -392,7 +398,13 @@ class LOGPlotter(ProfilePlotter):
     def plot(self, component):
 
         def add_ylabels():
-            units = 'nT/s' if 'induction' in self.pem_file.survey_type.lower() else 'pT'
+            if self.pem_file.is_fluxgate():
+                if float(self.pem_file.current) == 1.:
+                    units = "pT/A"
+                else:
+                    units = "pT"
+            else:
+                units = 'nT/s'
             ax.set_ylabel(f"Primary Pulse to Channel {self.pem_file.number_of_channels - 1}\n({units})")
 
         ax = self.figure.axes[0]
