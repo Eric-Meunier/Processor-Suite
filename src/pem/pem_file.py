@@ -2052,7 +2052,7 @@ class DMPParser:
 
             return header
 
-        def parse_channel_times(text, units=None):
+        def parse_channel_times(text, units=None, ramp=None):
             """
             Convert the channel table in the .DMP file to a PEM channel times table DataFrame
             :param text: str or list, raw channel table information in the .DMP file
@@ -2060,37 +2060,15 @@ class DMPParser:
             :return: DataFrame
             """
 
-            def channel_table(channel_times):
+            def channel_table(channel_times, units, ramp):
                 """
                 Channel times table data frame with channel start, end, center, width, and whether the channel is
                 to be removed when the file is split
                 :param channel_times: numpy array with shape (, 2), float of each channel start and end time.
+                :param units: str
+                :param ramp: float, used for fluxgate survey's on-time channel selection.
                 :return: pandas DataFrame
                 """
-
-                def check_removable(row):
-                    """
-                    Return True if the passed channel times is a channel that should be removed when the file is split.
-                    :param row: pandas row from the channel table
-                    :return: bool: True if the channel should be removed, else False.
-                    """
-                    if units == 'nT/s':
-                        if row.Start == -0.0002:
-                            return False
-                        elif row.Start > 0:
-                            return False
-                        else:
-                            return True
-
-                    elif units == 'pT':
-                        if row.Start == -0.002:
-                            return False
-                        elif row.Start > 0:
-                            return False
-                        else:
-                            return True
-                    else:
-                        raise ValueError('Units parsed from tags is invalid')
 
                 def find_last_off_time():
                     """
@@ -2117,12 +2095,34 @@ class DMPParser:
 
                 if self.pp_file is False:
                     # Configure which channels to remove for the first on-time
-                    table['Remove'] = table.apply(check_removable, axis=1)
+                    table['Remove'] = False
+                    for ind, row in table.iterrows():
+                        ramp = ramp / 1e6
+
+                        if row.Start > 0:
+                            remove = False
+                        else:
+                            if units == 'nT/s':
+                                if row.Start == -0.0002:
+                                    remove = False
+                                else:
+                                    remove = True
+                            # Keep the first channel that is before the start of the ramp for fluxgate surveys
+                            elif units == 'pT':
+                                if row.Start < -ramp and ind == 0:
+                                    remove = False
+                                else:
+                                    remove = True
+                            else:
+                                remove = True
+
+                        table.loc[ind, "Remove"] = remove
 
                     # Configure each channel after the last off-time channel (only for full waveform)
                     last_off_time_channel = find_last_off_time()
                     if last_off_time_channel:
-                        table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(lambda x: True)
+                        table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(
+                            lambda x: True)
                 else:
                     table['Remove'] = False
                 return table
@@ -2150,7 +2150,7 @@ class DMPParser:
             # Remove the channel number column
             times = np.delete(times, 0, axis=1)
 
-            table = channel_table(times)
+            table = channel_table(times, units, ramp)
             return table
 
         def parse_notes(text):
@@ -2300,7 +2300,7 @@ class DMPParser:
 
         # Parse the sections into nearly what they should be in the PEM file
         header = parse_header(raw_header, old_dmp=old_dmp)
-        channel_table = parse_channel_times(raw_channel_table, units=header.get('Units'))
+        channel_table = parse_channel_times(raw_channel_table, units=header.get('Units'), ramp=header.get("Ramp"))
         data = parse_data(raw_data, header)
 
         header_readings = int(header.get('Number of readings'))
@@ -3284,7 +3284,8 @@ if __name__ == '__main__':
     pemparser = PEMParser()
     pem_g = PEMGetter()
 
-    file = sample_folder.joinpath(r"")
+    file = sample_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
+    dparser.parse(file)
 
     # pem_file = pem_g.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')[0]
     # pem_file.get_dad()

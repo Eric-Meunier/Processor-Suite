@@ -3869,7 +3869,7 @@ if __name__ == '__main__':
     ax6 = ax5.twiny()
     ax6.get_shared_x_axes().join(ax5, ax6)
     # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
-    lin_plot = LINPlotter(pem, lin_fig)
+    lin_plot = LINPlotter(pem_files, lin_fig)
     lin_plot.plot('X')
     plt.show()
 
