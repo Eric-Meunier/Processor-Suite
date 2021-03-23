@@ -346,6 +346,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
 
         # r=root, d=directories, f = files
         for root, dir, files in os.walk(str(self.output_path)):
+            root_as_path = Path(root)
             for file in files:
                 ext = Path(file).suffix.lower()
                 icon = get_icon(Path(file))
@@ -354,17 +355,21 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
                     # print(f"{file} is a DMP file")
                     add_to_table(file, root, self.dmp_table, icon)
 
-                elif any([ext in damp_extensions]) and not os.path.split(root)[-1].lower() == 'gps':
+                elif any([ext in damp_extensions]) \
+                        and not root_as_path.name.lower() == 'gps' \
+                        and "DTL" not in file:
                     add_to_table(file, root, self.damp_table, icon)
                     damp_files.append(os.path.join(root, file))
 
-                elif any([ext in dump_extensions]) and not os.path.split(root)[-1].lower() == 'gps':
+                elif any([ext in dump_extensions]) and \
+                        not root_as_path.name.lower() == 'gps':
                     add_to_table(file, root, self.dump_table, icon)
 
                 elif any([ext in gps_extensions]):
                     add_to_table(file, root, self.gps_table, icon)
 
-                elif any([ext in geometry_extensions]) and not os.path.split(root)[-1].lower() == 'gps':
+                elif any([ext in geometry_extensions]) and \
+                        not root_as_path.name.lower() == 'gps':
                     add_to_table(file, root, self.geometry_table, icon)
 
                 else:
@@ -577,7 +582,7 @@ def main():
 
     up = Unpacker()
     up.move(app.desktop().screen().rect().center() - up.rect().center())
-    up.open_folder(samples_folder.joinpath(r"Feb 17.7z"))
+    up.open_folder(samples_folder.joinpath(r"March 06, 2021.zip"))
     # folder = r'C:\Users\Mortulo\Desktop\Aug4DataGaribaldiResourcesNickelMountainLoop1Holes2&8Complete.zip'
     # zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
     # up.open_folder(folder)
