@@ -45,7 +45,7 @@ from src.pem.pem_merger import PEMMerger
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 from src.pem.pem_plot_editor import PEMPlotEditor
 from src.qt_py.ri_importer import BatchRIImporter
-from src.pem.station_splitter import StationSplitter
+from src.pem.extractor_widgets import StationSplitter
 from src.qt_py.unpacker import Unpacker
 from src.logger import Log
 
@@ -274,9 +274,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected_files=True))
 
         # Extract stations
-        self.extract_stations_action = QAction("Extract Stations", self)
-        self.extract_stations_action.setIcon(QIcon(os.path.join(icons_path, 'station_splitter.png')))
+        self.extract_stations_action = QAction("Stations", self)
+        # self.extract_stations_action.setIcon(QIcon(os.path.join(icons_path, 'station_splitter.png')))
         self.extract_stations_action.triggered.connect(self.open_station_splitter)
+
+        self.extract_x_action = QAction("X Component", self)
+        self.extract_x_action.triggered.connect(lambda: self.extract_component("X"))
+        self.extract_y_action = QAction("Y Component", self)
+        self.extract_y_action.triggered.connect(lambda: self.extract_component("Y"))
+        self.extract_z_action = QAction("Z Component", self)
+        self.extract_z_action.triggered.connect(lambda: self.extract_component("Z"))
 
         # Magnetic declination calculator
         self.calc_mag_dec_action = QAction("Magnetic Declination", self)
@@ -366,6 +373,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Add the export menu
         self.export_menu = QMenu('Export...', self.menu)
         self.export_menu.setIcon(QIcon(os.path.join(icons_path, 'export.png')))
+
+        # Add the extract menu
+        self.extract_menu = QMenu('Extract...', self.menu)
+        self.extract_menu.setIcon(QIcon(os.path.join(icons_path, 'station_splitter.png')))
 
         # Share menu
         self.share_menu = QMenu('Share', self.menu)
@@ -931,6 +942,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # Clear the menu
                 self.menu.clear()
                 self.view_menu.clear()
+                self.extract_menu.clear()
                 self.export_menu.clear()
                 self.share_menu.clear()
                 self.reverse_menu.clear()
@@ -944,17 +956,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     pem_file = selected_pems[0]
 
                     self.menu.addAction(self.save_file_as_action)
-                    self.menu.addAction(self.extract_stations_action)
-
-                    self.menu.addAction(self.calc_mag_dec_action)
-                    if pem_file.has_any_gps():
-                        self.calc_mag_dec_action.setDisabled(False)
-                    else:
-                        self.calc_mag_dec_action.setDisabled(True)
                     self.menu.addSeparator()
 
                     # View menu
                     self.menu.addMenu(self.view_menu)
+                    self.view_menu.addAction(self.calc_mag_dec_action)
+                    if pem_file.has_any_gps():
+                        self.calc_mag_dec_action.setDisabled(False)
+                    else:
+                        self.calc_mag_dec_action.setDisabled(True)
                     self.view_menu.addAction(self.action_view_channels)
                     self.view_menu.addSeparator()
 
@@ -973,7 +983,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         else:
                             self.view_line_action.setDisabled(False)
 
-                    self.menu.addSeparator()
+                    # self.menu.addSeparator()
 
                     # Add the export menu
                     self.menu.addMenu(self.export_menu)
@@ -990,6 +1000,28 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         self.export_gps_action.setDisabled(True)
                     else:
                         self.export_gps_action.setDisabled(False)
+
+                    # Add the extract menu
+                    self.menu.addMenu(self.extract_menu)
+                    self.extract_menu.addAction(self.extract_stations_action)
+                    self.extract_menu.addSeparator()
+
+                    components = pem_file.get_components()
+                    self.extract_menu.addAction(self.extract_x_action)
+                    self.extract_menu.addAction(self.extract_y_action)
+                    self.extract_menu.addAction(self.extract_z_action)
+                    if "X" not in components:
+                        self.extract_x_action.setDisabled(True)
+                    else:
+                        self.extract_x_action.setDisabled(False)
+                    if "Y" not in components:
+                        self.extract_y_action.setDisabled(True)
+                    else:
+                        self.extract_y_action.setDisabled(False)
+                    if "Z" not in components:
+                        self.extract_z_action.setDisabled(True)
+                    else:
+                        self.extract_z_action.setDisabled(False)
 
                     # Add the share menu
                     self.menu.addMenu(self.share_menu)
@@ -2955,7 +2987,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         pem_files, rows = self.get_pem_files(selected=True)
         if not pem_files:
-            logger.warning(f"No PEM files opened.")
+            logger.warning(f"No PEM files selected.")
             return
 
         file_dir = self.file_dialog.getExistingDirectory(self, '', str(self.project_dir))
@@ -2987,6 +3019,33 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         bar.deleteLater()
         self.status_bar.showMessage('Export complete.', 1000)
+
+    def extract_component(self, component):
+        """
+        Create a new PEM file with the only the component selected.
+        """
+        # pem_files, rows = self.get_pem_files(selected=True)
+        pem_files, rows = self.get_pem_files(selected=False)
+        if not pem_files:
+            logger.warning(f"No PEM files selected.")
+            return
+
+        pem_file = pem_files[0]
+        if component not in pem_file.get_components():
+            self.message.information(self, "Invalid Component", f"{component} is not in {pem_file.filepath.name}.")
+            return
+
+        fp = pem_file.filepath
+        new_file, ext = self.file_dialog.getSaveFileName(self, 'Output File Name',
+                                                         str(fp.with_name(
+                                                             fp.stem + ' ' + component + fp.suffix)))
+
+        if new_file:
+            new_pem = pem_file.copy()
+            new_pem.data = new_pem.data[new_pem.data.Component == component]
+            new_pem.filepath = Path(new_file)
+            new_pem.save()
+            self.status_bar.showMessage(F"{Path(new_file).name} saved successfully.", 1500)
 
     def format_row(self, row):
 
@@ -4532,13 +4591,14 @@ def main():
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
-    pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=6)
+    # pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
-    # pem_files = pg.get_pems(random=True, number=10)
+    pem_files = pg.get_pems(random=True, number=1)
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     # mw.open_dmp_files(pem_files)
     mw.add_pem_files(pem_files)
+    # mw.extract_component("X")
     # mw.open_contour_map()
     # mw.open_mag_dec(mw.pem_files[0])
 

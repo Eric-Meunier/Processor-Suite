@@ -104,9 +104,9 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pg = PEMGetter()
-    files = pg.get_pems(number=1)
+    files = pg.get_pems(number=1, random=True)
     ss = StationSplitter()
-    ss.open(files[0])
+    ss.open_pem(files[0])
     ss.show()
 
     sys.exit(app.exec())

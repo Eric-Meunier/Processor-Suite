@@ -2240,7 +2240,7 @@ class DMPParser:
             df['RAD_ID'] = df['RAD_tool'].map(lambda x: x.id)
 
             # Convert the decay units to nT/s or pT
-            factor = 10 ** 12 if header.get('Units') == 'pT' else 10 ** 9
+            factor = 1e9  # Always 1e9 for DMP files?
             df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float) * factor)
             df[['Reading_index',
                 'Gain',
