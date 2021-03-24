@@ -32,6 +32,31 @@ def sort_data(data):
     return df
 
 
+def get_split_table(table, units, ramp):
+    for ind, row in table.iterrows():
+        ramp = ramp / 1e6
+
+        if row.Start > 0:
+            remove = False
+        else:
+            if units == 'nT/s':
+                if row.Start == -0.0002:
+                    remove = False
+                else:
+                    remove = True
+            # Keep the first channel that is before the start of the ramp for fluxgate surveys
+            elif units == 'pT':
+                if row.Start < -ramp and ind == 0:
+                    remove = False
+                else:
+                    remove = True
+            else:
+                remove = True
+
+        table.loc[ind, "Remove"] = remove
+    return table
+
+
 class StationConverter:
 
     @staticmethod
@@ -273,7 +298,6 @@ class PEMFile:
             return True
 
     def is_split(self):
-        t = time.time()
         if self.channel_times.Remove.any():
             return False
         else:
@@ -1721,7 +1745,7 @@ class PEMParser:
 
             return header
 
-        def parse_channel_times(text, units=None, num_channels=None):
+        def parse_channel_times(text, units=None, num_channels=None, ramp=None):
             """
             Create a DataFrame of the channel times from the PEM file.
             :param text: str, channel times section in the PEM file, above the data section.
@@ -1731,37 +1755,13 @@ class PEMParser:
             :return: DataFrame
             """
 
-            def channel_table(channel_times):
+            def channel_table(channel_times, units, ramp):
                 """
                 Channel times table data frame with channel start, end, center, width, and whether the channel is
                 to be removed when the file is split
                 :param channel_times: pandas Series, float of each channel time read from a PEM file header.
                 :return: pandas DataFrame
                 """
-
-                def check_removable(row):
-                    """
-                    Return True if the passed channel times is a channel that should be removed when the file is split.
-                    :param row: pandas row from the channel table
-                    :return: bool: True if the channel should be removed, else False.
-                    """
-                    if units == 'nT/s':
-                        if row.Start == -0.0002:
-                            return False
-                        elif row.Start > 0:
-                            return False
-                        else:
-                            return True
-
-                    elif units == 'pT':
-                        if row.Start == -0.002:
-                            return False
-                        elif row.Start > 0:
-                            return False
-                        else:
-                            return True
-                    else:
-                        raise ValueError('Units parsed from tags is invalid')
 
                 def find_last_off_time():
                     """
@@ -1791,13 +1791,12 @@ class PEMParser:
                 # must be removed.
                 table.drop(1, inplace=True)
                 table.reset_index(drop=True, inplace=True)
+                table['Remove'] = False
 
-                # If the file is a PP file
-                if table.Width.max() < 10 ** -5:
-                    table['Remove'] = False
-                else:
-                    # Configure which channels to remove for the first on-time
-                    table['Remove'] = table.apply(check_removable, axis=1)
+                # If the file isn't a PP file
+                if not table.Width.max() < 1e-5:
+                    # Configure which channels to remove
+                    table = get_split_table(table, units, ramp)
 
                     # Configure each channel after the last off-time channel (only for full waveform)
                     last_off_time_channel = find_last_off_time()
@@ -1808,7 +1807,7 @@ class PEMParser:
 
             assert text, f'Error parsing the channel times. No matches were found in {self.filepath.name}.'
 
-            table = channel_table(np.array(text.split(), dtype=float))
+            table = channel_table(np.array(text.split(), dtype=float), units, ramp)
             assert len(table) == num_channels or len(table) == num_channels + 1, \
                 f"{len(table)} channels found in channel times section instead of {num_channels} found in header of {self.filepath.name}"
             return table
@@ -1959,7 +1958,8 @@ class PEMParser:
         header = parse_header(raw_header)
         channel_table = parse_channel_times(raw_channel_times,
                                             units=tags.get('Units'),
-                                            num_channels=header.get('Number of channels'))
+                                            num_channels=header.get('Number of channels'),
+                                            ramp=header.get("Ramp"))
         data = parse_data(raw_data)
 
         pem_file = PEMFile().from_pem(tags, loop_coords, line_coords, notes, header, channel_table, data,
@@ -2018,6 +2018,8 @@ class DMPParser:
 
             if text[-1] == 'ZTS - Narrow':
                 self.pp_file = True
+            else:
+                self.pp_file = False
 
             header = dict()
             header['Format'] = str(210)
@@ -2092,39 +2094,19 @@ class DMPParser:
                 table['End'] = times[:, 1] / 10 ** 6  # Convert to seconds
                 table['Width'] = table['End'] - table['Start']
                 table['Center'] = (table['Width'] / 2) + table['Start']
+                table['Remove'] = False
 
                 if self.pp_file is False:
                     # Configure which channels to remove for the first on-time
-                    table['Remove'] = False
-                    for ind, row in table.iterrows():
-                        ramp = ramp / 1e6
-
-                        if row.Start > 0:
-                            remove = False
-                        else:
-                            if units == 'nT/s':
-                                if row.Start == -0.0002:
-                                    remove = False
-                                else:
-                                    remove = True
-                            # Keep the first channel that is before the start of the ramp for fluxgate surveys
-                            elif units == 'pT':
-                                if row.Start < -ramp and ind == 0:
-                                    remove = False
-                                else:
-                                    remove = True
-                            else:
-                                remove = True
-
-                        table.loc[ind, "Remove"] = remove
+                    table = get_split_table(table, units, ramp)
 
                     # Configure each channel after the last off-time channel (only for full waveform)
                     last_off_time_channel = find_last_off_time()
                     if last_off_time_channel:
                         table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(
                             lambda x: True)
-                else:
-                    table['Remove'] = False
+                    # else:
+                    #     table['Remove'] = False
                 return table
 
             assert text, f'No channel times found in {self.filepath.name}.'
@@ -2331,30 +2313,6 @@ class DMPParser:
                 :return: pandas DataFrame
                 """
 
-                def check_removable(row):
-                    """
-                    Return True if the passed channel times is a channel that should be removed when the file is split.
-                    :param row: pandas row from the channel table
-                    :return: bool: True if the channel should be removed, else False.
-                    """
-                    if units == 'nT/s':
-                        if row.Start == -0.0002:
-                            return False
-                        elif row.Start > 0:
-                            return False
-                        else:
-                            return True
-
-                    elif units == 'pT':
-                        if row.Start == -0.002:
-                            return False
-                        elif row.Start > 0:
-                            return False
-                        else:
-                            return True
-                    else:
-                        raise ValueError('Units parsed from tags is invalid')
-
                 def find_last_off_time():
                     """
                     Find where the next channel width is less than half the previous channel width, which indicates
@@ -2378,13 +2336,12 @@ class DMPParser:
                 table['End'] = list(times[1:])
                 table['Width'] = table['End'] - table['Start']
                 table['Center'] = (table['Width'] / 2) + table['Start']
+                table['Remove'] = False
 
-                # If the file is a PP file
-                if table.Width.max() < 10 ** -4:
-                    table['Remove'] = False
-                else:
-                    # Configure which channels to remove for the first on-time
-                    table['Remove'] = table.apply(check_removable, axis=1)
+                # If the file isn't a PP file
+                if not table.Width.max() < 1e-4:
+                    # Configure which channels to remove
+                    table = get_split_table(table, units, ramp)
 
                     # Configure each channel after the last off-time channel (only for full waveform)
                     last_off_time_channel = find_last_off_time()
@@ -3284,8 +3241,9 @@ if __name__ == '__main__':
     pemparser = PEMParser()
     pem_g = PEMGetter()
 
-    file = sample_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
-    dparser.parse(file)
+    # file = sample_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
+    file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-24 (1500 ramp)\RAW\XYZ_0323.PEM")
+    pemparser.parse(file)
 
     # pem_file = pem_g.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')[0]
     # pem_file.get_dad()

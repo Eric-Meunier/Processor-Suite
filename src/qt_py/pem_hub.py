@@ -53,7 +53,6 @@ logger = logging.getLogger(__name__)
 
 __version__ = '0.11.3'
 
-
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -2869,6 +2868,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 pem_file.save(legacy=legacy, processed=processed)
                 dlg += 1
 
+        self.fill_pem_list()
         bar.deleteLater()
         self.status_bar.showMessage(f"Save complete. {len(pem_files)} PEM file(s) exported", 2000)
 
@@ -3043,6 +3043,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             new_pem.data = new_pem.data[new_pem.data.Component == component]
             new_pem.filepath = Path(new_file)
             new_pem.save()
+
+            self.fill_pem_list()
             self.status_bar.showMessage(F"{Path(new_file).name} saved successfully.", 1500)
 
     def format_row(self, row):
@@ -4052,6 +4054,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.crs = None
 
         self.plan_map_options = PlanMapOptions(parent=self)
+        self.printer = None
         self.message = QMessageBox()
 
         # Set validations
@@ -4159,12 +4162,11 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         if save_dir:
 
             save_dir = os.path.splitext(save_dir)[0]
-            global printer
-            printer = PEMPrinter(parent=self, **plot_kwargs)
+            self.printer = PEMPrinter(parent=self, **plot_kwargs)
 
             try:
                 # PEM Files and RI files zipped together for when they get sorted
-                printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
+                self.printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
             except FileNotFoundError:
                 logger.critical(f'{save_dir} does not exist.')
                 self.message.information(self, 'Error', f'{save_dir} does not exist')
@@ -4419,6 +4421,7 @@ class ChannelTimeViewer(QMainWindow):
                         item.setBackground(color)
 
         df = self.pem_file.channel_times.copy()
+        print(F"Channel times given to table viewer: {df.to_string(index=False)}")
 
         if self.units_combo.currentText() == 'µs':
             df.loc[:, 'Start':'Width'] = df.loc[:, 'Start':'Width'] * 1000000
@@ -4592,10 +4595,11 @@ def main():
     # pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     pem_files = pg.get_pems(random=True, number=1)
+    file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
-    # mw.open_dmp_files(pem_files)
-    mw.add_pem_files(pem_files)
+    mw.open_dmp_files(file)
+    # mw.add_pem_files(pem_files)
     # mw.extract_component("X")
     # mw.open_contour_map()
     # mw.open_mag_dec(mw.pem_files[0])
