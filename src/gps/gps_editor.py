@@ -438,10 +438,10 @@ class SurveyLine(BaseGPS):
             # Ensure station is a string
             station = str(station).upper()
             if re.match(r"-?\d+(S|W)", station):
-                station = (-int(re.sub(r"[SW]", "", station)))
+                station = (-float(re.sub(r"[SW]", "", station)))
             else:
-                station = (int(re.sub(r"[EN]", "", station)))
-            return station
+                station = (float(re.sub(r"[EN]", "", station)))
+            return int(station)
 
         def has_na(series):
             """

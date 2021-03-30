@@ -2298,7 +2298,7 @@ class DMPParser:
         :param filepath: str, filepath of the .DMP2 file
         :return: PEMFile object
         """
-        def parse_channel_times(units=None):
+        def parse_channel_times(units, ramp):
             """
             Convert the channel table in the .DMP file to a PEM channel times table DataFrame
             :param units: str, 'nT/s' or 'pT'
@@ -2581,7 +2581,7 @@ class DMPParser:
 
         header = parse_header(scontents[0])
         data, data_errors = parse_data(scontents[1], units=header.get('Units'))
-        channel_table = parse_channel_times(units=header.get('Units'))
+        channel_table = parse_channel_times(header.get('Units'), header.get("Ramp"))
         # notes = header['Notes']
 
         pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath)
@@ -3242,7 +3242,8 @@ if __name__ == '__main__':
     pem_g = PEMGetter()
 
     # file = sample_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
-    file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-24 (1500 ramp)\RAW\XYZ_0323.PEM")
+    # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
+    file = r"C:\_Data\2021\TMC\Loop F\DUMP\LOOP F_LINES 100E TO 2100E\100E.PEM"
     pemparser.parse(file)
 
     # pem_file = pem_g.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')[0]

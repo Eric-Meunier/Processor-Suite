@@ -65,6 +65,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         self.imported_dip_line = None
         self.collar_az_line = None
         self.collar_dip_line = None
+        self.dip_spline = None
 
         # Polar lines
         self.tool_az_line_p = None
@@ -193,7 +194,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
         """
         Open files through the file dialog
         """
-        files, ext = self.dialog.getOpenFileNames(self, 'Open File',
+        default_path = self.pem_file.filepath.parent
+        files, ext = self.dialog.getOpenFileNames(self, 'Open File', str(default_path),
                                                   filter='DAD files (*.dad; *.csv; *.xlsx; *.xls; *.txt);; '
                                                          'SEG files (*.seg; *.txt)')
         if files != '':

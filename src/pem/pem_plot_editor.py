@@ -305,7 +305,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
         if event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_R:
-            self.delete_lines()
+            if keyboard.is_pressed("shift"):
+                self.undelete_lines()
+            else:
+                self.delete_lines()
 
         elif event.key() == QtCore.Qt.Key_C:
             self.cycle_profile_component()
@@ -1439,6 +1442,21 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.plot_profiles(components=selected_data.Component.unique())
             self.plot_station(self.selected_station, preserve_selection=True)
 
+    def undelete_lines(self):
+        """
+        Undelete the selected lines. The data corresponding to the selected lines have their deletion flags changed to
+        False. The station is then re-plotted. Line highlight is preserved.
+        """
+        selected_data = self.get_selected_decay_data()
+        if not selected_data.empty:
+            # Change the deletion flag
+            selected_data.loc[:, 'Deleted'] = selected_data.loc[:, 'Deleted'].map(lambda x: False)
+
+            # Update the data in the pem file object
+            self.pem_file.data.loc[selected_data.index] = selected_data
+            self.plot_profiles(components=selected_data.Component.unique())
+            self.plot_station(self.selected_station, preserve_selection=True)
+
     def change_decay_component_dialog(self, source=None):
         """
         Open a user input window to select the new component to change to.
@@ -2024,7 +2042,7 @@ if __name__ == '__main__':
     # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
     # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
     # pem_file = pem_getter.get_pems(client="PEM Rotation", random=True, number=1)[0]
-    pem_file = pem_getter.get_pems(client="Minera", random=True, number=1)[0]
+    pem_file = pem_getter.get_pems(client="TMC", random=True, number=1)[0]
 
     editor = PEMPlotEditor()
     # editor.move(0, 0)

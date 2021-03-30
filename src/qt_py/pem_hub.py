@@ -52,6 +52,9 @@ from src.logger import Log
 logger = logging.getLogger(__name__)
 
 __version__ = '0.11.3'
+# TODO add note when reversing component data
+# TODO Open C:\_Data\2021\Eastern\Corazan Mining\FLC-2020-23\RAW\xyz.pem file in de-rotator.
+
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -4066,9 +4069,10 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         # Signals
         def get_save_file():
             default_path = self.pem_files[-1].filepath.parent
-            save_dir = self.file_dialog.getSaveFileName(self, '', str(default_path), 'PDF Files (*.PDF)')[0]
-            logger.info(f"Saving PDFs to {save_dir}.")
+            save_dir = QFileDialog().getSaveFileName(self, '', str(default_path), 'PDF Files (*.PDF)')[0]
+
             if save_dir:
+                logger.info(f"Saving PDFs to {save_dir}.")
                 self.save_path_edit.setText(save_dir)
 
         self.print_btn.clicked.connect(self.print_pdfs)
