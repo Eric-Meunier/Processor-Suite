@@ -499,6 +499,11 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         make_move('Geometry', self.geometry_table)
         make_move('Other', self.other_table)
 
+        # Create a "Final" folder
+        final_folder = new_folder.joinpath("Final")
+        if not final_folder.is_dir():
+            final_folder.mkdir(parents=True)
+
         # Delete the input folder
         if self.input_path.resolve() != new_folder.resolve() and delete_old_folder is True:
             if self.input_path.resolve() in new_folder.resolve().parents:

@@ -41,25 +41,23 @@ from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, 
 from src.qt_py.name_editor import BatchNameEditor
 from src.geometry.pem_geometry import PEMGeometry
 from src.pem.pem_info_widget import PEMFileInfoWidget
-from src.pem.pem_merger import PEMMerger
+from src.qt_py.pem_merger import PEMMerger
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 from src.pem.pem_plot_editor import PEMPlotEditor
 from src.qt_py.ri_importer import BatchRIImporter
 from src.pem.extractor_widgets import StationSplitter
 from src.qt_py.unpacker import Unpacker
-from src.logger import Log
 
 logger = logging.getLogger(__name__)
 
 __version__ = '0.11.3'
 # TODO Plot dip angle in de-rotator
 
-# TODO C:\_Data\2021\Nantou BF\Borehole\PX20002-W01 (Loop 2)\Final RI files aren't batch imported correctly
 # TODO fix PDF printing bug
-# TODO Create Final folder when unpacking
 # TODO add right-click option to copy info to geophysics sheet.
 # TODO disable section plot option when there's no GPS in PDFPrinter.
 # TODO Quick map with only loop and collar won't show collar
+# TODO Add quick view to unpacker? Or separate EXE entirely?
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -3489,7 +3487,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Return a CRS object based on the CRS information in the PEM Editor window
         :return: CRS object
         """
-        print(f"Getting CRS")
         epsg_code = self.get_epsg()
         if epsg_code:
             try:
@@ -4632,7 +4629,6 @@ def main():
 
 
 def run_step():
-    import os
     from subprocess import Popen, PIPE
     import keyboard
     import time
