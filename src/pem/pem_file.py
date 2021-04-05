@@ -1192,8 +1192,8 @@ class PEMFile:
                 :param roll_angle: float: calculated roll angle
                 :return: list: rotated x values
                 """
-                rotated_x = [x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)) for (x, y) in
-                             zip(x_values, y_pair)]
+                rotated_x = [x * math.cos(math.radians(roll_angle)) -
+                             y * math.sin(math.radians(roll_angle)) for (x, y) in zip(x_values, y_pair)]
                 return np.array(rotated_x, dtype=float)
 
             def rotate_y(y_values, x_pair, roll_angle):
@@ -1205,7 +1205,8 @@ class PEMFile:
                 :param roll_angle: float: calculated roll angle
                 :return: list: rotated y values
                 """
-                rotated_y = [x * math.sin(math.radians(roll_angle)) + y * math.cos(math.radians(roll_angle)) for (x, y) in
+                rotated_y = [x * math.sin(math.radians(roll_angle)) +
+                             y * math.cos(math.radians(roll_angle)) for (x, y) in
                              zip(x_pair, y_values)]
                 return np.array(rotated_y, dtype=float)
 
@@ -1275,11 +1276,14 @@ class PEMFile:
                                               weights=weights)
                 return averaged_reading
 
+            print(f"Station: {group.Station.unique()[0]}")
             x_data = group[group['Component'] == 'X']
             y_data = group[group['Component'] == 'Y']
             # Save the first reading of each component to be used a the 'pair' reading for rotation
             x_pair = weighted_average(x_data)
             y_pair = weighted_average(y_data)
+            # x_pair = x_data.iloc[0].Reading
+            # y_pair = y_data.iloc[0].Reading
 
             rad = group.iloc[0]['RAD_tool']
 
@@ -2286,8 +2290,8 @@ class DMPParser:
         data = parse_data(raw_data, header)
 
         header_readings = int(header.get('Number of readings'))
-        assert len(data) == header_readings, \
-            f"{self.filepath.name}: Header claims {header_readings} readings but {len(data)} was found."
+        if len(data) != header_readings:
+            logger.warning(f"{self.filepath.name}: Header claims {header_readings} readings but {len(data)} was found.")
 
         pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath, notes=notes)
         return pem_file, pd.DataFrame()  # Empty data_error data frame. Errors not implemented yet for .DMP files.
@@ -3243,8 +3247,13 @@ if __name__ == '__main__':
 
     # file = sample_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
-    file = r"C:\_Data\2021\TMC\Loop F\DUMP\LOOP F_LINES 100E TO 2100E\100E.PEM"
-    pemparser.parse(file)
+    file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\XY Eric.PEM"
+    # file = r"C:\_Data\2021\TMC\Soquem\1338-19-037\DUMP\January 16, 2021\DMP\1338-19-037 XY.PEM"
+    pem_file = pemparser.parse(file)
+    pem_file.prep_rotation()
+    pem_file.rotate()
+    # pem_file.filepath = Path(r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\XYT mk2 Eric.PEM")
+    # pem_file.save()
 
     # pem_file = pem_g.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')[0]
     # pem_file.get_dad()

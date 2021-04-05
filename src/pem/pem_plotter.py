@@ -1729,6 +1729,7 @@ class SectionPlot(MapPlotter):
             scale_factor = get_scale_factor()
             return scale_factor
 
+        assert self.pem_file.has_all_gps(), f"PEMFile must have all GPS."
         segments = geometry.segments.df
 
         # Interpolate the azimuth
@@ -3578,7 +3579,7 @@ class PEMPrinter:
 
             # Save the Section plot as long as it is a borehole survey. Must have loop, collar GPS and segments.
             if self.print_section_plot is True and pem_files[0].is_borehole():
-                if pem_files[0].has_geometry():
+                if pem_files[0].has_geometry() and pem_files[0].has_collar_gps():
                     dlg.setLabelText(f"Saving section plot for {pem_files[0].line_name}")
 
                     stations = sorted(set(itertools.chain.from_iterable(

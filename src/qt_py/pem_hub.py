@@ -54,7 +54,17 @@ logger = logging.getLogger(__name__)
 __version__ = '0.11.3'
 # TODO add note when reversing component data
 # TODO Open C:\_Data\2021\Eastern\Corazan Mining\FLC-2020-23\RAW\xyz.pem file in de-rotator.
+# TODO C:\_Data\2021\TMC\Em17-107\RAW won't de-rotate without collar?
+# TODO also try opening GPX files of C:\_Data\2021\TMC\Em17-107\RAW
+# TODO Plot dip angle in de-rotator
 
+# TODO update PEM list after renaming file
+# TODO C:\_Data\2021\Nantou BF\Borehole\PX20002-W01 (Loop 2)\Final RI files aren't batch imported correctly
+# TODO fix PDF printing bug
+# TODO Create Final folder when unpacking
+# TODO add right-click option to copy info to geophysics sheet.
+# TODO disable section plot option when there's no GPS in PDFPrinter.
+# TODO Quick map with only loop and collar won't show collar
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -2855,7 +2865,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 if dlg.wasCanceled():
                     break
 
-                if pem_file.is_borehole() and pem_file.has_xy() and not pem_file.is_derotated():
+                if all([pem_file.is_borehole(), pem_file.has_xy(), not pem_file.is_derotated(), processed is True]):
                     response = self.message.question(self, 'Rotated XY',
                                                      f'File {pem_file.filepath.name} has not been de-rotated. '
                                                      f'Do you wish to automatically de-rotated it?',
@@ -4168,20 +4178,20 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
             save_dir = os.path.splitext(save_dir)[0]
             self.printer = PEMPrinter(parent=self, **plot_kwargs)
 
-            try:
+            # try:
                 # PEM Files and RI files zipped together for when they get sorted
-                self.printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
-            except FileNotFoundError:
-                logger.critical(f'{save_dir} does not exist.')
-                self.message.information(self, 'Error', f'{save_dir} does not exist')
-            except IOError:
-                logger.critical(f"{save_dir} is currently opened.")
-                self.message.information(self, 'Error', f'{save_dir} is currently opened')
-            except Exception as e:
-                logger.critical(f"{e}.")
-                self.message.critical(self, 'Error', str(e))
-            finally:
-                self.close()
+            self.printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
+            # except FileNotFoundError:
+            #     logger.critical(f'{save_dir} does not exist.')
+            #     self.message.information(self, 'Error', f'{save_dir} does not exist')
+            # except IOError:
+            #     logger.critical(f"{save_dir} is currently opened.")
+            #     self.message.information(self, 'Error', f'{save_dir} is currently opened')
+            # except Exception as e:
+            #     logger.critical(f"{e}.")
+            #     self.message.critical(self, 'Error', str(e))
+            # finally:
+            self.close()
         else:
             logger.error(f"No file name passed.")
             self.message.critical(self, 'Error', 'Invalid file name')
@@ -4620,10 +4630,32 @@ def main():
     app.exec_()
 
 
-if __name__ == '__main__':
-    logger = logging.getLogger(__name__)
+def run_step():
+    import os
+    from subprocess import Popen, PIPE
+    import keyboard
+    import time
+    cmd = r"step"
 
-    main()
+    app = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=subprocess.STDOUT,
+                shell=True,
+                encoding='utf8'
+                )
+    time.sleep(1)
+    keyboard.press_and_release("a")
+    keyboard.press_and_release("a")
+    keyboard.press_and_release("a")
+    keyboard.press_and_release("a")
+    # app.stdin.write("y" + os.linesep)
+    # app.stdin.write("y" + os.linesep)
+    # app.stdin.write("y" + os.linesep)
+
+
+if __name__ == '__main__':
+
+    logger = logging.getLogger(__name__)
+    run_step()
+    # main()
     # cProfile.run('main()', 'restats')
     # p = pstats.Stats('restats')
     # p.sort_stats('cumulative').print_stats(.5)

@@ -207,7 +207,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.Close:
-            print(f"Closing PIW")
             event.accept()
             self.deleteLater()
 
