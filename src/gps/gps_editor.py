@@ -76,7 +76,7 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            logger.warning('No CRS')
+            logger.info('No CRS')
             self.df = df
             return self
         elif self.df.empty:
@@ -106,11 +106,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            logger.warning('No CRS')
+            logger.infoinfoinfoinfo('No CRS')
             self.df = df
             return self
         elif self.df.empty:
-            logger.warning('GPS dataframe is empty.')
+            logger.info('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -140,11 +140,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            logger.warning('No CRS.')
+            logger.infoinfoinfo('No CRS.')
             self.df = df
             return self
         elif self.df.empty:
-            logger.warning('GPS dataframe is empty.')
+            logger.info('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -174,11 +174,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            logger.warning('No CRS.')
+            logger.infoinfo('No CRS.')
             self.df = df
             return self
         elif self.df.empty:
-            logger.warning('GPS dataframe is empty.')
+            logger.info('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -214,11 +214,11 @@ class BaseGPS:
         """
         df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
         if not self.crs:
-            logger.warning('No CRS.')
+            logger.info('No CRS.')
             self.df = df
             return self
         elif self.df.empty:
-            logger.warning('GPS dataframe is empty.')
+            logger.info('GPS dataframe is empty.')
             self.df = df
             return self
 
@@ -325,7 +325,7 @@ class TransmitterLoop(BaseGPS):
 
         if len(gps.columns) < 3:
             error_msg = f"{len(gps.columns)} column(s) of values were found instead of 3."
-            logger.warning(error_msg)
+            logger.info(error_msg)
             # print("Fewer than 3 columns were found.")
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
@@ -505,7 +505,7 @@ class SurveyLine(BaseGPS):
 
         if len(gps.columns) < 4:
             error_msg = f"{len(gps.columns)} column(s) of values were found instead of 4."
-            logger.warning(error_msg)
+            logger.info(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 4:
             gps = gps.drop(gps.columns[4:], axis=1)
@@ -639,7 +639,7 @@ class BoreholeCollar(BaseGPS):
 
         # If more than 1 collar GPS is found, only keep the first row and all other rows are errors
         if len(gps) > 1:
-            logger.warning(f"{len(gps)} row(s) found instead of 1. Removing the extra rows.")
+            logger.info(f"{len(gps)} row(s) found instead of 1. Removing the extra rows.")
             gps = gps.drop(gps.iloc[1:].index)
 
         # Capture rows with NaN in the first three columns
@@ -669,7 +669,7 @@ class BoreholeCollar(BaseGPS):
 
         if len(gps.columns) < 3:
             error_msg = f"{len(gps.columns)} column(s) of values were found instead of 3."
-            logger.warning(error_msg)
+            logger.info(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
             gps = gps.drop(gps.columns[3:], axis=1)  # Remove extra columns
@@ -776,7 +776,7 @@ class BoreholeSegments(BaseGPS):
 
         if len(gps.columns) < 5:
             error_msg = f"{len(gps.columns)} column(s) of values were found instead of 5."
-            logger.warning(error_msg)
+            logger.info(error_msg)
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 5:
             gps = gps.drop(gps.columns[5:], axis=1)
@@ -833,7 +833,7 @@ class BoreholeGeometry(BaseGPS):
 
         self.crs = self.collar.crs
         if not self.crs:
-            logger.warning(f"No CRS passed.")
+            logger.info(f"No CRS passed.")
             if latlon:
                 logger.error(f"Cannot project as latlon without CRS.")
                 return projection
@@ -845,10 +845,10 @@ class BoreholeGeometry(BaseGPS):
         segments = self.segments.get_segments().dropna()
 
         if collar.empty:
-            logger.warning(f"Collar GPS is empty.")
+            logger.info(f"Collar GPS is empty.")
             return projection
         elif segments.empty:
-            logger.warning(f"Hole segments is empty.")
+            logger.info(f"Hole segments is empty.")
             return projection
 
         # Interpolate the segments
@@ -940,12 +940,18 @@ class GPXEditor:
         if gpx.waypoints:
             for waypoint in gpx.waypoints:
                 name = re.sub(r'\s', '_', waypoint.name)
-                gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', name])
+                if not all([waypoint.latitude, waypoint.longitude, waypoint.elevation]):
+                    logger.warning(F"Skipping point {name} as the GPS is incomplete.")
+                else:
+                    gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', name])
         elif gpx.routes:
             route = gpx.routes[0]
             for point in route.points:
                 name = re.sub(r'\s', '_', point.name)
-                gps.append([point.latitude, point.longitude, 0., '0', name])  # Routes have no elevation data, thus 0.
+                if not all([point.latitude, point.longitude, point.elevation]):
+                    logger.warning(F"Skipping point {name} as the GPS is incomplete.")
+                else:
+                    gps.append([point.latitude, point.longitude, 0., '0', name])  # Routes have no elevation data, thus 0.
         else:
             raise ValueError(F"No waypoints or routes found in {Path(filepath).name}.")
         return gps
@@ -1209,9 +1215,9 @@ if __name__ == '__main__':
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\src\gps\sample_files\45-1.csv'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\AF19003 loop and collar.txt'
-    gpx_file = samples_folder.joinpath(r'GPX files\L500E.gpx')
+    gpx_file = r"C:\_Data\2021\TMC\EM10-10\GPS\EM10-10 + Loop F_0403.gpx"
 
-    result = gpx_editor.get_utm(gpx_file)
+    result = gpx_editor.parse_gpx(gpx_file)
 
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt'

@@ -57,6 +57,8 @@ __version__ = '0.11.3'
 # TODO C:\_Data\2021\TMC\Em17-107\RAW won't de-rotate without collar?
 # TODO also try opening GPX files of C:\_Data\2021\TMC\Em17-107\RAW
 # TODO Plot dip angle in de-rotator
+# TODO Fix de-rotated when you open it.
+# TODO PEMPloteditor reading numbers should be ints.
 
 # TODO update PEM list after renaming file
 # TODO C:\_Data\2021\Nantou BF\Borehole\PX20002-W01 (Loop 2)\Final RI files aren't batch imported correctly

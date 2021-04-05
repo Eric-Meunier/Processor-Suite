@@ -1002,6 +1002,7 @@ class PEMFile:
         # Sort the data frame
         df = sort_data(df)
         self.data = df
+        self.number_of_readings = len(self.data)
         return self
 
     def split(self):
@@ -1194,6 +1195,24 @@ class PEMFile:
                 """
                 rotated_x = [x * math.cos(math.radians(roll_angle)) -
                              y * math.sin(math.radians(roll_angle)) for (x, y) in zip(x_values, y_pair)]
+                # rotated_x = []
+                # for i, (x, y) in enumerate(zip(x_values, y_pair)):
+                #     if i == 0:
+                #         file.write(f"X: {x:.3f}\nY: {y:.3f}\n")
+                #         file.write(f"Roll radians: {math.radians(roll_angle):.3f}\n")
+                #         file.write(f"Cos roll: {math.cos(math.radians(roll_angle)):.3f}    ")
+                #         file.write(F"Sin roll: {math.sin(math.radians(roll_angle)):.3f}\n")
+                #         file.write(f"x * Cos roll: {x * math.cos(math.radians(roll_angle)):.3f}\n")
+                #         file.write(f"y * Sin roll: {y * math.sin(math.radians(roll_angle)):.3f}\n")
+                #         file.write(f"x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)): "
+                #                    f"{x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)):.3f}\n")
+                #     rot_x = x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle))
+                #     rotated_x.append(rot_x)
+                #
+                # xs = [f"{x:^ 6.3f}" for x in rotated_x]
+                # ys = [f"{y:^ 6.3f}" for y in y_pair]
+                # file.write(F"Y P: {xs}\n")
+                # file.write(F"X R: {ys}\n\n")
                 return np.array(rotated_x, dtype=float)
 
             def rotate_y(y_values, x_pair, roll_angle):
@@ -3247,11 +3266,13 @@ if __name__ == '__main__':
 
     # file = sample_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
-    file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\XY Eric.PEM"
+    # file = r"C:\_Data\2021\Geoken\Borehole\SAPR-21-005\DUMP\XY.PEM"
+    file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-037\DUMP\January 16, 2021\DMP\1338-19-037 XY.PEM"
     pem_file = pemparser.parse(file)
-    pem_file.prep_rotation()
-    pem_file.rotate()
+    # pem_file.prep_rotation()
+    # pem_file.rotate()
+    pem_file.average()
     # pem_file.filepath = Path(r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\XYT mk2 Eric.PEM")
     # pem_file.save()
 
