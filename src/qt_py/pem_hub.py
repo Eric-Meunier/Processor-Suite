@@ -52,15 +52,8 @@ from src.logger import Log
 logger = logging.getLogger(__name__)
 
 __version__ = '0.11.3'
-# TODO add note when reversing component data
-# TODO Open C:\_Data\2021\Eastern\Corazan Mining\FLC-2020-23\RAW\xyz.pem file in de-rotator.
-# TODO C:\_Data\2021\TMC\Em17-107\RAW won't de-rotate without collar?
-# TODO also try opening GPX files of C:\_Data\2021\TMC\Em17-107\RAW
 # TODO Plot dip angle in de-rotator
-# TODO Fix de-rotated when you open it.
-# TODO PEMPloteditor reading numbers should be ints.
 
-# TODO update PEM list after renaming file
 # TODO C:\_Data\2021\Nantou BF\Borehole\PX20002-W01 (Loop 2)\Final RI files aren't batch imported correctly
 # TODO fix PDF printing bug
 # TODO Create Final folder when unpacking
@@ -523,6 +516,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         self.table.setItem(row, col, item)
                     else:
                         pem_file.filepath = new_path
+                        self.fill_pem_list()
                         self.status_bar.showMessage(f"{old_path.name} renamed to {str(new_value)}", 2000)
 
             elif col == self.table_columns.index('Date'):
@@ -3695,10 +3689,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             if filt.any():
                 data = pem_file.data[filt]
-
                 data.loc[:, 'Reading'] = data.loc[:, 'Reading'] * -1
-
                 pem_file.data[filt] = data
+
+                note = f"<HE3> {comp.upper()} component polarity reversed."
+                if note in pem_file.notes:
+                    pem_file.notes.remove(note)
+                else:
+                    pem_file.notes.append(note)
+
                 self.refresh_pem(pem_file)
             else:
                 logger.warning(f"{pem_file.filepath.name} has no {comp} data.")
@@ -4611,11 +4610,11 @@ def main():
     # pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
     pem_files = pg.get_pems(random=True, number=1)
-    file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
+    # file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
-    mw.open_dmp_files(file)
-    # mw.add_pem_files(pem_files)
+    # mw.open_dmp_files(file)
+    mw.add_pem_files(pem_files)
     # mw.extract_component("X")
     # mw.open_contour_map()
     # mw.open_mag_dec(mw.pem_files[0])
@@ -4656,8 +4655,8 @@ def run_step():
 if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
-    run_step()
-    # main()
+    # run_step()
+    main()
     # cProfile.run('main()', 'restats')
     # p = pstats.Stats('restats')
     # p.sort_stats('cumulative').print_stats(.5)

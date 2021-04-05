@@ -67,13 +67,11 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.statusBar().hide()
 
         def update_profile_views(mag_axes, axes):
-            print(f"View updated")
             for mag_ax, ax in zip(mag_axes, axes):
                 mag_ax.setGeometry(ax.vb.sceneBoundingRect())
                 mag_ax.linkedViewChanged(ax.vb, mag_ax.XAxis)
 
         def update_tab_plot_views(mag_axes, axes):
-            print(f"View updated")
             for mag_ax, ax in zip(mag_axes, axes):
                 mag_ax.setGeometry(ax.vb.sceneBoundingRect())
                 mag_ax.linkedViewChanged(ax.vb, mag_ax.YAxis)
@@ -312,8 +310,8 @@ class Derotator(QMainWindow, Ui_Derotator):
         Reset the range of each plot
         """
         for ax in self.axes:
-            ax.autoRange()
             ax.enableAutoRange(enable=True)
+            ax.autoRange()
 
     def change_tab(self):
         """
@@ -391,7 +389,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                 return
 
         # Disable PP de-rotation if it's lacking all necessary GPS
-        if self.pem_file.has_loop_gps() and self.pem_file.has_geometry():
+        if self.pem_file.has_all_gps():
             self.pp_btn.setEnabled(True)
         else:
             self.pp_btn.setEnabled(False)
@@ -406,10 +404,12 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
 
             # Disable the PP values tab if there's no PP information
-            if all([self.pem_file.has_loop_gps(), self.pem_file.has_geometry(), self.pem_file.ramp > 0]):
-                self.tabWidget.setTabEnabled(1, True)
+            if all([self.pem_file.has_all_gps(), self.pem_file.ramp > 0]):
+                self.tabWidget.setTabEnabled(0, True)
+                self.tabWidget.setTabEnabled(2, True)
             else:
-                self.tabWidget.setTabEnabled(1, False)
+                self.tabWidget.setTabEnabled(0, False)
+                self.tabWidget.setTabEnabled(2, False)
 
             # Fill the table with the ineligible stations
             if not ineligible_stations.empty:
@@ -640,8 +640,9 @@ class Derotator(QMainWindow, Ui_Derotator):
         plot_lin('X')
         plot_lin('Y')
         plot_rotation()
-        plot_deviation()
+
         if self.pp_plotted is False and self.pp_btn.isEnabled():
+            plot_deviation()
             plot_pp_values()
 
     def rotate(self):
@@ -679,14 +680,16 @@ class Derotator(QMainWindow, Ui_Derotator):
 
 def main():
     from src.pem.pem_getter import PEMGetter
-    from src.pem.pem_file import PEMParser
+    from src.pem.pem_file import PEMParser, DMPParser
     app = QApplication(sys.argv)
     mw = Derotator()
 
     pg = PEMGetter()
     parser = PEMParser()
-    pem_files = pg.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')
-    # pem_files = parser.parse(r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\RAW\ddh5-01-38 flux_30.PEM')
+    # parser = DMPParser()
+    pem_files = parser.parse(r"C:\_Data\2021\TMC\EM17-107\RAW\XYEM17-107_0330.PEM")
+    # pem_files = pg.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')
+    # pem_files, errors = parser.parse(r'C:\_Data\2021\Eastern\Corazan Mining\FLC-2020-23 (LP-26A)\RAW\XYZ_0329.DMP')
     mw.open(pem_files)
 
     # mw.export_stats()

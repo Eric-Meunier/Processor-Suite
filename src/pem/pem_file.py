@@ -1295,7 +1295,6 @@ class PEMFile:
                                               weights=weights)
                 return averaged_reading
 
-            print(f"Station: {group.Station.unique()[0]}")
             x_data = group[group['Component'] == 'X']
             y_data = group[group['Component'] == 'Y']
             # Save the first reading of each component to be used a the 'pair' reading for rotation
@@ -1318,7 +1317,7 @@ class PEMFile:
             return row
 
         global include_pp
-        if all([self.has_loop_gps(), self.has_geometry(), self.ramp > 0]):
+        if all([self.has_all_gps(), self.ramp > 0]):
             include_pp = True
         else:
             include_pp = False
@@ -1510,8 +1509,8 @@ class PEMFile:
                             cleaned_pp_roll_angle = None
                             ppxy_cleaned = None
 
-                        measured_pp_roll_angle = math.degrees(
-                            math.atan2(rT[1], rT[0]) - math.atan2(measured_ppy, measured_ppx))
+                        measured_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) -
+                                                              math.atan2(measured_ppy, measured_ppx))
 
                         if measured_pp_roll_angle < 0:
                             measured_pp_roll_angle = measured_pp_roll_angle + 360
@@ -1598,7 +1597,7 @@ class PEMFile:
             group.RAD_tool = rad
             return group
 
-        if all([self.has_loop_gps(), self.has_geometry(), self.ramp > 0]):
+        if all([self.has_all_gps(), self.ramp > 0]):
             setup_pp()
             include_pp = True
         else:
