@@ -13,7 +13,7 @@ import pandas as pd
 from pyproj import CRS
 from scipy.spatial.transform import Rotation as R
 
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry  # , CRS
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 from src.logger import Log
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 
@@ -33,8 +33,15 @@ def sort_data(data):
 
 
 def get_split_table(table, units, ramp):
+    """
+    Return the channel table with Delete column filled out appropriately.
+    :param table: DataFrame
+    :param units: str, 'pT' or 'nT/s'
+    :param ramp: float, ramp in microseconds
+    :return: DataFrame
+    """
+    ramp = ramp * 1e-6
     for ind, row in table.iterrows():
-        ramp = ramp / 1e6
 
         if row.Start > 0:
             remove = False
@@ -1738,7 +1745,7 @@ class PEMParser:
             text = text.strip().split('\n')
 
             assert text, f'Error parsing the tags. No matches were found in {self.filepath.name}.'
-            assert len(text) == 6, f"{len(text)} tags were found instead of 6 in {self.filepath.name}"
+            assert len(text) == 6, f"{len(text)} tags were found instead of 6 in {self.filepath.name}."
 
             tags['Format'] = text[0].split('>')[1].strip()
             tags['Units'] = text[1].split('>')[1].strip()
@@ -1816,7 +1823,7 @@ class PEMParser:
                 if t.startswith('<'):
                     text.remove(t)
 
-            assert len(text) == 7, f"{len(text)} header lines were found instead of 7 in {self.filepath.name}"
+            assert len(text) == 7, f"{len(text)} header lines were found instead of 7 in {self.filepath.name}."
 
             header = dict()
 
@@ -1830,10 +1837,10 @@ class PEMParser:
             receiver_param = text[6].split()
 
             assert len(survey_param) == 7, \
-                f"{len(survey_param)} survey parameters were found instead of 7 in {self.filepath.name}"
+                f"{len(survey_param)} survey parameters were found instead of 7 in {self.filepath.name}."
 
             assert len(receiver_param) >= 7, \
-                f"{len(receiver_param)} receiver parameters were found instead of 7 or 8 in {self.filepath.name}"
+                f"{len(receiver_param)} receiver parameters were found instead of 7 or 8 in {self.filepath.name}."
 
             header['Survey type'] = survey_param[0]
             header['Convention'] = survey_param[1]
@@ -3356,8 +3363,9 @@ if __name__ == '__main__':
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-037\DUMP\January 16, 2021\DMP\1338-19-037 XY.PEM"
     # pem_file = pemparser.parse(file)
-    pem_files = pem_g.get_pems(random=True, number=1)
-    pem_files[0].get_date()
+    # pem_files = pem_g.get_pems(random=True, number=1)
+    pem_files = pem_g.get_pems(client="CDR2 fluxgate", file="Mark.PEM")
+    # pem_files[0].get_date()
     # pem_files[0].get_clipboard_info()
     # pem_file.prep_rotation()
     # pem_file.rotate()

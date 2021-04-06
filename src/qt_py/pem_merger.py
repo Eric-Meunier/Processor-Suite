@@ -519,6 +519,9 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             df_avg = channel.groupby('Station').mean()
             x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
+            if channel_number == 0:
+                print(f"Data: {y}")
+
             curve = self.get_curve(channel_number, component, pem_file)
 
             if self.actionSymbols.isChecked():
@@ -543,7 +546,9 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             # color = 'b'
             color = (206, 74, 126)
 
-        for component in components:
+        print(F"Plotting {pem_file.filepath.name}.")
+        for component in ['X']:
+        # for component in components:
             profile_data = pem_file.get_profile_data(component,
                                                      averaged=False,
                                                      converted=True,
@@ -665,12 +670,12 @@ if __name__ == '__main__':
 
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(client='Minera', number=2)
-    # pf1 = pem_getter.get_pems(client='Minera', file='L11400N_5.PEM')[0]
-    # pf2 = pem_getter.get_pems(client='Minera', file='L11400N_2.PEM')[0]
+    pf1 = pem_getter.get_pems(client='CDR2 fluxgate', file='Eric.PEM')[0]
+    pf2 = pem_getter.get_pems(client='CDR2 fluxgate', file='Mark.PEM')[0]
     # pf1 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 XYT.PEM')[0]
     # pf2 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 ZAv.PEM')[0]
-    pf1 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_02.PEM')[0]
-    pf2 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_03.PEM')[0]
+    # pf1 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_02.PEM')[0]
+    # pf2 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_03.PEM')[0]
     w = PEMMerger()
     w.open([pf1, pf2])
 

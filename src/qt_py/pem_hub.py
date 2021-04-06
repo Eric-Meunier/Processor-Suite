@@ -50,29 +50,30 @@ from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.11.3'
+__version__ = '0.11.4'
 # TODO Plot dip angle in de-rotator
 
 # TODO disable section plot option when there's no GPS in PDFPrinter.
 # TODO Quick map with only loop and collar won't show collar
 # TODO Add quick view to unpacker? Or separate EXE entirely?
-# TODO
+# TODO add "open step"
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    pemhubWindowCreatorFile = 'ui\\pem_hub.ui'
-    planMapOptionsCreatorFile = 'ui\\plan_map_options.ui'
-    pdfPrintOptionsCreatorFile = 'ui\\pdf_plot_printer.ui'
-    gpsConversionWindow = 'ui\\gps_conversion.ui'
-    icons_path = 'ui\\icons'
+    # TODO This application has not been tested when frozen
+    application_path = Path(sys.executable).parent
+    pemhubWindowCreatorFile = Path('ui\\pem_hub.ui')
+    planMapOptionsCreatorFile = Path('ui\\plan_map_options.ui')
+    pdfPrintOptionsCreatorFile = Path('ui\\pdf_plot_printer.ui')
+    gpsConversionWindow = Path('ui\\gps_conversion.ui')
+    icons_path = Path('ui\\icons')
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    pemhubWindowCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\pem_hub.ui')
-    planMapOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\plan_map_options.ui')
-    pdfPrintOptionsCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\pdf_plot_printer.ui')
-    gpsConversionWindow = os.path.join(os.path.dirname(application_path), 'ui\\gps_conversion.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+    pemhubWindowCreatorFile = application_path.joinpath('ui\\pem_hub.ui')
+    planMapOptionsCreatorFile = application_path.joinpath('ui\\plan_map_options.ui')
+    pdfPrintOptionsCreatorFile = application_path.joinpath('ui\\pdf_plot_printer.ui')
+    gpsConversionWindow = application_path.joinpath('ui\\gps_conversion.ui')
+    icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PEMHubWindow, _ = uic.loadUiType(pemhubWindowCreatorFile)
@@ -84,31 +85,31 @@ Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
 def get_icon(filepath):
     ext = filepath.suffix.lower()
     if ext in ['.xls', '.xlsx', '.csv']:
-        icon_pix = QPixmap(os.path.join(icons_path, 'excel_file.png'))
+        icon_pix = QPixmap(str(icons_path.joinpath('excel_file.png')))
         icon = QIcon(icon_pix)
     elif ext in ['.rtf', '.docx', '.doc']:
-        icon_pix = QPixmap(os.path.join(icons_path, 'word_file.png'))
+        icon_pix = QPixmap(str(icons_path.joinpath('word_file.png')))
         icon = QIcon(icon_pix)
     elif ext in ['.log', '.txt', '.xyz', '.seg', '.dad']:
-        icon_pix = QPixmap(os.path.join(icons_path, 'txt_file.png'))
+        icon_pix = QPixmap(str(icons_path.joinpath('txt_file.png')))
         icon = QIcon(icon_pix)
     elif ext in ['.pem']:
-        icon_pix = QPixmap(os.path.join(icons_path, 'crone_logo.png'))
+        icon_pix = QPixmap(str(icons_path.joinpath('crone_logo.png')))
         icon = QIcon(icon_pix)
     elif ext in ['.dmp', '.dmp2', '.dmp3', '.dmp4']:
-        icon_pix = QPixmap(os.path.join(icons_path, 'dmp.png'))
+        icon_pix = QPixmap(str(icons_path.joinpath('dmp.png')))
         icon = QIcon(icon_pix)
     elif ext in ['.gpx', '.gdb']:
-        icon_pix = QPixmap(os.path.join(icons_path, 'garmin_file.png'))
+        icon_pix = QPixmap(str(icons_path.joinpath('garmin_file.png')))
         icon = QIcon(icon_pix)
     elif ext in ['.ssf']:
-        icon_pix = QPixmap(os.path.join(icons_path, 'ssf_file.png'))
+        icon_pix = QPixmap(str(icons_path.joinpath('ssf_file.png')))
         icon = QIcon(icon_pix)
     elif ext in ['.cor']:
-        icon_pix = QPixmap(os.path.join(icons_path, 'cor_file.png'))
+        icon_pix = QPixmap(str(icons_path.joinpath('cor_file.png')))
         icon = QIcon(icon_pix)
     else:
-        icon_pix = QPixmap(os.path.join(icons_path, 'none_file.png'))
+        icon_pix = QPixmap(str(icons_path.joinpath('none_file.png')))
         icon = QIcon(icon_pix)
     return icon
 
@@ -168,6 +169,8 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.project_tree.setColumnHidden(2, True)
         self.project_tree.setColumnHidden(3, True)
         self.project_tree.setHeaderHidden(True)
+        self.project_tree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.project_tree.customContextMenuRequested.connect(self.open_dir_tree_context_menu)
         # self.move_dir_tree_to(self.file_sys_model.rootPath())
         self.pem_dir = None
         self.gps_dir = None
@@ -237,23 +240,23 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Remove, open, and save PEM files
         self.remove_file_action = QAction("Remove", self)
         self.remove_file_action.triggered.connect(self.remove_pem_file)
-        self.remove_file_action.setIcon(QIcon(os.path.join(icons_path, 'remove.png')))
+        self.remove_file_action.setIcon(QIcon(str(icons_path.joinpath('remove.png'))))
         self.open_file_action = QAction("Open", self)
         self.open_file_action.triggered.connect(self.open_in_text_editor)
-        self.open_file_action.setIcon(QIcon(os.path.join(icons_path, 'txt_file.png')))
+        self.open_file_action.setIcon(QIcon(str(icons_path.joinpath('txt_file.png'))))
         self.save_file_action = QAction("Save", self)
-        self.save_file_action.setIcon(QIcon(os.path.join(icons_path, 'save.png')))
+        self.save_file_action.setIcon(QIcon(str(icons_path.joinpath('save.png'))))
         self.save_file_action.triggered.connect(lambda: self.save_pem_files(selected=True))
         self.save_file_as_action = QAction("Save As...", self)
-        self.save_file_as_action.setIcon(QIcon(os.path.join(icons_path, 'save_as.png')))
+        self.save_file_as_action.setIcon(QIcon(str(icons_path.joinpath('save_as.png'))))
         self.save_file_as_action.triggered.connect(self.save_pem_file_as)
         self.copy_to_cliboard_action = QAction("Copy to Clipboard", self)
-        # self.copy_to_cliboard_action.setIcon(QIcon(os.path.join(icons_path, 'save_as.png')))
+        self.copy_to_cliboard_action.setIcon(QIcon(str(icons_path.joinpath('copy.png'))))
         self.copy_to_cliboard_action.triggered.connect(self.copy_pems_to_clipboard)
 
         # Exports
         self.export_pem_action = QAction("PEM", self)
-        self.export_pem_action.setIcon(QIcon(os.path.join(icons_path, 'crone_logo.png')))
+        self.export_pem_action.setIcon(QIcon(str(icons_path.joinpath('crone_logo.png'))))
         self.export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True, processed=False))
 
         self.export_dad_action = QAction("DAD", self)
@@ -270,12 +273,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Merge PEM files
         self.merge_action = QAction("Merge", self)
-        self.merge_action.setIcon(QIcon(os.path.join(icons_path, 'pem_merger.png')))
+        self.merge_action.setIcon(QIcon(str(icons_path.joinpath('pem_merger.png'))))
         self.merge_action.triggered.connect(self.open_pem_merger)
 
         # Print PDFs
         self.print_plots_action = QAction("Print Plots", self)
-        self.print_plots_action.setIcon(QIcon(os.path.join(icons_path, 'pdf.png')))
+        self.print_plots_action.setIcon(QIcon(str(icons_path.joinpath('pdf.png'))))
         self.print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected_files=True))
 
         # Extract stations
@@ -292,7 +295,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Magnetic declination calculator
         self.calc_mag_dec_action = QAction("Magnetic Declination", self)
-        self.calc_mag_dec_action.setIcon(QIcon(os.path.join(icons_path, 'mag_field.png')))
+        self.calc_mag_dec_action.setIcon(QIcon(str(icons_path.joinpath('mag_field.png'))))
         self.calc_mag_dec_action.triggered.connect(self.open_mag_dec)
 
         # View GPS
@@ -320,26 +323,26 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Plot editor
         self.open_plot_editor_action = QAction("Plot", self)
         self.open_plot_editor_action.triggered.connect(self.open_pem_plot_editor)
-        self.open_plot_editor_action.setIcon(QIcon(os.path.join(icons_path, 'plot_editor.png')))
+        self.open_plot_editor_action.setIcon(QIcon(str(icons_path.joinpath('plot_editor.png'))))
 
         # Quick Map
         self.open_quick_map_action = QAction("Quick Map", self)
         self.open_quick_map_action.triggered.connect(lambda: self.open_quick_map(selected=True))
-        self.open_quick_map_action.setIcon(QIcon(os.path.join(icons_path, 'gps_viewer.png')))
+        self.open_quick_map_action.setIcon(QIcon(str(icons_path.joinpath('gps_viewer.png'))))
 
         # Data editing/processing
         self.average_action = QAction("Average", self)
         self.average_action.triggered.connect(lambda: self.average_pem_data(selected=True))
-        self.average_action.setIcon(QIcon(os.path.join(icons_path, 'average.png')))
+        self.average_action.setIcon(QIcon(str(icons_path.joinpath('average.png'))))
         self.split_action = QAction("Split Channels", self)
         self.split_action.triggered.connect(lambda: self.split_pem_channels(selected=True))
-        self.split_action.setIcon(QIcon(os.path.join(icons_path, 'split.png')))
+        self.split_action.setIcon(QIcon(str(icons_path.joinpath('split.png'))))
         self.scale_current_action = QAction("Scale Current", self)
         self.scale_current_action.triggered.connect(lambda: self.scale_pem_current(selected=True))
-        self.scale_current_action.setIcon(QIcon(os.path.join(icons_path, 'current.png')))
+        self.scale_current_action.setIcon(QIcon(str(icons_path.joinpath('current.png'))))
         self.scale_ca_action = QAction("Scale Coil Area", self)
         self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
-        self.scale_ca_action.setIcon(QIcon(os.path.join(icons_path, 'coil.png')))
+        self.scale_ca_action.setIcon(QIcon(str(icons_path.joinpath('coil.png'))))
 
         # Reversing component data
         self.reverse_x_component_action = QAction("X Component", self)
@@ -355,12 +358,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Derotation
         self.derotate_action = QAction("De-rotate XY", self)
         self.derotate_action.triggered.connect(self.open_derotator)
-        self.derotate_action.setIcon(QIcon(os.path.join(icons_path, 'derotate.png')))
+        self.derotate_action.setIcon(QIcon(str(icons_path.joinpath('derotate.png'))))
 
         # Borehole geometry
         self.get_geometry_action = QAction("Geometry", self)
         self.get_geometry_action.triggered.connect(self.open_pem_geometry)
-        self.get_geometry_action.setIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
+        self.get_geometry_action.setIcon(QIcon(str(icons_path.joinpath('pem_geometry.png'))))
 
         # Rename lines and files
         self.rename_lines_action = QAction("Rename Lines/Holes", self)
@@ -373,23 +376,23 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # View menu
         self.view_menu = QMenu('View', self.menu)
-        self.view_menu.setIcon(QIcon(os.path.join(icons_path, 'view.png')))
+        self.view_menu.setIcon(QIcon(str(icons_path.joinpath('view.png'))))
 
         # Add the export menu
         self.export_menu = QMenu('Export...', self.menu)
-        self.export_menu.setIcon(QIcon(os.path.join(icons_path, 'export.png')))
+        self.export_menu.setIcon(QIcon(str(icons_path.joinpath('export.png'))))
 
         # Add the extract menu
         self.extract_menu = QMenu('Extract...', self.menu)
-        self.extract_menu.setIcon(QIcon(os.path.join(icons_path, 'station_splitter.png')))
+        self.extract_menu.setIcon(QIcon(str(icons_path.joinpath('station_splitter.png'))))
 
         # Share menu
         self.share_menu = QMenu('Share', self.menu)
-        self.share_menu.setIcon(QIcon(os.path.join(icons_path, 'share_gps.png')))
+        self.share_menu.setIcon(QIcon(str(icons_path.joinpath('share_gps.png'))))
 
         # Reverse data menu
         self.reverse_menu = QMenu('Reverse', self.menu)
-        self.reverse_menu.setIcon(QIcon(os.path.join(icons_path, 'reverse.png')))
+        self.reverse_menu.setIcon(QIcon(str(icons_path.joinpath('reverse.png'))))
 
     def init_ui(self):
         """
@@ -405,7 +408,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.setupUi(self)
         self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'conder.png')))
+        self.setWindowIcon(QIcon(str(icons_path.joinpath('conder.png'))))
         self.resize(1700, 900)
         center_window()
 
@@ -1065,10 +1068,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         self.share_all_action.setDisabled(True)
                     else:
                         self.share_all_action.setDisabled(False)
-                # else:
-                #     menu.addAction(export_pem_action)
+                else:
+                    self.menu.addAction(self.copy_to_cliboard_action)
 
-                self.menu.addAction(self.copy_to_cliboard_action)
                 self.menu.addSeparator()
                 # Plot
                 self.menu.addAction(self.open_plot_editor_action)
@@ -2216,6 +2218,25 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             logger.error(f"{str(path)} does not exist.")
             self.message.information(self, "Invalid Path", f"{str(path)} does not exist.")
             self.project_dir_edit.setText(str(self.get_current_path()))
+
+    def open_dir_tree_context_menu(self, position):
+        """
+        Right click context menu for directory tree
+        :param position: QPoint, position of mouse at time of right-click
+        """
+
+        def open_step():
+            # Open the Step window at the selected location in the project tree
+            index = self.project_tree.currentIndex()
+            index_item = self.file_sys_model.index(index.row(), 0, index.parent())
+            path = self.file_sys_model.filePath(index_item)
+
+            os.chdir(path)
+            os.system('cmd /c "step"')
+
+        menu = QMenu()
+        menu.addAction('Run Step', open_step)
+        menu.exec_(self.project_tree.viewport().mapToGlobal(position))
 
     def open_unpacker(self, folder=None):
         """Open the Unpacker"""
@@ -3890,7 +3911,7 @@ class PathFilter(QWidget):
         self.filetype = filetype
         self.parent = parent
         self.setWindowTitle(f"{filetype} File Filter")
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'filter.png')))
+        self.setWindowIcon(QIcon(str(icons_path.joinpath('filter.png'))))
 
         self.include_files_edit = QLineEdit()
         self.include_files_edit.setToolTip("Separate items with commas [,]")
@@ -3980,7 +4001,7 @@ class PEMBrowser(QTextBrowser):
     def __init__(self, pem_file):
         super().__init__()
         self.resize(600, 800)
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'txt_file.png')))
+        self.setWindowIcon(QIcon(str(icons_path.joinpath('txt_file.png'))))
         self.setWindowTitle(f"{pem_file.filepath.name}")
 
         with open(str(pem_file.filepath), 'r') as file:
@@ -4070,7 +4091,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.parent = parent
         self.setupUi(self)
         self.setWindowTitle("PDF Printing Options")
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'pdf.png')))
+        self.setWindowIcon(QIcon(str(icons_path.joinpath('pdf.png'))))
 
         self.pem_files = []
         self.ri_files = []
@@ -4277,7 +4298,7 @@ class GPSShareWidget(QWidget):
 
         # Format window
         self.setWindowTitle(f"Share GPS")
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'share_gps.png')))
+        self.setWindowIcon(QIcon(str(icons_path.joinpath('share_gps.png'))))
 
         self.layout = QFormLayout()
         self.setLayout(self.layout)
@@ -4618,7 +4639,7 @@ def main():
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
-    pem_files = pg.get_pems(random=True, number=3)
+    pem_files = pg.get_pems(random=True, number=1)
     # file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
@@ -4640,30 +4661,9 @@ def main():
     app.exec_()
 
 
-def run_step():
-    from subprocess import Popen, PIPE
-    import keyboard
-    import time
-    cmd = r"step"
-
-    app = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=subprocess.STDOUT,
-                shell=True,
-                encoding='utf8'
-                )
-    time.sleep(1)
-    keyboard.press_and_release("a")
-    keyboard.press_and_release("a")
-    keyboard.press_and_release("a")
-    keyboard.press_and_release("a")
-    # app.stdin.write("y" + os.linesep)
-    # app.stdin.write("y" + os.linesep)
-    # app.stdin.write("y" + os.linesep)
-
-
 if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
-    # run_step()
     main()
     # cProfile.run('main()', 'restats')
     # p = pstats.Stats('restats')
