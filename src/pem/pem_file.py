@@ -282,6 +282,40 @@ class PEMFile:
         else:
             return False
 
+    def is_xy(self):
+        """
+        If the survey is an induction XY probe survey
+        :return: bool
+        """
+        if not self.is_borehole or self.is_fluxgate():
+            return False
+        else:
+            components = self.data.Component.unique()
+            if len(components) == 2:
+                if 'X' in components and 'Y' in components:
+                    return True
+                else:
+                    return False
+            else:
+                return False
+
+    def is_z(self):
+        """
+        If the survey is an induction Z probe survey
+        :return: bool
+        """
+        if not self.is_borehole or self.is_fluxgate():
+            return False
+        else:
+            components = self.data.Component.unique()
+            if len(components) == 1:
+                if 'Z' in components:
+                    return True
+                else:
+                    return False
+            else:
+                return False
+
     def is_derotated(self):
         if self.is_borehole():
             filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
@@ -491,6 +525,9 @@ class PEMFile:
             i_dip = np.interp(xi, depths, dips)
 
         return pd.DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
+
+    def get_date(self):
+        return datetime.strptime(self.date, ('%B %d, %Y'))
 
     def get_mag(self):
         """
@@ -821,6 +858,57 @@ class PEMFile:
         eligible_data = data[~data.Remove.astype(bool)].drop(['Remove'], axis=1)
         ineligible_stations = data[data.Remove].drop(['Remove'], axis=1)
         return eligible_data, ineligible_stations
+
+    def get_clipboard_info(self):
+        """
+        Copies the information of the PEMFile to the clipboard for the purposes of filling out the geophysicssheet.
+        """
+        stations = self.get_stations(converted=True)
+        info = [self.operator,  # Operator
+                self.date,  # Date
+                self.client,  # Client
+                '',  # Helpers
+                '',  # Type of day
+                '',  # Per diem
+                '',  # Total hours worked
+                self.grid,  # Grid
+                self.loop_name,  # Loop name
+                self.line_name,  # Line/Hole name
+                stations.min(),  # Start
+                stations.max(),  # End
+                '',  # Complete?
+                self.get_survey_type(),  # Survey type
+                '',  # Start time on drill
+                '',  # Time leaving drill
+                ', '.join(self.data.ZTS.astype(str).unique()),  # ZTS
+                self.timebase,  # Timebase
+                '',  # Channel config.
+                self.ramp,  # Ramp
+                self.current,  # Current
+                '',  # Damping box setting
+                '',  # Tx config.
+                self.rx_number,  # Receiver
+                '',  # Clock
+                self.probes["XY probe number"] if self.is_z() else '',  # Z probe
+                self.probes["XY probe number"] if self.is_xy() else '',  # XY probe
+                self.probes["Tool number"] if self.is_xy() else '',  # RAD tool
+                '',  # RAD battery pack
+                self.probes["XY probe number"] if self.is_fluxgate() and self.is_borehole() else '',  # Fluxgate probe
+                '',  # Fluxgate battery pack
+                '',  # Borehole cable
+                self.probes["XY probe number"] if not self.is_borehole() and not self.is_fluxgate() else '',  # Surface coil
+                self.probes["XY probe number"] if not self.is_borehole() and self.is_fluxgate() else '',  # Surface fluxgate
+                self.probes["XY probe number"] if "squid" in self.survey_type.lower() else '',
+                '',  # Slip ring
+                '',  # Transmitter
+                '',  # VRs
+                '',  # Damping boxes
+                ]
+
+        return info
+        # row = pd.DataFrame([info])
+        # row.to_clipboard(excel=True, header=False, index=False)
+        # print(f"Row information copied to clipboard.")
 
     def set_crs(self, crs):
         """
@@ -1946,7 +2034,7 @@ class PEMParser:
 
         assert Path(filepath).exists(), f"{Path(filepath)} does not exist."
         self.filepath = Path(filepath)
-        logger.info(f"Parsing {self.filepath.name}")
+        logger.info(f"Parsing {self.filepath.name}.")
 
         with open(filepath, "rt") as file:
             contents = file.readlines()
@@ -2760,7 +2848,7 @@ class PEMSerializer:
                                  str(self.pem_file.timebase),
                                  str(int(self.pem_file.ramp)),
                                  str(self.pem_file.number_of_channels - 1),
-                                 str(self.pem_file.number_of_readings)]),
+                                 str(int(self.pem_file.number_of_readings))]),
                        ' '.join([str(self.pem_file.rx_number),
                                  str(self.pem_file.rx_software_version),
                                  str(self.pem_file.rx_software_version_date),
@@ -3255,7 +3343,6 @@ class RADTool:
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
-    import os
 
     sample_folder = Path(__file__).parents[2].joinpath("sample_files")
 
@@ -3266,12 +3353,15 @@ if __name__ == '__main__':
     # file = sample_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
     # file = r"C:\_Data\2021\Geoken\Borehole\SAPR-21-005\DUMP\XY.PEM"
-    file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
+    # file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-037\DUMP\January 16, 2021\DMP\1338-19-037 XY.PEM"
-    pem_file = pemparser.parse(file)
+    # pem_file = pemparser.parse(file)
+    pem_files = pem_g.get_pems(random=True, number=1)
+    pem_files[0].get_date()
+    # pem_files[0].get_clipboard_info()
     # pem_file.prep_rotation()
     # pem_file.rotate()
-    pem_file.average()
+    # pem_file.average()
     # pem_file.filepath = Path(r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\XYT mk2 Eric.PEM")
     # pem_file.save()
 

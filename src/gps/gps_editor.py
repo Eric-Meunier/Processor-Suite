@@ -323,7 +323,11 @@ class TransmitterLoop(BaseGPS):
 
         gps = gps.drop(cols_to_drop, axis=1)
 
-        if len(gps.columns) < 3:
+        if gps.empty:
+            error_msg = f"No loop GPS found."
+            logger.info(error_msg)
+            return empty_gps, gps, error_msg
+        elif len(gps.columns) < 3:
             error_msg = f"{len(gps.columns)} column(s) of values were found instead of 3."
             logger.info(error_msg)
             # print("Fewer than 3 columns were found.")
@@ -426,7 +430,7 @@ class SurveyLine(BaseGPS):
     def parse_station_gps(file):
         """
         Parse a text file or data frame for station GPS.
-        :param file: Union (str filepath, dataframe, list), text containing GPS data
+        :param file: Union (str filepath, dataframe, list), raw GPS data
         :return: DataFrame of the GPS.
         """
 
@@ -503,7 +507,11 @@ class SurveyLine(BaseGPS):
 
         gps = gps.drop(cols_to_drop, axis=1)
 
-        if len(gps.columns) < 4:
+        if gps.empty:
+            error_msg = f"No station GPS found."
+            logger.info(error_msg)
+            return empty_gps, gps, error_msg
+        elif len(gps.columns) < 4:
             error_msg = f"{len(gps.columns)} column(s) of values were found instead of 4."
             logger.info(error_msg)
             return empty_gps, gps, error_msg
@@ -667,7 +675,11 @@ class BoreholeCollar(BaseGPS):
 
         gps = gps.drop(cols_to_drop, axis=1)
 
-        if len(gps.columns) < 3:
+        if gps.empty:
+            error_msg = f"No collar GPS found."
+            logger.info(error_msg)
+            return empty_gps, gps, error_msg
+        elif len(gps.columns) < 3:
             error_msg = f"{len(gps.columns)} column(s) of values were found instead of 3."
             logger.info(error_msg)
             return empty_gps, gps, error_msg
@@ -774,7 +786,11 @@ class BoreholeSegments(BaseGPS):
 
         gps = gps.drop(cols_to_drop, axis=1)
 
-        if len(gps.columns) < 5:
+        if gps.empty:
+            error_msg = f"No segments found."
+            logger.info(error_msg)
+            return empty_gps, gps, error_msg
+        elif len(gps.columns) < 5:
             error_msg = f"{len(gps.columns)} column(s) of values were found instead of 5."
             logger.info(error_msg)
             return empty_gps, gps, error_msg

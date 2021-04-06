@@ -641,8 +641,10 @@ class Derotator(QMainWindow, Ui_Derotator):
         plot_lin('Y')
         plot_rotation()
 
-        if self.pp_plotted is False and self.pp_btn.isEnabled():
+        if pem_file.has_all_gps() and pem_file.ramp > 0:
             plot_deviation()
+
+        if self.pp_plotted is False and self.pp_btn.isEnabled():
             plot_pp_values()
 
     def rotate(self):

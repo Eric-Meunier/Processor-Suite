@@ -53,11 +53,10 @@ logger = logging.getLogger(__name__)
 __version__ = '0.11.3'
 # TODO Plot dip angle in de-rotator
 
-# TODO fix PDF printing bug
-# TODO add right-click option to copy info to geophysics sheet.
 # TODO disable section plot option when there's no GPS in PDFPrinter.
 # TODO Quick map with only loop and collar won't show collar
 # TODO Add quick view to unpacker? Or separate EXE entirely?
+# TODO
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -248,6 +247,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.save_file_as_action = QAction("Save As...", self)
         self.save_file_as_action.setIcon(QIcon(os.path.join(icons_path, 'save_as.png')))
         self.save_file_as_action.triggered.connect(self.save_pem_file_as)
+        self.copy_to_cliboard_action = QAction("Copy to Clipboard", self)
+        # self.copy_to_cliboard_action.setIcon(QIcon(os.path.join(icons_path, 'save_as.png')))
+        self.copy_to_cliboard_action.triggered.connect(self.copy_pems_to_clipboard)
 
         # Exports
         self.export_pem_action = QAction("PEM", self)
@@ -488,8 +490,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             :param col: Column of the main table that the change was made.
             :return: None
             """
-            logger.info(f'Table value changed at row {row} and column {col}')
-
             self.table.blockSignals(True)
             pem_file = self.pem_files[row]
             value = self.table.item(row, col).text()
@@ -501,7 +501,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 if new_value:
                     new_path = old_path.parent.joinpath(new_value)
-                    logger.info(f"Renaming {old_path.name} to {new_path.name}")
+                    logger.info(f"Renaming {old_path.name} to {new_path.name}.")
 
                     try:
                         os.rename(str(old_path), str(new_path))
@@ -538,7 +538,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 except ValueError:
                     logger.error(f"{value} is not a number.")
                     self.message.critical(self, 'Invalid Value', f"Current must be a number")
-                    self.pem_to_table(pem_file, row)
+                    self.add_pem_to_table(pem_file, row)
                 else:
                     pem_file.current = value
 
@@ -548,7 +548,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 except ValueError:
                     logger.error(f"{value} is not a number.")
                     self.message.critical(self, 'Invalid Value', f"Coil area Must be a number")
-                    self.pem_to_table(pem_file, row)
+                    self.add_pem_to_table(pem_file, row)
                 else:
                     pem_file.coil_area = value
 
@@ -960,6 +960,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     pem_file = selected_pems[0]
 
                     self.menu.addAction(self.save_file_as_action)
+                    self.menu.addAction(self.copy_to_cliboard_action)
                     self.menu.addSeparator()
 
                     # View menu
@@ -1067,6 +1068,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 # else:
                 #     menu.addAction(export_pem_action)
 
+                self.menu.addAction(self.copy_to_cliboard_action)
                 self.menu.addSeparator()
                 # Plot
                 self.menu.addAction(self.open_plot_editor_action)
@@ -1391,6 +1393,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             """
             crs = pem_file.get_crs()
             if crs:
+                logger.info(f"Setting hub CRS to {crs.name}.")
                 name = crs.name
 
                 if name == 'WGS 84':
@@ -1450,8 +1453,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
-        # pem_files = [Path(file) for file in pem_files]
-
         count = 0
         parser = PEMParser()
         self.table.blockSignals(True)
@@ -1481,8 +1482,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         dlg += 1
                         continue
 
+                logger.info(f"Adding {pem_file.filepath.name} to hub.")
                 # Check if the file is already opened in the table. Won't open if it is.
                 if self.is_opened(pem_file):
+                    logger.info(f"{pem_file.filepath.name} already opened.")
                     self.status_bar.showMessage(f"{pem_file.filepath.name} is already opened", 2000)
                     dlg += 1
                 else:
@@ -1507,12 +1510,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     self.pem_info_widgets.insert(i, pem_widget)
                     self.stackedWidget.insertWidget(i, pem_widget)
                     self.table.insertRow(i)
-                    self.pem_to_table(pem_file, i)
+                    self.add_pem_to_table(pem_file, i)
 
                     count += 1
                     # Progress the progress bar
                     dlg += 1
-                    # self.total_opened += 1
 
         self.color_table_numbers()
 
@@ -1595,6 +1597,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             # Only color the number columns if there are PEM files left
             self.color_table_numbers()
 
+        self.selection_label.setText('')
         self.setUpdatesEnabled(True)
 
     def read_inf_file(self, inf_file):
@@ -2421,15 +2424,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             # Filter the PEM files by file name
             include_files = strip(self.pem_list_filter.include_files_edit.text().split(','))
-            logger.info(f"Include files: {include_files}")
             exclude_files = strip(self.pem_list_filter.exclude_files_edit.text().split(','))
-            logger.info(f"Include files: {exclude_files}")
 
             # Filter the PEM files by folder names
             include_folders = strip(self.pem_list_filter.include_folders_edit.text().split(','))
-            logger.info(f"Include folders: {include_folders}")
             exclude_folders = strip(self.pem_list_filter.exclude_folders_edit.text().split(','))
-            logger.info(f"Exclude folders: {exclude_folders}")
 
             # Inclusive files
             if any(include_files):
@@ -2456,9 +2455,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 )]
 
             include_exts = strip(self.pem_list_filter.include_exts_edit.text().split(','))
-            logger.info(f"Include extensions: {include_exts}")
             exclude_exts = strip(self.pem_list_filter.exclude_exts_edit.text().split(','))
-            logger.info(f"Exclude extensions: {exclude_exts}")
 
             # Filter the PEM files by file extension
             # Inclusive extensions
@@ -2472,8 +2469,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     [re.sub(r'[\*\.]', '', f.lower()) != p.suffix.lower()[1:] for f in exclude_exts if f]
                 )]
 
-            pem_str = '\n'.join([str(f) for f in filtered_pems])
-            logger.info(f"Filtered pems: {pem_str}")
             return filtered_pems
 
         if not self.project_dir:
@@ -2628,6 +2623,23 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 save_xyz()
             else:
                 save_pem()
+
+    def copy_pems_to_clipboard(self):
+        """
+        Copy the information from the selected PEM files to the clipboard, to be entered into the geophysics sheet.
+        """
+        pem_files, rows = self.get_pem_files(selected=True)
+
+        if not pem_files:
+            return
+
+        info = []
+        for pem_file in sorted(pem_files, key=lambda x: x.get_date(), reverse=True):
+            info.append(pem_file.get_clipboard_info())
+
+        df = pd.DataFrame(info)
+        df.to_clipboard(excel=True, index=False, header=False)
+        self.status_bar.showMessage(f"Information copied to clipboard", 1500)
 
     def save_as_kmz(self, save=False):
         """
@@ -3329,7 +3341,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.table.blockSignals(False)
 
-    def pem_to_table(self, pem_file, row):
+    def add_pem_to_table(self, pem_file, row):
         """
         Adds the information from a PEM file to the main table. Blocks the table signals while doing so.
         :param pem_file: PEMFile object
@@ -3382,7 +3394,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             logger.info(f"Refreshing {pem_file.filepath.name}.")
             ind = self.pem_files.index(pem_file)
             self.pem_info_widgets[ind].open_file(pem_file)
-            self.pem_to_table(pem_file, ind)
+            self.add_pem_to_table(pem_file, ind)
             self.format_row(ind)
             self.color_table_numbers()
         else:
@@ -4606,7 +4618,7 @@ def main():
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
-    pem_files = pg.get_pems(random=True, number=1)
+    pem_files = pg.get_pems(random=True, number=3)
     # file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 

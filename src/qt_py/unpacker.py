@@ -500,7 +500,7 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
         make_move('Other', self.other_table)
 
         # Create a "Final" folder
-        final_folder = new_folder.joinpath("Final")
+        final_folder = self.get_current_path().parent.joinpath('Final')
         if not final_folder.is_dir():
             final_folder.mkdir(parents=True)
 
