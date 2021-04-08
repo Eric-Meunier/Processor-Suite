@@ -56,7 +56,7 @@ __version__ = '0.11.4'
 # TODO disable section plot option when there's no GPS in PDFPrinter.
 # TODO Quick map with only loop and collar won't show collar
 # TODO Add quick view to unpacker? Or separate EXE entirely?
-# TODO add "open step"
+# TODO De-rotation should maybe use partner pair if possible instead of averaging.
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -4639,7 +4639,7 @@ def main():
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
     # pem_files = pg.get_pems(client='PEM Rotation', number=3)
-    pem_files = pg.get_pems(random=True, number=1)
+    pem_files = pg.get_pems(client="PEM Rotation", random=True, number=1)
     # file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 

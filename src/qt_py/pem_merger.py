@@ -519,9 +519,6 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             df_avg = channel.groupby('Station').mean()
             x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
-            if channel_number == 0:
-                print(f"Data: {y}")
-
             curve = self.get_curve(channel_number, component, pem_file)
 
             if self.actionSymbols.isChecked():
@@ -546,9 +543,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
             # color = 'b'
             color = (206, 74, 126)
 
-        print(F"Plotting {pem_file.filepath.name}.")
-        for component in ['X']:
-        # for component in components:
+        for component in components:
             profile_data = pem_file.get_profile_data(component,
                                                      averaged=False,
                                                      converted=True,
@@ -638,7 +633,6 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
         else:
             return
 
-        print(f"Cycling profile tab to {new_ind}")
         self.profile_tab_widget.setCurrentIndex(new_ind)
 
     def save_pem_file(self):
