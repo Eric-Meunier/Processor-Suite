@@ -1851,6 +1851,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
                 pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
 
+        # Disable the section plots if no file can produce one
+        if not any([f.is_borehole() and f.has_all_gps() for f in pem_files]):
+            pdf_plot_printer.make_section_plots_gbox.setChecked(False)
+            pdf_plot_printer.make_section_plots_gbox.setEnabled(False)
+
         pdf_plot_printer.open(pem_files, ri_files=ri_files, crs=self.get_crs())
 
     def open_mag_dec(self):
@@ -3502,6 +3507,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 elif datum == 'NAD 1983':
                     epsg_code = f'269{zone_number:02d}'
                 else:
+                    logger.warning(f"CRS string not implemented.")
                     print(f"CRS string not implemented.")
                     return None
 
@@ -4634,13 +4640,15 @@ def main():
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
-    # pem_files = pg.get_pems(client='PEM Rotation', number=3)
-    pem_files = pg.get_pems(client="PEM Rotation", random=True, number=1)
+    pem_files = pg.get_pems(client='PEM Rotation', number=3, random=True)
+    mw.add_pem_files(pem_files)
+    pem_files = pg.get_pems(client='PEM Rotation', file=r"BX-081 Tool - Acc (Cross).PEM")
     # file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     # mw.open_dmp_files(file)
     mw.add_pem_files(pem_files)
+    mw.open_pdf_plot_printer()
     # mw.extract_component("X")
     # mw.open_contour_map()
     # mw.open_mag_dec(mw.pem_files[0])

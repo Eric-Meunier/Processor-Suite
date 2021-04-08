@@ -1922,9 +1922,9 @@ class SectionPlot(MapPlotter):
 
         self.ax.xaxis.set_visible(False)
         self.ax.yaxis.set_visible(True)
-        self.ax.set_yticklabels(self.ax.get_yticklabels(),
-                                rotation=90,
-                                va='center')
+        for tick in self.ax.get_yticklabels():
+            tick.set_rotation(90)
+            tick.set_verticalalignment('center')
 
         units = self.pem_file.collar.get_units()
         if units == 'm':
@@ -2497,7 +2497,6 @@ class GeneralMap:
 
         line_center_x, line_center_y = interp_x[i_perc_50_depth], interp_y[i_perc_50_depth]
         line_az = interp_az[i_perc_depth]
-        print(f"Line azimuth: {line_az:.0f}°")
         line_len = math.ceil(depths[-1] / 400) * 300  # Calculating the length of the cross-section
         dx = math.cos(math.radians(90 - line_az)) * (line_len / 2)
         dy = math.sin(math.radians(90 - line_az)) * (line_len / 2)
@@ -3758,12 +3757,10 @@ class PEMPrinter:
         # Group the files by unique surveys i.e. each entry is the same borehole and same loop
         for survey, files in itertools.groupby(bh_files, key=lambda x: (x[0].line_name, x[0].loop_name)):
             unique_bhs[survey] = list(files)
-            print(survey, list(files))
 
         # Group the files by unique surveys i.e. each entry is the same borehole and same loop
         for loop, files in itertools.groupby(sf_files, key=lambda x: x[0].loop_name):
             unique_grids[loop] = list(files)
-            print(loop, list(files))
 
         num_pages = count_pdf_pages(unique_bhs, unique_grids)  # for the progress bar
         bar = CustomProgressBar()
@@ -3834,7 +3831,7 @@ class PEMPrinter:
         self.portrait_fig, ax = plt.subplots(1, 1, num=1, clear=True)
         ax2 = ax.twiny()
         ax2.get_shared_x_axes().join(ax, ax2)
-        plt.yscale('symlog', linthreshy=10, linscaley=1. / math.log(10), subsy=list(np.arange(2, 10, 1)))
+        plt.yscale('symlog', linthresh=10, linscale=1. / math.log(10), subs=list(np.arange(2, 10, 1)))
 
     def configure_step_fig(self):
         """
@@ -3860,19 +3857,18 @@ if __name__ == '__main__':
     # map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
     # plt.show()
 
-    # pem_files = list(filter(lambda x: 'borehole' in x.survey_type.lower(), pem_files))
-    # fig = plt.figure(figsize=(8.5, 11), dpi=100)
-    # sp = SectionPlot()
-    # sp.plot(pem_files[0], figure=fig)
-    # plt.show()
-
-    lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    ax6 = ax5.twiny()
-    ax6.get_shared_x_axes().join(ax5, ax6)
-    # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
-    lin_plot = LINPlotter(pem_files, lin_fig)
-    lin_plot.plot('X')
+    fig = plt.figure(figsize=(8.5, 11), dpi=100)
+    sp = SectionPlot()
+    sp.plot(pem_files[0], figure=fig)
     plt.show()
+
+    # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    # ax6 = ax5.twiny()
+    # ax6.get_shared_x_axes().join(ax5, ax6)
+    # # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
+    # lin_plot = LINPlotter(pem_files, lin_fig)
+    # lin_plot.plot('X')
+    # plt.show()
 
     # log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
     # ax2 = ax.twiny()
@@ -3894,8 +3890,6 @@ if __name__ == '__main__':
     # plt.show()
 
     # map = GeneralMap(pem_files, fig).get_map()
-    # map = SectionPlot(pem_files, fig).get_section_plot()
-    # map = PlanMap(pem_files, fig).get_map()
     # map.show()
     # ax = fig.add_subplot()
     # component = 'z'
