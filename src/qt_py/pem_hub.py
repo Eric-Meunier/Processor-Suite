@@ -54,7 +54,6 @@ __version__ = '0.11.4'
 # TODO Plot dip angle in de-rotator
 
 # TODO disable section plot option when there's no GPS in PDFPrinter.
-# TODO Quick map with only loop and collar won't show collar
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO De-rotation should maybe use partner pair if possible instead of averaging.
 
@@ -4126,9 +4125,6 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
             self.close()
         elif e.key() == QtCore.Qt.Key_Enter:
             self.print_pdfs()
-
-    def closeEvent(self, e):
-        self.deleteLater()
 
     def open(self, pem_files, ri_files=None, crs=None):
 

@@ -1309,82 +1309,88 @@ class GPSViewer(QMainWindow):
 
         def plot_hole():
 
+            def plot_collar():
+                if collar.to_string() not in self.collars:
+                    self.collars.append(collar.to_string())
+
+                    collar_item = pg.PlotDataItem(clickable=True,
+                                                  name=pem_file.line_name,
+                                                  symbol='o',
+                                                  symbolSize=10,
+                                                  symbolPen=pg.mkPen(hole_color, width=1.),
+                                                  symbolBrush=pg.mkBrush('w'),
+                                                  pen=pg.mkPen(hole_color, width=1.5)
+                                                  )
+                    collar_item.setZValue(2)
+                    # Don't plot the collar here
+                    collar_item.setData(collar.Easting, collar.Northing)
+                    self.plan_view.addItem(collar_item)
+
+                    # Add the hole name annotation
+                    text_item = pg.TextItem(f"{pem_file.line_name}",
+                                            color=hole_color,
+                                            anchor=name_anchor,
+                                            # anchor=anchor,
+                                            )
+                    self.plan_view.addItem(text_item, ignoreBounds=True)
+                    text_item.setPos(collar.iloc[0].Easting,
+                                     collar.iloc[0].Northing)
+                    text_item.setParentItem(collar_item)
+                    text_item.setFont(QtGui.QFont("Helvetica", 8, QtGui.QFont.Normal))
+                    text_item.setZValue(2)
+
+            def plot_geometry():
+                if proj.to_string() not in self.traces:
+                    self.traces.append(proj.to_string())
+
+                    trace_item = pg.PlotDataItem(clickable=True,
+                                                 name=pem_file.line_name,
+                                                 symbol='o',
+                                                 symbolSize=2.5,
+                                                 symbolPen=pg.mkPen(hole_color, width=1.),
+                                                 symbolBrush=pg.mkBrush(hole_color),
+                                                 pen=pg.mkPen(hole_color, width=1.1)
+                                                 )
+
+                    trace_item.setData(proj.Easting, proj.Northing)
+                    trace_item.setZValue(1)
+                    self.plan_view.addItem(trace_item)
+
+                    # Add the depth annotation
+                    # Add the line name annotation
+                    text_item = pg.TextItem(f"{proj.iloc[-1].Relative_depth:g} m",
+                                            color=hole_color,
+                                            anchor=depth_anchor,
+                                            # angle=angle
+                                            )
+                    self.plan_view.addItem(text_item, ignoreBounds=True)
+                    text_item.setPos(proj.iloc[-1].Easting,
+                                     proj.iloc[-1].Northing)
+                    text_item.setParentItem(trace_item)
+                    text_item.setFont(QtGui.QFont("Helvetica", 8, QtGui.QFont.Normal))
+                    text_item.setZValue(2)
+
             collar = pem_file.get_collar().dropna()
             if collar.empty:
-                logger.warning(f"No collar GPS in {pem_file.filepath.name}.")
+                logger.info(f"No collar GPS in {pem_file.filepath.name}.")
                 return
 
             geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
             proj = geometry.get_projection(latlon=False)
             if proj.empty:
-                logger.warning(f"No hole segments in {pem_file.filepath.name}.")
-                return
+                logger.info(f"No hole segments in {pem_file.filepath.name}.")
+                # Annotation anchor for hole name and depth. Use the azimuth near the collar for the collar name,
+                # and the azimuth at the end of the hole for the depth.
+                name_anchor = (0.5, 1)
+            else:
+                name_az = pem_file.segments.df.iloc[0].Azimuth if not pem_file.segments.df.empty else 180
+                name_anchor = (0.5, 1) if 90 < name_az < 270 else (0.5, 0)
+                depth_az = pem_file.segments.df.iloc[-1].Azimuth if not pem_file.segments.df.empty else 180
+                depth_anchor = (0.5, 0) if 90 < depth_az < 270 else (0.5, 1)
 
-            # Annotation anchor for hole name and depth. Use the azimuth near the collar for the collar name, and the
-            # azimuth at the end of the hole for the depth.
-            name_az = pem_file.segments.df.iloc[0].Azimuth if not pem_file.segments.df.empty else 180
-            name_anchor = (0.5, 1) if 90 < name_az < 270 else (0.5, 0)
-            depth_az = pem_file.segments.df.iloc[-1].Azimuth if not pem_file.segments.df.empty else 180
-            depth_anchor = (0.5, 0) if 90 < depth_az < 270 else (0.5, 1)
+                plot_geometry()
 
-            if collar.to_string() not in self.collars:
-                self.collars.append(collar.to_string())
-
-                collar_item = pg.PlotDataItem(clickable=True,
-                                              name=pem_file.line_name,
-                                              symbol='o',
-                                              symbolSize=10,
-                                              symbolPen=pg.mkPen(hole_color, width=1.),
-                                              symbolBrush=pg.mkBrush('w'),
-                                              pen=pg.mkPen(hole_color, width=1.5)
-                                              )
-                collar_item.setZValue(2)
-                # Don't plot the collar here
-                collar_item.setData(collar.Easting, collar.Northing)
-                self.plan_view.addItem(collar_item)
-
-                # Add the hole name annotation
-                text_item = pg.TextItem(f"{pem_file.line_name}",
-                                        color=hole_color,
-                                        anchor=name_anchor,
-                                        # anchor=anchor,
-                                        )
-                self.plan_view.addItem(text_item, ignoreBounds=True)
-                text_item.setPos(collar.iloc[0].Easting,
-                                 collar.iloc[0].Northing)
-                text_item.setParentItem(collar_item)
-                text_item.setFont(QtGui.QFont("Helvetica", 8, QtGui.QFont.Normal))
-                text_item.setZValue(2)
-
-            if proj.to_string() not in self.traces:
-                self.traces.append(proj.to_string())
-
-                trace_item = pg.PlotDataItem(clickable=True,
-                                             name=pem_file.line_name,
-                                             symbol='o',
-                                             symbolSize=2.5,
-                                             symbolPen=pg.mkPen(hole_color, width=1.),
-                                             symbolBrush=pg.mkBrush(hole_color),
-                                             pen=pg.mkPen(hole_color, width=1.1)
-                                             )
-
-                trace_item.setData(proj.Easting, proj.Northing)
-                trace_item.setZValue(1)
-                self.plan_view.addItem(trace_item)
-
-                # Add the depth annotation
-                # Add the line name annotation
-                text_item = pg.TextItem(f"{proj.iloc[-1].Relative_depth:g} m",
-                                        color=hole_color,
-                                        anchor=depth_anchor,
-                                        # angle=angle
-                                        )
-                self.plan_view.addItem(text_item, ignoreBounds=True)
-                text_item.setPos(proj.iloc[-1].Easting,
-                                 proj.iloc[-1].Northing)
-                text_item.setParentItem(trace_item)
-                text_item.setFont(QtGui.QFont("Helvetica", 8, QtGui.QFont.Normal))
-                text_item.setZValue(2)
+            plot_collar()
 
         line_color = '#2DA8D8FF'
         loop_color = '#2A2B2DFF'
@@ -1430,23 +1436,24 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     getter = PEMGetter()
-    files = getter.get_pems(client='TMC', subfolder=r"Loop G\Final\Loop G", number=15)
+    # files = getter.get_pems(client='PEM Rotation', file=r"BX-081 Tool - Acc (Cross).PEM")
+    files = getter.get_pems(client='PEM Rotation', file=r"BX-081 Tool - Acc (PEMPro).PEM")
     # files = getter.get_pems(client='Iscaycruz', subfolder='Sante Est')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
     # m = TileMapViewer()
-    # m = GPSViewer()
+    m = GPSViewer()
     # # m = Map3DViewer()
-    # m.open(files)
-    # m.show()
+    m.open(files)
+    m.show()
 
     # map = Map3DViewer()
     # map.show()
     # map.open(files)
 
-    cmap = ContourMapViewer()
-    cmap.open(files)
-    cmap.show()
+    # cmap = ContourMapViewer()
+    # cmap.open(files)
+    # cmap.show()
     # cmap.channel_list_edit.setText("1, 3, 100, 4")
     # cmap.channel_list_rbtn.setChecked(True)
     # cmap.save_figure()
