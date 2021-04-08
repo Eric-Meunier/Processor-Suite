@@ -1279,50 +1279,29 @@ class PEMFile:
             :return: pandas DataFrame: data frame of the readings with the data rotated.
             """
 
-            def rotate_x(x_values, y_pair, roll_angle):
-                """
-                Rotate the X data of a reading
-                Formula: X' = Xcos(roll) - Ysin(roll)
-                :param x_values: list: list of x readings to rotated
-                :param y_pair: list: list of paired y reading
-                :param roll_angle: float: calculated roll angle
-                :return: list: rotated x values
-                """
-                rotated_x = [x * math.cos(math.radians(roll_angle)) -
-                             y * math.sin(math.radians(roll_angle)) for (x, y) in zip(x_values, y_pair)]
-                # rotated_x = []
-                # for i, (x, y) in enumerate(zip(x_values, y_pair)):
-                #     if i == 0:
-                #         file.write(f"X: {x:.3f}\nY: {y:.3f}\n")
-                #         file.write(f"Roll radians: {math.radians(roll_angle):.3f}\n")
-                #         file.write(f"Cos roll: {math.cos(math.radians(roll_angle)):.3f}    ")
-                #         file.write(F"Sin roll: {math.sin(math.radians(roll_angle)):.3f}\n")
-                #         file.write(f"x * Cos roll: {x * math.cos(math.radians(roll_angle)):.3f}\n")
-                #         file.write(f"y * Sin roll: {y * math.sin(math.radians(roll_angle)):.3f}\n")
-                #         file.write(f"x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)): "
-                #                    f"{x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)):.3f}\n")
-                #     rot_x = x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle))
-                #     rotated_x.append(rot_x)
-                #
-                # xs = [f"{x:^ 6.3f}" for x in rotated_x]
-                # ys = [f"{y:^ 6.3f}" for y in y_pair]
-                # file.write(F"Y P: {xs}\n")
-                # file.write(F"X R: {ys}\n\n")
-                return np.array(rotated_x, dtype=float)
-
-            def rotate_y(y_values, x_pair, roll_angle):
-                """
-                Rotate the Y data of a reading
-                Formula: Y' = Xsin(roll) + Ycos(roll)
-                :param y_values: list: list of y readings to rotated
-                :param x_pair: list: list of paired x reading
-                :param roll_angle: float: calculated roll angle
-                :return: list: rotated y values
-                """
-                rotated_y = [x * math.sin(math.radians(roll_angle)) +
-                             y * math.cos(math.radians(roll_angle)) for (x, y) in
-                             zip(x_pair, y_values)]
-                return np.array(rotated_y, dtype=float)
+            # def rotate_x(x_values, y_pair, roll):
+            #     """
+            #     Rotate the X data of a reading
+            #     Formula: X' = Xcos(roll) - Ysin(roll)
+            #     :param x_values: list, list of x readings to rotated
+            #     :param y_pair: list, list of paired y reading
+            #     :param roll: float, calculated roll angle in radians
+            #     :return: list, rotated x values
+            #     """
+            #     rotated_x = [x * math.cos(roll) - y * math.sin(roll) for (x, y) in zip(x_values, y_pair)]
+            #     return np.array(rotated_x, dtype=float)
+            #
+            # def rotate_y(y_values, x_pair, roll):
+            #     """
+            #     Rotate the Y data of a reading
+            #     Formula: Y' = Xsin(roll) + Ycos(roll)
+            #     :param y_values: list, list of y readings to rotated
+            #     :param x_pair: list, list of paired x reading
+            #     :param roll: float, calculated roll angle
+            #     :return: list, rotated y values
+            #     """
+            #     rotated_y = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_pair, y_values)]
+            #     return np.array(rotated_y, dtype=float)
 
             def get_new_rad(method):
                 """
@@ -1390,24 +1369,41 @@ class PEMFile:
                                               weights=weights)
                 return averaged_reading
 
-            x_data = group[group['Component'] == 'X']
-            y_data = group[group['Component'] == 'Y']
-            # Save the first reading of each component to be used a the 'pair' reading for rotation
-            x_pair = weighted_average(x_data)
-            y_pair = weighted_average(y_data)
-            # x_pair = x_data.iloc[0].Reading
-            # y_pair = y_data.iloc[0].Reading
-
-            rad = group.iloc[0]['RAD_tool']
-
             # Create a new RADTool object ready for de-rotating
+            rad = group.iloc[0]['RAD_tool']
             new_rad = get_new_rad(method)
             roll_angle = new_rad.angle_used  # Roll angle used for de-rotation
+            roll = math.radians(roll_angle)
 
-            x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle))
-            y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle))
-            row = x_data.append(y_data)
-            # Add the new rad tool series to the row
+            # x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle))
+            # y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle))
+
+            x_rows = group[group['Component'] == 'X']
+            y_rows = group[group['Component'] == 'Y']
+            rotated_x = []
+            rotated_y = []
+
+            if len(x_rows) == len(y_rows):
+                # print(f"Length of X and Y are the same, using indexed pairing.")
+                for i, (x_data, y_data) in enumerate(zip(x_rows.itertuples(index=False), y_rows.itertuples(index=False))):
+                    x = [x * math.cos(roll) - y * math.sin(roll) for (x, y) in zip(x_data.Reading, y_data.Reading)]
+                    y = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_data.Reading, y_data.Reading)]
+                    rotated_x.append(np.array(x))
+                    rotated_y.append(np.array(y))
+            else:
+                print(f"Length of X and Y are different, using a weighted average.")
+                x_pair = weighted_average(x_rows)
+                y_pair = weighted_average(y_rows)
+
+                for i, (x_data, y_data) in enumerate(zip(x_rows.itertuples(index=False), y_rows.itertuples(index=False))):
+                    x = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_data.Reading, y_pair)]
+                    y = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(y_data.Reading, x_pair)]
+                    rotated_x.append(np.array(x))
+                    rotated_y.append(np.array(y))
+
+            x_rows.Reading = rotated_x
+            y_rows.Reading = rotated_y
+            row = x_rows.append(y_rows)
             row['RAD_tool'] = row['RAD_tool'].map(lambda p: new_rad)
             return row
 

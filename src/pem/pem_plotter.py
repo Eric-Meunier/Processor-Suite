@@ -3837,7 +3837,7 @@ class PEMPrinter:
         """
         Configure the step plot figure
         """
-        self.portrait_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True)
+        self.portrait_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex='all', clear=True)
         ax5 = ax4.twiny()
         ax5.get_shared_x_axes().join(ax4, ax5)
 
@@ -3847,7 +3847,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(client='PEM Rotation', file='_PU-340 XY.PEM')
+    pem_files = pem_getter.get_pems(folder='PEM Rotation', file='_PU-340 XY.PEM')
 
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()

@@ -52,10 +52,7 @@ logger = logging.getLogger(__name__)
 
 __version__ = '0.11.4'
 # TODO Plot dip angle in de-rotator
-
-# TODO disable section plot option when there's no GPS in PDFPrinter.
 # TODO Add quick view to unpacker? Or separate EXE entirely?
-# TODO De-rotation should maybe use partner pair if possible instead of averaging.
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -4623,7 +4620,7 @@ def main():
     # ff = PathFilter()
     # ff.show()
 
-    mw.show()
+    # mw.show()
 
     # gpx_file = samples_folder.joinpath(r'GPX files\L500E.gpx')
     # pem_file = samples_folder.joinpath(r'GPX files\500E.PEM')
@@ -4640,19 +4637,21 @@ def main():
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
-    pem_files = pg.get_pems(client='PEM Rotation', number=3, random=True)
-    mw.add_pem_files(pem_files)
-    pem_files = pg.get_pems(client='PEM Rotation', file=r"BX-081 Tool - Acc (Cross).PEM")
+    pem_files = pg.get_pems(folder="Eastern", file="FLC-2018-18.PEM")
+    pem_files[0].prep_rotation()
+    pem_files[0].rotate()
+    # mw.add_pem_files(pem_files)
+    # pem_files = pg.get_pems(folder='PEM Rotation', file=r"BX-081 Tool - Acc (Cross).PEM")
     # file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
 
     # mw.open_dmp_files(file)
     mw.add_pem_files(pem_files)
-    mw.open_pdf_plot_printer()
+    mw.open_pem_plot_editor()
     # mw.extract_component("X")
     # mw.open_contour_map()
     # mw.open_mag_dec(mw.pem_files[0])
-
+    mw.show()
     # mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')
     # mw.move_dir_tree_to(r'C:\_Data\2020\Juno\Borehole')
     # mw.pem_list_filter.exclude_files_edit.setText('XYT.pem, xyg.pem')

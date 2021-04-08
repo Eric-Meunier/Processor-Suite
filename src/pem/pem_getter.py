@@ -14,12 +14,12 @@ class PEMGetter:
     Class to get a list of PEM files from a testing directory. Used for testing.
     """
     def __init__(self):
-        self.parser = PEMParser()
+        self.pem_parser = PEMParser()
 
-    def get_pems(self, client=None, number=None, selection=None, subfolder=None, file=None, random=False):
+    def get_pems(self, folder=None, subfolder=None, number=None, selection=None,  file=None, random=False):
         """
         Retrieve a list of PEMFiles
-        :param client: str, folder from which to retrieve files
+        :param folder: str, folder from which to retrieve files
         :param number: int, number of files to selected
         :param selection: int, index of file to select
         :param subfolder: str, name of the folder within the client folder to look into
@@ -36,17 +36,17 @@ class PEMGetter:
             logger.info(f'Getting File {filepath.name}.')
 
             try:
-                pem_file = self.parser.parse(filepath)
+                pem_file = self.pem_parser.parse(filepath)
             except Exception as e:
                 logger.error(f"{str(e)}")
                 return
 
             pem_files.append(pem_file)
 
-        sample_files_dir = Path(__file__).parents[2].joinpath('sample_files/PEMGetter files')
+        sample_files_dir = Path(__file__).parents[2].joinpath('sample_files')
 
-        if client:
-            sample_files_dir = sample_files_dir.joinpath(client)
+        if folder:
+            sample_files_dir = sample_files_dir.joinpath(folder)
             if subfolder:
                 sample_files_dir = sample_files_dir.joinpath(subfolder)
 

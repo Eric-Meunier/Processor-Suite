@@ -689,8 +689,8 @@ def main():
     pg = PEMGetter()
     parser = PEMParser()
     # parser = DMPParser()
-    pem_files = parser.parse(r"C:\_Data\2021\TMC\EM17-107\RAW\XYEM17-107_0330.PEM")
-    # pem_files = pg.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')
+    # pem_files = parser.parse(r"C:\_Data\2021\TMC\EM17-107\RAW\XYEM17-107_0330.PEM")
+    pem_files = pg.get_pems(folder="Eastern", file="FLC-2018-18.PEM")
     # pem_files, errors = parser.parse(r'C:\_Data\2021\Eastern\Corazan Mining\FLC-2020-23 (LP-26A)\RAW\XYZ_0329.DMP')
     mw.open(pem_files)
 

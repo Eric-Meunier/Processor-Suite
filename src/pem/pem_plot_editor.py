@@ -194,7 +194,6 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         self.active_profile_axes = []
 
         def update_views(mag_axes, axes):
-            print(f"View updated")
             for mag_ax, ax in zip(mag_axes, axes):
                 mag_ax.setGeometry(ax.vb.sceneBoundingRect())
                 mag_ax.linkedViewChanged(ax.vb, mag_ax.XAxis)
