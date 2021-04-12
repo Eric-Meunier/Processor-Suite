@@ -1,0 +1,2 @@
+-DMP conversion is off by a lot
+-Channel removal should keep first channel.

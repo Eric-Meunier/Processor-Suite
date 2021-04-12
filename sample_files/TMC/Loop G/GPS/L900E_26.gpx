@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx
+ xmlns="http://www.topografix.com/GPX/1/1"
+ creator="OziExplorer Version 3956f - http://www.oziexplorer.com"
+ version="1.1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+ <time>2021-01-26T00:24:51Z</time>
+ <bounds minlat="52.278439" minlon="-72.100883" maxlat="52.311161" maxlon="-72.033008"/>
+</metadata>
+<wpt lat="52.2859500" lon="-72.0465350">
+ <ele>494.080811</ele>
+ <time>2021-01-25T14:39:46.002Z</time>
+ <name>900 650</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2854940" lon="-72.0465410">
+ <ele>496.824005</ele>
+ <time>2021-01-25T14:43:42.997Z</time>
+ <name>900 600</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2850670" lon="-72.0465580">
+ <ele>491.032806</ele>
+ <time>2021-01-25T14:47:53.998Z</time>
+ <name>900 550</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2846040" lon="-72.0466270">
+ <ele>484.631989</ele>
+ <time>2021-01-25T14:50:08.998Z</time>
+ <name>900 500</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2841610" lon="-72.0466680">
+ <ele>489.813599</ele>
+ <time>2021-01-25T14:54:25.001Z</time>
+ <name>900 450</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2837200" lon="-72.0466920">
+ <ele>489.204010</ele>
+ <time>2021-01-25T14:57:00.996Z</time>
+ <name>900 400</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2832700" lon="-72.0466990">
+ <ele>492.252014</ele>
+ <time>2021-01-25T14:59:19.003Z</time>
+ <name>900 350</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2828010" lon="-72.0467460">
+ <ele>492.252014</ele>
+ <time>2021-01-25T15:01:08.999Z</time>
+ <name>900 300</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2823920" lon="-72.0468230">
+ <ele>495.299988</ele>
+ <time>2021-01-25T16:32:31.001Z</time>
+ <name>900 250</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2819290" lon="-72.0468540">
+ <ele>495.909607</ele>
+ <time>2021-01-25T16:33:36.000Z</time>
+ <name>900 200</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2814540" lon="-72.0468280">
+ <ele>497.433594</ele>
+ <time>2021-01-25T16:39:32.003Z</time>
+ <name>900 150</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2805710" lon="-72.0468930">
+ <ele>499.567200</ele>
+ <time>2021-01-25T16:51:11.998Z</time>
+ <name>900 50</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2810070" lon="-72.0468130">
+ <ele>490.423187</ele>
+ <time>2021-01-21T17:54:25.001Z</time>
+ <name>900 100</name>
+ <cmt>TP - 1/25/2021 6:02:26 PM</cmt>
+ <desc>TP - 1/25/2021 6:02:26 PM</desc>
+ <sym>Airport</sym>
+</wpt>
+<wpt lat="52.2939520" lon="-72.0459660">
+ <ele>489.204010</ele>
+ <time>2021-01-24T16:21:54.000Z</time>
+ <name>900 1550</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2935110" lon="-72.0460420">
+ <ele>493.776001</ele>
+ <time>2021-01-24T16:30:17.997Z</time>
+ <name>900 1500</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2930740" lon="-72.0460610">
+ <ele>487.070404</ele>
+ <time>2021-01-24T16:38:57.002Z</time>
+ <name>900 1450</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2926160" lon="-72.0460830">
+ <ele>486.460785</ele>
+ <time>2021-01-24T16:47:38.003Z</time>
+ <name>900 1400</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2921480" lon="-72.0461160">
+ <ele>500.176788</ele>
+ <time>2021-01-24T17:02:29.996Z</time>
+ <name>900 1350</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2917000" lon="-72.0461220">
+ <ele>498.652802</ele>
+ <time>2021-01-24T17:34:15.004Z</time>
+ <name>900 1300</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2913090" lon="-72.0462270">
+ <ele>499.872009</ele>
+ <time>2021-01-24T17:43:45.002Z</time>
+ <name>900 1250</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2908190" lon="-72.0462010">
+ <ele>498.043213</ele>
+ <time>2021-01-24T18:07:20.001Z</time>
+ <name>900 1200</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2903750" lon="-72.0462330">
+ <ele>489.508789</ele>
+ <time>2021-01-24T18:18:27.000Z</time>
+ <name>900 1150</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2899330" lon="-72.0462800">
+ <ele>500.176788</ele>
+ <time>2021-01-24T18:29:02.999Z</time>
+ <name>900 1100</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2895210" lon="-72.0462930">
+ <ele>517.245605</ele>
+ <time>2021-01-24T18:44:58.004Z</time>
+ <name>900 1050</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2890250" lon="-72.0464190">
+ <ele>502.310394</ele>
+ <time>2021-01-24T19:00:14.000Z</time>
+ <name>900 1000</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2886090" lon="-72.0463760">
+ <ele>499.872009</ele>
+ <time>2021-01-24T19:18:31.997Z</time>
+ <name>900 950</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2881170" lon="-72.0463930">
+ <ele>500.786407</ele>
+ <time>2021-01-24T19:34:15.001Z</time>
+ <name>900 900</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2876930" lon="-72.0464210">
+ <ele>505.358398</ele>
+ <time>2021-01-24T19:47:22.001Z</time>
+ <name>900 850</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2872540" lon="-72.0464420">
+ <ele>497.128815</ele>
+ <time>2021-01-24T20:00:53.997Z</time>
+ <name>900 800</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2868040" lon="-72.0464920">
+ <ele>489.204010</ele>
+ <time>2021-01-24T20:12:20.998Z</time>
+ <name>900 750</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2863230" lon="-72.0464560">
+ <ele>490.727997</ele>
+ <time>2021-01-24T20:19:04.002Z</time>
+ <name>900 700</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2943940" lon="-72.0460530">
+ <ele>487.679993</ele>
+ <time>2021-01-24T16:12:39.001Z</time>
+ <name>900 1600</name>
+ <cmt>TP - 1/24/2021 5:45:34 PM</cmt>
+ <desc>TP - 1/24/2021 5:45:34 PM</desc>
+ <sym>Airport</sym>
+</wpt>
+</gpx>

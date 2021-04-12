@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx
+ xmlns="http://www.topografix.com/GPX/1/1"
+ creator="OziExplorer Version 3956f - http://www.oziexplorer.com"
+ version="1.1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+ <time>2021-01-26T22:55:53Z</time>
+ <bounds minlat="52.278439" minlon="-72.100883" maxlat="52.311161" maxlon="-72.033008"/>
+</metadata>
+<wpt lat="52.2925080" lon="-72.0388090">
+ <ele>496.519196</ele>
+ <time>2021-01-25T15:30:29.002Z</time>
+ <name>1400 1400</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2920430" lon="-72.0388260">
+ <ele>488.289612</ele>
+ <time>2021-01-25T15:36:41.999Z</time>
+ <name>1400 1350</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2915990" lon="-72.0388520">
+ <ele>490.118408</ele>
+ <time>2021-01-25T15:39:32.000Z</time>
+ <name>1400 1300</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2911480" lon="-72.0388780">
+ <ele>490.118408</ele>
+ <time>2021-01-25T15:41:32.001Z</time>
+ <name>1400 1250</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2803370" lon="-72.0395990">
+ <ele>508.406403</ele>
+ <time>2021-01-25T16:48:54.000Z</time>
+ <name>1400 50</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2808110" lon="-72.0395660">
+ <ele>508.711212</ele>
+ <time>2021-01-25T16:51:49.003Z</time>
+ <name>1400 100</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2812350" lon="-72.0395180">
+ <ele>511.759186</ele>
+ <time>2021-01-25T16:54:57.001Z</time>
+ <name>1400 150</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2816900" lon="-72.0394890">
+ <ele>511.759186</ele>
+ <time>2021-01-25T16:57:13.003Z</time>
+ <name>1400 200</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2821700" lon="-72.0394540">
+ <ele>513.892822</ele>
+ <time>2021-01-25T17:00:15.998Z</time>
+ <name>1400 250</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2825930" lon="-72.0394250">
+ <ele>511.759186</ele>
+ <time>2021-01-25T17:03:28.999Z</time>
+ <name>1400 300</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2830320" lon="-72.0394160">
+ <ele>514.197571</ele>
+ <time>2021-01-25T17:06:39.001Z</time>
+ <name>1400 350</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2834600" lon="-72.0393980">
+ <ele>516.026428</ele>
+ <time>2021-01-25T17:10:16.003Z</time>
+ <name>1400 400</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2839240" lon="-72.0393470">
+ <ele>508.711212</ele>
+ <time>2021-01-25T17:17:50.001Z</time>
+ <name>1400 450</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2843950" lon="-72.0393040">
+ <ele>500.481598</ele>
+ <time>2021-01-25T17:24:20.002Z</time>
+ <name>1400 500</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2848720" lon="-72.0393060">
+ <ele>494.385590</ele>
+ <time>2021-01-25T17:27:27.999Z</time>
+ <name>1400  550</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2852740" lon="-72.0392600">
+ <ele>494.080811</ele>
+ <time>2021-01-25T17:30:43.004Z</time>
+ <name>1400 600</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2857590" lon="-72.0392340">
+ <ele>491.337585</ele>
+ <time>2021-01-25T17:35:19.000Z</time>
+ <name>1400 650</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2862170" lon="-72.0391880">
+ <ele>492.252014</ele>
+ <time>2021-01-25T17:39:14.000Z</time>
+ <name>1400 700</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2866740" lon="-72.0391800">
+ <ele>489.813599</ele>
+ <time>2021-01-25T17:43:07.997Z</time>
+ <name>1400 750</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2870530" lon="-72.0391220">
+ <ele>491.642395</ele>
+ <time>2021-01-25T17:59:56.000Z</time>
+ <name>1400 800</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2874810" lon="-72.0391110">
+ <ele>486.460785</ele>
+ <time>2021-01-25T18:05:49.998Z</time>
+ <name>1400 850</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2906840" lon="-72.0388900">
+ <ele>485.241608</ele>
+ <time>2021-01-25T18:22:19.001Z</time>
+ <name>1400 1200</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2902440" lon="-72.0389350">
+ <ele>489.204010</ele>
+ <time>2021-01-25T18:24:42.002Z</time>
+ <name>1400 1150</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2898030" lon="-72.0389440">
+ <ele>489.204010</ele>
+ <time>2021-01-25T18:25:49.999Z</time>
+ <name>1400 1100</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2893610" lon="-72.0389900">
+ <ele>489.813599</ele>
+ <time>2021-01-25T18:27:28.996Z</time>
+ <name>1400 1050</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+<wpt lat="52.2889000" lon="-72.0390010">
+ <ele>487.679993</ele>
+ <time>2021-01-25T18:30:03.997Z</time>
+ <name>1400 1000</name>
+ <sym>Flag, Blue</sym>
+</wpt>
+</gpx>
