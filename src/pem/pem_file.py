@@ -1279,29 +1279,29 @@ class PEMFile:
             :return: pandas DataFrame: data frame of the readings with the data rotated.
             """
 
-            # def rotate_x(x_values, y_pair, roll):
-            #     """
-            #     Rotate the X data of a reading
-            #     Formula: X' = Xcos(roll) - Ysin(roll)
-            #     :param x_values: list, list of x readings to rotated
-            #     :param y_pair: list, list of paired y reading
-            #     :param roll: float, calculated roll angle in radians
-            #     :return: list, rotated x values
-            #     """
-            #     rotated_x = [x * math.cos(roll) - y * math.sin(roll) for (x, y) in zip(x_values, y_pair)]
-            #     return np.array(rotated_x, dtype=float)
-            #
-            # def rotate_y(y_values, x_pair, roll):
-            #     """
-            #     Rotate the Y data of a reading
-            #     Formula: Y' = Xsin(roll) + Ycos(roll)
-            #     :param y_values: list, list of y readings to rotated
-            #     :param x_pair: list, list of paired x reading
-            #     :param roll: float, calculated roll angle
-            #     :return: list, rotated y values
-            #     """
-            #     rotated_y = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_pair, y_values)]
-            #     return np.array(rotated_y, dtype=float)
+            def rotate_x(x_values, y_pair, roll):
+                """
+                Rotate the X data of a reading
+                Formula: X' = Xcos(roll) - Ysin(roll)
+                :param x_values: list, list of x readings to rotated
+                :param y_pair: list, list of paired y reading
+                :param roll: float, calculated roll angle in radians
+                :return: list, rotated x values
+                """
+                rotated_x = [x * math.cos(roll) - y * math.sin(roll) for (x, y) in zip(x_values, y_pair)]
+                return np.array(rotated_x, dtype=float)
+
+            def rotate_y(y_values, x_pair, roll):
+                """
+                Rotate the Y data of a reading
+                Formula: Y' = Xsin(roll) + Ycos(roll)
+                :param y_values: list, list of y readings to rotated
+                :param x_pair: list, list of paired x reading
+                :param roll: float, calculated roll angle
+                :return: list, rotated y values
+                """
+                rotated_y = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_pair, y_values)]
+                return np.array(rotated_y, dtype=float)
 
             def get_new_rad(method):
                 """
@@ -1375,11 +1375,13 @@ class PEMFile:
             roll_angle = new_rad.angle_used  # Roll angle used for de-rotation
             roll = math.radians(roll_angle)
 
-            # x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle))
-            # y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle))
-
             x_rows = group[group['Component'] == 'X']
             y_rows = group[group['Component'] == 'Y']
+
+            # x_pair = weighted_average(x_rows)
+            # y_pair = weighted_average(y_rows)
+            # x_rows.loc[:, 'Reading'] = x_rows.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, roll_angle))
+            # y_rows.loc[:, 'Reading'] = y_rows.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, roll_angle))
             rotated_x = []
             rotated_y = []
 
@@ -1391,19 +1393,21 @@ class PEMFile:
                     rotated_x.append(np.array(x))
                     rotated_y.append(np.array(y))
             else:
-                print(f"Length of X and Y are different, using a weighted average.")
+                print(f"Length of X and Y are different, using a weighted average "
+                      f"(station {str(group.Station.unique()[0])}, readings {', '.join(group.Reading_index.astype(str))}).\n")
                 x_pair = weighted_average(x_rows)
                 y_pair = weighted_average(y_rows)
 
                 for x_data in x_rows.itertuples(index=False):
-                    x = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_data.Reading, y_pair)]
+                    x = [x * math.cos(roll) - y * math.sin(roll) for (x, y) in zip(x_data.Reading, y_pair)]
                     rotated_x.append(np.array(x))
                 for y_data in y_rows.itertuples(index=False):
-                    y = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(y_data.Reading, x_pair)]
+                    y = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_pair, y_data.Reading)]
                     rotated_y.append(np.array(y))
 
             x_rows.Reading = rotated_x
             y_rows.Reading = rotated_y
+
             row = x_rows.append(y_rows)
             row['RAD_tool'] = row['RAD_tool'].map(lambda p: new_rad)
             return row
@@ -3361,11 +3365,12 @@ if __name__ == '__main__':
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-037\DUMP\January 16, 2021\DMP\1338-19-037 XY.PEM"
     # pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
-    pem_files = pem_g.get_pems(folder="TMC Holes", file="131-21-35 XY.PEM")
+    pem_files = pem_g.get_pems(folder="PEM Rotation", file="MARO-21-005 xy.PEM")
+    pem_file = pem_files[0]
     # pem_files[0].get_date()
     # pem_files[0].get_clipboard_info()
-    # pem_file.prep_rotation()
-    # pem_file.rotate()
+    pem_file.prep_rotation()
+    pem_file.rotate()
     # pem_file.average()
     # pem_file.filepath = Path(r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\XYT mk2 Eric.PEM")
     # pem_file.save()
