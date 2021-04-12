@@ -494,13 +494,13 @@ class Derotator(QMainWindow, Ui_Derotator):
             y_filt = raw_pem.data['Component'] == 'Y'
             x_stations = raw_pem.data[x_filt].Station.astype(int)
             y_stations = raw_pem.data[y_filt].Station.astype(int)
-            x_acc_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.acc_roll_angle - self.soa)
-            y_acc_angles = raw_pem.data[y_filt].RAD_tool.map(lambda x: x.acc_roll_angle - self.soa)
+            x_acc_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.acc_roll_angle + self.soa)
+            y_acc_angles = raw_pem.data[y_filt].RAD_tool.map(lambda x: x.acc_roll_angle + self.soa)
 
             x_pp_angle_measured = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.measured_pp_roll_angle)
             y_pp_angle_measured = raw_pem.data[y_filt].RAD_tool.map(lambda x: x.measured_pp_roll_angle)
-            x_deviation = x_acc_angles - x_pp_angle_measured
-            y_deviation = y_acc_angles - y_pp_angle_measured
+            x_deviation = x_pp_angle_measured - x_acc_angles
+            y_deviation = y_pp_angle_measured - y_acc_angles
 
             # Calculate the average deviation for the curve line
             x_df = pd.DataFrame([x_deviation, x_stations]).T

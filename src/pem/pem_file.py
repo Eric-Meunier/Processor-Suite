@@ -3360,7 +3360,7 @@ if __name__ == '__main__':
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-037\DUMP\January 16, 2021\DMP\1338-19-037 XY.PEM"
     # pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
-    pem_files = pem_g.get_pems(client="CDR2 fluxgate", file="Mark.PEM")
+    pem_files = pem_g.get_pems(folder="TMC Holes", file="131-21-35 XY.PEM")
     # pem_files[0].get_date()
     # pem_files[0].get_clipboard_info()
     # pem_file.prep_rotation()
