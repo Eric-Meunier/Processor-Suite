@@ -1395,10 +1395,11 @@ class PEMFile:
                 x_pair = weighted_average(x_rows)
                 y_pair = weighted_average(y_rows)
 
-                for i, (x_data, y_data) in enumerate(zip(x_rows.itertuples(index=False), y_rows.itertuples(index=False))):
+                for x_data in x_rows.itertuples(index=False):
                     x = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_data.Reading, y_pair)]
-                    y = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(y_data.Reading, x_pair)]
                     rotated_x.append(np.array(x))
+                for y_data in y_rows.itertuples(index=False):
+                    y = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(y_data.Reading, x_pair)]
                     rotated_y.append(np.array(y))
 
             x_rows.Reading = rotated_x

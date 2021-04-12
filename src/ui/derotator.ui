@@ -55,22 +55,6 @@
         <enum>QFrame::Sunken</enum>
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="5" column="0" alignment="Qt::AlignHCenter">
-         <widget class="QDialogButtonBox" name="button_box">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="standardButtons">
-           <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-          </property>
-          <property name="centerButtons">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="0">
          <widget class="QGroupBox" name="groupBox_2">
           <property name="sizePolicy">
@@ -151,6 +135,22 @@
           </layout>
          </widget>
         </item>
+        <item row="5" column="0" alignment="Qt::AlignHCenter">
+         <widget class="QDialogButtonBox" name="button_box">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="standardButtons">
+           <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+          </property>
+          <property name="centerButtons">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
         <item row="2" column="0">
          <widget class="QLabel" name="bad_stations_label">
           <property name="sizePolicy">
@@ -159,19 +159,16 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="font">
+           <font>
+            <weight>75</weight>
+            <italic>false</italic>
+            <bold>true</bold>
+           </font>
+          </property>
           <property name="text">
            <string>Readings ineligible for de-rotation
 due to missing X and/or Y pair:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QListWidget" name="list">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
           </property>
          </widget>
         </item>
@@ -187,6 +184,13 @@ due to missing X and/or Y pair:</string>
            </size>
           </property>
          </spacer>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="list">
+          <property name="text">
+           <string>TextLabel</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>

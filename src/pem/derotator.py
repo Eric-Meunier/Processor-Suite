@@ -63,7 +63,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.message = QMessageBox()
 
         self.bad_stations_label.hide()
-        self.list.hide()
+        self.list.setText('')
         self.statusBar().hide()
 
         def update_profile_views(mag_axes, axes):
@@ -333,10 +333,11 @@ class Derotator(QMainWindow, Ui_Derotator):
             Fill the stations list with the ineligible readings
             :param stations: DataFrame of ineligible readings
             """
-            self.list.clear()
+            list = []
             for s in stations.itertuples():
                 result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
-                self.list.addItem(result)
+                list.append(result)
+            self.list.setText("\n".join(list))
 
         def plot_mag():
 
@@ -415,10 +416,8 @@ class Derotator(QMainWindow, Ui_Derotator):
             if not ineligible_stations.empty:
                 fill_table(ineligible_stations)
                 self.bad_stations_label.show()
-                self.list.show()
             else:
                 self.bad_stations_label.hide()
-                self.list.hide()
 
             self.rotate()
             plot_mag()
@@ -690,7 +689,7 @@ def main():
     parser = PEMParser()
     # parser = DMPParser()
     # pem_files = parser.parse(r"C:\_Data\2021\TMC\EM17-107\RAW\XYEM17-107_0330.PEM")
-    pem_files = pg.get_pems(folder="Eastern", file="FLC-2018-18.PEM")
+    pem_files = pg.get_pems(folder="PEM Rotation", file="_BX-081 XY.PEM")
     # pem_files, errors = parser.parse(r'C:\_Data\2021\Eastern\Corazan Mining\FLC-2020-23 (LP-26A)\RAW\XYZ_0329.DMP')
     mw.open(pem_files)
 
