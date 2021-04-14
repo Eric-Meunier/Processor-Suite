@@ -665,12 +665,12 @@ class BoreholeCollar(BaseGPS):
                 continue
             # Remove P tag column
             if col.map(lambda x: str(x).startswith('<')).all():
-                logger.info(f"Removing P-tag column.")
+                # logger.info(f"Removing P-tag column.")
                 cols_to_drop.append(i)
             # Remove units column
             # TODO A collar GPS with east, north, and 0 for elevation will fail because of this.
             elif col.map(lambda x: str(x) == '0').all():
-                logger.info(f"Removing column of 0s.")
+                # logger.info(f"Removing column of 0s.")
                 cols_to_drop.append(i)
 
         gps = gps.drop(cols_to_drop, axis=1)
@@ -869,21 +869,26 @@ class BoreholeGeometry(BaseGPS):
 
         # Interpolate the segments
         if num_segments is not None or stations is not None:
-            azimuths = segments.Azimuth.to_list()
-            dips = segments.Dip.to_list()
-            depths = segments.Depth.to_list()
+            seg_azimuths = segments.Azimuth.to_list()
+            seg_dips = segments.Dip.to_list()
+            seg_depths = segments.Depth.to_list()
 
-            # Create the interpolated lists
+            # Create the interpolated lists. Make sure the first depth is 0 (collar)
             if stations is not None:
-                interp_depths = sorted(np.unique(np.concatenate((depths, stations))))
+                interp_depths = sorted(np.unique(np.concatenate((seg_depths, stations))))
+                if interp_depths[0] != 0:
+                    interp_depths = np.append(interp_depths, 0, 0)
                 num_segments = len(interp_depths)
             else:
-                interp_depths = np.linspace(depths[0], depths[-1], num_segments)
-            interp_az = np.interp(interp_depths, depths, azimuths)
-            interp_dip = np.interp(interp_depths, depths, dips)
-            interp_lens = np.subtract(interp_depths[1:], interp_depths[:-1])
-            interp_lens = np.insert(interp_lens, 0, segments.iloc[0]['Segment_length'])  # Add the first seg length
-            inter_units = np.full(num_segments, segments.Unit.unique()[0])
+                interp_depths = np.linspace(seg_depths[0], seg_depths[-1], num_segments)
+                if interp_depths[0] != 0:
+                    interp_depths = np.append(interp_depths, 0, 0)
+
+            # Num segments is length of points - 1
+            interp_az = np.interp(interp_depths[1:], seg_depths, seg_azimuths)
+            interp_dip = np.interp(interp_depths[1:], seg_depths, seg_dips)
+            interp_lens = np.diff(interp_depths)
+            inter_units = np.full(num_segments - 1, segments.Unit.unique()[0])
 
             # Stack up the arrays and transpose it
             segments = np.vstack(
@@ -891,7 +896,7 @@ class BoreholeGeometry(BaseGPS):
                  interp_dip,
                  interp_lens,
                  inter_units,
-                 interp_depths)
+                 interp_depths[1:])
             ).T
 
         else:
@@ -914,7 +919,8 @@ class BoreholeGeometry(BaseGPS):
             eastings = np.append(eastings, eastings[-1] + dx)
             northings = np.append(northings, northings[-1] + dy)
             depths = np.append(depths, depths[-1] - dz)
-            relative_depth = np.append(relative_depth, relative_depth[-1] + seg_l)
+            # relative_depth = np.append(relative_depth, relative_depth[-1] + seg_l)
+            relative_depth = np.append(relative_depth, segment[4])
 
         projection.Easting = pd.Series(eastings, dtype=float)
         projection.Northing = pd.Series(northings, dtype=float)

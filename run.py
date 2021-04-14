@@ -1,5 +1,6 @@
 import logging
 import sys
+from pathlib import Path
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QErrorMessage
 
@@ -18,13 +19,16 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     global error_box
     error_box = QErrorMessage()
     error_box.setWindowTitle('Error')
-    error_box.showMessage(open('.log').read())
+
+    if getattr(sys, 'frozen', False):
+        application_path = Path(sys.executable).parent
+    else:
+        application_path = Path(__file__).absolute().parents[1]
+    error_box.showMessage(open(application_path.joinpath('.log'), "w+").read())
     # sys.exit(1)
 
 
 sys.excepthook = handle_exception
-# logger.info('test')
-# logger.error('error')
 
 
 def main():

@@ -33,6 +33,9 @@ class PEMGetter:
             Parse and add the PEMFile to the list of pem_files.
             :param filepath: Path object of the PEMFile
             """
+            if not filepath.exists():
+                raise ValueError(f"File {filepath.name} does not exists.")
+
             logger.info(f'Getting File {filepath.name}.')
 
             try:
@@ -82,16 +85,13 @@ class PEMGetter:
 
             elif file is not None:
                 filepath = sample_files_dir.joinpath(file)
-                if filepath.exists():
-                    add_pem(filepath)
-                else:
-                    logger.info(f"File {filepath.name} does not exists.")
+                add_pem(filepath)
 
             else:
                 for file in available_files:
                     filepath = sample_files_dir.joinpath(file)
-                    # pem_files.append((pem_file, None))  # Empty second item for ri_files
                     add_pem(filepath)
+                    # pem_files.append((pem_file, None))  # Empty second item for ri_files
 
         pem_list = '\n'.join([str(f.filepath) for f in pem_files])
         logger.info(f"Collected PEM files: {pem_list}")
