@@ -469,7 +469,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Help menu
         def open_logs():
-            log_file = Path(r'.log')
+            log_file = application_path.joinpath('.log')
             if log_file.exists():
                 os.startfile(str(log_file))
             else:
@@ -4130,6 +4130,9 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         elif e.key() == QtCore.Qt.Key_Enter:
             self.print_pdfs()
 
+    def close(self):
+        self.hide()
+
     def open(self, pem_files, ri_files=None, crs=None):
 
         def fill_share_range():
@@ -4208,21 +4211,8 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
 
             save_dir = os.path.splitext(save_dir)[0]
             self.printer = PEMPrinter(parent=self, **plot_kwargs)
-
-            # try:
-                # PEM Files and RI files zipped together for when they get sorted
             self.printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
-            # except FileNotFoundError:
-            #     logger.critical(f'{save_dir} does not exist.')
-            #     self.message.information(self, 'Error', f'{save_dir} does not exist')
-            # except IOError:
-            #     logger.critical(f"{save_dir} is currently opened.")
-            #     self.message.information(self, 'Error', f'{save_dir} is currently opened')
-            # except Exception as e:
-            #     logger.critical(f"{e}.")
-            #     self.message.critical(self, 'Error', str(e))
-            # finally:
-            self.close()
+            self.hide()
         else:
             logger.error(f"No file name passed.")
             self.message.critical(self, 'Error', 'Invalid file name')
@@ -4278,7 +4268,7 @@ class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
         self.hole_depth_labels_cbox.setChecked(False)
 
     def closeEvent(self, e):
-        e.accept()
+        self.hide()
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:

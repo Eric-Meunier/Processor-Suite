@@ -34,10 +34,6 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 
-# TODO Add tool that shows difference in tool rotation value and PP
-# TODO add mag to profiles, or to PP values tab.
-# TODO Add tab for deviation from cleaned PP
-
 
 class Derotator(QMainWindow, Ui_Derotator):
     """
@@ -689,7 +685,7 @@ def main():
     parser = PEMParser()
     # parser = DMPParser()
     # pem_files = parser.parse(r"C:\_Data\2021\TMC\EM17-107\RAW\XYEM17-107_0330.PEM")
-    pem_files = pg.get_pems(folder="PEM Rotation", file="_BX-081 XY.PEM")
+    pem_files = pg.get_pems(folder="PEM Rotation", file="soa.PEM")
     # pem_files, errors = parser.parse(r'C:\_Data\2021\Eastern\Corazan Mining\FLC-2020-23 (LP-26A)\RAW\XYZ_0329.DMP')
     mw.open(pem_files)
 

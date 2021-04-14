@@ -1420,7 +1420,6 @@ class PEMFile:
             if method.upper() == 'PP':
                 raise ValueError("Cannot perform PP rotation on a PEM file that doesn't have the necessary geometry.")
 
-        logger.info(f"Include PP for {self.filepath.name}: {include_pp}.")
         # Create a filter for X and Y data only
         xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
         filtered_data = self.data[xy_filt]  # Data should have already been filtered by prep_rotation.
@@ -3365,7 +3364,9 @@ if __name__ == '__main__':
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-037\DUMP\January 16, 2021\DMP\1338-19-037 XY.PEM"
     # pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
-    pem_files = pem_g.get_pems(folder="PEM Rotation", file="MARO-21-005 xy.PEM")
+    # pem_files = pem_g.get_pems(folder="PEM Rotation", file="MARO-21-005 xy.PEM")
+    pem_files = pem_g.get_pems(folder="PEM Rotation", file="soa.PEM")
+    # pem_files = pem_g.get_pems(folder="PEM Rotation", file="xy_0406.PEM")
     pem_file = pem_files[0]
     # pem_files[0].get_date()
     # pem_files[0].get_clipboard_info()
