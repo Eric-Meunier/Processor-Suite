@@ -54,6 +54,13 @@ __version__ = '0.11.4'
 # TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO refresh pem list after export
+# TODO Create right click option to create package on final folder (like step)
+# TODO Every time GPS is brought in, it should check that the CRS is the same, if not, change it.
+# TODO Merge tool should read SOA value
+# TODO Add "Save as" processed PE
+# TODO Print PDF after pressing Enter.
+# TODO Add SOA to de-rotation note?
+
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
