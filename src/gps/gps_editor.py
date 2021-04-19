@@ -877,13 +877,13 @@ class BoreholeGeometry(BaseGPS):
             if stations is not None:
                 interp_depths = sorted(np.unique(np.concatenate((seg_depths, stations))))
                 if interp_depths[0] != 0:
-                    interp_depths = np.append(interp_depths, 0, 0)
-                num_segments = len(interp_depths)
+                    interp_depths = np.insert(interp_depths, 0, 0.)
             else:
                 interp_depths = np.linspace(seg_depths[0], seg_depths[-1], num_segments)
                 if interp_depths[0] != 0:
-                    interp_depths = np.append(interp_depths, 0, 0)
+                    interp_depths = np.insert(interp_depths, 0, 0.)
 
+            num_segments = len(interp_depths)
             # Num segments is length of points - 1
             interp_az = np.interp(interp_depths[1:], seg_depths, seg_azimuths)
             interp_dip = np.interp(interp_depths[1:], seg_depths, seg_dips)

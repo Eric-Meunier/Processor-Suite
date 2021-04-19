@@ -150,7 +150,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                                    'bottom': NonScientific(orientation="bottom")})
         self.dev_ax_legend = self.dev_ax.addLegend(pen='k', brush='w')
         self.dev_ax_legend.setParent(self.deviation_view)
-        self.dev_ax.setLabel('top', 'Acc - PP Rotation (Degrees)')
+        self.dev_ax.setLabel('top', 'PP Rotation Angle - Accelerometer Rotation Angle (Degrees)')
         self.dev_ax.setLabel('left', 'Station', units=None)
         v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
         self.dev_ax.addItem(v_line)
@@ -185,10 +185,10 @@ class Derotator(QMainWindow, Ui_Derotator):
             ax.getAxis('top').enableAutoSIPrefix(enable=False)
             ax.getAxis('bottom').enableAutoSIPrefix(enable=False)
 
-        self.x_dev_curve = pg.PlotCurveItem(pen=pg.mkPen('b', width=1), name="X Component")
-        self.y_dev_curve = pg.PlotCurveItem(pen=pg.mkPen('r', width=1), name="Y Component")
-        self.x_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen('b', width=1), brush=pg.mkBrush("w"))
-        self.y_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen('r', width=1), brush=pg.mkBrush("w"))
+        self.x_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((255, 0, 0, 100), width=2), name="X Component")
+        self.y_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Y Component")
+        self.x_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((255, 0, 0, 100), width=2), brush=pg.mkBrush("w"))
+        self.y_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 0, 255, 100), width=2), brush=pg.mkBrush("w"))
         self.dev_ax.addItem(self.x_dev_curve)
         self.dev_ax.addItem(self.y_dev_curve)
         self.dev_ax.addItem(self.x_dev_scatter)
@@ -450,7 +450,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                 x, y = df.index, df
 
                 ax.plot(x=x, y=y,
-                        pen=pg.mkPen('k', width=1.),
+                        pen=pg.mkPen('k', width=1.1),
                         symbol='o',
                         symbolSize=2,
                         symbolBrush='k',
@@ -527,24 +527,28 @@ class Derotator(QMainWindow, Ui_Derotator):
                     # Add the cleaned PP information for non-fluxgate surveys
                     if not pem_file.is_fluxgate():
                         x_pp_angle_cleaned = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
-                        cpp_item = pg.ScatterPlotItem()
+                        cpp_item = pg.PlotDataItem()
                         cpp_item.setData(x_pp_angle_cleaned, stations,
-                                         pen='r',
-                                         brush=None,
+                                         pen=pg.mkPen((255, 0, 0, 200), width=2.),
+                                         symbolPen=pg.mkPen((255, 0, 0, 200), width=2.),
+                                         # symbolPen='r',
+                                         symbolBrush=pg.mkBrush('w'),
                                          symbol='t',
-                                         size=14)
+                                         symbolSize=12)
                         ax.addItem(cpp_item)
                         self.rot_ax_legend.addItem(cpp_item, 'Cleaned PP')
 
                     x_pp_angle_measured = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.measured_pp_roll_angle)
 
                     # Create and plot the scatter plot items
-                    mpp_item = pg.ScatterPlotItem()
+                    mpp_item = pg.PlotDataItem()
                     mpp_item.setData(x_pp_angle_measured, stations,
-                                     pen='b',
-                                     brush=None,
+                                     pen=pg.mkPen((0, 0, 255, 200), width=2.),
+                                     symbolPen=pg.mkPen((0, 0, 255, 200), width=2.),
+                                     # symbolPen='b',
+                                     symbolBrush=pg.mkBrush('w'),
                                      symbol='t1',
-                                     size=14)
+                                     symbolSize=12)
 
                     # Add the scatter plot items to the scatter plot
                     ax.addItem(mpp_item)
@@ -554,18 +558,23 @@ class Derotator(QMainWindow, Ui_Derotator):
                 acc_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.acc_roll_angle - self.soa)
                 mag_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.mag_roll_angle - self.soa)
 
-                acc_item = pg.ScatterPlotItem()
-                mag_item = pg.ScatterPlotItem()
+                acc_item = pg.PlotDataItem()
+                mag_item = pg.PlotDataItem()
                 acc_item.setData(acc_angles, stations,
-                                 pen='g',
-                                 brush=None,
+                                 pen=pg.mkPen((0, 255, 0, 200), width=2.),
+                                 symbolPen=pg.mkPen((0, 255, 0, 200), width=2.),
+                                 # symbolPen='g',
+                                 symbolBrush=pg.mkBrush('w'),
                                  symbol='o',
-                                 size=14)
+                                 symbolSize=12)
+                # TODO Make this purple or whatever
                 mag_item.setData(mag_angles, stations,
-                                 pen='m',
-                                 brush=None,
+                                 pen=pg.mkPen((100, 100, 100, 200), width=2.),
+                                 symbolPen=pg.mkPen((100, 100, 100, 200), width=2.),
+                                 # symbolPen='m',
+                                 symbolBrush=pg.mkBrush('w'),
                                  symbol='s',
-                                 size=14)
+                                 symbolSize=12)
                 ax.addItem(acc_item)
                 ax.addItem(mag_item)
                 self.rot_ax_legend.addItem(acc_item, 'Accelerometer')

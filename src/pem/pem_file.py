@@ -3365,7 +3365,7 @@ if __name__ == '__main__':
     # pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
     # pem_files = pem_g.get_pems(folder="PEM Rotation", file="MARO-21-005 xy.PEM")
-    pem_files = pem_g.get_pems(folder="PEM Rotation", file="soa.PEM")
+    pem_files = pem_g.get_pems(folder="PEM Rotation", file="em21-155xy_0415.PEM")
     # pem_files = pem_g.get_pems(folder="PEM Rotation", file="xy_0406.PEM")
     pem_file = pem_files[0]
     # pem_files[0].get_date()

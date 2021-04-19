@@ -4635,7 +4635,7 @@ def main():
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
-    pem_files = pg.get_pems(folder="PEM Rotation", file="MARO-21-005 xy.PEM")
+    pem_files = pg.get_pems(folder="PEM Rotation", file="soa.PEM")
     # pem_files = pg.get_pems(folder='PEM Rotation', file=r"BX-081 Tool - Acc (Cross).PEM")
     # file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
