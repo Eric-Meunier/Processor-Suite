@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+from scipy.signal import savgol_filter
 
 import matplotlib.pyplot as plt
 import mplcursors
@@ -281,8 +282,15 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             Add the azimuth spline line
             """
             spline_stations = np.linspace(0, depth.iloc[-1], 6)
+            if len(az) > 11:
+                print(f"Applying Savitzky–Golay filter to azimuth")
+                print(F"Length of az: {len(az)}")
+                window_len = int(len(az) / 4)
+                if int(len(az) / 4) % 2 != 1:
+                    window_len += 1
+                print(f"Window length for filter: {window_len}")
+                az = savgol_filter(az, window_len, 3)
             spline_az = np.interp(spline_stations, depth, az + self.mag_dec_sbox.value())
-
             self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
                                                line_color='darkred')
 
@@ -1067,14 +1075,13 @@ if __name__ == '__main__':
 
     pg = PEMGetter()
     parser = PEMParser()
-    # files = pg.get_pems(client='PEM Rotation', file='BR01.PEM')
-    # files = [parser.parse(r'C:\_Data\2020\Iscaycruz\Borehole\SE-20-02A\RAW\xy_11.pem')]
-    files = [parser.parse(r'C:\_Data\2021\TMC\Vanicom\SR21-08\RAW\SR-21-08 XY.PEM')]
+    # files = pg.get_pems(folder='PEM Rotation', file='_PU-340 XY.PEM')
+    files = pg.get_pems(folder='Eastern', number=1, random=True)
     # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
 
     win = PEMGeometry()
     win.open(files)
-    dad = r'C:\_Data\2020\Iscaycruz\Borehole\SE-20-02A\RAW\gyro.csv'
+    # dad = r'C:\_Data\2020\Iscaycruz\Borehole\SE-20-02A\RAW\gyro.csv'
     # win.open_dad_file(dad)
     # win.az_output_combo.setCurrentIndex(1)
     # win.dip_output_combo.setCurrentIndex(1)
