@@ -16,7 +16,8 @@ class PEMGetter:
     def __init__(self):
         self.pem_parser = PEMParser()
 
-    def get_pems(self, folder=None, subfolder=None, number=None, selection=None,  file=None, random=False):
+    def get_pems(self, folder=None, subfolder=None, number=None, selection=None,  file=None, random=False,
+                 incl=None):
         """
         Retrieve a list of PEMFiles
         :param folder: str, folder from which to retrieve files
@@ -25,6 +26,7 @@ class PEMGetter:
         :param subfolder: str, name of the folder within the client folder to look into
         :param file: str, name the specific to open
         :param random: bool, select random files. If no number is passed, randomly selects the number too.
+        :param incl: str, text to include in the file name.
         :return: list of PEMFile objects.
         """
 
@@ -55,9 +57,14 @@ class PEMGetter:
 
         pem_files = []
 
+        # Pool of available files is all PEMFiles in PEMGetter files directory.
+        if incl is not None:
+            available_files = list(sample_files_dir.rglob(f'*{incl}*.PEM'))
+        else:
+            available_files = list(sample_files_dir.rglob(f'*.PEM'))
+        print(f"Available files: {', '.join([str(a) for a in available_files])}")
+
         if random:
-            # Pool of available files is all PEMFiles in PEMGetter files directory.
-            available_files = list(sample_files_dir.rglob('*.PEM'))
             if not number:
                 # Generate a random number of files to choose from
                 number = randrange(5, min(len(available_files), 15))
@@ -70,8 +77,6 @@ class PEMGetter:
                 add_pem(file)
 
         else:
-            available_files = list(sample_files_dir.glob('*.PEM'))
-
             if number:
                 for file in available_files[:number]:
                     filepath = sample_files_dir.joinpath(file)
