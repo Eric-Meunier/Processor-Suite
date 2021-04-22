@@ -62,7 +62,7 @@ class PEMGetter:
             available_files = list(sample_files_dir.rglob(f'*{incl}*.PEM'))
         else:
             available_files = list(sample_files_dir.rglob(f'*.PEM'))
-        print(f"Available files: {', '.join([str(a) for a in available_files])}")
+        # print(f"Available files: {', '.join([str(a) for a in available_files])}")
 
         if random:
             if not number:

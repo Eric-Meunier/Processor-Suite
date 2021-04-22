@@ -887,7 +887,7 @@ class PEMFile:
                 self.get_survey_type(),  # Survey type
                 '',  # Start time on drill
                 '',  # Time leaving drill
-                ', '.join(self.data.ZTS.astype(str).unique()),  # ZTS
+                ', '.join(self.data.ZTS.astype(int).astype(str).unique()),  # ZTS
                 self.timebase,  # Timebase
                 '',  # Channel config.
                 self.ramp,  # Ramp

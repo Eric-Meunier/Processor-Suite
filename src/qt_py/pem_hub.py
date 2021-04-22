@@ -53,7 +53,6 @@ logger = logging.getLogger(__name__)
 __version__ = '0.11.4'
 # TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
-# TODO refresh pem list after export
 # TODO Create right click option to create package on final folder (like step)
 # TODO Every time GPS is brought in, it should check that the CRS is the same, if not, change it.
 # TODO Merge tool should read SOA value
@@ -65,7 +64,6 @@ __version__ = '0.11.4'
 # TODO Create a theory vs measured plot (similar to step)
 # TODO For suffix and repeat warnings, make the background red
 # TODO Add rainbow coloring to final plots?
-# TODO Add savgol filter to Geometry dip.
 # TODO Use mpl in de-rotator
 # TODO Use savgol to filter data
 
@@ -1400,55 +1398,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 i = pems.index(pem_file)
             return i
 
-        def fill_crs(pem_file):
-            """
-            Fill CRS from the file to the main table's CRS drop down menus
-            :param pem_file: PEMFile object
-            """
-            crs = pem_file.get_crs()
-            if crs:
-                logger.info(f"Setting hub CRS to {crs.name}.")
-                name = crs.name
-
-                if name == 'WGS 84':
-                    datum = 'WGS 1984'
-                    system = 'Lat/Lon'
-                    zone = None
-
-                elif 'UTM' in name:
-                    system = 'UTM'
-
-                    sc = name.split(' / ')
-
-                    datum = re.sub(r'\s+', '', sc[0])  # Remove any spaces
-                    if datum == 'WGS84':
-                        datum = 'WGS 1984'
-                    elif datum == 'NAD83':
-                        datum = 'NAD 1983'
-                    elif datum == 'NAD27':
-                        datum = 'NAD 1927'
-                    else:
-                        logger.error(f"{datum} has not been implemented for PEMPro.")
-                        return
-
-                    zone = sc[1].split(' ')[-1]
-                    zone_number = zone[:-1]
-                    north = 'North' if zone[-1] == 'N' else 'South'
-                    zone = f'{zone_number} {north}'
-                else:
-                    logger.info(f"{name} parsing is not currently implemented.")
-                    return
-
-                self.gps_system_cbox.setCurrentText(system)
-                self.gps_datum_cbox.setCurrentText(datum)
-                if zone:
-                    self.gps_zone_cbox.setCurrentText(zone)
-
-                if self.epsg_rbtn.isChecked():
-                    self.gps_system_cbox.setEnabled(False)
-                    self.gps_datum_cbox.setEnabled(False)
-                    self.gps_zone_cbox.setEnabled(False)
-
         def share_header(pem_file):
             """
             Fill the shared header text boxes using the header information in the pem_file
@@ -1472,7 +1421,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.table.blockSignals(True)
         self.allow_signals = False
         self.table.setUpdatesEnabled(False)  # Suspends the animation of the table getting populated
-
+        current_crs = self.get_crs()
         # Start the progress bar
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
@@ -1515,9 +1464,21 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     if self.project_dir_edit.text() == '':
                         self.move_dir_tree_to(pem_file.filepath.parent)
 
-                    # Fill CRS from the file if project CRS currently empty
-                    if self.gps_system_cbox.currentText() == '':
-                        fill_crs(pem_file)
+                    # Update project CRS
+                    pem_crs = pem_file.get_crs()
+                    if pem_crs is not None:
+                        if current_crs is None:
+                            self.set_crs(pem_crs)
+                        else:
+                            if pem_crs != current_crs:
+                                response = self.message.question(self, "Change CRS",
+                                                                 F"CRS from {pem_file.filepath.name} is different then the"
+                                                                 F"current project CRS ({pem_crs.name} vs {current_crs.name}).\n"
+                                                                 F"Change CRS to {pem_crs.name}?", self.message.Yes, self.message.No)
+                                if response == self.message.Yes:
+                                    self.set_crs(pem_crs)
+                                else:
+                                    pass
 
                     i = get_insertion_point(pem_file)
                     self.pem_files.insert(i, pem_file)
@@ -1547,16 +1508,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param gps_files: list or str, filepaths of text file or GPX files
         """
         pem_info_widget = self.stackedWidget.currentWidget()
-        crs = self.get_crs()
+        current_crs = self.get_crs()
 
         if not isinstance(gps_files, list):
             gps_files = [gps_files]
 
         gps_files = [Path(file) for file in gps_files]
-        pem_info_widget.open_gps_files(gps_files)
+        crs = pem_info_widget.open_gps_files(gps_files)
 
         # Set the project CRS if a .inf or .log file is in the directory and the project CRS is currently empty
-        if crs is None:
+        if current_crs is None and crs is None:
             crs_files = list(gps_files[0].parent.glob('*.inf'))
             crs_files.extend(gps_files[0].parent.glob('*.log'))
             if crs_files:
@@ -1564,7 +1525,21 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.status_bar.showMessage(F"Project CRS automatically filled using information from {crs_files[0]}.",
                                             2000)
             else:
-                print(f"No CRS files found.")
+                logger.debug(f"No CRS files found.")
+        else:
+            if crs is not None:
+                if current_crs is not None and current_crs != crs:
+                    response = self.message.question(self, "Change CRS",
+                                                     F"CRS from GPS file(s) is different then the current project "
+                                                     F"CRS ({crs.name} vs {current_crs.name}).\n"
+                                                     F"Change CRS to {crs.name}?", self.message.Yes, self.message.No)
+                    if response == self.message.Yes:
+                        logger.debug(f"Changing CRS to {crs.name}.")
+                        self.set_crs(crs)
+                    else:
+                        pass
+                else:
+                    self.set_crs(crs)
 
     def add_ri_file(self, ri_files):
         """
@@ -1613,21 +1588,6 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         self.selection_label.setText('')
         self.setUpdatesEnabled(True)
-
-    def read_inf_file(self, inf_file):
-        """
-        Parses a .INF file to extract the CRS information in ti and set the CRS drop-down values.
-        :param inf_file: str, .INF filepath
-        """
-        crs = self.parse_crs(inf_file)
-        coord_sys = crs.get('System')
-        coord_zone = crs.get('Zone')
-        datum = crs.get('Datum')
-        self.gps_system_cbox.setCurrentText(coord_sys)
-        self.gps_datum_cbox.setCurrentText(datum)
-        self.gps_zone_cbox.setCurrentText(coord_zone)
-
-        self.status_bar.showMessage(f"CRS information filled.", 2000)
 
     def open_in_text_editor(self):
         """
@@ -2068,7 +2028,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.epsg_edit.editingFinished.emit()
                 self.epsg_rbtn.click()
 
-                self.status_bar.showMessage(f"Process complete. GPS converted to {crs.to_string()}.", 2000)
+                self.status_bar.showMessage(f"Process complete. GPS converted to {crs.name}.", 2000)
 
             bar.deleteLater()
 
@@ -2538,12 +2498,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         with open(filepath, 'rt') as f:
             file = f.read()
-        crs = dict()
-        crs['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
-        crs['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
-        crs['Datum'] = re.search(r'Datum:\W+(?P<Datum>.*)', file).group(1).split(' (')[0]
-        logger.info(f"Parsing INF file: System: {crs['System']}. Zone: {crs['Zone']}. Datum: {crs['Datum']}")
-        return crs
+        crs_dict = dict()
+        crs_dict['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
+        crs_dict['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
+        crs_dict['Datum'] = re.search(r'Datum:\W+(?P<Datum>.*)', file).group(1).split(' (')[0]
+        logger.info(f"Parsing INF file {Path(filepath).name}:\n"
+                    f"System: {crs_dict['System']}. Zone: {crs_dict['Zone']}. Datum: {crs_dict['Datum']}")
+        return crs_dict
 
     def move_dir_tree_to(self, dir_path):
         """
@@ -3550,6 +3511,68 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 return crs
         else:
             return None
+
+
+    def read_inf_file(self, inf_file):
+        """
+        Parses a .INF file to extract the CRS information in ti and set the CRS drop-down values.
+        :param inf_file: str, .INF filepath
+        """
+        crs_dict = self.parse_crs(inf_file)
+        coord_sys = crs_dict.get('System')
+        coord_zone = crs_dict.get('Zone')
+        datum = crs_dict.get('Datum')
+        self.gps_system_cbox.setCurrentText(coord_sys)
+        self.gps_datum_cbox.setCurrentText(datum)
+        self.gps_zone_cbox.setCurrentText(coord_zone)
+
+    def set_crs(self, crs):
+        """
+        Set the project's CRS
+        :param crs: pyproj CRS object
+        """
+        if crs:
+            name = crs.name
+            logger.debug(F"Setting project CRS to {name}.")
+
+            if name == 'WGS 84':
+                datum = 'WGS 1984'
+                system = 'Lat/Lon'
+                zone = None
+
+            elif 'UTM' in name:
+                system = 'UTM'
+                sc = name.split(' / ')
+                datum = re.sub(r'\s+', '', sc[0])  # Remove any spaces
+                if datum == 'WGS84':
+                    datum = 'WGS 1984'
+                elif datum == 'NAD83':
+                    datum = 'NAD 1983'
+                elif datum == 'NAD27':
+                    datum = 'NAD 1927'
+                else:
+                    logger.error(f"{datum} has not been implemented for PEMPro.")
+                    return
+
+                zone = sc[1].split(' ')[-1]
+                zone_number = zone[:-1]
+                north = 'North' if zone[-1] == 'N' else 'South'
+                zone = f'{zone_number} {north}'
+            else:
+                logger.info(f"{name} parsing is not currently implemented.")
+                return
+
+            self.gps_system_cbox.setCurrentText(system)
+            self.gps_datum_cbox.setCurrentText(datum)
+            if zone:
+                self.gps_zone_cbox.setCurrentText(zone)
+
+            if self.epsg_rbtn.isChecked():
+                self.gps_system_cbox.setEnabled(False)
+                self.gps_datum_cbox.setEnabled(False)
+                self.gps_zone_cbox.setEnabled(False)
+
+        self.status_bar.showMessage(f"CRS information changed to {crs.name}.", 2000)
 
     def average_pem_data(self, selected=False):
         """
@@ -4642,8 +4665,9 @@ def main():
     # pem_files = pg.get_pems(client='Kazzinc', number=4)
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
     # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
-    # pem_files = pg.get_pems(client='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
-    pem_files = pg.get_pems(folder="PEM Rotation", file="soa.PEM")
+    # pem_files = pg.get_pems(folder='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
+    pem_files = pg.get_pems(folder='GPX Files', subfolder=r'EM21-155\RAW', file=r"em21-155xy_0415.PEM")
+    # pem_files = pg.get_pems(folder="PEM Rotation", file="soa.PEM")
     # pem_files = pg.get_pems(folder='PEM Rotation', file=r"BX-081 Tool - Acc (Cross).PEM")
     # file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
@@ -4651,7 +4675,9 @@ def main():
     # mw.open_dmp_files(file)
     mw.add_pem_files(pem_files)
     mw.table.selectRow(0)
-    mw.open_derotator()
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"GPX files\EM21-155\GPS\EM21-155 +Loop D4_0415.gpx")])
+    # mw.open_derotator()
     # mw.open_pem_plot_editor()
 
     # mw.extract_component("X")

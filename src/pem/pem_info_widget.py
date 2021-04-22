@@ -8,9 +8,11 @@ import math
 import numpy as np
 import pandas as pd
 from pathlib import Path
+
+import pyqtgraph
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate,
-                             QFileDialog, QErrorMessage, QHeaderView)
+from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QAbstractItemView,
+                             QDialogButtonBox, QFileDialog, QErrorMessage, QHeaderView, QVBoxLayout, QApplication)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXEditor
@@ -363,7 +365,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             for file in files:
                 if file.suffix.lower() == '.gpx':
                     # Convert the GPX file to string
-                    gps, zone, hemisphere = gpx_editor.get_utm(file, as_string=True)
+                    global crs
+                    gps, zone, hemisphere, crs = gpx_editor.get_utm(file, as_string=True)
                     contents = [c.strip().split() for c in gps]
                 else:
                     if file.suffix.lower() == '.csv':
@@ -383,6 +386,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             files = [files]
 
         files = [Path(f) for f in files]
+        global crs
+        crs = None
 
         file_contents = merge_files(files)
         current_tab = self.tabs.currentWidget()
@@ -393,27 +398,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         # Add borehole collar GPS
         elif current_tab == self.geometry_tab:
-            try:
-                collar = BoreholeCollar(file_contents)
-                errors = collar.get_errors()
-                if not errors.empty:
-                    self.message.warning(self, 'Parsing Error',
-                                         f"The following rows could not be parsed:\n\n{errors.to_string()}.")
-                if not collar.df.empty:
-                    self.fill_gps_table(collar.df, self.collar_table)
-                    self.gps_object_changed(self.collar_table, refresh=True)
-                else:
-                    self.message.information(self, 'No GPS Found', f"{collar.error_msg}")
-            except Exception as e:
-                logger.critical(f"{e}.")
-                self.error.showMessage(f"Error adding borehole collar: {str(e)}.")
+            self.add_collar(file_contents)
 
         # Add loop GPS
         elif current_tab == self.loop_gps_tab:
             self.add_loop(file_contents)
-
         else:
             pass
+
+        return crs
 
     def open_pem_geometry(self):
         """
@@ -483,6 +476,35 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         except Exception as e:
             logger.critical(f"{e}.")
             self.error.showMessage(f"Error adding loop: {str(e)}")
+
+    def add_collar(self, collar_content=None):
+        """
+        Open the CollarPicker (if needed) and add the collarGPS.
+        :param collar_content: list of GPS points. If more than 1, uses the CollarPicker widget.
+        """
+
+        def accept_collar(data):
+            try:
+                collar = BoreholeCollar(data)
+                errors = collar.get_errors()
+                if not errors.empty:
+                    self.message.warning(self, 'Parsing Error',
+                                         f"The following rows could not be parsed:\n\n{errors.to_string()}.")
+                if collar.df.empty:
+                    self.message.warning(self, 'No GPS Found', f"{collar.error_msg}")
+
+                self.fill_gps_table(collar.df, self.collar_table)
+                self.gps_object_changed(self.collar_table, refresh=True)
+            except Exception as e:
+                logger.critical(f"{e}.")
+                self.error.showMessage(f"Error adding borehole collar: {str(e)}.")
+
+        if len(collar_content) > 1:
+            global picker
+            picker = CollarPicker(collar_content)
+            picker.accept_sig.connect(accept_collar)
+        else:
+            accept_collar(collar_content)
 
     def fill_info_tab(self):
         """
@@ -1026,7 +1048,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param refresh: bool, if the signal for the parent to refresh the PEMFile should be emitted. Should be false
         the GPS object isn't losing or gaining any rows.
         """
-        print(f"Table changed.")
         if table == self.loop_table:
             self.pem_file.loop = self.get_loop()
 
@@ -1062,3 +1083,66 @@ class FloatDelegate(QItemDelegate):
             QItemDelegate.paint(self, painter, option, index)
         # else:
         #     QItemDelegate.paint(self, painter, option, index)
+
+
+class CollarPicker(QWidget):
+    accept_sig = QtCore.pyqtSignal(object)
+
+    def __init__(self, gps_points):
+        """
+        Widgets that shows all the GPS points and allow the selection of a single point to be brought in.
+        :param gps_points: list
+        """
+        super().__init__()
+        self.setWindowTitle("Collar Picker")
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+
+        # Format table
+        self.table = pyqtgraph.TableWidget()
+        columns = ["Easting", "Northing", "Elevation", "Units", "Name"]
+        self.table.setColumnCount(len(columns))
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+
+        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttonBox.setCenterButtons(True)
+
+        self.layout.addWidget(self.table)
+        self.layout.addWidget(self.buttonBox)
+
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.close)
+
+        # pd.options.display.float_format = '${:,.2f}'.format
+        df = pd.DataFrame(gps_points, columns=columns)
+        if df.empty:
+            print(f"Not collar GPS points passed.")
+            self.close()
+
+        df.loc[:, "Easting":"Elevation"] = df.loc[:, "Easting":"Elevation"].astype(float).applymap(lambda x: f"{x:.2f}")
+        self.table.setData(df.values)
+        self.table.setHorizontalHeaderLabels(columns)
+        self.table.selectRow(0)
+        self.show()
+
+    def accept(self):
+        selected_row = self.table.currentRow()
+        gps = [[self.table.item(selected_row, col).text() for col in range(self.table.columnCount())]]
+        print(f"Collar GPS: {gps}")
+        self.accept_sig.emit(gps)
+        self.close()
+
+    def closeEvent(self, e):
+        self.deleteLater()
+        e.accept()
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    cp = CollarPicker(None)
+    cp.show()
+
+    app.exec_()

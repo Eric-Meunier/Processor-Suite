@@ -297,8 +297,8 @@ class TransmitterLoop(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
-            logger.warning(f"Empty file passed.")
-            return empty_gps, pd.DataFrame(), 'Empty file passed.'
+            logger.warning(f"No GPS passed.")
+            return empty_gps, pd.DataFrame(), 'No GPS passed.'
         else:
             logger.error(f"Invalid input: {file}.")
             raise TypeError(f'{file} is not a valid input for loop GPS parsing.')
@@ -481,8 +481,8 @@ class SurveyLine(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
-            logger.warning("Empty file passed.")
-            return empty_gps, pd.DataFrame(), 'Empty file passed.'
+            logger.warning("No GPS passed.")
+            return empty_gps, pd.DataFrame(), 'No GPS passed.'
         else:
             logger.error(f"Invalid input: {file}.")
             raise TypeError(f'{file} is not a valid input for station GPS parsing.')
@@ -626,8 +626,8 @@ class BoreholeCollar(BaseGPS):
             if file:
                 gps = pd.DataFrame(file)
             else:
-                logger.warning(f"Empty file passed.")
-                return empty_gps, pd.DataFrame(), 'Empty file passed.'
+                logger.warning(f"No GPS passed.")
+                return empty_gps, pd.DataFrame(), 'No GPS passed.'
 
         elif isinstance(file, pd.DataFrame):
             gps = file
@@ -639,7 +639,7 @@ class BoreholeCollar(BaseGPS):
 
         elif file is None:
             logger.warning(f"No GPS passed.")
-            return empty_gps, pd.DataFrame(), 'Empty file passed.'
+            return empty_gps, pd.DataFrame(), 'No GPS passed.'
 
         else:
             logger.error(f"Invalid input: {file}.")
@@ -763,8 +763,8 @@ class BoreholeSegments(BaseGPS):
             split_file = [r.strip().split() for r in file]
             gps = pd.DataFrame(split_file)
         elif file is None:
-            logger.warning(f"Empty file passed.")
-            return empty_gps, pd.DataFrame(), 'Empty file passed.'
+            logger.warning(f"No GPS passed.")
+            return empty_gps, pd.DataFrame(), 'No GPS passed.'
         else:
             logger.warning(f"Invalid input: {file}.")
             raise TypeError(f'{file} is not a valid input for segments parsing')
@@ -1001,17 +1001,39 @@ class GPXEditor:
             zone = u[2]
             letter = u[3]
             hemisphere = 'north' if lat >= 0 else 'south'  # Used in PEMEditor
-
+            crs = self.get_crs(zone, hemisphere)
             if as_string is True:
                 utm_gps.append(' '.join([str(u[0]), str(u[1]), str(elevation), units, name]))
             else:
                 utm_gps.append([u[0], u[1], elevation, units, name])
 
-        return utm_gps, zone, hemisphere
+        return utm_gps, zone, hemisphere, crs
 
     def get_lat_long(self, gpx_filepath):
         gps = self.parse_gpx(gpx_filepath)
         return gps
+
+    def get_crs(self, zone_number, hemis):
+        if hemis == "north":
+            north = True
+        else:
+            north = False
+
+        # Assumes datum is WGS1984
+        if north:
+            epsg_code = f'326{zone_number:02d}'
+        else:
+            epsg_code = f'327{zone_number:02d}'
+        logger.debug(f"EPSG for zone {zone_number}, hemisphese {hemis}: {epsg_code}.")
+
+        try:
+            crs = CRS.from_epsg(epsg_code)
+        except Exception as e:
+            logger.error(f"{e}.")
+            return None
+        else:
+            logger.debug(f"Project CRS: {crs.name}")
+            return crs
 
     def save_gpx(self, coordinates):
         pass
@@ -1235,11 +1257,9 @@ if __name__ == '__main__':
     # gps_parser = GPSParser()
     gpx_editor = GPXEditor()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\src\gps\sample_files\45-1.csv'
-    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\AF19003 loop and collar.txt'
-    gpx_file = r"C:\_Data\2021\TMC\EM10-10\GPS\EM10-10 + Loop F_0403.gpx"
+    gpx_file = samples_folder.joinpath(r'GPX files\L100E.gpx')
 
-    result = gpx_editor.parse_gpx(gpx_file)
+    result = gpx_editor.get_utm(gpx_file)
 
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Line GPS\LINE 0S.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt'
