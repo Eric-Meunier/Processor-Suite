@@ -551,6 +551,9 @@ class PEMFile:
 
         return pd.DataFrame({'Station': stations, 'Mag': mag})
 
+    def get_soa(self):
+        return self.probes.get("SOA")
+
     def get_channel_bounds(self):
         """
         Create tuples of start and end channels to be plotted per axes for LIN plots

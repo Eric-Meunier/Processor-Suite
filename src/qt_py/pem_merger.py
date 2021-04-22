@@ -401,8 +401,10 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
 
             self.coil_area_sbox_1.blockSignals(True)
             self.coil_area_sbox_2.blockSignals(True)
+            self.soa_sbox_1.blockSignals(True)
             self.current_sbox_1.blockSignals(True)
             self.current_sbox_2.blockSignals(True)
+            self.soa_sbox_2.blockSignals(True)
 
             self.file_label_1.setText(self.pf1.filepath.name)
             self.client_label_1.setText(self.pf1.client)
@@ -420,6 +422,7 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
 
             self.coil_area_sbox_1.setValue(float(self.pf1.coil_area))
             self.current_sbox_1.setValue(float(self.pf1.current))
+            self.soa_sbox_1.setValue(float(self.pf1.get_soa()))
 
             self.file_label_2.setText(self.pf2.filepath.name)
             self.client_label_2.setText(self.pf2.client)
@@ -437,11 +440,14 @@ class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
 
             self.coil_area_sbox_2.setValue(float(self.pf2.coil_area))
             self.current_sbox_2.setValue(float(self.pf2.current))
+            self.soa_sbox_2.setValue(float(self.pf2.get_soa()))
 
             self.coil_area_sbox_1.blockSignals(False)
             self.coil_area_sbox_2.blockSignals(False)
+            self.soa_sbox_1.blockSignals(False)
             self.current_sbox_1.blockSignals(False)
             self.current_sbox_2.blockSignals(False)
+            self.soa_sbox_2.blockSignals(False)
 
             check_label_differences()
 
@@ -664,8 +670,8 @@ if __name__ == '__main__':
 
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(client='Minera', number=2)
-    pf1 = pem_getter.get_pems(client='CDR2 fluxgate', file='Eric.PEM')[0]
-    pf2 = pem_getter.get_pems(client='CDR2 fluxgate', file='Mark.PEM')[0]
+    pf1 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10xy_0403.PEM')[0]
+    pf2 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10-2xy_0403.PEM')[0]
     # pf1 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 XYT.PEM')[0]
     # pf2 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 ZAv.PEM')[0]
     # pf1 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_02.PEM')[0]

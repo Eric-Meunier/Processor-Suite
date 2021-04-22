@@ -54,13 +54,10 @@ __version__ = '0.11.4'
 # TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create right click option to create package on final folder (like step)
-# TODO Every time GPS is brought in, it should check that the CRS is the same, if not, change it.
 # TODO Merge tool should read SOA value
 # TODO Add "Save as" processed PEM
 # TODO Print PDF after pressing Enter.
 # TODO Add SOA to de-rotation note?
-# TODO opening GPX doesn't add CRS
-# TODO Adding collar GPS from GPX should show all points and let you pick.
 # TODO Create a theory vs measured plot (similar to step)
 # TODO For suffix and repeat warnings, make the background red
 # TODO Add rainbow coloring to final plots?
