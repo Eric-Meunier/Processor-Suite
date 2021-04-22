@@ -54,7 +54,6 @@ __version__ = '0.11.4'
 # TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create right click option to create package on final folder (like step)
-# TODO Merge tool should read SOA value
 # TODO Add "Save as" processed PEM
 # TODO Print PDF after pressing Enter.
 # TODO Add SOA to de-rotation note?
@@ -2608,16 +2607,41 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     logger.error(f"Cannot open {Path(save_path).name} because there is no"
                                  f" application associated with it.")
 
-        pem_file = self.pem_files[self.table.currentRow()]
+        pem_files, rows = self.get_pem_files(selected=True)
+        pem_file = pem_files[0]
         default_path = str(pem_file.filepath)
         save_path, save_type = self.file_dialog.getSaveFileName(self, '', default_path, 'PEM File (*.PEM);; '
                                                                                         'Legacy PEM File (*.PEM);;'
+                                                                                        'Processed PEM File (*.PEM);;'
                                                                                         'XYZ File (*.XYZ)')
 
         if save_path:
             if 'XYZ' in save_type:
                 save_xyz()
             else:
+                if save_type == "Processed PEM File (*.PEM)":
+                    # Make sure there's a valid CRS when doing a final export
+                    crs = self.get_crs()
+                    if not crs:
+                        response = self.message.question(self, 'Invalid CRS',
+                                                         'The CRS information is invalid. '
+                                                         'Do you wish to proceed with no CRS information?',
+                                                         self.message.Yes | self.message.No)
+                        if response == self.message.No:
+                            self.status_bar.showMessage(f"Cancelled.", 2000)
+                            return
+
+                    # Check if there are any suffix or repeat warnings.
+                    for warning in ['Suffix\nWarnings', 'Repeat\nWarnings']:
+                        if any([self.table.item(row, self.table_columns.index(warning)).text() != '0' for row in rows]):
+                            warning_str = re.sub(r'\n', ' ', warning)
+                            response = self.message.question(self, warning_str.title(),
+                                                             f"One or more files have {warning_str.lower()}.\n"
+                                                             "Continue with export?",
+                                                             self.message.Yes | self.message.No)
+                            if response == self.message.No:
+                                self.status_bar.showMessage(f"Cancelled.", 2000)
+                                return
                 save_pem()
 
     def copy_pems_to_clipboard(self):
@@ -2851,6 +2875,19 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                                                  self.message.Yes | self.message.No)
                 if response == self.message.No:
                     self.status_bar.showMessage(f"Cancelled.", 2000)
+                    return
+
+            # Check if there are any suffix or repeat warnings.
+            for warning in ['Suffix\nWarnings', 'Repeat\nWarnings']:
+                if any([self.table.item(row, self.table_columns.index(warning)).text() != '0' for row in rows]):
+                    warning_str = re.sub(r'\n', ' ', warning)
+                    response = self.message.question(self, warning_str.title(),
+                                                     f"One or more files have {warning_str.lower()}.\n"
+                                                     "Continue with export?",
+                                                     self.message.Yes | self.message.No)
+                    if response == self.message.No:
+                        self.status_bar.showMessage(f"Cancelled.", 2000)
+                        return
 
         file_dir = self.file_dialog.getExistingDirectory(self, '', str(self.project_dir))
         if not file_dir:
@@ -4643,52 +4680,15 @@ def main():
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    # ff = PathFilter()
-    # ff.show()
+    pem_files = pg.get_pems(folder='Raw Boreholes', file=r"XYZ_0418.PEM")
 
-    # mw.show()
-
-    # gpx_file = samples_folder.joinpath(r'GPX files\L500E.gpx')
-    # pem_file = samples_folder.joinpath(r'GPX files\500E.PEM')
-    #
-    # mw.open_pem_files(pem_file)
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    # mw.open_gps_files(gpx_file)
-
-    # pem_files = [r'C:\_Data\2020\Wolfden\G-040\DUMP\November 07, 2020\DMP\xy-040.DMP2']
-    # pem_files = [pem_parser.parse(r'C:\_Data\2020\Juno\Borehole\TME-08-02\RAW\tme-08-02 flux_13.PEM')]
-    # pem_files = pg.get_pems(file=r'g6-09-01 flux_08.PEM')
-    # pem_files = pg.get_pems(client='TMC', file='1000e.PEM')
-    # pem_files = pg.get_pems(client='Kazzinc', number=4)
-    # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
-    # pem_files = samples_folder.joinpath(r'TMC holes\1338-19-036\RAW\XY_16.PEM')
-    # pem_files = pg.get_pems(folder='TMC', subfolder=r'Loop G\Final\Loop G', number=3)
-    pem_files = pg.get_pems(folder='GPX Files', subfolder=r'EM21-155\RAW', file=r"em21-155xy_0415.PEM")
-    # pem_files = pg.get_pems(folder="PEM Rotation", file="soa.PEM")
-    # pem_files = pg.get_pems(folder='PEM Rotation', file=r"BX-081 Tool - Acc (Cross).PEM")
-    # file = samples_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
-    # pem_files = [r'C:\_Data\2020\Juno\Borehole\DDH5-01-38\Final\ddh5-01-38.PEM']
-
-    # mw.open_dmp_files(file)
     mw.add_pem_files(pem_files)
     mw.table.selectRow(0)
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"GPX files\EM21-155\GPS\EM21-155 +Loop D4_0415.gpx")])
-    # mw.open_derotator()
-    # mw.open_pem_plot_editor()
+    mw.save_pem_file_as()
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"GPX files\EM21-155\GPS\EM21-155 +Loop D4_0415.gpx")])
 
-    # mw.extract_component("X")
-    # mw.open_contour_map()
-    # mw.open_mag_dec(mw.pem_files[0])
     mw.show()
-    # mw.project_dir_edit.setText(r'C:\_Data\2019\Trevali Peru\Surface\Loop 3')
-    # mw.move_dir_tree_to(r'C:\_Data\2020\Juno\Borehole')
-    # mw.pem_list_filter.exclude_files_edit.setText('XYT.pem, xyg.pem')
-    #
-    # mw.pem_list_filter.include_folders_edit.setText('final')
-    #
-    # mw.pem_list_filter.exclude_folders_edit.setText('backup')
-    # mw.pem_list_filter.accept_sig.emit()
 
     app.exec_()
 

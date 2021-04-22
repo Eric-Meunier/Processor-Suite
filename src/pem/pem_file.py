@@ -538,7 +538,7 @@ class PEMFile:
 
     def get_mag(self):
         """
-        Return the magnetic field strenght of a borehole file.
+        Return the magnetic field strength profile of a borehole file.
         :return: Dataframe
         """
         assert self.is_borehole(), f"Can only get DAD from borehole surveys."
