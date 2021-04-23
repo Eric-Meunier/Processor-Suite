@@ -61,6 +61,7 @@ __version__ = '0.11.4'
 # TODO Add rainbow coloring to final plots?
 # TODO Use mpl in de-rotator
 # TODO Use savgol to filter data
+# TODO Use map (like loop gps thing) for selecting collar.
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -4685,7 +4686,7 @@ def main():
     # mw.table.selectRow(0)
     # mw.save_pem_file_as()
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"GPX files\EM21-155\GPS\EM21-155 +Loop D4_0415.gpx")])
+    # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"GPX files\EM21-155\GPS\EM21-155 + Loop D4_0415.gpx")])
 
     mw.show()
 

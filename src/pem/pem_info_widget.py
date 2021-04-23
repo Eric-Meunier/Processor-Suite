@@ -16,9 +16,9 @@ from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QI
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXEditor
+from src.gps.gps_adder import LoopAdder, LineAdder, CollarPicker
 from src.pem.pem_file import StationConverter
 from src.geometry.pem_geometry import PEMGeometry
-from src.gps.gps_adder import LoopAdder, LineAdder
 from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
@@ -501,7 +501,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if len(collar_content) > 1:
             global picker
-            picker = CollarPicker(collar_content)
+            picker = CollarPicker()
+            picker.open(collar_content, name="GPX File")
             picker.accept_sig.connect(accept_collar)
         else:
             accept_collar(collar_content)
@@ -1135,64 +1136,9 @@ class FloatDelegate(QItemDelegate):
         #     QItemDelegate.paint(self, painter, option, index)
 
 
-class CollarPicker(QWidget):
-    accept_sig = QtCore.pyqtSignal(object)
-
-    def __init__(self, gps_points):
-        """
-        Widgets that shows all the GPS points and allow the selection of a single point to be brought in.
-        :param gps_points: list
-        """
-        super().__init__()
-        self.setWindowTitle("Collar Picker")
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
-
-        # Format table
-        self.table = pyqtgraph.TableWidget()
-        columns = ["Easting", "Northing", "Elevation", "Units", "Name"]
-        self.table.setColumnCount(len(columns))
-        header = self.table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
-
-        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.buttonBox.setCenterButtons(True)
-
-        self.layout.addWidget(self.table)
-        self.layout.addWidget(self.buttonBox)
-
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.close)
-
-        # pd.options.display.float_format = '${:,.2f}'.format
-        df = pd.DataFrame(gps_points, columns=columns)
-        if df.empty:
-            print(f"Not collar GPS points passed.")
-            self.close()
-
-        df.loc[:, "Easting":"Elevation"] = df.loc[:, "Easting":"Elevation"].astype(float).applymap(lambda x: f"{x:.2f}")
-        self.table.setData(df.values)
-        self.table.setHorizontalHeaderLabels(columns)
-        self.table.selectRow(0)
-        self.show()
-
-    def accept(self):
-        selected_row = self.table.currentRow()
-        gps = [[self.table.item(selected_row, col).text() for col in range(self.table.columnCount())]]
-        print(f"Collar GPS: {gps}")
-        self.accept_sig.emit(gps)
-        self.close()
-
-    def closeEvent(self, e):
-        self.deleteLater()
-        e.accept()
-
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    cp = CollarPicker(None)
-    cp.show()
+    # cp = CollarPicker(None)
+    # cp.show()
 
     app.exec_()
