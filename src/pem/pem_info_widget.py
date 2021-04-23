@@ -515,51 +515,101 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         bold_font = QtGui.QFont()
         bold_font.setBold(True)
         f = self.pem_file
-        info = OrderedDict({
-            'Operator': f.operator,
-            'Format': f.format,
-            'Units': f.units,
-            'Tools': ', '.join(f.probes.values()),
-            'Timebase': f.timebase,
-            'Ramp': f.ramp,
-            'Number of Channels': f.number_of_channels,
-            'Number of Readings': f.number_of_readings,
-            'Primary Field Value': f.primary_field_value,
-            'Loop Dimensions': ' x '.join(f.loop_dimensions.split()[:-1]),
-            'Loop Polarity': f.loop_polarity,
-            'Normalized': f.normalized,
-            'Rx Number': f.rx_number,
-            'Rx File Name': f.rx_file_name,
-            'Rx Software Ver.': f.rx_software_version,
-            'Rx Software Ver. Date': f.rx_software_version_date,
-            'Survey Type': f.survey_type,
-            'Sync': f.sync,
-            'Convention': f.convention
-        })
-        for i, (key, value) in enumerate(info.items()):
-            row = self.info_table.rowCount()
-            self.info_table.insertRow(row)
+        # info = OrderedDict({
+        #     'Operator': f.operator,
+        #     'Format': f.format,
+        #     'Units': f.units,
+        #     'Tools': ', '.join(f.probes.values()),
+        #     'Timebase': f.timebase,
+        #     'Ramp': f.ramp,
+        #     'Number of Channels': f.number_of_channels,
+        #     'Number of Readings': f.number_of_readings,
+        #     'Primary Field Value': f.primary_field_value,
+        #     'Loop Dimensions': ' x '.join(f.loop_dimensions.split()[:-1]),
+        #     'Loop Polarity': f.loop_polarity,
+        #     'Normalized': f.normalized,
+        #     'Rx Number': f.rx_number,
+        #     'Rx File Name': f.rx_file_name,
+        #     'Rx Software Ver.': f.rx_software_version,
+        #     'Rx Software Ver. Date': f.rx_software_version_date,
+        #     'Survey Type': f.survey_type,
+        #     'Sync': f.sync,
+        #     'Convention': f.convention
+        # })
 
+        info = OrderedDict({
+            "Format": f.format,
+            "Units": f.units,
+            "Operator": f.operator,
+            "Probes": [f"{key}: {value}" for key, value in zip(f.probes.keys(), f.probes.values())],
+            "Current": f.current,
+            "Loop_dimensions": f.loop_dimensions,
+            "Client": f.client,
+            "Grid": f.grid,
+            "Line_name": f.line_name,
+            "Loop_name": f.loop_name,
+            "Date": f.date,
+            "Survey_type": f.survey_type,
+            "Convention": f.convention,
+            "Sync": f.sync,
+            "Timebase": f.timebase,
+            "Ramp": f.ramp,
+            "Number_of_channels": f"{f.number_of_channels} ({len(f.channel_times)})",
+            "Number_of_readings": f"{f.number_of_readings} ({len(f.data)})",
+            "Rx_number": f.rx_number,
+            "Rx_software_version": f.rx_software_version,
+            "Rx_software_version_date": f.rx_software_version_date,
+            "Rx_file_name": f.rx_file_name,
+            "Normalized": f.normalized,
+            "Primary_field_value": f.primary_field_value,
+            "Coil_area": f.coil_area,
+            "Loop_polarity": f.loop_polarity,
+            "Notes": '\n'.join(f.notes),
+            "Filepath": str(f.filepath),
+            "CRS": f.crs,
+            "Prepped_for_rotation": f.prepped_for_rotation,
+            "Legacy": f.legacy,
+        })
+
+        for key, value in info.items():
             key_item = QTableWidgetItem(key)
             key_item.setFont(bold_font)
-            value_item = QTableWidgetItem(str(value))
 
-            self.info_table.setItem(row, 0, key_item)
-            self.info_table.setItem(row, 1, value_item)
+            if key == "Probes" or key == "Notes":
+                span_row = self.info_table.rowCount()
+                for v in value:
+                    row = self.info_table.rowCount()
+                    self.info_table.insertRow(row)
 
-        span_start = self.info_table.rowCount()
-        for note in f.notes:
-            row = self.info_table.rowCount()
-            self.info_table.insertRow(row)
+                    value_item = QTableWidgetItem(str(v))
+                    self.info_table.setItem(row, 1, value_item)
 
-            note_item = QTableWidgetItem(note)
-            self.info_table.setItem(row, 1, note_item)
+                self.info_table.setSpan(span_row, 0, len(value), 1)
+                self.info_table.setItem(span_row, 0, key_item)
 
-        notes_key_item = QTableWidgetItem('Notes')
-        notes_key_item.setFont(bold_font)
-        # Set the Notes cell to span multiple notes
-        self.info_table.setSpan(span_start, 0, len(f.notes), 1)
-        self.info_table.setItem(span_start, 0, notes_key_item)
+            else:
+                row = self.info_table.rowCount()
+                self.info_table.insertRow(row)
+
+                value_item = QTableWidgetItem(str(value))
+
+                self.info_table.setItem(row, 0, key_item)
+                self.info_table.setItem(row, 1, value_item)
+
+        # # Increase the size of the notes cell
+        # span_start = self.info_table.rowCount()
+        # for note in f.notes:
+        #     row = self.info_table.rowCount()
+        #     self.info_table.insertRow(row)
+        #
+        #     note_item = QTableWidgetItem(note)
+        #     self.info_table.setItem(row, 1, note_item)
+        #
+        # notes_key_item = QTableWidgetItem('Notes')
+        # notes_key_item.setFont(bold_font)
+        # # Set the Notes cell to span multiple notes
+        # self.info_table.setSpan(span_start, 0, len(f.notes), 1)
+        # self.info_table.setItem(span_start, 0, notes_key_item)
 
         # Set the column widths
         header = self.info_table.horizontalHeader()

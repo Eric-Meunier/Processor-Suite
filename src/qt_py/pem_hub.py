@@ -54,7 +54,6 @@ __version__ = '0.11.4'
 # TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create right click option to create package on final folder (like step)
-# TODO Add "Save as" processed PEM
 # TODO Print PDF after pressing Enter.
 # TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
@@ -4683,8 +4682,8 @@ def main():
     pem_files = pg.get_pems(folder='Raw Boreholes', file=r"XYZ_0418.PEM")
 
     mw.add_pem_files(pem_files)
-    mw.table.selectRow(0)
-    mw.save_pem_file_as()
+    # mw.table.selectRow(0)
+    # mw.save_pem_file_as()
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"GPX files\EM21-155\GPS\EM21-155 +Loop D4_0415.gpx")])
 
