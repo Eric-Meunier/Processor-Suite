@@ -234,11 +234,11 @@ class GPSAdder(QMainWindow):
         p = point.pos()
         x, y = p.x(), p.y()
         if obj == self.plan_highlight or obj == self.plan_plot:
-            lx = np.argwhere(self.plan_plot.xData == x)
-            ly = np.argwhere(self.plan_plot.yData == y)
+            lx = np.argwhere(self.plan_plot.getData()[0] == x)
+            ly = np.argwhere(self.plan_plot.getData()[1] == y)
         else:
-            lx = np.argwhere(self.section_plot.xData == x)
-            ly = np.argwhere(self.section_plot.yData == y)
+            lx = np.argwhere(self.section_plot.getData()[0] == x)
+            ly = np.argwhere(self.section_plot.getData()[1] == y)
         ind = np.intersect1d(lx, ly).tolist()[0]
 
         # Swap two points when CTRL is pressed when selecting two points
@@ -1093,7 +1093,8 @@ def main():
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
 
     # mw = LoopAdder()
-    mw = LineAdder()
+    # mw = LineAdder()
+    mw = CollarPicker()
     mw.show()
 
     pg = PEMGetter()

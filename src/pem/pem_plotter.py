@@ -1489,7 +1489,10 @@ class PlanMap(MapPlotter):
         # Add the X and Y axes UTM labels and format the labels
         self.ax.xaxis.set_visible(True)  # Required to actually get the labels to show in UTM
         self.ax.yaxis.set_visible(True)
-        self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
+        for tick in self.ax.get_yticklabels():
+            tick.set_rotation(90)
+            tick.set_verticalalignment('center')
+
         if 'UTM' in self.crs.name:
             self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
             self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
@@ -1934,7 +1937,7 @@ class SectionPlot(MapPlotter):
 
         add_coord_labels()
         add_title()
-        self.add_scale_bar(self.ax, x_pos=0.205, y_pos=0.25, scale_factor=2, units=units)
+        self.add_scale_bar(self.ax, x_pos=0.205, y_pos=0.25, scale_factor=1, units=units)
 
 
 # class ContourMap(MapPlotter):
