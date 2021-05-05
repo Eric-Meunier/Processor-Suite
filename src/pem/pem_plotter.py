@@ -348,6 +348,7 @@ class LINPlotter(ProfilePlotter):
                 else:
                     ax.set_ylabel(f"Channel {channel_bounds[i][0]} - {channel_bounds[i][1]}\n({units})")
 
+        logger.info(f"Plotting LIN for {self.pem_file.filepath.name}, {component} component.")
         profile = self.pem_file.get_profile_data(component, converted=True)
         channel_bounds = self.pem_file.get_channel_bounds()
         for i, group in enumerate(channel_bounds):
@@ -407,6 +408,7 @@ class LOGPlotter(ProfilePlotter):
                 units = 'nT/s'
             ax.set_ylabel(f"Primary Pulse to Channel {self.pem_file.number_of_channels - 1}\n({units})")
 
+        logger.info(f"Plotting LOG for {self.pem_file.filepath.name}, {component} component.")
         ax = self.figure.axes[0]
         # Starting offset used for channel annotations
         offset = 100
@@ -573,6 +575,7 @@ class STEPPlotter(ProfilePlotter):
                 if offset >= len(x_intervals) * 0.85:
                     offset = len(x_intervals) * 0.10
 
+        logger.info(f"Plotting Step for {self.pem_file.filepath.name}, {component} component.")
         ri_profile = self.ri_file.get_ri_profile(component)
         off_time_channel_data = [ri_profile[key] for key in ri_profile if re.match('Ch', key)]
         num_off_time_channels = len(off_time_channel_data) + 10
@@ -3847,7 +3850,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(folder='PEM Rotation', file='_PU-340 XY.PEM')
+    pem_files = pem_getter.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth", file="2200EAv KBNorth.PEM")
 
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
@@ -3857,26 +3860,26 @@ if __name__ == '__main__':
     # map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
     # plt.show()
 
-    fig = plt.figure(figsize=(8.5, 11), dpi=100)
-    sp = SectionPlot()
-    sp.plot(pem_files[0], figure=fig)
-    plt.show()
+    # fig = plt.figure(figsize=(8.5, 11), dpi=100)
+    # sp = SectionPlot()
+    # sp.plot(pem_files[0], figure=fig)
+    # plt.show()
 
     # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
     # ax6 = ax5.twiny()
     # ax6.get_shared_x_axes().join(ax5, ax6)
     # # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
-    # lin_plot = LINPlotter(pem_files, lin_fig)
-    # lin_plot.plot('X')
+    # lin_plot = LINPlotter(pem_files[0], lin_fig)
+    # lin_plot.plot('Z')
     # plt.show()
 
-    # log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
-    # ax2 = ax.twiny()
-    # ax2.get_shared_x_axes().join(ax, ax2)
-    # plt.yscale('symlog', linthresh=10, linscale=1. / math.log(10), subs=list(np.arange(2, 10, 1)))
-    # log_plot = LOGPlotter(pem_files[0], log_fig)
-    # log_plot.plot('X')
-    # plt.show()
+    log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
+    ax2 = ax.twiny()
+    ax2.get_shared_x_axes().join(ax, ax2)
+    plt.yscale('symlog', linthresh=10, linscale=1. / math.log(10), subs=list(np.arange(2, 10, 1)))
+    log_plot = LOGPlotter(pem_files[0], log_fig)
+    log_plot.plot('X')
+    plt.show()
 
     # step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
     # ax5 = ax4.twiny()

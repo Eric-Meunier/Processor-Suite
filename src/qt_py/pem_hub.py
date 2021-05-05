@@ -58,10 +58,19 @@ __version__ = '0.11.4'
 # TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO For suffix and repeat warnings, make the background red
+# TODO Add warning when number of suffix warnings or repeat warnings isn't 0 when printing?
 # TODO Add rainbow coloring to final plots?
 # TODO Use mpl in de-rotator
 # TODO Use savgol to filter data
-# TODO Use map (like loop gps thing) for selecting collar.
+# TODO Update PEM list after merge.
+# TODO Add ability to remove channels
+# TODO Have multiple channel tables opened at once
+# TODO Fix bulk renaming (adding column after pressing OK)
+# TODO FIx notes in PIW
+# TODO Copy channel table to clipboard
+# TODO Add progress bar when plotting contour map
+# TODO Bug in contour map: Title box removes grid
+# TODO redo bulk RI adder
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -4680,9 +4689,14 @@ def main():
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pg.get_pems(folder='Raw Boreholes', file=r"XYZ_0418.PEM")
+    pem_files = pg.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth")
+    ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI2"))
+
+    assert len(pem_files) == len(ri_files)
 
     mw.add_pem_files(pem_files)
+    mw.open_pdf_plot_printer(selected_files=False)
+    # mw.open_ri_importer()
     # mw.table.selectRow(0)
     # mw.save_pem_file_as()
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
