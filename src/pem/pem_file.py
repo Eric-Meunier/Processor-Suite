@@ -612,6 +612,8 @@ class PEMFile:
         if averaged is True:
             profile = profile.groupby('Station').mean()
 
+        # Sort the data frame to prevent issues with plotting
+        profile.sort_index(inplace=True)
         return profile
 
     def get_contour_data(self):

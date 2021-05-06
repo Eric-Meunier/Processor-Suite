@@ -58,10 +58,17 @@ __version__ = '0.11.4'
 # TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO For suffix and repeat warnings, make the background red
+# TODO Add warning when number of suffix warnings or repeat warnings isn't 0 when printing?
 # TODO Add rainbow coloring to final plots?
 # TODO Use mpl in de-rotator
 # TODO Use savgol to filter data
-# TODO Use map (like loop gps thing) for selecting collar.
+# TODO Update PEM list after merge.
+# TODO Add ability to remove channels
+# TODO Fix bulk renaming (adding column after pressing OK)
+# TODO FIx notes in PIW
+# TODO Copy channel table to clipboard
+# TODO Add progress bar when plotting contour map
+# TODO Bug in contour map: Title box removes grid
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -133,6 +140,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.tab_num = 1
         self.allow_signals = True
         self.text_browsers = []
+        self.channel_tables = []
 
         # Status bar formatting
         self.selection_label = QLabel()
@@ -1903,15 +1911,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :return: None
         """
 
-        def open_ri_files():
-            ri_filepaths = ri_importer.ri_files
-            if len(ri_filepaths) > 0:
-                for i, ri_filepath in enumerate(ri_filepaths):
-                    self.pem_info_widgets[i].open_ri_file(ri_filepath)
-                self.status_bar.showMessage(f"Imported {len(ri_filepaths)} RI files", 2000)
+        def open_ri_files(files):
+            if len(files) > 0:
+                for pem_file, ri_file in files.items():
+                    ind = self.pem_files.index(pem_file)
+                    self.pem_info_widgets[ind].open_ri_file(ri_file)
+                self.status_bar.showMessage(f"Imported {len(files)} RI files", 2000)
             else:
                 pass
 
+        global ri_importer
         ri_importer = BatchRIImporter(parent=self)
         ri_importer.open_pem_files(self.pem_files)
         ri_importer.acceptImportSignal.connect(open_ri_files)
@@ -2161,12 +2170,18 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """
         Open the ChannelTimeViewer table for the selected PEMFile.
         """
+        def on_close(channel_table):
+            ind = self.channel_tables.index(channel_table)
+            print(f"Closing table {ind}")
+            del self.channel_tables[ind]
+
         pem_files, rows = self.get_pem_files(selected=True)
         pem_file = pem_files[0]
 
-        global win
-        win = ChannelTimeViewer(pem_file, parent=self)
-        win.show()
+        channel_viewer = ChannelTimeViewer(pem_file, parent=self)
+        channel_viewer.close_request.connect(on_close)
+        self.channel_tables.append(channel_viewer)
+        channel_viewer.show()
 
     def open_grid_planner(self):
         """Open the Grid Planner"""
@@ -4423,6 +4438,7 @@ class GPSShareWidget(QWidget):
 
 
 class ChannelTimeViewer(QMainWindow):
+    close_request = QtCore.pyqtSignal(object)
 
     def __init__(self, pem_file, parent=None):
         """
@@ -4476,6 +4492,11 @@ class ChannelTimeViewer(QMainWindow):
 
         self.fill_channel_table()
 
+    def closeEvent(self, e):
+        self.close_request.emit(self)
+        e.accept()
+        self.deleteLater()
+
     def fill_channel_table(self):
         """
         Fill and color the table with the channel times of the PEMFile.
@@ -4528,7 +4549,7 @@ class ChannelTimeViewer(QMainWindow):
                         item.setBackground(color)
 
         df = self.pem_file.channel_times.copy()
-        print(F"Channel times given to table viewer: {df.to_string(index=False)}")
+        # print(F"Channel times given to table viewer: {df.to_string(index=False)}")
 
         if self.units_combo.currentText() == 'µs':
             df.loc[:, 'Start':'Width'] = df.loc[:, 'Start':'Width'] * 1000000
@@ -4680,9 +4701,13 @@ def main():
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pg.get_pems(folder='Raw Boreholes', file=r"XYZ_0418.PEM")
+    pem_files = pg.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth")
+    ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
+
+    assert len(pem_files) == len(ri_files)
 
     mw.add_pem_files(pem_files)
+    # mw.open_ri_importer()
     # mw.table.selectRow(0)
     # mw.save_pem_file_as()
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)

@@ -283,8 +283,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             """
             spline_stations = np.linspace(0, depth.iloc[-1], 6)
             if len(az) > 11:
-                window_len = int(len(az) / 2)
-                if int(len(az) / 2) % 2 == 0:
+                window_len = int(len(az) / 4)
+                if int(len(az) / 4) % 2 == 0:
                     window_len += 1
                 az = savgol_filter(az, window_len, 3)
             spline_az = np.interp(spline_stations, depth, az + self.mag_dec_sbox.value())
@@ -301,8 +301,8 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             """
             spline_stations = np.linspace(0, depth.iloc[-1], 6)
             if len(dip) > 11:
-                window_len = int(len(dip) / 2)
-                if int(len(dip) / 2) % 2 == 0:
+                window_len = int(len(dip) / 4)
+                if int(len(dip) / 4) % 2 == 0:
                     window_len += 1
                 dip = savgol_filter(dip, window_len, 3)
 
