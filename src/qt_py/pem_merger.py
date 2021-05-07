@@ -15,13 +15,11 @@ from src.pem.pem_file import StationConverter
 logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    mergerCreatorFile = 'ui\\pem_merger.ui'
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    mergerCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\pem_merger.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+mergerCreatorFile = application_path.joinpath('ui\\pem_merger.ui')
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PlotMergerWindow, QtBaseClass = uic.loadUiType(mergerCreatorFile)

@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import pylineclip as lc
 import pyqtgraph as pg
+from pathlib import Path
 from PyQt5 import uic, QtCore, QtGui
 from PyQt5.QtCore import QPointF
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
@@ -26,13 +27,11 @@ from src.logger import Log
 logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    plotEditorCreatorFile = 'ui\\pem_plot_editor.ui'
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    plotEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\pem_plot_editor.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+plotEditorCreatorFile = application_path.joinpath('ui\\pem_plot_editor.ui')
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PlotEditorWindow, QtBaseClass = uic.loadUiType(plotEditorCreatorFile)

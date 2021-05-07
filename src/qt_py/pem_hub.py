@@ -36,7 +36,7 @@ from src.gps.gpx_creator import GPXCreator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py.custom_qt_widgets import CustomProgressBar
-from src.pem.derotator import Derotator
+from src.qt_py.derotator import Derotator
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
 from src.qt_py.name_editor import BatchNameEditor
 from src.geometry.pem_geometry import PEMGeometry
@@ -64,7 +64,6 @@ __version__ = '0.11.5'
 # TODO Use savgol to filter data
 # TODO Update PEM list after merge.
 # TODO Add ability to remove channels
-# TODO Fix bulk renaming (adding column after pressing OK)
 # TODO Copy channel table to clipboard
 # TODO Add progress bar when plotting contour map
 # TODO Bug in contour map: Title box removes grid
@@ -73,20 +72,14 @@ __version__ = '0.11.5'
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    # TODO This application has not been tested when frozen
     application_path = Path(sys.executable).parent
-    pemhubWindowCreatorFile = Path('ui\\pem_hub.ui')
-    planMapOptionsCreatorFile = Path('ui\\plan_map_options.ui')
-    pdfPrintOptionsCreatorFile = Path('ui\\pdf_plot_printer.ui')
-    gpsConversionWindow = Path('ui\\gps_conversion.ui')
-    icons_path = Path('ui\\icons')
 else:
     application_path = Path(__file__).absolute().parents[1]
-    pemhubWindowCreatorFile = application_path.joinpath('ui\\pem_hub.ui')
-    planMapOptionsCreatorFile = application_path.joinpath('ui\\plan_map_options.ui')
-    pdfPrintOptionsCreatorFile = application_path.joinpath('ui\\pdf_plot_printer.ui')
-    gpsConversionWindow = application_path.joinpath('ui\\gps_conversion.ui')
-    icons_path = application_path.joinpath("ui\\icons")
+pemhubWindowCreatorFile = application_path.joinpath('ui\\pem_hub.ui')
+planMapOptionsCreatorFile = application_path.joinpath('ui\\plan_map_options.ui')
+pdfPrintOptionsCreatorFile = application_path.joinpath('ui\\pdf_plot_printer.ui')
+gpsConversionWindow = application_path.joinpath('ui\\gps_conversion.ui')
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PEMHubWindow, _ = uic.loadUiType(pemhubWindowCreatorFile)
@@ -1769,6 +1762,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.remove_pem_file(rows)
 
             self.add_pem_files(filepath)
+            self.fill_pem_list()
 
         pem_files, rows = self.get_pem_files(selected=True)
         if len(pem_files) != 2:

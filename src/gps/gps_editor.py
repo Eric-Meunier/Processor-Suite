@@ -20,16 +20,12 @@ from scipy import spatial
 
 logger = logging.getLogger(__name__)
 
-
-# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    gpsConversionWindow = 'ui\\gps_conversion.ui'
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    gpsConversionWindow = os.path.join(os.path.dirname(application_path), 'ui\\gps_conversion.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+gpsConversionWindow = application_path.joinpath('ui\\gps_conversion.ui')
+icons_path = application_path.joinpath('ui\\icons')
 
 # Load Qt ui file into a class
 Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)

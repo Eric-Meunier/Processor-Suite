@@ -1,36 +1,32 @@
 import logging
+import math
 import os
 import sys
 from collections import OrderedDict
 from copy import deepcopy
-
-import math
-import numpy as np
-import pandas as pd
 from pathlib import Path
 
-import pyqtgraph
+import numpy as np
+import pandas as pd
 from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QAbstractItemView,
-                             QDialogButtonBox, QFileDialog, QErrorMessage, QHeaderView, QVBoxLayout, QApplication)
+from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QFileDialog, QErrorMessage,
+                             QHeaderView, QApplication)
 
+from src.geometry.pem_geometry import PEMGeometry
+from src.gps.gps_adder import LoopAdder, LineAdder, CollarPicker
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXEditor
-from src.gps.gps_adder import LoopAdder, LineAdder, CollarPicker
 from src.pem.pem_file import StationConverter
-from src.geometry.pem_geometry import PEMGeometry
 from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    pemInfoWidgetCreatorFile = 'ui\\pem_info_widget.ui'
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    pemInfoWidgetCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\pem_info_widget.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+pemInfoWidgetCreatorFile = application_path.joinpath('ui\\pem_info_widget.ui')
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
 Ui_PEMInfoWidget, QtBaseClass = uic.loadUiType(pemInfoWidgetCreatorFile)

@@ -42,11 +42,6 @@ from src.qt_py.custom_qt_widgets import CustomProgressBar
 
 logger = logging.getLogger(__name__)
 
-if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-
 mpl.rcParams['path.simplify'] = True
 mpl.rcParams['path.simplify_threshold'] = 1.0
 mpl.rcParams['agg.path.chunksize'] = 10000

@@ -1,5 +1,6 @@
 import sys
 import os
+from pathlib import Path
 from PyQt5 import (QtCore, QtGui, uic)
 from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QProgressBar, QGridLayout,
@@ -7,17 +8,13 @@ from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget,
                              QLabel, QLineEdit, QPushButton)
 from src.pem.pem_plotter import GeneralMap
 
+# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    # If the application is run as a bundle, the pyInstaller bootloader
-    # extends the sys module by a flag frozen=True and sets the app
-    # path into variable _MEIPASS'.
-    application_path = os.path.dirname(sys.executable)
-    reportGeneratorDesignerFile = 'ui\\report_generator.ui'
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    reportGeneratorDesignerFile = os.path.join(os.path.dirname(application_path), 'ui\\report_generator.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+reportGeneratorDesignerFile = application_path.joinpath('ui\\report_generator.ui')
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
 Ui_ReportGenerator, QtBaseClass = uic.loadUiType(reportGeneratorDesignerFile)

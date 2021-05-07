@@ -3,6 +3,7 @@ import os
 import sys
 
 import cartopy
+from pathlib import Path
 from PyQt5 import (QtGui)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidget, QFrame, QMainWindow, QLabel, QPushButton, QFormLayout, QVBoxLayout)
@@ -12,13 +13,11 @@ from matplotlib.figure import Figure
 
 logger = logging.getLogger(__name__)
 
-# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+icons_path = application_path.joinpath('ui\\icons')
 
 
 class MagDeclinationCalculator(QMainWindow):

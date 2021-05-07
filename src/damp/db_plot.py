@@ -22,14 +22,10 @@ pg.setConfigOption('crashWarning', True)
 __version__ = '0.5'
 
 if getattr(sys, 'frozen', False):
-    # If the application is run as a bundle, the pyInstaller bootloader
-    # extends the sys module by a flag frozen=True and sets the app
-    # path into variable _MEIPASS'.
-    application_path = os.path.dirname(sys.executable)
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+icons_path = application_path.joinpath("ui\\icons")
 
 
 class DBPlotter(QMainWindow):

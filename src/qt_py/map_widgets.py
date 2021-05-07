@@ -29,23 +29,20 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 from scipy import interpolate as interp
 
+from pathlib import Path
 from src.pem.pem_plotter import MapPlotter
 from src.gps.gps_editor import BoreholeGeometry
 from src.qt_py.custom_qt_widgets import CustomProgressBar
 
 logger = logging.getLogger(__name__)
 
-# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    section3DCreatorFile = 'ui\\3D_section.ui'
-    contourMapCreatorFile = 'ui\\contour_map.ui'
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    section3DCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\3D_section.ui')
-    contourMapCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\contour_map.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+section3DCreatorFile = application_path.joinpath('ui\\3D_section.ui')
+contourMapCreatorFile = application_path.joinpath('ui\\contour_map.ui')
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
 Ui_Section3DWidget, _ = uic.loadUiType(section3DCreatorFile)
