@@ -538,7 +538,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         #     'Convention': f.convention
         # })
 
-        info = OrderedDict({
+        info = OrderedDict(sorted({
             "Format": f.format,
             "Units": f.units,
             "Operator": f.operator,
@@ -565,12 +565,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             "Primary_field_value": f.primary_field_value,
             "Coil_area": f.coil_area,
             "Loop_polarity": f.loop_polarity,
-            "Notes": '\n'.join(f.notes),
+            "Notes": f.notes,
             "Filepath": str(f.filepath),
-            "CRS": f.crs,
+            "CRS": f.crs.name if f.crs else None,
             "Prepped_for_rotation": f.prepped_for_rotation,
             "Legacy": f.legacy,
-        })
+        }.items()))
 
         for key, value in info.items():
             key_item = QTableWidgetItem(key)

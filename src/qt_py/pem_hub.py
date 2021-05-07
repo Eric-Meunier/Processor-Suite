@@ -50,7 +50,7 @@ from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.11.4'
+__version__ = '0.11.5'
 # TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create right click option to create package on final folder (like step)
@@ -65,7 +65,6 @@ __version__ = '0.11.4'
 # TODO Update PEM list after merge.
 # TODO Add ability to remove channels
 # TODO Fix bulk renaming (adding column after pressing OK)
-# TODO FIx notes in PIW
 # TODO Copy channel table to clipboard
 # TODO Add progress bar when plotting contour map
 # TODO Bug in contour map: Title box removes grid
@@ -2577,6 +2576,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 # Add the CRS note if CRS isn't None
                 if crs:
+                    pem_file.set_crs(crs)
                     add_crs_tag()
 
                 # Save the PEM file and refresh it in the table
@@ -4701,10 +4701,10 @@ def main():
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pg.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth")
-    ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
+    pem_files = pg.get_pems(folder='Raglan', number=1)
+    # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
-    assert len(pem_files) == len(ri_files)
+    # assert len(pem_files) == len(ri_files)
 
     mw.add_pem_files(pem_files)
     # mw.open_ri_importer()
