@@ -68,6 +68,7 @@ __version__ = '0.11.5'
 # TODO Copy channel table to clipboard
 # TODO Add progress bar when plotting contour map
 # TODO Bug in contour map: Title box removes grid
+# TODO Add Reverse > station order in right click menu
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -4701,12 +4702,13 @@ def main():
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pg.get_pems(folder='Raglan', number=1)
+    pem_files = pg.get_pems(folder='Raglan', number=6)
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
     # assert len(pem_files) == len(ri_files)
 
     mw.add_pem_files(pem_files)
+    mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.table.selectRow(0)
     # mw.save_pem_file_as()

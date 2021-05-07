@@ -96,8 +96,6 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         self.table.setItem(row_pos, 0, item)
         self.table.setItem(row_pos, 1, item2)
 
-        self.table.resizeColumnsToContents()
-
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
@@ -132,7 +130,6 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         """
         Create a list of the new names and emit them as a signal
         """
-
         new_names = []
         for i, pem_file in enumerate(self.pem_files):
             new_name = self.table.item(i, 1).text()
