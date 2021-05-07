@@ -7,8 +7,9 @@ from pathlib import Path
 import geopandas as gpd
 import gpxpy
 import pandas as pd
-from PyQt5 import (QtGui, QtCore, uic)
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction, QLabel)
+from PySide2 import QtGui
+from PySide2.QtUiTools import loadUiType
+from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction, QLabel)
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
 
@@ -18,11 +19,10 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]
-gpxCreatorFile = application_path.joinpath('ui\\gpx_creator.ui')
 icons_path = application_path.joinpath('ui\\icons')
 
 # Load Qt ui file into a class
-Ui_GPXCreator, QtBaseClass = uic.loadUiType(gpxCreatorFile)
+Ui_GPXCreator, QtBaseClass = loadUiType(str(application_path.joinpath('ui\\gpx_creator.ui')))
 
 
 class GPXCreator(QMainWindow, Ui_GPXCreator):

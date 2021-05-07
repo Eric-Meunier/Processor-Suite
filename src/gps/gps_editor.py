@@ -12,8 +12,9 @@ import math
 import numpy as np
 import pandas as pd
 import utm
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QMessageBox)
+from PySide2 import QtCore, QtGui
+from PySide2.QtUiTools import loadUiType
+from PySide2.QtWidgets import (QWidget, QMessageBox)
 from math import hypot
 from pyproj import CRS
 from scipy import spatial
@@ -24,11 +25,10 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]
-gpsConversionWindow = application_path.joinpath('ui\\gps_conversion.ui')
 icons_path = application_path.joinpath('ui\\icons')
 
 # Load Qt ui file into a class
-Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
+Ui_GPSConversionWidget, _ = loadUiType(str(application_path.joinpath('ui\\gps_conversion.ui')))
 
 
 class BaseGPS:
@@ -1036,7 +1036,7 @@ class GPXEditor:
 
 
 class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
-    accept_signal = QtCore.pyqtSignal(int)
+    accept_signal = QtCore.Signal(int)
 
     def __init__(self, parent=None):
         super().__init__()

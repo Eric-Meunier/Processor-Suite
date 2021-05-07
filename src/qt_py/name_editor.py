@@ -3,8 +3,8 @@ import os
 import sys
 
 from pathlib import Path
-from PyQt5 import (QtCore, uic)
-from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QHeaderView)
+from PySide2 import QtCore, QtUiTools
+from PySide2.QtWidgets import QWidget, QAbstractScrollArea, QTableWidgetItem, QHeaderView
 
 logger = logging.getLogger(__name__)
 
@@ -12,18 +12,17 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]
-lineNameEditorCreatorFile = application_path.joinpath('ui\\line_name_editor.ui')
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_LineNameEditorWidget, QtBaseClass = uic.loadUiType(lineNameEditorCreatorFile)
+Ui_LineNameEditorWidget, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\line_name_editor.ui')))
 
 
 class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
     """
     Class to bulk rename PEM File line/hole names or file names.
     """
-    acceptChangesSignal = QtCore.pyqtSignal(object)
+    acceptChangesSignal = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()

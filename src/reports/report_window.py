@@ -1,8 +1,8 @@
 import sys
 import os
 from pathlib import Path
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
+from PySide2 import (QtCore, QtGui, uic)
+from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                              QAbstractScrollArea, QTableWidgetItem, QAction, QMenu, QProgressBar, QGridLayout,
                              QInputDialog, QHeaderView, QTableWidget, QErrorMessage, QDialogButtonBox, QVBoxLayout,
                              QLabel, QLineEdit, QPushButton)
@@ -17,7 +17,7 @@ reportGeneratorDesignerFile = application_path.joinpath('ui\\report_generator.ui
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_ReportGenerator, QtBaseClass = uic.loadUiType(reportGeneratorDesignerFile)
+Ui_ReportGenerator, QtBaseClass = loadUiType(reportGeneratorDesignerFile)
 
 
 class ReportGenerator(QMainWindow, Ui_ReportGenerator):

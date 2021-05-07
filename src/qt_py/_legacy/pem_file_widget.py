@@ -1,6 +1,6 @@
-import PyQt5
-from PyQt5.QtWidgets import *
-from PyQt5 import uic
+import PySide2
+from PySide2.QtWidgets import *
+from PySide2 import uic
 from pem.pem_editor import PEMFileEditor
 from qt_py.plot_viewer_widget import PlotViewerWidget
 from qt_py.plot_widget import PlotWidget
@@ -8,16 +8,16 @@ from log import Logger
 from matplotlib.pyplot import figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
-from PyQt5.QtCore import Qt, pyqtSignal, QEvent
-from PyQt5 import QtGui
-from PyQt5.QtPrintSupport import QPrinter
+from PySide2.QtCore import Qt, pyqtSignal, QEvent
+from PySide2 import QtGui
+from PySide2.QtPrintSupport import QPrinter
 import os
 from matplotlib.backends.backend_pdf import PdfPages
 
 logger = Logger(__name__)
 # Load Qt ui file into a class
 # qtCreatorFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../ui/pem_file_widget.ui")
-# Ui_PEMFileWidget, QtBaseClass = uic.loadUiType(qtCreatorFile)
+# Ui_PEMFileWidget, QtBaseClass = loadUiType(qtCreatorFile)
 
 class PEMFileWidget(QWidget):
 

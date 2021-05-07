@@ -11,9 +11,10 @@ import pandas as pd
 import pylineclip as lc
 import pyqtgraph as pg
 from pathlib import Path
-from PyQt5 import uic, QtCore, QtGui
-from PyQt5.QtCore import QPointF
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
+from PySide2 import QtCore, QtGui
+from PySide2.QtUiTools import loadUiType
+from PySide2.QtCore import QPointF
+from PySide2.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
                              QPushButton, QShortcut)
 from pyqtgraph.Point import Point
 from scipy import spatial
@@ -30,11 +31,10 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]
-plotEditorCreatorFile = application_path.joinpath('ui\\pem_plot_editor.ui')
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_PlotEditorWindow, QtBaseClass = uic.loadUiType(plotEditorCreatorFile)
+Ui_PlotEditorWindow, QtBaseClass = loadUiType(str(application_path.joinpath('ui\\pem_plot_editor.ui')))
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -44,9 +44,9 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 
 class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
-    save_sig = QtCore.pyqtSignal(object)
-    close_sig = QtCore.pyqtSignal(object)
-    reset_file_sig = QtCore.pyqtSignal(object)
+    save_sig = QtCore.Signal(object)
+    close_sig = QtCore.Signal(object)
+    reset_file_sig = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -1858,7 +1858,7 @@ class DecayViewBox(pg.ViewBox):
     Custom ViewBox for the decay plots. Allows box selecting, box-zoom when shift is held, and mouse wheel when shift
     is held does mouse wheel zoom
     """
-    box_select_signal = QtCore.pyqtSignal(object)
+    box_select_signal = QtCore.Signal(object)
 
     def __init__(self, *args, **kwds):
         pg.ViewBox.__init__(self, *args, **kwds)
@@ -1953,8 +1953,8 @@ class ProfileViewBox(pg.ViewBox):
     """
     Custom ViewBox for profile plots. Click and drag creates a linear region selector.
     """
-    box_select_signal = QtCore.pyqtSignal(object, object)
-    box_select_started_signal = QtCore.pyqtSignal()
+    box_select_signal = QtCore.Signal(object, object)
+    box_select_started_signal = QtCore.Signal()
 
     def __init__(self, *args, **kwds):
         pg.ViewBox.__init__(self, *args, **kwds)

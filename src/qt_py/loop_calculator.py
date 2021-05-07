@@ -6,8 +6,8 @@ import numpy as np
 import pyqtgraph as pg
 
 from pathlib import Path
-from PyQt5 import (QtGui, QtCore, uic)
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QComboBox, QShortcut, QFileDialog)
+from PySide2 import QtGui, QtCore, QtUiTools
+from PySide2.QtWidgets import QMainWindow, QApplication, QComboBox, QShortcut, QFileDialog
 
 from src.logger import Log
 from src.qt_py.custom_qt_widgets import NonScientific
@@ -24,11 +24,10 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]
-loopCalcUIFile = application_path.joinpath('ui\\loop_calculator.ui')
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-loopCalcUi, _ = uic.loadUiType(loopCalcUIFile)
+loopCalcUi, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\loop_calculator.ui')))
 
 
 class LoopCalculator(QMainWindow, loopCalcUi):

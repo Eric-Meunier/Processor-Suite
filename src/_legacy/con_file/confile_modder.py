@@ -3,8 +3,8 @@ import os
 import sys
 from os.path import isfile, join
 import logging
-from PyQt5 import (QtGui, uic)
-from PyQt5.QtWidgets import (QMainWindow, QAction, QApplication, QFileDialog, QDesktopWidget,
+from PySide2 import (QtGui, uic)
+from PySide2.QtWidgets import (QMainWindow, QAction, QApplication, QFileDialog, QDesktopWidget,
                              QTableWidgetItem, QAbstractScrollArea, QMessageBox)
 from src.pem._legacy.pem_parser import PEMParser
 
@@ -26,7 +26,7 @@ samples_path = os.path.join(application_path, "sample_files")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 # ConderWindow_qtCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\con_file_window.ui')
-Ui_Conder_Window, QtBaseClass = uic.loadUiType(ConderWindow_qtCreatorFile)
+Ui_Conder_Window, QtBaseClass = loadUiType(ConderWindow_qtCreatorFile)
 
 
 class Conder(QMainWindow, Ui_Conder_Window):

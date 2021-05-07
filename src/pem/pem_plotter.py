@@ -23,7 +23,7 @@ import pyqtgraph as pg
 import six
 import utm
 from PIL import Image
-from PyQt5.QtWidgets import (QProgressBar, QApplication)
+from PySide2.QtWidgets import QProgressBar, QApplication
 from cartopy import feature
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from matplotlib import patches

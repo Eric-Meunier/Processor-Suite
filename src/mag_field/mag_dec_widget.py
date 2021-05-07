@@ -4,9 +4,8 @@ import sys
 
 import cartopy
 from pathlib import Path
-from PyQt5 import (QtGui)
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QWidget, QFrame, QMainWindow, QLabel, QPushButton, QFormLayout, QVBoxLayout)
+from PySide2 import QtGui
+from PySide2.QtWidgets import (QWidget, QFrame, QMainWindow, QLabel, QPushButton, QFormLayout, QVBoxLayout)
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -29,7 +28,7 @@ class MagDeclinationCalculator(QMainWindow):
         super().__init__()
         self.parent = parent
         self.setWindowTitle('Magnetic Declination')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'mag_field.png')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
         # self.setLayout(QVBoxLayout())
         self.resize(400, 400)
         self.status_bar = self.statusBar()

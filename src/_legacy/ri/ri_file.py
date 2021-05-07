@@ -2,7 +2,7 @@ import logging
 import re
 import sys
 
-from PyQt5.QtWidgets import (QMainWindow, QApplication)
+from PySide2.QtWidgets import (QMainWindow, QApplication)
 
 __version__ = '0.0.0'
 

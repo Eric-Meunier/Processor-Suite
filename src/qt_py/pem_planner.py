@@ -10,13 +10,13 @@ import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-import pyqtgraph as pg
 import simplekml
-from PyQt5 import QtGui, QtCore, uic
-from PyQt5.QtCore import QTimer, QPointF
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QInputDialog,
-                             QLineEdit, QFormLayout, QWidget, QFrame, QPushButton, QGroupBox, QHBoxLayout, QRadioButton,
-                             QGridLayout)
+from PySide2 import QtGui, QtCore, QtUiTools
+from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QInputDialog,
+                               QLineEdit, QFormLayout, QWidget, QFrame, QPushButton, QGroupBox, QHBoxLayout,
+                               QRadioButton,
+                               QGridLayout)
+import pyqtgraph as pg
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import patheffects
@@ -37,13 +37,11 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]
-loopPlannerCreatorFile = application_path.joinpath('ui\\loop_planner.ui')
-gridPlannerCreatorFile = application_path.joinpath('ui\\grid_planner.ui')
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_LoopPlannerWindow, _ = uic.loadUiType(loopPlannerCreatorFile)
-Ui_GridPlannerWindow, _ = uic.loadUiType(gridPlannerCreatorFile)
+Ui_LoopPlannerWindow, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\loop_planner.ui')))
+Ui_GridPlannerWindow, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\grid_planner.ui')))
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -146,8 +144,8 @@ class SurveyPlanner(QMainWindow):
 
 
 class HoleWidget(QWidget):
-    name_changed_sig = QtCore.pyqtSignal()
-    plot_hole_sig = QtCore.pyqtSignal()
+    name_changed_sig = QtCore.Signal(str)
+    plot_hole_sig = QtCore.Signal()
 
     def __init__(self, properties, plot_widget, name=''):
         """
@@ -576,8 +574,8 @@ class HoleWidget(QWidget):
 
 
 class LoopWidget(QWidget):
-    name_changed_sig = QtCore.pyqtSignal()
-    plot_hole_sig = QtCore.pyqtSignal()
+    name_changed_sig = QtCore.Signal(str)
+    plot_hole_sig = QtCore.Signal()
 
     def __init__(self, properties, center, plot_widget, name=''):
         """
@@ -638,7 +636,7 @@ class LoopWidget(QWidget):
         # Set the position of the loop by the center (and not the bottom-left corner)
         h = int(properties.get('height'))
         w = int(properties.get('width'))
-        pos = QPointF(center.x() - (w / 2), center.y() - (h / 2))  # Adjusted position for the center
+        pos = QtCore.QPointF(center.x() - (w / 2), center.y() - (h / 2))  # Adjusted position for the center
 
         self.loop_roi = LoopROI(pos,
                                 size=(h, w),
@@ -672,7 +670,7 @@ class LoopWidget(QWidget):
         self.loop_name_edit.textChanged.connect(lambda: self.loop_name.setText(self.loop_name_edit.text()))
         self.loop_roi.sigRegionChanged.connect(self.update_loop_values)
         self.loop_roi.sigRegionChanged.connect(self.plot_loop_name)
-        self.loop_roi.sigRegionChangeFinished.connect(self.plot_hole_sig.emit)
+        self.loop_roi.sigRegionChangeFinished.connect(lambda: self.plot_hole_sig.emit())
 
     def select(self):
         """When the loop is selected"""
@@ -691,16 +689,16 @@ class LoopWidget(QWidget):
     def get_loop_coords(self):
         """
         Return the coordinates of the corners of the loop.
-        :return: list of QPointF objects.
+        :return: list of QtCore.QPointF objects.
         """
         x, y = self.loop_roi.pos()
         w, h = self.loop_roi.size()
         angle = self.loop_roi.angle()
 
-        c1 = QPointF(x, y)
-        c2 = QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
-        c3 = QPointF(c2.x() - h * (math.sin(math.radians(angle))), c2.y() + h * (math.sin(math.radians(90-angle))))
-        c4 = QPointF(c3.x() + w * (math.cos(math.radians(180-angle))), c3.y() - w * (math.sin(math.radians(180-angle))))
+        c1 = QtCore.QPointF(x, y)
+        c2 = QtCore.QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
+        c3 = QtCore.QPointF(c2.x() - h * (math.sin(math.radians(angle))), c2.y() + h * (math.sin(math.radians(90-angle))))
+        c4 = QtCore.QPointF(c3.x() + w * (math.cos(math.radians(180-angle))), c3.y() - w * (math.sin(math.radians(180-angle))))
         corners = [c1, c2, c3, c4]
         return corners
 
@@ -727,13 +725,13 @@ class LoopWidget(QWidget):
     def get_loop_center(self):
         """
         Return the coordinates of the center of the loop.
-        :return: QPointF
+        :return: QtCore.QPointF
         """
         corners = self.get_loop_coords()
         xs = np.array([c.x() for c in corners])
         ys = np.array([c.y() for c in corners])
 
-        center = QPointF(xs.mean(), ys.mean())
+        center = QtCore.QPointF(xs.mean(), ys.mean())
         return center
 
     def get_properties(self):
@@ -1143,7 +1141,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             self.hole_tab_widget.setCurrentIndex(len(self.hole_widgets) - 1)
 
             # Select the hole if it is the only one open
-            if len(self.hole_tab_widget) == 1:
+            if self.hole_tab_widget.count() == 1:
                 self.select_hole(0)
 
     def add_loop(self, name=None):
@@ -1230,7 +1228,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             self.loop_tab_widget.setCurrentIndex(len(self.loop_widgets) - 1)
 
             # Select the loop if it is the only one open
-            if len(self.loop_tab_widget) == 1:
+            if self.loop_tab_widget.count() == 1:
                 self.select_loop(0)
                 self.ax.get_yaxis().set_visible(True)
 
@@ -2583,8 +2581,8 @@ class LoopROI(pg.RectROI):
 
 def main():
     app = QApplication(sys.argv)
-    planner = LoopPlanner()
-    # planner = GridPlanner()
+    # planner = LoopPlanner()
+    planner = GridPlanner()
 
     # planner.gps_system_cbox.setCurrentIndex(2)
     # planner.gps_datum_cbox.setCurrentIndex(1)

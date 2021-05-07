@@ -8,8 +8,8 @@ import pandas as pd
 import pyqtgraph as pg
 from src.logger import Log
 from src.qt_py.custom_qt_widgets import NonScientific
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
+from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
 
 import logging
 import sys
@@ -20,11 +20,10 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]
-derotatorCreatorFile = application_path.joinpath('ui\\derotator.ui')
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_Derotator, QtBaseClass = uic.loadUiType(derotatorCreatorFile)
+Ui_Derotator, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\derotator.ui')))
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -36,7 +35,7 @@ class Derotator(QMainWindow, Ui_Derotator):
     """
     Class that de-rotates XY data of a PEMFile
     """
-    accept_sig = QtCore.pyqtSignal(object)
+    accept_sig = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -333,18 +332,27 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.list.setText("\n".join(list))
 
         def plot_mag():
-
             # if self.actionPlot_Mag.isChecked():
             mag_df = self.pem_file.get_mag()
-            mag_x, mag_y = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
+            if mag_df.Mag.any():
+                mag_x, mag_y = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
 
-            self.dev_mag_curve.setData(x=mag_y, y=mag_x)
+                self.dev_mag_curve.setData(x=mag_y, y=mag_x)
 
-            for mag_ax in np.concatenate([self.mag_x_view_axes, self.mag_y_view_axes]):
-                # Plot the mag
-                mag_curve = pg.PlotCurveItem(x=mag_x, y=mag_y, pen=pg.mkPen('1DD219', width=1))
-                mag_ax.addItem(mag_curve)
-                self.mag_curves.append(mag_curve)
+                for mag_ax in np.concatenate([self.mag_x_view_axes, self.mag_y_view_axes]):
+                    # Plot the mag
+                    mag_curve = pg.PlotCurveItem(x=mag_x, y=mag_y, pen=pg.mkPen('1DD219', width=1))
+                    mag_ax.addItem(mag_curve)
+                    self.mag_curves.append(mag_curve)
+            else:
+                for curve in np.concatenate([self.mag_curves, [self.dev_mag_curve]]):
+                    curve.hide()
+                    for ax in self.profile_axes:
+                        ax.getAxis("right").hide()
+                    self.dev_ax.getAxis("bottom").setLabel("")
+                    self.dev_ax.getAxis("bottom").setPen(pg.mkPen(color='k'))
+                    self.dev_ax.getAxis("bottom").setTextPen(pg.mkPen(color='k'))
+                    self.dev_ax.getAxis("bottom").setStyle(showValues=False)
 
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
@@ -444,14 +452,14 @@ class Derotator(QMainWindow, Ui_Derotator):
                 :param ax: pyqtgraph PlotItem
                 """
                 df = df.groupby('Station').mean()
-                x, y = df.index, df
+                x, y = df.index.to_numpy(), df.to_numpy()
 
                 ax.plot(x=x, y=y,
                         pen=pg.mkPen('k', width=1.1),
-                        symbol='o',
-                        symbolSize=2,
-                        symbolBrush='k',
-                        symbolPen='k',
+                        # symbol='o',
+                        # symbolSize=2,
+                        # symbolBrush='k',
+                        # symbolPen='k',
                         )
 
             profile_data = processed_pem.get_profile_data(component, converted=True, incl_deleted=False)
@@ -462,10 +470,8 @@ class Derotator(QMainWindow, Ui_Derotator):
                 # Select the correct axes based on the component
                 if component == 'X':
                     ax = self.x_view_axes[i]
-                    mag_ax = self.mag_x_view_axes[i]
                 else:
                     ax = self.y_view_axes[i]
-                    mag_ax = self.mag_y_view_axes[i]
 
                 # Set the Y-axis labels
                 if i == 0:
@@ -691,7 +697,7 @@ def main():
     parser = PEMParser()
     # parser = DMPParser()
     # pem_files = parser.parse(r"C:\_Data\2021\TMC\EM17-107\RAW\XYEM17-107_0330.PEM")
-    pem_files = pg.get_pems(folder="PEM Rotation", file="soa.PEM")
+    pem_files = pg.get_pems(folder="Raglan", number=1)
     # pem_files, errors = parser.parse(r'C:\_Data\2021\Eastern\Corazan Mining\FLC-2020-23 (LP-26A)\RAW\XYZ_0329.DMP')
     mw.open(pem_files)
 

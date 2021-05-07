@@ -5,9 +5,8 @@ from pathlib import Path
 from shutil import copyfile, rmtree
 
 import py7zr
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QLabel, QFileSystemModel,
+from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QLabel, QFileSystemModel,
                              QAbstractItemView, QErrorMessage, QMenu, QPushButton, QFrame, QHBoxLayout,
                              QTableWidget, QTableWidgetItem, QVBoxLayout, QLineEdit)
 from pyunpack import Archive
@@ -21,15 +20,14 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]
-unpackerCreatorFile = application_path.joinpath('ui\\unpacker.ui')
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_UnpackerCreator, QtBaseClass = uic.loadUiType(unpackerCreatorFile)
+Ui_UnpackerCreator, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\unpacker.ui')))
 
 
 class Unpacker(QMainWindow, Ui_UnpackerCreator):
-    open_project_folder_sig = QtCore.pyqtSignal(object)
+    open_project_folder_sig = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -251,32 +249,32 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             ext = filepath.suffix.lower()
 
             if ext in ['.xls', '.xlsx', '.csv']:
-                icon_pix = QPixmap(os.path.join(icons_path, 'excel_file.png'))
-                icon = QIcon(icon_pix)
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'excel_file.png'))
+                icon = QtGui.QIcon(icon_pix)
             elif ext in ['.rtf', '.docx', '.doc']:
-                icon_pix = QPixmap(os.path.join(icons_path, 'word_file.png'))
-                icon = QIcon(icon_pix)
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'word_file.png'))
+                icon = QtGui.QIcon(icon_pix)
             elif ext in ['.log', '.txt', '.xyz', '.seg', '.dad']:
-                icon_pix = QPixmap(os.path.join(icons_path, 'txt_file.png'))
-                icon = QIcon(icon_pix)
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'txt_file.png'))
+                icon = QtGui.QIcon(icon_pix)
             elif ext in ['.pem']:
-                icon_pix = QPixmap(os.path.join(icons_path, 'crone_logo.png'))
-                icon = QIcon(icon_pix)
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'crone_logo.png'))
+                icon = QtGui.QIcon(icon_pix)
             elif ext in ['.dmp', '.dmp2', '.dmp3', '.dmp4']:
-                icon_pix = QPixmap(os.path.join(icons_path, 'dmp.png'))
-                icon = QIcon(icon_pix)
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'dmp.png'))
+                icon = QtGui.QIcon(icon_pix)
             elif ext in ['.gpx', '.gdb']:
-                icon_pix = QPixmap(os.path.join(icons_path, 'garmin_file.png'))
-                icon = QIcon(icon_pix)
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'garmin_file.png'))
+                icon = QtGui.QIcon(icon_pix)
             elif ext in ['.ssf']:
-                icon_pix = QPixmap(os.path.join(icons_path, 'ssf_file.png'))
-                icon = QIcon(icon_pix)
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'ssf_file.png'))
+                icon = QtGui.QIcon(icon_pix)
             elif ext in ['.cor']:
-                icon_pix = QPixmap(os.path.join(icons_path, 'cor_file.png'))
-                icon = QIcon(icon_pix)
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'cor_file.png'))
+                icon = QtGui.QIcon(icon_pix)
             else:
-                icon_pix = QPixmap(os.path.join(icons_path, 'none_file.png'))
-                icon = QIcon(icon_pix)
+                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'none_file.png'))
+                icon = QtGui.QIcon(icon_pix)
             return icon
 
         def add_to_table(file, dir, table, icon):

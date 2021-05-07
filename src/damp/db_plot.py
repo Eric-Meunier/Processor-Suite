@@ -8,8 +8,8 @@ from threading import Timer
 
 import pandas as pd
 import pyqtgraph as pg
-from PyQt5 import (QtCore, QtGui)
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QShortcut, QVBoxLayout, QGridLayout, QMessageBox, QFileDialog,
+from PySide2 import QtCore, QtGui
+from PySide2.QtWidgets import (QWidget, QMainWindow, QShortcut, QVBoxLayout, QGridLayout, QMessageBox, QFileDialog,
                              QLabel, QAction, QMenu, QApplication)
 
 logger = logging.getLogger(__name__)

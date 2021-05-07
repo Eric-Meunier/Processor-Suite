@@ -1,5 +1,5 @@
-from PyQt5 import QtCore
-from PyQt5.QtWidgets import (QProgressBar)
+from PySide2 import QtCore
+from PySide2.QtWidgets import QProgressBar
 import pyqtgraph as pg
 import numpy as np
 

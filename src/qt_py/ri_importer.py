@@ -5,9 +5,9 @@ import sys
 
 import natsort
 from pathlib import Path
-from PyQt5 import (QtCore)
-from PyQt5.QtWidgets import (QApplication, QWidget, QMessageBox, QAbstractScrollArea, QTableWidgetItem, QHeaderView, QTableWidget,
-                             QDialogButtonBox, QVBoxLayout)
+from PySide2 import QtCore
+from PySide2.QtWidgets import (QApplication, QWidget, QMessageBox, QAbstractScrollArea, QTableWidgetItem, QHeaderView, QTableWidget,
+                               QDialogButtonBox, QVBoxLayout)
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ class BatchRIImporter(QWidget):
     Widget that imports multiple RI files. There must be equal number of RI files to PEM Files
     and the line/file name numbers much match up.
     """
-    acceptImportSignal = QtCore.pyqtSignal(object)
+    acceptImportSignal = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()

@@ -8,9 +8,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QFileDialog, QErrorMessage,
-                             QHeaderView, QApplication)
+from PySide2 import QtCore, QtGui
+from PySide2.QtUiTools import loadUiType
+from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QFileDialog,
+                               QErrorMessage, QHeaderView, QApplication)
 
 from src.geometry.pem_geometry import PEMGeometry
 from src.gps.gps_adder import LoopAdder, LineAdder, CollarPicker
@@ -25,11 +26,10 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]
-pemInfoWidgetCreatorFile = application_path.joinpath('ui\\pem_info_widget.ui')
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_PEMInfoWidget, QtBaseClass = uic.loadUiType(pemInfoWidgetCreatorFile)
+Ui_PEMInfoWidget, QtBaseClass = loadUiType(str(application_path.joinpath('ui\\pem_info_widget.ui')))
 logger = logging.getLogger(__name__)
 
 
@@ -44,12 +44,12 @@ def clear_table(table):
 
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
-    refresh_row_signal = QtCore.pyqtSignal()  # Send a signal to PEMEditor to refresh its main table.
+    refresh_row_signal = QtCore.Signal()  # Send a signal to PEMEditor to refresh its main table.
 
-    share_loop_signal = QtCore.pyqtSignal(object)
-    share_line_signal = QtCore.pyqtSignal(object)
-    share_collar_signal = QtCore.pyqtSignal(object)
-    share_segments_signal = QtCore.pyqtSignal(object)
+    share_loop_signal = QtCore.Signal(object)
+    share_line_signal = QtCore.Signal(object)
+    share_collar_signal = QtCore.Signal(object)
+    share_segments_signal = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()

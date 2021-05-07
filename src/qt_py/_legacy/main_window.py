@@ -2,8 +2,8 @@ import logging
 import os
 import sys
 
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QDesktopWidget, QMessageBox, QMdiArea,
+from PySide2 import (QtCore, QtGui, uic)
+from PySide2.QtWidgets import (QMainWindow, QApplication, QDesktopWidget, QMessageBox, QMdiArea,
                              QMdiSubWindow, QToolButton,
                              QFileDialog, QAction, QToolBar)
 
@@ -28,7 +28,7 @@ else:
     MW_CreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\main_window.ui')
     icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
 
-Ui_MainWindow, QtBaseClass = uic.loadUiType(MW_CreatorFile)
+Ui_MainWindow, QtBaseClass = loadUiType(MW_CreatorFile)
 
 sys._excepthook = sys.excepthook
 
@@ -56,8 +56,8 @@ class CustomMdiArea(QMdiArea):
 
 
 class CustomMdiSubWindow(QMdiSubWindow):
-    closeWindow = QtCore.pyqtSignal()
-    # hideWindow = QtCore.pyqtSignal()
+    closeWindow = QtCore.Signal()
+    # hideWindow = QtCore.Signal()
 
     def __init__(self, parent=None):
         super().__init__()
@@ -75,7 +75,7 @@ class CustomMdiSubWindow(QMdiSubWindow):
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
-    windowChange = QtCore.pyqtSignal()
+    windowChange = QtCore.Signal()
 
     def __init__(self):
         super().__init__()

@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PyQt5 import uic, QtCore, QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFrame, QLineEdit, QLabel, QMessageBox, QFileDialog,
+from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2.QtWidgets import (QApplication, QMainWindow, QFrame, QLineEdit, QLabel, QMessageBox, QFileDialog,
                              QPushButton, QAction, QHBoxLayout)
 
 from src.pem.pem_file import StationConverter
@@ -18,11 +18,10 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]
-mergerCreatorFile = application_path.joinpath('ui\\pem_merger.ui')
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_PlotMergerWindow, QtBaseClass = uic.loadUiType(mergerCreatorFile)
+Ui_PlotMergerWindow, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\pem_merger.ui')))
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -32,7 +31,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 
 class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
-    accept_sig = QtCore.pyqtSignal(str)
+    accept_sig = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super().__init__()
