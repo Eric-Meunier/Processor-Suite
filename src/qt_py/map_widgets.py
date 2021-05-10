@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 import matplotlib as mpl
@@ -725,7 +726,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('Contour Map Viewer')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map3.png')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map.png')))
         self.channel_list_edit.setEnabled(False)
 
         self.error = QErrorMessage()
@@ -758,15 +759,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.colormap = custom_cmap
 
         """Signals"""
-
-        def toggle_grid():
-            # Draw the grid
-            if self.grid_cbox.isChecked():
-                self.ax.grid()
-            else:
-                self.ax.grid(False)
-            self.canvas.draw_idle()
-
         self.channel_spinbox.valueChanged.connect(lambda: self.draw_map(self.figure))
         self.z_rbtn.clicked.connect(lambda: self.draw_map(self.figure))
         self.x_rbtn.clicked.connect(lambda: self.draw_map(self.figure))
@@ -779,7 +771,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.label_lines_cbox.toggled.connect(lambda: self.draw_map(self.figure))
         self.label_stations_cbox.toggled.connect(lambda: self.draw_map(self.figure))
         self.plot_elevation_cbox.toggled.connect(lambda: self.draw_map(self.figure))
-        self.grid_cbox.toggled.connect(toggle_grid)
+        self.grid_cbox.toggled.connect(self.toggle_grid)
         self.title_box_cbox.toggled.connect(lambda: self.draw_map(self.figure))
         self.channel_list_rbtn.toggled.connect(
             lambda: self.channel_list_edit.setEnabled(self.channel_list_rbtn.isChecked()))
@@ -826,7 +818,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
 
         return figure, ax, cbar_ax
 
-    def open(self, pem_files):
+    def open(self, pem_files, dlg=None):
         """
         Open the PEMFiles and plot the map
         :param pem_files: list, PEMFile objects to plot
@@ -834,7 +826,6 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         """
         survey_type = pem_files[0].get_survey_type()
         self.pem_files = [file for file in pem_files if not file.is_borehole() and file.get_survey_type() == survey_type]
-        self.get_contour_data()
 
         if len(self.pem_files) < 2:
             self.message.information(self, 'Insufficient PEM Files', 'Must have at least 2 surface PEM files to plot')
@@ -842,7 +833,10 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         elif not all([file.is_fluxgate() == self.pem_files[0].is_fluxgate() for file in self.pem_files]):
             self.message.information(self, 'Mixed Survey Types', 'Not all survey types are the same.')
             return
-        elif self.data.empty:
+
+        self.show()
+        self.get_contour_data(dlg)
+        if self.data.empty:
             self.message.information(self, "No Data Found", f"No valid contour data was found.")
             return
 
@@ -877,9 +871,8 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         self.channel_times = self.pem_files[np.argmax(pem_file_channels)].channel_times
 
         self.draw_map(self.figure)
-        self.show()
 
-    def get_contour_data(self):
+    def get_contour_data(self, dlg=None):
         """
         Create contour data (GPS + channel reading) for all PEMFiles.
         :return: pandas DataFrame
@@ -888,6 +881,16 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
         for pem_file in self.pem_files:
             pem_data = pem_file.get_contour_data()
             self.data = self.data.append(pem_data)
+            if dlg is not None:
+                dlg += 1
+
+    def toggle_grid(self):
+        # Draw the grid
+        if self.grid_cbox.isChecked():
+            self.ax.grid()
+        else:
+            self.ax.grid(False)
+        self.canvas.draw_idle()
 
     def draw_map(self, figure, channel=None):
         """
@@ -1047,7 +1050,7 @@ class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
                                 zorder=10)
 
         ax.yaxis.get_major_formatter().set_scientific(False)
-        self.canvas.draw()
+        self.toggle_grid()
 
     def get_selected_component(self):
         if self.z_rbtn.isChecked():
@@ -1424,24 +1427,22 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     getter = PEMGetter()
-    # files = getter.get_pems(client='PEM Rotation', file=r"BX-081 Tool - Acc (Cross).PEM")
-    files = getter.get_pems(folder='PEM Rotation', file=r"BX-081 Tool - Acc (PEMPro).PEM")
-    # files = getter.get_pems(client='Iscaycruz', subfolder='Sante Est')
+    files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
     # m = TileMapViewer()
     # m = GPSViewer()
-    m = Map3DViewer()
-    m.open(files)
-    m.show()
+    # m = Map3DViewer()
+    # m.open(files)
+    # m.show()
 
     # map = Map3DViewer()
     # map.show()
     # map.open(files)
 
-    # cmap = ContourMapViewer()
-    # cmap.open(files)
-    # cmap.show()
+    cmap = ContourMapViewer()
+    cmap.open(files)
+    cmap.show()
     # cmap.channel_list_edit.setText("1, 3, 100, 4")
     # cmap.channel_list_rbtn.setChecked(True)
     # cmap.save_figure()

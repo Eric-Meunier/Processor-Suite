@@ -64,8 +64,6 @@ __version__ = '0.11.5'
 # TODO Update PEM list after merge.
 # TODO Add ability to remove channels
 # TODO Copy channel table to clipboard
-# TODO Add progress bar when plotting contour map
-# TODO Bug in contour map: Title box removes grid
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -2311,8 +2309,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
     def open_contour_map(self):
         """Open the Contour Map"""
         global contour_map
-        contour_map = ContourMapViewer(parent=self)
-        contour_map.open(self.pem_files)
+
+        bar = CustomProgressBar()
+        bar.setMaximum(len(self.pem_files))
+        with pg.ProgressDialog("Plotting PEM Files...", 0, 1) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle("Plotting PEM Files")
+            contour_map = ContourMapViewer(parent=self)
+            contour_map.open(self.pem_files, dlg)
+        bar.deleteLater()
 
     def open_freq_converter(self):
         """Open the Frequency Converter"""
@@ -4784,7 +4789,7 @@ def main():
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pem_g.get_pems(folder="TMC", file="100e.PEM")
+    pem_files = pem_g.get_pems(folder="Iscaycruz", subfolder="Loop 1")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
     # assert len(pem_files) == len(ri_files)

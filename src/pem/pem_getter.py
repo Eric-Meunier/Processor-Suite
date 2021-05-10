@@ -99,5 +99,7 @@ class PEMGetter:
                     # pem_files.append((pem_file, None))  # Empty second item for ri_files
 
         pem_list = '\n'.join([str(f.filepath) for f in pem_files])
+        if not pem_list:
+            raise ValueError(f"No PEM files found in {sample_files_dir}.")
         logger.info(f"Collected PEM files: {pem_list}")
         return pem_files
