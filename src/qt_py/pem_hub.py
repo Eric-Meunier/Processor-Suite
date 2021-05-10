@@ -16,11 +16,11 @@ import pandas as pd
 import simplekml
 import stopit
 from PySide2 import QtCore, QtGui, QtUiTools
-from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
-                             QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel, QHBoxLayout,
-                             QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
-                             QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame, QGroupBox,
-                             QComboBox, QListWidgetItem)
+from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
+                               QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser,
+                               QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
+                               QPushButton, QAbstractItemView, QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox,
+                               QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem)
 import pyqtgraph as pg
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
@@ -66,7 +66,6 @@ __version__ = '0.11.5'
 # TODO Copy channel table to clipboard
 # TODO Add progress bar when plotting contour map
 # TODO Bug in contour map: Title box removes grid
-# TODO Add Reverse > station order in right click menu
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -74,7 +73,7 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]  # src folder path
-print(f"App path: {application_path}")
+print(f"Application path: {application_path}")
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
@@ -365,16 +364,20 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
         self.scale_ca_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('coil.png'))))
 
-        # Reversing component data
-        self.reverse_x_component_action = QAction("X Component", self)
+        # Reversing
+        self.reverse_x_component_action = QAction("X Polarity", self)
         self.reverse_x_component_action.triggered.connect(
             lambda: self.reverse_component_data(comp='X', selected=True))
-        self.reverse_y_component_action = QAction("Y Component", self)
+        self.reverse_y_component_action = QAction("Y Polarity", self)
         self.reverse_y_component_action.triggered.connect(
             lambda: self.reverse_component_data(comp='Y', selected=True))
-        self.reverse_z_component_action = QAction("Z Component", self)
+        self.reverse_z_component_action = QAction("Z Polarity", self)
         self.reverse_z_component_action.triggered.connect(
             lambda: self.reverse_component_data(comp='Z', selected=True))
+
+        self.reverse_station_order_action = QAction("Station Order", self)
+        self.reverse_station_order_action.triggered.connect(
+            lambda: self.reverse_station_order(selected=True))
 
         # Derotation
         self.derotate_action = QAction("De-rotate XY", self)
@@ -510,6 +513,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionReverseX_Component.triggered.connect(lambda: self.reverse_component_data(comp='X', selected=False))
         self.actionReverseY_Component.triggered.connect(lambda: self.reverse_component_data(comp='Y', selected=False))
         self.actionReverseZ_Component.triggered.connect(lambda: self.reverse_component_data(comp='Z', selected=False))
+        self.actionStation_Order.triggered.connect(lambda: self.reverse_station_order(selected=False))
 
         # Map menu
         self.actionQuick_Map.triggered.connect(self.open_quick_map)
@@ -1155,6 +1159,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.reverse_menu.addAction(self.reverse_x_component_action)
                 self.reverse_menu.addAction(self.reverse_y_component_action)
                 self.reverse_menu.addAction(self.reverse_z_component_action)
+                self.reverse_menu.addSeparator()
+                self.reverse_menu.addAction(self.reverse_station_numbers_action)
+
                 self.menu.addSeparator()
 
                 # For boreholes only, do-rotate and geometry
@@ -3859,27 +3866,47 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        for pem_file in pem_files:
-            logger.info(f"Reversing {comp} data of {pem_file.filepath.name}.")
-            filt = pem_file.data.Component == comp.upper()
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
 
-            if filt.any():
-                data = pem_file.data[filt]
-                data.loc[:, 'Reading'] = data.loc[:, 'Reading'] * -1
-                pem_file.data[filt] = data
+        with pg.ProgressDialog(f'Reversing {comp} Component Polarity...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle(f'Reversing {comp} Component Polarity')
 
-                note = f"<HE3> {comp.upper()} component polarity reversed."
-                if note in pem_file.notes:
-                    pem_file.notes.remove(note)
-                else:
-                    pem_file.notes.append(note)
-
+            for pem_file, row in zip(pem_files, rows):
+                dlg.setLabelText(f"Reversing {comp} component data of {pem_file.filepath.name}")
+                pem_file = pem_file.reverse_component(comp)
                 self.refresh_pem(pem_file)
-            else:
-                logger.warning(f"{pem_file.filepath.name} has no {comp} data.")
+                dlg += 1
 
+        bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. "
                                     f"{comp.upper()} of {len(pem_files)} PEM file(s) reversed.", 2000)
+
+    def reverse_station_order(self, selected=False):
+        pem_files, rows = self.get_pem_files(selected=selected)
+
+        if not pem_files:
+            logger.warning(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+
+        with pg.ProgressDialog('Reversing Station Order...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle('Reversing Station Order')
+
+            for pem_file, row in zip(pem_files, rows):
+                dlg.setLabelText(f"Reversing station order of {pem_file.filepath.name}")
+                pem_file = pem_file.reverse_station_order()
+                self.refresh_pem(pem_file)
+                dlg += 1
+
+        bar.deleteLater()
+        self.status_bar.showMessage(f"Process complete. "
+                                    f"Station order of {len(pem_files)} PEM file(s) reversed.", 2000)
 
     # def auto_merge_pem_files(self):
     #
@@ -4753,11 +4780,11 @@ def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMHub()
-    pg = PEMGetter()
+    pem_g = PEMGetter()
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pg.get_pems(folder='Raglan', number=1)
+    pem_files = pem_g.get_pems(folder="TMC", file="100e.PEM")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
     # assert len(pem_files) == len(ri_files)

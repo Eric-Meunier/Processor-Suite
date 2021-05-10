@@ -1184,6 +1184,48 @@ class PEMFile:
         self.notes.append(f'<HE3> Data scaled by factor of {1 + factor}')
         return self
 
+    def reverse_component(self, component):
+        logger.info(f"Reversing {component} data of {self.filepath.name}.")
+        filt = self.data.Component == component.upper()
+
+        if filt.any():
+            data = self.data[filt]
+            data.loc[:, 'Reading'] = data.loc[:, 'Reading'] * -1
+            self.data[filt] = data
+
+            note = f"<HE3> {component.upper()} component polarity reversed."
+            if note in self.notes:
+                self.notes.remove(note)
+            else:
+                self.notes.append(note)
+        else:
+            logger.warning(f"{self.filepath.name} has no {component} data.")
+        return self
+
+    def reverse_station_numbers(self):
+        """
+        Reverse the order of all station numbers.
+        """
+
+        def get_new_station_num(station):
+            old_number = re.search(r"\d+", station).group(0)
+            new_number = new_order.get(old_number)
+            new_station = re.sub(r"\d+", new_number, station)
+            return new_station
+
+        logger.info(f"Reversing station numbers of {self.filepath.name}.")
+        new_order = dict(zip(self.get_stations(converted=True).astype(str),
+                             reversed(self.get_stations(converted=True).astype(str))))
+        reversed_stations = self.data.Station.map(get_new_station_num)
+        self.data.Station = reversed_stations
+
+        note = f"<HE3> Station numbers reversed."
+        if note in self.notes:
+            self.notes.remove(note)
+        else:
+            self.notes.append(note)
+        return self
+
     def rotate_soa(self, soa):
         """
         Rotate the X and Y by an SOA value.
@@ -3370,13 +3412,14 @@ if __name__ == '__main__':
     # pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
     # pem_files = pem_g.get_pems(folder="PEM Rotation", file="MARO-21-005 xy.PEM")
-    pem_files = pem_g.get_pems(folder="PEM Rotation", file="em21-155xy_0415.PEM")
+    pem_files = pem_g.get_pems(folder="TMC", file="100e.PEM")
     # pem_files = pem_g.get_pems(folder="PEM Rotation", file="xy_0406.PEM")
     pem_file = pem_files[0]
+    pem_file.reverse_station_order()
     # pem_files[0].get_date()
     # pem_files[0].get_clipboard_info()
-    pem_file.prep_rotation()
-    pem_file.rotate()
+    # pem_file.prep_rotation()
+    # pem_file.rotate()
     # pem_file.average()
     # pem_file.filepath = Path(r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\XYT mk2 Eric.PEM")
     # pem_file.save()

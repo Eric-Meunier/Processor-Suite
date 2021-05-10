@@ -734,7 +734,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 :param ax: pyqtgraph PlotItem
                 """
                 df_avg = df.groupby('Station').mean()
-                x, y = df_avg.index, df_avg
+                x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
                 ax.plot(x=x, y=y,
                         pen=pg.mkPen('k', width=1.),
@@ -751,7 +751,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 :param ax: pyqtgraph PlotItem
                 :return:
                 """
-                x, y = df.index, df
+                x, y = df.index.to_numpy(), df.to_numpy()
 
                 scatter = pg.ScatterPlotItem(x=x, y=y,
                                              pen=pg.mkPen('k', width=1.),
