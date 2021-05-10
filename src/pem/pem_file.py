@@ -195,14 +195,14 @@ class PEMFile:
 
         self.filepath = Path(filepath)
 
-        crs = self.get_crs()
-        self.loop = TransmitterLoop(loop_coords, crs=crs)
+        self.crs = self.get_crs()
+        self.loop = TransmitterLoop(loop_coords, crs=self.crs)
         if self.is_borehole():
-            self.collar = BoreholeCollar([line_coords[0]], crs=crs)
+            self.collar = BoreholeCollar([line_coords[0]], crs=self.crs)
             self.segments = BoreholeSegments(line_coords[1:])
             # self.geometry = BoreholeGeometry(self.collar, self.segments)
         else:
-            self.line = SurveyLine(line_coords, crs=crs)
+            self.line = SurveyLine(line_coords, crs=self.crs)
 
         return self
 
@@ -266,14 +266,14 @@ class PEMFile:
 
         self.filepath = filepath.with_suffix('.PEM')
 
-        crs = self.get_crs()
-        self.loop = TransmitterLoop(None, crs=crs)
+        self.crs = self.get_crs()
+        self.loop = TransmitterLoop(None, crs=self.crs)
         if self.is_borehole():
-            self.collar = BoreholeCollar(None, crs=crs)
+            self.collar = BoreholeCollar(None, crs=self.crs)
             self.segments = BoreholeSegments(None)
             # self.geometry = BoreholeGeometry(self.collar, self.segments)
         else:
-            self.line = SurveyLine(None, crs=crs)
+            self.line = SurveyLine(None, crs=self.crs)
 
         return self
 

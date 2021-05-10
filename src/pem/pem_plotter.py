@@ -23,7 +23,7 @@ import pyqtgraph as pg
 import six
 import utm
 from PIL import Image
-from PyQt5.QtWidgets import (QProgressBar, QApplication)
+from PySide2.QtWidgets import QProgressBar, QApplication
 from cartopy import feature
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from matplotlib import patches
@@ -41,11 +41,6 @@ from src.qt_py.ri_importer import RIFile
 from src.qt_py.custom_qt_widgets import CustomProgressBar
 
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
 
 mpl.rcParams['path.simplify'] = True
 mpl.rcParams['path.simplify_threshold'] = 1.0

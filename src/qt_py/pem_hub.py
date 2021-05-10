@@ -13,16 +13,15 @@ import keyboard
 import natsort
 import numpy as np
 import pandas as pd
-import pyqtgraph as pg
 import simplekml
 import stopit
-from PyQt5 import (QtCore, QtGui, uic)
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
+from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
                              QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel, QHBoxLayout,
                              QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
                              QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame, QGroupBox,
                              QComboBox, QListWidgetItem)
+import pyqtgraph as pg
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
@@ -36,7 +35,7 @@ from src.gps.gpx_creator import GPXCreator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py.custom_qt_widgets import CustomProgressBar
-from src.pem.derotator import Derotator
+from src.qt_py.derotator import Derotator
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
 from src.qt_py.name_editor import BatchNameEditor
 from src.geometry.pem_geometry import PEMGeometry
@@ -50,7 +49,7 @@ from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.11.4'
+__version__ = '0.11.5'
 # TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create right click option to create package on final folder (like step)
@@ -64,66 +63,74 @@ __version__ = '0.11.4'
 # TODO Use savgol to filter data
 # TODO Update PEM list after merge.
 # TODO Add ability to remove channels
-# TODO Fix bulk renaming (adding column after pressing OK)
-# TODO FIx notes in PIW
 # TODO Copy channel table to clipboard
 # TODO Add progress bar when plotting contour map
 # TODO Bug in contour map: Title box removes grid
+# TODO Add Reverse > station order in right click menu
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    # TODO This application has not been tested when frozen
     application_path = Path(sys.executable).parent
-    pemhubWindowCreatorFile = Path('ui\\pem_hub.ui')
-    planMapOptionsCreatorFile = Path('ui\\plan_map_options.ui')
-    pdfPrintOptionsCreatorFile = Path('ui\\pdf_plot_printer.ui')
-    gpsConversionWindow = Path('ui\\gps_conversion.ui')
-    icons_path = Path('ui\\icons')
 else:
-    application_path = Path(__file__).absolute().parents[1]
-    pemhubWindowCreatorFile = application_path.joinpath('ui\\pem_hub.ui')
-    planMapOptionsCreatorFile = application_path.joinpath('ui\\plan_map_options.ui')
-    pdfPrintOptionsCreatorFile = application_path.joinpath('ui\\pdf_plot_printer.ui')
-    gpsConversionWindow = application_path.joinpath('ui\\gps_conversion.ui')
-    icons_path = application_path.joinpath("ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]  # src folder path
+print(f"App path: {application_path}")
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_PEMHubWindow, _ = uic.loadUiType(pemhubWindowCreatorFile)
-Ui_PlanMapOptionsWidget, _ = uic.loadUiType(planMapOptionsCreatorFile)
-Ui_PDFPlotPrinterWidget, _ = uic.loadUiType(pdfPrintOptionsCreatorFile)
-Ui_GPSConversionWidget, _ = uic.loadUiType(gpsConversionWindow)
+Ui_PEMHubWindow, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\pem_hub.ui')))
+Ui_PlanMapOptionsWidget, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\plan_map_options.ui')))
+Ui_PDFPlotPrinterWidget, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\pdf_plot_printer.ui')))
+Ui_GPSConversionWidget, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\gps_conversion.ui')))
 
 
 def get_icon(filepath):
     ext = filepath.suffix.lower()
     if ext in ['.xls', '.xlsx', '.csv']:
-        icon_pix = QPixmap(str(icons_path.joinpath('excel_file.png')))
-        icon = QIcon(icon_pix)
+        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('excel_file.png')))
+        if not (icons_path.joinpath('excel_file.png').exists()):
+            print(f"{icons_path.joinpath('excel_file.png')} does not exist.")
+        icon = QtGui.QIcon(icon_pix)
     elif ext in ['.rtf', '.docx', '.doc']:
-        icon_pix = QPixmap(str(icons_path.joinpath('word_file.png')))
-        icon = QIcon(icon_pix)
+        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('word_file.png')))
+        if not (icons_path.joinpath('word_file.png').exists()):
+            print(f"{icons_path.joinpath('word_file.png')} does not exist.")
+        icon = QtGui.QIcon(icon_pix)
     elif ext in ['.log', '.txt', '.xyz', '.seg', '.dad']:
-        icon_pix = QPixmap(str(icons_path.joinpath('txt_file.png')))
-        icon = QIcon(icon_pix)
+        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('txt_file.png')))
+        if not (icons_path.joinpath('txt_file.png').exists()):
+            print(f"{icons_path.joinpath('txt_file.png')} does not exist.")
+        icon = QtGui.QIcon(icon_pix)
     elif ext in ['.pem']:
-        icon_pix = QPixmap(str(icons_path.joinpath('crone_logo.png')))
-        icon = QIcon(icon_pix)
+        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('crone_logo.png')))
+        if not (icons_path.joinpath('crone_logo.png').exists()):
+            print(f"{icons_path.joinpath('crone_logo.png')} does not exist.")
+        icon = QtGui.QIcon(icon_pix)
     elif ext in ['.dmp', '.dmp2', '.dmp3', '.dmp4']:
-        icon_pix = QPixmap(str(icons_path.joinpath('dmp.png')))
-        icon = QIcon(icon_pix)
+        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('dmp.png')))
+        if not (icons_path.joinpath('dmp.png').exists()):
+            print(f"{icons_path.joinpath('dmp.png')} does not exist.")
+        icon = QtGui.QIcon(icon_pix)
     elif ext in ['.gpx', '.gdb']:
-        icon_pix = QPixmap(str(icons_path.joinpath('garmin_file.png')))
-        icon = QIcon(icon_pix)
+        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('garmin_file.png')))
+        if not (icons_path.joinpath('garmin_file.png').exists()):
+            print(f"{icons_path.joinpath('garmin_file.png')} does not exist.")
+        icon = QtGui.QIcon(icon_pix)
     elif ext in ['.ssf']:
-        icon_pix = QPixmap(str(icons_path.joinpath('ssf_file.png')))
-        icon = QIcon(icon_pix)
+        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('ssf_file.png')))
+        if not (icons_path.joinpath('ssf_file.png').exists()):
+            print(f"{icons_path.joinpath('ssf_file.png')} does not exist.")
+        icon = QtGui.QIcon(icon_pix)
     elif ext in ['.cor']:
-        icon_pix = QPixmap(str(icons_path.joinpath('cor_file.png')))
-        icon = QIcon(icon_pix)
+        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('cor_file.png')))
+        if not (icons_path.joinpath('cor_file.png').exists()):
+            print(f"{icons_path.joinpath('cor_file.png')} does not exist.")
+        icon = QtGui.QIcon(icon_pix)
     else:
-        icon_pix = QPixmap(str(icons_path.joinpath('none_file.png')))
-        icon = QIcon(icon_pix)
+        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('none_file.png')))
+        if not (icons_path.joinpath('none_file.png').exists()):
+            print(f"{icons_path.joinpath('none_file.png')} does not exist.")
+        icon = QtGui.QIcon(icon_pix)
     return icon
 
 
@@ -254,31 +261,31 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Remove, open, and save PEM files
         self.remove_file_action = QAction("Remove", self)
         self.remove_file_action.triggered.connect(self.remove_pem_file)
-        self.remove_file_action.setIcon(QIcon(str(icons_path.joinpath('remove.png'))))
+        self.remove_file_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('remove.png'))))
         self.open_file_action = QAction("Open", self)
         self.open_file_action.triggered.connect(self.open_in_text_editor)
-        self.open_file_action.setIcon(QIcon(str(icons_path.joinpath('txt_file.png'))))
+        self.open_file_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('txt_file.png'))))
         self.save_file_action = QAction("Save", self)
-        self.save_file_action.setIcon(QIcon(str(icons_path.joinpath('save.png'))))
+        self.save_file_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('save.png'))))
         self.save_file_action.triggered.connect(lambda: self.save_pem_files(selected=True))
         self.save_file_as_action = QAction("Save As...", self)
-        self.save_file_as_action.setIcon(QIcon(str(icons_path.joinpath('save_as.png'))))
+        self.save_file_as_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('save_as.png'))))
         self.save_file_as_action.triggered.connect(self.save_pem_file_as)
         self.copy_to_cliboard_action = QAction("Copy to Clipboard", self)
-        self.copy_to_cliboard_action.setIcon(QIcon(str(icons_path.joinpath('copy.png'))))
+        self.copy_to_cliboard_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('copy.png'))))
         self.copy_to_cliboard_action.triggered.connect(self.copy_pems_to_clipboard)
 
         # Exports
         self.export_pem_action = QAction("PEM", self)
-        self.export_pem_action.setIcon(QIcon(str(icons_path.joinpath('crone_logo.png'))))
+        self.export_pem_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('crone_logo.png'))))
         self.export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True, processed=False))
 
         self.export_dad_action = QAction("DAD", self)
-        # export_pem_action.setIcon(QIcon(os.path.join(icons_path, 'export.png')))
+        # export_pem_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'export.png')))
         self.export_dad_action.triggered.connect(self.export_dad)
 
         self.export_gps_action = QAction("GPS", self)
-        # export_pem_action.setIcon(QIcon(os.path.join(icons_path, 'export.png')))
+        # export_pem_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'export.png')))
         self.export_gps_action.triggered.connect(lambda: self.export_gps(selected=True))
 
         # View channel table
@@ -287,17 +294,17 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Merge PEM files
         self.merge_action = QAction("Merge", self)
-        self.merge_action.setIcon(QIcon(str(icons_path.joinpath('pem_merger.png'))))
+        self.merge_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('pem_merger.png'))))
         self.merge_action.triggered.connect(self.open_pem_merger)
 
         # Print PDFs
         self.print_plots_action = QAction("Print Plots", self)
-        self.print_plots_action.setIcon(QIcon(str(icons_path.joinpath('pdf.png'))))
+        self.print_plots_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('pdf.png'))))
         self.print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected_files=True))
 
         # Extract stations
         self.extract_stations_action = QAction("Stations", self)
-        # self.extract_stations_action.setIcon(QIcon(os.path.join(icons_path, 'station_splitter.png')))
+        # self.extract_stations_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'station_splitter.png')))
         self.extract_stations_action.triggered.connect(self.open_station_splitter)
 
         self.extract_x_action = QAction("X Component", self)
@@ -309,7 +316,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Magnetic declination calculator
         self.calc_mag_dec_action = QAction("Magnetic Declination", self)
-        self.calc_mag_dec_action.setIcon(QIcon(str(icons_path.joinpath('mag_field.png'))))
+        self.calc_mag_dec_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('mag_field.png'))))
         self.calc_mag_dec_action.triggered.connect(self.open_mag_dec)
 
         # View GPS
@@ -331,32 +338,32 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.share_all_action.triggered.connect(lambda: share_gps('all'))
 
         # self.table.view_3d_section_action = QAction("&View 3D Section", self)
-        # self.table.view_3d_section_action.setIcon(QIcon(os.path.join(icons_path, 'section_3d.png')))
+        # self.table.view_3d_section_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
         # self.table.view_3d_section_action.triggered.connect(self.show_section_3d_viewer)
 
         # Plot editor
         self.open_plot_editor_action = QAction("Plot", self)
         self.open_plot_editor_action.triggered.connect(self.open_pem_plot_editor)
-        self.open_plot_editor_action.setIcon(QIcon(str(icons_path.joinpath('plot_editor.png'))))
+        self.open_plot_editor_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('plot_editor.png'))))
 
         # Quick Map
         self.open_quick_map_action = QAction("Quick Map", self)
         self.open_quick_map_action.triggered.connect(lambda: self.open_quick_map(selected=True))
-        self.open_quick_map_action.setIcon(QIcon(str(icons_path.joinpath('gps_viewer.png'))))
+        self.open_quick_map_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('gps_viewer.png'))))
 
         # Data editing/processing
         self.average_action = QAction("Average", self)
         self.average_action.triggered.connect(lambda: self.average_pem_data(selected=True))
-        self.average_action.setIcon(QIcon(str(icons_path.joinpath('average.png'))))
+        self.average_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('average.png'))))
         self.split_action = QAction("Split Channels", self)
         self.split_action.triggered.connect(lambda: self.split_pem_channels(selected=True))
-        self.split_action.setIcon(QIcon(str(icons_path.joinpath('split.png'))))
+        self.split_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('split.png'))))
         self.scale_current_action = QAction("Scale Current", self)
         self.scale_current_action.triggered.connect(lambda: self.scale_pem_current(selected=True))
-        self.scale_current_action.setIcon(QIcon(str(icons_path.joinpath('current.png'))))
+        self.scale_current_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('current.png'))))
         self.scale_ca_action = QAction("Scale Coil Area", self)
         self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
-        self.scale_ca_action.setIcon(QIcon(str(icons_path.joinpath('coil.png'))))
+        self.scale_ca_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('coil.png'))))
 
         # Reversing component data
         self.reverse_x_component_action = QAction("X Component", self)
@@ -372,12 +379,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # Derotation
         self.derotate_action = QAction("De-rotate XY", self)
         self.derotate_action.triggered.connect(self.open_derotator)
-        self.derotate_action.setIcon(QIcon(str(icons_path.joinpath('derotate.png'))))
+        self.derotate_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('derotate.png'))))
 
         # Borehole geometry
         self.get_geometry_action = QAction("Geometry", self)
         self.get_geometry_action.triggered.connect(self.open_pem_geometry)
-        self.get_geometry_action.setIcon(QIcon(str(icons_path.joinpath('pem_geometry.png'))))
+        self.get_geometry_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('pem_geometry.png'))))
 
         # Rename lines and files
         self.rename_lines_action = QAction("Rename Lines/Holes", self)
@@ -390,23 +397,23 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # View menu
         self.view_menu = QMenu('View', self.menu)
-        self.view_menu.setIcon(QIcon(str(icons_path.joinpath('view.png'))))
+        self.view_menu.setIcon(QtGui.QIcon(str(icons_path.joinpath('view.png'))))
 
         # Add the export menu
         self.export_menu = QMenu('Export...', self.menu)
-        self.export_menu.setIcon(QIcon(str(icons_path.joinpath('export.png'))))
+        self.export_menu.setIcon(QtGui.QIcon(str(icons_path.joinpath('export.png'))))
 
         # Add the extract menu
         self.extract_menu = QMenu('Extract...', self.menu)
-        self.extract_menu.setIcon(QIcon(str(icons_path.joinpath('station_splitter.png'))))
+        self.extract_menu.setIcon(QtGui.QIcon(str(icons_path.joinpath('station_splitter.png'))))
 
         # Share menu
         self.share_menu = QMenu('Share', self.menu)
-        self.share_menu.setIcon(QIcon(str(icons_path.joinpath('share_gps.png'))))
+        self.share_menu.setIcon(QtGui.QIcon(str(icons_path.joinpath('share_gps.png'))))
 
         # Reverse data menu
         self.reverse_menu = QMenu('Reverse', self.menu)
-        self.reverse_menu.setIcon(QIcon(str(icons_path.joinpath('reverse.png'))))
+        self.reverse_menu.setIcon(QtGui.QIcon(str(icons_path.joinpath('reverse.png'))))
 
     def init_ui(self):
         """
@@ -422,11 +429,52 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.setupUi(self)
         self.setAcceptDrops(True)
         self.setWindowTitle("PEMPro  v" + str(__version__))
-        self.setWindowIcon(QIcon(str(icons_path.joinpath('conder.png'))))
+        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath('conder.png'))))
         self.resize(1700, 900)
-        center_window()
+        # center_window()
 
         self.table.horizontalHeader().hide()
+
+        # Set icons
+        self.actionOpenFile.setIcon(QtGui.QIcon(str(icons_path.joinpath("open.png"))))
+        self.actionSaveFiles.setIcon(QtGui.QIcon(str(icons_path.joinpath("save.png"))))
+        self.menuExport_Files.setIcon(QtGui.QIcon(str(icons_path.joinpath("export.png"))))
+        self.actionPrint_Plots_to_PDF.setIcon(QtGui.QIcon(str(icons_path.joinpath("pdf.png"))))
+
+        self.actionAverage_All_PEM_Files.setIcon(QtGui.QIcon(str(icons_path.joinpath("average.png"))))
+        self.actionSplit_All_PEM_Files.setIcon(QtGui.QIcon(str(icons_path.joinpath("split.png"))))
+        self.actionScale_All_Currents.setIcon(QtGui.QIcon(str(icons_path.joinpath("current.png"))))
+        self.actionChange_All_Coil_Areas.setIcon(QtGui.QIcon(str(icons_path.joinpath("coil.png"))))
+        self.menuReverse_Polarity.setIcon(QtGui.QIcon(str(icons_path.joinpath("reverse.png"))))
+
+        self.actionSave_as_KMZ.setIcon(QtGui.QIcon(str(icons_path.joinpath("google_earth.png"))))
+        self.actionExport_All_GPS.setIcon(QtGui.QIcon(str(icons_path.joinpath("csv.png"))))
+        self.actionConvert_GPS.setIcon(QtGui.QIcon(str(icons_path.joinpath("convert_gps.png"))))
+
+        self.actionQuick_Map.setIcon(QtGui.QIcon(str(icons_path.joinpath("gps_viewer.png"))))
+        self.actionTile_Map.setIcon(QtGui.QIcon(str(icons_path.joinpath("folium.png"))))
+        self.actionContour_Map.setIcon(QtGui.QIcon(str(icons_path.joinpath("contour_map.png"))))
+        self.action3D_Map.setIcon(QtGui.QIcon(str(icons_path.joinpath("3d_map.png"))))
+        self.actionGoogle_Earth.setIcon(QtGui.QIcon(str(icons_path.joinpath("google_earth.png"))))
+
+        self.actionUnpacker.setIcon(QtGui.QIcon(str(icons_path.joinpath("unpacker.png"))))
+        self.actionDamping_Box_Plotter.setIcon(QtGui.QIcon(str(icons_path.joinpath("db_plot.png"))))
+        self.actionLoop_Planner.setIcon(QtGui.QIcon(str(icons_path.joinpath("loop_planner.png"))))
+        self.actionGrid_Planner.setIcon(QtGui.QIcon(str(icons_path.joinpath("grid_planner.png"))))
+        self.actionLoop_Current_Calculator.setIcon(QtGui.QIcon(str(icons_path.joinpath("voltmeter.png"))))
+        self.actionConvert_Timebase_Frequency.setIcon(QtGui.QIcon(str(icons_path.joinpath("freq_timebase_calc.png"))))
+        self.actionGPX_Creator.setIcon(QtGui.QIcon(str(icons_path.joinpath("gpx_creator.png"))))
+
+        self.actionView_Logs.setIcon(QtGui.QIcon(str(icons_path.joinpath("txt_file.png"))))
+
+        self.refresh_pem_list_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("refresh.png"))))
+        self.filter_pem_list_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("filter.png"))))
+        self.add_pem_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("add_square.png"))))
+        self.remove_pem_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("minus.png"))))
+        self.refresh_gps_list_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("refresh.png"))))
+        self.filter_gps_list_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("filter.png"))))
+        self.add_gps_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("add_square.png"))))
+        self.remove_gps_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("minus.png"))))
 
     def init_menus(self):
         """
@@ -457,7 +505,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionChange_All_Coil_Areas.triggered.connect(lambda: self.scale_pem_coil_area(selected=False))
 
         self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
-        self.actionAuto_Merge_All_Files.triggered.connect(self.auto_merge_pem_files)
+        # self.actionAuto_Merge_All_Files.triggered.connect(self.auto_merge_pem_files)
 
         self.actionReverseX_Component.triggered.connect(lambda: self.reverse_component_data(comp='X', selected=False))
         self.actionReverseY_Component.triggered.connect(lambda: self.reverse_component_data(comp='Y', selected=False))
@@ -490,7 +538,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             if log_file.exists():
                 os.startfile(str(log_file))
             else:
-                self.message.error(self, 'File Not Found', f"'{log_file}' file not found.")
+                self.message.critical(self, 'File Not Found', f"'{log_file}' file not found.")
 
         self.actionView_Logs.triggered.connect(open_logs)
 
@@ -1050,38 +1098,38 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                     # Share loop
                     self.share_menu.addAction(self.share_loop_action)
-                    if not pem_file.has_loop_gps():
-                        self.share_loop_action.setDisabled(True)
-                    else:
+                    if pem_file.has_loop_gps() and len(self.pem_files) > 1:
                         self.share_loop_action.setDisabled(False)
+                    else:
+                        self.share_loop_action.setDisabled(True)
 
                     # Share line GPS
                     if not pem_file.is_borehole():
                         self.share_menu.addAction(self.share_line_action)
-                        if not pem_file.has_station_gps():
-                            self.share_line_action.setDisabled(True)
-                        else:
+                        if pem_file.has_station_gps() and len(self.pem_files) > 1:
                             self.share_line_action.setDisabled(False)
+                        else:
+                            self.share_line_action.setDisabled(True)
 
                     # Share Collar and Segments
                     else:
                         self.share_menu.addAction(self.share_collar_action)
                         self.share_menu.addAction(self.share_segments_action)
-                        if not pem_file.has_collar_gps():
-                            self.share_collar_action.setDisabled(True)
-                        else:
+                        if pem_file.has_collar_gps() and len(self.pem_files) > 1:
                             self.share_collar_action.setDisabled(False)
-                        if not pem_file.has_geometry():
-                            self.share_segments_action.setDisabled(True)
                         else:
+                            self.share_collar_action.setDisabled(True)
+                        if pem_file.has_geometry() and len(self.pem_files) > 1:
                             self.share_segments_action.setDisabled(False)
+                        else:
+                            self.share_segments_action.setDisabled(True)
 
                     self.share_menu.addSeparator()
                     self.share_menu.addAction(self.share_all_action)
-                    if not pem_file.has_any_gps():
-                        self.share_all_action.setDisabled(True)
-                    else:
+                    if pem_file.has_any_gps() and len(self.pem_files) > 1:
                         self.share_all_action.setDisabled(False)
+                    else:
+                        self.share_all_action.setDisabled(True)
                 else:
                     self.menu.addAction(self.copy_to_cliboard_action)
 
@@ -1769,6 +1817,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.remove_pem_file(rows)
 
             self.add_pem_files(filepath)
+            self.fill_pem_list()
 
         pem_files, rows = self.get_pem_files(selected=True)
         if len(pem_files) != 2:
@@ -2036,6 +2085,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.status_bar.showMessage(f"Process complete. GPS converted to {crs.name}.", 2000)
 
             bar.deleteLater()
+            self.set_crs(crs)
 
         crs = self.get_crs()
 
@@ -2044,8 +2094,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.message.critical(self, 'Invalid CRS', 'Project CRS is invalid.')
             return
 
-        self.gps_conversion_widget.open(crs)
-        self.gps_conversion_widget.accept_signal.connect(convert_gps)
+        global converter
+        converter = GPSConversionWidget()
+        converter.open(crs)
+        converter.accept_signal.connect(convert_gps)
 
     def open_gps_share(self, gps_object, source_widget):
         """
@@ -2159,6 +2211,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             else:
                 pem_files = []
 
+        if len(pem_files) < 2:
+            return
+
         source_index = piws.index(source_widget)
 
         global gps_share
@@ -2238,7 +2293,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         unpacker.open_project_folder_sig.connect(open_unpacker_dir)
         if folder:
             unpacker.open_folder(folder, project_dir=self.project_dir)
-        # unpacker.show()
+        unpacker.show()
 
     def open_gpx_creator(self):
         """Open the GPX Creator"""
@@ -2577,6 +2632,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 # Add the CRS note if CRS isn't None
                 if crs:
+                    pem_file.set_crs(crs)
                     add_crs_tag()
 
                 # Save the PEM file and refresh it in the table
@@ -3825,134 +3881,134 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.status_bar.showMessage(f"Process complete. "
                                     f"{comp.upper()} of {len(pem_files)} PEM file(s) reversed.", 2000)
 
-    def auto_merge_pem_files(self):
-
-        def merge_pems(pem_files):
-            """
-            Merge the list of PEM files into a single PEM file.
-            :param pem_files: list, PEMFile objects.
-            :return: single PEMFile object
-            """
-            if isinstance(pem_files, list) and len(pem_files) > 1:
-                logger.info(f"Merging {', '.join([f.filepath.name for f in pem_files])}.")
-                # Data merging section
-                currents = [pem_file.current for pem_file in pem_files]
-                coil_areas = [pem_file.coil_area for pem_file in pem_files]
-
-                # If any currents are different
-                if not all([current == currents[0] for current in currents]):
-                    response = self.message.question(self, 'Warning - Different currents',
-                                                     f"{', '.join([f.filepath.name for f in pem_files])} do not have "
-                                                     f"the same current. Proceed with merging anyway?",
-                                                     self.message.Yes | self.message.No)
-                    if response == self.message.No:
-                        self.status_bar.showMessage('Aborted.', 2000)
-                        return
-
-                # If any coil areas are different
-                if not all([coil_area == coil_areas[0] for coil_area in coil_areas]):
-                    response = self.message.question(self, 'Warning - Different coil areas',
-                                                     f"{', '.join([f.filepath.name for f in pem_files])} do not have "
-                                                     f"the same coil area. Proceed with merging anyway?",
-                                                     self.message.Yes | self.message.No)
-                    if response == self.message.No:
-                        self.status_bar.showMessage('Aborted.', 2000)
-                        return
-
-                # If the files aren't all split or un-split
-                if any([pem_file.is_split() for pem_file in pem_files]) and any(
-                        [not pem_file.is_split() for pem_file in pem_files]):
-                    response = self.message.question(self, 'Warning - Different channel split states',
-                                                     'There is a mix of channel splitting in the selected files. '
-                                                     'Would you like to split the unsplit file(s) '
-                                                     'and proceed with merging?',
-                                                     self.message.Yes | self.message.No)
-                    if response == self.message.Yes:
-                        for pem_file in pem_files:
-                            pem_file = pem_file.split()
-                    else:
-                        return
-
-                # If the files aren't all de-rotated
-                if any([pem_file.is_derotated() for pem_file in pem_files]) and any(
-                        [not pem_file.is_derotated() for pem_file in pem_files]):
-                    self.message.information(self, 'Error - Different states of XY de-rotation',
-                                             'There is a mix of XY de-rotation in the selected files.')
-
-                merged_pem = pem_files[0].copy()
-                merged_pem.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
-                merged_pem.number_of_readings = sum([f.number_of_readings for f in pem_files])
-                merged_pem.is_merged = True
-
-                # Add the M tag
-                if '[M]' not in pem_files[0].filepath.name:
-                    merged_pem.filepath = merged_pem.filepath.with_name(
-                        merged_pem.filepath.stem + '[M]' + merged_pem.filepath.suffix)
-
-                merged_pem.save()
-                return merged_pem
-
-        files_to_open = []
-        files_to_remove = []
-
-        if not self.pem_files:
-            logger.warning(f"No PEM files opened.")
-            self.status_bar.showMessage(f"No PEM files opened.", 2000)
-            return
-
-        pem_files, rows = copy.deepcopy(self.pem_files), np.arange(self.table.rowCount())
-
-        bh_files = [f for f in pem_files if f.is_borehole()]
-        sf_files = [f for f in pem_files if f not in bh_files]
-
-        # Merge surface files
-        # Group the files by loop name
-        for loop, loop_files in groupby(sf_files, key=lambda x: x.loop_name):
-            loop_files = list(loop_files)
-            logger.info(f"Auto merging loop {loop}.")
-
-            # Group the files by line name
-            for line, line_files in groupby(loop_files, key=lambda x: x.line_name):
-                line_files = list(line_files)
-                if len(line_files) > 1:
-                    logger.info(f"Auto merging line {line}: {[f.filepath.name for f in line_files]}.")
-
-                    # Merge the files
-                    merged_pem = merge_pems(line_files)
-
-                    if merged_pem is not None:
-                        files_to_open.append(merged_pem)
-                        files_to_remove.extend(line_files)
-
-        # Merge borehole files
-        # Group the files by loop
-        for loop, loop_files in groupby(bh_files, key=lambda x: x.loop_name):
-            loop_files = list(loop_files)
-
-            # Group the files by hole name
-            for hole, hole_files in groupby(loop_files, key=lambda x: x.line_name):
-                hole_files = sorted(list(hole_files), key=lambda x: x.get_components())
-
-                # Group the files by their components
-                for components, comp_files in groupby(hole_files, key=lambda x: x.get_components()):
-                    comp_files = list(comp_files)
-                    if len(comp_files) > 1:
-                        logger.info(f"Auto merging hole {hole}: {[f.filepath.name for f in comp_files]}")
-
-                        # Merge the files
-                        merged_pem = merge_pems(comp_files)
-
-                        if merged_pem is not None:
-                            files_to_open.append(merged_pem)
-                            files_to_remove.extend(comp_files)
-
-        rows = [pem_files.index(f) for f in files_to_remove]
-
-        if self.delete_merged_files_cbox.isChecked():
-            logger.warning(f"Removing rows {', '.join(rows)}.")
-            self.remove_pem_file(rows=rows)
-
-        self.add_pem_files(files_to_open)
+    # def auto_merge_pem_files(self):
+    #
+    #     def merge_pems(pem_files):
+    #         """
+    #         Merge the list of PEM files into a single PEM file.
+    #         :param pem_files: list, PEMFile objects.
+    #         :return: single PEMFile object
+    #         """
+    #         if isinstance(pem_files, list) and len(pem_files) > 1:
+    #             logger.info(f"Merging {', '.join([f.filepath.name for f in pem_files])}.")
+    #             # Data merging section
+    #             currents = [pem_file.current for pem_file in pem_files]
+    #             coil_areas = [pem_file.coil_area for pem_file in pem_files]
+    #
+    #             # If any currents are different
+    #             if not all([current == currents[0] for current in currents]):
+    #                 response = self.message.question(self, 'Warning - Different currents',
+    #                                                  f"{', '.join([f.filepath.name for f in pem_files])} do not have "
+    #                                                  f"the same current. Proceed with merging anyway?",
+    #                                                  self.message.Yes | self.message.No)
+    #                 if response == self.message.No:
+    #                     self.status_bar.showMessage('Aborted.', 2000)
+    #                     return
+    #
+    #             # If any coil areas are different
+    #             if not all([coil_area == coil_areas[0] for coil_area in coil_areas]):
+    #                 response = self.message.question(self, 'Warning - Different coil areas',
+    #                                                  f"{', '.join([f.filepath.name for f in pem_files])} do not have "
+    #                                                  f"the same coil area. Proceed with merging anyway?",
+    #                                                  self.message.Yes | self.message.No)
+    #                 if response == self.message.No:
+    #                     self.status_bar.showMessage('Aborted.', 2000)
+    #                     return
+    #
+    #             # If the files aren't all split or un-split
+    #             if any([pem_file.is_split() for pem_file in pem_files]) and any(
+    #                     [not pem_file.is_split() for pem_file in pem_files]):
+    #                 response = self.message.question(self, 'Warning - Different channel split states',
+    #                                                  'There is a mix of channel splitting in the selected files. '
+    #                                                  'Would you like to split the unsplit file(s) '
+    #                                                  'and proceed with merging?',
+    #                                                  self.message.Yes | self.message.No)
+    #                 if response == self.message.Yes:
+    #                     for pem_file in pem_files:
+    #                         pem_file = pem_file.split()
+    #                 else:
+    #                     return
+    #
+    #             # If the files aren't all de-rotated
+    #             if any([pem_file.is_derotated() for pem_file in pem_files]) and any(
+    #                     [not pem_file.is_derotated() for pem_file in pem_files]):
+    #                 self.message.information(self, 'Error - Different states of XY de-rotation',
+    #                                          'There is a mix of XY de-rotation in the selected files.')
+    #
+    #             merged_pem = pem_files[0].copy()
+    #             merged_pem.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
+    #             merged_pem.number_of_readings = sum([f.number_of_readings for f in pem_files])
+    #             merged_pem.is_merged = True
+    #
+    #             # Add the M tag
+    #             if '[M]' not in pem_files[0].filepath.name:
+    #                 merged_pem.filepath = merged_pem.filepath.with_name(
+    #                     merged_pem.filepath.stem + '[M]' + merged_pem.filepath.suffix)
+    #
+    #             merged_pem.save()
+    #             return merged_pem
+    #
+    #     files_to_open = []
+    #     files_to_remove = []
+    #
+    #     if not self.pem_files:
+    #         logger.warning(f"No PEM files opened.")
+    #         self.status_bar.showMessage(f"No PEM files opened.", 2000)
+    #         return
+    #
+    #     pem_files, rows = copy.deepcopy(self.pem_files), np.arange(self.table.rowCount())
+    #
+    #     bh_files = [f for f in pem_files if f.is_borehole()]
+    #     sf_files = [f for f in pem_files if f not in bh_files]
+    #
+    #     # Merge surface files
+    #     # Group the files by loop name
+    #     for loop, loop_files in groupby(sf_files, key=lambda x: x.loop_name):
+    #         loop_files = list(loop_files)
+    #         logger.info(f"Auto merging loop {loop}.")
+    #
+    #         # Group the files by line name
+    #         for line, line_files in groupby(loop_files, key=lambda x: x.line_name):
+    #             line_files = list(line_files)
+    #             if len(line_files) > 1:
+    #                 logger.info(f"Auto merging line {line}: {[f.filepath.name for f in line_files]}.")
+    #
+    #                 # Merge the files
+    #                 merged_pem = merge_pems(line_files)
+    #
+    #                 if merged_pem is not None:
+    #                     files_to_open.append(merged_pem)
+    #                     files_to_remove.extend(line_files)
+    #
+    #     # Merge borehole files
+    #     # Group the files by loop
+    #     for loop, loop_files in groupby(bh_files, key=lambda x: x.loop_name):
+    #         loop_files = list(loop_files)
+    #
+    #         # Group the files by hole name
+    #         for hole, hole_files in groupby(loop_files, key=lambda x: x.line_name):
+    #             hole_files = sorted(list(hole_files), key=lambda x: x.get_components())
+    #
+    #             # Group the files by their components
+    #             for components, comp_files in groupby(hole_files, key=lambda x: x.get_components()):
+    #                 comp_files = list(comp_files)
+    #                 if len(comp_files) > 1:
+    #                     logger.info(f"Auto merging hole {hole}: {[f.filepath.name for f in comp_files]}")
+    #
+    #                     # Merge the files
+    #                     merged_pem = merge_pems(comp_files)
+    #
+    #                     if merged_pem is not None:
+    #                         files_to_open.append(merged_pem)
+    #                         files_to_remove.extend(comp_files)
+    #
+    #     rows = [pem_files.index(f) for f in files_to_remove]
+    #
+    #     if self.delete_merged_files_cbox.isChecked():
+    #         logger.warning(f"Removing rows {', '.join(rows)}.")
+    #         self.remove_pem_file(rows=rows)
+    #
+    #     self.add_pem_files(files_to_open)
 
     def auto_name_lines(self):
         """
@@ -3989,7 +4045,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
 
 class PathFilter(QWidget):
-    accept_sig = QtCore.pyqtSignal()
+    accept_sig = QtCore.Signal()
 
     def __init__(self, filetype, parent=None):
         """
@@ -4001,7 +4057,7 @@ class PathFilter(QWidget):
         self.filetype = filetype
         self.parent = parent
         self.setWindowTitle(f"{filetype} File Filter")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath('filter.png'))))
+        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath('filter.png'))))
 
         self.include_files_edit = QLineEdit()
         self.include_files_edit.setToolTip("Separate items with commas [,]")
@@ -4086,12 +4142,12 @@ class PathFilter(QWidget):
 
 
 class PEMBrowser(QTextBrowser):
-    close_request = QtCore.pyqtSignal(object)
+    close_request = QtCore.Signal(object)
 
     def __init__(self, pem_file):
         super().__init__()
         self.resize(600, 800)
-        self.setWindowIcon(QIcon(str(icons_path.joinpath('txt_file.png'))))
+        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath('txt_file.png'))))
         self.setWindowTitle(f"{pem_file.filepath.name}")
 
         with open(str(pem_file.filepath), 'r') as file:
@@ -4146,7 +4202,7 @@ class FrequencyConverter(QWidget):
             timebase_edit.blockSignals(False)
 
         self.setWindowTitle('Timebase / Frequency Converter')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
         layout = QGridLayout()
         self.setLayout(layout)
 
@@ -4181,7 +4237,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.parent = parent
         self.setupUi(self)
         self.setWindowTitle("PDF Printing Options")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath('pdf.png'))))
+        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath('pdf.png'))))
 
         self.pem_files = []
         self.ri_files = []
@@ -4365,7 +4421,7 @@ class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
 
 
 class GPSShareWidget(QWidget):
-    accept_sig = QtCore.pyqtSignal(object)
+    accept_sig = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -4375,7 +4431,7 @@ class GPSShareWidget(QWidget):
 
         # Format window
         self.setWindowTitle(f"Share GPS")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath('share_gps.png'))))
+        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath('share_gps.png'))))
 
         self.layout = QFormLayout()
         self.setLayout(self.layout)
@@ -4438,7 +4494,7 @@ class GPSShareWidget(QWidget):
 
 
 class ChannelTimeViewer(QMainWindow):
-    close_request = QtCore.pyqtSignal(object)
+    close_request = QtCore.Signal(object)
 
     def __init__(self, pem_file, parent=None):
         """
@@ -4597,7 +4653,7 @@ class SuffixWarningViewer(QMainWindow):
 
 
 class WarningViewer(QMainWindow):
-    accept_sig = QtCore.pyqtSignal(object)
+    accept_sig = QtCore.Signal(object)
 
     def __init__(self, pem_file, warning_type=None, parent=None):
         """
@@ -4701,12 +4757,13 @@ def main():
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pg.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth")
-    ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
+    pem_files = pg.get_pems(folder='Raglan', number=1)
+    # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
-    assert len(pem_files) == len(ri_files)
+    # assert len(pem_files) == len(ri_files)
 
     mw.add_pem_files(pem_files)
+    # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.table.selectRow(0)
     # mw.save_pem_file_as()

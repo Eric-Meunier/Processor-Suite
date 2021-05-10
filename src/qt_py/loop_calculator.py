@@ -5,8 +5,9 @@ import math
 import numpy as np
 import pyqtgraph as pg
 
-from PyQt5 import (QtGui, QtCore, uic)
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QComboBox, QShortcut, QFileDialog)
+from pathlib import Path
+from PySide2 import QtGui, QtCore, QtUiTools
+from PySide2.QtWidgets import QMainWindow, QApplication, QComboBox, QShortcut, QFileDialog
 
 from src.logger import Log
 from src.qt_py.custom_qt_widgets import NonScientific
@@ -19,18 +20,14 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 
-# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    loopCalcUIFile = 'ui\\loop_calculator.ui'
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    loopCalcUIFile = os.path.join(os.path.dirname(application_path), 'ui\\loop_calculator.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-loopCalcUi, _ = uic.loadUiType(loopCalcUIFile)
+loopCalcUi, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\loop_calculator.ui')))
 
 
 class LoopCalculator(QMainWindow, loopCalcUi):

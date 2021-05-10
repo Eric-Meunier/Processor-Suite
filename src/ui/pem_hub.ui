@@ -1473,8 +1473,6 @@ Warnings</string>
     <addaction name="menuReverse_Polarity"/>
     <addaction name="separator"/>
     <addaction name="menuRename"/>
-    <addaction name="separator"/>
-    <addaction name="actionAuto_Merge_All_Files"/>
    </widget>
    <widget class="QMenu" name="menuGPS">
     <property name="title">
@@ -1817,7 +1815,7 @@ Warnings</string>
   <action name="actionDamping_Box_Plotter">
    <property name="icon">
     <iconset>
-     <normaloff>icons/db_plot 32.png</normaloff>icons/db_plot 32.png</iconset>
+     <normaloff>icons/db_plot.png</normaloff>icons/db_plot.png</iconset>
    </property>
    <property name="text">
     <string>Damping Box Plotter</string>
@@ -1829,7 +1827,7 @@ Warnings</string>
   <action name="actionUnpacker">
    <property name="icon">
     <iconset>
-     <normaloff>icons/unpacker_1.png</normaloff>icons/unpacker_1.png</iconset>
+     <normaloff>icons/unpacker.png</normaloff>icons/unpacker.png</iconset>
    </property>
    <property name="text">
     <string>Unpacker</string>
@@ -1841,7 +1839,7 @@ Warnings</string>
   <action name="actionGPX_Creator">
    <property name="icon">
     <iconset>
-     <normaloff>icons/gpx_creator_4.png</normaloff>icons/gpx_creator_4.png</iconset>
+     <normaloff>icons/gpx_creator.png</normaloff>icons/gpx_creator.png</iconset>
    </property>
    <property name="text">
     <string>GPX Creator</string>

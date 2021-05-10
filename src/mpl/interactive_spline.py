@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib.artist import Artist
 from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
-from PyQt5.QtCore import Qt
+from PySide2.QtCore import Qt
 from scipy import spatial
 from scipy.interpolate import interp1d, splrep, BSpline, splev, LSQUnivariateSpline, UnivariateSpline
 

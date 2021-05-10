@@ -2,30 +2,27 @@ import logging
 import os
 import sys
 
-from PyQt5 import (QtCore, uic)
-from PyQt5.QtWidgets import (QWidget, QAbstractScrollArea, QTableWidgetItem, QHeaderView)
+from pathlib import Path
+from PySide2 import QtCore, QtUiTools
+from PySide2.QtWidgets import QWidget, QAbstractScrollArea, QTableWidgetItem, QHeaderView
 
 logger = logging.getLogger(__name__)
 
-# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    lineNameEditorCreatorFile = 'ui\\line_name_editor.ui'
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    lineNameEditorCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\line_name_editor.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_LineNameEditorWidget, QtBaseClass = uic.loadUiType(lineNameEditorCreatorFile)
+Ui_LineNameEditorWidget, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\line_name_editor.ui')))
 
 
 class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
     """
     Class to bulk rename PEM File line/hole names or file names.
     """
-    acceptChangesSignal = QtCore.pyqtSignal(object)
+    acceptChangesSignal = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -96,8 +93,6 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         self.table.setItem(row_pos, 0, item)
         self.table.setItem(row_pos, 1, item2)
 
-        self.table.resizeColumnsToContents()
-
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
@@ -132,7 +127,6 @@ class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
         """
         Create a list of the new names and emit them as a signal
         """
-
         new_names = []
         for i, pem_file in enumerate(self.pem_files):
             new_name = self.table.item(i, 1).text()

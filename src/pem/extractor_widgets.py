@@ -4,8 +4,8 @@ import os
 import sys
 from pathlib import Path
 
-from PyQt5 import (QtCore, QtGui)
-from PyQt5.QtWidgets import (QWidget, QFileDialog, QApplication, QTableWidgetItem, QHeaderView, QTableWidget,
+from PySide2 import QtCore, QtGui
+from PySide2.QtWidgets import (QWidget, QFileDialog, QApplication, QTableWidgetItem, QHeaderView, QTableWidget,
                              QPushButton, QGridLayout)
 
 logger = logging.getLogger(__name__)

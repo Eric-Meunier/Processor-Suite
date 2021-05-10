@@ -1,55 +1,43 @@
 import logging
-import math
 import os
 import re
 import sys
+from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import natsort
 import numpy as np
-import io
-import pickle
+import pandas as pd
 import plotly
 import plotly.graph_objects as go
+from PySide2 import QtGui, QtCore, QtUiTools
+from PySide2.QtWebEngineWidgets import QWebEngineView
+from PySide2.QtWidgets import (QApplication, QErrorMessage, QWidget, QFileDialog, QMessageBox, QGridLayout,
+                               QAction, QMainWindow, QHBoxLayout, QShortcut)
 import pyqtgraph as pg
-import pandas as pd
-from PyQt5 import (QtGui, QtCore, uic)
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWidgets import (QApplication)
-from PyQt5.QtWidgets import (QErrorMessage, QWidget, QFileDialog, QMessageBox, QGridLayout,
-                             QAction, QMainWindow, QHBoxLayout, QShortcut)
-from matplotlib import patches
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from matplotlib.ticker import MaxNLocator
 from scipy import interpolate as interp
 
-from src.pem.pem_plotter import MapPlotter
 from src.gps.gps_editor import BoreholeGeometry
+from src.pem.pem_plotter import MapPlotter
 from src.qt_py.custom_qt_widgets import CustomProgressBar
 
 logger = logging.getLogger(__name__)
 
-# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    section3DCreatorFile = 'ui\\3D_section.ui'
-    contourMapCreatorFile = 'ui\\contour_map.ui'
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    section3DCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\3D_section.ui')
-    contourMapCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\contour_map.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_Section3DWidget, _ = uic.loadUiType(section3DCreatorFile)
-Ui_ContourMapCreatorFile, _ = uic.loadUiType(contourMapCreatorFile)
+Ui_Section3DWidget, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\3D_section.ui')))
+Ui_ContourMapCreatorFile, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\contour_map.ui')))
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -1437,13 +1425,13 @@ if __name__ == '__main__':
 
     getter = PEMGetter()
     # files = getter.get_pems(client='PEM Rotation', file=r"BX-081 Tool - Acc (Cross).PEM")
-    files = getter.get_pems(client='PEM Rotation', file=r"BX-081 Tool - Acc (PEMPro).PEM")
+    files = getter.get_pems(folder='PEM Rotation', file=r"BX-081 Tool - Acc (PEMPro).PEM")
     # files = getter.get_pems(client='Iscaycruz', subfolder='Sante Est')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
     # m = TileMapViewer()
-    m = GPSViewer()
-    # # m = Map3DViewer()
+    # m = GPSViewer()
+    m = Map3DViewer()
     m.open(files)
     m.show()
 

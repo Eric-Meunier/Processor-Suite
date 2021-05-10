@@ -1,8 +1,8 @@
 import logging
 import sys
 from pathlib import Path
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QApplication, QErrorMessage
+from PySide2.QtCore import QTimer
+from PySide2.QtWidgets import QApplication, QErrorMessage
 
 from src.qt_py.pem_hub import PEMHub
 

@@ -9,9 +9,10 @@ import mplcursors
 import math
 import numpy as np
 import pandas as pd
-from PyQt5 import (uic, QtGui, QtCore)
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QShortcut, QFileDialog, QMessageBox, QErrorMessage, QWidget,
+from PySide2 import QtGui, QtCore
+from PySide2.QtUiTools import loadUiType
+from PySide2.QtGui import QIcon
+from PySide2.QtWidgets import (QMainWindow, QApplication, QShortcut, QFileDialog, QMessageBox, QErrorMessage, QWidget,
                              QVBoxLayout)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
@@ -22,21 +23,18 @@ from src.mpl.zoom_pan import ZoomPan
 logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-    pemGeometryCreatorFile = 'ui\\pem_geometry.ui'
-    icons_path = 'ui\\icons'
+    application_path = Path(sys.executable).parent
 else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    pemGeometryCreatorFile = os.path.join(os.path.dirname(application_path), 'ui\\pem_geometry.ui')
-    icons_path = os.path.join(os.path.dirname(application_path), "ui\\icons")
+    application_path = Path(__file__).absolute().parents[1]
+icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_PemGeometry, QtBaseClass = uic.loadUiType(pemGeometryCreatorFile)
+Ui_PemGeometry, QtBaseClass = loadUiType(str(application_path.joinpath('ui\\pem_geometry.ui')))
 
 
 class PEMGeometry(QMainWindow, Ui_PemGeometry):
     # plt.style.use('seaborn-white')
-    accepted_sig = QtCore.pyqtSignal(object)
+    accepted_sig = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
