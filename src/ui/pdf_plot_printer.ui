@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>283</width>
-    <height>447</height>
+    <height>449</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -386,6 +386,9 @@
   <tabstop>print_btn</tabstop>
   <tabstop>cancel_btn</tabstop>
   <tabstop>make_profile_plots_gbox</tabstop>
+  <tabstop>output_lin_cbox</tabstop>
+  <tabstop>output_log_cbox</tabstop>
+  <tabstop>output_step_cbox</tabstop>
   <tabstop>share_range_cbox</tabstop>
   <tabstop>max_range_edit</tabstop>
   <tabstop>min_range_edit</tabstop>

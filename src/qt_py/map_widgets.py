@@ -1184,7 +1184,7 @@ class GPSViewer(QMainWindow):
         QApplication.clipboard().setPixmap(self.grab())
         self.status_bar.show()
         self.status_bar.showMessage('Image copied to clipboard.', 1000)
-        QTimer.singleShot(1000, lambda: self.status_bar.hide())
+        QtCore.QTimer.singleShot(1000, lambda: self.status_bar.hide())
 
     def open(self, pem_files):
         if not isinstance(pem_files, list):

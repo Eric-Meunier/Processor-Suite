@@ -20,7 +20,7 @@ from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidge
                                QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser,
                                QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
                                QPushButton, QAbstractItemView, QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox,
-                               QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem)
+                               QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem, QShortcut)
 import pyqtgraph as pg
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
@@ -53,7 +53,6 @@ __version__ = '0.11.5'
 # TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create right click option to create package on final folder (like step)
-# TODO Print PDF after pressing Enter.
 # TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO For suffix and repeat warnings, make the background red
@@ -64,6 +63,7 @@ __version__ = '0.11.5'
 # TODO Update PEM list after merge.
 # TODO Add ability to remove channels
 # TODO Copy channel table to clipboard
+# TODO Upgrade DB Plot to view files without the command
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -287,6 +287,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # View channel table
         self.action_view_channels = QAction("Channel Table", self)
+        self.action_view_channels.setIcon(QtGui.QIcon(str(icons_path.joinpath("table.png"))))
         self.action_view_channels.triggered.connect(self.open_channel_table_viewer)
 
         # Merge PEM files
@@ -1158,7 +1159,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.reverse_menu.addAction(self.reverse_y_component_action)
                 self.reverse_menu.addAction(self.reverse_z_component_action)
                 self.reverse_menu.addSeparator()
-                self.reverse_menu.addAction(self.reverse_station_numbers_action)
+                self.reverse_menu.addAction(self.reverse_station_order_action)
 
                 self.menu.addSeparator()
 
@@ -4279,6 +4280,9 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.printer = None
         self.message = QMessageBox()
 
+        self.print_btn.setDefault(True)
+        self.print_btn.setFocus()
+
         # Set validations
         int_validator = QtGui.QIntValidator()
         self.max_range_edit.setValidator(int_validator)
@@ -4302,8 +4306,8 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
-        elif e.key() == QtCore.Qt.Key_Enter:
-            self.print_pdfs()
+        # elif e.key() == QtCore.Qt.Key_Enter:
+        #     self.print_pdfs()
 
     def close(self):
         self.hide()
@@ -4535,9 +4539,10 @@ class ChannelTimeViewer(QMainWindow):
         :param parent: Qt parent object
         """
         super().__init__()
-
         self.pem_file = pem_file
         self.parent = parent
+        self.df = pd.DataFrame()
+        self.text_format = ""
 
         # Format window
         self.setLayout(QVBoxLayout())
@@ -4546,6 +4551,7 @@ class ChannelTimeViewer(QMainWindow):
         self.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
         self.resize(600, 600)
         self.setWindowTitle(f"Channel Times - {self.pem_file.filepath.name}")
+        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("table.png"))))
 
         # Status bar
         self.survey_type_label = QLabel(f" {self.pem_file.get_survey_type()} Survey ")
@@ -4577,6 +4583,8 @@ class ChannelTimeViewer(QMainWindow):
 
         # Signals
         self.units_combo.currentTextChanged.connect(self.fill_channel_table)
+        self.copy_table_action = QShortcut("Ctrl+C", self)
+        self.copy_table_action.activated.connect(self.copy_table)
 
         self.fill_channel_table()
 
@@ -4584,6 +4592,19 @@ class ChannelTimeViewer(QMainWindow):
         self.close_request.emit(self)
         e.accept()
         self.deleteLater()
+
+    def copy_table(self):
+        df = self.df.loc[:, "Start":"Width"].copy()
+
+        # Add a "Channel" column, and rename the others to include the units
+        df.reset_index(inplace=True)
+        units = self.units_combo.currentText()
+        columns = [f"{c} ({units})" for c in df.columns]
+        columns[0] = "Channel"
+        df.columns = columns
+
+        df.to_clipboard(excel=True, header=True, index=False, float_format=self.text_format)
+        self.statusBar().showMessage("Table copied to clipboard.", 1500)
 
     def fill_channel_table(self):
         """
@@ -4602,18 +4623,18 @@ class ChannelTimeViewer(QMainWindow):
                                   mpl_blue[1] * 255,
                                   mpl_blue[2] * 255)
 
-            for i, column in enumerate(df.columns):
+            for i, column in enumerate(self.df.columns):
 
                 if column != 'Remove':
                     # Normalize column values for color mapping
-                    mn, mx, count = df[column].min(), df[column].max(), len(df[column])
+                    mn, mx, count = self.df[column].min(), self.df[column].max(), len(self.df[column])
                     norm = plt.Normalize(mn, mx)
 
                     # Create a custom color map
                     cm = LCMap.from_list('Custom', [mpl_red, mpl_blue])
 
                     # Apply the color map to the values in the column
-                    colors = cm(norm(df[column].to_numpy()))
+                    colors = cm(norm(self.df[column].to_numpy()))
 
                 for row in range(self.table.rowCount()):
                     item = self.table.item(row, i)
@@ -4636,24 +4657,22 @@ class ChannelTimeViewer(QMainWindow):
                                              colors[row][2] * 255)
                         item.setBackground(color)
 
-        df = self.pem_file.channel_times.copy()
-        # print(F"Channel times given to table viewer: {df.to_string(index=False)}")
+        self.df = self.pem_file.channel_times.copy()
+        # print(F"Channel times given to table viewer: {self.df.to_string(index=False)}")
 
         if self.units_combo.currentText() == 'µs':
-            df.loc[:, 'Start':'Width'] = df.loc[:, 'Start':'Width'] * 1000000
-            text_format = '%0.0f'
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] * 1000000
+            self.text_format = '%0.0f'
         elif self.units_combo.currentText() == 'ms':
-            df.loc[:, 'Start':'Width'] = df.loc[:, 'Start':'Width'] * 1000
-            text_format = '%0.3f'
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] * 1000
+            self.text_format = '%0.3f'
         else:
-            df.loc[:, 'Start':'Width'] = df.loc[:, 'Start':'Width']
-            text_format = '%0.6f'
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width']
+            self.text_format = '%0.6f'
 
-        self.table.setData(df.to_dict('index'))
-        self.table.setFormat(text_format)
-        # self.table.resizeColumnsToContents()
+        self.table.setData(self.df.to_dict('index'))
+        self.table.setFormat(self.text_format)
         self.table.resizeRowsToContents()
-        # self.resize(self.table.size())
 
         color_table()
 
@@ -4789,12 +4808,15 @@ def main():
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pem_g.get_pems(folder="Iscaycruz", subfolder="Loop 1")
+    pem_files = pem_g.get_pems(folder="Iscaycruz", subfolder="Loop 1", number=1)
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
     # assert len(pem_files) == len(ri_files)
 
     mw.add_pem_files(pem_files)
+    mw.table.selectRow(0)
+    mw.open_channel_table_viewer()
+    # mw.open_pdf_plot_printer()
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.table.selectRow(0)
