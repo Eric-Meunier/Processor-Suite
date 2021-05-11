@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import simplekml
 import stopit
+import shutil
 from PySide2 import QtCore, QtGui, QtUiTools
 from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                                QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser,
@@ -52,7 +53,6 @@ logger = logging.getLogger(__name__)
 __version__ = '0.11.5'
 # TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
-# TODO Create right click option to create package on final folder (like step)
 # TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO For suffix and repeat warnings, make the background red
@@ -62,7 +62,6 @@ __version__ = '0.11.5'
 # TODO Use savgol to filter data
 # TODO Update PEM list after merge.
 # TODO Add ability to remove channels
-# TODO Copy channel table to clipboard
 # TODO Upgrade DB Plot to view files without the command
 
 
@@ -2274,17 +2273,57 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param position: QPoint, position of mouse at time of right-click
         """
 
-        def open_step():
-            # Open the Step window at the selected location in the project tree
+        def get_current_path():
             index = self.project_tree.currentIndex()
             index_item = self.file_sys_model.index(index.row(), 0, index.parent())
             path = self.file_sys_model.filePath(index_item)
+            return Path(path)
 
-            os.chdir(path)
+        def open_step():
+            # Open the Step window at the selected location in the project tree
+            path = get_current_path()
+
+            os.chdir(str(path))
             os.system('cmd /c "step"')
+
+        def create_delivery_folder():
+            """
+            Gather and copy PEM, STP, and PDF files to a deliverable folder and compress it to a .ZIP file.
+            """
+            folder_name, ok_pressed = QInputDialog.getText(self, "Select Folder Name", "Folder Name:",
+                                                           text=self.project_dir.parent.name)
+            if ok_pressed and folder_name:
+                path = get_current_path()
+                zip_path = path.joinpath(folder_name)
+                if zip_path.exists():
+                    response = self.message.question(self, "Existing Directory",
+                                                     f"Folder '{folder_name}' already exists. Copy and overwrite files "
+                                                     f"to this folder?", self.message.Yes, self.message.No)
+                    if response == self.message.No:
+                        return
+
+                pem_files = list(path.glob("*.PEM"))
+                step_files = list(path.glob("*.STP"))
+                pdf_files = list(path.glob("*.PDF"))
+                files = np.concatenate([pem_files, step_files, pdf_files])
+                if not any(files):
+                    self.status_bar.showMessage(f"No processed files found in {path}.", 1500)
+                    return
+
+                logger.debug(f"Delivery folder path: {str(zip_path)}")
+                zip_path.mkdir(exist_ok=True)
+
+                for file in files:
+                    logger.debug(f"Moving {file} to {zip_path.joinpath(file.name)}.")
+                    shutil.copyfile(file, zip_path.joinpath(file.name))
+
+                shutil.make_archive(str(zip_path), 'zip', str(zip_path))
+                self.status_bar.showMessage(f"{folder_name}.zip created successfully.", 1500)
 
         menu = QMenu()
         menu.addAction('Run Step', open_step)
+        menu.addSeparator()
+        menu.addAction('Create Delivery Folder', create_delivery_folder)
         menu.exec_(self.project_tree.viewport().mapToGlobal(position))
 
     def open_unpacker(self, folder=None):
@@ -4813,9 +4852,11 @@ def main():
 
     # assert len(pem_files) == len(ri_files)
 
-    mw.add_pem_files(pem_files)
-    mw.table.selectRow(0)
-    mw.open_channel_table_viewer()
+    mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
+    mw.open_project_dir()
+    # mw.add_pem_files(pem_files)
+    # mw.table.selectRow(0)
+    # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
