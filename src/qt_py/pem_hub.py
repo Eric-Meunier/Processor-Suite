@@ -60,7 +60,6 @@ __version__ = '0.11.5'
 # TODO Add rainbow coloring to final plots?
 # TODO Use mpl in de-rotator
 # TODO Use savgol to filter data
-# TODO Update PEM list after merge.
 # TODO Add ability to remove channels
 # TODO Upgrade DB Plot to view files without the command
 

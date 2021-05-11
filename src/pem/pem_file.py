@@ -541,7 +541,7 @@ class PEMFile:
         Return the magnetic field strength profile of a borehole file.
         :return: Dataframe
         """
-        assert self.is_borehole(), f"Can only get DAD from borehole surveys."
+        assert self.is_borehole(), f"Can only get magnetic field strength data from borehole surveys."
         assert any([self.has_xy(), self.has_geometry()]), f"File must either have geometry or be an XY file."
 
         # Create the DAD from the RAD Tool data
@@ -550,6 +550,34 @@ class PEMFile:
         mag = data.RAD_tool.apply(lambda x: x.get_mag_strength()).astype(float)
 
         return pd.DataFrame({'Station': stations, 'Mag': mag})
+
+    def get_azimuth(self):
+        """
+        Return the measured azimuth values of a borehole file.
+        :return: DataFrame
+        """
+        assert all([self.has_xy(), self.is_borehole()]), f"Can only get azimuth data from borehole XY surveys."
+
+        # Create the DAD from the RAD Tool data
+        df = self.data[(self.data.Component == "X") | (self.data.Component == "Y")].loc[:, ["Station", "Component"]]
+        azimuth = self.data.RAD_tool.apply(lambda x: x.get_azimuth()).astype(float)
+        df["Azimuth"] = azimuth
+
+        return df.dropna()
+
+    def get_dip(self):
+        """
+        Return the measured dip values of a borehole file.
+        :return: DataFrame
+        """
+        assert all([self.has_xy(), self.is_borehole()]), f"Can only get dip data from borehole surveys with XY components."
+
+        # Create the DAD from the RAD Tool data
+        df = self.data[(self.data.Component == "X") | (self.data.Component == "Y")].loc[:, ["Station", "Component"]]
+        dip = self.data.RAD_tool.apply(lambda x: x.get_dip()).astype(float)
+        df["Dip"] = dip
+
+        return df.dropna()
 
     def get_soa(self):
         return self.probes.get("SOA")
@@ -1440,8 +1468,8 @@ class PEMFile:
                     rotated_x.append(np.array(x))
                     rotated_y.append(np.array(y))
             else:
-                print(f"Length of X and Y are different, using a weighted average "
-                      f"(station {str(group.Station.unique()[0])}, readings {', '.join(group.Reading_index.astype(str))}).\n")
+                # print(f"Length of X and Y are different, using a weighted average "
+                #       f"(station {str(group.Station.unique()[0])}, readings {', '.join(group.Reading_index.astype(str))}).\n")
                 x_pair = weighted_average(x_rows)
                 y_pair = weighted_average(y_rows)
 
