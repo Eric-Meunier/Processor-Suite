@@ -1,5 +1,4 @@
 import os
-import sys
 from pathlib import Path
 from src.pem.pem_file import PEMFile
 
@@ -46,7 +45,6 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.rotated_file = None
         self.pp_plotted = False
         self.rotation_note = None
-        self.mag_curves = []
         self.soa = self.soa_sbox.value()
 
         self.setWindowTitle('XY De-rotation')
@@ -58,38 +56,6 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.list.setText('')
         self.statusBar().hide()
 
-        def update_profile_views(mag_axes, axes):
-            """Required to have the mag plot axis joined with the other axes"""
-            for mag_ax, ax in zip(mag_axes, axes):
-                mag_ax.setGeometry(ax.vb.sceneBoundingRect())
-                mag_ax.linkedViewChanged(ax.vb, mag_ax.YAxis)
-
-        def update_tab_plot_views(mag_axes, axes):
-            """Required to have the mag plot axis joined with the other axes"""
-            for mag_ax, ax in zip(mag_axes, axes):
-                mag_ax.setGeometry(ax.vb.sceneBoundingRect())
-                mag_ax.linkedViewChanged(ax.vb, mag_ax.YAxis)
-
-        def toggle_mag_plots():
-            if self.plot_mag_cbox.isChecked():
-                for curve in np.concatenate([self.mag_curves, [self.dev_mag_curve]]):
-                    curve.show()
-                for ax in self.profile_axes:
-                    ax.getAxis("right").show()
-                self.dev_ax.getAxis("bottom").setLabel("Total Magnetic Field", color='1DD219', units="pT")
-                self.dev_ax.getAxis("bottom").setPen(pg.mkPen(color='1DD219'))
-                self.dev_ax.getAxis("bottom").setTextPen(pg.mkPen(color='1DD219'))
-                self.dev_ax.getAxis("bottom").setStyle(showValues=True)
-            else:
-                for curve in np.concatenate([self.mag_curves, [self.dev_mag_curve]]):
-                    curve.hide()
-                for ax in self.profile_axes:
-                    ax.getAxis("right").hide()
-                self.dev_ax.getAxis("bottom").setLabel("")
-                self.dev_ax.getAxis("bottom").setPen(pg.mkPen(color='k'))
-                self.dev_ax.getAxis("bottom").setTextPen(pg.mkPen(color='k'))
-                self.dev_ax.getAxis("bottom").setStyle(showValues=False)
-
         # Configure the plots
         self.x_view.ci.layout.setSpacing(5)  # Spacing between plots
         self.x_ax0 = self.x_view.addPlot(0, 0)
@@ -98,14 +64,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.x_ax3 = self.x_view.addPlot(0, 3)
         self.x_ax4 = self.x_view.addPlot(0, 4)
 
-        self.mag_x_ax0 = pg.ViewBox()
-        self.mag_x_ax1 = pg.ViewBox()
-        self.mag_x_ax2 = pg.ViewBox()
-        self.mag_x_ax3 = pg.ViewBox()
-        self.mag_x_ax4 = pg.ViewBox()
-
         self.x_view_axes = [self.x_ax0, self.x_ax1, self.x_ax2, self.x_ax3, self.x_ax4]
-        self.mag_x_view_axes = [self.mag_x_ax0, self.mag_x_ax1, self.mag_x_ax2, self.mag_x_ax3, self.mag_x_ax4]
 
         # Configure the lin plot
         self.y_view.ci.layout.setSpacing(5)  # Spacing between plots
@@ -115,46 +74,10 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.y_ax3 = self.y_view.addPlot(0, 3)
         self.y_ax4 = self.y_view.addPlot(0, 4)
 
-        self.mag_y_ax0 = pg.ViewBox()
-        self.mag_y_ax1 = pg.ViewBox()
-        self.mag_y_ax2 = pg.ViewBox()
-        self.mag_y_ax3 = pg.ViewBox()
-        self.mag_y_ax4 = pg.ViewBox()
-
         self.y_view_axes = [self.y_ax0, self.y_ax1, self.y_ax2, self.y_ax3, self.y_ax4]
-        self.mag_y_view_axes = [self.mag_y_ax0, self.mag_y_ax1, self.mag_y_ax2, self.mag_y_ax3, self.mag_y_ax4]
-
-        for mag_ax, ax in zip(np.concatenate([self.mag_x_view_axes, self.mag_y_view_axes]),
-                              np.concatenate([self.x_view_axes, self.y_view_axes])):
-            ax.hideButtons()
-            ax.setMenuEnabled(False)
-            ax.invertY(True)
-            ax.setYLink(self.x_ax0)
-            ax.getAxis('top').setWidth(60)
-            ax.getAxis('bottom').setWidth(60)
-            ax.getAxis('top').enableAutoSIPrefix(enable=False)
-            ax.getAxis('bottom').enableAutoSIPrefix(enable=False)
-
-            # Add the mag plot into the profile plot
-            ax.showAxis("bottom")
-            ax.showAxis("top")
-            ax.getAxis("left").setStyle(showValues=False)
-
-            ax.scene().addItem(mag_ax)
-            mag_ax.setYLink(ax)
-            ax.getAxis("bottom").linkToView(mag_ax)
-            ax.getAxis("bottom").setLabel("Total Magnetic Field", color='1DD219', units="pT")
-            ax.getAxis("bottom").setPen(pg.mkPen(color='1DD219'))
-            ax.getAxis("bottom").setTextPen(pg.mkPen(color='1DD219'))
-
-        # Use the first axes to set the label and tick labels
-        for ax in [self.x_ax0, self.y_ax0]:
-            ax.getAxis("left").setStyle(showValues=True)
-            ax.getAxis("left").setLabel("Station", color='1DD219')
 
         # Create the deviation plot
-        self.dev_ax = self.deviation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top"),
-                                                                   'bottom': NonScientific(orientation="bottom")})
+        self.dev_ax = self.deviation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
         self.dev_ax_legend = self.dev_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
         self.dev_ax_legend.setParent(self.deviation_view)
         self.dev_ax.setLabel('top', 'PP Rotation Angle - Accelerometer Rotation Angle (Degrees)')
@@ -162,11 +85,11 @@ class Derotator(QMainWindow, Ui_Derotator):
         v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
         self.dev_ax.addItem(v_line)
 
+        # TODO set DIp and Mag plots equal width?
         # Create the dip plot
-        self.dip_ax = self.dip_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top"),
-                                                             'bottom': NonScientific(orientation="bottom")})
+        self.dip_ax = self.tool_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
         self.dip_ax_legend = self.dip_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
-        self.dip_ax_legend.setParent(self.dip_view)
+        self.dip_ax_legend.setParent(self.tool_view)
         self.dip_ax.setLabel('top', 'Dip Angle (Degrees)')
         self.dip_ax.setLabel('left', 'Station', units=None)
         v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
@@ -174,7 +97,14 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.dip_ax.setLimits(xMin=-90, xMax=0)
         self.dip_ax.setXRange(-90, 0)
 
-        # Create the rotation angle plot
+        # Mag plot
+        self.mag_ax = self.tool_view.addPlot(0, 1, axisItems={'top': NonScientific(orientation="top")})
+        self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 255, 0, 100), width=2), name="Magnetic Field Strength")
+        self.mag_ax.setLabel("top", "Total Magnetic Field Strength\n(pT)")
+        self.mag_ax.setLabel('left', 'Station', units=None)
+        self.mag_ax.addItem(self.mag_curve)
+
+    # Create the rotation angle plot
         self.rot_ax = self.rotation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
         self.rot_ax_legend = self.rot_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
         self.rot_ax_legend.setParent(self.rotation_view)
@@ -190,22 +120,51 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.pp_ax.setLabel('top', 'Magnetic Field Strength', units='nT/s')
         self.pp_ax.setLabel('left', 'Station', units=None)
 
-        # Disable the 'A' button and auto-scaling SI units
-        for ax in [self.dev_ax, self.dip_ax, self.rot_ax, self.pp_ax]:
+        for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
             ax.hideButtons()
+            ax.setMenuEnabled(False)
             ax.invertY(True)
             ax.setYLink(self.x_ax0)
-            ax.showGrid(x=False, y=True, alpha=0.3)
-            # ax.getAxis('bottom').setWidth(60)
-            ax.showAxis('top')
-            ax.showAxis('right')
-            ax.getAxis("right").setStyle(showValues=False)
-            if ax is not self.dev_ax:
-                ax.getAxis("bottom").setStyle(showValues=False)
 
-            # ax.getAxis('left').enableAutoSIPrefix(enable=False)
+            # Add the mag plot into the profile plot
+            ax.showAxis("top")
+            ax.showAxis("right")
+            ax.getAxis("top").setStyle(showValues=True)
+            ax.getAxis("right").setStyle(showValues=False)
+            ax.getAxis("left").setStyle(showValues=False)
             ax.getAxis('top').enableAutoSIPrefix(enable=False)
-            ax.getAxis('bottom').enableAutoSIPrefix(enable=False)
+            # ax.hideAxis("left")
+            ax.hideAxis("bottom")
+
+        # Use the first axes to set the label and tick labels
+        for ax in [self.x_ax0, self.y_ax0]:
+            ax.getAxis("left").setStyle(showValues=True)
+            ax.getAxis("left").setLabel("Station", color='1DD219')
+        #
+        # for ax in [self.x_ax4, self.y_ax4]:
+        #     ax.showAxis("right")
+        #     ax.getAxis("right").setStyle(showValues=False)
+
+        # Disable the 'A' button and auto-scaling SI units
+        for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
+            # ax.showGrid(x=False, y=True, alpha=0.3)
+            ax.hideButtons()
+            ax.setMenuEnabled(False)
+            ax.invertY(True)
+            ax.setYLink(self.x_ax0)
+
+            # Add the mag plot into the profile plot
+            ax.showAxis("top")
+            ax.showAxis("right")
+            ax.getAxis("top").setStyle(showValues=True)
+            ax.getAxis("right").setStyle(showValues=False)
+            ax.getAxis("left").setStyle(showValues=True)
+            ax.getAxis("left").setLabel("Station", color='1DD219')
+            ax.getAxis('top').enableAutoSIPrefix(enable=False)
+            ax.hideAxis("bottom")
+
+        self.mag_ax.getAxis("left").setStyle(showValues=False)
+        self.mag_ax.getAxis("left").setLabel("")
 
         self.x_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((255, 0, 0, 100), width=2), name="X Component")
         self.y_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Y Component")
@@ -225,28 +184,13 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.dip_ax.addItem(self.x_dip_scatter)
         self.dip_ax.addItem(self.y_dip_scatter)
 
-        self.dev_ax_mag = pg.ViewBox()
-        self.dev_ax_mag.invertY(True)
-        self.dev_ax.scene().addItem(self.dev_ax_mag)
-        self.dev_ax.getAxis("bottom").linkToView(self.dev_ax_mag)
-        self.dev_ax.getAxis("bottom").setLabel("Total Magnetic Field", color='1DD219', units="pT")
-        self.dev_ax.getAxis("bottom").setPen(pg.mkPen(color='1DD219'))
-        self.dev_ax.getAxis("bottom").setTextPen(pg.mkPen(color='1DD219'))
-        self.dev_ax_mag.setYLink(self.dev_ax)
-        self.dev_mag_curve = pg.PlotCurveItem(pen=pg.mkPen('1DD219', width=1), name="Magnetic Field Strength")
-        self.dev_ax_mag.addItem(self.dev_mag_curve)
-
         self.profile_axes = np.concatenate([self.x_view_axes, self.y_view_axes])
-        self.axes = np.concatenate([self.x_view_axes, self.y_view_axes, [self.rot_ax], [self.pp_ax], [self.dev_ax]])
-
-        self.x_ax0.vb.sigResized.connect(lambda: update_profile_views(self.mag_x_view_axes, self.x_view_axes))
-        self.y_ax0.vb.sigResized.connect(lambda: update_profile_views(self.mag_y_view_axes, self.y_view_axes))
-        self.dev_ax.vb.sigResized.connect(lambda: update_tab_plot_views([self.dev_ax_mag], [self.dev_ax]))
+        self.axes = np.concatenate([self.x_view_axes, self.y_view_axes, [self.dev_ax], [self.dip_ax], [self.mag_ax],
+                                    [self.rot_ax], [self.pp_ax]])
 
         # Signals
         self.actionPEM_File.triggered.connect(self.export_pem_file)
         self.actionStats.triggered.connect(self.export_stats)
-        self.plot_mag_cbox.triggered.connect(toggle_mag_plots)
 
         self.button_box.accepted.connect(lambda: self.accept_sig.emit(self.rotated_file))
         self.button_box.rejected.connect(self.close)
@@ -367,27 +311,13 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.list.setText("\n".join(list))
 
         def plot_mag():
-            # if self.actionPlot_Mag.isChecked():
             mag_df = self.pem_file.get_mag()
             if mag_df.Mag.any():
-                mag_x, mag_y = mag_df.Mag.to_numpy(), mag_df.Station.to_numpy()
-                self.dev_mag_curve.setData(x=mag_y, y=mag_x)
-
-                for mag_ax in np.concatenate([self.mag_x_view_axes, self.mag_y_view_axes]):
-                    # Plot the mag
-                    mag_curve = pg.PlotCurveItem(x=mag_x, y=mag_y, pen=pg.mkPen('1DD219', width=1))
-                    mag_ax.addItem(mag_curve)
-                    self.mag_curves.append(mag_curve)
+                stations, mag = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
+                print(f"Plotting mag...")
+                self.mag_curve.setData(x=mag, y=stations)
             else:
-                logger.debug(f"No mag data found in {self.pem_file.filepath.name}")
-                for curve in np.concatenate([self.mag_curves, [self.dev_mag_curve]]):
-                    curve.hide()
-                    for ax in self.profile_axes:
-                        ax.getAxis("bottom").hide()
-                    self.dev_ax.getAxis("bottom").setLabel("")
-                    self.dev_ax.getAxis("bottom").setPen(pg.mkPen(color='k'))
-                    self.dev_ax.getAxis("bottom").setTextPen(pg.mkPen(color='k'))
-                    self.dev_ax.getAxis("bottom").setStyle(showValues=False)
+                logger.warning(f"No mag data found in {self.pem_file.filepath.name}")
 
         def plot_dip():
             """
@@ -416,14 +346,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                 self.x_dip_curve.setData(x=x_avg_df.Dip.to_numpy(), y=x_avg_df.Station.to_numpy())
                 self.y_dip_curve.setData(x=y_avg_df.Dip.to_numpy(), y=y_avg_df.Station.to_numpy())
             else:
-                self.tabWidget.setTabEnabled(1, False)
-                logger.debug(f"No dip data found in {self.pem_file.filepath.name}")
-                self.x_dip_curve.hide()
-                self.y_dip_curve.hide()
-                self.dip_ax.getAxis("bottom").setLabel("")
-                self.dip_ax.getAxis("bottom").setPen(pg.mkPen(color='k'))
-                self.dip_ax.getAxis("bottom").setTextPen(pg.mkPen(color='k'))
-                self.dip_ax.getAxis("bottom").setStyle(showValues=False)
+                logger.warning(f"No dip data found in {self.pem_file.filepath.name}")
 
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
@@ -491,10 +414,6 @@ class Derotator(QMainWindow, Ui_Derotator):
             else:
                 self.bad_stations_label.hide()
 
-            self.rotate()
-            plot_mag()
-            plot_dip()
-
             # Limit the profile plots to only show the station range
             stations = self.pem_file.get_stations(converted=True)
             for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
@@ -502,8 +421,15 @@ class Derotator(QMainWindow, Ui_Derotator):
             for ax in [self.dev_ax, self.dip_ax, self.rot_ax, self.pp_ax]:
                 ax.setLimits(yMin=stations.min() - 1, yMax=stations.max() + 1)
 
-            self.reset_range()
+            self.rotate()
+            if self.pem_file.has_d7():
+                plot_mag()
+                plot_dip()
+            else:
+                self.tabWidget.setTabEnabled(1, False)
+
             self.show()
+            self.reset_range()
 
     def plot_pem(self, pem_file):
         """
@@ -666,37 +592,34 @@ class Derotator(QMainWindow, Ui_Derotator):
 
             if not pem_file.is_fluxgate():
                 ppxy_cleaned = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_cleaned)
-                cleaned_item = pg.PlotDataItem()
-                cleaned_item.setData(ppxy_cleaned.to_numpy(), stations,
-                                     pen=pg.mkPen((255, 0, 0, 200), width=2),
-                                     brush=None,
-                                     symbol='t',
-                                     symbolPen=pg.mkPen((255, 0, 0, 200), width=2),
-                                     symbolBrush='w',
-                                     symbolSize=12)
+                cleaned_item = pg.PlotDataItem(ppxy_cleaned.to_numpy(), stations,
+                                               pen=pg.mkPen((255, 0, 0, 200), width=2),
+                                               brush=None,
+                                               symbol='t',
+                                               symbolPen=pg.mkPen((255, 0, 0, 200), width=2),
+                                               symbolBrush='w',
+                                               symbolSize=12)
                 ax.addItem(cleaned_item)
                 self.pp_ax_legend.addItem(cleaned_item, 'Cleaned PP')
 
             ppxy_theory = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_theory)
             ppxy_measured = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_measured)
 
-            theory_item = pg.PlotDataItem()
-            theory_item.setData(ppxy_theory.to_numpy(), stations,
-                                pen=pg.mkPen((0, 255, 0, 200), width=2),
-                                brush=None,
-                                symbol='o',
-                                symbolPen=pg.mkPen((0, 255, 0, 200), width=2),
-                                symbolBrush='w',
-                                symbolSize=12)
+            theory_item = pg.PlotDataItem(ppxy_theory.to_numpy(), stations,
+                                          pen=pg.mkPen((0, 255, 0, 200), width=2),
+                                          brush=None,
+                                          symbol='o',
+                                          symbolPen=pg.mkPen((0, 255, 0, 200), width=2),
+                                          symbolBrush='w',
+                                          symbolSize=12)
 
-            measured_item = pg.PlotDataItem()
-            measured_item.setData(ppxy_measured.to_numpy(), stations,
-                                  pen=pg.mkPen((0, 0, 255, 200), width=2),
-                                  brush=None,
-                                  symbol='t1',
-                                  symbolPen=pg.mkPen((0, 0, 255, 200), width=2),
-                                  symbolBrush='w',
-                                  symbolSize=12)
+            measured_item = pg.PlotDataItem(ppxy_measured.to_numpy(), stations,
+                                            pen=pg.mkPen((0, 0, 255, 200), width=2),
+                                            brush=None,
+                                            symbol='t1',
+                                            symbolPen=pg.mkPen((0, 0, 255, 200), width=2),
+                                            symbolBrush='w',
+                                            symbolSize=12)
 
             ax.addItem(measured_item)
             ax.addItem(theory_item)
@@ -747,6 +670,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.rotated_file = copy_file
 
         self.plot_pem(self.rotated_file)
+        self.reset_range()
 
     def get_method(self):
         if self.acc_btn.isChecked():
