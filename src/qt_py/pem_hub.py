@@ -65,6 +65,8 @@ __version__ = '0.11.5'
 # TODO Remove dotted lines for holes that aren't selected in hole planner
 # TODO Add status bar information when taking screenshot in hole planner
 # TODO load and save files in hole planner
+# TODO hide loops and holes in hole planner
+# TODO Fix bug in hole planner
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)

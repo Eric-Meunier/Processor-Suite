@@ -91,32 +91,29 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                 brush=pg.mkBrush("w"))
         self.y_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 0, 255, 100), width=2, symbolSize=symbol_size),
                                                 brush=pg.mkBrush("w"))
-        self.dev_ax.addItem(self.x_dev_curve)
-        self.dev_ax.addItem(self.y_dev_curve)
-        self.dev_ax.addItem(self.x_dev_scatter)
-        self.dev_ax.addItem(self.y_dev_scatter)
+
+        for item in [self.x_dev_curve, self.y_dev_curve, self.x_dev_scatter, self.y_dev_scatter]:
+            self.dev_ax.addItem(item)
 
         # Create the dip plot
         self.dip_ax = self.tool_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
-        # self.dip_ax_legend = self.dip_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
-        # self.dip_ax_legend.setParent(self.tool_view)
-        self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Dip")
-        self.dip_ax.addItem(self.dip_curve)
         self.dip_ax.setLabel('top', 'Dip Angle (Degrees)')
         self.dip_ax.setLabel('left', 'Station', units=None)
         v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
         self.dip_ax.addItem(v_line)
         self.dip_ax.setLimits(xMin=-90, xMax=0)
         self.dip_ax.setXRange(-90, 0)
+        self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Dip")
+        self.dip_ax.addItem(self.dip_curve)
 
         # Mag plot
         self.mag_ax = self.tool_view.addPlot(0, 1, axisItems={'top': NonScientific(orientation="top")})
-        self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 255, 0, 100), width=2), name="Magnetic Field Strength")
         self.mag_ax.setLabel("top", "Total Magnetic Field (pT)")
         self.mag_ax.setLabel('left', 'Station', units=None)
-        self.mag_ax.addItem(self.mag_curve)
         self.mag_ax.getAxis("left").setWidth(30)
         self.mag_ax.getAxis("right").setWidth(10)
+        self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 255, 0, 100), width=2), name="Magnetic Field Strength")
+        self.mag_ax.addItem(self.mag_curve)
 
         # Create the rotation angle plot
         self.rot_ax = self.rotation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
@@ -126,6 +123,18 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.rot_ax.setXRange(0, 360)
         self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees')
         self.rot_ax.setLabel('left', 'Station', units=None)
+        self.cpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((255, 0, 0, 200), width=2.), name='Cleaned PP')
+        self.cpp_rot_scatter = pg.ScatterPlotItem(symbol='t')
+        self.mpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 200), width=2.), name='Measured PP')
+        self.mpp_rot_scatter = pg.ScatterPlotItem(symbol='t1')
+        self.acc_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 255, 0, 200), width=2.), name='Accelerometer')
+        self.acc_rot_scatter = pg.ScatterPlotItem(symbol='o')
+        self.mag_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((100, 100, 100, 200), width=2.), name='Magnetometer')
+        self.mag_rot_scatter = pg.ScatterPlotItem(symbol='s')
+
+        for item in [self.cpp_rot_curve, self.cpp_rot_scatter, self.mpp_rot_curve, self.mpp_rot_scatter,
+                     self.acc_rot_curve, self.acc_rot_scatter, self.mag_rot_curve, self.mag_rot_scatter]:
+            self.rot_ax.addItem(item)
 
         # Create the pp values plot
         self.pp_ax = self.pp_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
@@ -134,6 +143,29 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.pp_ax.setLabel('top', 'Magnetic Field Strength', units='nT/s')
         self.pp_ax.setLabel('left', 'Station', units=None)
 
+        self.cleaned_pp_curve = pg.PlotDataItem(pen=pg.mkPen((255, 0, 0, 100), width=2), name='Cleaned PP')
+        self.cleaned_pp_scatter = pg.ScatterPlotItem(symbol='t',
+                                                     pen=pg.mkPen((255, 0, 0, 100), width=2),
+                                                     brush='w',
+                                                     size=symbol_size)
+
+        self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen((0, 255, 0, 100), width=2), name='Theory')
+        self.theory_pp_scatter = pg.ScatterPlotItem(symbol='o',
+                                                    pen=pg.mkPen((0, 255, 0, 100), width=2),
+                                                    brush='w',
+                                                    size=symbol_size)
+
+        self.measured_pp_curve = pg.PlotDataItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name='Measured PP')
+        self.measured_pp_scatter = pg.ScatterPlotItem(symbol='t1',
+                                                      pen=pg.mkPen((0, 0, 255, 100), width=2),
+                                                      brush='w',
+                                                      size=symbol_size)
+
+        for item in [self.cleaned_pp_curve, self.cleaned_pp_scatter, self.theory_pp_curve, self.theory_pp_scatter,
+                     self.measured_pp_curve, self.measured_pp_scatter]:
+            self.pp_ax.addItem(item)
+
+        # Format all axes
         for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
             ax.hideButtons()
             ax.setMenuEnabled(False)
@@ -493,67 +525,28 @@ class Derotator(QMainWindow, Ui_Derotator):
             """
             method = self.get_method()
             if method is not None:
-                self.rot_ax.clear()
-
-                ax = self.rot_ax
-                x_filt = raw_pem.data['Component'] == 'X'
-                stations = raw_pem.data[x_filt].Station.astype(int).to_numpy()
+                # self.rot_ax.clear()
+                stations = raw_pem.data.Station.astype(int).to_numpy()
 
                 if self.pp_btn.isEnabled():
                     # Add the cleaned PP information for non-fluxgate surveys
                     if not pem_file.is_fluxgate():
-                        x_pp_angle_cleaned = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
-                        cpp_item = pg.PlotDataItem()
-                        cpp_item.setData(x_pp_angle_cleaned.to_numpy(), stations,
-                                         pen=pg.mkPen((255, 0, 0, 200), width=2.),
-                                         symbolPen=pg.mkPen((255, 0, 0, 200), width=2.),
-                                         # symbolPen='r',
-                                         symbolBrush=pg.mkBrush('w'),
-                                         symbol='t',
-                                         symbolSize=symbol_size)
-                        ax.addItem(cpp_item)
-                        self.rot_ax_legend.addItem(cpp_item, 'Cleaned PP')
+                        # TODO separate X and Y, mean for curve and scatter using both
+                        x_pp_angle_cleaned = raw_pem.data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
+                        self.cpp_rot_curve.setData(x_pp_angle_cleaned.mean(), stations)
+                        self.cpp_rot_scatter.setData(x_pp_angle_cleaned.to_numpy(), stations)
 
                     x_pp_angle_measured = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.measured_pp_roll_angle)
-
-                    # Create and plot the scatter plot items
-                    mpp_item = pg.PlotDataItem()
-                    mpp_item.setData(x_pp_angle_measured.to_numpy(), stations,
-                                     pen=pg.mkPen((0, 0, 255, 200), width=2.),
-                                     symbolPen=pg.mkPen((0, 0, 255, 200), width=2.),
-                                     # symbolPen='b',
-                                     symbolBrush=pg.mkBrush('w'),
-                                     symbol='t1',
-                                     symbolSize=symbol_size)
-
-                    # Add the scatter plot items to the scatter plot
-                    ax.addItem(mpp_item)
-                    # Add the items to the legend
-                    self.rot_ax_legend.addItem(mpp_item, 'Measured PP')
+                    self.mpp_rot_curve.setData(x_pp_angle_measured.mean(), stations)
+                    self.mpp_rot_scatter.setData(x_pp_angle_measured.to_numpy(), stations)
 
                 acc_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.acc_roll_angle - self.soa)
                 mag_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.mag_roll_angle - self.soa)
 
-                acc_item = pg.PlotDataItem()
-                mag_item = pg.PlotDataItem()
-                acc_item.setData(acc_angles.to_numpy(), stations,
-                                 pen=pg.mkPen((0, 255, 0, 200), width=2.),
-                                 symbolPen=pg.mkPen((0, 255, 0, 200), width=2.),
-                                 # symbolPen='g',
-                                 symbolBrush=pg.mkBrush('w'),
-                                 symbol='o',
-                                 symbolSize=symbol_size)
-                mag_item.setData(mag_angles.to_numpy(), stations,
-                                 pen=pg.mkPen((100, 100, 100, 200), width=2.),
-                                 symbolPen=pg.mkPen((100, 100, 100, 200), width=2.),
-                                 # symbolPen='m',
-                                 symbolBrush=pg.mkBrush('w'),
-                                 symbol='s',
-                                 symbolSize=symbol_size)
-                ax.addItem(acc_item)
-                ax.addItem(mag_item)
-                self.rot_ax_legend.addItem(acc_item, 'Accelerometer')
-                self.rot_ax_legend.addItem(mag_item, 'Magnetometer')
+                self.acc_rot_curve.setData(acc_angles.mean(), stations)
+                self.acc_rot_scatter.setData(acc_angles.to_numpy(), stations)
+                self.mag_rot_curve.setData(mag_angles.mean(), stations)
+                self.mag_rot_scatter.setData(mag_angles.to_numpy(), stations)
 
         def plot_pp_values():
             """
@@ -566,40 +559,18 @@ class Derotator(QMainWindow, Ui_Derotator):
 
             if not pem_file.is_fluxgate():
                 ppxy_cleaned = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_cleaned)
-                cleaned_item = pg.PlotDataItem(ppxy_cleaned.to_numpy(), stations,
-                                               pen=pg.mkPen((255, 0, 0, 200), width=2),
-                                               brush=None,
-                                               symbol='t',
-                                               symbolPen=pg.mkPen((255, 0, 0, 200), width=2),
-                                               symbolBrush='w',
-                                               symbolSize=symbol_size)
-                ax.addItem(cleaned_item)
-                self.pp_ax_legend.addItem(cleaned_item, 'Cleaned PP')
+                self.cleaned_pp_curve.setData(ppxy_cleaned.mean(), stations)
+                self.cleaned_pp_scatter.setData(ppxy_cleaned.to_numpy(), stations)
 
             ppxy_theory = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_theory)
             ppxy_measured = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_measured)
 
-            theory_item = pg.PlotDataItem(ppxy_theory.to_numpy(), stations,
-                                          pen=pg.mkPen((0, 255, 0, 200), width=2),
-                                          brush=None,
-                                          symbol='o',
-                                          symbolPen=pg.mkPen((0, 255, 0, 200), width=2),
-                                          symbolBrush='w',
-                                          symbolSize=symbol_size)
+            self.theory_pp_curve.setData(ppxy_theory.mean(), stations)
+            self.theory_pp_scatter.setData(ppxy_theory.to_numpy(), stations)
 
-            measured_item = pg.PlotDataItem(ppxy_measured.to_numpy(), stations,
-                                            pen=pg.mkPen((0, 0, 255, 200), width=2),
-                                            brush=None,
-                                            symbol='t1',
-                                            symbolPen=pg.mkPen((0, 0, 255, 200), width=2),
-                                            symbolBrush='w',
-                                            symbolSize=symbol_size)
+            self.measured_pp_curve.setData(ppxy_measured.mean(), stations)
+            self.measured_pp_scatter.setData(ppxy_measured.to_numpy(), stations)
 
-            ax.addItem(measured_item)
-            ax.addItem(theory_item)
-
-            self.pp_ax_legend.addItem(measured_item, 'Measured PP')
-            self.pp_ax_legend.addItem(theory_item, 'Theory')
             self.pp_plotted = True
 
         if not pem_file:
@@ -666,16 +637,18 @@ def main():
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser, DMPParser
     app = QApplication(sys.argv)
-    mw = Derotator()
 
     pg = PEMGetter()
     parser = PEMParser()
     # parser = DMPParser()
-    pem_files = pg.get_pems(folder="PEM Rotation", file="_SAN-225G-18 XYZ.PEM")
     # pem_files = pg.get_pems(folder="PEM Rotation", random=True, number=5)
     # for pem_file in pem_files:
     #     d = Derotator()
     #     d.open(pem_file)
+
+    # pem_files = pg.get_pems(folder="PEM Rotation", file="_SAN-225G-18 XYZ.PEM")
+    pem_files = pg.get_pems(folder="PEM Rotation", file="_SAN-0246-19 XY (Cross bug).PEM")
+    mw = Derotator()
     mw.open(pem_files)
 
     # mw.export_stats()

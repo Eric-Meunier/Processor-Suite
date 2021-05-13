@@ -105,6 +105,11 @@ class ProfilePlotter:
             """
             survey_type = self.pem_file.get_survey_type()
             timebase_freq = ((1 / (self.pem_file.timebase / 1000)) / 4)
+            if timebase_freq == 15.01:
+                timebase_freq = 15.00
+            elif timebase_freq == 30.01:
+                timebase_freq = 30.00
+
             s_title = 'Hole' if self.pem_file.is_borehole() else 'Line'
 
             plt.figtext(0.550, 0.960, 'Crone Geophysics & Exploration Ltd.',
