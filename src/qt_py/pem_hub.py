@@ -16,7 +16,7 @@ import pandas as pd
 import simplekml
 import stopit
 import shutil
-from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2 import QtCore, QtGui, QtUiTools, QtWidgets
 from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                                QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser,
                                QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
@@ -62,6 +62,9 @@ __version__ = '0.11.5'
 # TODO Use savgol to filter data
 # TODO Add ability to remove channels
 # TODO Upgrade DB Plot to view files without the command
+# TODO Remove dotted lines for holes that aren't selected in hole planner
+# TODO Add status bar information when taking screenshot in hole planner
+# TODO load and save files in hole planner
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -4240,54 +4243,60 @@ class FrequencyConverter(QWidget):
         super().__init__()
         self.parent = parent
 
-        def convert_freq_to_timebase():
-            freq_edit.blockSignals(True)
-            timebase_edit.blockSignals(True)
-            timebase_edit.setText('')
-
-            try:
-                freq = float(freq_edit.text())
-            except ValueError:
-                logger.error(f'{freq_edit.text()} is not a number.')
-            else:
-                timebase = (1 / freq) * (1000 / 4)
-                timebase_edit.setText(f"{timebase:.2f}")
-
-            freq_edit.blockSignals(False)
-            timebase_edit.blockSignals(False)
-
-        def convert_timebase_to_freq():
-            freq_edit.blockSignals(True)
-            timebase_edit.blockSignals(True)
-            freq_edit.setText('')
-
-            try:
-                timebase = float(timebase_edit.text())
-            except ValueError:
-                logger.error(f'{timebase_edit.text()} is not a number.')
-            else:
-                freq = (1 / (4 * timebase / 1000))
-                freq_edit.setText(f"{freq:.2f}")
-
-            freq_edit.blockSignals(False)
-            timebase_edit.blockSignals(False)
-
         self.setWindowTitle('Timebase / Frequency Converter')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
-        layout = QGridLayout()
-        self.setLayout(layout)
+        self.layout = QGridLayout()
+        self.setLayout(self.layout)
 
-        timebase_label = QLabel('Timebase (ms)')
-        freq_label = QLabel('Freqency (Hz)')
-        timebase_edit = QLineEdit()
-        timebase_edit.textEdited.connect(convert_timebase_to_freq)
-        freq_edit = QLineEdit()
-        freq_edit.textEdited.connect(convert_freq_to_timebase)
+        self.timebase_label = QLabel('Timebase (ms)')
+        self.freq_label = QLabel('Frequency (Hz)')
 
-        layout.addWidget(timebase_label, 0, 0)
-        layout.addWidget(timebase_edit, 0, 1)
-        layout.addWidget(freq_label, 2, 0)
-        layout.addWidget(freq_edit, 2, 1)
+        self.timebase_edit = QLineEdit()
+        self.timebase_edit.setValidator(QtGui.QDoubleValidator())
+        self.freq_edit = QLineEdit()
+        self.freq_edit.setValidator(QtGui.QDoubleValidator())
+
+        self.layout.addWidget(self.timebase_label, 0, 0)
+        self.layout.addWidget(self.timebase_edit, 0, 1)
+        self.layout.addWidget(self.freq_label, 2, 0)
+        self.layout.addWidget(self.freq_edit, 2, 1)
+
+        def convert_freq_to_timebase():
+            self.freq_edit.blockSignals(True)
+            self.timebase_edit.blockSignals(True)
+            self.timebase_edit.setText('')
+
+            freq = self.freq_edit.text()
+            if freq:
+                freq = float(freq)
+                if freq == 0.:
+                    self.timebase_edit.setText(f"")
+                else:
+                    timebase = (1 / freq) * (1000 / 4)
+                    self.timebase_edit.setText(f"{timebase:.2f}")
+
+            self.freq_edit.blockSignals(False)
+            self.timebase_edit.blockSignals(False)
+
+        def convert_timebase_to_freq():
+            self.freq_edit.blockSignals(True)
+            self.timebase_edit.blockSignals(True)
+            self.freq_edit.setText('')
+
+            timebase = self.timebase_edit.text()
+            if timebase:
+                timebase = float(timebase)
+                if timebase == 0.:
+                    self.freq_edit.setText(f"")
+                else:
+                    freq = (1 / (4 * timebase / 1000))
+                    self.freq_edit.setText(f"{freq:.2f}")
+
+            self.freq_edit.blockSignals(False)
+            self.timebase_edit.blockSignals(False)
+
+        self.timebase_edit.textEdited.connect(convert_timebase_to_freq)
+        self.freq_edit.textEdited.connect(convert_freq_to_timebase)
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
@@ -4841,18 +4850,20 @@ class WarningViewer(QMainWindow):
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
-    mw = PEMHub()
+    # mw = PEMHub()
     pem_g = PEMGetter()
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pem_g.get_pems(folder="Iscaycruz", subfolder="Loop 1", number=1)
+    # pem_files = pem_g.get_pems(folder="Iscaycruz", subfolder="Loop 1", number=1)
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
     # assert len(pem_files) == len(ri_files)
 
-    mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
-    mw.open_project_dir()
+    con = FrequencyConverter()
+    con.show()
+    # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
+    # mw.open_project_dir()
     # mw.add_pem_files(pem_files)
     # mw.table.selectRow(0)
     # mw.open_channel_table_viewer()
@@ -4864,7 +4875,7 @@ def main():
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"GPX files\EM21-155\GPS\EM21-155 + Loop D4_0415.gpx")])
 
-    mw.show()
+    # mw.show()
 
     app.exec_()
 

@@ -527,7 +527,7 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             tool_az = tool_az + 360
 
         tool_dip = self.df.RAD_tool.map(lambda x: x.get_dip())
-        mag = self.df.RAD_tool.map(lambda x: x.get_mag_strength())
+        mag = self.df.RAD_tool.map(lambda x: x.get_mag())
         acc_roll = self.df.RAD_tool.map(lambda x: x.get_acc_roll())
         mag_roll = self.df.RAD_tool.map(lambda x: x.get_mag_roll())
         stations = self.df.Station.astype(int)

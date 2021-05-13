@@ -3,14 +3,15 @@ import os
 
 spec_file = r"run_pempro.spec"
 
+"""
+Notes:
+-To solve "OSError: could not find or load spatialindex_c.dll": pip install osmnx (but must have matplotlib==3.3.2, which has the defaultParams error), or pip uninstall rtree.
+-To solve "NameError: name 'defaultParams' is not defined": pip install matplotlib==3.2.2 (which will be incompatible with osmnx).
+"""
+
 
 def make_spec(spec_file):
-    """
-    Notes:
-    -To solve "OSError: could not find or load spatialindex_c.dll": pip install osmnx (but must have matplotlib==3.3.2, which has the defaultParams error), or pip uninstall rtree.
-    -To solve "NameError: name 'defaultParams' is not defined": pip install matplotlib==3.2.2 (which will be incompatible with osmnx).
-    """
-
+    print(f"Creating .spec file for version {__version__}")
     with open(spec_file, "w+") as file:
         file.write(r'''
 # -*- mode: python ; coding: utf-8 -*-

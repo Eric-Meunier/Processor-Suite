@@ -1,17 +1,15 @@
 import os
-from pathlib import Path
-from src.pem.pem_file import PEMFile
-
-import numpy as np
-import pandas as pd
-import pyqtgraph as pg
-from src.logger import Log
-from src.qt_py.custom_qt_widgets import NonScientific
-from PySide2 import QtCore, QtGui, QtUiTools
-from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
-
 import logging
 import sys
+import numpy as np
+import pandas as pd
+from pathlib import Path
+# from src.logger import Log
+from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
+import pyqtgraph as pg
+from src.pem.pem_file import PEMFile
+from src.qt_py.custom_qt_widgets import NonScientific
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +26,8 @@ pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
+
+symbol_size = 9
 
 
 class Derotator(QMainWindow, Ui_Derotator):
@@ -85,11 +85,23 @@ class Derotator(QMainWindow, Ui_Derotator):
         v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
         self.dev_ax.addItem(v_line)
 
-        # TODO set DIp and Mag plots equal width?
+        self.x_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((255, 0, 0, 100), width=2), name="X Component")
+        self.y_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Y Component")
+        self.x_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((255, 0, 0, 100), width=2, symbolSize=symbol_size),
+                                                brush=pg.mkBrush("w"))
+        self.y_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 0, 255, 100), width=2, symbolSize=symbol_size),
+                                                brush=pg.mkBrush("w"))
+        self.dev_ax.addItem(self.x_dev_curve)
+        self.dev_ax.addItem(self.y_dev_curve)
+        self.dev_ax.addItem(self.x_dev_scatter)
+        self.dev_ax.addItem(self.y_dev_scatter)
+
         # Create the dip plot
         self.dip_ax = self.tool_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
-        self.dip_ax_legend = self.dip_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
-        self.dip_ax_legend.setParent(self.tool_view)
+        # self.dip_ax_legend = self.dip_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
+        # self.dip_ax_legend.setParent(self.tool_view)
+        self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Dip")
+        self.dip_ax.addItem(self.dip_curve)
         self.dip_ax.setLabel('top', 'Dip Angle (Degrees)')
         self.dip_ax.setLabel('left', 'Station', units=None)
         v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
@@ -100,11 +112,13 @@ class Derotator(QMainWindow, Ui_Derotator):
         # Mag plot
         self.mag_ax = self.tool_view.addPlot(0, 1, axisItems={'top': NonScientific(orientation="top")})
         self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 255, 0, 100), width=2), name="Magnetic Field Strength")
-        self.mag_ax.setLabel("top", "Total Magnetic Field Strength\n(pT)")
+        self.mag_ax.setLabel("top", "Total Magnetic Field (pT)")
         self.mag_ax.setLabel('left', 'Station', units=None)
         self.mag_ax.addItem(self.mag_curve)
+        self.mag_ax.getAxis("left").setWidth(30)
+        self.mag_ax.getAxis("right").setWidth(10)
 
-    # Create the rotation angle plot
+        # Create the rotation angle plot
         self.rot_ax = self.rotation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
         self.rot_ax_legend = self.rot_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
         self.rot_ax_legend.setParent(self.rotation_view)
@@ -165,24 +179,6 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         self.mag_ax.getAxis("left").setStyle(showValues=False)
         self.mag_ax.getAxis("left").setLabel("")
-
-        self.x_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((255, 0, 0, 100), width=2), name="X Component")
-        self.y_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Y Component")
-        self.x_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((255, 0, 0, 100), width=2), brush=pg.mkBrush("w"))
-        self.y_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 0, 255, 100), width=2), brush=pg.mkBrush("w"))
-        self.dev_ax.addItem(self.x_dev_curve)
-        self.dev_ax.addItem(self.y_dev_curve)
-        self.dev_ax.addItem(self.x_dev_scatter)
-        self.dev_ax.addItem(self.y_dev_scatter)
-
-        self.x_dip_curve = pg.PlotCurveItem(pen=pg.mkPen((255, 0, 0, 100), width=2), name="X Component")
-        self.y_dip_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Y Component")
-        self.x_dip_scatter = pg.ScatterPlotItem(pen=pg.mkPen((255, 0, 0, 100), width=2), brush=pg.mkBrush("w"))
-        self.y_dip_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 0, 255, 100), width=2), brush=pg.mkBrush("w"))
-        self.dip_ax.addItem(self.x_dip_curve)
-        self.dip_ax.addItem(self.y_dip_curve)
-        self.dip_ax.addItem(self.x_dip_scatter)
-        self.dip_ax.addItem(self.y_dip_scatter)
 
         self.profile_axes = np.concatenate([self.x_view_axes, self.y_view_axes])
         self.axes = np.concatenate([self.x_view_axes, self.y_view_axes, [self.dev_ax], [self.dip_ax], [self.mag_ax],
@@ -312,10 +308,10 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         def plot_mag():
             mag_df = self.pem_file.get_mag()
+            mag_df = mag_df.drop_duplicates(subset='Station')
+            stations = mag_df.Station.astype(int).to_numpy()
             if mag_df.Mag.any():
-                stations, mag = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
-                print(f"Plotting mag...")
-                self.mag_curve.setData(x=mag, y=stations)
+                self.mag_curve.setData(x=mag_df.Mag.to_numpy(), y=stations)
             else:
                 logger.warning(f"No mag data found in {self.pem_file.filepath.name}")
 
@@ -324,27 +320,10 @@ class Derotator(QMainWindow, Ui_Derotator):
             Plot the dip of the hole.
             """
             dip_df = self.pem_file.get_dip()
+            dip_df = dip_df.drop_duplicates(subset='Station')
+            stations = dip_df.Station.astype(int).to_numpy()
             if not dip_df.empty:
-                x_filt = self.pem_file.data['Component'] == 'X'
-                y_filt = self.pem_file.data['Component'] == 'Y'
-                x_stations = self.pem_file.data[x_filt].Station.astype(int)
-                y_stations = self.pem_file.data[y_filt].Station.astype(int)
-                x_dip_angles = self.pem_file.data[x_filt].RAD_tool.map(lambda x: x.get_dip())
-                y_dip_angles = self.pem_file.data[y_filt].RAD_tool.map(lambda x: x.get_dip())
-
-                # Calculate the average deviation for the curve line
-                x_df = pd.DataFrame([x_dip_angles, x_stations]).T
-                x_df.rename(columns={"RAD_tool": "Dip"}, inplace=True)
-                x_avg_df = x_df.groupby("Station", as_index=False).mean()
-
-                y_df = pd.DataFrame([y_dip_angles, y_stations]).T
-                y_df.rename(columns={"RAD_tool": "Dip"}, inplace=True)
-                y_avg_df = y_df.groupby("Station", as_index=False).mean()
-
-                self.x_dip_scatter.setData(x=x_dip_angles.to_numpy(), y=x_stations.to_numpy())
-                self.y_dip_scatter.setData(x=y_dip_angles.to_numpy(), y=y_stations.to_numpy())
-                self.x_dip_curve.setData(x=x_avg_df.Dip.to_numpy(), y=x_avg_df.Station.to_numpy())
-                self.y_dip_curve.setData(x=y_avg_df.Dip.to_numpy(), y=y_avg_df.Station.to_numpy())
+                self.dip_curve.setData(x=dip_df.Dip.to_numpy(), y=stations)
             else:
                 logger.warning(f"No dip data found in {self.pem_file.filepath.name}")
 
@@ -418,7 +397,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             stations = self.pem_file.get_stations(converted=True)
             for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
                 ax.setLimits(yMin=stations.min(), yMax=stations.max())
-            for ax in [self.dev_ax, self.dip_ax, self.rot_ax, self.pp_ax]:
+            for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
                 ax.setLimits(yMin=stations.min() - 1, yMax=stations.max() + 1)
 
             self.rotate()
@@ -454,10 +433,6 @@ class Derotator(QMainWindow, Ui_Derotator):
 
                 ax.plot(x=x, y=y,
                         pen=pg.mkPen('k', width=1.1),
-                        # symbol='o',
-                        # symbolSize=2,
-                        # symbolBrush='k',
-                        # symbolPen='k',
                         )
 
             profile_data = processed_pem.get_profile_data(component, converted=True, incl_deleted=False)
@@ -535,7 +510,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                          # symbolPen='r',
                                          symbolBrush=pg.mkBrush('w'),
                                          symbol='t',
-                                         symbolSize=12)
+                                         symbolSize=symbol_size)
                         ax.addItem(cpp_item)
                         self.rot_ax_legend.addItem(cpp_item, 'Cleaned PP')
 
@@ -549,7 +524,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                      # symbolPen='b',
                                      symbolBrush=pg.mkBrush('w'),
                                      symbol='t1',
-                                     symbolSize=12)
+                                     symbolSize=symbol_size)
 
                     # Add the scatter plot items to the scatter plot
                     ax.addItem(mpp_item)
@@ -567,15 +542,14 @@ class Derotator(QMainWindow, Ui_Derotator):
                                  # symbolPen='g',
                                  symbolBrush=pg.mkBrush('w'),
                                  symbol='o',
-                                 symbolSize=12)
-                # TODO Make this purple or whatever
+                                 symbolSize=symbol_size)
                 mag_item.setData(mag_angles.to_numpy(), stations,
                                  pen=pg.mkPen((100, 100, 100, 200), width=2.),
                                  symbolPen=pg.mkPen((100, 100, 100, 200), width=2.),
                                  # symbolPen='m',
                                  symbolBrush=pg.mkBrush('w'),
                                  symbol='s',
-                                 symbolSize=12)
+                                 symbolSize=symbol_size)
                 ax.addItem(acc_item)
                 ax.addItem(mag_item)
                 self.rot_ax_legend.addItem(acc_item, 'Accelerometer')
@@ -598,7 +572,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                symbol='t',
                                                symbolPen=pg.mkPen((255, 0, 0, 200), width=2),
                                                symbolBrush='w',
-                                               symbolSize=12)
+                                               symbolSize=symbol_size)
                 ax.addItem(cleaned_item)
                 self.pp_ax_legend.addItem(cleaned_item, 'Cleaned PP')
 
@@ -611,7 +585,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                           symbol='o',
                                           symbolPen=pg.mkPen((0, 255, 0, 200), width=2),
                                           symbolBrush='w',
-                                          symbolSize=12)
+                                          symbolSize=symbol_size)
 
             measured_item = pg.PlotDataItem(ppxy_measured.to_numpy(), stations,
                                             pen=pg.mkPen((0, 0, 255, 200), width=2),
@@ -619,7 +593,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                             symbol='t1',
                                             symbolPen=pg.mkPen((0, 0, 255, 200), width=2),
                                             symbolBrush='w',
-                                            symbolSize=12)
+                                            symbolSize=symbol_size)
 
             ax.addItem(measured_item)
             ax.addItem(theory_item)

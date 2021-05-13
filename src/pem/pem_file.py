@@ -545,11 +545,11 @@ class PEMFile:
         assert any([self.has_xy(), self.has_geometry()]), f"File must either have geometry or be an XY file."
 
         # Create the DAD from the RAD Tool data
-        data = self.data.drop_duplicates(subset='Station')
-        stations = data.loc[:, "Station"].astype(int)
-        mag = data.RAD_tool.apply(lambda x: x.get_mag_strength()).astype(float)
+        df = self.data[(self.data.Component == "X") | (self.data.Component == "Y")].loc[:, ["Station", "Component"]]
+        mag = self.data.RAD_tool.apply(lambda x: x.get_mag()).astype(float)
+        df["Mag"] = mag
 
-        return pd.DataFrame({'Station': stations, 'Mag': mag})
+        return df
 
     def get_azimuth(self):
         """
@@ -3295,7 +3295,7 @@ class RADTool:
 
         return roll_angle
 
-    def get_mag_strength(self):
+    def get_mag(self):
         """
         Calculate and return the magnetic field strength (total field) in units of nT
         :return: float
