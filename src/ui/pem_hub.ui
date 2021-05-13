@@ -1454,7 +1454,7 @@ Warnings</string>
     </widget>
     <widget class="QMenu" name="menuReverse_Polarity">
      <property name="title">
-      <string>Reverse Polarity</string>
+      <string>Reverse...</string>
      </property>
      <property name="icon">
       <iconset>
@@ -1463,6 +1463,8 @@ Warnings</string>
      <addaction name="actionReverseX_Component"/>
      <addaction name="actionReverseY_Component"/>
      <addaction name="actionReverseZ_Component"/>
+     <addaction name="separator"/>
+     <addaction name="actionStation_Order"/>
     </widget>
     <addaction name="actionAverage_All_PEM_Files"/>
     <addaction name="actionSplit_All_PEM_Files"/>
@@ -1863,7 +1865,7 @@ Warnings</string>
   </action>
   <action name="actionReverseX_Component">
    <property name="text">
-    <string>X Component</string>
+    <string>X Polarity</string>
    </property>
    <property name="toolTip">
     <string>Reverse the polarity of all X component data</string>
@@ -1871,7 +1873,7 @@ Warnings</string>
   </action>
   <action name="actionReverseY_Component">
    <property name="text">
-    <string>Y Component</string>
+    <string>Y Polarity</string>
    </property>
    <property name="toolTip">
     <string>Reverse the polarity of all Y component data</string>
@@ -1879,7 +1881,7 @@ Warnings</string>
   </action>
   <action name="actionReverseZ_Component">
    <property name="text">
-    <string>Z Component</string>
+    <string>Z Polarity</string>
    </property>
    <property name="toolTip">
     <string>Reverse the polarity of all Z component data</string>
@@ -2066,6 +2068,11 @@ Warnings</string>
    </property>
    <property name="text">
     <string>Loop Current Calculator</string>
+   </property>
+  </action>
+  <action name="actionStation_Order">
+   <property name="text">
+    <string>Station Order</string>
    </property>
   </action>
  </widget>

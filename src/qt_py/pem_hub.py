@@ -15,12 +15,13 @@ import numpy as np
 import pandas as pd
 import simplekml
 import stopit
+import shutil
 from PySide2 import QtCore, QtGui, QtUiTools
-from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog, QHeaderView,
-                             QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QFileSystemModel, QHBoxLayout,
-                             QInputDialog, QErrorMessage, QLabel, QLineEdit, QPushButton, QAbstractItemView,
-                             QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox, QSizePolicy, QFrame, QGroupBox,
-                             QComboBox, QListWidgetItem)
+from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
+                               QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser,
+                               QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
+                               QPushButton, QAbstractItemView, QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox,
+                               QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem, QShortcut)
 import pyqtgraph as pg
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
@@ -52,8 +53,6 @@ logger = logging.getLogger(__name__)
 __version__ = '0.11.5'
 # TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
-# TODO Create right click option to create package on final folder (like step)
-# TODO Print PDF after pressing Enter.
 # TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO For suffix and repeat warnings, make the background red
@@ -61,12 +60,8 @@ __version__ = '0.11.5'
 # TODO Add rainbow coloring to final plots?
 # TODO Use mpl in de-rotator
 # TODO Use savgol to filter data
-# TODO Update PEM list after merge.
 # TODO Add ability to remove channels
-# TODO Copy channel table to clipboard
-# TODO Add progress bar when plotting contour map
-# TODO Bug in contour map: Title box removes grid
-# TODO Add Reverse > station order in right click menu
+# TODO Upgrade DB Plot to view files without the command
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -74,7 +69,7 @@ if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]  # src folder path
-print(f"App path: {application_path}")
+print(f"Application path: {application_path}")
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
@@ -290,6 +285,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # View channel table
         self.action_view_channels = QAction("Channel Table", self)
+        self.action_view_channels.setIcon(QtGui.QIcon(str(icons_path.joinpath("table.png"))))
         self.action_view_channels.triggered.connect(self.open_channel_table_viewer)
 
         # Merge PEM files
@@ -365,16 +361,20 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
         self.scale_ca_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('coil.png'))))
 
-        # Reversing component data
-        self.reverse_x_component_action = QAction("X Component", self)
+        # Reversing
+        self.reverse_x_component_action = QAction("X Polarity", self)
         self.reverse_x_component_action.triggered.connect(
             lambda: self.reverse_component_data(comp='X', selected=True))
-        self.reverse_y_component_action = QAction("Y Component", self)
+        self.reverse_y_component_action = QAction("Y Polarity", self)
         self.reverse_y_component_action.triggered.connect(
             lambda: self.reverse_component_data(comp='Y', selected=True))
-        self.reverse_z_component_action = QAction("Z Component", self)
+        self.reverse_z_component_action = QAction("Z Polarity", self)
         self.reverse_z_component_action.triggered.connect(
             lambda: self.reverse_component_data(comp='Z', selected=True))
+
+        self.reverse_station_order_action = QAction("Station Order", self)
+        self.reverse_station_order_action.triggered.connect(
+            lambda: self.reverse_station_order(selected=True))
 
         # Derotation
         self.derotate_action = QAction("De-rotate XY", self)
@@ -510,6 +510,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionReverseX_Component.triggered.connect(lambda: self.reverse_component_data(comp='X', selected=False))
         self.actionReverseY_Component.triggered.connect(lambda: self.reverse_component_data(comp='Y', selected=False))
         self.actionReverseZ_Component.triggered.connect(lambda: self.reverse_component_data(comp='Z', selected=False))
+        self.actionStation_Order.triggered.connect(lambda: self.reverse_station_order(selected=False))
 
         # Map menu
         self.actionQuick_Map.triggered.connect(self.open_quick_map)
@@ -1155,6 +1156,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                 self.reverse_menu.addAction(self.reverse_x_component_action)
                 self.reverse_menu.addAction(self.reverse_y_component_action)
                 self.reverse_menu.addAction(self.reverse_z_component_action)
+                self.reverse_menu.addSeparator()
+                self.reverse_menu.addAction(self.reverse_station_order_action)
+
                 self.menu.addSeparator()
 
                 # For boreholes only, do-rotate and geometry
@@ -2268,17 +2272,57 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         :param position: QPoint, position of mouse at time of right-click
         """
 
-        def open_step():
-            # Open the Step window at the selected location in the project tree
+        def get_current_path():
             index = self.project_tree.currentIndex()
             index_item = self.file_sys_model.index(index.row(), 0, index.parent())
             path = self.file_sys_model.filePath(index_item)
+            return Path(path)
 
-            os.chdir(path)
+        def open_step():
+            # Open the Step window at the selected location in the project tree
+            path = get_current_path()
+
+            os.chdir(str(path))
             os.system('cmd /c "step"')
+
+        def create_delivery_folder():
+            """
+            Gather and copy PEM, STP, and PDF files to a deliverable folder and compress it to a .ZIP file.
+            """
+            folder_name, ok_pressed = QInputDialog.getText(self, "Select Folder Name", "Folder Name:",
+                                                           text=self.project_dir.parent.name)
+            if ok_pressed and folder_name:
+                path = get_current_path()
+                zip_path = path.joinpath(folder_name)
+                if zip_path.exists():
+                    response = self.message.question(self, "Existing Directory",
+                                                     f"Folder '{folder_name}' already exists. Copy and overwrite files "
+                                                     f"to this folder?", self.message.Yes, self.message.No)
+                    if response == self.message.No:
+                        return
+
+                pem_files = list(path.glob("*.PEM"))
+                step_files = list(path.glob("*.STP"))
+                pdf_files = list(path.glob("*.PDF"))
+                files = np.concatenate([pem_files, step_files, pdf_files])
+                if not any(files):
+                    self.status_bar.showMessage(f"No processed files found in {path}.", 1500)
+                    return
+
+                logger.debug(f"Delivery folder path: {str(zip_path)}")
+                zip_path.mkdir(exist_ok=True)
+
+                for file in files:
+                    logger.debug(f"Moving {file} to {zip_path.joinpath(file.name)}.")
+                    shutil.copyfile(file, zip_path.joinpath(file.name))
+
+                shutil.make_archive(str(zip_path), 'zip', str(zip_path))
+                self.status_bar.showMessage(f"{folder_name}.zip created successfully.", 1500)
 
         menu = QMenu()
         menu.addAction('Run Step', open_step)
+        menu.addSeparator()
+        menu.addAction('Create Delivery Folder', create_delivery_folder)
         menu.exec_(self.project_tree.viewport().mapToGlobal(position))
 
     def open_unpacker(self, folder=None):
@@ -2304,8 +2348,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
     def open_contour_map(self):
         """Open the Contour Map"""
         global contour_map
-        contour_map = ContourMapViewer(parent=self)
-        contour_map.open(self.pem_files)
+
+        bar = CustomProgressBar()
+        bar.setMaximum(len(self.pem_files))
+        with pg.ProgressDialog("Plotting PEM Files...", 0, 1) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle("Plotting PEM Files")
+            contour_map = ContourMapViewer(parent=self)
+            contour_map.open(self.pem_files, dlg)
+        bar.deleteLater()
 
     def open_freq_converter(self):
         """Open the Frequency Converter"""
@@ -3859,27 +3910,47 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        for pem_file in pem_files:
-            logger.info(f"Reversing {comp} data of {pem_file.filepath.name}.")
-            filt = pem_file.data.Component == comp.upper()
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
 
-            if filt.any():
-                data = pem_file.data[filt]
-                data.loc[:, 'Reading'] = data.loc[:, 'Reading'] * -1
-                pem_file.data[filt] = data
+        with pg.ProgressDialog(f'Reversing {comp} Component Polarity...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle(f'Reversing {comp} Component Polarity')
 
-                note = f"<HE3> {comp.upper()} component polarity reversed."
-                if note in pem_file.notes:
-                    pem_file.notes.remove(note)
-                else:
-                    pem_file.notes.append(note)
-
+            for pem_file, row in zip(pem_files, rows):
+                dlg.setLabelText(f"Reversing {comp} component data of {pem_file.filepath.name}")
+                pem_file = pem_file.reverse_component(comp)
                 self.refresh_pem(pem_file)
-            else:
-                logger.warning(f"{pem_file.filepath.name} has no {comp} data.")
+                dlg += 1
 
+        bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. "
                                     f"{comp.upper()} of {len(pem_files)} PEM file(s) reversed.", 2000)
+
+    def reverse_station_order(self, selected=False):
+        pem_files, rows = self.get_pem_files(selected=selected)
+
+        if not pem_files:
+            logger.warning(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+
+        with pg.ProgressDialog('Reversing Station Order...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle('Reversing Station Order')
+
+            for pem_file, row in zip(pem_files, rows):
+                dlg.setLabelText(f"Reversing station order of {pem_file.filepath.name}")
+                pem_file = pem_file.reverse_station_order()
+                self.refresh_pem(pem_file)
+                dlg += 1
+
+        bar.deleteLater()
+        self.status_bar.showMessage(f"Process complete. "
+                                    f"Station order of {len(pem_files)} PEM file(s) reversed.", 2000)
 
     # def auto_merge_pem_files(self):
     #
@@ -4247,6 +4318,9 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.printer = None
         self.message = QMessageBox()
 
+        self.print_btn.setDefault(True)
+        self.print_btn.setFocus()
+
         # Set validations
         int_validator = QtGui.QIntValidator()
         self.max_range_edit.setValidator(int_validator)
@@ -4270,8 +4344,8 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
-        elif e.key() == QtCore.Qt.Key_Enter:
-            self.print_pdfs()
+        # elif e.key() == QtCore.Qt.Key_Enter:
+        #     self.print_pdfs()
 
     def close(self):
         self.hide()
@@ -4503,9 +4577,10 @@ class ChannelTimeViewer(QMainWindow):
         :param parent: Qt parent object
         """
         super().__init__()
-
         self.pem_file = pem_file
         self.parent = parent
+        self.df = pd.DataFrame()
+        self.text_format = ""
 
         # Format window
         self.setLayout(QVBoxLayout())
@@ -4514,6 +4589,7 @@ class ChannelTimeViewer(QMainWindow):
         self.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
         self.resize(600, 600)
         self.setWindowTitle(f"Channel Times - {self.pem_file.filepath.name}")
+        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("table.png"))))
 
         # Status bar
         self.survey_type_label = QLabel(f" {self.pem_file.get_survey_type()} Survey ")
@@ -4545,6 +4621,8 @@ class ChannelTimeViewer(QMainWindow):
 
         # Signals
         self.units_combo.currentTextChanged.connect(self.fill_channel_table)
+        self.copy_table_action = QShortcut("Ctrl+C", self)
+        self.copy_table_action.activated.connect(self.copy_table)
 
         self.fill_channel_table()
 
@@ -4552,6 +4630,19 @@ class ChannelTimeViewer(QMainWindow):
         self.close_request.emit(self)
         e.accept()
         self.deleteLater()
+
+    def copy_table(self):
+        df = self.df.loc[:, "Start":"Width"].copy()
+
+        # Add a "Channel" column, and rename the others to include the units
+        df.reset_index(inplace=True)
+        units = self.units_combo.currentText()
+        columns = [f"{c} ({units})" for c in df.columns]
+        columns[0] = "Channel"
+        df.columns = columns
+
+        df.to_clipboard(excel=True, header=True, index=False, float_format=self.text_format)
+        self.statusBar().showMessage("Table copied to clipboard.", 1500)
 
     def fill_channel_table(self):
         """
@@ -4570,18 +4661,18 @@ class ChannelTimeViewer(QMainWindow):
                                   mpl_blue[1] * 255,
                                   mpl_blue[2] * 255)
 
-            for i, column in enumerate(df.columns):
+            for i, column in enumerate(self.df.columns):
 
                 if column != 'Remove':
                     # Normalize column values for color mapping
-                    mn, mx, count = df[column].min(), df[column].max(), len(df[column])
+                    mn, mx, count = self.df[column].min(), self.df[column].max(), len(self.df[column])
                     norm = plt.Normalize(mn, mx)
 
                     # Create a custom color map
                     cm = LCMap.from_list('Custom', [mpl_red, mpl_blue])
 
                     # Apply the color map to the values in the column
-                    colors = cm(norm(df[column].to_numpy()))
+                    colors = cm(norm(self.df[column].to_numpy()))
 
                 for row in range(self.table.rowCount()):
                     item = self.table.item(row, i)
@@ -4604,24 +4695,22 @@ class ChannelTimeViewer(QMainWindow):
                                              colors[row][2] * 255)
                         item.setBackground(color)
 
-        df = self.pem_file.channel_times.copy()
-        # print(F"Channel times given to table viewer: {df.to_string(index=False)}")
+        self.df = self.pem_file.channel_times.copy()
+        # print(F"Channel times given to table viewer: {self.df.to_string(index=False)}")
 
         if self.units_combo.currentText() == 'µs':
-            df.loc[:, 'Start':'Width'] = df.loc[:, 'Start':'Width'] * 1000000
-            text_format = '%0.0f'
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] * 1000000
+            self.text_format = '%0.0f'
         elif self.units_combo.currentText() == 'ms':
-            df.loc[:, 'Start':'Width'] = df.loc[:, 'Start':'Width'] * 1000
-            text_format = '%0.3f'
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] * 1000
+            self.text_format = '%0.3f'
         else:
-            df.loc[:, 'Start':'Width'] = df.loc[:, 'Start':'Width']
-            text_format = '%0.6f'
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width']
+            self.text_format = '%0.6f'
 
-        self.table.setData(df.to_dict('index'))
-        self.table.setFormat(text_format)
-        # self.table.resizeColumnsToContents()
+        self.table.setData(self.df.to_dict('index'))
+        self.table.setFormat(self.text_format)
         self.table.resizeRowsToContents()
-        # self.resize(self.table.size())
 
         color_table()
 
@@ -4753,16 +4842,21 @@ def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMHub()
-    pg = PEMGetter()
+    pem_g = PEMGetter()
     pem_parser = PEMParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pg.get_pems(folder='Raglan', number=1)
+    pem_files = pem_g.get_pems(folder="Iscaycruz", subfolder="Loop 1", number=1)
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
     # assert len(pem_files) == len(ri_files)
 
-    mw.add_pem_files(pem_files)
+    mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
+    mw.open_project_dir()
+    # mw.add_pem_files(pem_files)
+    # mw.table.selectRow(0)
+    # mw.open_channel_table_viewer()
+    # mw.open_pdf_plot_printer()
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.table.selectRow(0)
