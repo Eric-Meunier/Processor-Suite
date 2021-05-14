@@ -492,7 +492,14 @@ due to missing X and/or Y pair:</string>
     </widget>
     <addaction name="menuExport"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="actionShow_Scatter"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuSettings"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionPEM_File">
@@ -519,6 +526,17 @@ due to missing X and/or Y pair:</string>
    </property>
    <property name="text">
     <string>Plot Mag</string>
+   </property>
+  </action>
+  <action name="actionShow_Scatter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Scatter</string>
    </property>
   </action>
  </widget>

@@ -536,47 +536,59 @@ class PEMFile:
     def get_date(self):
         return datetime.strptime(self.date, ('%B %d, %Y'))
 
-    def get_mag(self):
+    def get_mag(self, average=False):
         """
         Return the magnetic field strength profile of a borehole file.
         :return: Dataframe
+        :param average: Bool, return the average per each station
         """
         assert self.is_borehole(), f"Can only get magnetic field strength data from borehole surveys."
         assert any([self.has_xy(), self.has_geometry()]), f"File must either have geometry or be an XY file."
 
-        # Create the DAD from the RAD Tool data
-        df = self.data[(self.data.Component == "X") | (self.data.Component == "Y")].loc[:, ["Station", "Component"]]
-        mag = self.data.RAD_tool.apply(lambda x: x.get_mag()).astype(float)
-        df["Mag"] = mag
+        df = self.data.drop_duplicates(subset="RAD_ID").loc[:, ["Station", "RAD_tool"]]
+        df.Station = df.Station.astype(float)
+        mag = df.RAD_tool.apply(lambda x: x.get_mag())
+        df = df.assign(Mag=mag)
+        if average is True:
+            df = df.groupby('Station', as_index=False).mean()
 
-        return df
+        df = df.sort_values("Station")
+        return df.dropna()
 
-    def get_azimuth(self):
+    def get_azimuth(self, average=False):
         """
         Return the measured azimuth values of a borehole file.
         :return: DataFrame
+        :param average: Bool, return the average per each station
         """
         assert all([self.has_xy(), self.is_borehole()]), f"Can only get azimuth data from borehole XY surveys."
 
-        # Create the DAD from the RAD Tool data
-        df = self.data[(self.data.Component == "X") | (self.data.Component == "Y")].loc[:, ["Station", "Component"]]
-        azimuth = self.data.RAD_tool.apply(lambda x: x.get_azimuth()).astype(float)
-        df["Azimuth"] = azimuth
+        df = self.data.drop_duplicates(subset="RAD_ID").loc[:, ["Station", "RAD_tool"]]
+        df.Station = df.Station.astype(float)
+        azimuth = df.RAD_tool.apply(lambda x: x.get_azimuth())
+        df = df.assign(Azimuth=azimuth)
+        if average is True:
+            df = df.groupby('Station', as_index=False).mean()
 
+        df = df.sort_values("Station")
         return df.dropna()
 
-    def get_dip(self):
+    def get_dip(self, average=False):
         """
         Return the measured dip values of a borehole file.
         :return: DataFrame
+        :param average: Bool, return the average per each station
         """
         assert all([self.has_xy(), self.is_borehole()]), f"Can only get dip data from borehole surveys with XY components."
 
-        # Create the DAD from the RAD Tool data
-        df = self.data[(self.data.Component == "X") | (self.data.Component == "Y")].loc[:, ["Station", "Component"]]
-        dip = self.data.RAD_tool.apply(lambda x: x.get_dip()).astype(float)
-        df["Dip"] = dip
+        df = self.data.drop_duplicates(subset="RAD_ID").loc[:, ["Station", "RAD_tool"]]
+        df.Station = df.Station.astype(float)
+        dip = df.RAD_tool.apply(lambda x: x.get_dip())
+        df = df.assign(Dip=dip)
+        if average is True:
+            df = df.groupby('Station', as_index=False).mean()
 
+        df = df.sort_values("Station")
         return df.dropna()
 
     def get_soa(self):
@@ -1513,11 +1525,12 @@ class PEMFile:
         self.probes['SOA'] = str(soa)
         return self
 
-    def prep_rotation(self):
+    def prep_rotation(self, allow_negative_angles=False):
         """
         Prepare the PEM file for probe de-rotation by updating the RAD tool objects with all calculations needed for
         any eligible de-rotation method.
         :return: tuple, updated PEMFile object and data frame of ineligible stations.
+        :param allow_negative_angles: Bool, allow PP roll angles to be negative.
         """
 
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
@@ -1670,8 +1683,9 @@ class PEMFile:
                             cleaned_pp_roll_angle = math.degrees(
                                 math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx)
                             )
-                            if cleaned_pp_roll_angle < 0:
-                                cleaned_pp_roll_angle = cleaned_pp_roll_angle + 360
+                            if allow_negative_angles is False:
+                                if cleaned_pp_roll_angle < 0:
+                                    cleaned_pp_roll_angle = cleaned_pp_roll_angle + 360
 
                             pp_rad_info['ppx_cleaned'] = cleaned_PPx
                             pp_rad_info['ppy_cleaned'] = cleaned_PPy
@@ -1682,8 +1696,9 @@ class PEMFile:
                         measured_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) -
                                                               math.atan2(measured_ppy, measured_ppx))
 
-                        if measured_pp_roll_angle < 0:
-                            measured_pp_roll_angle = measured_pp_roll_angle + 360
+                        if allow_negative_angles is False:
+                            if measured_pp_roll_angle < 0:
+                                measured_pp_roll_angle = measured_pp_roll_angle + 360
 
                         # Update the RAD Tool object with the new information
                         pp_rad_info['azimuth'] = seg_azimuth
@@ -3255,9 +3270,10 @@ class RADTool:
             dip = None
         return dip
 
-    def get_acc_roll(self):
+    def get_acc_roll(self, allow_negative=False):
         """
         Calculate the roll angle as measured by the accelerometer. Must be D7.
+        :param allow_negative: bool, allow negative roll values or only allow values within 0 - 360.
         :return: float, roll angle
         """
         if not self.has_tool_values():
@@ -3270,14 +3286,16 @@ class RADTool:
         roll_angle = 360 - cc_roll_angle if y > 0 else cc_roll_angle
         if roll_angle >= 360:
             roll_angle = roll_angle - 360
-        elif roll_angle < 0:
-            roll_angle = roll_angle + 360
+        if allow_negative:
+            if roll_angle < 0:
+                roll_angle = roll_angle + 360
 
         return roll_angle
 
-    def get_mag_roll(self):
+    def get_mag_roll(self, allow_negative=False):
         """
         Calculate the roll angle as measured by the magnetometer. Must be D7.
+        :param allow_negative: bool, allow negative roll values or only allow values within 0 - 360.
         :return: float, roll angle
         """
         if not self.has_tool_values():
@@ -3290,8 +3308,9 @@ class RADTool:
         roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
         if roll_angle > 360:
             roll_angle = roll_angle - 360
-        elif roll_angle < 0:
-            roll_angle = -roll_angle
+        if allow_negative:
+            if roll_angle < 0:
+                roll_angle = -roll_angle
 
         return roll_angle
 

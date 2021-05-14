@@ -16,7 +16,7 @@ import pandas as pd
 import simplekml
 import stopit
 import shutil
-from PySide2 import QtCore, QtGui, QtUiTools, QtWidgets
+from PySide2 import QtCore, QtGui, QtUiTools
 from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                                QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser,
                                QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
@@ -67,6 +67,7 @@ __version__ = '0.11.5'
 # TODO load and save files in hole planner
 # TODO hide loops and holes in hole planner
 # TODO Fix bug in hole planner
+# TODO Make plot editor mag plot a separate axes
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -4852,27 +4853,28 @@ class WarningViewer(QMainWindow):
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
-    # mw = PEMHub()
+    mw = PEMHub()
     pem_g = PEMGetter()
     pem_parser = PEMParser()
+    dmp_parser = DMPParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    # pem_files = pem_g.get_pems(folder="Iscaycruz", subfolder="Loop 1", number=1)
+    pem_files = pem_g.get_pems(folder="Iscaycruz", subfolder="PZ-19-05", file="CXY_02.PEM")
+    # dmp_files = samples_folder.joinpath(r"TMC\EM21-162\DUMP\em21-162 xy.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
     # assert len(pem_files) == len(ri_files)
 
-    con = FrequencyConverter()
-    con.show()
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
-    # mw.add_pem_files(pem_files)
-    # mw.table.selectRow(0)
+    mw.add_pem_files(pem_files)
+    # mw.add_dmp_files([dmp_files])
+    mw.table.selectRow(0)
+    mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
-    # mw.table.selectRow(0)
     # mw.save_pem_file_as()
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"GPX files\EM21-155\GPS\EM21-155 + Loop D4_0415.gpx")])

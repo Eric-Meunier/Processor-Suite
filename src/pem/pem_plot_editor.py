@@ -11,11 +11,9 @@ import pandas as pd
 import pylineclip as lc
 import pyqtgraph as pg
 from pathlib import Path
-from PySide2 import QtCore, QtGui
-from PySide2.QtUiTools import loadUiType
-from PySide2.QtCore import QPointF
+from PySide2 import QtCore, QtGui, QtUiTools
 from PySide2.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                             QPushButton, QShortcut)
+                               QPushButton, QShortcut)
 from pyqtgraph.Point import Point
 from scipy import spatial
 
@@ -34,7 +32,7 @@ else:
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_PlotEditorWindow, QtBaseClass = loadUiType(str(application_path.joinpath('ui\\pem_plot_editor.ui')))
+Ui_PlotEditorWindow, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\pem_plot_editor.ui')))
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -433,12 +431,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Plot the mag profile if available. Disable the plot mag button if it's not applicable.
         if self.pem_file.is_borehole() and self.pem_file.has_xy():
-            self.mag_df = self.pem_file.get_mag()
+            self.mag_df = self.pem_file.get_mag(unique=True)
             if self.mag_df.Mag.any():
                 self.plot_mag_cbox.setEnabled(True)
                 # Save the mag curves so they can be toggled easily.
                 self.mag_curves = []
-                x, y = self.mag_df.Station.to_numpy(), self.mag_df.Mag.to_numpy()
+                x, y = self.mag_df.Station.astype(int).to_numpy(), self.mag_df.Mag.to_numpy()
                 for ax in self.mag_profile_axes:
                     mag_plot_item = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen('1DD219', width=2.))
                     ax.addItem(mag_plot_item)
@@ -1220,7 +1218,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             view = vb.viewRect()
             nx = (point.x() + view.x()) / view.width()
             ny = (point.y() + view.y()) / view.height()
-            return QPointF(nx, ny)
+            return QtCore.QPointF(nx, ny)
 
         self.active_ax = None
 
@@ -1251,7 +1249,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 xi, yi = line.xData, line.yData
                 interp_xi = np.linspace(xi.min(), xi.max(), 100)
                 interp_yi = np.interp(interp_xi, xi, yi)  # Interp for when the mouse in between two points
-                line_qpoints = [normalize(QPointF(x, y)) for x, y in zip(interp_xi, interp_yi)]
+                line_qpoints = [normalize(QtCore.QPointF(x, y)) for x, y in zip(interp_xi, interp_yi)]
                 line_points = np.array([(p.x(), p.y()) for p in line_qpoints])
 
                 # logger.info(f"Line data pos: {np.average([p[0] for p in line_points]):.2f}, "

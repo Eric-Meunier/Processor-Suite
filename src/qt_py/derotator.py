@@ -27,7 +27,7 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 
-symbol_size = 9
+symbol_size = 6
 
 
 class Derotator(QMainWindow, Ui_Derotator):
@@ -43,7 +43,6 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.parent = parent
         self.pem_file = None
         self.rotated_file = None
-        self.pp_plotted = False
         self.rotation_note = None
         self.soa = self.soa_sbox.value()
 
@@ -78,21 +77,16 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         # Create the deviation plot
         self.dev_ax = self.deviation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
-        self.dev_ax_legend = self.dev_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
-        self.dev_ax_legend.setParent(self.deviation_view)
         self.dev_ax.setLabel('top', 'PP Rotation Angle - Accelerometer Rotation Angle (Degrees)')
         self.dev_ax.setLabel('left', 'Station', units=None)
         v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
-        self.dev_ax.addItem(v_line)
 
-        self.x_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((255, 0, 0, 100), width=2), name="X Component")
-        self.y_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Y Component")
-        self.x_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((255, 0, 0, 100), width=2, symbolSize=symbol_size),
-                                                brush=pg.mkBrush("w"))
-        self.y_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 0, 255, 100), width=2, symbolSize=symbol_size),
-                                                brush=pg.mkBrush("w"))
+        self.dev_curve = pg.PlotCurveItem(pen=pg.mkPen((150, 0, 150, 100), width=2))
+        self.dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((150, 0, 150, 100), width=2),
+                                              size=symbol_size,
+                                              brush=pg.mkBrush("w"))
 
-        for item in [self.x_dev_curve, self.y_dev_curve, self.x_dev_scatter, self.y_dev_scatter]:
+        for item in [self.dev_curve, self.dev_scatter, v_line]:
             self.dev_ax.addItem(item)
 
         # Create the dip plot
@@ -104,7 +98,9 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.dip_ax.setLimits(xMin=-90, xMax=0)
         self.dip_ax.setXRange(-90, 0)
         self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Dip")
+        self.dip_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 0, 255, 100), width=2), brush="w", size=symbol_size)
         self.dip_ax.addItem(self.dip_curve)
+        self.dip_ax.addItem(self.dip_scatter)
 
         # Mag plot
         self.mag_ax = self.tool_view.addPlot(0, 1, axisItems={'top': NonScientific(orientation="top")})
@@ -113,28 +109,36 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.mag_ax.getAxis("left").setWidth(30)
         self.mag_ax.getAxis("right").setWidth(10)
         self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 255, 0, 100), width=2), name="Magnetic Field Strength")
+        self.mag_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 255, 0, 100), width=2), brush="w", size=symbol_size)
         self.mag_ax.addItem(self.mag_curve)
+        self.mag_ax.addItem(self.mag_scatter)
 
         # Create the rotation angle plot
         self.rot_ax = self.rotation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
         self.rot_ax_legend = self.rot_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
         self.rot_ax_legend.setParent(self.rotation_view)
-        self.rot_ax.setLimits(xMin=0, xMax=360)
-        self.rot_ax.setXRange(0, 360)
         self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees')
         self.rot_ax.setLabel('left', 'Station', units=None)
-        self.cpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((255, 0, 0, 200), width=2.), name='Cleaned PP')
-        self.cpp_rot_scatter = pg.ScatterPlotItem(symbol='t')
-        self.mpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 200), width=2.), name='Measured PP')
-        self.mpp_rot_scatter = pg.ScatterPlotItem(symbol='t1')
-        self.acc_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 255, 0, 200), width=2.), name='Accelerometer')
-        self.acc_rot_scatter = pg.ScatterPlotItem(symbol='o')
+        self.cpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((255, 0, 0, 100), width=2.), name='Cleaned PP')
+        self.cpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((255, 0, 0, 100), width=2.),
+                                                  symbol='o',
+                                                  brush="w",
+                                                  size=symbol_size)
+        self.mpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2.), name='Measured PP')
+        self.mpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 0, 255, 100), width=2.),
+                                                  symbol='o',
+                                                  brush="w",
+                                                  size=symbol_size)
+        self.acc_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 255, 0, 100), width=2.), name='Accelerometer')
+        self.acc_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 255, 0, 100), width=2.),
+                                                  symbol='o',
+                                                  brush="w",
+                                                  size=symbol_size)
         self.mag_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((100, 100, 100, 200), width=2.), name='Magnetometer')
-        self.mag_rot_scatter = pg.ScatterPlotItem(symbol='s')
-
-        for item in [self.cpp_rot_curve, self.cpp_rot_scatter, self.mpp_rot_curve, self.mpp_rot_scatter,
-                     self.acc_rot_curve, self.acc_rot_scatter, self.mag_rot_curve, self.mag_rot_scatter]:
-            self.rot_ax.addItem(item)
+        self.mag_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((100, 100, 100, 200), width=2.),
+                                                  symbol='o',
+                                                  brush="w",
+                                                  size=symbol_size)
 
         # Create the pp values plot
         self.pp_ax = self.pp_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
@@ -144,7 +148,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.pp_ax.setLabel('left', 'Station', units=None)
 
         self.cleaned_pp_curve = pg.PlotDataItem(pen=pg.mkPen((255, 0, 0, 100), width=2), name='Cleaned PP')
-        self.cleaned_pp_scatter = pg.ScatterPlotItem(symbol='t',
+        self.cleaned_pp_scatter = pg.ScatterPlotItem(symbol='o',
                                                      pen=pg.mkPen((255, 0, 0, 100), width=2),
                                                      brush='w',
                                                      size=symbol_size)
@@ -156,14 +160,14 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                     size=symbol_size)
 
         self.measured_pp_curve = pg.PlotDataItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name='Measured PP')
-        self.measured_pp_scatter = pg.ScatterPlotItem(symbol='t1',
+        self.measured_pp_scatter = pg.ScatterPlotItem(symbol='o',
                                                       pen=pg.mkPen((0, 0, 255, 100), width=2),
                                                       brush='w',
                                                       size=symbol_size)
 
-        for item in [self.cleaned_pp_curve, self.cleaned_pp_scatter, self.theory_pp_curve, self.theory_pp_scatter,
-                     self.measured_pp_curve, self.measured_pp_scatter]:
-            self.pp_ax.addItem(item)
+        # for item in [self.cleaned_pp_curve, self.cleaned_pp_scatter, self.theory_pp_curve, self.theory_pp_scatter,
+        #              self.measured_pp_curve, self.measured_pp_scatter]:
+        #     self.pp_ax.addItem(item)
 
         # Format all axes
         for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
@@ -175,6 +179,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             # Add the mag plot into the profile plot
             ax.showAxis("top")
             ax.showAxis("right")
+            ax.getAxis("top").setHeight(40)
             ax.getAxis("top").setStyle(showValues=True)
             ax.getAxis("right").setStyle(showValues=False)
             ax.getAxis("left").setStyle(showValues=False)
@@ -202,6 +207,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             # Add the mag plot into the profile plot
             ax.showAxis("top")
             ax.showAxis("right")
+            ax.getAxis("top").setHeight(40)
             ax.getAxis("top").setStyle(showValues=True)
             ax.getAxis("right").setStyle(showValues=False)
             ax.getAxis("left").setStyle(showValues=True)
@@ -219,6 +225,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         # Signals
         self.actionPEM_File.triggered.connect(self.export_pem_file)
         self.actionStats.triggered.connect(self.export_stats)
+        self.actionShow_Scatter.triggered.connect(self.toggle_scatter)
 
         self.button_box.accepted.connect(lambda: self.accept_sig.emit(self.rotated_file))
         self.button_box.rejected.connect(self.close)
@@ -239,6 +246,17 @@ class Derotator(QMainWindow, Ui_Derotator):
         if event.type() == QtCore.QEvent.Close:  # Close the viewboxes when the window is closed
             self.deleteLater()
         return super().eventFilter(watched, event)
+
+    def toggle_scatter(self):
+        scatters = [self.dev_scatter, self.dip_scatter, self.mag_scatter, self.cpp_rot_scatter, self.mpp_rot_scatter,
+                    self.acc_rot_scatter, self.mag_rot_scatter, self.cleaned_pp_scatter, self.theory_pp_scatter,
+                    self.measured_pp_scatter]
+        if self.actionShow_Scatter.isChecked():
+            for scatter in scatters:
+                scatter.show()
+        else:
+            for scatter in scatters:
+                scatter.hide()
 
     def export_stats(self):
         """
@@ -339,11 +357,11 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.list.setText("\n".join(list))
 
         def plot_mag():
-            mag_df = self.pem_file.get_mag()
-            mag_df = mag_df.drop_duplicates(subset='Station')
-            stations = mag_df.Station.astype(int).to_numpy()
+            mag_df = self.pem_file.get_mag(average=False)
+            mag_df_avg = self.pem_file.get_mag(average=True)
             if mag_df.Mag.any():
-                self.mag_curve.setData(x=mag_df.Mag.to_numpy(), y=stations)
+                self.mag_curve.setData(x=mag_df_avg.Mag.to_numpy(), y=mag_df_avg.Station.astype(int).to_numpy())
+                self.mag_scatter.setData(x=mag_df.Mag.to_numpy(), y=mag_df.Station.astype(int).to_numpy())
             else:
                 logger.warning(f"No mag data found in {self.pem_file.filepath.name}")
 
@@ -351,13 +369,61 @@ class Derotator(QMainWindow, Ui_Derotator):
             """
             Plot the dip of the hole.
             """
-            dip_df = self.pem_file.get_dip()
-            dip_df = dip_df.drop_duplicates(subset='Station')
-            stations = dip_df.Station.astype(int).to_numpy()
+            dip_df = self.pem_file.get_dip(average=False)
+            dip_df_avg = self.pem_file.get_dip(average=True)
             if not dip_df.empty:
-                self.dip_curve.setData(x=dip_df.Dip.to_numpy(), y=stations)
+                self.dip_curve.setData(x=dip_df_avg.Dip.to_numpy(), y=dip_df_avg.Station.astype(int).to_numpy())
+                self.dip_scatter.setData(x=dip_df.Dip.to_numpy(), y=dip_df.Station.astype(int).to_numpy())
             else:
                 logger.warning(f"No dip data found in {self.pem_file.filepath.name}")
+
+        def plot_pp_values():
+            """
+            Plot the theoretical PP values with the measured (raw) and cleaned PP
+            """
+            # Used for PP values and rotation angle plots, not lin plots
+            data = self.pem_file.data.drop_duplicates(subset="RAD_ID")
+            stations = data.Station.astype(float)
+
+            # PP XY cleaned
+            if not pem_file.is_fluxgate():
+                ppxy_cleaned = data.RAD_tool.map(lambda x: x.ppxy_cleaned)
+                data.assign(PPXY_cleaned=ppxy_cleaned)
+
+                ppxy_cleaned_df = pd.DataFrame([ppxy_cleaned, stations]).T
+                ppxy_cleaned_df.rename(columns={"RAD_tool": "PPXY_cleaned"}, inplace=True)
+                ppxy_cleaned_avg_df = ppxy_cleaned_df.groupby("Station", as_index=False).mean()
+
+                self.cleaned_pp_curve.setData(ppxy_cleaned_avg_df.PPXY_cleaned, ppxy_cleaned_avg_df.Station)
+                self.cleaned_pp_scatter.setData(ppxy_cleaned_df.PPXY_cleaned, ppxy_cleaned_df.Station)
+                self.pp_ax.addItem(self.cleaned_pp_curve)
+                self.pp_ax.addItem(self.cleaned_pp_scatter)
+
+            # PP XY theory
+            ppxy_theory = data.RAD_tool.map(lambda x: x.ppxy_theory)
+            data.assign(PPXY_theory=ppxy_theory)
+
+            ppxy_theory_df = pd.DataFrame([ppxy_theory, stations]).T
+            ppxy_theory_df.rename(columns={"RAD_tool": "PPXY_theory"}, inplace=True)
+            ppxy_theory_avg_df = ppxy_theory_df.groupby("Station", as_index=False).mean()
+
+            self.theory_pp_curve.setData(ppxy_theory_avg_df.PPXY_theory, ppxy_theory_avg_df.Station)
+            self.theory_pp_scatter.setData(ppxy_theory_df.PPXY_theory, ppxy_theory_df.Station)
+            self.pp_ax.addItem(self.theory_pp_curve)
+            self.pp_ax.addItem(self.theory_pp_scatter)
+
+            # PP XY measured
+            ppxy_measured = data.RAD_tool.map(lambda x: x.ppxy_measured)
+            data.assign(PPXY_measured=ppxy_measured)
+
+            ppxy_measured_df = pd.DataFrame([ppxy_measured, stations]).T
+            ppxy_measured_df.rename(columns={"RAD_tool": "PPXY_measured"}, inplace=True)
+            ppxy_measured_avg_df = ppxy_measured_df.groupby("Station", as_index=False).mean()
+
+            self.measured_pp_curve.setData(ppxy_measured_avg_df.PPXY_measured, ppxy_measured_avg_df.Station)
+            self.measured_pp_scatter.setData(ppxy_measured_df.PPXY_measured, ppxy_measured_df.Station)
+            self.pp_ax.addItem(self.measured_pp_curve)
+            self.pp_ax.addItem(self.measured_pp_scatter)
 
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
@@ -402,7 +468,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.pp_btn.setEnabled(False)
 
         try:
-            self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
+            self.pem_file, ineligible_stations = self.pem_file.prep_rotation(allow_negative_angles=True)
         except Exception as e:
             # Common exception will be that there is no eligible data
             logger.error(str(e))
@@ -414,6 +480,15 @@ class Derotator(QMainWindow, Ui_Derotator):
             if all([self.pem_file.has_all_gps(), self.pem_file.ramp > 0]):
                 self.tabWidget.setTabEnabled(0, True)
                 self.tabWidget.setTabEnabled(2, True)
+
+                # Add the PP rotation plot curves and scatter items
+                if not pem_file.is_fluxgate():
+                    self.rot_ax.addItem(self.cpp_rot_curve)
+                    self.rot_ax.addItem(self.cpp_rot_scatter)
+                self.rot_ax.addItem(self.mpp_rot_curve)
+                self.rot_ax.addItem(self.mpp_rot_scatter)
+
+                plot_pp_values()
             else:
                 self.tabWidget.setTabEnabled(0, False)
                 self.tabWidget.setTabEnabled(2, False)
@@ -464,8 +539,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                 x, y = df.to_numpy(), df.index.to_numpy()
 
                 ax.plot(x=x, y=y,
-                        pen=pg.mkPen('k', width=1.1),
-                        )
+                        pen=pg.mkPen((200, 200, 200, 200), width=1.2))
 
             profile_data = processed_pem.get_profile_data(component, converted=True, incl_deleted=False)
             if profile_data.empty:
@@ -493,31 +567,19 @@ class Derotator(QMainWindow, Ui_Derotator):
             """
             Plot the difference between PP rotation value and Acc rotation value. Useful for SOA.
             """
-            x_filt = raw_pem.data['Component'] == 'X'
-            y_filt = raw_pem.data['Component'] == 'Y'
-            x_stations = raw_pem.data[x_filt].Station.astype(int)
-            y_stations = raw_pem.data[y_filt].Station.astype(int)
-            x_acc_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.acc_roll_angle + self.soa)
-            y_acc_angles = raw_pem.data[y_filt].RAD_tool.map(lambda x: x.acc_roll_angle + self.soa)
-
-            x_pp_angle_measured = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.measured_pp_roll_angle)
-            y_pp_angle_measured = raw_pem.data[y_filt].RAD_tool.map(lambda x: x.measured_pp_roll_angle)
-            x_deviation = x_pp_angle_measured - x_acc_angles
-            y_deviation = y_pp_angle_measured - y_acc_angles
+            acc_angles = rotation_data.RAD_tool.map(lambda x: x.acc_roll_angle + self.soa)
+            pp_angle_measured = rotation_data.RAD_tool.map(lambda x: x.measured_pp_roll_angle)
+            deviation = pp_angle_measured - acc_angles
+            if all(deviation < 0):
+                deviation = deviation + 360
 
             # Calculate the average deviation for the curve line
-            x_df = pd.DataFrame([x_deviation, x_stations]).T
-            x_df.rename(columns={"RAD_tool": "Deviation"}, inplace=True)
-            x_avg_df = x_df.groupby("Station", as_index=False).mean()
+            df = pd.DataFrame([deviation, rotation_data.Station]).T
+            df.rename(columns={"RAD_tool": "Deviation"}, inplace=True)
+            avg_df = df.groupby("Station", as_index=False).mean()
 
-            y_df = pd.DataFrame([y_deviation, y_stations]).T
-            y_df.rename(columns={"RAD_tool": "Deviation"}, inplace=True)
-            y_avg_df = y_df.groupby("Station", as_index=False).mean()
-
-            self.x_dev_scatter.setData(x=x_deviation.to_numpy(), y=x_stations.to_numpy())
-            self.y_dev_scatter.setData(x=y_deviation.to_numpy(), y=y_stations.to_numpy())
-            self.x_dev_curve.setData(x=x_avg_df.Deviation.to_numpy(), y=x_avg_df.Station.to_numpy())
-            self.y_dev_curve.setData(x=y_avg_df.Deviation.to_numpy(), y=y_avg_df.Station.to_numpy())
+            self.dev_curve.setData(x=avg_df.Deviation.to_numpy(), y=avg_df.Station.to_numpy())
+            self.dev_scatter.setData(x=deviation.to_numpy(), y=rotation_data.Station.to_numpy())
 
         def plot_rotation():
             """
@@ -525,53 +587,63 @@ class Derotator(QMainWindow, Ui_Derotator):
             """
             method = self.get_method()
             if method is not None:
-                # self.rot_ax.clear()
-                stations = raw_pem.data.Station.astype(int).to_numpy()
 
                 if self.pp_btn.isEnabled():
                     # Add the cleaned PP information for non-fluxgate surveys
                     if not pem_file.is_fluxgate():
-                        # TODO separate X and Y, mean for curve and scatter using both
-                        x_pp_angle_cleaned = raw_pem.data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
-                        self.cpp_rot_curve.setData(x_pp_angle_cleaned.mean(), stations)
-                        self.cpp_rot_scatter.setData(x_pp_angle_cleaned.to_numpy(), stations)
+                        pp_angle_cleaned = rotation_data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
+                        rotation_data.assign(PP_cleaned=pp_angle_cleaned)
 
-                    x_pp_angle_measured = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.measured_pp_roll_angle)
-                    self.mpp_rot_curve.setData(x_pp_angle_measured.mean(), stations)
-                    self.mpp_rot_scatter.setData(x_pp_angle_measured.to_numpy(), stations)
+                        # Calculate the average deviation for the curve line
+                        cleaned_pp_df = pd.DataFrame([pp_angle_cleaned, rotation_data.Station]).T
+                        cleaned_pp_df.rename(columns={"RAD_tool": "Cleaned_PP"}, inplace=True)
+                        cleaned_pp_avg = cleaned_pp_df.groupby("Station", as_index=False).mean()
 
-                acc_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.acc_roll_angle - self.soa)
-                mag_angles = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.mag_roll_angle - self.soa)
+                        self.cpp_rot_curve.setData(cleaned_pp_avg.Cleaned_PP.to_numpy(), cleaned_pp_avg.Station.to_numpy())
+                        self.cpp_rot_scatter.setData(pp_angle_cleaned.to_numpy(), rotation_data.Station.to_numpy())
 
-                self.acc_rot_curve.setData(acc_angles.mean(), stations)
-                self.acc_rot_scatter.setData(acc_angles.to_numpy(), stations)
-                self.mag_rot_curve.setData(mag_angles.mean(), stations)
-                self.mag_rot_scatter.setData(mag_angles.to_numpy(), stations)
+                    pp_angle_measured = rotation_data.RAD_tool.map(lambda x: x.measured_pp_roll_angle)
+                    rotation_data.assign(PP_cleaned=pp_angle_measured)
+                    pp_measured_df = pd.DataFrame([pp_angle_measured, rotation_data.Station]).T
+                    pp_measured_df.rename(columns={"RAD_tool": "Measured_PP"}, inplace=True)
+                    pp_measured_avg = pp_measured_df.groupby("Station", as_index=False).mean()
+                    self.mpp_rot_curve.setData(pp_measured_avg.Measured_PP.to_numpy(), pp_measured_avg.Station.to_numpy())
+                    self.mpp_rot_scatter.setData(pp_angle_measured.to_numpy(), rotation_data.Station.to_numpy())
 
-        def plot_pp_values():
-            """
-            Plot the theoretical PP values with the measured (raw) and cleaned PP
-            """
-            ax = self.pp_ax
-            # Used for PP values and rotation angle plots, not lin plots
-            x_filt = raw_pem.data['Component'] == 'X'
-            stations = raw_pem.data[x_filt].Station.astype(int).to_numpy()
+                # Accelerometer
+                if self.pem_file.has_d7():
+                    acc_angle = rotation_data.RAD_tool.map(lambda x: x.get_acc_roll(allow_negative=True) - self.soa)
+                else:
+                    acc_angle = rotation_data.RAD_tool.map(lambda x: x.acc_roll_angle)
+                    if acc_angle.all():
+                        acc_angle = acc_angle - self.soa
+                        if self.acc_rot_curve not in self.rot_ax.items:
+                            self.rot_ax.addItem(self.acc_rot_curve)
+                            self.rot_ax.addItem(self.acc_rot_scatter)
+                rotation_data.assign(Acc=acc_angle)
+                acc_df = pd.DataFrame([acc_angle, rotation_data.Station]).T
+                acc_df.rename(columns={"RAD_tool": "Acc"}, inplace=True)
+                acc_avg = acc_df.groupby("Station", as_index=False).mean()
+                self.acc_rot_curve.setData(acc_avg.Acc.to_numpy(), acc_avg.Station.to_numpy())
+                self.acc_rot_scatter.setData(acc_angle.to_numpy(), rotation_data.Station.to_numpy())
 
-            if not pem_file.is_fluxgate():
-                ppxy_cleaned = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_cleaned)
-                self.cleaned_pp_curve.setData(ppxy_cleaned.mean(), stations)
-                self.cleaned_pp_scatter.setData(ppxy_cleaned.to_numpy(), stations)
+                # Magnetometer
+                if self.pem_file.has_d7():
+                    mag_angle = rotation_data.RAD_tool.map(lambda x: x.get_mag_roll(allow_negative=True) - self.soa)
 
-            ppxy_theory = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_theory)
-            ppxy_measured = raw_pem.data[x_filt].RAD_tool.map(lambda x: x.ppxy_measured)
-
-            self.theory_pp_curve.setData(ppxy_theory.mean(), stations)
-            self.theory_pp_scatter.setData(ppxy_theory.to_numpy(), stations)
-
-            self.measured_pp_curve.setData(ppxy_measured.mean(), stations)
-            self.measured_pp_scatter.setData(ppxy_measured.to_numpy(), stations)
-
-            self.pp_plotted = True
+                else:
+                    mag_angle = rotation_data.RAD_tool.map(lambda x: x.mag_roll_angle)
+                    if mag_angle.all():
+                        mag_angle = mag_angle - self.soa
+                        if self.acc_rot_curve not in self.rot_ax.items:
+                            self.rot_ax.addItem(self.mag_rot_curve)
+                            self.rot_ax.addItem(self.mag_rot_scatter)
+                rotation_data.assign(Mag_angle=mag_angle)
+                mag_df = pd.DataFrame([mag_angle, rotation_data.Station]).T
+                mag_df.rename(columns={"RAD_tool": "Mag_angle"}, inplace=True)
+                mag_avg = mag_df.groupby("Station", as_index=False).mean()
+                self.mag_rot_curve.setData(mag_avg.Mag_angle.to_numpy(), mag_avg.Station.to_numpy())
+                self.mag_rot_scatter.setData(mag_angle.to_numpy(), rotation_data.Station.to_numpy())
 
         if not pem_file:
             return
@@ -590,15 +662,18 @@ class Derotator(QMainWindow, Ui_Derotator):
         clear_plots()
         channel_bounds = self.pem_file.get_channel_bounds()
 
+        # Use all roll angles from all unique RAD tool measurements
+        rotation_data = raw_pem.data[(raw_pem.data.Component == "X") | (raw_pem.data.Component == "Y")]
+        rotation_data = rotation_data.drop_duplicates(subset="RAD_ID")  #.dropna()
+        rotation_data.Station = rotation_data.Station.astype(float)
+        rotation_data.sort_values("Station", inplace=True)
+
         plot_lin('X')
         plot_lin('Y')
         plot_rotation()
 
         if pem_file.has_all_gps() and pem_file.ramp > 0:
             plot_deviation()
-
-        if self.pp_plotted is False and self.pp_btn.isEnabled():
-            plot_pp_values()
 
     def rotate(self):
         """
@@ -641,13 +716,13 @@ def main():
     pg = PEMGetter()
     parser = PEMParser()
     # parser = DMPParser()
-    # pem_files = pg.get_pems(folder="PEM Rotation", random=True, number=5)
+    # pem_files = pg.get_pems(folder="Rotation Testing", random=True, number=5)
     # for pem_file in pem_files:
     #     d = Derotator()
     #     d.open(pem_file)
 
-    # pem_files = pg.get_pems(folder="PEM Rotation", file="_SAN-225G-18 XYZ.PEM")
-    pem_files = pg.get_pems(folder="PEM Rotation", file="_SAN-0246-19 XY (Cross bug).PEM")
+    pem_files = pg.get_pems(folder="Rotation Testing", file="SAN-225G-18 Tool - Mag (PEMPro).PEM")
+    # pem_files = pg.get_pems(folder="Rotation Testing", file="_SAN-0246-19 XY (Cross bug).PEM")
     mw = Derotator()
     mw.open(pem_files)
 

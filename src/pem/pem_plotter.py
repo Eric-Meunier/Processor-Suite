@@ -104,11 +104,12 @@ class ProfilePlotter:
             Adds the title header to a figure
             """
             survey_type = self.pem_file.get_survey_type()
-            timebase_freq = ((1 / (self.pem_file.timebase / 1000)) / 4)
-            if timebase_freq == 15.01:
+            if self.pem_file.timebase == 16.66:
                 timebase_freq = 15.00
-            elif timebase_freq == 30.01:
+            elif self.pem_file.timebase == 8.33:
                 timebase_freq = 30.00
+            else:
+                timebase_freq = ((1 / (self.pem_file.timebase / 1000)) / 4)
 
             s_title = 'Hole' if self.pem_file.is_borehole() else 'Line'
 
