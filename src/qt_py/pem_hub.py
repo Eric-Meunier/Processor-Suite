@@ -4859,7 +4859,7 @@ def main():
     dmp_parser = DMPParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pem_g.get_pems(folder="Iscaycruz", subfolder="PZ-19-05", file="CXY_02.PEM")
+    pem_files = pem_g.get_pems(folder="Trevali Peru", number=1)
     # dmp_files = samples_folder.joinpath(r"TMC\EM21-162\DUMP\em21-162 xy.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
@@ -4869,8 +4869,8 @@ def main():
     # mw.open_project_dir()
     mw.add_pem_files(pem_files)
     # mw.add_dmp_files([dmp_files])
-    mw.table.selectRow(0)
-    mw.open_pem_plot_editor()
+    # mw.table.selectRow(0)
+    # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()
     # mw.open_name_editor('Line', selected=False)
@@ -4879,7 +4879,7 @@ def main():
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"GPX files\EM21-155\GPS\EM21-155 + Loop D4_0415.gpx")])
 
-    # mw.show()
+    mw.show()
 
     app.exec_()
 

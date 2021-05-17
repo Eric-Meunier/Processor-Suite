@@ -8,10 +8,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from PySide2 import QtCore, QtGui
-from PySide2.QtUiTools import loadUiType
-from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QFileDialog,
-                               QErrorMessage, QHeaderView, QApplication)
+from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate,
+                               QFileDialog, QErrorMessage, QHeaderView, QApplication)
 
 from src.geometry.pem_geometry import PEMGeometry
 from src.gps.gps_adder import LoopAdder, LineAdder, CollarPicker
@@ -29,7 +28,7 @@ else:
 icons_path = application_path.joinpath("ui\\icons")
 
 # Load Qt ui file into a class
-Ui_PEMInfoWidget, QtBaseClass = loadUiType(str(application_path.joinpath('ui\\pem_info_widget.ui')))
+Ui_PEMInfoWidget, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\pem_info_widget.ui')))
 logger = logging.getLogger(__name__)
 
 
@@ -86,7 +85,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Units', 'Station']
         self.loop_table_columns = ['Easting', 'Northing', 'Elevation', 'Units']
 
-        float_delegate = FloatDelegate(2)  # Must keep this reference or else it is garbage collected
+        float_delegate = QItemDelegate()  # Must keep this reference or else it is garbage collected
         self.line_table.setItemDelegateForColumn(0, float_delegate)
         self.line_table.setItemDelegateForColumn(1, float_delegate)
         self.line_table.setItemDelegateForColumn(2, float_delegate)
@@ -512,27 +511,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         bold_font = QtGui.QFont()
         bold_font.setBold(True)
         f = self.pem_file
-        # info = OrderedDict({
-        #     'Operator': f.operator,
-        #     'Format': f.format,
-        #     'Units': f.units,
-        #     'Tools': ', '.join(f.probes.values()),
-        #     'Timebase': f.timebase,
-        #     'Ramp': f.ramp,
-        #     'Number of Channels': f.number_of_channels,
-        #     'Number of Readings': f.number_of_readings,
-        #     'Primary Field Value': f.primary_field_value,
-        #     'Loop Dimensions': ' x '.join(f.loop_dimensions.split()[:-1]),
-        #     'Loop Polarity': f.loop_polarity,
-        #     'Normalized': f.normalized,
-        #     'Rx Number': f.rx_number,
-        #     'Rx File Name': f.rx_file_name,
-        #     'Rx Software Ver.': f.rx_software_version,
-        #     'Rx Software Ver. Date': f.rx_software_version_date,
-        #     'Survey Type': f.survey_type,
-        #     'Sync': f.sync,
-        #     'Convention': f.convention
-        # })
 
         info = OrderedDict(sorted({
             "Format": f.format,
@@ -593,21 +571,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.info_table.setItem(row, 0, key_item)
                 self.info_table.setItem(row, 1, value_item)
 
-        # # Increase the size of the notes cell
-        # span_start = self.info_table.rowCount()
-        # for note in f.notes:
-        #     row = self.info_table.rowCount()
-        #     self.info_table.insertRow(row)
-        #
-        #     note_item = QTableWidgetItem(note)
-        #     self.info_table.setItem(row, 1, note_item)
-        #
-        # notes_key_item = QTableWidgetItem('Notes')
-        # notes_key_item.setFont(bold_font)
-        # # Set the Notes cell to span multiple notes
-        # self.info_table.setSpan(span_start, 0, len(f.notes), 1)
-        # self.info_table.setItem(span_start, 0, notes_key_item)
-
         # Set the column widths
         header = self.info_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -629,14 +592,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             :return: None
             """
             def series_to_items(x):
-                # if isinstance(x, float):
-                    # item = QTableWidgetItem(f"{x:.2f}")
                 item = QTableWidgetItem()
                 item.setData(QtCore.Qt.EditRole, x)
                 return item
-                    # return QTableWidgetItem(f"{x}")
-                # else:
-                #     return QTableWidgetItem(str(x))
 
             # Add a new row to the table
             row_pos = table.rowCount()
@@ -646,6 +604,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # Format each item of the table to be centered
             for m, item in enumerate(items):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
+                if m == 3:
+                    # Disable editing the Units column
+                    item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
                 table.setItem(row_pos, m, item)
 
         data = deepcopy(data)
@@ -1115,21 +1076,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.refresh_row_signal.emit()
 
 
-class FloatDelegate(QItemDelegate):
-    def __init__(self, decimals, parent=None):
-        QItemDelegate.__init__(self, parent=parent)
-        self.nDecimals = decimals
-
-    def paint(self, painter, option, index):
-        value = index.model().data(index, QtCore.Qt.EditRole)
-        # if index in [0, 1]:
-        try:
-            number = float(value)
-            painter.drawText(option.rect, QtCore.Qt.AlignCenter, f"{number:.{self.nDecimals}f}")
-        except Exception:
-            QItemDelegate.paint(self, painter, option, index)
-        # else:
-        #     QItemDelegate.paint(self, painter, option, index)
+# class FloatDelegate(QStyledItemDelegate):
+#     def __init__(self, decimals, parent=None):
+#         QStyledItemDelegate.__init__(self, parent=parent)
+#         self.nDecimals = decimals
+#
+#     def paint(self, painter, option, index):
+#         value = index.model().data(index, QtCore.Qt.EditRole)
+#         # if index in [0, 1]:
+#         # try:
+#         number = float(value)
+#         painter.drawText(option.rect, QtCore.Qt.AlignCenter, f"{number:.{self.nDecimals}f}")
+#         # except Exception:
+#         # QItemDelegate.paint(self, painter, option, index)
+#         # else:
+#         #     QItemDelegate.paint(self, painter, option, index)
 
 
 if __name__ == "__main__":

@@ -431,12 +431,12 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         # Plot the mag profile if available. Disable the plot mag button if it's not applicable.
         if self.pem_file.is_borehole() and self.pem_file.has_xy():
-            self.mag_df = self.pem_file.get_mag(unique=True)
+            self.mag_df = self.pem_file.get_mag(average=True)
             if self.mag_df.Mag.any():
                 self.plot_mag_cbox.setEnabled(True)
                 # Save the mag curves so they can be toggled easily.
                 self.mag_curves = []
-                x, y = self.mag_df.Station.astype(int).to_numpy(), self.mag_df.Mag.to_numpy()
+                x, y = self.mag_df.Station.to_numpy(), self.mag_df.Mag.to_numpy()
                 for ax in self.mag_profile_axes:
                     mag_plot_item = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen('1DD219', width=2.))
                     ax.addItem(mag_plot_item)

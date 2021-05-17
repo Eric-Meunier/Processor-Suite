@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" creator="MapSource 6.16.3" version="1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+
+  <metadata>
+    <link href="http://www.garmin.com">
+      <text>Garmin International</text>
+    </link>
+    <time>2021-05-16T04:10:53Z</time>
+    <bounds maxlat="47.461413005366921" maxlon="-79.172641038894653" minlat="47.455585990101099" minlon="-79.172843964770436"/>
+  </metadata>
+
+  <wpt lat="47.455585990101099" lon="-79.172813035547733">
+    <ele>287.89154100000002</ele>
+    <time>2021-05-15T19:14:44Z</time>
+    <name>77+25 0+00</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.455781036987901" lon="-79.172843964770436">
+    <ele>286.06970200000001</ele>
+    <time>2021-05-15T19:09:14Z</time>
+    <name>77+25 0+25</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.456024028360844" lon="-79.172799959778786">
+    <ele>288.01348899999999</ele>
+    <time>2021-05-15T19:04:39Z</time>
+    <name>77+25 0+50</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.456246986985207" lon="-79.172800965607166">
+    <ele>287.15271000000001</ele>
+    <time>2021-05-15T18:59:57Z</time>
+    <name>77+25 0+75</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.456463994458318" lon="-79.172777999192476">
+    <ele>287.72082499999999</ele>
+    <time>2021-05-15T18:56:30Z</time>
+    <name>77+25 1+00</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.456693993881345" lon="-79.172801971435547">
+    <ele>288.15020800000002</ele>
+    <time>2021-05-15T18:52:17Z</time>
+    <name>77+25 1+25</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.456903038546443" lon="-79.172770958393812">
+    <ele>288.46414199999998</ele>
+    <time>2021-05-15T18:47:39Z</time>
+    <name>77+25 1+50</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.457131026312709" lon="-79.172771964222193">
+    <ele>289.30972300000002</ele>
+    <time>2021-05-15T18:43:19Z</time>
+    <name>77+25 1+75</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.45735096745193" lon="-79.172774981707335">
+    <ele>288.493042</ele>
+    <time>2021-05-15T18:39:23Z</time>
+    <name>77+25 2+00</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.457587001845241" lon="-79.172774981707335">
+    <ele>285.48251299999998</ele>
+    <time>2021-05-15T18:26:52Z</time>
+    <name>77+25 2+25</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.457819012925029" lon="-79.172757966443896">
+    <ele>286.38799999999998</ele>
+    <time>2021-05-15T18:22:20Z</time>
+    <name>77+25 2+50</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.458041971549392" lon="-79.17274204082787">
+    <ele>286.11767600000002</ele>
+    <time>2021-05-15T18:18:40Z</time>
+    <name>77+25 2+75</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.458272976800799" lon="-79.172755032777786">
+    <ele>285.61758400000002</ele>
+    <time>2021-05-15T18:14:53Z</time>
+    <name>77+25 3+00</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.458489984273911" lon="-79.172727959230542">
+    <ele>285.67114299999997</ele>
+    <time>2021-05-15T18:11:15Z</time>
+    <name>77+25 3+25</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.458712020888925" lon="-79.172714967280626">
+    <ele>284.78527800000001</ele>
+    <time>2021-05-15T18:06:57Z</time>
+    <name>77+25 3+50</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.458917964249849" lon="-79.172688983380795">
+    <ele>286.58700599999997</ele>
+    <time>2021-05-15T18:03:21Z</time>
+    <name>77+25 3+75</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.459147963672876" lon="-79.172710021957755">
+    <ele>284.03933699999999</ele>
+    <time>2021-05-15T17:59:12Z</time>
+    <name>77+25 4+00</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.459394978359342" lon="-79.17267800308764">
+    <ele>283.34884599999998</ele>
+    <time>2021-05-15T17:55:10Z</time>
+    <name>77+25 4+25</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.45960502885282" lon="-79.17267800308764">
+    <ele>283.00839200000001</ele>
+    <time>2021-05-15T17:50:07Z</time>
+    <name>77+25 4+50</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.459833016619086" lon="-79.172670962288976">
+    <ele>282.518036</ele>
+    <time>2021-05-15T17:45:52Z</time>
+    <name>77+25 4+75</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.460016999393702" lon="-79.172688983380795">
+    <ele>284.13339200000001</ele>
+    <time>2021-05-15T17:42:20Z</time>
+    <name>77+25 5+00</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.460294021293521" lon="-79.172642966732383">
+    <ele>281.63754299999999</ele>
+    <time>2021-05-15T17:36:21Z</time>
+    <name>77+25 5+25</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.460492001846433" lon="-79.172669034451246">
+    <ele>281.490906</ele>
+    <time>2021-05-15T17:30:00Z</time>
+    <name>77+25 5+50</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.460730969905853" lon="-79.172641038894653">
+    <ele>280.50097699999998</ele>
+    <time>2021-05-15T17:26:37Z</time>
+    <name>77+25 5+75</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.460956024006009" lon="-79.172652019187808">
+    <ele>278.89898699999998</ele>
+    <time>2021-05-15T17:20:22Z</time>
+    <name>77+25 6+00</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.461155010387301" lon="-79.172654030844569">
+    <ele>278.68969700000002</ele>
+    <time>2021-05-15T17:13:11Z</time>
+    <name>77+25 6+25</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="47.461413005366921" lon="-79.172654030844569">
+    <ele>275.51797499999998</ele>
+    <time>2021-05-15T17:04:55Z</time>
+    <name>77+25 6+50</name>
+    <sym>Flag, Blue</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+</gpx>

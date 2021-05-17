@@ -479,7 +479,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             # Disable the PP values tab if there's no PP information
             if all([self.pem_file.has_all_gps(), self.pem_file.ramp > 0]):
                 self.tabWidget.setTabEnabled(0, True)
-                self.tabWidget.setTabEnabled(2, True)
+                self.tabWidget.setTabEnabled(3, True)
 
                 # Add the PP rotation plot curves and scatter items
                 if not pem_file.is_fluxgate():
@@ -491,7 +491,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                 plot_pp_values()
             else:
                 self.tabWidget.setTabEnabled(0, False)
-                self.tabWidget.setTabEnabled(2, False)
+                self.tabWidget.setTabEnabled(3, False)
 
             # Fill the table with the ineligible stations
             if not ineligible_stations.empty:

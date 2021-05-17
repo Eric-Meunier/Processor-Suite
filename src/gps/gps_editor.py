@@ -957,7 +957,8 @@ class GPXEditor:
         # Use Route points if no waypoints exist
         if gpx.waypoints:
             for waypoint in gpx.waypoints:
-                name = re.sub(r'\s', '_', waypoint.name)
+                # name = re.sub(r'\s', '_', waypoint.name)
+                name = re.sub(r'\W', '', waypoint.name)
                 if not all([waypoint.latitude, waypoint.longitude, waypoint.elevation]):
                     logger.warning(F"Skipping point {name} as the GPS is incomplete.")
                 else:
@@ -965,7 +966,8 @@ class GPXEditor:
         elif gpx.routes:
             route = gpx.routes[0]
             for point in route.points:
-                name = re.sub(r'\s', '_', point.name)
+                # name = re.sub(r'\s', '_', point.name)
+                name = re.sub(r'\W', '', point.name)
                 if not all([point.latitude, point.longitude, point.elevation]):
                     logger.warning(F"Skipping point {name} as the GPS is incomplete.")
                 else:
@@ -1253,7 +1255,7 @@ if __name__ == '__main__':
     # gps_parser = GPSParser()
     gpx_editor = GPXEditor()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
-    gpx_file = samples_folder.joinpath(r'GPX files\L100E.gpx')
+    gpx_file = samples_folder.joinpath(r'GPX files\L77+25_0515.gpx')
 
     result = gpx_editor.get_utm(gpx_file)
 
