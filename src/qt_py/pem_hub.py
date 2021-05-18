@@ -68,6 +68,9 @@ __version__ = '0.11.5'
 # TODO hide loops and holes in hole planner
 # TODO Fix bug in hole planner
 # TODO Make plot editor mag plot a separate axes
+# TODO De-rotator roll angles should be close to each other
+# TODO PEMHub status bar should include "PP" survey types
+# TODO Move mag data to separate plot in PEMPlotEditor.
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)

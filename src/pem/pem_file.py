@@ -534,7 +534,7 @@ class PEMFile:
         return pd.DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
 
     def get_date(self):
-        return datetime.strptime(self.date, ('%B %d, %Y'))
+        return datetime.strptime(self.date, (r'%B %d, %Y'))
 
     def get_mag(self, average=False):
         """
@@ -590,6 +590,12 @@ class PEMFile:
 
         df = df.sort_values("Station")
         return df.dropna()
+
+    def get_acc_roll(self, soa):
+        data = self.data[(self.data.Component == "X") | (self.data.Component == "Y")]
+        data = data.drop_duplicates(subset="RAD_ID")
+        data.Station = data.Station.astype(float)
+        data.sort_values("Station", inplace=True)
 
     def get_soa(self):
         return self.probes.get("SOA")
