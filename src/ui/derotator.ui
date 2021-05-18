@@ -485,11 +485,13 @@ due to missing X and/or Y pair:</string>
     </property>
     <widget class="QMenu" name="menuExport">
      <property name="title">
-      <string>Export</string>
+      <string>Export...</string>
      </property>
      <addaction name="actionPEM_File"/>
      <addaction name="actionStats"/>
     </widget>
+    <addaction name="actionReverse_XY"/>
+    <addaction name="separator"/>
     <addaction name="menuExport"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
@@ -537,6 +539,11 @@ due to missing X and/or Y pair:</string>
    </property>
    <property name="text">
     <string>Show Scatter</string>
+   </property>
+  </action>
+  <action name="actionReverse_XY">
+   <property name="text">
+    <string>Reverse XY</string>
    </property>
   </action>
  </widget>

@@ -64,6 +64,40 @@ def get_split_table(table, units, ramp):
     return table
 
 
+def process_angle(average_angle, angle):
+    """
+    Find the angle angle closest (by multiples of 360) to the average angle angle.
+    :param average_angle: float
+    :param angle: float
+    :return: float
+    """
+    # print(f"Processing angle {angle:.2f} (avg. {average_angle:.2f}).")
+    roll_minus = angle - 360
+    roll_plus = angle + 360
+    diff = abs(angle - average_angle)
+    diff_minus = abs(roll_minus - average_angle)
+    diff_plus = abs(roll_plus - average_angle)
+    # print(f"Diff, diff_minus, diff_plus: {', '.join([str(round(diff, 2)), str(round(diff_minus, 2)), str(round(diff_plus, 2))])}.")
+    if all(diff_minus < [diff, diff_plus]):
+        if diff_minus > 300:
+            # print(f"Minusing again")
+            roll_minus = roll_minus - 360
+        # print(f"Going with {diff_minus:.2f}")
+        # print(F"Returning new angle {roll_minus:.2f}\n")
+        return roll_minus
+    elif all(diff_plus < [diff, diff_minus]):
+        if diff_plus > 300:
+            # print(f"Plusing again")
+            roll_plus = roll_plus + 360
+        # print(f"Going with {diff_plus:.2f}")
+        # print(F"Returning new angle {roll_plus:.2f}\n")
+        return roll_plus
+    else:
+        # print(f"Going with {diff:.2f}")
+        # print(f"Returning angle {angle:.2f}\n")
+        return angle
+
+
 class StationConverter:
 
     @staticmethod
@@ -563,15 +597,26 @@ class PEMFile:
         """
         assert all([self.has_xy(), self.is_borehole()]), f"Can only get azimuth data from borehole XY surveys."
 
-        df = self.data.drop_duplicates(subset="RAD_ID").loc[:, ["Station", "RAD_tool"]]
-        df.Station = df.Station.astype(float)
-        azimuth = df.RAD_tool.apply(lambda x: x.get_azimuth())
-        df = df.assign(Azimuth=azimuth)
-        if average is True:
-            df = df.groupby('Station', as_index=False).mean()
+        data = self.data[(self.data.Component == "X") | (self.data.Component == "Y")]
+        data = data.drop_duplicates(subset="RAD_ID")
+        data.Station = data.Station.astype(float)
+        data.sort_values("Station", inplace=True)
+        azimuth_data = data.RAD_tool.map(lambda x: x.get_azimuth())
 
-        df = df.sort_values("Station")
-        return df.dropna()
+        # The first azimuth is used as the first "average"
+        processed_azimuth_data = np.array([azimuth_data[0]])
+        for azimuth in azimuth_data[1:]:
+            processed_azimuth = process_angle(np.mean(processed_azimuth_data), azimuth)
+            processed_azimuth_data = np.append(processed_azimuth_data, processed_azimuth)
+
+        while all([r < 0 for r in processed_azimuth_data]):
+            processed_azimuth_data = np.array(processed_azimuth_data) + 360
+
+        df = pd.DataFrame.from_dict({"Angle": processed_azimuth_data, "Station": data.Station})
+        if average is True:
+            df = df.groupby("Station", as_index=False).mean()
+
+        return df
 
     def get_dip(self, average=False):
         """
@@ -591,11 +636,47 @@ class PEMFile:
         df = df.sort_values("Station")
         return df.dropna()
 
-    def get_acc_roll(self, soa):
+    def get_roll_data(self, roll_type, soa=0):
+
+        if not self.prepped_for_rotation:
+            raise ValueError(F"PEMFile must be prepped for de-rotation.")
+
+        if not all([self.has_xy(), self.is_borehole()]):
+            raise ValueError(F"PEMFile must be a borehole file with X and Y component readings.")
+
         data = self.data[(self.data.Component == "X") | (self.data.Component == "Y")]
         data = data.drop_duplicates(subset="RAD_ID")
         data.Station = data.Station.astype(float)
         data.sort_values("Station", inplace=True)
+
+        if roll_type == "Acc":
+            roll_data = data.RAD_tool.map(lambda x: x.acc_roll_angle + soa).to_numpy()
+        elif roll_type == "Mag":
+            roll_data = data.RAD_tool.map(lambda x: x.mag_roll_angle + soa).to_numpy()
+        elif roll_type == "Tool":
+            roll_data = data.RAD_tool.map(lambda x: x.angle_used + soa).to_numpy()
+        elif roll_type == "Measured_PP":
+            if not self.has_all_gps():
+                raise ValueError(f"PEMFile must have all GPS for {roll_type} de-rotation.")
+            roll_data = data.RAD_tool.map(lambda x: x.measured_pp_roll_angle).to_numpy()
+        elif roll_type == "Cleaned_PP":
+            if not self.has_all_gps():
+                raise ValueError(f"PEMFile must have all GPS for {roll_type} de-rotation.")
+            roll_data = data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle).to_numpy()
+        else:
+            raise ValueError(f"{roll_type} is not a valid de-rotation method.")
+
+        # The first roll angle is used as the first "average"
+        processed_roll_data = np.array([roll_data[0]])
+        for roll in roll_data[1:]:
+            processed_roll = process_angle(np.mean(processed_roll_data), roll)
+            processed_roll_data = np.append(processed_roll_data, processed_roll)
+
+        while all([r < 0 for r in processed_roll_data]):
+            processed_roll_data = np.array(processed_roll_data) + 360
+
+        df = pd.DataFrame.from_dict({"Angle": processed_roll_data, "Station": data.Station})
+        return df
 
     def get_soa(self):
         return self.probes.get("SOA")
@@ -1245,7 +1326,7 @@ class PEMFile:
             else:
                 self.notes.append(note)
         else:
-            logger.warning(f"{self.filepath.name} has no {component} data.")
+            logger.warning(f"{self.filepath.name} has no {component} component data.")
         return self
 
     def reverse_station_numbers(self):
@@ -1794,6 +1875,7 @@ class PEMFile:
         else:
             include_pp = False
 
+        # TODO Find pandas warning near here
         # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
         eligible_data, ineligible_data = self.get_rotation_filtered_data()
 
@@ -3465,10 +3547,12 @@ if __name__ == '__main__':
     # pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
     # pem_files = pem_g.get_pems(folder="PEM Rotation", file="MARO-21-005 xy.PEM")
-    pem_files = pem_g.get_pems(folder="TMC", file="100e.PEM")
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
     # pem_files = pem_g.get_pems(folder="PEM Rotation", file="xy_0406.PEM")
     pem_file = pem_files[0]
-    pem_file.reverse_station_order()
+    pem_file.prep_rotation(allow_negative_angles=True)
+    pem_file.get_measured_pp_roll()
+    # pem_file.reverse_station_order()
     # pem_files[0].get_date()
     # pem_files[0].get_clipboard_info()
     # pem_file.prep_rotation()

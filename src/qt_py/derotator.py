@@ -230,6 +230,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                     [self.rot_ax], [self.pp_ax]])
 
         # Signals
+        self.actionReverse_XY.triggered.connect(self.reverse_xy)
         self.actionPEM_File.triggered.connect(self.export_pem_file)
         self.actionStats.triggered.connect(self.export_stats)
         self.actionShow_Scatter.triggered.connect(self.toggle_scatter)
@@ -576,26 +577,24 @@ class Derotator(QMainWindow, Ui_Derotator):
             """
             Plot the difference between PP rotation value and Acc rotation value. Useful for SOA.
             """
-            acc_angles = rotation_data.RAD_tool.map(lambda x: x.acc_roll_angle + self.soa)
-            mag_angles = rotation_data.RAD_tool.map(lambda x: x.mag_roll_angle + self.soa)
-            pp_angle_measured = rotation_data.RAD_tool.map(lambda x: x.measured_pp_roll_angle)
-            acc_deviation = pp_angle_measured - acc_angles
-            mag_deviation = pp_angle_measured - mag_angles
+            acc_df = raw_pem.get_roll_data("Acc", self.soa)
+            mag_df = raw_pem.get_roll_data("Mag", self.soa)
+            measured_pp_df = raw_pem.get_roll_data("Measured_PP", self.soa)
+            acc_deviation = measured_pp_df.Angle - acc_df.Angle
+            mag_deviation = measured_pp_df.Angle - mag_df.Angle
             if all(acc_deviation < 0):
                 acc_deviation = acc_deviation + 360
             if all(mag_deviation < 0):
                 mag_deviation = mag_deviation + 360
 
             # Calculate the average deviation for the curve line
-            acc_df = pd.DataFrame([acc_deviation, rotation_data.Station]).T
-            mag_df = pd.DataFrame([mag_deviation, rotation_data.Station]).T
-            acc_df.rename(columns={"RAD_tool": "Deviation"}, inplace=True)
-            mag_df.rename(columns={"RAD_tool": "Deviation"}, inplace=True)
-            acc_avg_df = acc_df.groupby("Station", as_index=False).mean()
-            mag_avg_df = mag_df.groupby("Station", as_index=False).mean()
+            acc_dev_df = pd.DataFrame([acc_deviation, acc_df.Station]).T
+            mag_dev_df = pd.DataFrame([mag_deviation, mag_df.Station]).T
+            acc_avg_df = acc_dev_df.groupby("Station", as_index=False).mean()
+            mag_avg_df = mag_dev_df.groupby("Station", as_index=False).mean()
 
-            self.acc_dev_curve.setData(x=acc_avg_df.Deviation.to_numpy(), y=acc_avg_df.Station.to_numpy())
-            self.mag_dev_curve.setData(x=mag_avg_df.Deviation.to_numpy(), y=mag_avg_df.Station.to_numpy())
+            self.acc_dev_curve.setData(x=acc_avg_df.Angle.to_numpy(), y=acc_avg_df.Station.to_numpy())
+            self.mag_dev_curve.setData(x=mag_avg_df.Angle.to_numpy(), y=mag_avg_df.Station.to_numpy())
             self.acc_dev_scatter.setData(x=acc_deviation.to_numpy(), y=rotation_data.Station.to_numpy())
             self.mag_dev_scatter.setData(x=mag_deviation.to_numpy(), y=rotation_data.Station.to_numpy())
 
@@ -609,77 +608,49 @@ class Derotator(QMainWindow, Ui_Derotator):
                 if self.pp_btn.isEnabled():
                     # Add the cleaned PP information for non-fluxgate surveys
                     if not pem_file.is_fluxgate():
-                        pp_angle_cleaned = rotation_data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
-                        rotation_data.assign(PP_cleaned=pp_angle_cleaned)
-
-                        # Calculate the average deviation for the curve line
-                        cleaned_pp_df = pd.DataFrame([pp_angle_cleaned, rotation_data.Station]).T
-                        cleaned_pp_df.rename(columns={"RAD_tool": "Cleaned_PP"}, inplace=True)
+                        # pp_angle_cleaned = rotation_data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
+                        cleaned_pp_df = raw_pem.get_roll_data("Cleaned_PP", self.soa)
                         cleaned_pp_avg = cleaned_pp_df.groupby("Station", as_index=False).mean()
 
-                        self.cpp_rot_curve.setData(cleaned_pp_avg.Cleaned_PP.to_numpy(), cleaned_pp_avg.Station.to_numpy())
-                        self.cpp_rot_scatter.setData(pp_angle_cleaned.to_numpy(), rotation_data.Station.to_numpy())
+                        self.cpp_rot_curve.setData(cleaned_pp_avg.Angle.to_numpy(), cleaned_pp_avg.Station.to_numpy())
+                        self.cpp_rot_scatter.setData(cleaned_pp_df.Angle, cleaned_pp_df.Station)
 
-                    pp_angle_measured = rotation_data.RAD_tool.map(lambda x: x.measured_pp_roll_angle)
-                    rotation_data.assign(PP_cleaned=pp_angle_measured)
-                    pp_measured_df = pd.DataFrame([pp_angle_measured, rotation_data.Station]).T
-                    pp_measured_df.rename(columns={"RAD_tool": "Measured_PP"}, inplace=True)
-                    pp_measured_avg = pp_measured_df.groupby("Station", as_index=False).mean()
-                    self.mpp_rot_curve.setData(pp_measured_avg.Measured_PP.to_numpy(), pp_measured_avg.Station.to_numpy())
-                    self.mpp_rot_scatter.setData(pp_angle_measured.to_numpy(), rotation_data.Station.to_numpy())
+                    # pp_angle_measured = rotation_data.RAD_tool.map(lambda x: x.measured_pp_roll_angle)
+                    measured_pp_df = raw_pem.get_roll_data("Measured_PP", self.soa)
+                    measured_pp_avg = measured_pp_df.groupby("Station", as_index=False).mean()
+                    self.mpp_rot_curve.setData(measured_pp_avg.Angle.to_numpy(), measured_pp_avg.Station.to_numpy())
+                    self.mpp_rot_scatter.setData(measured_pp_df.Angle, measured_pp_df.Station)
 
-                # Accelerometer
+                # Tool rotations
                 if self.pem_file.has_d7():
-                    acc_angle = rotation_data.RAD_tool.map(lambda x: x.get_acc_roll(allow_negative=True) - self.soa)
-                    mag_angle = rotation_data.RAD_tool.map(lambda x: x.get_mag_roll(allow_negative=True) - self.soa)
-
-                    if acc_angle.all():
-                        acc_angle = acc_angle - self.soa
-                        if self.acc_rot_curve not in self.rot_ax.items:
-                            self.rot_ax.addItem(self.acc_rot_curve)
-                            self.rot_ax.addItem(self.acc_rot_scatter)
-                    else:
-                        raise ValueError(f"Issue with accelerometer angles for {self.pem_file.filepath.name}.")
-
-                    if mag_angle.all():
-                        mag_angle = mag_angle - self.soa
-                        if self.acc_rot_curve not in self.rot_ax.items:
-                            self.rot_ax.addItem(self.mag_rot_curve)
-                            self.rot_ax.addItem(self.mag_rot_scatter)
-                    else:
-                        raise ValueError(f"Issue with accelerometer angles for {self.pem_file.filepath.name}.")
-
-                    rotation_data.assign(Acc=acc_angle)
-                    acc_df = pd.DataFrame([acc_angle, rotation_data.Station]).T
-                    acc_df.rename(columns={"RAD_tool": "Acc"}, inplace=True)
+                    acc_df = raw_pem.get_roll_data("Acc", self.soa)
                     acc_avg = acc_df.groupby("Station", as_index=False).mean()
-                    self.acc_rot_curve.setData(acc_avg.Acc.to_numpy(), acc_avg.Station.to_numpy())
-                    self.acc_rot_scatter.setData(acc_angle.to_numpy(), rotation_data.Station.to_numpy())
+                    self.acc_rot_curve.setData(acc_avg.Angle.to_numpy(), acc_avg.Station.to_numpy())
+                    self.acc_rot_scatter.setData(acc_df.Angle, acc_df.Station)
 
-                    rotation_data.assign(Mag_angle=mag_angle)
-                    mag_df = pd.DataFrame([mag_angle, rotation_data.Station]).T
-                    mag_df.rename(columns={"RAD_tool": "Mag_angle"}, inplace=True)
+                    mag_df = raw_pem.get_roll_data("Mag", self.soa)
                     mag_avg = mag_df.groupby("Station", as_index=False).mean()
-                    self.mag_rot_curve.setData(mag_avg.Mag_angle.to_numpy(), mag_avg.Station.to_numpy())
-                    self.mag_rot_scatter.setData(mag_angle.to_numpy(), rotation_data.Station.to_numpy())
+                    self.mag_rot_curve.setData(mag_avg.Angle.to_numpy(), mag_avg.Station.to_numpy())
+                    self.mag_rot_scatter.setData(mag_df.Angle, mag_df.Station)
+
+                    if self.acc_rot_curve not in self.rot_ax.items:
+                        self.rot_ax.addItem(self.acc_rot_curve)
+                        self.rot_ax.addItem(self.acc_rot_scatter)
+
+                    if self.mag_rot_curve not in self.rot_ax.items:
+                        self.rot_ax.addItem(self.mag_rot_curve)
+                        self.rot_ax.addItem(self.mag_rot_scatter)
 
                 else:
                     # Tool used to calculate angle is unknown
-                    tool_angle = rotation_data.RAD_tool.map(lambda x: x.angle_used)
-                    if tool_angle.all():
-                        tool_angle = tool_angle - self.soa
-                        if self.tool_rot_curve not in self.rot_ax.items:
-                            self.rot_ax.addItem(self.tool_rot_curve)
-                            self.rot_ax.addItem(self.tool_rot_scatter)
-                    else:
-                        raise ValueError(f"Issue with tool angles for {self.pem_file.filepath.name}.")
-
-                    rotation_data.assign(Mag_angle=tool_angle)
-                    tool_df = pd.DataFrame([tool_angle, rotation_data.Station]).T
-                    tool_df.rename(columns={"RAD_tool": "Tool_angle"}, inplace=True)
+                    tool_df = raw_pem.get_roll_data("Tool", self.soa)
                     tool_avg = tool_df.groupby("Station", as_index=False).mean()
-                    self.tool_rot_curve.setData(tool_avg.Tool_angle.to_numpy(), tool_avg.Station.to_numpy())
-                    self.tool_rot_scatter.setData(tool_angle.to_numpy(), rotation_data.Station.to_numpy())
+                    self.tool_rot_curve.setData(tool_avg.Angle.to_numpy(), tool_avg.Station.to_numpy())
+                    self.tool_rot_scatter.setData(tool_df.Angle, tool_df.Station)
+
+                    if self.tool_rot_curve not in self.rot_ax.items:
+                        self.rot_ax.addItem(self.tool_rot_curve)
+                        self.rot_ax.addItem(self.tool_rot_scatter)
 
         if not pem_file:
             return
@@ -728,6 +699,13 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.plot_pem(self.rotated_file)
         self.reset_range()
 
+    def reverse_xy(self):
+        self.pem_file.reverse_component("X")
+        self.pem_file.reverse_component("Y")
+
+        self.pem_file.prep_rotation()
+        self.rotate()
+
     def get_method(self):
         if self.acc_btn.isChecked():
             method = 'acc'
@@ -752,13 +730,13 @@ def main():
     pg = PEMGetter()
     parser = PEMParser()
     # parser = DMPParser()
-    # pem_files = pg.get_pems(folder="Rotation Testing", random=True, number=6)
+    # pem_files = pg.get_pems(folder="Raw Boreholes", random=True, number=6)
     # for pem_file in pem_files:
     #     d = Derotator()
     #     d.open(pem_file)
 
     # pem_files = pg.get_pems(folder="Rotation Testing", file="SAN-225G-18 Tool - Mag (PEMPro).PEM")
-    pem_files = pg.get_pems(folder="Rotation Testing", file="em21-155xy_0415.PEM")
+    pem_files = pg.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
     # pem_files = pg.get_pems(folder="Rotation Testing", file="_SAN-0246-19 XY (Cross bug).PEM")
     mw = Derotator()
     mw.open(pem_files)

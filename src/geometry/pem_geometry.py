@@ -518,8 +518,9 @@ class PEMGeometry(QMainWindow, Ui_PemGeometry):
             self.az_ax.lines.remove(self.tool_az_line)
 
         global tool_az, tool_dip, stations
-        tool_az = self.df.RAD_tool.map(lambda x: x.get_azimuth(
-            allow_negative=self.actionAllow_Negative_Azimuth.isChecked()))
+        # tool_az = self.df.RAD_tool.map(lambda x: x.get_azimuth(
+        #     allow_negative=self.actionAllow_Negative_Azimuth.isChecked()))
+        tool_az = self.pem_file.get_azimuth(average=True).Angle
         tool_az = tool_az + self.mag_dec_sbox.value()  # Add the magnetic declination
 
         # If all azimuth values are negative, make them positive.

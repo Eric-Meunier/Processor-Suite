@@ -52,8 +52,12 @@ class PEMGetter:
 
         if folder:
             sample_files_dir = sample_files_dir.joinpath(folder)
+            if not sample_files_dir.exists():
+                raise ValueError(f"Folder {folder} does not exist.")
             if subfolder:
                 sample_files_dir = sample_files_dir.joinpath(subfolder)
+                if not sample_files_dir.exists():
+                    raise ValueError(f"Subfolder {subfolder} does not exist.")
 
         pem_files = []
 
