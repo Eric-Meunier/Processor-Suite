@@ -28,6 +28,10 @@ pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 
 symbol_size = 6
+cpp_color = (0, 153, 153, 100)
+mpp_color = (255, 0, 255, 100)
+acc_color = (0, 0, 255, 100)
+mag_color = (0, 204, 0, 100)
 
 
 class Derotator(QMainWindow, Ui_Derotator):
@@ -82,12 +86,12 @@ class Derotator(QMainWindow, Ui_Derotator):
         v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
         self.dev_ax_legend = self.dev_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
         self.dev_ax_legend.setParent(self.deviation_view)
-        self.acc_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((150, 0, 150, 100), width=2), name="Accelerometer")
-        self.acc_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((150, 0, 150, 100), width=2),
+        self.acc_dev_curve = pg.PlotCurveItem(pen=pg.mkPen(acc_color, width=2), name="Accelerometer")
+        self.acc_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen(acc_color, width=2),
                                                   size=symbol_size,
                                                   brush=pg.mkBrush("w"))
-        self.mag_dev_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 150, 0, 100), width=2), name="Magnetometer")
-        self.mag_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 150, 0, 100), width=2),
+        self.mag_dev_curve = pg.PlotCurveItem(pen=pg.mkPen(mag_color, width=2), name="Magnetometer")
+        self.mag_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mag_color, width=2),
                                                   size=symbol_size,
                                                   brush=pg.mkBrush("w"))
 
@@ -102,8 +106,8 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.dip_ax.addItem(v_line)
         self.dip_ax.setLimits(xMin=-90, xMax=0)
         self.dip_ax.setXRange(-90, 0)
-        self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name="Dip")
-        self.dip_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 0, 255, 100), width=2), brush="w", size=symbol_size)
+        self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen(acc_color, width=2), name="Dip")
+        self.dip_scatter = pg.ScatterPlotItem(pen=pg.mkPen(acc_color, width=2), brush="w", size=symbol_size)
         self.dip_ax.addItem(self.dip_curve)
         self.dip_ax.addItem(self.dip_scatter)
 
@@ -113,8 +117,8 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.mag_ax.setLabel('left', 'Station', units=None)
         self.mag_ax.getAxis("left").setWidth(30)
         self.mag_ax.getAxis("right").setWidth(10)
-        self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 255, 0, 100), width=2), name="Magnetic Field Strength")
-        self.mag_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 255, 0, 100), width=2), brush="w", size=symbol_size)
+        self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen(mag_color, width=2), name="Magnetic Field Strength")
+        self.mag_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mag_color, width=2), brush="w", size=symbol_size)
         self.mag_ax.addItem(self.mag_curve)
         self.mag_ax.addItem(self.mag_scatter)
 
@@ -124,29 +128,29 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.rot_ax_legend.setParent(self.rotation_view)
         self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees')
         self.rot_ax.setLabel('left', 'Station', units=None)
-        self.cpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((255, 0, 0, 100), width=2.), name='Cleaned PP')
-        self.cpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((255, 0, 0, 100), width=2.),
+        self.cpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(cpp_color, width=2.), name='Cleaned PP')
+        self.cpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(cpp_color, width=2.),
                                                   symbol='o',
                                                   brush="w",
                                                   size=symbol_size)
-        self.mpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 0, 255, 100), width=2.), name='Measured PP')
-        self.mpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 0, 255, 100), width=2.),
+        self.mpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(mpp_color, width=2.), name='Measured PP')
+        self.mpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mpp_color, width=2.),
                                                   symbol='o',
                                                   brush="w",
                                                   size=symbol_size)
-        self.acc_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((0, 255, 0, 100), width=2.), name='Accelerometer')
-        self.acc_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((0, 255, 0, 100), width=2.),
+        self.acc_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(acc_color, width=2.), name='Accelerometer')
+        self.acc_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(acc_color, width=2.),
                                                   symbol='o',
                                                   brush="w",
                                                   size=symbol_size)
-        self.mag_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((150, 0, 150, 200), width=2.), name='Magnetometer')
-        self.mag_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((150, 0, 150, 200), width=2.),
+        self.mag_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(mag_color, width=2.), name='Magnetometer')
+        self.mag_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mag_color, width=2.),
                                                   symbol='o',
                                                   brush="w",
                                                   size=symbol_size)
-        self.tool_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((100, 100, 100, 200), width=2.),
+        self.tool_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((32, 32, 32, 200), width=2.),
                                                name='Tool (Unknown Sensor)')
-        self.tool_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((100, 100, 100, 200), width=2.),
+        self.tool_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((32, 32, 32, 200), width=2.),
                                                    symbol='o',
                                                    brush="w",
                                                    size=symbol_size)
@@ -158,23 +162,23 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.pp_ax.setLabel('top', 'Primary Pulse Response', units='nT/s')
         self.pp_ax.setLabel('left', 'Station', units=None)
 
-        self.cleaned_pp_curve = pg.PlotDataItem(pen=pg.mkPen((255, 0, 0, 100), width=2), name='Cleaned')
+        self.cleaned_pp_curve = pg.PlotDataItem(pen=pg.mkPen(cpp_color, width=2), name='Cleaned')
         self.cleaned_pp_scatter = pg.ScatterPlotItem(symbol='o',
-                                                     pen=pg.mkPen((255, 0, 0, 100), width=2),
+                                                     pen=pg.mkPen(cpp_color, width=2),
                                                      brush='w',
                                                      size=symbol_size)
 
-        self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen((0, 255, 0, 100), width=2), name='Theory')
-        self.theory_pp_scatter = pg.ScatterPlotItem(symbol='o',
-                                                    pen=pg.mkPen((0, 255, 0, 100), width=2),
-                                                    brush='w',
-                                                    size=symbol_size)
-
-        self.measured_pp_curve = pg.PlotDataItem(pen=pg.mkPen((0, 0, 255, 100), width=2), name='Measured')
+        self.measured_pp_curve = pg.PlotDataItem(pen=pg.mkPen(mpp_color, width=2), name='Measured')
         self.measured_pp_scatter = pg.ScatterPlotItem(symbol='o',
-                                                      pen=pg.mkPen((0, 0, 255, 100), width=2),
+                                                      pen=pg.mkPen(mpp_color, width=2),
                                                       brush='w',
                                                       size=symbol_size)
+
+        self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen((32, 32, 32, 100), width=2), name='Theory')
+        self.theory_pp_scatter = pg.ScatterPlotItem(symbol='o',
+                                                    pen=pg.mkPen((32, 32, 32, 100), width=2),
+                                                    brush='w',
+                                                    size=symbol_size)
 
         # Format all axes
         for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
@@ -407,19 +411,6 @@ class Derotator(QMainWindow, Ui_Derotator):
                 self.pp_ax.addItem(self.cleaned_pp_curve)
                 self.pp_ax.addItem(self.cleaned_pp_scatter)
 
-            # PP XY theory
-            ppxy_theory = data.RAD_tool.map(lambda x: x.ppxy_theory)
-            data.assign(PPXY_theory=ppxy_theory)
-
-            ppxy_theory_df = pd.DataFrame([ppxy_theory, stations]).T
-            ppxy_theory_df.rename(columns={"RAD_tool": "PPXY_theory"}, inplace=True)
-            ppxy_theory_avg_df = ppxy_theory_df.groupby("Station", as_index=False).mean()
-
-            self.theory_pp_curve.setData(ppxy_theory_avg_df.PPXY_theory, ppxy_theory_avg_df.Station)
-            self.theory_pp_scatter.setData(ppxy_theory_df.PPXY_theory, ppxy_theory_df.Station)
-            self.pp_ax.addItem(self.theory_pp_curve)
-            self.pp_ax.addItem(self.theory_pp_scatter)
-
             # PP XY measured
             ppxy_measured = data.RAD_tool.map(lambda x: x.ppxy_measured)
             data.assign(PPXY_measured=ppxy_measured)
@@ -432,6 +423,19 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.measured_pp_scatter.setData(ppxy_measured_df.PPXY_measured, ppxy_measured_df.Station)
             self.pp_ax.addItem(self.measured_pp_curve)
             self.pp_ax.addItem(self.measured_pp_scatter)
+
+            # PP XY theory
+            ppxy_theory = data.RAD_tool.map(lambda x: x.ppxy_theory)
+            data.assign(PPXY_theory=ppxy_theory)
+
+            ppxy_theory_df = pd.DataFrame([ppxy_theory, stations]).T
+            ppxy_theory_df.rename(columns={"RAD_tool": "PPXY_theory"}, inplace=True)
+            ppxy_theory_avg_df = ppxy_theory_df.groupby("Station", as_index=False).mean()
+
+            self.theory_pp_curve.setData(ppxy_theory_avg_df.PPXY_theory, ppxy_theory_avg_df.Station)
+            self.theory_pp_scatter.setData(ppxy_theory_df.PPXY_theory, ppxy_theory_df.Station)
+            self.pp_ax.addItem(self.theory_pp_curve)
+            self.pp_ax.addItem(self.theory_pp_scatter)
 
         while isinstance(pem_file, list):
             pem_file = pem_file[0]

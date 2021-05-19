@@ -2,7 +2,6 @@ import copy
 import logging
 import math
 import re
-import time
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +17,8 @@ from src.logger import Log
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 
 logger = logging.getLogger(__name__)
+
+pd.options.mode.chained_assignment = None  # default='warn'
 
 
 def sort_data(data):
