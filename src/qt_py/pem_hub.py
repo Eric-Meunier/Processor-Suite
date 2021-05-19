@@ -51,14 +51,12 @@ from src.qt_py.unpacker import Unpacker
 logger = logging.getLogger(__name__)
 
 __version__ = '0.11.5'
-# TODO Plot dip angle in de-rotator
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO For suffix and repeat warnings, make the background red
 # TODO Add warning when number of suffix warnings or repeat warnings isn't 0 when printing?
 # TODO Add rainbow coloring to final plots?
-# TODO Use mpl in de-rotator
 # TODO Use savgol to filter data
 # TODO Add ability to remove channels
 # TODO Upgrade DB Plot to view files without the command
@@ -68,7 +66,7 @@ __version__ = '0.11.5'
 # TODO hide loops and holes in hole planner
 # TODO Fix bug in hole planner
 # TODO Make plot editor mag plot a separate axes
-# TODO When adding GPX files, should be able to truncate names (to remove the line name if it is appeneded)
+# TODO When adding GPX files, should be able to truncate names (to remove the line name if it is appended)
 # TODO De-rotator roll angles should be close to each other
 # TODO PEMHub status bar should include "PP" survey types
 # TODO Move mag data to separate plot in PEMPlotEditor.

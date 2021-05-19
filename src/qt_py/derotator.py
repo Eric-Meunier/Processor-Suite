@@ -526,7 +526,6 @@ class Derotator(QMainWindow, Ui_Derotator):
                 plot_dip()
             else:
                 self.tabWidget.setTabEnabled(1, False)
-                # self.tabWidget.setTabEnabled(2, False)
 
             self.show()
             self.reset_range()
