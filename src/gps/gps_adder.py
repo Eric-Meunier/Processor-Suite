@@ -8,11 +8,9 @@ import keyboard
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui
-from PySide2.QtUiTools import loadUiType
-from PySide2.QtGui import QIcon
+from PySide2 import QtCore, QtGui, QtUiTools
 from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QCheckBox,
-                             QHeaderView, QLabel, QFileDialog)
+                             QHeaderView, QInputDialog, QFileDialog)
 
 from src.qt_py.custom_qt_widgets import NonScientific
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXEditor
@@ -27,8 +25,8 @@ else:
 icons_path = application_path.joinpath('ui\\icons')
 
 # Load Qt ui file into a class
-Ui_LineAdder, _ = loadUiType(str(application_path.joinpath('ui\\line_adder.ui')))
-Ui_LoopAdder, _ = loadUiType(str(application_path.joinpath('ui\\loop_adder.ui')))
+Ui_LineAdder, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\line_adder.ui')))
+Ui_LoopAdder, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\loop_adder.ui')))
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -321,23 +319,14 @@ class LineAdder(GPSAdder, Ui_LineAdder):
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
+        self.setWindowTitle('Line Adder')
+        self.status_bar.hide()
+
         self.parent = parent
         self.line = None
         self.selected_row_info = None
         self.converter = StationConverter()
-        self.setWindowTitle('Line Adder')
-        self.status_bar.hide()
-
-        # Status bar widgets
-        # self.auto_sort_cbox = QCheckBox("Automatically Sort Line by Position", self)
-        self.auto_sort_cbox.setChecked(True)
-
-        self.errors_label = QLabel('')
-        self.errors_label.setMargin(3)
-
-        # self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
-        # self.status_bar.addPermanentWidget(QLabel(), 1)
-        # self.status_bar.addPermanentWidget(self.errors_label, 0)
+        self.name_edit = None
 
         # Table
         self.table.setFixedWidth(400)
@@ -395,6 +384,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
         # Signals
         self.actionOpen.triggered.connect(self.open_file_dialog)
+        self.actionEdit_Names.triggered.connect(self.edit_names)
 
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
@@ -421,6 +411,16 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                 self.section_view.removeItem(self.section_lx)
                 self.section_view.removeItem(self.section_ly)
 
+    def edit_names(self):
+        """
+        Remove text from station names. Useful for GPX files.
+        """
+        text_removal, _ = QInputDialog().getText(self, "Edit Station Names", "Text to remove:")
+        if text_removal:
+            print(f"Removing {text_removal}")
+            self.df.Station.loc[:] = self.df.Station.map(lambda x: float(re.sub(f"{text_removal}", "", str(x))))
+            self.df_to_table(self.df)
+
     def open(self, gps, name=''):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
@@ -433,7 +433,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                 self.line = SurveyLine(gps)
                 errors = self.line.get_errors()
             else:
-                raise ValueError(f"{o} is not a valid file.")
+                raise ValueError(f"{gps} is not a valid file.")
         elif isinstance(gps, SurveyLine):
             self.line = gps
         else:
@@ -639,7 +639,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         stations_column = self.df.columns.to_list().index('Station')
         color_duplicates()
         color_order()
-        self.errors_label.setText(f"{str(errors)} error(s) ")
+        if errors > 0:
+            self.message.warning(self, "Parsing Errors Found", f"{str(errors)} error(s) found parsing the GPS.")
+        # self.errors_label.setText(f"{str(errors)} error(s) ")
         self.table.blockSignals(False)
 
 
@@ -1126,7 +1128,7 @@ def main():
 
     mw = LineAdder()
     file = samples_folder.joinpath(r'GPX files\L77+25_0515.gpx')
-    line = SurveyLine(str(file))
+    # line = SurveyLine(str(file))
 
     mw.open(file)
     mw.show()

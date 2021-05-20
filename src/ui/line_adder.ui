@@ -176,6 +176,8 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen"/>
+    <addaction name="separator"/>
+    <addaction name="actionEdit_Names"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -208,6 +210,16 @@
    </property>
    <property name="text">
     <string>Auto-Sort By Position</string>
+   </property>
+  </action>
+  <action name="actionEdit_Station_Names">
+   <property name="text">
+    <string>Edit Station Names</string>
+   </property>
+  </action>
+  <action name="actionEdit_Names">
+   <property name="text">
+    <string>Edit Station Names</string>
    </property>
   </action>
  </widget>
