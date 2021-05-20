@@ -730,7 +730,7 @@ def main():
     from src.pem.pem_file import PEMParser, DMPParser
     app = QApplication(sys.argv)
 
-    pg = PEMGetter()
+    pem_g = PEMGetter()
     parser = PEMParser()
     # parser = DMPParser()
     # pem_files = pg.get_pems(folder="Raw Boreholes", random=True, number=6)
@@ -738,10 +738,10 @@ def main():
     #     d = Derotator()
     #     d.open(pem_file)
 
-    # pem_files = pg.get_pems(folder="Rotation Testing", file="SAN-225G-18 Tool - Mag (PEMPro).PEM")
-    pem_files = pg.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
-    # pem_files = pg.get_pems(folder="TMC", subfolder=r"131-21-37\DATA", file="131-21-37 XY.PEM")
-    # pem_files = pg.get_pems(folder="Rotation Testing", file="_SAN-0246-19 XY (Cross bug).PEM")
+    # pem_files = pem_g.get_pems(folder="Rotation Testing", file="SAN-225G-18 Tool - Mag (PEMPro).PEM")
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    # pem_files = pem_g.get_pems(folder="TMC", subfolder=r"131-21-37\DATA", file="131-21-37 XY.PEM")
+    # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-0246-19 XY (Cross bug).PEM")
     mw = Derotator()
     mw.open(pem_files)
 

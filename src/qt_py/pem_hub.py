@@ -54,7 +54,6 @@ __version__ = '0.11.5'
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
-# TODO For suffix and repeat warnings, make the background red
 # TODO Add warning when number of suffix warnings or repeat warnings isn't 0 when printing?
 # TODO Add rainbow coloring to final plots?
 # TODO Use savgol to filter data
@@ -65,9 +64,7 @@ __version__ = '0.11.5'
 # TODO load and save files in hole planner
 # TODO hide loops and holes in hole planner
 # TODO Fix bug in hole planner
-# TODO Make plot editor mag plot a separate axes
 # TODO When adding GPX files, should be able to truncate names (to remove the line name if it is appended)
-# TODO De-rotator roll angles should be close to each other
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -151,14 +148,25 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.channel_tables = []
 
         # Status bar formatting
-        self.selection_label = QLabel()
-        self.selection_label.setIndent(5)
+        self.selection_files_label = QLabel()
+        self.selection_files_label.setMargin(3)
+        self.selection_files_label.setStyleSheet('color: blue')
+        self.selection_timebase_label = QLabel()
+        self.selection_timebase_label.setMargin(3)
+        self.selection_timebase_label.setStyleSheet('color: blue')
+        self.selection_survey_label = QLabel()
+        self.selection_survey_label.setMargin(3)
+        self.selection_survey_label.setStyleSheet('color: blue')
+        self.selection_derotation_label = QLabel()
+        self.selection_derotation_label.setMargin(3)
+        self.selection_derotation_label.setStyleSheet('color: blue')
         self.epsg_label = QLabel()
+        self.epsg_label.setMargin(3)
 
         # Project directory frame
         dir_frame = QFrame()
         dir_frame.setLayout(QHBoxLayout())
-        dir_frame.layout().setContentsMargins(2, 0, 2, 0)
+        dir_frame.layout().setContentsMargins(3, 0, 3, 0)
         dir_frame.layout().setSpacing(2)
         label = QLabel('Project Directory:')
         self.project_dir_edit = QLineEdit('')
@@ -167,8 +175,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         dir_frame.layout().addWidget(label)
         dir_frame.layout().addWidget(self.project_dir_edit)
 
-        self.status_bar.addPermanentWidget(self.selection_label, 0)
-        self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
+        self.status_bar.addPermanentWidget(self.selection_files_label, 0)
+        self.status_bar.addPermanentWidget(self.selection_timebase_label, 0)
+        self.status_bar.addPermanentWidget(self.selection_survey_label, 0)
+        self.status_bar.addPermanentWidget(self.selection_derotation_label, 0)
+        # self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
         self.status_bar.addPermanentWidget(dir_frame, 0)
 
@@ -788,24 +799,24 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
             if len(pem_files) == 1:
                 file = pem_files[0]
-                selection_info = []
-
                 timebase = f"Timebase: {file.timebase}ms"
                 survey_type = f"Survey Type: {file.get_survey_type()}"
                 if file.is_pp():
                     survey_type += " PP"
 
-                selection_info.extend([timebase, survey_type])
-
                 if file.is_borehole() and file.has_xy():
-                    rotated = f"De-rotated: {file.is_derotated()}"
-                    selection_info.extend([rotated])
-
-                info_str = ' | '.join(selection_info)
+                    derotated = f"De-rotated: {file.is_derotated()}"
+                else:
+                    derotated = ""
             else:
-                info_str = f"{len(pem_files)} selected"
+                timebase = ""
+                survey_type = ""
+                derotated = ""
 
-            self.selection_label.setText(f"{info_str} ")
+            self.selection_files_label.setText(f"Selected: {len(pem_files)}")
+            self.selection_timebase_label.setText(timebase)
+            self.selection_survey_label.setText(survey_type)
+            self.selection_derotation_label.setText(derotated)
 
         def cell_clicked(row, col):
             """
@@ -3262,7 +3273,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                     else:
                         return True
 
-            def color_background(row_index, color):
+            def color_row_background(row_index, color):
                 """
                 Color an entire table row
                 :param row_index: Int: Row of the table to color
@@ -3280,6 +3291,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             repeat_col = self.table_columns.index('Repeat\nWarnings')
             pem_has_gps = has_all_gps(self.pem_info_widgets[row])
 
+            if not pem_has_gps:
+                color_row_background(row, 'blue')
+
             for col in [average_col, split_col, suffix_col, repeat_col]:
                 item = self.table.item(row, col)
                 if item:
@@ -3296,17 +3310,18 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                             item.setForeground(QtGui.QColor('black'))
                     elif col == suffix_col:
                         if int(value) > 0:
-                            item.setForeground(QtGui.QColor('red'))
-                        else:
-                            item.setForeground(QtGui.QColor('black'))
+                            item.setBackground(QtGui.QColor('red'))
+                            item.setForeground(QtGui.QColor('white'))
+                        # else:
+                        #     item.setBackground(QtGui.QColor('white'))
+                        #     item.setForeground(QtGui.QColor('black'))
                     elif col == repeat_col:
                         if int(value) > 0:
-                            item.setForeground(QtGui.QColor('red'))
-                        else:
-                            item.setForeground(QtGui.QColor('black'))
-
-            if not pem_has_gps:
-                color_background(row, 'blue')
+                            item.setBackground(QtGui.QColor('red'))
+                            item.setForeground(QtGui.QColor('white'))
+                        # else:
+                        #     item.setBackground(QtGui.QColor('white'))
+                        #     item.setForeground(QtGui.QColor('black'))
 
         def color_anomalies():
             """
@@ -4868,18 +4883,19 @@ def main():
     dmp_parser = DMPParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    # files = pem_g.get_pems(folder="TMC", subfolder=r"1338-18-19/RAW", file="_16_1338-18-19ppz.dmp2")
-    files = samples_folder.joinpath(r"TMC/1338-18-19/RAW/_16_1338-18-19ppz.dmp2")
-    # files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
+    # dmp_files = pem_g.get_pems(folder="TMC", subfolder=r"1338-18-19/RAW", file="_16_1338-18-19ppz.dmp2")
+    # dmp_files = samples_folder.joinpath(r"TMC/1338-18-19/RAW/_16_1338-18-19ppz.dmp2")
+    # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
-
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    pem_files = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")
     # assert len(pem_files) == len(ri_files)
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
-    # mw.add_pem_files(pem_files)
-    mw.add_dmp_files([files])
-    mw.table.selectRow(0)
+    mw.add_pem_files(pem_files)
+    # mw.add_dmp_files([dmp_files])
+    # mw.table.selectRow(0)
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()

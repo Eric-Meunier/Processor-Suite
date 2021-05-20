@@ -20,6 +20,11 @@ from scipy import spatial
 from src.pem.pem_file import StationConverter, PEMParser
 from src.logger import Log
 
+"""
+NOTE: pyqtgraph 0.12.0 creates a bug with QRectF, specifically with decay_mouse_moved, where the event pointer
+will not intersect the area of the QRectF.
+"""
+
 # from pyod.models.abod import ABOD
 # from pyod.models.knn import KNN
 # from pyod.utils.data import get_outliers_inliers
@@ -1210,8 +1215,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         self.active_ax = None
 
+        print(f"\nEvt: {evt}")
         # Find which axes is beneath the mouse
         for ax in self.decay_axes:
+            print(f"Rect: {ax.vb.childGroup.sceneBoundingRect()}")
             if ax.vb.childGroup.sceneBoundingRect().contains(evt):
                 self.active_ax = ax
                 self.last_active_ax = ax
@@ -2014,7 +2021,7 @@ if __name__ == '__main__':
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     app = QApplication(sys.argv)
-    pem_getter = PEMGetter()
+    pem_g = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()
     # pem_files = pem_getter.get_pems(random=True, number=1)
@@ -2022,8 +2029,8 @@ if __name__ == '__main__':
     # pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
     # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
     # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
-    # pem_file = pem_getter.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")[0]
-    pem_file = pem_getter.get_pems(folder="Raw Boreholes", random=True, number=1)[0]
+    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")[0]
+    # pem_files = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
     editor = PEMPlotEditor()
     # editor.move(0, 0)
