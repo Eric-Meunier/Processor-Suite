@@ -740,6 +740,7 @@ def main():
 
     # pem_files = pg.get_pems(folder="Rotation Testing", file="SAN-225G-18 Tool - Mag (PEMPro).PEM")
     pem_files = pg.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    # pem_files = pg.get_pems(folder="TMC", subfolder=r"131-21-37\DATA", file="131-21-37 XY.PEM")
     # pem_files = pg.get_pems(folder="Rotation Testing", file="_SAN-0246-19 XY (Cross bug).PEM")
     mw = Derotator()
     mw.open(pem_files)

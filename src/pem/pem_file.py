@@ -72,30 +72,30 @@ def process_angle(average_angle, angle):
     :param angle: float
     :return: float
     """
-    # print(f"Processing angle {angle:.2f} (avg. {average_angle:.2f}).")
+    print(f"Processing angle {angle:.2f} (avg. {average_angle:.2f}).")
     roll_minus = angle - 360
     roll_plus = angle + 360
     diff = abs(angle - average_angle)
     diff_minus = abs(roll_minus - average_angle)
     diff_plus = abs(roll_plus - average_angle)
-    # print(f"Diff, diff_minus, diff_plus: {', '.join([str(round(diff, 2)), str(round(diff_minus, 2)), str(round(diff_plus, 2))])}.")
+    print(f"Diff, diff_minus, diff_plus: {', '.join([str(round(diff, 2)), str(round(diff_minus, 2)), str(round(diff_plus, 2))])}.")
     if all(diff_minus < [diff, diff_plus]):
         if diff_minus > 300:
-            # print(f"Minusing again")
+            print(f"Minusing again")
             roll_minus = roll_minus - 360
-        # print(f"Going with {diff_minus:.2f}")
-        # print(F"Returning new angle {roll_minus:.2f}\n")
+        print(f"Going with {diff_minus:.2f}")
+        print(F"Returning new angle {roll_minus:.2f}\n")
         return roll_minus
     elif all(diff_plus < [diff, diff_minus]):
         if diff_plus > 300:
-            # print(f"Plusing again")
+            print(f"Plusing again")
             roll_plus = roll_plus + 360
-        # print(f"Going with {diff_plus:.2f}")
-        # print(F"Returning new angle {roll_plus:.2f}\n")
+        print(f"Going with {diff_plus:.2f}")
+        print(F"Returning new angle {roll_plus:.2f}\n")
         return roll_plus
     else:
-        # print(f"Going with {diff:.2f}")
-        # print(f"Returning angle {angle:.2f}\n")
+        print(f"Going with {diff:.2f}")
+        print(f"Returning angle {angle:.2f}\n")
         return angle
 
 
@@ -670,7 +670,8 @@ class PEMFile:
         # The first roll angle is used as the first "average"
         processed_roll_data = np.array([roll_data[0]])
         for roll in roll_data[1:]:
-            processed_roll = process_angle(np.mean(processed_roll_data), roll)
+            processed_roll = process_angle(processed_roll_data[-1], roll)  # Works better than using average
+            # processed_roll = process_angle(np.mean(processed_roll_data), roll)
             processed_roll_data = np.append(processed_roll_data, processed_roll)
 
         while all([r < 0 for r in processed_roll_data]):
@@ -3547,12 +3548,12 @@ if __name__ == '__main__':
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-037\DUMP\January 16, 2021\DMP\1338-19-037 XY.PEM"
     # pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
-    # pem_files = pem_g.get_pems(folder="PEM Rotation", file="MARO-21-005 xy.PEM")
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    pem_files = pem_g.get_pems(folder="TMC", subfolder=r"131-21-37\DATA", file="131-21-37 XY.PEM")
     # pem_files = pem_g.get_pems(folder="PEM Rotation", file="xy_0406.PEM")
     pem_file = pem_files[0]
     pem_file.prep_rotation(allow_negative_angles=True)
-    pem_file.get_measured_pp_roll()
+    pem_file.get_roll_data("Measured_PP")
     # pem_file.reverse_station_order()
     # pem_files[0].get_date()
     # pem_files[0].get_clipboard_info()

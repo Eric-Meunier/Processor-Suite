@@ -68,8 +68,6 @@ __version__ = '0.11.5'
 # TODO Make plot editor mag plot a separate axes
 # TODO When adding GPX files, should be able to truncate names (to remove the line name if it is appended)
 # TODO De-rotator roll angles should be close to each other
-# TODO PEMHub status bar should include "PP" survey types
-# TODO Move mag data to separate plot in PEMPlotEditor.
 
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -442,6 +440,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         # center_window()
 
         self.table.horizontalHeader().hide()
+        # self.table.setStyleSheet('''
+        #                         QTableView::item::selected {
+        #                           background-color: darkgray;
+        #                         }
+        #                         ''')
 
         # Set icons
         self.actionOpenFile.setIcon(QtGui.QIcon(str(icons_path.joinpath("open.png"))))
@@ -789,6 +792,9 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
                 timebase = f"Timebase: {file.timebase}ms"
                 survey_type = f"Survey Type: {file.get_survey_type()}"
+                if file.is_pp():
+                    survey_type += " PP"
+
                 selection_info.extend([timebase, survey_type])
 
                 if file.is_borehole() and file.has_xy():
@@ -1194,9 +1200,10 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
     def eventFilter(self, source, event):
         # # Clear the selection when clicking away from any file
-        # if (event.type() == QtCore.QEvent.MouseButtonPress and
-        #         source is self.table.viewport() and
-        #         self.table.itemAt(event.pos()) is None):
+        if (event.type() == QtCore.QEvent.MouseButtonPress and
+                source is self.table.viewport() and
+                self.table.itemAt(event.pos()) is None):
+            pass
         #     self.table.clearSelection()
 
         if source == self.table:
@@ -1221,15 +1228,15 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
                         self.table.clearSelection()
                         return True
 
-            # Attempt to side scroll when Shift scrolling, but doesn't work well.
-            elif event.type() == QtCore.QEvent.Wheel:
-                if event.modifiers() == QtCore.Qt.ShiftModifier:
-                    pos = self.table.horizontalScrollBar().value()
-                    if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
-                        self.table.horizontalScrollBar().setValue(pos + 20)
-                    else:
-                        self.table.horizontalScrollBar().setValue(pos - 20)
-                    return True
+            # # Attempt to side scroll when Shift scrolling, but doesn't work well.
+            # elif event.type() == QtCore.QEvent.Wheel:
+            #     if event.modifiers() == QtCore.Qt.ShiftModifier:
+            #         pos = self.table.horizontalScrollBar().value()
+            #         if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
+            #             self.table.horizontalScrollBar().setValue(pos + 20)
+            #         else:
+            #             self.table.horizontalScrollBar().setValue(pos - 20)
+            #         return True
 
         return super(QWidget, self).eventFilter(source, event)
 
@@ -4861,17 +4868,18 @@ def main():
     dmp_parser = DMPParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    pem_files = pem_g.get_pems(folder="Trevali Peru", number=1)
-    # dmp_files = samples_folder.joinpath(r"TMC\EM21-162\DUMP\em21-162 xy.dmp2")
+    # files = pem_g.get_pems(folder="TMC", subfolder=r"1338-18-19/RAW", file="_16_1338-18-19ppz.dmp2")
+    files = samples_folder.joinpath(r"TMC/1338-18-19/RAW/_16_1338-18-19ppz.dmp2")
+    # files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
 
     # assert len(pem_files) == len(ri_files)
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
-    mw.add_pem_files(pem_files)
-    # mw.add_dmp_files([dmp_files])
-    # mw.table.selectRow(0)
+    # mw.add_pem_files(pem_files)
+    mw.add_dmp_files([files])
+    mw.table.selectRow(0)
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()
