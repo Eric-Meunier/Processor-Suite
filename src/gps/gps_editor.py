@@ -289,9 +289,14 @@ class TransmitterLoop(BaseGPS):
         elif isinstance(file, pd.DataFrame):
             gps = file
         elif Path(str(file)).is_file():
-            file = open(file, 'rt').readlines()
-            split_file = [r.strip().split() for r in file]
-            gps = pd.DataFrame(split_file)
+            if Path(file).suffix.lower() == '.gpx':
+                # Convert the GPX file to string
+                gps, zone, hemisphere, crs = GPXEditor().get_utm(file, as_string=True)
+                contents = [c.strip().split() for c in gps]
+            else:
+                file = open(file, 'rt').readlines()
+                contents = [c.strip().split() for c in file]
+            gps = pd.DataFrame(contents)
         elif file is None:
             logger.warning(f"No GPS passed.")
             return empty_gps, pd.DataFrame(), 'No GPS passed.'
@@ -473,9 +478,14 @@ class SurveyLine(BaseGPS):
         elif isinstance(file, pd.DataFrame):
             gps = file
         elif Path(str(file)).is_file():
-            file = open(file, 'rt').readlines()
-            split_file = [r.strip().split() for r in file]
-            gps = pd.DataFrame(split_file)
+            if Path(file).suffix.lower() == '.gpx':
+                # Convert the GPX file to string
+                gps, zone, hemisphere, crs = GPXEditor().get_utm(file, as_string=True)
+                contents = [c.strip().split() for c in gps]
+            else:
+                file = open(file, 'rt').readlines()
+                contents = [c.strip().split() for c in file]
+            gps = pd.DataFrame(contents)
         elif file is None:
             logger.warning("No GPS passed.")
             return empty_gps, pd.DataFrame(), 'No GPS passed.'
@@ -629,9 +639,14 @@ class BoreholeCollar(BaseGPS):
             gps = file
 
         elif Path(str(file)).is_file():
-            file = open(file, 'rt').readlines()
-            split_file = [r.strip().split() for r in file]
-            gps = pd.DataFrame(split_file)
+            if Path(file).suffix.lower() == '.gpx':
+                # Convert the GPX file to string
+                gps, zone, hemisphere, crs = GPXEditor().get_utm(file, as_string=True)
+                contents = [c.strip().split() for c in gps]
+            else:
+                file = open(file, 'rt').readlines()
+                contents = [c.strip().split() for c in file]
+            gps = pd.DataFrame(contents)
 
         elif file is None:
             logger.warning(f"No GPS passed.")

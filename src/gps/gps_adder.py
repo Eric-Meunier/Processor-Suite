@@ -12,10 +12,10 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtUiTools import loadUiType
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QCheckBox,
-                             QHeaderView, QLabel)
+                             QHeaderView, QLabel, QFileDialog)
 
 from src.qt_py.custom_qt_widgets import NonScientific
-from src.gps.gps_editor import TransmitterLoop, SurveyLine
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXEditor
 from src.pem.pem_file import StationConverter
 
 logger = logging.getLogger(__name__)
@@ -122,10 +122,6 @@ class GPSAdder(QMainWindow):
         self.accept_sig.emit(self.table_to_df().dropna())
         self.hide()
 
-    # def close(self):
-    #     self.clear_table()
-    #     self.hide()
-
     def clear_table(self):
         self.table.blockSignals(True)
         self.table.clear()
@@ -135,6 +131,14 @@ class GPSAdder(QMainWindow):
 
     def open(self, o, name=''):
         pass
+
+    def open_file_dialog(self):
+        default_path = ""
+        file, extension = QFileDialog().getOpenFileName(self, "Open GPS File", default_path, "Text Files (*.TXT);;"
+                                                                                             "CSV Files (*.CSV);;"
+                                                                                             "GPX Files (*.GPX)")
+        if file:
+            self.open(file)
 
     def df_to_table(self, df):
         """
@@ -322,17 +326,18 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.selected_row_info = None
         self.converter = StationConverter()
         self.setWindowTitle('Line Adder')
+        self.status_bar.hide()
 
         # Status bar widgets
-        self.auto_sort_cbox = QCheckBox("Automatically Sort Line by Position", self)
+        # self.auto_sort_cbox = QCheckBox("Automatically Sort Line by Position", self)
         self.auto_sort_cbox.setChecked(True)
 
         self.errors_label = QLabel('')
-        self.errors_label.setIndent(5)
+        self.errors_label.setMargin(3)
 
-        self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
-        self.status_bar.addPermanentWidget(QLabel(), 1)
-        self.status_bar.addPermanentWidget(self.errors_label, 0)
+        # self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
+        # self.status_bar.addPermanentWidget(QLabel(), 1)
+        # self.status_bar.addPermanentWidget(self.errors_label, 0)
 
         # Table
         self.table.setFixedWidth(400)
@@ -355,7 +360,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
                                      'bottom': NonScientific(orientation='bottom')})
         self.section_view.setTitle('Elevation View')
-
+        self.section_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                        'bottom': NonScientific(orientation='bottom')})
         self.plan_view.setAspectLocked()
         self.section_view.setAspectLocked()
 
@@ -388,6 +394,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         # self.section_view.setLabel('bottom', f"Station", units=None)
 
         # Signals
+        self.actionOpen.triggered.connect(self.open_file_dialog)
+
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
 
@@ -413,21 +421,23 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                 self.section_view.removeItem(self.section_lx)
                 self.section_view.removeItem(self.section_ly)
 
-    def open(self, o, name=''):
+    def open(self, gps, name=''):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
-        :param o: Union [filepath; GPS object; DataFrame], Loop to open
+        :param gps: Union [filepath; GPS object; DataFrame], Loop to open
         :param name: str, name of the line
         """
         errors = pd.DataFrame()
-        if isinstance(o, str):
-            if Path(o).is_file():
-                self.line = SurveyLine(o)
+        if isinstance(gps, str) or isinstance(gps, Path):
+            if Path(gps).is_file():
+                self.line = SurveyLine(gps)
                 errors = self.line.get_errors()
             else:
                 raise ValueError(f"{o} is not a valid file.")
-        elif isinstance(o, SurveyLine):
-            self.line = o
+        elif isinstance(gps, SurveyLine):
+            self.line = gps
+        else:
+            raise ValueError(F"{gps} is not a valid input type.")
 
         if self.line.df.empty:
             logger.critical(f"No GPS found: {self.line.error_msg}.")
@@ -642,13 +652,14 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.loop = None
         self.selected_row_info = None
         self.setWindowTitle('Loop Adder')
+        self.status_bar.hide()
 
         # Status bar widgets
-        self.auto_sort_cbox = QCheckBox("Automatically Sort Loop", self)
-        self.auto_sort_cbox.setChecked(True)
+        # self.auto_sort_cbox = QCheckBox("Automatically Sort Loop", self)
+        # self.auto_sort_cbox.setChecked(True)
 
-        self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
-        self.status_bar.addPermanentWidget(QLabel(), 1)
+        # self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
+        # self.status_bar.addPermanentWidget(QLabel(), 1)
 
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -699,6 +710,8 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.section_view.showLabel('top', show=False)
 
         # Signals
+        self.actionOpen.triggered.connect(self.open_file_dialog)
+
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
 
@@ -706,23 +719,23 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.table.itemSelectionChanged.connect(self.highlight_point)
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
 
-    def open(self, o, name=''):
+    def open(self, gps, name=''):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
-        :param o: Union (filepath, dataframe), Loop to open
+        :param gps: Union (filepath, dataframe), Loop to open
         :param name: str, name of the loop
         """
         errors = pd.DataFrame()
-        if isinstance(o, str):
-            if Path(o).is_file():
-                self.loop = TransmitterLoop(o)
+        if isinstance(gps, str):
+            if Path(gps).is_file():
+                self.loop = TransmitterLoop(gps)
                 errors = self.loop.get_errors()
             else:
-                raise ValueError(f"{o} is not a valid file.")
-        elif isinstance(o, TransmitterLoop):
-            self.loop = o
+                raise ValueError(f"{gps} is not a valid file.")
+        elif isinstance(gps, TransmitterLoop):
+            self.loop = gps
         else:
-            raise ValueError(f"{o} is not a valid input.")
+            raise ValueError(f"{gps} is not a valid input.")
 
         if self.loop.df.empty:
             logger.critical(f"No GPS found: {self.loop.error_msg}")
@@ -871,6 +884,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.selected_row_info = None
         self.setWindowTitle('Collar Picker')
         self.status_bar.hide()
+        self.menuSettings.clear()
 
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -921,6 +935,8 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.section_view.showLabel('top', show=False)
 
         # Signals
+        self.actionOpen.triggered.connect(self.open_file_dialog)
+
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
 
@@ -943,22 +959,35 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             self.plan_view.autoRange()
             self.section_view.autoRange()
 
-    def open(self, o, name=''):
+    def open(self, gps, name=''):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
-        :param o: Union (filepath, dataframe), Loop to open
+        :param gps: Union (filepath, dataframe), file to open
         :param name: str, name of the loop
         """
-        if not isinstance(o, pd.DataFrame):
-            self.df = pd.DataFrame(o, columns=["Easting", "Northing", "Elevation", "Unit", "Name"])
-            self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
-                lambda x: f"{x:.2f}")
-            # Convert the column dtypes for when the data is created from the table values
-            self.df["Easting"] = pd.to_numeric(self.df["Easting"])
-            self.df["Northing"] = pd.to_numeric(self.df["Northing"])
-            self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
+        if Path(str(gps)).is_file():
+            if Path(gps).suffix.lower() == '.gpx':
+                # Convert the GPX file to string
+                gps, zone, hemisphere, crs = GPXEditor().get_utm(gps, as_string=True)
+                contents = [c.strip().split() for c in gps]
+            else:
+                file = open(gps, 'rt').readlines()
+                contents = [c.strip().split() for c in file]
+            try:
+                self.df = pd.DataFrame(contents, columns=["Easting", "Northing", "Elevation", "Unit", "Name"])
+            except ValueError as e:
+                self.show()
+                self.message.critical(self, f"Parsing Error", str(e))
+                return
+            else:
+                self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
+                    lambda x: f"{x:.2f}")
+                # Convert the column dtypes for when the data is created from the table values
+                self.df["Easting"] = pd.to_numeric(self.df["Easting"])
+                self.df["Northing"] = pd.to_numeric(self.df["Northing"])
+                self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
         else:
-            self.df = o
+            self.df = gps
 
         if self.df.empty:
             logger.critical(f"No GPS found to Collar Picker.")
@@ -1083,22 +1112,24 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
+    samples_folder = Path(__file__).absolute().parents[2].joinpath(r'sample_files')
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
-
-    # mw = LoopAdder()
-    # mw = LineAdder()
-    mw = CollarPicker()
-    mw.show()
-
     pg = PEMGetter()
-    file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
+
+    # mw = CollarPicker()
     # file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
 
+    # mw = LoopAdder()
+    # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
     # loop = TransmitterLoop(file)
-    # line = SurveyLine(file)
+
+    mw = LineAdder()
+    file = samples_folder.joinpath(r'GPX files\L77+25_0515.gpx')
+    line = SurveyLine(str(file))
 
     mw.open(file)
+    mw.show()
 
     app.exec_()
 
