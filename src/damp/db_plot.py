@@ -3,6 +3,8 @@ import logging
 import os
 import re
 import sys
+import chardet
+import codecs
 from pathlib import Path
 from threading import Timer
 
@@ -10,9 +12,11 @@ import pandas as pd
 import pyqtgraph as pg
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QMainWindow, QShortcut, QVBoxLayout, QGridLayout, QMessageBox, QFileDialog,
-                             QLabel, QAction, QMenu, QApplication)
+                               QLabel, QAction, QMenu, QApplication)
 
+logging.basicConfig()
 logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -172,24 +176,16 @@ class DBPlotter(QMainWindow):
 
     def create_db_widget(self, db_files):
         """
-        Parse the data and create the DBPlotWidget
+        Parse the data and create the DBPlot
         """
 
         def to_timestamp(row):
             """
-            Return a timestamp from the hours, minutes, seconds of the row and the year, month, day from the read
-            command.
+            Return a timestamp from the hours, minutes, seconds of the row.
             :param row: pd.Series
             :return: int, datetime timestamp
             """
-            date_time = datetime.datetime(year=int(year),
-                                          month=int(month),
-                                          day=int(day),
-                                          hour=row.Hours,
-                                          minute=row.Minutes,
-                                          second=row.Seconds)
-
-            return date_time.timestamp()
+            return (row.Hours * 3600) + (row.Minutes * 60) + row.Seconds
 
         def parse_date(string):
             date = re.search(r'<CR>Time:(\d+\/\d+\/\d+)', string)
@@ -202,14 +198,12 @@ class DBPlotter(QMainWindow):
             :param data_str: string, raw data of a single read command.
             :return: pd DataFrame
             """
-
-            # Date is required because the X-axis AxisItem requires a datetime timestamp
             date = parse_date(data_str)
             if not date:
-                logger.error(f"Skipped data in {name} as no date can be found")
-                raise Exception(f"No date found in {name}")
+                logger.info(f"No date found.")
+                date_str = "[No Date]"
             else:
-                global year, month, day, date_str
+                global year, month, day
                 year, month, day = date.group(1).split('/')
                 date_str = datetime.date(int(year), int(month), int(day)).strftime('%B %d, %Y')
 
@@ -223,68 +217,86 @@ class DBPlotter(QMainWindow):
                               ).dropna().astype(int)
 
             if df.empty:
-                raise Exception(f"Data error in {name}")
+                logger.info(f"No data found in {name}")
+                return df, date_str
 
             # Create a timestamp column to be used as the X axis
             df['Time'] = df.apply(to_timestamp, axis=1)
 
-            # Convert the miliamps to amps
+            # Convert the milliamps to amps
             df.Current = df.Current / 1000
 
-            return df
+            return df, date_str
 
+        data_found = False
         for file in db_files:
             name = Path(file).name
-            with open(file) as f:
-                contents = f.read()
+            logger.info(f"Parsing file {name}.")
+            with open(file, 'rb') as byte_file:
+                byte_content = byte_file.read()
+                encoding = chardet.detect(byte_content).get('encoding')
+                # if encoding == 'ascii':
+                #     encoding = 'utf-16'
+                logger.info(f"Using {encoding} encoding.")
+                str_contents = byte_content.decode(encoding=encoding)
 
-            # Try to create a DBPlotWidget for each 'read' command found
-            reads = re.split(r'read ', contents)
+            # Try to create a DBPlot for each 'read' command found
+            reads = re.split(r'read ', str_contents)
 
             if not reads:
-                logger.info(f"No data found in {name}")
-                raise Exception(f"No data found in {name}")
+                logger.warning(f"No data found.")
+                # TODO do blind parse here
+                raise ValueError(f"No data found in {name}.")
 
             if len(reads) < 2:
                 # No read command found
-                logger.info(f"No 'read' command found in {name}")
+                logger.warning(f"No 'read' command found.")
                 command = 'None'
-                data_str = contents
+                data_str = str_contents
 
-                df = parse_data(data_str)
+                df, date_str = parse_data(data_str)
+                if df.empty:
+                    raise ValueError(f"No data found in {name}.")
 
-                db_widget = DBPlotWidget(df, command, name, date_str, parent=self)
+                db_widget = DBPlot(df, command, name, date_str, parent=self)
                 self.db_widgets.append(db_widget)
                 self.add_widget(db_widget)
-                # self.layout().addWidget(db_widget)
 
             else:
                 # Each read command found
                 for i, read in enumerate(reads[1:]):
+                    logger.info(F"Parsing read command #{i}.")
+                    read = read.strip()
                     lines = read.split('\n')
                     command = 'read ' + lines[0]  # The "read" command input
 
                     if len(lines) < 3:  # Meaning it is only the command and no data following
+                        logger.info(f"No data found.")
                         continue
 
                     if len(lines[0].strip()) != 4:  # Meaning it is a ramp reading
+                        logger.info(f"No data found. Possible ramp reading.")
                         continue
 
                     data_str = '\n'.join(lines)
-
-                    df = parse_data(data_str)
+                    df, date_str = parse_data(data_str)
                     if df.empty:
-                        raise Exception(f"Data error in {name}")
+                        logger.info(f"No data found.")
+                        continue
+                    else:
+                        data_found = True
+                        db_widget = DBPlot(df, command, name, date_str, parent=self)
+                        self.db_widgets.append(db_widget)
+                        self.add_widget(db_widget)
 
-                    db_widget = DBPlotWidget(df, command, name, date_str, parent=self)
-                    self.db_widgets.append(db_widget)
-                    self.add_widget(db_widget)
-                    # self.layout().addWidget(db_widget)
+                if data_found is False:
+                    logger.warning(f"No data found in file.")
+                    raise ValueError(f"No data found in file {name}.")
 
     def add_widget(self, plot_widget):
         """
         Add and position a plot widget in the grid layout.
-        :param plot_widget: DBPlotWidget object
+        :param plot_widget: DBPlot object
         """
         # Adding the plot object to the layout
         self.widget_layout.addWidget(plot_widget, self.x, self.y)
@@ -352,7 +364,7 @@ class DBPlotter(QMainWindow):
         self.statusBar().showMessage(f"Screen shot copied to clipboard.", 1000)
 
 
-class DBPlotWidget(QMainWindow):
+class DBPlot(QMainWindow):
     """
     A widget that plots damping box data, with a linear region item that, when moved, updates
     the status bar with information within the region.
@@ -499,12 +511,13 @@ class DBPlotWidget(QMainWindow):
 
 
 if __name__ == '__main__':
-    app = QtGui.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     mw = DBPlotter()
 
-    samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath('sample_files\Damping box files'))
+    samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files\Damping box files'))
 
-    files = str(Path(samples_folder).joinpath('YAT-Log-20201106-165508_box231.txt'))
+    # files = str(Path(samples_folder).joinpath('YAT-Log-20201106-165508_box231.txt'))
+    files = str(Path(samples_folder).joinpath('Date error/16_Damp Box 238 Voltage 01.16.2021.txt'))
     mw.open(files)
     mw.show()
 

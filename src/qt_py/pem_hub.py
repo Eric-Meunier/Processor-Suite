@@ -64,8 +64,6 @@ __version__ = '0.11.5'
 # TODO load and save files in hole planner
 # TODO hide loops and holes in hole planner
 # TODO Fix bug in hole planner
-# TODO When adding GPX files, should be able to truncate names (to remove the line name if it is appended)
-
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -1644,6 +1642,13 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             self.gps_zone_cbox.setCurrentText('')
             self.gps_datum_cbox.setCurrentText('')
 
+        def reset_selection_labels():
+            for label in [self.selection_files_label,
+                          self.selection_timebase_label,
+                          self.selection_survey_label,
+                          self.selection_derotation_label]:
+                label.setText("")
+
         if not rows:
             pem_files, rows = self.get_pem_files(selected=True)
 
@@ -1668,7 +1673,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
             # Only color the number columns if there are PEM files left
             self.color_table_numbers()
 
-        self.selection_label.setText('')
+        reset_selection_labels()
         self.setUpdatesEnabled(True)
 
     def open_in_text_editor(self):
@@ -4888,22 +4893,22 @@ def main():
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
-    pem_files = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")
+    pem_files = pem_g.get_pems(folder="TMC", subfolder=r"Loop G\RAW", file="100e.PEM")
     # assert len(pem_files) == len(ri_files)
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
     mw.add_pem_files(pem_files)
     # mw.add_dmp_files([dmp_files])
-    # mw.table.selectRow(0)
+    mw.table.selectRow(0)
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"GPX files\EM21-155\GPS\EM21-155 + Loop D4_0415.gpx")])
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"TMC\Loop G\GPS\L100E_16.gpx")])
 
     mw.show()
 

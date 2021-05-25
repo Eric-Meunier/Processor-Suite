@@ -279,6 +279,7 @@ class TransmitterLoop(BaseGPS):
         ])
 
         error_msg = ''
+        gpx_errors = []
 
         if isinstance(file, TransmitterLoop):
             logger.info(f"TransmitterLoop passed.")
@@ -291,7 +292,7 @@ class TransmitterLoop(BaseGPS):
         elif Path(str(file)).is_file():
             if Path(file).suffix.lower() == '.gpx':
                 # Convert the GPX file to string
-                gps, zone, hemisphere, crs = GPXEditor().get_utm(file, as_string=True)
+                gps, zone, hemisphere, crs, gpx_errors = GPXEditor().get_utm(file, as_string=True)
                 contents = [c.strip().split() for c in gps]
             else:
                 file = open(file, 'rt').readlines()
@@ -335,6 +336,8 @@ class TransmitterLoop(BaseGPS):
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
             gps = gps.drop(gps.columns[3:], axis=1)
+        elif gpx_errors:
+            error_msg = '\n'.join(gpx_errors)
 
         gps.columns = range(gps.shape[1])  # Reset the columns
 
@@ -468,6 +471,7 @@ class SurveyLine(BaseGPS):
         ])
 
         error_msg = ''
+        gpx_errors = []
 
         if isinstance(file, SurveyLine):
             logger.info(f"SurveyLine passed.")
@@ -480,7 +484,7 @@ class SurveyLine(BaseGPS):
         elif Path(str(file)).is_file():
             if Path(file).suffix.lower() == '.gpx':
                 # Convert the GPX file to string
-                gps, zone, hemisphere, crs = GPXEditor().get_utm(file, as_string=True)
+                gps, zone, hemisphere, crs, gpx_errors = GPXEditor().get_utm(file, as_string=True)
                 contents = [c.strip().split() for c in gps]
             else:
                 file = open(file, 'rt').readlines()
@@ -523,6 +527,8 @@ class SurveyLine(BaseGPS):
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 4:
             gps = gps.drop(gps.columns[4:], axis=1)
+        elif gpx_errors:
+            error_msg = '\n'.join(gpx_errors)
         gps.columns = range(gps.shape[1])  # Reset the columns
 
         # Add the units column
@@ -627,6 +633,7 @@ class BoreholeCollar(BaseGPS):
             'Unit',
         ])
         error_msg = ''
+        gpx_errors = []
 
         if isinstance(file, list):
             if file:
@@ -641,7 +648,7 @@ class BoreholeCollar(BaseGPS):
         elif Path(str(file)).is_file():
             if Path(file).suffix.lower() == '.gpx':
                 # Convert the GPX file to string
-                gps, zone, hemisphere, crs = GPXEditor().get_utm(file, as_string=True)
+                gps, zone, hemisphere, crs, gpx_errors = GPXEditor().get_utm(file, as_string=True)
                 contents = [c.strip().split() for c in gps]
             else:
                 file = open(file, 'rt').readlines()
@@ -696,6 +703,8 @@ class BoreholeCollar(BaseGPS):
             return empty_gps, gps, error_msg
         elif len(gps.columns) > 3:
             gps = gps.drop(gps.columns[3:], axis=1)  # Remove extra columns
+        elif gpx_errors:
+            error_msg = '\n'.join(gpx_errors)
 
         gps.columns = range(gps.shape[1])  # Reset the columns
 
@@ -968,6 +977,7 @@ class GPXEditor:
         gpx_file = open(filepath, 'r')
         gpx = gpxpy.parse(gpx_file)
         gps = []
+        errors = []
 
         # Use Route points if no waypoints exist
         if gpx.waypoints:
@@ -975,21 +985,30 @@ class GPXEditor:
                 # name = re.sub(r'\s', '_', waypoint.name)
                 name = re.sub(r'\W', '', waypoint.name)
                 if not all([waypoint.latitude, waypoint.longitude, waypoint.elevation]):
+                    points_str = ', '.join([str(waypoint.latitude), str(waypoint.longitude), str(waypoint.elevation)])
                     logger.warning(F"Skipping point {name} as the GPS is incomplete.")
+                    errors.append(F"Skipping point {name} as the GPS is incomplete. (Lat, Lon, Elev = {points_str})")
                 else:
                     gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', name])
+            if len(gpx.waypoints) != len(gps):
+                logger.warning(f"{len(gpx.waypoints)} waypoints found in GPX file but {len(gps)} points parsed.")
         elif gpx.routes:
             route = gpx.routes[0]
             for point in route.points:
                 # name = re.sub(r'\s', '_', point.name)
                 name = re.sub(r'\W', '', point.name)
                 if not all([point.latitude, point.longitude, point.elevation]):
+                    points_str = ', '.join([str(point.latitude), str(point.longitude), str(point.elevation)])
                     logger.warning(F"Skipping point {name} as the GPS is incomplete.")
+                    errors.append(F"Skipping point {name} as the GPS is incomplete. (Lat, Lon, Elev = {points_str})")
                 else:
                     gps.append([point.latitude, point.longitude, 0., '0', name])  # Routes have no elevation data, thus 0.
+            if len(route.points) != len(gps):
+                logger.warning(f"{len(route.points)} points found in GPX file but {len(gps)} points parsed.")
         else:
             raise ValueError(F"No waypoints or routes found in {Path(filepath).name}.")
-        return gps
+
+        return gps, errors
 
     def get_utm(self, gpx_file, as_string=False):
         """
@@ -998,9 +1017,10 @@ class GPXEditor:
         :param as_string: bool, return a string instead of tuple if True
         :return: latitude, longitude, elevation, unit, stn
         """
-        gps = self.parse_gpx(gpx_file)
+        gps, errors = self.parse_gpx(gpx_file)
         zone = None
         hemisphere = None
+        crs = None
         utm_gps = []
         for row in gps:
             lat = row[0]
@@ -1014,13 +1034,14 @@ class GPXEditor:
             zone = u[2]
             letter = u[3]
             hemisphere = 'north' if lat >= 0 else 'south'  # Used in PEMEditor
-            crs = self.get_crs(zone, hemisphere)
+            if crs is None:
+                crs = self.get_crs(zone, hemisphere)
             if as_string is True:
                 utm_gps.append(' '.join([str(u[0]), str(u[1]), str(elevation), units, name]))
             else:
                 utm_gps.append([u[0], u[1], elevation, units, name])
 
-        return utm_gps, zone, hemisphere, crs
+        return utm_gps, zone, hemisphere, crs, errors
 
     def get_lat_long(self, gpx_filepath):
         gps = self.parse_gpx(gpx_filepath)

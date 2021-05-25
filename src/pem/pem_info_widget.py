@@ -360,8 +360,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             for file in files:
                 if file.suffix.lower() == '.gpx':
                     # Convert the GPX file to string
-                    global crs
-                    gps, zone, hemisphere, crs = gpx_editor.get_utm(file, as_string=True)
+                    gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(file, as_string=True)
                     contents = [c.strip().split() for c in gps]
                 else:
                     if file.suffix.lower() == '.csv':
@@ -381,8 +380,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             files = [files]
 
         files = [Path(f) for f in files]
-        global crs
         crs = None
+        errors = []
 
         file_contents = merge_files(files)
         current_tab = self.tabs.currentWidget()
@@ -401,6 +400,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
+        if errors:
+            error_str = '\n'.join(errors)
+            self.message.warning(self, "Parsing Errors", f"The following errors occurred parsing the GPS file: "
+                                                         f"{error_str}")
         return crs
 
     def open_pem_geometry(self):

@@ -44,7 +44,7 @@ class GPSAdder(QMainWindow):
     def __init__(self):
         super().__init__()
         self.resize(1000, 800)
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'gps_adder.png')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'gps_adder.png')))
 
         self.df = None
         self.error = False  # For pending errors
@@ -967,10 +967,11 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         :param gps: Union (filepath, dataframe), file to open
         :param name: str, name of the loop
         """
+        gpx_errors = []
         if Path(str(gps)).is_file():
             if Path(gps).suffix.lower() == '.gpx':
                 # Convert the GPX file to string
-                gps, zone, hemisphere, crs = GPXEditor().get_utm(gps, as_string=True)
+                gps, zone, hemisphere, crs, gpx_errors = GPXEditor().get_utm(gps, as_string=True)
                 contents = [c.strip().split() for c in gps]
             else:
                 file = open(gps, 'rt').readlines()
@@ -1003,6 +1004,10 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.table.selectRow(0)
         self.plot_table()
         self.show()
+        if gpx_errors:
+            error_str = '\n'.join(gpx_errors)
+            self.message.warning(self, "Parsing Errors", f"The following errors occurred parsing the GPS file: "
+                                                         f"{error_str}")
 
     def plot_table(self, preserve_limits=False):
         """
