@@ -235,8 +235,6 @@ class DBPlotter(QMainWindow):
             with open(file, 'rb') as byte_file:
                 byte_content = byte_file.read()
                 encoding = chardet.detect(byte_content).get('encoding')
-                # if encoding == 'ascii':
-                #     encoding = 'utf-16'
                 logger.info(f"Using {encoding} encoding.")
                 str_contents = byte_content.decode(encoding=encoding)
 
@@ -245,7 +243,6 @@ class DBPlotter(QMainWindow):
 
             if not reads:
                 logger.warning(f"No data found.")
-                # TODO do blind parse here
                 raise ValueError(f"No data found in {name}.")
 
             if len(reads) < 2:
@@ -256,7 +253,7 @@ class DBPlotter(QMainWindow):
 
                 df, date_str = parse_data(data_str)
                 if df.empty:
-                    raise ValueError(f"No data found in {name}.")
+                    raise ValueError(f"No data found in {name}.\nEnsure that the file's encoding is UTF-8.")
 
                 db_widget = DBPlot(df, command, name, date_str, parent=self)
                 self.db_widgets.append(db_widget)
@@ -517,7 +514,8 @@ if __name__ == '__main__':
     samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files\Damping box files'))
 
     # files = str(Path(samples_folder).joinpath('YAT-Log-20201106-165508_box231.txt'))
-    files = str(Path(samples_folder).joinpath('Date error/16_Damp Box 238 Voltage 01.16.2021.txt'))
+    files = str(Path(samples_folder).joinpath('Date error/0511_May11Dampingbox232Voltage.txt'))
+    # files = str(Path(samples_folder).joinpath('Date error/16_Damp Box 222 Current 01.16.2021.txt'))
     mw.open(files)
     mw.show()
 
