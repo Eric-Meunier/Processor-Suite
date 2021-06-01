@@ -34,6 +34,7 @@ binaries = [
 hidden_imports = [
     'fiona._shim',  # Required
     'fiona.schema',  # Required
+    'PySide2.QtXml'  # Required
 ]
 
 a = Analysis(['run.py'],
