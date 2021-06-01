@@ -54,7 +54,6 @@ __version__ = '0.11.6'
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
-# TODO Add warning when number of suffix warnings or repeat warnings isn't 0 when printing?
 # TODO Add rainbow coloring to final plots?
 # TODO Use savgol to filter data
 # TODO Add ability to remove channels

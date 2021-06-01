@@ -132,6 +132,20 @@
              </property>
             </widget>
            </item>
+           <item>
+            <widget class="Line" name="separator">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QRadioButton" name="unrotate_btn">
+             <property name="text">
+              <string>Un-rotate</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </widget>
         </item>

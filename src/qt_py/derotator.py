@@ -59,6 +59,9 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.list.setText('')
         self.statusBar().hide()
 
+        self.separator.hide()
+        self.unrotate_btn.hide()
+
         # Configure the plots
         self.x_view.ci.layout.setSpacing(5)  # Spacing between plots
         self.x_ax0 = self.x_view.addPlot(0, 0)
@@ -246,6 +249,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.mag_btn.clicked.connect(self.rotate)
         self.pp_btn.clicked.connect(self.rotate)
         self.none_btn.clicked.connect(self.rotate)
+        self.unrotate_btn.clicked.connect(self.rotate)
         self.soa_sbox.valueChanged.connect(self.rotate)
 
         self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
@@ -464,15 +468,18 @@ class Derotator(QMainWindow, Ui_Derotator):
                                   'File must be a borehole survey with X and Y component data.')
             return
 
-        if not __name__ == "__main__":
-            # Check that the file hasn't already been de-rotated.
-            if self.pem_file.is_derotated():
-                response = self.message.question(self, 'File already de-rotated',
-                                                 f"{pem_file.filepath.name} is already de-rotated. " +
-                                                 'Do you wish to de-rotate again?',
-                                                 self.message.Yes | self.message.No)
-                if response == self.message.No:
-                    return
+        # if not __name__ == "__main__":
+        # Check that the file hasn't already been de-rotated.
+        if self.pem_file.is_derotated():
+            response = self.message.question(self, 'File already de-rotated',
+                                             f"{pem_file.filepath.name} is already de-rotated. " +
+                                             'Do you wish to de-rotate again?',
+                                             self.message.Yes | self.message.No)
+            if response == self.message.No:
+                return
+            else:
+                self.separator.show()
+                self.unrotate_btn.show()
 
         # Disable PP de-rotation if it's lacking all necessary GPS
         if self.pem_file.has_all_gps():
@@ -719,6 +726,9 @@ class Derotator(QMainWindow, Ui_Derotator):
         elif self.pp_btn.isChecked():
             method = 'pp'
             self.rotation_note = '<GEN> XY data de-rotated using PP.'
+        elif self.unrotate_btn.isChecked():
+            method = 'unrotate'
+            self.rotation_note = '<GEN> XY data un-rotated'
         else:
             method = None
             self.rotation_note = None
@@ -739,7 +749,7 @@ def main():
     #     d.open(pem_file)
 
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="SAN-225G-18 Tool - Mag (PEMPro).PEM")
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files = pem_g.get_pems(folder="TMC", subfolder=r"131-21-37\DATA", file="131-21-37 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-0246-19 XY (Cross bug).PEM")
     mw = Derotator()
