@@ -50,7 +50,7 @@ from src.qt_py.unpacker import Unpacker
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.11.5'
+__version__ = '0.11.6'
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
@@ -58,7 +58,6 @@ __version__ = '0.11.5'
 # TODO Add rainbow coloring to final plots?
 # TODO Use savgol to filter data
 # TODO Add ability to remove channels
-# TODO Upgrade DB Plot to view files without the command
 # TODO Remove dotted lines for holes that aren't selected in hole planner
 # TODO Add status bar information when taking screenshot in hole planner
 # TODO load and save files in hole planner
@@ -483,7 +482,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         self.actionGrid_Planner.setIcon(QtGui.QIcon(str(icons_path.joinpath("grid_planner.png"))))
         self.actionLoop_Current_Calculator.setIcon(QtGui.QIcon(str(icons_path.joinpath("voltmeter.png"))))
         self.actionConvert_Timebase_Frequency.setIcon(QtGui.QIcon(str(icons_path.joinpath("freq_timebase_calc.png"))))
-        self.actionGPX_Creator.setIcon(QtGui.QIcon(str(icons_path.joinpath("gpx_creator.png"))))
+        self.actionGPX_Creator.setIcon(QtGui.QIcon(str(icons_path.joinpath("garmin_file.png"))))
 
         self.actionView_Logs.setIcon(QtGui.QIcon(str(icons_path.joinpath("txt_file.png"))))
 
@@ -4356,7 +4355,6 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         self.crs = None
 
         self.plan_map_options = PlanMapOptions(parent=self)
-        self.printer = None
         self.message = QMessageBox()
 
         self.print_btn.setDefault(True)
@@ -4468,8 +4466,9 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
         if save_dir:
 
             save_dir = os.path.splitext(save_dir)[0]
-            self.printer = PEMPrinter(parent=self, **plot_kwargs)
-            self.printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
+            global printer
+            printer = PEMPrinter(**plot_kwargs)
+            printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
             self.hide()
         else:
             logger.error(f"No file name passed.")
