@@ -1215,10 +1215,10 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
 
         self.active_ax = None
 
-        print(f"\nEvt: {evt}")
+        # print(f"\nEvt: {evt}")
         # Find which axes is beneath the mouse
         for ax in self.decay_axes:
-            print(f"Rect: {ax.vb.childGroup.sceneBoundingRect()}")
+            # print(f"Rect: {ax.vb.childGroup.sceneBoundingRect()}")
             if ax.vb.childGroup.sceneBoundingRect().contains(evt):
                 self.active_ax = ax
                 self.last_active_ax = ax
