@@ -14,8 +14,7 @@ import simplekml
 from PySide2 import QtGui, QtCore, QtUiTools
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QInputDialog,
                                QLineEdit, QFormLayout, QWidget, QFrame, QPushButton, QGroupBox, QHBoxLayout,
-                               QRadioButton,
-                               QGridLayout)
+                               QRadioButton, QCheckBox, QGridLayout)
 import pyqtgraph as pg
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -141,11 +140,13 @@ class SurveyPlanner(QMainWindow):
 
     def copy_img(self):
         QApplication.clipboard().setPixmap(self.grab())
+        self.statusBar().showMessage(F"Image saved to clipboard.", 1500)
 
 
 class HoleWidget(QWidget):
     name_changed_sig = QtCore.Signal(str)
     plot_hole_sig = QtCore.Signal()
+    remove_sig = QtCore.Signal()
 
     def __init__(self, properties, plot_widget, name=''):
         """
@@ -175,6 +176,10 @@ class HoleWidget(QWidget):
             }
 
         # Create all the inner widget items
+        self.show_cbox = QCheckBox("Show in plan map")
+        self.show_cbox.setChecked(True)
+        self.layout().addRow(self.show_cbox)
+
         # Position
         position_gbox = QGroupBox('Position')
         position_gbox.setLayout(QFormLayout())
@@ -230,10 +235,19 @@ class HoleWidget(QWidget):
         self.layout().addRow(geometry_gbox)
 
         # Hole name
+        name_frame = QFrame()
+        name_frame.setLayout(QHBoxLayout())
+        name_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.hole_name_edit = QLineEdit(name)
         self.hole_name_edit.setPlaceholderText('(Optional)')
 
-        self.layout().addRow('Name', self.hole_name_edit)
+        self.remove_btn = QPushButton(QtGui.QIcon(str(icons_path.joinpath("_remove2.png"))), "")
+        self.remove_btn.setFlat(True)
+
+        name_frame.layout().addWidget(QLabel("Name"))
+        name_frame.layout().addWidget(self.hole_name_edit)
+        name_frame.layout().addWidget(self.remove_btn)
+        self.layout().addRow(name_frame)
 
         # Validators
         self.int_validator = QtGui.QIntValidator()
@@ -252,7 +266,7 @@ class HoleWidget(QWidget):
         self.hole_dip_edit.setValidator(self.dip_validator)
         self.hole_length_edit.setValidator(self.size_validator)
 
-        # Plotting
+        """Plotting"""
         # Hole collar
         self.hole_collar = pg.ScatterPlotItem(clickable=True,
                                               pen=pg.mkPen(default_color, width=1.),
@@ -292,7 +306,7 @@ class HoleWidget(QWidget):
         self.calc_hole_projection()
         self.draw_hole()
 
-        # Signals
+        """Signals"""
         def toggle_geometry():
             self.hole_azimuth_edit.setEnabled(self.manual_geometry_rbtn.isChecked())
             self.hole_dip_edit.setEnabled(self.manual_geometry_rbtn.isChecked())
@@ -305,6 +319,22 @@ class HoleWidget(QWidget):
             self.draw_hole()
             self.plot_hole_sig.emit()
 
+        def toggle_visibility():
+            if self.show_cbox.isChecked():
+                self.hole_collar.show()
+                self.hole_name.show()
+                self.hole_trace.show()
+                self.hole_end.show()
+                self.section_extent_line.show()
+            else:
+                self.hole_collar.hide()
+                self.hole_name.hide()
+                self.hole_trace.hide()
+                self.hole_end.hide()
+                self.section_extent_line.hide()
+
+        self.show_cbox.toggled.connect(toggle_visibility)
+
         # Radio buttons
         self.manual_geometry_rbtn.toggled.connect(toggle_geometry)
         self.dad_geometry_rbtn.toggled.connect(toggle_geometry)
@@ -315,6 +345,7 @@ class HoleWidget(QWidget):
         # Editing
         self.hole_name_edit.textChanged.connect(self.name_changed_sig.emit)
         self.hole_name_edit.textChanged.connect(lambda: self.hole_name.setText(self.hole_name_edit.text()))
+        self.remove_btn.clicked.connect(self.remove_sig.emit)
 
         self.hole_easting_edit.editingFinished.connect(self.calc_hole_projection)
         self.hole_easting_edit.editingFinished.connect(self.draw_hole)
@@ -341,6 +372,8 @@ class HoleWidget(QWidget):
         self.hole_end.setPen(pg.mkPen(selection_color, width=1.5))
 
         self.hole_name.setColor(selection_color)
+        if self.show_cbox.isChecked():
+            self.section_extent_line.show()
 
     def deselect(self):
         self.hole_collar.setPen(pg.mkPen(default_color, width=1.))
@@ -354,6 +387,8 @@ class HoleWidget(QWidget):
         self.hole_end.setPen(pg.mkPen(default_color, width=1.))
 
         self.hole_name.setColor(default_color)
+        if self.show_cbox.isChecked():
+            self.section_extent_line.hide()
 
     def remove(self):
         self.plan_view.removeItem(self.hole_collar)
@@ -558,12 +593,14 @@ class HoleWidget(QWidget):
         if not self.projection.empty:
             # Plot the trace
             self.hole_trace.setData(self.projection.Easting.to_numpy(), self.projection.Northing.to_numpy())
-            self.hole_trace.show()
+            if self.show_cbox.isChecked():
+                self.hole_trace.show()
 
             # Plot the end of the hole
             self.hole_end.setPos(self.projection.Easting.iloc[-1], self.projection.Northing.iloc[-1])
             angle = self.get_azimuth()
-            self.hole_end.show()
+            if self.show_cbox.isChecked():
+                self.hole_end.show()
             self.hole_end.setStyle(angle=angle + 90,
                                    pen=self.hole_trace.opts['pen'])
         else:
@@ -576,6 +613,7 @@ class HoleWidget(QWidget):
 class LoopWidget(QWidget):
     name_changed_sig = QtCore.Signal(str)
     plot_hole_sig = QtCore.Signal()
+    remove_sig = QtCore.Signal()
 
     def __init__(self, properties, center, plot_widget, name=''):
         """
@@ -599,6 +637,10 @@ class LoopWidget(QWidget):
             }
 
         # Create all the inner widget items
+        self.show_cbox = QCheckBox("Show in plan map")
+        self.show_cbox.setChecked(True)
+        self.layout().addRow(self.show_cbox)
+
         self.loop_height_edit = QLineEdit(str(int(properties.get('height'))))
         self.loop_width_edit = QLineEdit(str(int(properties.get('width'))))
         self.loop_angle_edit = QLineEdit(str(int(properties.get('angle'))))
@@ -616,11 +658,24 @@ class LoopWidget(QWidget):
         h_line.setFrameShape(QFrame().HLine)
         h_line.setFrameShadow(QFrame().Sunken)
         self.layout().addRow(h_line)
-
-        self.layout().addRow('Name', self.loop_name_edit)
+        # self.layout().addRow('Name', self.loop_name_edit)
 
         self.copy_loop_btn = QPushButton(QtGui.QIcon(str(Path(icons_path, 'copy.png'))), "Copy Corners")
         self.layout().addRow(self.copy_loop_btn)
+
+        name_frame = QFrame()
+        name_frame.setLayout(QHBoxLayout())
+        name_frame.layout().setContentsMargins(0, 0, 0, 0)
+        self.loop_name_edit = QLineEdit(name)
+        self.loop_name_edit.setPlaceholderText('(Optional)')
+
+        self.remove_btn = QPushButton(QtGui.QIcon(str(icons_path.joinpath("_remove2.png"))), "")
+        self.remove_btn.setFlat(True)
+
+        name_frame.layout().addWidget(QLabel("Name"))
+        name_frame.layout().addWidget(self.loop_name_edit)
+        name_frame.layout().addWidget(self.remove_btn)
+        self.layout().addRow(name_frame)
 
         # Validators
         self.size_validator = QtGui.QIntValidator()
@@ -644,8 +699,8 @@ class LoopWidget(QWidget):
                                 snapSize=5,
                                 centered=True,
                                 pen=pg.mkPen(default_color, width=1.),
-                                handlePen=pg.mkPen(50, 50, 50, 100),
-                                handleHoverPen=pg.mkPen(50, 50, 50, 255),
+                                # handlePen=pg.mkPen(50, 50, 50, 100),
+                                # handleHoverPen=pg.mkPen(50, 50, 50, 255),
                                 )
 
         self.loop_roi.setZValue(15)
@@ -661,7 +716,17 @@ class LoopWidget(QWidget):
         self.plan_view.addItem(self.loop_name, ignoreBounds=True)
         self.plot_loop_name()
 
-        # Signals
+        """Signals"""
+        def toggle_visibility():
+            if self.show_cbox.isChecked():
+                self.loop_roi.show()
+                self.loop_name.show()
+            else:
+                self.loop_roi.hide()
+                self.loop_name.hide()
+
+        self.show_cbox.toggled.connect(toggle_visibility)
+        self.remove_btn.clicked.connect(self.remove_sig.emit)
         self.loop_height_edit.editingFinished.connect(self.update_loop_roi)
         self.loop_width_edit.editingFinished.connect(self.update_loop_roi)
         self.loop_angle_edit.editingFinished.connect(self.update_loop_roi)
@@ -808,8 +873,11 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
         self.plan_view.setMenuEnabled(False)
-        self.hole_tab_widget.setTabsClosable(True)
-        self.loop_tab_widget.setTabsClosable(True)
+        self.actionSave_as_KMZ.setIcon(QtGui.QIcon(str(icons_path.joinpath("google_earth.png"))))
+        self.actionSave_as_GPX.setIcon(QtGui.QIcon(str(icons_path.joinpath("garmin_file.png"))))
+        self.view_map_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("folium.png"))))
+        self.add_hole_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("add.png"))))
+        self.add_loop_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("add.png"))))
 
         # Plotting
         self.selected_hole = None
@@ -824,14 +892,12 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         self.section_view_layout.addWidget(self.section_canvas)
 
         self.add_hole('Hole')
-        # self.add_loop('Loop')
+        # TODO Comment out later
+        self.add_loop('Loop')
 
         # Signals
-        # Tabs
-        self.hole_tab_widget.tabCloseRequested.connect(self.remove_hole)
-        self.loop_tab_widget.tabCloseRequested.connect(self.remove_loop)
-        self.hole_tab_widget.currentChanged.connect(self.select_hole)
-        self.loop_tab_widget.currentChanged.connect(self.select_loop)
+        self.hole_cbox.currentIndexChanged.connect(self.select_hole)
+        self.loop_cbox.currentIndexChanged.connect(self.select_loop)
 
         # Menu
         self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
@@ -1060,6 +1126,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         else:
             print(f"Hole {ind} selected")
             self.selected_hole = self.hole_widgets[ind]
+            self.hole_tab_widget.setCurrentIndex(ind)
 
             for i, widget in enumerate(self.hole_widgets):
                 if i == ind:
@@ -1080,6 +1147,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
         else:
             print(f"loop {ind} selected")
             self.selected_loop = self.loop_widgets[ind]
+            self.loop_tab_widget.setCurrentIndex(ind)
 
             for i, widget in enumerate(self.loop_widgets):
                 if i == ind:
@@ -1101,7 +1169,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             :param widget: Hole widget
             """
             ind = self.hole_widgets.index(widget)
-            self.hole_tab_widget.setTabText(ind, widget.hole_name_edit.text())
+            self.hole_cbox.setItemText(ind, widget.hole_name_edit.text())
 
         def hole_clicked(widget):
             """
@@ -1111,6 +1179,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             # Change the tab
             ind = self.hole_widgets.index(widget)
             self.hole_tab_widget.setCurrentIndex(ind)
+            self.hole_cbox.setCurrentIndex(ind)
 
             # Select the object
             for w in self.hole_widgets:
@@ -1118,6 +1187,10 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
                     w.select()
                 else:
                     w.deselect()
+
+        def remove_hole(widget):
+            ind = self.hole_widgets.index(widget)
+            self.remove_hole(ind)
 
         if not name:
             name, ok_pressed = QInputDialog.getText(self, "Add Hole", "Hole name:", QLineEdit.Normal, "")
@@ -1137,8 +1210,11 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             hole_widget.name_changed_sig.connect(lambda: name_changed(hole_widget))
             hole_widget.hole_collar.sigClicked.connect(lambda: hole_clicked(hole_widget))
             hole_widget.plot_hole_sig.connect(self.plot_hole)
-            self.hole_tab_widget.addTab(hole_widget, name)
+            hole_widget.remove_sig.connect(lambda: remove_hole(hole_widget))
+            self.hole_tab_widget.addWidget(hole_widget)
             self.hole_tab_widget.setCurrentIndex(len(self.hole_widgets) - 1)
+            self.hole_cbox.addItem(name)
+            self.hole_cbox.setCurrentIndex(len(self.hole_widgets) - 1)
 
             # Select the hole if it is the only one open
             if self.hole_tab_widget.count() == 1:
@@ -1166,6 +1242,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             # Change the tab
             ind = self.loop_widgets.index(widget)
             self.loop_tab_widget.setCurrentIndex(ind)
+            self.loop_cbox.setCurrentIndex(ind)
 
             # Select the object
             for w in self.loop_widgets:
@@ -1200,6 +1277,10 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
 
             self.status_bar.showMessage('Loop corner coordinates copied to clipboard.', 1000)
 
+        def remove_loop(widget):
+            ind = self.loop_widgets.index(widget)
+            self.remove_loop(ind)
+
         if not name:
             name, ok_pressed = QInputDialog.getText(self, "Add Loop", "Loop name:", QLineEdit.Normal, "")
             if not ok_pressed:
@@ -1223,9 +1304,12 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             loop_widget.loop_roi.sigClicked.connect(lambda: loop_clicked(loop_widget))
             loop_widget.loop_roi.sigRegionChangeStarted.connect(lambda: loop_clicked(loop_widget))
             loop_widget.copy_loop_btn.clicked.connect(lambda: loop_copied(loop_widget))
+            loop_widget.remove_sig.connect(lambda: remove_loop(loop_widget))
 
-            self.loop_tab_widget.addTab(loop_widget, name)
+            self.loop_tab_widget.addWidget(loop_widget)
             self.loop_tab_widget.setCurrentIndex(len(self.loop_widgets) - 1)
+            self.loop_cbox.addItem(name)
+            self.loop_cbox.setCurrentIndex(len(self.loop_widgets) - 1)
 
             # Select the loop if it is the only one open
             if self.loop_tab_widget.count() == 1:
@@ -1239,7 +1323,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             widget = self.hole_widgets[ind]
             widget.remove()
             del self.hole_widgets[ind]
-            self.hole_tab_widget.removeTab(ind)
+            self.hole_tab_widget.removeWidget(widget)
+            self.hole_cbox.removeItem(ind)
 
     def remove_loop(self, ind):
         response = QMessageBox.question(self, "Remove Loop", "Are you sure you want to remove this loop?",
@@ -1248,7 +1333,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             widget = self.loop_widgets[ind]
             widget.remove()
             del self.loop_widgets[ind]
-            self.loop_tab_widget.removeTab(ind)
+            self.loop_tab_widget.removeWidget(widget)
+            self.loop_cbox.removeItem(ind)
 
     def plot_hole(self):
         """
@@ -1666,6 +1752,11 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.setWindowTitle('Grid Planner')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.setGeometry(200, 200, 1100, 700)
+
+        self.actionSave_as_KMZ.setIcon(QtGui.QIcon(str(icons_path.joinpath("google_earth.png"))))
+        self.actionSave_as_GPX.setIcon(QtGui.QIcon(str(icons_path.joinpath("garmin_file.png"))))
+        self.view_map_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("folium.png"))))
+        self.add_loop_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("add.png"))))
         # self.installEventFilter(self)
 
         self.loop_height = int(self.loop_height_edit.text())
@@ -2581,8 +2672,8 @@ class LoopROI(pg.RectROI):
 
 def main():
     app = QApplication(sys.argv)
-    # planner = LoopPlanner()
-    planner = GridPlanner()
+    planner = LoopPlanner()
+    # planner = GridPlanner()
 
     # planner.gps_system_cbox.setCurrentIndex(2)
     # planner.gps_datum_cbox.setCurrentIndex(1)

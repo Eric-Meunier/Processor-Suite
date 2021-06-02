@@ -71,9 +71,12 @@
          <number>6</number>
         </property>
         <item>
-         <widget class="QTabWidget" name="hole_tab_widget">
+         <widget class="QComboBox" name="hole_cbox"/>
+        </item>
+        <item>
+         <widget class="QStackedWidget" name="hole_tab_widget">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
@@ -84,8 +87,11 @@
             <height>100</height>
            </size>
           </property>
-          <property name="currentIndex">
-           <number>-1</number>
+          <property name="frameShape">
+           <enum>QFrame::Box</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Sunken</enum>
           </property>
          </widget>
         </item>
@@ -251,6 +257,9 @@
            <iconset>
             <normaloff>icons/add.png</normaloff>icons/add.png</iconset>
           </property>
+          <property name="flat">
+           <bool>false</bool>
+          </property>
          </widget>
         </item>
        </layout>
@@ -329,10 +338,25 @@
         <enum>QFrame::Sunken</enum>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <property name="leftMargin">
+         <number>6</number>
+        </property>
+        <property name="topMargin">
+         <number>6</number>
+        </property>
+        <property name="rightMargin">
+         <number>6</number>
+        </property>
+        <property name="bottomMargin">
+         <number>6</number>
+        </property>
         <item>
-         <widget class="QTabWidget" name="loop_tab_widget">
+         <widget class="QComboBox" name="loop_cbox"/>
+        </item>
+        <item>
+         <widget class="QStackedWidget" name="loop_tab_widget">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
@@ -340,7 +364,7 @@
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>100</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -348,6 +372,12 @@
             <width>16777215</width>
             <height>16777215</height>
            </size>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Box</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Sunken</enum>
           </property>
          </widget>
         </item>
@@ -378,6 +408,9 @@
           <property name="icon">
            <iconset>
             <normaloff>icons/add.png</normaloff>icons/add.png</iconset>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
