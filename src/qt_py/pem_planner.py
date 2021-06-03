@@ -509,7 +509,7 @@ class HoleWidget(QWidget):
         :param crs: User selected CRS
         :return: dataframe
         """
-        proj = self.projection
+        proj = self.projection.copy()
 
         # Create point objects for each coordinate
         mpoints = asMultiPoint(proj.loc[:, ['Easting', 'Northing']].to_numpy())
@@ -1692,7 +1692,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             hole_name = hole_widget.hole_name_edit.text()
 
             # Add the collar
-            proj = hole_widget.get_proj_latlon(crs)
+            proj = hole_widget.get_proj_latlon(crs).loc[:, "Easting":"Northing"]
             if proj.empty:
                 logger.warning(f"{hole_name} projection is empty.")
                 continue
@@ -1709,7 +1709,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             loop_name = loop_widget.loop_name_edit.text()
 
             # Add the loop
-            loop = loop_widget.get_loop_coords_latlon(crs)
+            loop = loop_widget.get_loop_coords_latlon(crs).loc[:, "Easting":"Northing"]
 
             if loop.empty:
                 logger.error(f"Loop {loop_name} GPS is empty.")
