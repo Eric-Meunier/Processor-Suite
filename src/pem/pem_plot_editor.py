@@ -427,7 +427,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
             self.plot_ontime_decays_cbox.setEnabled(True)
 
         # Plot the mag profile if available. Disable the plot mag button if it's not applicable.
-        if self.pem_file.is_borehole() and self.pem_file.has_xy():
+        if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
             mag_df = self.pem_file.get_mag(average=True)
             if mag_df.Mag.any():
                 self.plot_mag_cbox.setEnabled(True)
@@ -769,7 +769,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                         plot_scatters(data, ax)
 
             # Plot the mag profile if available. Disable the plot mag button if it's not applicable.
-            if self.pem_file.is_borehole() and self.pem_file.has_xy():
+            if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
                 mag_df = self.pem_file.get_mag(average=True)
                 if mag_df.Mag.any():
                     self.plot_mag_cbox.setEnabled(True)

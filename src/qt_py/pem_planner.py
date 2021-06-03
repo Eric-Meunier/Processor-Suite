@@ -243,6 +243,7 @@ class HoleWidget(QWidget):
 
         self.remove_btn = QPushButton(QtGui.QIcon(str(icons_path.joinpath("_remove2.png"))), "")
         self.remove_btn.setFlat(True)
+        self.remove_btn.setToolTip("Remove")
 
         name_frame.layout().addWidget(QLabel("Name"))
         name_frame.layout().addWidget(self.hole_name_edit)
@@ -671,6 +672,7 @@ class LoopWidget(QWidget):
 
         self.remove_btn = QPushButton(QtGui.QIcon(str(icons_path.joinpath("_remove2.png"))), "")
         self.remove_btn.setFlat(True)
+        self.remove_btn.setToolTip("Remove")
 
         name_frame.layout().addWidget(QLabel("Name"))
         name_frame.layout().addWidget(self.loop_name_edit)
@@ -1631,15 +1633,15 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             folder = kml.newfolder(name=hole_name)
 
             # Add the collar
-            proj = hole_widget.get_proj_latlon(crs)
+            proj = hole_widget.get_proj_latlon(crs).loc[:, "Easting":"Northing"]
             if proj.empty:
                 logger.warning(f"{hole_name} projection is empty.")
                 continue
 
             collar = proj.iloc[0]
 
-            collar = folder.newpoint(name=hole_name, coords=[collar.to_numpy()])
-            collar.style = collar_style
+            collar_point = folder.newpoint(name=hole_name, coords=[collar.to_numpy()])
+            collar_point.style = collar_style
 
             # Add the hole trace
             trace = folder.newlinestring(name=hole_name)
@@ -1651,7 +1653,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             loop_name = loop_widget.loop_name_edit.text()
 
             # Add the loop
-            loop = loop_widget.get_loop_coords_latlon(crs)
+            loop = loop_widget.get_loop_coords_latlon(crs).loc[:, "Easting":"Northing"]
 
             if loop.empty:
                 logger.error(f"Loop {loop_name} GPS is empty.")
