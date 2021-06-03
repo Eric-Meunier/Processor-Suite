@@ -58,7 +58,6 @@ __version__ = '0.11.6'
 # TODO Use savgol to filter data
 # TODO Add ability to remove channels
 # TODO load and save files in hole planner
-# TODO Fix bug in hole planner
 # TODO Bug in PEMPlotEditor, scrolling is skipping stations.
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)

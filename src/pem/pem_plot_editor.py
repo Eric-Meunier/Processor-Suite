@@ -370,12 +370,13 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         else:
             self.cycle_station('up')
 
-    def wheelEvent(self, evt):
-        y = evt.angleDelta().y()
-        if y < 0:
-            self.cycle_station('down')
-        else:
-            self.cycle_station('up')
+    # This was causing the scroll event to occur twice and skip stations as a result
+    # def wheelEvent(self, evt):
+    #     y = evt.angleDelta().y()
+    #     if y < 0:
+    #         self.cycle_station('down')
+    #     else:
+    #         self.cycle_station('up')
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
@@ -1650,6 +1651,7 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
         Change the selected station
         :param direction: str, direction to cycle stations. Either 'up' or 'down'.
         """
+        print(f"Cycle station")
         station_index = list(self.stations).index(self.selected_station)
         if direction == 'down':
             if station_index == len(self.stations) - 1:
@@ -1658,7 +1660,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 # Force the new index to be a different station then the one selected
                 new_ind = station_index
                 while self.stations[new_ind] == self.selected_station and new_ind < len(self.stations) - 1:
+                    print(f"New ind: {new_ind}")
                     new_ind += 1
+                print(f"Next station: {self.stations[new_ind]}")
                 self.plot_station(self.stations[new_ind], preserve_selection=False)
         elif direction == 'up':
             if station_index == 0:
@@ -1667,7 +1671,9 @@ class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
                 # Force the new index to be a different station then the one selected
                 new_ind = station_index
                 while self.stations[new_ind] == self.selected_station and new_ind > 0:
+                    print(f"New ind: {new_ind}")
                     new_ind -= 1
+                print(f"Next station: {self.stations[new_ind]}")
                 self.plot_station(self.stations[new_ind], preserve_selection=False)
 
     def cycle_selection(self, direction):
