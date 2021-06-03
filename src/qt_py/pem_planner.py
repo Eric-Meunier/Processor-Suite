@@ -21,6 +21,7 @@ from matplotlib.figure import Figure
 from matplotlib import patheffects
 import matplotlib.transforms as mtransforms
 from pyproj import CRS
+from scipy import spatial
 from shapely.geometry import asMultiPoint
 
 from src.logger import Log
@@ -694,19 +695,27 @@ class LoopWidget(QWidget):
         h = int(properties.get('height'))
         w = int(properties.get('width'))
         pos = QtCore.QPointF(center.x() - (w / 2), center.y() - (h / 2))  # Adjusted position for the center
+        angle = 0
 
-        self.loop_roi = LoopROI(pos,
-                                size=(h, w),
+        c1 = QtCore.QPointF(pos)
+        c2 = QtCore.QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
+        c3 = QtCore.QPointF(c2.x() - h * (math.sin(math.radians(angle))), c2.y() + h * (math.sin(math.radians(90-angle))))
+        c4 = QtCore.QPointF(c3.x() + w * (math.cos(math.radians(180-angle))), c3.y() - w * (math.sin(math.radians(180-angle))))
+        corners = [(c1.x(), c1.y()),
+                   (c2.x(), c2.y()),
+                   (c3.x(), c3.y()),
+                   (c4.x(), c4.y()),
+                   ]
+
+        self.loop_roi = LoopROI(corners,
                                 scaleSnap=True,
                                 snapSize=5,
-                                centered=True,
+                                closed=True,
                                 pen=pg.mkPen(default_color, width=1.),
-                                # handlePen=pg.mkPen(50, 50, 50, 100),
-                                # handleHoverPen=pg.mkPen(50, 50, 50, 255),
                                 )
-
+        self.loop_roi.hoverPen = pg.mkPen(default_color, width=2.)
         self.loop_roi.setZValue(15)
-        self.loop_roi.addRotateHandle(pos=[1, 0.5], center=[0.5, 0.5])
+        # self.loop_roi.addRotateHandle(pos=[1, 0.5], center=[0.5, 0.5])
         self.loop_roi.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
 
         # Add loop name
@@ -727,6 +736,9 @@ class LoopWidget(QWidget):
                 self.loop_roi.hide()
                 self.loop_name.hide()
 
+        def hover(e):
+            print(e)
+
         self.show_cbox.toggled.connect(toggle_visibility)
         self.remove_btn.clicked.connect(self.remove_sig.emit)
         self.loop_height_edit.editingFinished.connect(self.update_loop_roi)
@@ -738,6 +750,8 @@ class LoopWidget(QWidget):
         self.loop_roi.sigRegionChanged.connect(self.update_loop_values)
         self.loop_roi.sigRegionChanged.connect(self.plot_loop_name)
         self.loop_roi.sigRegionChangeFinished.connect(lambda: self.plot_hole_sig.emit())
+        # self.loop_roi.sigHoverEvent.connect(hover)
+        # self.loop_roi.sigRegionChangeFinished.connect(lambda: print(f"Loop move finished"))
 
     def select(self):
         """When the loop is selected"""
@@ -758,15 +772,11 @@ class LoopWidget(QWidget):
         Return the coordinates of the corners of the loop.
         :return: list of QtCore.QPointF objects.
         """
-        x, y = self.loop_roi.pos()
-        w, h = self.loop_roi.size()
-        angle = self.loop_roi.angle()
-
-        c1 = QtCore.QPointF(x, y)
-        c2 = QtCore.QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
-        c3 = QtCore.QPointF(c2.x() - h * (math.sin(math.radians(angle))), c2.y() + h * (math.sin(math.radians(90-angle))))
-        c4 = QtCore.QPointF(c3.x() + w * (math.cos(math.radians(180-angle))), c3.y() - w * (math.sin(math.radians(180-angle))))
-        corners = [c1, c2, c3, c4]
+        corners = []
+        for c in [QtCore.QPointF(h.get("pos")) for h in self.loop_roi.handles]:
+            x = c.x() + self.loop_roi.state.get("pos").x()
+            y = c.y() + self.loop_roi.state.get("pos").y()
+            corners.append(QtCore.QPointF(x, y))
         return corners
 
     def get_loop_coords_latlon(self, crs):
@@ -811,7 +821,6 @@ class LoopWidget(QWidget):
 
     def plot_loop_name(self):
         center = self.get_loop_center()
-        # self.loop_center.setData([center.x()], [center.y()])
         self.loop_name.setPos(center.x(), center.y())
 
     def update_loop_roi(self):
@@ -841,17 +850,22 @@ class LoopWidget(QWidget):
         Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
         replots the section plot.
         """
-        self.loop_width_edit.blockSignals(True)
-        self.loop_height_edit.blockSignals(True)
-        self.loop_angle_edit.blockSignals(True)
-        w, h = self.loop_roi.size()
-        angle = self.loop_roi.angle()
-        self.loop_width_edit.setText(f"{w:.0f}")
-        self.loop_height_edit.setText(f"{h:.0f}")
-        self.loop_angle_edit.setText(f"{angle:.0f}")
-        self.loop_width_edit.blockSignals(False)
-        self.loop_height_edit.blockSignals(False)
-        self.loop_angle_edit.blockSignals(False)
+        # self.loop_width_edit.blockSignals(True)
+        # self.loop_height_edit.blockSignals(True)
+        # self.loop_angle_edit.blockSignals(True)
+        # w, h = self.loop_roi.size()
+        # angle = self.loop_roi.angle()
+        # self.loop_width_edit.setText(f"{w:.0f}")
+        # self.loop_height_edit.setText(f"{h:.0f}")
+        # self.loop_angle_edit.setText(f"{angle:.0f}")
+        # self.loop_width_edit.blockSignals(False)
+        # self.loop_height_edit.blockSignals(False)
+        # self.loop_angle_edit.blockSignals(False)
+        for seg in self.loop_roi.segments:
+            pos_1 = seg.handles[0].get("pos")
+            pos_2 = seg.handles[1].get("pos")
+            dist = spatial.distance.euclidean((pos_1.x(), pos_1.y()), (pos_2.x(), pos_2.y()))
+            # print(dist)
 
 
 class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
@@ -2656,7 +2670,23 @@ class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
         self.status_bar.showMessage('Grid coordinates copied to clipboard', 1000)
 
 
-class LoopROI(pg.RectROI):
+# class LoopROI(pg.RectROI):
+#     """
+#     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
+#     """
+#
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#
+#     def _makePen(self):
+#         # Generate the pen color for this ROI based on its current state.
+#         if self.mouseHovering:
+#             return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+#         else:
+#             return self.pen
+
+
+class LoopROI(pg.PolyLineROI):
     """
     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
     """
@@ -2665,8 +2695,10 @@ class LoopROI(pg.RectROI):
         super().__init__(*args, **kwargs)
 
     def _makePen(self):
+        # print(f"Making pen")
         # Generate the pen color for this ROI based on its current state.
         if self.mouseHovering:
+            # print(f"Mouse hovering")
             return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
         else:
             return self.pen
