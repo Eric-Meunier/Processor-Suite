@@ -1017,7 +1017,10 @@ class GPXEditor:
         :param as_string: bool, return a string instead of tuple if True
         :return: latitude, longitude, elevation, unit, stn
         """
-        gps, errors = self.parse_gpx(gpx_file)
+        try:
+            gps, errors = self.parse_gpx(gpx_file)
+        except Exception as e:
+            raise Exception(f"The following error occurred parsing the GPX file:\n{e}.")
         zone = None
         hemisphere = None
         crs = None

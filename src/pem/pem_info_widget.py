@@ -360,8 +360,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             for file in files:
                 if file.suffix.lower() == '.gpx':
                     # Convert the GPX file to string
-                    gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(file, as_string=True)
-                    contents = [c.strip().split() for c in gps]
+                    try:
+                        gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(file, as_string=True)
+                    except Exception as e:
+                        self.error.showMessage(f"The following error occurred parsing the GPX file:\n{e}.")
+                        return
+                    else:
+                        contents = [c.strip().split() for c in gps]
                 else:
                     if file.suffix.lower() == '.csv':
                         contents = pd.read_csv(file, delim_whitespace=False, header=None).to_numpy()

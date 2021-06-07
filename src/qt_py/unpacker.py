@@ -397,13 +397,15 @@ class Unpacker(QMainWindow, Ui_UnpackerCreator):
             :param additional_folder: path: Path of any additional folders to copy the files to. Used for GPS, Damp,
             and DMP files. Previously used for PEM files too.
             """
-            if not table.rowCount():
-                return
-
             # Create a folder if folder_name isn't a folder already
             folder = new_folder.joinpath(folder_name)
             if not folder.is_dir():
+                logger.info(F"Creating {folder} directory.")
                 folder.mkdir(parents=True)
+
+            if not table.rowCount():
+                logger.info(F"No files found for '{folder_name}'")
+                return
 
             for row in range(table.rowCount()):
                 file = Path(table.item(row, 0).text())
