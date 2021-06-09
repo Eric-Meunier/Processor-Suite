@@ -16,6 +16,7 @@ from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut
                                QLineEdit, QFormLayout, QWidget, QFrame, QPushButton, QGroupBox, QHBoxLayout,
                                QRadioButton, QCheckBox, QGridLayout)
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.ROI import LineSegmentROI
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import patheffects
@@ -2693,15 +2694,54 @@ class LoopROI(pg.PolyLineROI):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        pass
 
     def _makePen(self):
-        # print(f"Making pen")
         # Generate the pen color for this ROI based on its current state.
         if self.mouseHovering:
             # print(f"Mouse hovering")
             return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
         else:
             return self.pen
+
+    def addSegment(self, h1, h2, index=None):
+        seg = _PolyLineSegment(handles=(h1, h2), pen=self.pen, parent=self, movable=False)
+        if index is None:
+            self.segments.append(seg)
+        else:
+            self.segments.insert(index, seg)
+        seg.sigClicked.connect(self.segmentClicked)
+        seg.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
+        seg.setZValue(self.zValue()+1)
+        for h in seg.handles:
+            h['item'].setDeletable(True)
+            h['item'].setAcceptedMouseButtons(h['item'].acceptedMouseButtons() | QtCore.Qt.LeftButton) ## have these handles take left clicks too, so that handles cannot be added on top of other handles
+
+
+class _PolyLineSegment(LineSegmentROI):
+    # Used internally by PolyLineROI
+    def __init__(self, *args, **kwds):
+        self._parentHovering = False
+        LineSegmentROI.__init__(self, *args, **kwds)
+
+    def setParentHover(self, hover):
+        # set independently of own hover state
+        if self._parentHovering != hover:
+            self._parentHovering = hover
+            self._updateHoverColor()
+
+    def _makePen(self):
+        if self.mouseHovering or self._parentHovering:
+            return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+        else:
+            return self.pen
+
+    def hoverEvent(self, ev):
+        # accept drags even though we discard them to prevent competition with parent ROI
+        # (unless parent ROI is not movable)
+        if self.parentItem().translatable:
+            ev.acceptDrags(QtCore.Qt.LeftButton)
+        return LineSegmentROI.hoverEvent(self, ev)
 
 
 def main():
