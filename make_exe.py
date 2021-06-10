@@ -17,7 +17,7 @@ def make_spec(spec_file):
 # -*- mode: python ; coding: utf-8 -*-
 
 import sys
-from PyInstaller.utils.hooks import collect_data_files # this is very helpful
+from PyInstaller.utils.hooks import collect_data_files  # this is very helpful
 
 sys.setrecursionlimit(5000)
 block_cipher = None
@@ -25,11 +25,11 @@ options = []
 
 paths = [
     sys.prefix,  # venv path
+    sys.prefix + r"\\Lib\\site_packages",
+    sys.prefix + r"\\Scripts",
 ]
 
-binaries = [
-
-]
+binaries = []
 
 hidden_imports = [
     'fiona._shim',  # Required
@@ -41,13 +41,14 @@ a = Analysis(['run.py'],
              pathex=paths, # add all your paths
              binaries=binaries, # add the dlls you may need
              datas=collect_data_files('geopandas', subdir='datasets') +  # Required
+                   collect_data_files('plotly') +  # Required, much smaller than copying the entire folder
                    [
                    (r'src\ui\*.ui','ui'), # Places all .ui files in a folder called 'qt_ui'
                    (r'src\ui\icons\*.png', r'ui/icons'),  # Places all icon files in a folder called 'icons'
                    (r'src\ui\icons\*.ico', r'ui/icons'),
                    (r'.mapbox', r'.'),
                    (r'venv\Lib\site-packages\geomag\WMM.COF', 'geomag'),  # Places a file used for magnetic declination calculation in a 'geomag' folder.
-                   (r'venv\Lib\site-packages\plotly', 'plotly'),  # Required
+                   # (r"venv\Scripts\pyside2-uic.exe", ".")
                    ],
              hiddenimports=hidden_imports,
              hookspath=[],
@@ -70,7 +71,7 @@ exe = EXE(pyz,
           bootloader_ignore_signals=False,
           strip=False,
           upx=False,
-          console=False, icon=r'src/ui/icons/conder.ico')
+          console=True, icon=r'src/ui/icons/conder.ico')
         ''')
 
         file.write(f"""

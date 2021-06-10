@@ -3,11 +3,10 @@ import os
 import re
 import sys
 
-import natsort
 from pathlib import Path
 from PySide2 import QtCore
-from PySide2.QtWidgets import (QApplication, QWidget, QMessageBox, QAbstractScrollArea, QTableWidgetItem, QHeaderView, QTableWidget,
-                               QDialogButtonBox, QVBoxLayout)
+from PySide2.QtWidgets import (QApplication, QWidget, QMessageBox, QAbstractScrollArea, QTableWidgetItem, QHeaderView,
+                               QTableWidget, QDialogButtonBox, QVBoxLayout)
 
 logger = logging.getLogger(__name__)
 

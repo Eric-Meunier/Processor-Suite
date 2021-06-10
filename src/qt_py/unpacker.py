@@ -5,13 +5,14 @@ from pathlib import Path
 from shutil import copyfile, rmtree
 
 import py7zr
-from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QLabel, QFileSystemModel,
-                             QAbstractItemView, QErrorMessage, QMenu, QPushButton, QFrame, QHBoxLayout,
-                             QTableWidget, QTableWidgetItem, QVBoxLayout, QLineEdit)
+                               QAbstractItemView, QErrorMessage, QMenu, QPushButton, QFrame, QHBoxLayout,
+                               QTableWidget, QTableWidgetItem, QVBoxLayout, QLineEdit)
 from pyunpack import Archive
 
 from src.damp.db_plot import DBPlotter
+from src.ui.unpacker import Ui_Unpacker
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +23,8 @@ else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath("ui\\icons")
 
-# Load Qt ui file into a class
-Ui_UnpackerCreator, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\unpacker.ui')))
 
-
-class Unpacker(QMainWindow, Ui_UnpackerCreator):
+class Unpacker(QMainWindow, Ui_Unpacker):
     open_project_folder_sig = QtCore.Signal(object)
 
     def __init__(self, parent=None):

@@ -5,11 +5,12 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 # from src.logger import Log
-from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
 import pyqtgraph as pg
 from src.pem.pem_file import PEMFile
 from src.qt_py.custom_qt_widgets import NonScientific
+from src.ui.derotator import Ui_Derotator
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +19,6 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath("ui\\icons")
-
-# Load Qt ui file into a class
-Ui_Derotator, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\derotator.ui')))
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')

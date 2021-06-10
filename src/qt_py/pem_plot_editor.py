@@ -4,20 +4,20 @@ import os
 import re
 import sys
 import math
-
 import keyboard
 import numpy as np
 import pandas as pd
 import pylineclip as lc
 import pyqtgraph as pg
 from pathlib import Path
-from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                               QPushButton, QShortcut)
+                               QPushButton)
 from pyqtgraph.Point import Point
 from scipy import spatial
 
-from src.pem.pem_file import StationConverter, PEMParser
+from src.pem.pem_file import StationConverter
+from src.ui.pem_plot_editor import Ui_PEMPlotEditor
 from src.logger import Log
 
 """
@@ -36,9 +36,6 @@ else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath("ui\\icons")
 
-# Load Qt ui file into a class
-Ui_PlotEditorWindow, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\pem_plot_editor.ui')))
-
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
@@ -46,7 +43,7 @@ pg.setConfigOption('crashWarning', True)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
-class PEMPlotEditor(QMainWindow, Ui_PlotEditorWindow):
+class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
     save_sig = QtCore.Signal(object)
     close_sig = QtCore.Signal(object)
     reset_file_sig = QtCore.Signal(object)

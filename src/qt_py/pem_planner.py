@@ -30,6 +30,8 @@ from src.geometry.segment import Segmenter
 from src.qt_py.custom_qt_widgets import NonScientific, PlanMapAxis
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.qt_py.map_widgets import TileMapViewer
+from src.ui.loop_planner import Ui_LoopPlanner
+from src.ui.grid_planner import Ui_GridPlanner
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +40,6 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath("ui\\icons")
-
-# Load Qt ui file into a class
-Ui_LoopPlannerWindow, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\loop_planner.ui')))
-Ui_GridPlannerWindow, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\grid_planner.ui')))
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -868,7 +866,7 @@ class LoopWidget(QWidget):
             # print(dist)
 
 
-class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
+class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
     """
     Program that plots the magnetic field projected to a plane perpendicular to a borehole for a interactive loop.
     Loop and borehole collar can be exported as KMZ or GPX files.
@@ -1755,7 +1753,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlannerWindow):
             self.status_bar.showMessage('Cancelled.', 2000)
 
 
-class GridPlanner(SurveyPlanner, Ui_GridPlannerWindow):
+class GridPlanner(SurveyPlanner, Ui_GridPlanner):
     """
     Program to plan a surface grid.
     """

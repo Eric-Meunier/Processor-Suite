@@ -40,11 +40,10 @@ class PEMGetter:
 
             logger.info(f'Getting File {filepath.name}.')
 
-            try:
-                pem_file = self.pem_parser.parse(filepath)
-            except Exception as e:
-                logger.error(f"{str(e)}")
-                return
+            pem_file = self.pem_parser.parse(filepath)
+            # except Exception as e:
+            #     logger.error(f"{str(e)}")
+            #     return
 
             pem_files.append(pem_file)
 

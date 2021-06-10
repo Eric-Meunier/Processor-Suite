@@ -6,11 +6,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFrame, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                             QPushButton, QAction, QHBoxLayout)
+                               QPushButton, QAction, QHBoxLayout)
 
 from src.pem.pem_file import StationConverter
+from src.ui.pem_merger import Ui_PEMMerger
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +21,6 @@ else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath("ui\\icons")
 
-# Load Qt ui file into a class
-Ui_PlotMergerWindow, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\pem_merger.ui')))
-
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
@@ -30,7 +28,7 @@ pg.setConfigOption('crashWarning', True)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
-class PEMMerger(QMainWindow, Ui_PlotMergerWindow):
+class PEMMerger(QMainWindow, Ui_PEMMerger):
     accept_sig = QtCore.Signal(str)
 
     def __init__(self, parent=None):

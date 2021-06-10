@@ -8,13 +8,15 @@ import keyboard
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui, QtUiTools
-from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QCheckBox,
-                             QHeaderView, QInputDialog, QFileDialog)
+from PySide2 import QtCore, QtGui
+from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QHeaderView, QInputDialog,
+                               QFileDialog)
 
 from src.qt_py.custom_qt_widgets import NonScientific
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXEditor
 from src.pem.pem_file import StationConverter
+from src.ui.line_adder import Ui_LineAdder
+from src.ui.loop_adder import Ui_LoopAdder
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +25,6 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath('ui\\icons')
-
-# Load Qt ui file into a class
-Ui_LineAdder, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\line_adder.ui')))
-Ui_LoopAdder, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\loop_adder.ui')))
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')

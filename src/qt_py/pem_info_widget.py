@@ -8,16 +8,16 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from PySide2 import QtCore, QtGui, QtUiTools
-from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate,
-                               QFileDialog, QErrorMessage, QHeaderView, QApplication)
-
+from PySide2 import QtCore, QtGui
+from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QFileDialog,
+                               QErrorMessage, QHeaderView, QApplication)
 from src.geometry.pem_geometry import PEMGeometry
 from src.gps.gps_adder import LoopAdder, LineAdder, CollarPicker
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXEditor
 from src.pem.pem_file import StationConverter
 from src.qt_py.ri_importer import RIFile
+from src.ui.pem_info_widget import Ui_PEMInfoWidget
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +26,6 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath("ui\\icons")
-
-# Load Qt ui file into a class
-Ui_PEMInfoWidget, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\pem_info_widget.ui')))
-logger = logging.getLogger(__name__)
 
 
 def clear_table(table):
@@ -1082,23 +1078,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if refresh:
             self.refresh_row_signal.emit()
-
-
-# class FloatDelegate(QStyledItemDelegate):
-#     def __init__(self, decimals, parent=None):
-#         QStyledItemDelegate.__init__(self, parent=parent)
-#         self.nDecimals = decimals
-#
-#     def paint(self, painter, option, index):
-#         value = index.model().data(index, QtCore.Qt.EditRole)
-#         # if index in [0, 1]:
-#         # try:
-#         number = float(value)
-#         painter.drawText(option.rect, QtCore.Qt.AlignCenter, f"{number:.{self.nDecimals}f}")
-#         # except Exception:
-#         # QItemDelegate.paint(self, painter, option, index)
-#         # else:
-#         #     QItemDelegate.paint(self, painter, option, index)
 
 
 if __name__ == "__main__":

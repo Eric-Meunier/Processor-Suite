@@ -3,8 +3,9 @@ import os
 import sys
 
 from pathlib import Path
-from PySide2 import QtCore, QtUiTools
+from PySide2 import QtCore
 from PySide2.QtWidgets import QWidget, QAbstractScrollArea, QTableWidgetItem, QHeaderView
+from src.ui.line_name_editor import Ui_LineNameEditor
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +15,8 @@ else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath("ui\\icons")
 
-# Load Qt ui file into a class
-Ui_LineNameEditorWidget, QtBaseClass = QtUiTools.loadUiType(str(application_path.joinpath('ui\\line_name_editor.ui')))
 
-
-class BatchNameEditor(QWidget, Ui_LineNameEditorWidget):
+class BatchNameEditor(QWidget, Ui_LineNameEditor):
     """
     Class to bulk rename PEM File line/hole names or file names.
     """

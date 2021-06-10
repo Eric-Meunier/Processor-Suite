@@ -2234,7 +2234,7 @@ class PEMParser:
                 :param reading: str of a reading in a PEM file
                 :return: list
                 """
-                data = reading.split('\n')
+                data = reading.strip().split('\n')  # Strip because readings can have more than 1 new line between them.
                 head = data[0].split()
 
                 station = head[0]
@@ -2256,10 +2256,10 @@ class PEMParser:
 
                 # Add the new columns from DMP2 files
                 if len(head) > 9:
-                    Deleted = True if head[9] == 'True' else False
+                    deleted = True if head[9] == 'True' else False
                     overload = True if head[10] == 'True' else False
                     timestamp = head[11]
-                    result.extend([Deleted, overload, timestamp])
+                    result.extend([deleted, overload, timestamp])
 
                 return result
 
@@ -2270,7 +2270,9 @@ class PEMParser:
 
             data = []
             # Format each reading to be added to the data frame. Faster than creating Series object per row.
-            for reading in text:
+            for read_num, reading in enumerate(text):
+                if not reading.strip():
+                    continue
                 data.append(format_data(reading))
 
             # Create the data frame

@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 from pathlib import Path
 from PySide2 import QtCore, QtGui, QtWidgets
 
@@ -9,9 +10,11 @@ logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
+    icons_path = application_path.joinpath(r"ui\icons")
 else:
     application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath(r"PEMPro\src\ui\icons")
+    icons_path = application_path.joinpath(r"PEMPro\src\ui\icons")
+app_data_dir = Path(os.getenv('APPDATA'))
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -24,7 +27,8 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     global error_box
     error_box = QtWidgets.QErrorMessage()
     error_box.setWindowTitle('Error')
-    error_box.showMessage(open(application_path.joinpath('.log'), "w+").read())
+    # error_box.showMessage(open(application_path.joinpath('.log'), "w+").read())
+    error_box.showMessage(open(app_data_dir.joinpath(r'PEMPro\.log'), "w+").read())
 
     # sys.exit(1)
 

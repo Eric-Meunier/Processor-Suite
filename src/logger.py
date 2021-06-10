@@ -1,5 +1,7 @@
 import functools
 import logging
+import os
+from pathlib import Path
 from copy import copy
 from logging.config import dictConfig
 
@@ -37,6 +39,12 @@ class ColoredFormatter(logging.Formatter):
         return logging.Formatter.format(self, colored_record)
 
 
+# Create the .log file in the AppData folder.
+app_data_folder = Path(os.path.join(os.getenv('APPDATA'), r"PEMPro"))
+app_data_folder.mkdir(parents=True, exist_ok=True)  # Create the PEMPro AppData folder
+f = open(app_data_folder.joinpath(".log"), "w")  # Create the file
+f.close()
+
 # Create a root logger. These configurations will be used by all loggers when calling logging.getLogger().
 log_config = {
     'version': 1,
@@ -61,7 +69,7 @@ log_config = {
             'level': 'DEBUG',
             'formatter': 'file',
             'class': 'logging.FileHandler',
-            'filename': '.log',
+            'filename': os.path.join(os.getenv('APPDATA'), r"PEMPro\.log"),
             'mode': 'w',
         }
     },

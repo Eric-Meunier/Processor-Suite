@@ -10,15 +10,15 @@ import math
 import numpy as np
 import pandas as pd
 from PySide2 import QtGui, QtCore
-from PySide2.QtUiTools import loadUiType
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import (QMainWindow, QApplication, QShortcut, QFileDialog, QMessageBox, QErrorMessage, QWidget,
-                             QVBoxLayout)
+                               QVBoxLayout)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from src.geometry.segment import Segmenter
 from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
+from src.ui.pem_geometry import Ui_PEMGeometry
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +28,8 @@ else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath("ui\\icons")
 
-# Load Qt ui file into a class
-Ui_PemGeometry, QtBaseClass = loadUiType(str(application_path.joinpath('ui\\pem_geometry.ui')))
 
-
-class PEMGeometry(QMainWindow, Ui_PemGeometry):
+class PEMGeometry(QMainWindow, Ui_PEMGeometry):
     # plt.style.use('seaborn-white')
     accepted_sig = QtCore.Signal(object)
 

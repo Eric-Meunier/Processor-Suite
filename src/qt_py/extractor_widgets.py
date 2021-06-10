@@ -1,4 +1,3 @@
-import copy
 import logging
 import os
 import sys
@@ -6,7 +5,7 @@ from pathlib import Path
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QFileDialog, QApplication, QTableWidgetItem, QHeaderView, QTableWidget,
-                             QPushButton, QGridLayout)
+                               QPushButton, QGridLayout)
 
 logger = logging.getLogger(__name__)
 

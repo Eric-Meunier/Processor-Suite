@@ -4,14 +4,13 @@ import os
 import re
 import sys
 import chardet
-import codecs
 from pathlib import Path
 from threading import Timer
 
 import pandas as pd
 import pyqtgraph as pg
 from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QWidget, QMainWindow, QShortcut, QVBoxLayout, QGridLayout, QMessageBox, QFileDialog,
+from PySide2.QtWidgets import (QWidget, QMainWindow, QVBoxLayout, QGridLayout, QMessageBox, QFileDialog,
                                QLabel, QAction, QMenu, QApplication)
 
 logging.basicConfig()

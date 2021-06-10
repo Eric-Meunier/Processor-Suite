@@ -12,6 +12,7 @@ from PySide2.QtUiTools import loadUiType
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction, QLabel)
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
+from src.ui.gpx_creator import Ui_GPXCreator
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +21,6 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath('ui\\icons')
-
-# Load Qt ui file into a class
-Ui_GPXCreator, QtBaseClass = loadUiType(str(application_path.joinpath('ui\\gpx_creator.ui')))
 
 
 class GPXCreator(QMainWindow, Ui_GPXCreator):

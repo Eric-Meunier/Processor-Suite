@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import plotly
 import plotly.graph_objects as go
-from PySide2 import QtGui, QtCore, QtUiTools
+from PySide2 import QtGui, QtCore
 from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtWidgets import (QApplication, QErrorMessage, QWidget, QFileDialog, QMessageBox, QGridLayout,
                                QAction, QMainWindow, QHBoxLayout, QShortcut)
@@ -27,6 +27,7 @@ from scipy import interpolate as interp
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import MapPlotter
 from src.qt_py.custom_qt_widgets import CustomProgressBar
+from src.ui.contour_map import Ui_ContourMap
 
 logger = logging.getLogger(__name__)
 
@@ -36,208 +37,10 @@ else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath("ui\\icons")
 
-# Load Qt ui file into a class
-Ui_Section3DWidget, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\3D_section.ui')))
-Ui_ContourMapCreatorFile, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\contour_map.ui')))
-
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
-
-
-# class Map3DViewer2(QMainWindow):
-#
-#     def __init__(self, parent=None):
-#         super().__init__()
-#         self.pem_files = None
-#         self.parent = parent
-#
-#         self.loops = []
-#         self.lines = []
-#         self.collars = []
-#         self.holes = []
-#         self.annotations = []
-#
-#         self.view = pg.opengl.GLViewWidget()
-#
-#         # self.setWindowTitle("3D Map Viewer")
-#         # self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map2.png')))
-#         # self.resize(1000, 800)
-#         # layout = QGridLayout()
-#         # self.setLayout(layout)
-#         #
-#         # self.save_img_action = QAction('Save Image')
-#         # self.save_img_action.setShortcut("Ctrl+S")
-#         # self.save_img_action.triggered.connect(self.save_img)
-#         # self.copy_image_action = QAction('Copy Image')
-#         # self.copy_image_action.setShortcut("Ctrl+C")
-#         # self.copy_image_action.triggered.connect(self.copy_img)
-#         #
-#         # self.file_menu = self.menuBar().addMenu('&File')
-#         # self.file_menu.addAction(self.save_img_action)
-#         # self.file_menu.addAction(self.copy_image_action)
-#         #
-#         # self.figure = go.Figure()
-#         # self.figure.update_layout(scene=dict(
-#         #     xaxis_title='EASTING',
-#         #     yaxis_title='NORTHING',
-#         #     zaxis_title='ELEVATION',
-#         #     aspectmode='data'),
-#         #     margin=dict(r=0, b=0, l=0, t=0),
-#         # )
-#         #
-#         # # create an instance of QWebEngineView and set the html code
-#         # self.plot_widget = QWebEngineView()
-#         # self.setCentralWidget(self.plot_widget)
-#
-#     def open(self, pem_files):
-#         if not isinstance(pem_files, list):
-#             pem_files = [pem_files]
-#
-#         if not pem_files:
-#             raise Exception("No files to plot.")
-#
-#         if any([f.has_any_gps() for f in pem_files]):
-#             self.pem_files = pem_files
-#             self.plot_pems()
-#             self.show()
-#         else:
-#             raise Exception(f"No GPS to plot.")
-#
-#     def plot_pems(self):
-#
-#         def reset_figure():
-#             self.figure.data = []
-#             self.loops = []
-#             self.lines = []
-#             self.collars = []
-#             self.holes = []
-#
-#         def plot_loop(pem_file):
-#             loop = pem_file.get_loop(closed=True)
-#             if loop.to_string() not in self.loops:
-#                 self.loops.append(loop.to_string())
-#
-#                 # Plot the loop in the figure
-#                 self.figure.add_trace(go.Scatter3d(x=loop.Easting,
-#                                                    y=loop.Northing,
-#                                                    z=loop.Elevation,
-#                                                    legendgroup='loop',
-#                                                    mode='lines',
-#                                                    name=f"Loop {pem_file.loop_name}",
-#                                                    text=loop.index))
-#
-#         def plot_line(pem_file):
-#             line = pem_file.get_line()
-#
-#             if line.to_string() not in self.lines:
-#                 self.lines.append(line.to_string())
-#                 # Plot the line in the figure
-#                 self.figure.add_trace(go.Scatter3d(x=line.Easting,
-#                                                    y=line.Northing,
-#                                                    z=line.Elevation,
-#                                                    legendgroup='line',
-#                                                    mode='lines+markers',
-#                                                    name=pem_file.line_name,
-#                                                    text=line.Station
-#                                                    ))
-#
-#                 # if self.label_stations_cbox.isChecked():
-#                 #     for row in line.itertuples():
-#                 #         self.annotations.append(dict(x=row.Easting,
-#                 #                                      y=row.Northing,
-#                 #                                      z=row.Elevation,
-#                 #                                      ax=0,
-#                 #                                      ay=0,
-#                 #                                      text=row.Station,
-#                 #                                      showarrow=False,
-#                 #                                      xanchor="center",
-#                 #                                      yanchor="bottom"))
-#
-#         def plot_hole(pem_file):
-#             collar = pem_file.get_collar().dropna()
-#             geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
-#             proj = geometry.get_projection(latlon=False)
-#
-#             if not proj.empty:
-#                 if proj.to_string() not in self.holes:
-#                     self.holes.append(proj.to_string())
-#                     # Plot the line in the figure
-#                     self.figure.add_trace(go.Scatter3d(x=proj.Easting,
-#                                                        y=proj.Northing,
-#                                                        z=proj.Elevation,
-#                                                        mode='lines+markers',
-#                                                        legendgroup='hole',
-#                                                        name=pem_file.line_name,
-#                                                        text=proj['Relative_depth']
-#                                                        ))
-#
-#                 else:
-#                     return
-#
-#             elif not collar.empty and collar.to_string() not in self.collars:
-#                 self.collars.append(collar.to_string())
-#                 self.figure.add_trace(go.Scatter3d(x=collar.Easting,
-#                                                    y=collar.Northing,
-#                                                    z=collar.Elevation,
-#                                                    # legendgroup='hole',
-#                                                    name=pem_file.line_name,
-#                                                    text=pem_file.line_name
-#                                                    ))
-#
-#         reset_figure()
-#
-#         # Plot the PEMs
-#         for pem_file in self.pem_files:
-#             plot_loop(pem_file)
-#
-#             if not pem_file.is_borehole():
-#                 plot_line(pem_file)
-#
-#             else:
-#                 plot_hole(pem_file)
-#
-#         # Set the style of the markers and lines
-#         self.figure.update_traces(marker=dict(size=6,
-#                                               line=dict(width=2,
-#                                                         color='DarkSlateGrey')),
-#                                   line=dict(width=4)
-#                                   )
-#         # TODO Format the axis ticks
-#         self.figure.update_layout(yaxis_tickformat='%')
-#
-#         # Create the HTML
-#         html = '<html><body>'
-#         html += plotly.offline.plot(self.figure,
-#                                     output_type='div',
-#                                     include_plotlyjs='cdn',
-#                                     config={'displayModeBar': False}
-#                                     )
-#         html += '</body></html>'
-#
-#         t2 = time.time()
-#         # Add the plot HTML to be shown in the plot widget
-#         self.plot_widget.setHtml(html)
-#         print(f'Time to set HTML: {time.time() - t2:.3f}')
-#
-#     def save_img(self):
-#         save_file = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG Files (*.PNG);; All files(*.*)')[0]
-#
-#         if save_file:
-#             size = self.contentsRect()
-#             img = QtGui.QPixmap(size.width(), size.height())
-#             self.render(img)
-#             img.save(save_file)
-#         else:
-#             pass
-#
-#     def copy_img(self):
-#         size = self.contentsRect()
-#         img = QtGui.QPixmap(size.width(), size.height())
-#         self.render(img)
-#         img.copy(size)
-#         QApplication.clipboard().setPixmap(img)
 
 
 class MapboxViewer(QMainWindow):
@@ -473,6 +276,9 @@ class TileMapViewer(MapboxViewer):
             raise Exception(f"No Lat/Lon GPS after plotting all PEM files.")
 
         # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
+        # TODO Move mapbox file to AppData folder, add ability to add a token.
+        # app_data_dir = Path(os.getenv('APPDATA'))
+        # token = open(app_data_dir.joinpath(r"PEMPro\.mapbox", 'r')).read()
         token = open(".mapbox", 'r').read()
         if not token:
             logger.warning(f"No Mapbox token passed.")
@@ -716,7 +522,7 @@ class ContourMapToolbar(NavigationToolbar):
                  t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
 
 
-class ContourMapViewer(QWidget, Ui_ContourMapCreatorFile):
+class ContourMapViewer(QWidget, Ui_ContourMap):
     """
     Widget to display contour maps. Filters the given PEMFiles to only include surface surveys. Either all files
     can be un-split, or if there are any split files, it will split the rest. Averages all files.

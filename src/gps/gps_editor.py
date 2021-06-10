@@ -1,6 +1,5 @@
 import copy
 import logging
-import os
 import re
 import sys
 from pathlib import Path
@@ -18,6 +17,7 @@ from PySide2.QtWidgets import (QWidget, QMessageBox)
 from math import hypot
 from pyproj import CRS
 from scipy import spatial
+from src.ui.gps_conversion import Ui_GPSConversion
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,6 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = Path(__file__).absolute().parents[1]
 icons_path = application_path.joinpath('ui\\icons')
-
-# Load Qt ui file into a class
-Ui_GPSConversionWidget, _ = loadUiType(str(application_path.joinpath('ui\\gps_conversion.ui')))
 
 
 class BaseGPS:
@@ -1076,7 +1073,7 @@ class GPXEditor:
         pass
 
 
-class GPSConversionWidget(QWidget, Ui_GPSConversionWidget):
+class GPSConversionWidget(QWidget, Ui_GPSConversion):
     accept_signal = QtCore.Signal(int)
 
     def __init__(self, parent=None):

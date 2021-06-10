@@ -31,7 +31,7 @@ from src.mag_field.mag_dec_widget import MagDeclinationCalculator
 from src.damp.db_plot import DBPlotter
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry,
                                 GPSConversionWidget)
-from src.qt_py.loop_calculator import LoopCalculator
+from src.mag_field.loop_calculator import LoopCalculator
 from src.gps.gpx_creator import GPXCreator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
 from src.pem.pem_plotter import PEMPrinter
@@ -40,13 +40,16 @@ from src.qt_py.derotator import Derotator
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
 from src.qt_py.name_editor import BatchNameEditor
 from src.geometry.pem_geometry import PEMGeometry
-from src.pem.pem_info_widget import PEMFileInfoWidget
+from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.qt_py.pem_merger import PEMMerger
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
-from src.pem.pem_plot_editor import PEMPlotEditor
+from src.qt_py.pem_plot_editor import PEMPlotEditor
 from src.qt_py.ri_importer import BatchRIImporter
-from src.pem.extractor_widgets import StationSplitter
+from src.qt_py.extractor_widgets import StationSplitter
 from src.qt_py.unpacker import Unpacker
+from src.ui.pem_hub import Ui_PEMHub
+from src.ui.plan_map_options import Ui_PlanMapOptions
+from src.ui.pdf_plot_printer import Ui_PDFPlotPrinter
 
 logger = logging.getLogger(__name__)
 
@@ -58,20 +61,16 @@ __version__ = '0.11.6'
 # TODO Use savgol to filter data
 # TODO Add ability to remove channels
 # TODO load and save files in hole planner
+# TODO Viewing KMZ needs to save the temp file in AppData folder.
+# TODO Change name_editor line_name_editor to not use QtDesigner.
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
 else:
     application_path = Path(__file__).absolute().parents[1]  # src folder path
-print(f"Application path: {application_path}")
 icons_path = application_path.joinpath("ui\\icons")
-
-# Load Qt ui file into a class
-Ui_PEMHubWindow, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\pem_hub.ui')))
-Ui_PlanMapOptionsWidget, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\plan_map_options.ui')))
-Ui_PDFPlotPrinterWidget, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\pdf_plot_printer.ui')))
-Ui_GPSConversionWidget, _ = QtUiTools.loadUiType(str(application_path.joinpath('ui\\gps_conversion.ui')))
+app_data_dir = Path(os.getenv('APPDATA'))
 
 
 def get_icon(filepath):
@@ -124,7 +123,7 @@ def get_icon(filepath):
     return icon
 
 
-class PEMHub(QMainWindow, Ui_PEMHubWindow):
+class PEMHub(QMainWindow, Ui_PEMHub):
 
     def __init__(self, parent=None):
         super().__init__()
@@ -549,7 +548,7 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
 
         # Help menu
         def open_logs():
-            log_file = application_path.joinpath('.log')
+            log_file = app_data_dir.joinpath(r'PEMPro\.log')
             if log_file.exists():
                 os.startfile(str(log_file))
             else:
@@ -2054,10 +2053,12 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         if not self.pem_files:
             logger.warning(f"No PEM files opened.")
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
 
         elif not any([f.has_any_gps() for f in self.pem_files]):
             logger.warning(f"No GPS found in any file.")
             self.message.information(self, 'Error', 'No file has any GPS to plot.')
+            return
 
         else:
             map_3d.open(self.pem_files)
@@ -2374,6 +2375,16 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         """Open the Contour Map"""
         global contour_map
 
+        if not self.pem_files:
+            logger.warning(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
+        elif not any([f.has_any_gps() for f in self.pem_files]):
+            logger.warning(f"No GPS found in any file.")
+            self.message.information(self, 'Error', 'No file has any GPS to plot.')
+            return
+
         bar = CustomProgressBar()
         bar.setMaximum(len(self.pem_files))
         with pg.ProgressDialog("Plotting PEM Files...", 0, 1) as dlg:
@@ -2406,6 +2417,11 @@ class PEMHub(QMainWindow, Ui_PEMHubWindow):
         Open the station splitter for the selected PEMFile
         """
         pem_files, rows = self.get_pem_files(selected=True)
+        if not self.pem_files:
+            logger.warning(f"No PEM files selected.")
+            self.status_bar.showMessage(f"No PEM files selected.", 2000)
+            return
+
         pem_file = pem_files[0]
 
         global ss
@@ -4333,7 +4349,7 @@ class FrequencyConverter(QWidget):
         e.accept()
 
 
-class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
+class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
     """
     Widget to handle printing PDF plots for PEM/RI files.
     """
@@ -4470,7 +4486,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinterWidget):
             self.message.critical(self, 'Error', 'Invalid file name')
 
 
-class PlanMapOptions(QWidget, Ui_PlanMapOptionsWidget):
+class PlanMapOptions(QWidget, Ui_PlanMapOptions):
     """
     GUI to display checkboxes for display options when creating the final Plan Map PDF. Buttons aren't attached
     to any signals. The state of the checkboxes are read from PEMEditor.
@@ -4887,22 +4903,22 @@ def main():
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
-    pem_files = pem_g.get_pems(folder="TMC", subfolder=r"Loop G\RAW", file="100e.PEM")
+    pem_files = pem_g.get_pems(folder="Test PEMS", file="223XYT.PEM")
     # assert len(pem_files) == len(ri_files)
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
     mw.add_pem_files(pem_files)
     # mw.add_dmp_files([dmp_files])
-    mw.table.selectRow(0)
+    # mw.table.selectRow(0)
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"TMC\Loop G\GPS\L100E_16.gpx")])
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"TMC\Loop G\GPS\L100E_16.gpx")])
 
     mw.show()
 
