@@ -1,0 +1,8 @@
+>>06/03/2021 03:03:05 PM [INFO] pem_getter.py (add_pem:41):
+ Getting File em21-155xy_0415.PEM.
+>>06/03/2021 03:03:05 PM [INFO] pem_file.py (parse:2318):
+ Parsing em21-155xy_0415.PEM.
+>>06/03/2021 03:03:06 PM [INFO] pem_file.py (get_crs:484):
+ em21-155xy_0415.PEM CRS is NAD83 / UTM zone 18N.
+>>06/03/2021 03:03:06 PM [INFO] pem_getter.py (get_pems:108):
+ Collected PEM files: C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Raw Boreholes\em21-155xy_0415.PEM
