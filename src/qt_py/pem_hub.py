@@ -61,8 +61,8 @@ __version__ = '0.11.6'
 # TODO Use savgol to filter data
 # TODO Add ability to remove channels
 # TODO load and save files in hole planner
-# TODO Viewing KMZ needs to save the temp file in AppData folder.
 # TODO Change name_editor line_name_editor to not use QtDesigner.
+# TODO Fix Gridplanner with new loop
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -70,7 +70,9 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = Path(__file__).absolute().parents[1]  # src folder path
 icons_path = application_path.joinpath("ui\\icons")
-app_data_dir = Path(os.getenv('APPDATA'))
+# Create the AppData folder used to save temporary data and settings
+app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
+app_data_dir.mkdir(exist_ok=True)
 
 
 def get_icon(filepath):
@@ -548,7 +550,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Help menu
         def open_logs():
-            log_file = app_data_dir.joinpath(r'PEMPro\.log')
+            log_file = app_data_dir.joinpath('logs.txt')
             if log_file.exists():
                 os.startfile(str(log_file))
             else:
@@ -2955,16 +2957,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 # os.startfile(kmz_save_dir)
         else:
             # Save the file and open Google Earth using a temporary file
-            prog = Path(os.environ["ProgramFiles"]).joinpath(r'Google/Google Earth Pro/client/googleearth.exe')
-            if prog.is_file():
-                # Create the temp folder
-                Path('temp').mkdir(exist_ok=True)
-                # Temp file name
-                kmz_save_dir = str(Path(r'temp/temp.kmz').resolve())  # Gets the absolute path
+            google_earth_exe = Path(os.environ["ProgramFiles"]).joinpath(
+                r'Google/Google Earth Pro/client/googleearth.exe')
+            if google_earth_exe.is_file():
+                # Create the temp file
+                kmz_save_dir = str(app_data_dir.joinpath("temp.kmz").resolve())  # Gets the absolute path
                 # Save the file
                 kml.savekmz(kmz_save_dir, format=False)
                 # Open Google Earth
-                cmd = [str(prog), kmz_save_dir]
+                cmd = [str(google_earth_exe), kmz_save_dir]
                 subprocess.Popen(cmd)
             else:
                 logger.error(f"Cannot find Google Earth Pro.")

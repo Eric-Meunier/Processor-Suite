@@ -1,3 +1,4 @@
+print(f"Initializing program.")
 import logging
 import sys
 import os
@@ -27,8 +28,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     global error_box
     error_box = QtWidgets.QErrorMessage()
     error_box.setWindowTitle('Error')
-    # error_box.showMessage(open(application_path.joinpath('.log'), "w+").read())
-    error_box.showMessage(open(app_data_dir.joinpath(r'PEMPro\.log'), "w+").read())
+    error_box.showMessage(open(app_data_dir.joinpath(r'PEMPro\logs.txt'), "w+").read())
 
     # sys.exit(1)
 
@@ -37,6 +37,7 @@ sys.excepthook = handle_exception
 
 
 def main():
+    print(f"Starting app.")
     app = QtWidgets.QApplication(sys.argv)
 
     # path = icons_path.joinpath(r"Crone\HRES Logo.svg")

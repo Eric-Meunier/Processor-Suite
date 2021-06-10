@@ -40,9 +40,9 @@ class ColoredFormatter(logging.Formatter):
 
 
 # Create the .log file in the AppData folder.
-app_data_folder = Path(os.path.join(os.getenv('APPDATA'), r"PEMPro"))
-app_data_folder.mkdir(parents=True, exist_ok=True)  # Create the PEMPro AppData folder
-f = open(app_data_folder.joinpath(".log"), "w")  # Create the file
+app_data_dir = Path(os.path.join(os.getenv('APPDATA'), r"PEMPro"))
+app_data_dir.mkdir(parents=True, exist_ok=True)  # Create the PEMPro AppData folder
+f = open(app_data_dir.joinpath("logs.txt"), "w")  # Create the file
 f.close()
 
 # Create a root logger. These configurations will be used by all loggers when calling logging.getLogger().

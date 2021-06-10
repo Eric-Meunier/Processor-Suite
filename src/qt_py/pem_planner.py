@@ -1770,7 +1770,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.actionSave_as_KMZ.setIcon(QtGui.QIcon(str(icons_path.joinpath("google_earth.png"))))
         self.actionSave_as_GPX.setIcon(QtGui.QIcon(str(icons_path.joinpath("garmin_file.png"))))
         self.view_map_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("folium.png"))))
-        self.add_loop_btn.setIcon(QtGui.QIcon(str(icons_path.joinpath("add.png"))))
         # self.installEventFilter(self)
 
         self.loop_height = int(self.loop_height_edit.text())
