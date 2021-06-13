@@ -39,8 +39,6 @@ pyjsparser==2.7.1
 pyparsing==2.4.7
 PyPrind==2.11.2
 pyproj @ file:///C:/Users/Eric/pipwin/pyproj-2.6.1.post1-cp37-cp37m-win32.whl
-PyQt5==5.15.0
-PyQt5-sip==12.8.0
 pyqtgraph==0.11.0
 PyQtWebEngine==5.15.0
 pyshp==2.1.0
@@ -68,3 +66,4 @@ stopit~=1.1.2
 py7zr~=0.9.5
 setuptools~=49.6.0
 mplcursors~=0.3
+PySide2~=5.15.2

@@ -1313,6 +1313,18 @@ class PEMFile:
         self.notes.append(f'<HE3> Data scaled by factor of {1 + factor}')
         return self
 
+    def mag_offset_last(self):
+        """
+        Subtract the last channel from the entire decay
+        This will remove all amplitude information from the PEM!
+        :return: PEMFile object, self with data scaled
+        """
+        self.data.Reading = self.data.Reading - self.data.Reading[-1]
+        logger.info(f"Data in {self.filepath.name} offset by last reading - Amplitude information lost")
+
+        self.notes.append('<HE3> DECAY SHIFTED TO FORCE LAST CHN = 0')
+        return self
+
     def reverse_component(self, component):
         logger.info(f"Reversing {component} data of {self.filepath.name}.")
         filt = self.data.Component == component.upper()

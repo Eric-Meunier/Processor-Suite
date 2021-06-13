@@ -3973,6 +3973,36 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.status_bar.showMessage(f"Process complete. "
                                     f"{comp.upper()} of {len(pem_files)} PEM file(s) reversed.", 2000)
 
+    def offset_mag_last(self, selected=False):
+        """
+        Subtract the last channel from the entire decay
+        This will remove all amplitude information from the PEM!
+        :param selected: bool, only use selected PEMFiles or not.
+        """
+        pem_files, rows = self.get_pem_files(selected=selected)
+
+        if not pem_files:
+            logger.warning(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+
+        with pg.ProgressDialog(f'Offsetting readings by last channel...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle(f'Offsetting reading')
+
+            for pem_file, row in zip(pem_files, rows):
+                dlg.setLabelText(f"Offsetting data of {pem_file.filepath.name} by last channel")
+                pem_file: PEMFile
+                pem_file = pem_file.mag_offset_last()
+                self.refresh_pem(pem_file)
+                dlg += 1
+
+        bar.deleteLater()
+        self.status_bar.showMessage("Mag offset process complete. ", 2000)
+
     def reverse_station_order(self, selected=False):
         pem_files, rows = self.get_pem_files(selected=selected)
 
