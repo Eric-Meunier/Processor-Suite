@@ -4904,7 +4904,7 @@ def main():
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
-    pem_files = pem_g.get_pems(folder="TMC", subfolder="131-21-37\DATA", file="131-21-37 XY.PEM")
+    pem_files = pem_g.get_pems(folder="GPX files", file="z_0614.PEM")
     # assert len(pem_files) == len(ri_files)
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
@@ -4918,12 +4918,12 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"TMC\Loop G\GPS\L100E_16.gpx")])
-    gps_files = [samples_folder.joinpath(r"TMC\131-21-37\GPS\131-21-37 - clean.gpx")]
+    gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
     mw.add_gps_files(gps_files)
 
-    mw.show()
+    # mw.show()
 
     app.exec_()
 

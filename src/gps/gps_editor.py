@@ -1017,7 +1017,7 @@ class GPXEditor:
         try:
             gps, errors = self.parse_gpx(gpx_file)
         except Exception as e:
-            raise Exception(f"The following error occurred parsing the GPX file:\n{e}.")
+            raise Exception(str(e))
         zone = None
         hemisphere = None
         crs = None

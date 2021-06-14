@@ -356,11 +356,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             for file in files:
                 if file.suffix.lower() == '.gpx':
                     # Convert the GPX file to string
+                    global crs, errors
                     try:
-                        global crs, errors
                         gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(file, as_string=True)
                     except Exception as e:
-                        self.error.showMessage(f"The following error occurred parsing the GPX file:\n{e}.")
+                        # self.error.showMessage("GPX Parsing Error", f"The following error occurred parsing the GPX file:\n{e}.")
+                        errors.append(str(e))
                         return
                     else:
                         contents = [c.strip().split() for c in gps]
@@ -387,6 +388,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         errors = []
 
         file_contents = merge_files(files)
+
+        if errors:
+            error_str = '\n'.join(errors)
+            self.message.warning(self, "Parsing Errors", f"The following errors occurred parsing the GPS file(s): "
+                                                         f"{error_str}")
+            if not file_contents:
+                return
+
         current_tab = self.tabs.currentWidget()
 
         # Add survey line GPS
@@ -403,10 +412,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         else:
             pass
 
-        if errors:
-            error_str = '\n'.join(errors)
-            self.message.warning(self, "Parsing Errors", f"The following errors occurred parsing the GPS file: "
-                                                         f"{error_str}")
         return crs
 
     def open_pem_geometry(self):
