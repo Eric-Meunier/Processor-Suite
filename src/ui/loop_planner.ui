@@ -255,7 +255,7 @@
           </property>
           <property name="icon">
            <iconset>
-            <normaloff>icons/add.png</normaloff>icons/add.png</iconset>
+            <normaloff>../../../../.designer/backup/icons/add.png</normaloff>../../../../.designer/backup/icons/add.png</iconset>
           </property>
           <property name="flat">
            <bool>false</bool>
@@ -326,7 +326,7 @@
       </widget>
       <widget class="QFrame" name="loop_frame">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
@@ -407,7 +407,7 @@
           </property>
           <property name="icon">
            <iconset>
-            <normaloff>icons/add.png</normaloff>icons/add.png</iconset>
+            <normaloff>../../../../.designer/backup/icons/add.png</normaloff>../../../../.designer/backup/icons/add.png</iconset>
           </property>
           <property name="flat">
            <bool>false</bool>
@@ -440,7 +440,9 @@
     <property name="title">
      <string>View</string>
     </property>
-    <addaction name="show_annotations_cbox"/>
+    <addaction name="show_names_cbox"/>
+    <addaction name="show_corners_cbox"/>
+    <addaction name="show_segments_cbox"/>
     <addaction name="show_grid_cbox"/>
     <addaction name="separator"/>
     <addaction name="view_map_action"/>
@@ -452,7 +454,7 @@
   <action name="actionSave_as_KMZ">
    <property name="icon">
     <iconset>
-     <normaloff>icons/google_earth.png</normaloff>icons/google_earth.png</iconset>
+     <normaloff>../../../../.designer/backup/icons/google_earth.png</normaloff>../../../../.designer/backup/icons/google_earth.png</iconset>
    </property>
    <property name="text">
     <string>Save as KMZ...</string>
@@ -464,7 +466,7 @@
   <action name="actionSave_as_GPX">
    <property name="icon">
     <iconset>
-     <normaloff>icons/garmin_file.png</normaloff>icons/garmin_file.png</iconset>
+     <normaloff>../../../../.designer/backup/icons/garmin_file.png</normaloff>../../../../.designer/backup/icons/garmin_file.png</iconset>
    </property>
    <property name="text">
     <string>Save as GPX...</string>
@@ -476,7 +478,7 @@
   <action name="view_map_action">
    <property name="icon">
     <iconset>
-     <normaloff>icons/folium.png</normaloff>icons/folium.png</iconset>
+     <normaloff>../../../../.designer/backup/icons/folium.png</normaloff>../../../../.designer/backup/icons/folium.png</iconset>
    </property>
    <property name="text">
     <string>Map</string>
@@ -501,7 +503,7 @@
     <string>Show the grid in the plan view</string>
    </property>
   </action>
-  <action name="show_annotations_cbox">
+  <action name="show_names_cbox">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -509,7 +511,29 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Annotations</string>
+    <string>Names</string>
+   </property>
+  </action>
+  <action name="show_corners_cbox">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Corners</string>
+   </property>
+  </action>
+  <action name="show_segments_cbox">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Segment Lengths</string>
    </property>
   </action>
  </widget>

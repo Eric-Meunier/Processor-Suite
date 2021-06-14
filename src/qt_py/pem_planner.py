@@ -11,16 +11,15 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import simplekml
-from PySide2 import QtGui, QtCore, QtUiTools
+from PySide2 import QtGui, QtCore
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QInputDialog,
                                QLineEdit, QFormLayout, QWidget, QFrame, QPushButton, QGroupBox, QHBoxLayout,
-                               QRadioButton, QCheckBox, QGridLayout)
+                               QItemDelegate, QStyledItemDelegate,
+                               QRadioButton, QCheckBox, QGridLayout, QTableWidget, QTableWidgetItem, QHeaderView)
 import pyqtgraph as pg
-from pyqtgraph.graphicsItems.ROI import LineSegmentROI
+import matplotlib as mpl
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from matplotlib import patheffects
-import matplotlib.transforms as mtransforms
 from pyproj import CRS
 from scipy import spatial
 from shapely.geometry import asMultiPoint
@@ -629,6 +628,11 @@ class LoopWidget(QWidget):
         layout = QFormLayout()
         self.setLayout(layout)
         self.plan_view = plot_widget
+        self.corner_labels = []
+        self.segment_labels = []
+        self.show_corners = True
+        self.show_segments = True
+        self.is_selected = True
 
         if not properties:
             properties = {
@@ -653,6 +657,18 @@ class LoopWidget(QWidget):
         self.layout().addRow('Height', self.loop_height_edit)
         self.layout().addRow('Width', self.loop_width_edit)
         self.layout().addRow('Angle', self.loop_angle_edit)
+
+        self.coords_table = QTableWidget()
+        self.coords_table.setColumnCount(2)
+        self.coords_table.setHorizontalHeaderLabels(["Easting", "Northing"])
+        self.coords_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.coords_table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        # self.coords_table.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        float_delegate = QItemDelegate()
+        # float_delegate = QStyledItemDelegate()
+        self.coords_table.setItemDelegateForColumn(0, float_delegate)
+        self.coords_table.setItemDelegateForColumn(1, float_delegate)
+        self.layout().addRow(self.coords_table)
 
         # Create the horizontal line for the header
         h_line = QFrame()
@@ -714,8 +730,12 @@ class LoopWidget(QWidget):
                                 )
         self.loop_roi.hoverPen = pg.mkPen(default_color, width=2.)
         self.loop_roi.setZValue(15)
+        self.update_loop_values()
         # self.loop_roi.addRotateHandle(pos=[1, 0.5], center=[0.5, 0.5])
-        self.loop_roi.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
+
+        # # Add the loop corners to the table
+        # for handle in self.loop_roi.getHandles():
+        #     self.add_corner(handle)
 
         # Add loop name
         self.loop_name = pg.TextItem(name, anchor=(0.5, 0.5), color=(0, 0, 0, 100))
@@ -735,9 +755,7 @@ class LoopWidget(QWidget):
                 self.loop_roi.hide()
                 self.loop_name.hide()
 
-        def hover(e):
-            print(e)
-
+        self.coords_table.cellChanged.connect(self.update_loop_corners)
         self.show_cbox.toggled.connect(toggle_visibility)
         self.remove_btn.clicked.connect(self.remove_sig.emit)
         self.loop_height_edit.editingFinished.connect(self.update_loop_roi)
@@ -746,25 +764,61 @@ class LoopWidget(QWidget):
 
         self.loop_name_edit.textChanged.connect(self.name_changed_sig.emit)
         self.loop_name_edit.textChanged.connect(lambda: self.loop_name.setText(self.loop_name_edit.text()))
+        self.loop_roi.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
+        self.loop_roi.sigHandleAdded.connect(self.update_loop_values)
+        self.loop_roi.sigHandleAdded.connect(self.label_loop_corners)
         self.loop_roi.sigRegionChanged.connect(self.update_loop_values)
         self.loop_roi.sigRegionChanged.connect(self.plot_loop_name)
         self.loop_roi.sigRegionChangeFinished.connect(lambda: self.plot_hole_sig.emit())
-        # self.loop_roi.sigHoverEvent.connect(hover)
-        # self.loop_roi.sigRegionChangeFinished.connect(lambda: print(f"Loop move finished"))
 
     def select(self):
         """When the loop is selected"""
         self.loop_roi.setPen(selection_color, width=1.5)
         self.loop_name.setColor(selection_color)
+        if self.show_corners is True:
+            for label in self.corner_labels:
+                label.show()
+        if self.show_segments is True:
+            for label in self.segment_labels:
+                label.show()
+        self.is_selected = True
 
     def deselect(self):
         self.loop_roi.setPen(pg.mkPen(default_color), width=1.)
         self.loop_name.setColor(default_color)
+        for label in self.corner_labels:
+            label.hide()
+        for label in self.segment_labels:
+            label.hide()
+        self.is_selected = False
 
     def remove(self):
         self.plan_view.removeItem(self.loop_roi)
         self.plan_view.removeItem(self.loop_name)
+        for label in self.corner_labels:
+            self.plan_view.removeItem(label)
+        for label in self.segment_labels:
+            self.plan_view.removeItem(label)
         self.deleteLater()
+
+    def add_corner(self):
+
+        def series_to_items(x):
+            item = QTableWidgetItem()
+            item.setData(QtCore.Qt.EditRole, x)
+            return item
+
+        corners = self.get_loop_coords()
+        for corner in corners:
+            # Add a new row to the table
+            row_pos = self.coords_table.rowCount()
+            self.coords_table.insertRow(row_pos)
+
+            items = [series_to_items(c) for c in corner.pos()]
+            # Format each item of the table to be centered
+            for m, item in enumerate(items):
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.coords_table.setItem(row_pos, m, item)
 
     def get_loop_coords(self):
         """
@@ -772,7 +826,7 @@ class LoopWidget(QWidget):
         :return: list of QtCore.QPointF objects.
         """
         corners = []
-        for c in [QtCore.QPointF(h.get("pos")) for h in self.loop_roi.handles]:
+        for c in [h.pos() for h in self.loop_roi.getHandles()]:
             x = c.x() + self.loop_roi.state.get("pos").x()
             y = c.y() + self.loop_roi.state.get("pos").y()
             corners.append(QtCore.QPointF(x, y))
@@ -849,22 +903,77 @@ class LoopWidget(QWidget):
         Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
         replots the section plot.
         """
-        # self.loop_width_edit.blockSignals(True)
-        # self.loop_height_edit.blockSignals(True)
-        # self.loop_angle_edit.blockSignals(True)
-        # w, h = self.loop_roi.size()
-        # angle = self.loop_roi.angle()
-        # self.loop_width_edit.setText(f"{w:.0f}")
-        # self.loop_height_edit.setText(f"{h:.0f}")
-        # self.loop_angle_edit.setText(f"{angle:.0f}")
-        # self.loop_width_edit.blockSignals(False)
-        # self.loop_height_edit.blockSignals(False)
-        # self.loop_angle_edit.blockSignals(False)
-        for seg in self.loop_roi.segments:
-            pos_1 = seg.handles[0].get("pos")
-            pos_2 = seg.handles[1].get("pos")
-            dist = spatial.distance.euclidean((pos_1.x(), pos_1.y()), (pos_2.x(), pos_2.y()))
-            # print(dist)
+        # for seg in self.loop_roi.segments:
+        #     pos_1 = seg.handles[0].get("pos")
+        #     pos_2 = seg.handles[1].get("pos")
+        #     dist = spatial.distance.euclidean((pos_1.x(), pos_1.y()), (pos_2.x(), pos_2.y()))
+
+        def series_to_items(x):
+            x = round(x, 0)
+            item = QTableWidgetItem()
+            item.setData(QtCore.Qt.EditRole, x)
+            return item
+
+        self.coords_table.blockSignals(True)
+
+        while self.coords_table.rowCount() > 0:
+            self.coords_table.removeRow(0)
+
+        corners = self.get_loop_coords()
+        for corner in corners:
+            # Add a new row to the table
+            row_pos = self.coords_table.rowCount()
+            self.coords_table.insertRow(row_pos)
+
+            items = [series_to_items(c) for c in [corner.x(), corner.y()]]
+            # Format each item of the table to be centered
+            for m, item in enumerate(items):
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                self.coords_table.setItem(row_pos, m, item)
+
+        self.coords_table.blockSignals(False)
+        self.label_loop_corners()
+
+    def update_loop_corners(self):
+        self.loop_roi.blockSignals(True)
+
+        loop_pos = self.loop_roi.state.get("pos")
+        for row, handle in zip(range(self.coords_table.rowCount()), self.loop_roi.getHandles()):
+            table_x, table_y = self.coords_table.item(row, 0).text(), self.coords_table.item(row, 1).text()
+            print(f"Moving {handle.pos().x():.0f}, {handle.pos().y():.0f} to {float(table_x) + loop_pos.x():.0f}, {float(table_y) + loop_pos.y():.0f}")
+            self.loop_roi.movePoint(handle, QtCore.QPointF(float(table_x), float(table_y)))
+
+        self.loop_roi.blockSignals(False)
+        self.label_loop_corners()
+
+    def label_loop_corners(self):
+
+        # Remove previous labels
+        for label in self.corner_labels:
+            self.plan_view.removeItem(label)
+        for label in self.segment_labels:
+            self.plan_view.removeItem(label)
+
+        corners = self.get_loop_coords()
+        for i, corner in enumerate(corners):
+            label = pg.TextItem(str(i + 1), color=pg.mkColor(default_color))
+            label.setPos(corner)
+            self.corner_labels.append(label)
+            self.plan_view.addItem(label, ignoreBounds=True)
+            if self.show_corners is False:
+                label.hide()
+
+        loop_pos = self.loop_roi.state.get("pos")
+        for segment in self.loop_roi.segments:
+            p1, p2 = segment.endpoints
+            x, y = ((p2.x() - p1.x()) / 2) + p1.x() + loop_pos.x(), ((p2.y() - p1.y()) / 2) + p1.y() + loop_pos.y()
+            dist = spatial.distance.euclidean((p1.x(), p1.y()), (p2.x(), p2.y()))
+            label = pg.TextItem(f"{dist:.0f}m", color=pg.mkColor(default_color))
+            label.setPos(x, y)
+            self.segment_labels.append(label)
+            self.plan_view.addItem(label, ignoreBounds=True)
+            if self.show_segments is False:
+                label.hide()
 
 
 class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
@@ -922,18 +1031,40 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         # Checkbox
         def toggle_annotations():
             for hole in self.hole_widgets:
-                if self.show_annotations_cbox.isChecked():
+                if self.show_names_cbox.isChecked():
                     hole.hole_name.show()
                 else:
                     hole.hole_name.hide()
 
             for loop in self.loop_widgets:
-                if self.show_annotations_cbox.isChecked():
+                if self.show_names_cbox.isChecked():
                     loop.loop_name.show()
                 else:
                     loop.loop_name.hide()
 
-        self.show_annotations_cbox.toggled.connect(toggle_annotations)
+                if self.show_corners_cbox.isChecked():
+                    loop.show_corners = True
+                    if loop.is_selected:
+                        for label in loop.corner_labels:
+                            label.show()
+                else:
+                    loop.show_corners = False
+                    for label in loop.corner_labels:
+                        label.hide()
+
+                if self.show_segments_cbox.isChecked():
+                    loop.show_segments = True
+                    if loop.is_selected:
+                        for label in loop.segment_labels:
+                            label.show()
+                else:
+                    loop.show_segments = False
+                    for label in loop.segment_labels:
+                        label.hide()
+
+        self.show_names_cbox.toggled.connect(toggle_annotations)
+        self.show_corners_cbox.toggled.connect(toggle_annotations)
+        self.show_segments_cbox.toggled.connect(toggle_annotations)
         self.show_grid_cbox.toggled.connect(lambda: self.plan_view.showGrid(x=self.show_grid_cbox.isChecked(),
                                                                             y=self.show_grid_cbox.isChecked()))
 
@@ -1321,6 +1452,12 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             loop_widget.copy_loop_btn.clicked.connect(lambda: loop_copied(loop_widget))
             loop_widget.remove_sig.connect(lambda: remove_loop(loop_widget))
 
+            if not self.show_corners_cbox.isChecked():
+                loop_widget.show_corners = False
+
+            if not self.show_segments_cbox.isChecked():
+                loop_widget.show_segments = False
+
             self.loop_tab_widget.addWidget(loop_widget)
             self.loop_tab_widget.setCurrentIndex(len(self.loop_widgets) - 1)
             self.loop_cbox.addItem(name)
@@ -1395,7 +1532,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             # Get the 2D projected coordinates onto the plane defined by points p1 and p2
             plane_projection = get_plane_projection(p1, p2, proj)
 
-            buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
+            buffer = [mpl.patheffects.Stroke(linewidth=3, foreground='white'), mpl.patheffects.Normal()]
             hole_len = self.selected_hole.projection.Relative_depth.iloc[-1]
             collar_elevation = 0.
 
@@ -1418,7 +1555,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
             # Label hole name
             hole_name = self.selected_hole.hole_name_edit.text()
-            trans = mtransforms.blended_transform_factory(self.ax.transData, self.ax.transAxes)
+            trans = mpl.transforms.blended_transform_factory(self.ax.transData, self.ax.transAxes)
             self.ax.annotate(f"{hole_name}", (plotx[0], collar_elevation),
                              xytext=(0, 12),
                              textcoords='offset pixels',
@@ -2688,6 +2825,8 @@ class LoopROI(pg.PolyLineROI):
     """
     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
     """
+    sigHandleAdded = QtCore.Signal(object)
+    sigHandleRemoved = QtCore.Signal(object)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -2714,12 +2853,38 @@ class LoopROI(pg.PolyLineROI):
             h['item'].setDeletable(True)
             h['item'].setAcceptedMouseButtons(h['item'].acceptedMouseButtons() | QtCore.Qt.LeftButton) ## have these handles take left clicks too, so that handles cannot be added on top of other handles
 
+    def addHandle(self, info, index=None):
+        # Reimplement so a signal can be emitted
+        h = pg.ROI.addHandle(self, info, index=index)
+        h.sigRemoveRequested.connect(self.removeHandle)
+        self.stateChanged(finish=True)
+        self.sigHandleAdded.emit(h)
+        return h
 
-class _PolyLineSegment(LineSegmentROI):
+    def removeHandle(self, handle, updateSegments=True):
+        self.sigHandleRemoved.emit(handle)
+        pg.ROI.removeHandle(self, handle)
+        handle.sigRemoveRequested.disconnect(self.removeHandle)
+
+        if not updateSegments:
+            return
+        segments = handle.rois[:]
+
+        if len(segments) == 1:
+            self.removeSegment(segments[0])
+        elif len(segments) > 1:
+            handles = [h['item'] for h in segments[1].handles]
+            handles.remove(handle)
+            segments[0].replaceHandle(handle, handles[0])
+            self.removeSegment(segments[1])
+        self.stateChanged(finish=True)
+
+
+class _PolyLineSegment(pg.LineSegmentROI):
     # Used internally by PolyLineROI
     def __init__(self, *args, **kwds):
         self._parentHovering = False
-        LineSegmentROI.__init__(self, *args, **kwds)
+        pg.LineSegmentROI.__init__(self, *args, **kwds)
 
     def setParentHover(self, hover):
         # set independently of own hover state
@@ -2738,7 +2903,11 @@ class _PolyLineSegment(LineSegmentROI):
         # (unless parent ROI is not movable)
         if self.parentItem().translatable:
             ev.acceptDrags(QtCore.Qt.LeftButton)
-        return LineSegmentROI.hoverEvent(self, ev)
+        return pg.LineSegmentROI.hoverEvent(self, ev)
+
+    def setAngle(self, *args, **kwargs):
+        # Disable rotating the line segment
+        pass
 
 
 def main():

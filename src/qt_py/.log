@@ -1,4 +1,0 @@
->>06/07/2021 01:02:20 PM [INFO] gps_editor.py (get_projection:872):
- No CRS passed.
->>06/07/2021 01:02:20 PM [WARNING] pem_planner.py (plot_hole:1485):
- Cannot plot hole without a loop.
