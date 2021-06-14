@@ -1319,7 +1319,9 @@ class PEMFile:
         This will remove all amplitude information from the PEM!
         :return: PEMFile object, self with data scaled
         """
-        self.data.Reading = self.data.Reading - self.data.Reading[-1]
+
+        for i in range(len(self.data.Reading)):
+            self.data.Reading[i] -= self.data.Reading[i][-1]
         logger.info(f"Data in {self.filepath.name} offset by last reading - Amplitude information lost")
 
         self.notes.append('<HE3> DECAY SHIFTED TO FORCE LAST CHN = 0')

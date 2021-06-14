@@ -370,7 +370,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.scale_ca_action = QAction("Scale Coil Area", self)
         self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
         self.scale_ca_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('coil.png'))))
-
+        self.mag_offset_action = QAction("Mag Offset", self)
+        self.mag_offset_action.triggered.connect(lambda: self.mag_offset_lastchn(selected=True))
         # Reversing
         self.reverse_x_component_action = QAction("X Polarity", self)
         self.reverse_x_component_action.triggered.connect(
@@ -1167,6 +1168,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.menu.addAction(self.split_action)
                 self.menu.addAction(self.scale_current_action)
                 self.menu.addAction(self.scale_ca_action)
+                self.menu.addAction(self.mag_offset_action)
                 self.menu.addSeparator()
 
                 # Add the reverse data menu
@@ -3942,6 +3944,34 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             bar.deleteLater()
             self.status_bar.showMessage(f"Process complete. "
                                         f"Current of {len(pem_files)} PEM files scaled to {current}.", 2000)
+    def mag_offset_lastchn(self, selected=False):
+        """
+        Mag offset to the last channel
+        """
+        pem_files, rows = self.get_pem_files(selected=selected)
+
+        if not pem_files:
+            logger.warning(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+
+        with pg.ProgressDialog(f'Mag offsetting to last channel...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle(f'Mag offset')
+
+            for pem_file, row in zip(pem_files, rows):
+                dlg.setLabelText(f"Mag offsetting data of {pem_file.filepath.name}")
+                pem_file: PEMFile
+                pem_file = pem_file.mag_offset_last()
+                self.refresh_pem(pem_file)
+                dlg += 1
+
+        bar.deleteLater()
+        self.status_bar.showMessage(f"Process complete. "
+                                    f"Mag offsetting {len(pem_files)} PEM file(s) reversed.", 2000)
 
     def reverse_component_data(self, comp, selected=False):
         """
