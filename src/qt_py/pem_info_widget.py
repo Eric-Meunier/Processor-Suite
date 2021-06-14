@@ -357,6 +357,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 if file.suffix.lower() == '.gpx':
                     # Convert the GPX file to string
                     try:
+                        global crs, errors
                         gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(file, as_string=True)
                     except Exception as e:
                         self.error.showMessage(f"The following error occurred parsing the GPX file:\n{e}.")
@@ -381,6 +382,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             files = [files]
 
         files = [Path(f) for f in files]
+        global crs, errors
         crs = None
         errors = []
 
