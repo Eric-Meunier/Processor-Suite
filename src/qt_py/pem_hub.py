@@ -3971,7 +3971,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. "
-                                    f"Mag offsetting {len(pem_files)} PEM file(s) reversed.", 2000)
+                                    f"Mag offset of {len(pem_files)} PEM file(s) complete.", 2000)
 
     def reverse_component_data(self, comp, selected=False):
         """
