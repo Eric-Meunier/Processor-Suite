@@ -14,9 +14,10 @@ import simplekml
 from PySide2 import QtGui, QtCore
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QInputDialog,
                                QLineEdit, QFormLayout, QWidget, QFrame, QPushButton, QGroupBox, QHBoxLayout,
-                               QItemDelegate, QStyledItemDelegate,
+                               QItemDelegate, QSpinBox,
                                QRadioButton, QCheckBox, QGridLayout, QTableWidget, QTableWidgetItem, QHeaderView)
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.ROI import Handle
 import matplotlib as mpl
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -615,10 +616,10 @@ class LoopWidget(QWidget):
     plot_hole_sig = QtCore.Signal()
     remove_sig = QtCore.Signal()
 
-    def __init__(self, properties, center, plot_widget, name=''):
+    def __init__(self, center, plot_widget, name='', angle=0.):
         """
         Widget representing a loop as tab in Loop Planner.
-        :param properties: dict, properties of a previous loop to be used as a starting point.
+        :param angle: angle of a previous loop to be used as a starting point.
         :param center: tuple of int, centre position of the loop ROI.
         :param plot_widget: pyqtgraph plot widget to plot on.
         :param name: str, name of the loop.
@@ -634,29 +635,19 @@ class LoopWidget(QWidget):
         self.show_segments = True
         self.is_selected = True
 
-        if not properties:
-            properties = {
-                'height': 500,
-                'width': 500,
-                'angle': 0,
-            }
-
         # Create all the inner widget items
         self.show_cbox = QCheckBox("Show in plan map")
         self.show_cbox.setChecked(True)
         self.layout().addRow(self.show_cbox)
 
-        self.loop_height_edit = QLineEdit(str(int(properties.get('height'))))
-        self.loop_width_edit = QLineEdit(str(int(properties.get('width'))))
-        self.loop_angle_edit = QLineEdit(str(int(properties.get('angle'))))
-
+        self.loop_angle_sbox = QSpinBox()
+        self.loop_angle_sbox.setRange(-360, 360)
+        self.loop_angle_sbox.setValue(int(angle))
         self.loop_name_edit = QLineEdit(name)
         self.loop_name_edit.setPlaceholderText('(Optional)')
 
         # Add the widgets to the layout
-        self.layout().addRow('Height', self.loop_height_edit)
-        self.layout().addRow('Width', self.loop_width_edit)
-        self.layout().addRow('Angle', self.loop_angle_edit)
+        self.layout().addRow('Angle', self.loop_angle_sbox)
 
         self.coords_table = QTableWidget()
         self.coords_table.setColumnCount(2)
@@ -665,7 +656,6 @@ class LoopWidget(QWidget):
         # self.coords_table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
         # self.coords_table.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         float_delegate = QItemDelegate()
-        # float_delegate = QStyledItemDelegate()
         self.coords_table.setItemDelegateForColumn(0, float_delegate)
         self.coords_table.setItemDelegateForColumn(1, float_delegate)
         self.layout().addRow(self.coords_table)
@@ -675,7 +665,6 @@ class LoopWidget(QWidget):
         h_line.setFrameShape(QFrame().HLine)
         h_line.setFrameShadow(QFrame().Sunken)
         self.layout().addRow(h_line)
-        # self.layout().addRow('Name', self.loop_name_edit)
 
         self.copy_loop_btn = QPushButton(QtGui.QIcon(str(Path(icons_path, 'copy.png'))), "Copy Corners")
         self.layout().addRow(self.copy_loop_btn)
@@ -701,16 +690,10 @@ class LoopWidget(QWidget):
         self.loop_angle_validator = QtGui.QIntValidator()
         self.loop_angle_validator.setRange(0, 360)
 
-        # Set all validators
-        self.loop_height_edit.setValidator(self.size_validator)
-        self.loop_width_edit.setValidator(self.size_validator)
-        self.loop_angle_edit.setValidator(self.loop_angle_validator)
-
         # Set the position of the loop by the center (and not the bottom-left corner)
-        h = int(properties.get('height'))
-        w = int(properties.get('width'))
+        h, w = 500, 500
         pos = QtCore.QPointF(center.x() - (w / 2), center.y() - (h / 2))  # Adjusted position for the center
-        angle = 0
+        # angle = 0
 
         c1 = QtCore.QPointF(pos)
         c2 = QtCore.QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
@@ -731,11 +714,6 @@ class LoopWidget(QWidget):
         self.loop_roi.hoverPen = pg.mkPen(default_color, width=2.)
         self.loop_roi.setZValue(15)
         self.update_loop_values()
-        # self.loop_roi.addRotateHandle(pos=[1, 0.5], center=[0.5, 0.5])
-
-        # # Add the loop corners to the table
-        # for handle in self.loop_roi.getHandles():
-        #     self.add_corner(handle)
 
         # Add loop name
         self.loop_name = pg.TextItem(name, anchor=(0.5, 0.5), color=(0, 0, 0, 100))
@@ -766,9 +744,7 @@ class LoopWidget(QWidget):
         self.coords_table.cellChanged.connect(self.update_loop_corners)
         self.show_cbox.toggled.connect(toggle_visibility)
         self.remove_btn.clicked.connect(self.remove_sig.emit)
-        self.loop_height_edit.editingFinished.connect(self.update_loop_roi)
-        self.loop_width_edit.editingFinished.connect(self.update_loop_roi)
-        self.loop_angle_edit.editingFinished.connect(self.update_loop_roi)
+        self.loop_angle_sbox.valueChanged.connect(self.update_loop_roi)
 
         self.loop_name_edit.textChanged.connect(self.name_changed_sig.emit)
         self.loop_name_edit.textChanged.connect(lambda: self.loop_name.setText(self.loop_name_edit.text()))
@@ -789,6 +765,9 @@ class LoopWidget(QWidget):
         if self.show_segments is True:
             for label in self.segment_labels:
                 label.show()
+        for handle in self.loop_roi.getHandles():
+            handle.show()
+
         self.is_selected = True
 
     def deselect(self):
@@ -798,9 +777,15 @@ class LoopWidget(QWidget):
             label.hide()
         for label in self.segment_labels:
             label.hide()
+        for handle in self.loop_roi.getHandles():
+            handle.hide()
         self.is_selected = False
 
     def remove(self):
+        """
+        Remove and delete the loop ROI object.
+        :return: None
+        """
         self.plan_view.removeItem(self.loop_roi)
         self.plan_view.removeItem(self.loop_name)
         for label in self.corner_labels:
@@ -809,28 +794,9 @@ class LoopWidget(QWidget):
             self.plan_view.removeItem(label)
         self.deleteLater()
 
-    def add_corner(self):
-
-        def series_to_items(x):
-            item = QTableWidgetItem()
-            item.setData(QtCore.Qt.EditRole, x)
-            return item
-
-        corners = self.get_loop_coords()
-        for corner in corners:
-            # Add a new row to the table
-            row_pos = self.coords_table.rowCount()
-            self.coords_table.insertRow(row_pos)
-
-            items = [series_to_items(c) for c in corner.pos()]
-            # Format each item of the table to be centered
-            for m, item in enumerate(items):
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
-                self.coords_table.setItem(row_pos, m, item)
-
     def get_loop_coords(self):
         """
-        Return the coordinates of the corners of the loop.
+        Return the coordinates of the corners (handles) of the loop.
         :return: list of QtCore.QPointF objects.
         """
         corners = []
@@ -872,13 +838,8 @@ class LoopWidget(QWidget):
         center = QtCore.QPointF(xs.mean(), ys.mean())
         return center
 
-    def get_properties(self):
-        """Return a dictionary of loop properties"""
-        return {
-            'height': self.loop_height_edit.text(),
-            'width': self.loop_width_edit.text(),
-            'angle': self.loop_angle_edit.text(),
-        }
+    def get_angle(self):
+        return self.loop_angle_sbox.text()
 
     def plot_loop_name(self):
         center = self.get_loop_center()
@@ -888,18 +849,13 @@ class LoopWidget(QWidget):
         """
         Signal slot, change the loop ROI object based on the user input values.
         """
+        print(f"updating loop roi")
         self.loop_roi.blockSignals(True)
 
-        # # Change the loop ROI
-        # h = int(self.loop_height_edit.text())
-        # w = int(self.loop_width_edit.text())
-        a = int(self.loop_angle_edit.text())
-        #
-        # self.loop_roi.setSize((w, h))
-        self.loop_roi.setAngle(a)
-
-        # Update the loop name position
+        angle = int(self.loop_angle_sbox.text())
+        self.loop_roi.setAngle(angle, center=self.get_loop_center())
         self.plot_loop_name()
+        self.label_loop_corners()
 
         self.loop_roi.blockSignals(False)
 
@@ -908,13 +864,9 @@ class LoopWidget(QWidget):
 
     def update_loop_values(self):
         """
-        Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
+        Signal slot: Updates the values of the loop angle and table values when the loop ROI is changed, then
         replots the section plot.
         """
-        # for seg in self.loop_roi.segments:
-        #     pos_1 = seg.handles[0].get("pos")
-        #     pos_2 = seg.handles[1].get("pos")
-        #     dist = spatial.distance.euclidean((pos_1.x(), pos_1.y()), (pos_2.x(), pos_2.y()))
 
         def series_to_items(x):
             x = round(x, 0)
@@ -923,6 +875,7 @@ class LoopWidget(QWidget):
             return item
 
         self.coords_table.blockSignals(True)
+        self.loop_angle_sbox.blockSignals(True)
 
         while self.coords_table.rowCount() > 0:
             self.coords_table.removeRow(0)
@@ -939,10 +892,17 @@ class LoopWidget(QWidget):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.coords_table.setItem(row_pos, m, item)
 
+        angle = self.loop_roi.getState().get("angle")
+        self.loop_angle_sbox.setValue(int(angle))
+
         self.coords_table.blockSignals(False)
+        self.loop_angle_sbox.blockSignals(False)
         self.label_loop_corners()
 
     def update_loop_corners(self):
+        """
+        Move a handle based on the values in the table
+        """
         self.loop_roi.blockSignals(True)
 
         loop_pos = self.loop_roi.state.get("pos")
@@ -955,6 +915,9 @@ class LoopWidget(QWidget):
         self.label_loop_corners()
 
     def label_loop_corners(self):
+        """
+        Label the loop corners and segment lengths
+        """
 
         # Remove previous labels
         for label in self.corner_labels:
@@ -964,7 +927,7 @@ class LoopWidget(QWidget):
 
         corners = self.get_loop_coords()
         for i, corner in enumerate(corners):
-            label = pg.TextItem(str(i + 1), color=pg.mkColor(default_color))
+            label = pg.TextItem(str(i + 1), color=pg.mkColor(selection_color))
             label.setPos(corner)
             self.corner_labels.append(label)
             self.plan_view.addItem(label, ignoreBounds=True)
@@ -1444,13 +1407,13 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         if name != '':
             # Copy the information from the currently selected hole widget to be used in the new widget
             if self.loop_widgets:
-                properties = self.loop_widgets[self.loop_tab_widget.currentIndex()].get_properties()
+                angle = self.loop_widgets[self.loop_tab_widget.currentIndex()].get_angle()
             else:
-                properties = None
+                angle = 0
 
             # Create the loop widget for the tab
             pos = self.plan_view.viewRect().center()
-            loop_widget = LoopWidget(properties, pos, self.plan_view, name=name)
+            loop_widget = LoopWidget(pos, self.plan_view, name=name, angle=int(angle))
             self.loop_widgets.append(loop_widget)
 
             # Connect signals
@@ -2814,22 +2777,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.status_bar.showMessage('Grid coordinates copied to clipboard', 1000)
 
 
-# class LoopROI(pg.RectROI):
-#     """
-#     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
-#     """
-#
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#
-#     def _makePen(self):
-#         # Generate the pen color for this ROI based on its current state.
-#         if self.mouseHovering:
-#             return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
-#         else:
-#             return self.pen
-
-
 class LoopROI(pg.PolyLineROI):
     """
     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
@@ -2850,7 +2797,7 @@ class LoopROI(pg.PolyLineROI):
             return self.pen
 
     def addSegment(self, h1, h2, index=None):
-        seg = _PolyLineSegment(handles=(h1, h2), pen=self.pen, parent=self, movable=False)
+        seg = _PolyLineSegment(handles=(h1, h2), pen=self.pen, parent=self, movable=True)
         if index is None:
             self.segments.append(seg)
         else:
@@ -2864,7 +2811,17 @@ class LoopROI(pg.PolyLineROI):
 
     def addHandle(self, info, index=None):
         # Reimplement so a signal can be emitted
-        h = pg.ROI.addHandle(self, info, index=index)
+        h = CustomHandle(6, typ="r", pen=pg.mkPen(selection_color, width=1.), parent=self)
+        h.setPos(info['pos'] * self.state['size'])
+        info['item'] = h
+
+        h.connectROI(self)
+        if index is None:
+            self.handles.append(info)
+        else:
+            self.handles.insert(index, info)
+
+        h.setZValue(self.zValue()+1)
         h.sigRemoveRequested.connect(self.removeHandle)
         self.stateChanged(finish=True)
         self.sigHandleAdded.emit(h)
@@ -2905,6 +2862,9 @@ class LoopROI(pg.PolyLineROI):
         finish          (bool) See setPos()
         =============== ==========================================================================
         """
+        if not -360 < angle < 360:
+            return
+
         if update not in (True, False):
             raise TypeError("update argument must be bool")
 
@@ -2914,7 +2874,6 @@ class LoopROI(pg.PolyLineROI):
         self.state['angle'] = angle
         tr = QtGui.QTransform()  # note: only rotation is contained in the transform
         tr.rotate(angle)
-
         if center is not None:
             centerLocal = QtCore.QPointF(center) * self.state['size']
         if centerLocal is not None:
@@ -2924,13 +2883,39 @@ class LoopROI(pg.PolyLineROI):
             self.translate(cc, update=False)
 
         self.setTransform(tr)
-        handle_pos = "\n".join([f"{h.pos().x() + cc.x()}, {h.pos().y() + cc.y()}" for h in self.getHandles()])
-        # print(f"Handle positions:\n{handle_pos}")
         if update:
             self.stateChanged(finish=finish)
 
 
+class CustomHandle(Handle):
+    """
+    Re-implementing Handle to change the size and color (especially when hovering) of the handles.
+    """
+    def __init__(self, *args, **kwds):
+        Handle.__init__(self, *args, **kwds)
+        self.pen = pg.mkPen(selection_color, width=1.)
+
+    def hoverEvent(self, ev):
+        hover = False
+        if not ev.isExit():
+            if ev.acceptDrags(QtCore.Qt.LeftButton):
+                hover = True
+            for btn in [QtCore.Qt.LeftButton, QtCore.Qt.RightButton, QtCore.Qt.MidButton]:
+                if int(self.acceptedMouseButtons() & btn) > 0 and ev.acceptClicks(btn):
+                    hover = True
+
+        if hover:
+            self.currentPen = pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+        else:
+            self.currentPen = self.pen
+        self.update()
+
+
 class _PolyLineSegment(pg.LineSegmentROI):
+    """
+    Reimplement in order to set the hover pen to the same color as the current loop pen color, and disable rotating
+    the segment.
+    """
     # Used internally by PolyLineROI
     def __init__(self, *args, **kwds):
         self._parentHovering = False
