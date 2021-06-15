@@ -751,9 +751,17 @@ class LoopWidget(QWidget):
             if self.show_cbox.isChecked():
                 self.loop_roi.show()
                 self.loop_name.show()
+                if self.show_corners:
+                    for label in self.corner_labels:
+                        label.show()
+                if self.show_segments:
+                    for label in self.segment_labels:
+                        label.show()
             else:
                 self.loop_roi.hide()
                 self.loop_name.hide()
+                for label in np.concatenate([self.corner_labels, self.segment_labels]):
+                    label.hide()
 
         self.coords_table.cellChanged.connect(self.update_loop_corners)
         self.show_cbox.toggled.connect(toggle_visibility)
@@ -826,9 +834,9 @@ class LoopWidget(QWidget):
         :return: list of QtCore.QPointF objects.
         """
         corners = []
-        for c in [h.pos() for h in self.loop_roi.getHandles()]:
-            x = c.x() + self.loop_roi.state.get("pos").x()
-            y = c.y() + self.loop_roi.state.get("pos").y()
+        for scene_p in self.loop_roi.getSceneHandlePositions():
+            x = self.loop_roi.mapSceneToParent(scene_p[1]).x()
+            y = self.loop_roi.mapSceneToParent(scene_p[1]).y()
             corners.append(QtCore.QPointF(x, y))
         return corners
 
@@ -882,12 +890,12 @@ class LoopWidget(QWidget):
         """
         self.loop_roi.blockSignals(True)
 
-        # Change the loop ROI
-        h = int(self.loop_height_edit.text())
-        w = int(self.loop_width_edit.text())
+        # # Change the loop ROI
+        # h = int(self.loop_height_edit.text())
+        # w = int(self.loop_width_edit.text())
         a = int(self.loop_angle_edit.text())
-
-        self.loop_roi.setSize((w, h))
+        #
+        # self.loop_roi.setSize((w, h))
         self.loop_roi.setAngle(a)
 
         # Update the loop name position
@@ -963,10 +971,11 @@ class LoopWidget(QWidget):
             if self.show_corners is False:
                 label.hide()
 
-        loop_pos = self.loop_roi.state.get("pos")
         for segment in self.loop_roi.segments:
-            p1, p2 = segment.endpoints
-            x, y = ((p2.x() - p1.x()) / 2) + p1.x() + loop_pos.x(), ((p2.y() - p1.y()) / 2) + p1.y() + loop_pos.y()
+            p1, p2 = segment.getSceneHandlePositions()
+            p1 = self.loop_roi.mapSceneToParent(p1[1])
+            p2 = self.loop_roi.mapSceneToParent(p2[1])
+            x, y = ((p2.x() - p1.x()) / 2) + p1.x(), ((p2.y() - p1.y()) / 2) + p1.y()
             dist = spatial.distance.euclidean((p1.x(), p1.y()), (p2.x(), p2.y()))
             label = pg.TextItem(f"{dist:.0f}m", color=pg.mkColor(default_color))
             label.setPos(x, y)
@@ -1397,7 +1406,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 else:
                     w.deselect()
 
-        def loop_copied(widget):
+        def loop_corners_copied(widget):
             """
             Copy the loop coordinates to the clipboard.
             :param widget: Loop widget object
@@ -1449,7 +1458,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             loop_widget.plot_hole_sig.connect(self.plot_hole)
             loop_widget.loop_roi.sigClicked.connect(lambda: loop_clicked(loop_widget))
             loop_widget.loop_roi.sigRegionChangeStarted.connect(lambda: loop_clicked(loop_widget))
-            loop_widget.copy_loop_btn.clicked.connect(lambda: loop_copied(loop_widget))
+            loop_widget.copy_loop_btn.clicked.connect(lambda: loop_corners_copied(loop_widget))
             loop_widget.remove_sig.connect(lambda: remove_loop(loop_widget))
 
             if not self.show_corners_cbox.isChecked():
@@ -2878,6 +2887,47 @@ class LoopROI(pg.PolyLineROI):
             segments[0].replaceHandle(handle, handles[0])
             self.removeSegment(segments[1])
         self.stateChanged(finish=True)
+
+    def setAngle(self, angle, center=None, centerLocal=None, snap=False, update=True, finish=True):
+        """
+        Set the ROI's rotation angle.
+
+        =============== ==========================================================================
+        **Arguments**
+        angle           (float) The final ROI angle in degrees
+        center          (None | Point) Optional center point around which the ROI is rotated,
+                        expressed as [0-1, 0-1] over the size of the ROI.
+        centerLocal     (None | Point) Same as *center*, but the position is expressed in the
+                        local coordinate system of the ROI
+        snap            (bool) If True, the final ROI angle is snapped to the nearest increment
+                        (default is 15 degrees; see ROI.rotateSnapAngle)
+        update          (bool) See setPos()
+        finish          (bool) See setPos()
+        =============== ==========================================================================
+        """
+        if update not in (True, False):
+            raise TypeError("update argument must be bool")
+
+        if snap is True:
+            angle = round(angle / self.rotateSnapAngle) * self.rotateSnapAngle
+
+        self.state['angle'] = angle
+        tr = QtGui.QTransform()  # note: only rotation is contained in the transform
+        tr.rotate(angle)
+
+        if center is not None:
+            centerLocal = QtCore.QPointF(center) * self.state['size']
+        if centerLocal is not None:
+            centerLocal = QtCore.QPointF(centerLocal)
+            # rotate to new angle, keeping a specific point anchored as the center of rotation
+            cc = self.mapToParent(centerLocal) - (tr.map(centerLocal) + self.state['pos'])
+            self.translate(cc, update=False)
+
+        self.setTransform(tr)
+        handle_pos = "\n".join([f"{h.pos().x() + cc.x()}, {h.pos().y() + cc.y()}" for h in self.getHandles()])
+        # print(f"Handle positions:\n{handle_pos}")
+        if update:
+            self.stateChanged(finish=finish)
 
 
 class _PolyLineSegment(pg.LineSegmentROI):

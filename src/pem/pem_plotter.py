@@ -1927,7 +1927,7 @@ class SectionPlot(MapPlotter):
 
         add_coord_labels()
         add_title()
-        self.add_scale_bar(self.ax, x_pos=0.205, y_pos=0.25, scale_factor=1, units=units)
+        self.add_scale_bar(self.ax, x_pos=0.205, y_pos=0.25, scale_factor=2, units=units)
 
 
 # class GeneralMap:

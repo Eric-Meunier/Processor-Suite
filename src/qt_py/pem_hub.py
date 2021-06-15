@@ -3071,7 +3071,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 if all([pem_file.is_borehole(), pem_file.has_xy(), not pem_file.is_derotated(), processed is True]):
                     response = self.message.question(self, 'Rotated XY',
                                                      f'File {pem_file.filepath.name} has not been de-rotated. '
-                                                     f'Do you wish to automatically de-rotated it?',
+                                                     f'Do you wish to automatically de-rotate it?',
                                                      self.message.Yes | self.message.No)
                     if response == self.message.No:
                         continue
@@ -4918,10 +4918,10 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"TMC\Loop G\GPS\L100E_16.gpx")])
-    gps_files = [samples_folder.joinpath(r"TMC\131-21-37\GPS\131-21-37 - clean.gpx")]
-    mw.add_gps_files(gps_files)
+    # gps_files = [samples_folder.joinpath(r"TMC\131-21-37\GPS\131-21-37 - clean.gpx")]
+    # mw.add_gps_files(gps_files)
 
     mw.show()
 
