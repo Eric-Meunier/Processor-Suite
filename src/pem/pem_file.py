@@ -3131,7 +3131,7 @@ class PEMSerializer:
         elif survey_type == 'Borehole Fluxgate':
             survey_str = 'BH-Flux'
         elif survey_type == 'SQUID':
-            survey_str = 'SQUID'
+            survey_str = 'S-SQUID'
         else:
             raise ValueError(f"{survey_type} is not a valid survey type.")
 
