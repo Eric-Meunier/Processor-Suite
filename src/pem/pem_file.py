@@ -385,6 +385,12 @@ class PEMFile:
         else:
             return False
 
+    def is_mmr(self):
+        # This is hacky as hell but currently our RX dumps the BH files as type BH-Flux so we just hope the
+        # operator puts mmr or dipole somewhere in the loop name
+        # TODO We need a fileheader survey type for MMR
+        return 'mmr' in self.loop_name.casefold() or 'dipole' in self.loop_name.casefold()
+
     def has_collar_gps(self):
         if self.is_borehole():
             if not self.collar.df.dropna().empty and all(self.collar.df):
