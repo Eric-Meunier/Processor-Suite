@@ -30,7 +30,7 @@ class InteractiveSpline:
     showverts = True
     epsilon = 10  # max pixel distance to count as a vertex hit
 
-    def __init__(self, ax, spline_coords, line_color='red', vertical_plot=True):
+    def __init__(self, ax, spline_coords, line_color='red', vertical_plot=True, method="cubic"):
         """
         :param ax: Matplotlib Axes object
         :param spline_coords: list of tuple, x and y coordinates of the spline to create
@@ -54,7 +54,7 @@ class InteractiveSpline:
         self.poly.set_visible(False)
         self.background = None
         self._ind = None  # the active vert
-        self.method = 'quadratic'
+        self.method = method
 
         x, y = zip(*self.poly.xy)
         self.line = Line2D(x, y,

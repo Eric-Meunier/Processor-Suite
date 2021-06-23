@@ -277,14 +277,15 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             Add the azimuth spline line
             """
             spline_stations = np.linspace(0, depth.iloc[-1], 6)
-            if len(az) > 11:
-                window_len = int(len(az) / 4)
-                if int(len(az) / 4) % 2 == 0:
-                    window_len += 1
-                az = savgol_filter(az, window_len, 3)
+            # if len(az) > 11:
+            #     window_len = int(len(az) / 4)
+            #     if int(len(az) / 4) % 2 == 0:
+            #         window_len += 1
+            #     az = savgol_filter(az, window_len, 3)
             spline_az = np.interp(spline_stations, depth, az + self.mag_dec_sbox.value())
             self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
-                                               line_color='darkred')
+                                               line_color='darkred',
+                                               method="cubic")
 
             self.toggle_az_spline()
             self.az_output_combo.addItem('Spline')
@@ -295,16 +296,17 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             Add the dip spline line
             """
             spline_stations = np.linspace(0, depth.iloc[-1], 6)
-            if len(dip) > 11:
-                window_len = int(len(dip) / 4)
-                if int(len(dip) / 4) % 2 == 0:
-                    window_len += 1
-                dip = savgol_filter(dip, window_len, 3)
+            # if len(dip) > 11:
+            #     window_len = int(len(dip) / 4)
+            #     if int(len(dip) / 4) % 2 == 0:
+            #         window_len += 1
+            #     dip = savgol_filter(dip, window_len, 3)
 
             spline_dip = np.interp(spline_stations, depth, dip)
 
             self.dip_spline = InteractiveSpline(self.dip_ax, zip(spline_stations, spline_dip),
-                                                line_color='darkblue')
+                                                line_color='darkblue',
+                                                method="cubic")
 
             self.toggle_dip_spline()
             self.dip_output_combo.addItem('Spline')

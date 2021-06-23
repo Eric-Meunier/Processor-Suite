@@ -63,6 +63,11 @@ __version__ = '0.11.6'
 # TODO load and save files in hole planner
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Fix Gridplanner with new loop
+# TODO Show ZTS in status bar
+# TODO Look into slowness when changing station number and such in pem plot editor
+# TODO Allow dragging in different filetypes at the same time.
+# TODO importing Iscaycruz data should fill the PSAD EPSG
+# TODO Add CTRL + shortcuts for saving screenshots for DB Plot.
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
