@@ -1526,14 +1526,15 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
     def change_station(self):
         """
-        Opens a input dialog to change the station name of the selected data.
+        Opens a input dialog to change the station number of the selected data.
         """
         if self.selected_lines:
             selected_data = self.get_selected_decay_data()
             selected_station = selected_data.Station.unique()[0]
 
-            new_station, ok_pressed = QInputDialog.getText(self, "Change Station", "New Station:", QLineEdit.Normal,
-                                                           selected_station)
+            new_station, ok_pressed = QInputDialog.getText(self, "Change Station", "New Station:",
+                                                           text=selected_station)
+
             if ok_pressed:
                 new_station = new_station.upper()
                 if re.match(r'-?\d+', new_station):
@@ -1543,8 +1544,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     self.pem_file.data.iloc[selected_data.index] = selected_data
 
                     # Update the plots
-                    self.plot_profiles(components=selected_data.Component.unique())
-                    self.plot_station(self.selected_station)
+                    try:
+                        self.plot_profiles(components=selected_data.Component.unique())
+                    except ValueError:
+                        self.message.critical(self, "Invalid Station Number",
+                                              f"{new_station} is not a valid station number")
+                    else:
+                        self.plot_station(self.selected_station)
 
     def shift_stations(self):
         """
@@ -1640,7 +1646,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             new_ind = comp_indexes[0]
         else:
             return
-        print(f"Cycling profile tab to {new_ind}")
+        # print(f"Cycling profile tab to {new_ind}")
         self.profile_tab_widget.setCurrentIndex(new_ind)
 
     def cycle_station(self, direction):
@@ -1648,7 +1654,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         Change the selected station
         :param direction: str, direction to cycle stations. Either 'up' or 'down'.
         """
-        print(f"Cycle station")
         station_index = list(self.stations).index(self.selected_station)
         if direction == 'down':
             if station_index == len(self.stations) - 1:
@@ -1657,9 +1662,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 # Force the new index to be a different station then the one selected
                 new_ind = station_index
                 while self.stations[new_ind] == self.selected_station and new_ind < len(self.stations) - 1:
-                    print(f"New ind: {new_ind}")
                     new_ind += 1
-                print(f"Next station: {self.stations[new_ind]}")
                 self.plot_station(self.stations[new_ind], preserve_selection=False)
         elif direction == 'up':
             if station_index == 0:
@@ -1668,9 +1671,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 # Force the new index to be a different station then the one selected
                 new_ind = station_index
                 while self.stations[new_ind] == self.selected_station and new_ind > 0:
-                    print(f"New ind: {new_ind}")
                     new_ind -= 1
-                print(f"Next station: {self.stations[new_ind]}")
                 self.plot_station(self.stations[new_ind], preserve_selection=False)
 
     def cycle_selection(self, direction):
@@ -1874,7 +1875,6 @@ class DecayViewBox(pg.ViewBox):
             dif = dif * -1
 
             if ev.isFinish():  # This is the final move in the drag; change the view scale now
-                # print "finish"
                 self.rbScaleBox.hide()
                 ax = QtCore.QRectF(Point(ev.buttonDownPos(ev.button())), Point(pos))
                 ax = self.childGroup.mapRectFromParent(ax)
@@ -2032,8 +2032,8 @@ if __name__ == '__main__':
     # pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
     # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
     # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
-    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")[0]
-    # pem_files = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
     editor = PEMPlotEditor()
     # editor.move(0, 0)

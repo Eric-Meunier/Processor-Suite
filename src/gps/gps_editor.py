@@ -666,11 +666,13 @@ class BoreholeCollar(BaseGPS):
             gps = gps.drop(gps.iloc[1:].index)
 
         # Capture rows with NaN in the first three columns
-        nan_rows = gps.iloc[:, 0: 2].apply(has_na, axis=1)
+        nan_rows = gps.iloc[:, 0: 3].apply(has_na, axis=1)
         error_gps = gps.loc[nan_rows].copy()
 
         # Remove NaN before converting to str
         gps = gps[~nan_rows]
+        if gps.empty:
+            logger.warning("No GPS found after removing NaNs.")
 
         gps = gps.astype(str)
         # Remove P tags and units columns
@@ -1017,7 +1019,7 @@ class GPXEditor:
         try:
             gps, errors = self.parse_gpx(gpx_file)
         except Exception as e:
-            raise Exception(f"The following error occurred parsing the GPX file:\n{e}.")
+            raise Exception(str(e))
         zone = None
         hemisphere = None
         crs = None

@@ -16,7 +16,7 @@ import pandas as pd
 import simplekml
 import stopit
 import shutil
-from PySide2 import QtCore, QtGui, QtUiTools
+from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                                QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser,
                                QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
@@ -63,6 +63,14 @@ __version__ = '0.11.6'
 # TODO load and save files in hole planner
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Fix Gridplanner with new loop
+# TODO Show ZTS in status bar
+# TODO Look into slowness when changing station number and such in pem plot editor
+# TODO Allow dragging in different filetypes at the same time.
+# TODO importing Iscaycruz data should fill the PSAD EPSG
+# TODO Add CTRL + shortcuts for saving screenshots for DB Plot.
+# TODO Save as processed PEM doesn't seem to work.
+# TODO Add interactive collar coordinate picker from an Excel file (or csv, or txt). Create table, and select Easting,
+# TODO (cont) Northing, elevation in order?
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -3071,7 +3079,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 if all([pem_file.is_borehole(), pem_file.has_xy(), not pem_file.is_derotated(), processed is True]):
                     response = self.message.question(self, 'Rotated XY',
                                                      f'File {pem_file.filepath.name} has not been de-rotated. '
-                                                     f'Do you wish to automatically de-rotate it?',
+                                                     f'Do you wish to automatically de-rotated it?',
                                                      self.message.Yes | self.message.No)
                     if response == self.message.No:
                         continue
@@ -3886,7 +3894,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if not coil_area:
             default = pem_files[0].coil_area
-            coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", default)
+            coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", value=default)
+            # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", QLineEdit.Normal, default)
+            # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", default, -1e6, 1e6, 50)
             if not ok_pressed:
                 return
 
@@ -4904,7 +4914,7 @@ def main():
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
-    pem_files = pem_g.get_pems(folder="TMC", subfolder="131-21-37\DATA", file="131-21-37 XY.PEM")
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
     # assert len(pem_files) == len(ri_files)
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
@@ -4917,10 +4927,10 @@ def main():
     # mw.open_pdf_plot_printer()
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
-    # mw.save_pem_file_as()
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.save_pem_file_as()¶
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"TMC\Loop G\GPS\L100E_16.gpx")])
-    # gps_files = [samples_folder.joinpath(r"TMC\131-21-37\GPS\131-21-37 - clean.gpx")]
+    # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
     # mw.add_gps_files(gps_files)
 
     mw.show()
