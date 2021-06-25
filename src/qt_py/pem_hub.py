@@ -69,6 +69,8 @@ __version__ = '0.11.6'
 # TODO importing Iscaycruz data should fill the PSAD EPSG
 # TODO Add CTRL + shortcuts for saving screenshots for DB Plot.
 # TODO Save as processed PEM doesn't seem to work.
+# TODO Add interactive collar coordinate picker from an Excel file (or csv, or txt). Create table, and select Easting,
+# TODO (cont) Northing, elevation in order?
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -3892,7 +3894,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if not coil_area:
             default = pem_files[0].coil_area
-            coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", default)
+            coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", value=default)
+            # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", QLineEdit.Normal, default)
+            # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", default, -1e6, 1e6, 50)
             if not ok_pressed:
                 return
 
