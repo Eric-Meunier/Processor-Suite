@@ -413,10 +413,10 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         """
         Remove text from station names. Useful for GPX files.
         """
-        text_removal, _ = QInputDialog().getText(self, "Edit Station Names", "Text to remove:")
-        if text_removal:
-            print(f"Removing {text_removal}")
-            self.df.Station.loc[:] = self.df.Station.map(lambda x: float(re.sub(f"{text_removal}", "", str(x))))
+        add_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to add:")
+        if add_amt:
+            print(f"Adding {add_amt}")
+            self.df.Station.loc[:] = self.df.Station.loc[:] + add_amt
             self.df_to_table(self.df)
 
     def open(self, gps, name=''):
@@ -1145,7 +1145,7 @@ def main():
     # loop = TransmitterLoop(file)
 
     mw = LineAdder()
-    file = samples_folder.joinpath(r'GPX files\L77+25_0515.gpx')
+    file = samples_folder.joinpath(r'GPX files\Loop01 L200_0624.gpx')
     # line = SurveyLine(str(file))
 
     mw.open(file)

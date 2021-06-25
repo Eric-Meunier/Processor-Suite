@@ -37,6 +37,8 @@ def clear_table(table):
         table.removeRow(0)
     table.blockSignals(False)
 
+get_collar_called = 0
+
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     refresh_row_signal = QtCore.Signal()  # Send a signal to PEMEditor to refresh its main table.
@@ -1027,6 +1029,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: BoreholeCollar object
         """
         gps = []
+        global get_collar_called
+        get_collar_called += 1
+        print(f"Get collar called: {get_collar_called}")
         for row in range(self.collar_table.rowCount()):
             gps_row = list()
             for col in range(self.collar_table.columnCount()):
