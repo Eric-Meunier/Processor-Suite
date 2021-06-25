@@ -1434,7 +1434,8 @@ class PEMFile:
         self.data[xy_filt] = rotated_data
         for note in self.notes:
             if "SOA offset" in note:
-                del note
+                self.notes.remove(note)
+                break
         self.notes.append(f"<GEN> Data de-rotated by SOA offset of {soa}°.")
         return self
 

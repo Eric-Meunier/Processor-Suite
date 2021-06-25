@@ -616,16 +616,17 @@ class LoopWidget(QWidget):
     plot_hole_sig = QtCore.Signal()
     remove_sig = QtCore.Signal()
 
-    def __init__(self, center, plot_widget, name='', angle=0.):
+    def __init__(self, coords, plot_widget, name='', angle=0.):
         """
         Widget representing a loop as tab in Loop Planner.
-        :param angle: angle of a previous loop to be used as a starting point.
-        :param center: tuple of int, centre position of the loop ROI.
-        :param plot_widget: pyqtgraph plot widget to plot on.
+        :param coords: list of lists, coordinates of the loop. If one is passed, it will be used as the center and
+        the corners will be calculated using a 500m x 500m size.
         :param name: str, name of the loop.
+        :param angle: angle of a previous loop to be used as a starting point.
+        :param plot_widget: pyqtgraph plot widget to plot on.
         """
         super().__init__()
-
+        self.setAcceptDrops(True)
         layout = QFormLayout()
         self.setLayout(layout)
         self.plan_view = plot_widget
@@ -690,20 +691,24 @@ class LoopWidget(QWidget):
         self.loop_angle_validator = QtGui.QIntValidator()
         self.loop_angle_validator.setRange(0, 360)
 
-        # Set the position of the loop by the center (and not the bottom-left corner)
-        h, w = 500, 500
-        pos = QtCore.QPointF(center.x() - (w / 2), center.y() - (h / 2))  # Adjusted position for the center
-        # angle = 0
+        if len(coords) == 1:
+            center = coords[0]
+            # Set the position of the loop by the center (and not the bottom-left corner)
+            h, w = 500, 500
+            pos = QtCore.QPointF(center.x() - (w / 2), center.y() - (h / 2))  # Adjusted position for the center
+            # angle = 0
 
-        c1 = QtCore.QPointF(pos)
-        c2 = QtCore.QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
-        c3 = QtCore.QPointF(c2.x() - h * (math.sin(math.radians(angle))), c2.y() + h * (math.sin(math.radians(90-angle))))
-        c4 = QtCore.QPointF(c3.x() + w * (math.cos(math.radians(180-angle))), c3.y() - w * (math.sin(math.radians(180-angle))))
-        corners = [(c1.x(), c1.y()),
-                   (c2.x(), c2.y()),
-                   (c3.x(), c3.y()),
-                   (c4.x(), c4.y()),
-                   ]
+            c1 = QtCore.QPointF(pos)
+            c2 = QtCore.QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
+            c3 = QtCore.QPointF(c2.x() - h * (math.sin(math.radians(angle))), c2.y() + h * (math.sin(math.radians(90-angle))))
+            c4 = QtCore.QPointF(c3.x() + w * (math.cos(math.radians(180-angle))), c3.y() - w * (math.sin(math.radians(180-angle))))
+            corners = [(c1.x(), c1.y()),
+                       (c2.x(), c2.y()),
+                       (c3.x(), c3.y()),
+                       (c4.x(), c4.y()),
+                       ]
+        else:
+            corners = coords
 
         self.loop_roi = LoopROI(corners,
                                 scaleSnap=True,
@@ -957,6 +962,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
+        self.setAcceptDrops(True)
         self.parent = parent
 
         self.setWindowTitle('Loop Planner')
@@ -1223,6 +1229,18 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.ax.figure.subplots_adjust(left=0.1, bottom=0.02, right=0.98, top=0.98)
         self.ax.get_yaxis().set_visible(False)  # Hide the section plot until a loop is added.
 
+    def dragEnterEvent(self, e):
+        e.accept()
+
+    def dropEvent(self, e):
+        urls = [Path(url.toLocalFile()) for url in e.mimeData().urls()]
+
+        if all([file.suffix.lower() == ".tx" for file in urls]):
+            for file in urls:
+                # print(f"Opening loop {file.name}")
+                # self.add_loop(file.name)
+                self.open_tx_file(file)
+
     def event(self, e):
         if e.type() in [QtCore.QEvent.Show]:  # , QtCore.QEvent.Resize):
             self.plot_hole()
@@ -1338,7 +1356,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             if self.hole_tab_widget.count() == 1:
                 self.select_hole(0)
 
-    def add_loop(self, name=None):
+    def add_loop(self, name=None, coords=None):
         """
         Create tab for a new loop
         :param name: str, name of the loop
@@ -1411,9 +1429,11 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             else:
                 angle = 0
 
-            # Create the loop widget for the tab
-            pos = self.plan_view.viewRect().center()
-            loop_widget = LoopWidget(pos, self.plan_view, name=name, angle=int(angle))
+            if coords is None:
+                # Create the loop widget for the tab
+                coords = [self.plan_view.viewRect().center()]
+
+            loop_widget = LoopWidget(coords, self.plan_view, name=name, angle=int(angle))
             self.loop_widgets.append(loop_widget)
 
             # Connect signals
@@ -1439,6 +1459,26 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             if self.loop_tab_widget.count() == 1:
                 self.select_loop(0)
                 self.ax.get_yaxis().set_visible(True)
+
+    def open_tx_file(self, file):
+        """
+        Parse a Maxwell .tx file and add it as a loop.
+        :param file: Path or str, filepath.
+        :return: None
+        """
+        if not isinstance(file, Path):
+            file = Path(file)
+        print(f"Opening {file.name}.")
+        content = pd.read_table(file, header=None, delim_whitespace=True)
+        if content.empty:
+            logger.warning(f"No coordinates found in {file.name}.")
+            return
+        else:
+            coords = []
+            for ind, coord in content.iterrows():
+                coords.append(QtCore.QPointF(coord[0], coord[1]))
+
+        self.add_loop(name=file.name, coords=coords)
 
     def remove_hole(self, ind):
         response = QMessageBox.question(self, "Remove Hole", "Are you sure you want to remove this hole?",
@@ -2797,7 +2837,7 @@ class LoopROI(pg.PolyLineROI):
             return self.pen
 
     def addSegment(self, h1, h2, index=None):
-        seg = _PolyLineSegment(handles=(h1, h2), pen=self.pen, parent=self, movable=True)
+        seg = CustomSegment(handles=(h1, h2), pen=self.pen, parent=self, movable=False)
         if index is None:
             self.segments.append(seg)
         else:
@@ -2911,7 +2951,7 @@ class CustomHandle(Handle):
         self.update()
 
 
-class _PolyLineSegment(pg.LineSegmentROI):
+class CustomSegment(pg.LineSegmentROI):
     """
     Reimplement in order to set the hover pen to the same color as the current loop pen color, and disable rotating
     the segment.
@@ -2946,6 +2986,7 @@ class _PolyLineSegment(pg.LineSegmentROI):
 
 
 def main():
+    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
     app = QApplication(sys.argv)
     planner = LoopPlanner()
     # planner = GridPlanner()
@@ -2954,6 +2995,8 @@ def main():
     # planner.gps_datum_cbox.setCurrentIndex(1)
     # planner.gps_zone_cbox.setCurrentIndex(16)
     planner.show()
+    tx_file = samples_folder.joinpath(r"Tx Files/Loop.tx")
+    # planner.open_tx_file(tx_file)
     # planner.hole_widgets[0].get_dad_file()
     # planner.hole_az_edit.setText('174')
     # planner.view_map()
