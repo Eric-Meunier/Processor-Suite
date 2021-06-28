@@ -1619,7 +1619,6 @@ class PEMFile:
             ch_numbers = []
             total_time = pp_center
             last_time = ch_times.iloc[-1].End
-            # TODO Double check this is done correctly
             while (total_time + ramp) < last_time:
                 # Add the ramp time iteratively to the PP center time until reaching the end of the off-time
                 total_time += ramp
@@ -3494,7 +3493,6 @@ if __name__ == '__main__':
     pemparser = PEMParser()
     pem_g = PEMGetter()
 
-    # file = sample_folder.joinpath(r"TODO\FLC-2021-24\RAW\ZXY_0322.DMP")
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
     # file = r"C:\_Data\2021\Geoken\Borehole\SAPR-21-005\DUMP\XY.PEM"
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"

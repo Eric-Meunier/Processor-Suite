@@ -55,7 +55,6 @@ logger = logging.getLogger(__name__)
 
 __version__ = '0.11.6'
 # TODO Add quick view to unpacker? Or separate EXE entirely?
-# TODO Add SOA to de-rotation note?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Add rainbow coloring to final plots?
 # TODO Use savgol to filter data
@@ -63,13 +62,10 @@ __version__ = '0.11.6'
 # TODO load and save files in hole planner
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Fix Gridplanner with new loop
-# TODO add undo-all deleted readings in pem plot editor
 # TODO Show ZTS in status bar
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Allow dragging in different filetypes at the same time.
 # TODO importing Iscaycruz data should fill the PSAD EPSG
-# TODO Add CTRL + shortcuts for saving screenshots for DB Plot.
-# TODO Save as processed PEM doesn't seem to work.
 # TODO Add interactive collar coordinate picker from an Excel file (or csv, or txt). Create table, and select Easting,
 # TODO (cont) Northing, elevation in order?
 

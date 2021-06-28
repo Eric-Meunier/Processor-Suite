@@ -88,7 +88,9 @@ class DBPlotter(QMainWindow):
         self.open_file_action = QAction('Open', self.file_menu)
         self.open_file_action.triggered.connect(self.open_file_dialog)
         self.actionSave_Screenshot = QAction("Save Screenshot")
+        self.actionSave_Screenshot.setShortcut("Ctrl+S")
         self.actionCopy_Screenshot = QAction("Copy Screenshot")
+        self.actionCopy_Screenshot.setShortcut("Ctrl+C")
         self.actionSave_Screenshot.triggered.connect(self.save_img)
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
 
