@@ -1763,9 +1763,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
 
         def accept_file(rotated_pem):
-            rotation_note = derotator.rotation_note
-            if rotation_note is not None:
-                rotated_pem.notes.append(rotation_note)
+            # rotation_note = derotator.rotation_note
+            # if rotation_note is not None:
+            #     rotated_pem.notes.append(rotation_note)
 
             self.pem_files[row] = rotated_pem
             self.refresh_pem(rotated_pem)
@@ -4914,8 +4914,12 @@ def main():
     # dmp_files = samples_folder.joinpath(r"TMC/1338-18-19/RAW/_16_1338-18-19ppz.dmp2")
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
-    pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
+
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
+    # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
     # assert len(pem_files) == len(ri_files)
 
@@ -4925,7 +4929,7 @@ def main():
     # mw.add_dmp_files([dmp_files])
     # mw.table.selectRow(0)
     mw.table.selectAll()
-    mw.open_pem_merger()
+    # mw.open_pem_merger()
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()

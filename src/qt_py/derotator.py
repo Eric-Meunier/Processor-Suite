@@ -695,7 +695,13 @@ class Derotator(QMainWindow, Ui_Derotator):
         Rotate and plot the data, always using the original PEMFile
         """
         method = self.get_method()
-        self.soa = self.soa_sbox.value()
+        if method == "unrotate":
+            self.soa_sbox.setEnabled(False)
+            self.soa = 0
+        else:
+            self.soa_sbox.setEnabled(True)
+            self.soa = self.soa_sbox.value()
+
         # Create a copy of the pem_file so it is never changed
         copy_file = self.pem_file.copy()
 
@@ -717,19 +723,14 @@ class Derotator(QMainWindow, Ui_Derotator):
     def get_method(self):
         if self.acc_btn.isChecked():
             method = 'acc'
-            self.rotation_note = '<GEN> XY data de-rotated using accelerometer'
         elif self.mag_btn.isChecked():
             method = 'mag'
-            self.rotation_note = '<GEN> XY data de-rotated using magnetometer'
         elif self.pp_btn.isChecked():
             method = 'pp'
-            self.rotation_note = '<GEN> XY data de-rotated using PP.'
         elif self.unrotate_btn.isChecked():
             method = 'unrotate'
-            self.rotation_note = '<GEN> XY data un-rotated'
         else:
             method = None
-            self.rotation_note = None
         return method
 
 

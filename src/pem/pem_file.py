@@ -166,6 +166,7 @@ class PEMFile:
         self.crs = None
 
         self.total_scale_factor = 0.
+        self.soa = 0  # For XY SOA rotation
         self.pp_table = None
         self.prepped_for_rotation = False
         self.legacy = False
@@ -1355,90 +1356,6 @@ class PEMFile:
             self.notes.append(note)
         return self
 
-    def rotate_soa(self, soa):
-        """
-        Rotate the X and Y by an SOA value.
-        :param soa: int
-        :return: PEMFile object
-        """
-
-        def rotate_data(group, soa):
-            """
-            Rotate the data for a given reading
-            :param group: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
-            reading from X and Y components, and the RAD tool values for all readings must all be the same.
-            :param soa: int, value to rotate by.
-            :return: pandas DataFrame: data frame of the readings with the data rotated.
-            """
-
-            def rotate_x(x_values, y_pair, roll_angle):
-                """
-                Rotate the X data of a reading
-                Formula: X' = Xcos(roll) - Ysin(roll)
-                :param x_values: list: list of x readings to rotated
-                :param y_pair: list: list of paired y reading
-                :param roll_angle: float: calculated roll angle
-                :return: list: rotated x values
-                """
-                rotated_x = [x * math.cos(math.radians(roll_angle)) - y * math.sin(math.radians(roll_angle)) for (x, y) in
-                             zip(x_values, y_pair)]
-                return np.array(rotated_x, dtype=float)
-
-            def rotate_y(y_values, x_pair, roll_angle):
-                """
-                Rotate the Y data of a reading
-                Formula: Y' = Xsin(roll) + Ycos(roll)
-                :param y_values: list: list of y readings to rotated
-                :param x_pair: list: list of paired x reading
-                :param roll_angle: float: calculated roll angle
-                :return: list: rotated y values
-                """
-                rotated_y = [x * math.sin(math.radians(roll_angle)) + y * math.cos(math.radians(roll_angle)) for (x, y) in
-                             zip(x_pair, y_values)]
-                return np.array(rotated_y, dtype=float)
-
-            def weighted_average(group):
-                """
-                Function to calculate the weighted average reading of a station-component group.
-                :param group: pandas DataFrame of PEM data for a station-component
-                :return: np array, averaged reading
-                """
-                # Sum the number of stacks column
-                weights = group['Number_of_stacks'].to_list()
-                # Add the weighted average of the readings to the reading column
-                averaged_reading = np.average(group.Reading.to_list(),
-                                              axis=0,
-                                              weights=weights)
-                return averaged_reading
-
-            x_data = group[group['Component'] == 'X']
-            y_data = group[group['Component'] == 'Y']
-            # Save the first reading of each component to be used a the 'pair' reading for rotation
-            x_pair = weighted_average(x_data)
-            y_pair = weighted_average(y_data)
-
-            x_data.loc[:, 'Reading'] = x_data.loc[:, 'Reading'].map(lambda i: rotate_x(i, y_pair, soa))
-            y_data.loc[:, 'Reading'] = y_data.loc[:, 'Reading'].map(lambda i: rotate_y(i, x_pair, soa))
-            row = x_data.append(y_data)
-            return row
-
-        filtered_data, _ = self.get_rotation_filtered_data()
-        logger.info(f"Rotating {self.filepath.name} by SOA of {soa}.")
-
-        # Rotate the data
-        rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
-                                             group_keys=False,
-                                             as_index=False).apply(lambda l: rotate_data(l, soa))
-
-        xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
-        self.data[xy_filt] = rotated_data
-        for note in self.notes:
-            if "SOA offset" in note:
-                self.notes.remove(note)
-                break
-        self.notes.append(f"<GEN> Data de-rotated by SOA offset of {soa}°.")
-        return self
-
     def rotate(self, method='acc', soa=0):
         """
         Rotate the XY data of the PEM file.
@@ -1452,12 +1369,14 @@ class PEMFile:
             assert self.is_derotated(), f"{self.filepath.name} has not been de-rotated."
             assert self.has_d7(), f"{self.filepath.name} RAD tool values must be D7."
         else:
-            assert self.prepped_for_rotation, f"{self.filepath.name} has not been prepped for rotation."
-        logger.info(f"De-rotating data of {self.filepath.name} using {method} with SOA {soa}.")
+            if method is not None:
+                assert self.prepped_for_rotation, f"{self.filepath.name} has not been prepped for rotation."
+        self.soa += soa
+        logger.info(f"De-rotating data of {self.filepath.name} using {method} with SOA {self.soa}.")
 
-        def rotate_data(group, method, soa):
+        def rotate_group(group, method, soa):
             """
-            Rotate the data for a given reading
+            Rotate the data for a given reading.
             :param group: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
             reading from X and Y components, and the RAD tool values for all readings must all be the same.
             :param method: str: type of rotation to apply. Either 'acc' for accelerometer or 'mag' for magnetic
@@ -1480,7 +1399,6 @@ class PEMFile:
                         roll_angle = rad.cleaned_pp_roll_angle
                         rot_type = 'pp_cleaned'
 
-                    # Update the new_rad with the de-rotation information
                     new_info = {'roll_angle': roll_angle,
                                 'dip': rad.pp_dip,
                                 'R': 'R1',
@@ -1490,7 +1408,6 @@ class PEMFile:
 
                 # Accelerometer rotation
                 elif method == 'acc':
-                    # Update the new_rad with the de-rotation information
                     new_info = {'roll_angle': rad.acc_roll_angle,
                                 'dip': rad.acc_dip,
                                 'R': 'R3',
@@ -1500,7 +1417,6 @@ class PEMFile:
 
                 # Magnetometer rotation
                 elif method == 'mag':
-                    # Update the new_rad with the de-rotation information
                     new_info = {'roll_angle': rad.mag_roll_angle,
                                 'dip': rad.mag_dip,
                                 'R': 'R3',
@@ -1508,14 +1424,34 @@ class PEMFile:
                                 'derotated': True,
                                 'rotation_type': 'mag'}
 
+                # SOA rotation
+                elif method is None:
+                    if self.is_derotated():
+                        roll_angle = rad.angle_used
+                        r = "R3"
+                        dip = rad.dip
+                        derotated = True
+                    else:
+                        roll_angle = soa
+                        r = None
+                        dip = None
+                        derotated = False
+
+                    new_info = {'roll_angle': roll_angle,
+                                'dip': dip,
+                                'R': r,
+                                'angle_used': soa,
+                                'derotated': derotated,
+                                'rotation_type': 'soa'}
+
                 elif method == 'unrotate':
-                    # Update the new_rad with the de-rotation information
                     new_info = {'roll_angle': None,
                                 'dip': None,
                                 'R': None,
                                 'angle_used': rad.angle_used,
                                 'derotated': False,
-                                'rotation_type': 'unrotate'}
+                                'rotation_type': None}
+
                 else:
                     raise ValueError(f"{method} is not a valid de-rotation method.")
 
@@ -1544,6 +1480,7 @@ class PEMFile:
             if method == "unrotate":
                 roll_angle = rad.angle_used
                 roll = -math.radians(roll_angle)
+                new_rad.angle_used = None
             else:
                 roll_angle = new_rad.angle_used  # Roll angle used for de-rotation
                 roll = math.radians(roll_angle)
@@ -1586,7 +1523,7 @@ class PEMFile:
             include_pp = True
         else:
             include_pp = False
-            if method.upper() == 'PP':
+            if method == 'PP':
                 raise ValueError("Cannot perform PP rotation on a PEM file that doesn't have the necessary geometry.")
 
         # Create a filter for X and Y data only
@@ -1599,114 +1536,32 @@ class PEMFile:
         # Rotate the data
         rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
                                              group_keys=False,
-                                             as_index=False).apply(lambda l: rotate_data(l, method, soa))
+                                             as_index=False).apply(lambda l: rotate_group(l, method, soa))
 
         self.data[xy_filt] = rotated_data
         # Remove the rows that were filtered out in filtered_data
-        # self.data.dropna(inplace=True)
         if method == "unrotate":
-            self.probes['SOA'] = '0'
-        else:
-            self.probes['SOA'] = str(soa)
-        return self
+            self.soa = 0
+        self.probes['SOA'] = str(self.soa)
 
-    def unrotate(self):
-        """
-        Undo a data de-rotation. File must be de-rotated.
-        :return: PEMFile
-        """
-        assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
-        assert self.is_derotated(), f"{self.filepath.name} has not been de-rotated."
-        assert self.has_d7(), f"{self.filepath.name} RAD tool values must be D7."
+        # Remove any previous de-rotation notes
+        for note in reversed(self.notes):
+            if "<GEN> XY data" in note and "rotated" in note:
+                print(f"Removing note {note}")
+                self.notes.remove(note)
 
-        logger.info(f"Un-rotating data of {self.filepath.name}.")
+        # Add the rotation note
+        if method == 'acc':
+            self.notes.append('<GEN> XY data de-rotated using accelerometer.')
+        elif method == 'mag':
+            self.notes.append('<GEN> XY data de-rotated using magnetometer.')
+        elif method == 'PP':
+            self.notes.append('<GEN> XY data de-rotated using PP.')
+        elif method == 'unrotate':
+            self.notes.append('<GEN> XY data un-rotated.')
 
-        def rotate_data(group):
-            """
-            Rotate the data for a given reading
-            :param group: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
-            reading from X and Y components, and the RAD tool values for all readings must all be the same.
-            :param method: str: type of rotation to apply. Either 'acc' for accelerometer or 'mag' for magnetic
-            :return: pandas DataFrame: data frame of the readings with the data rotated.
-            """
-
-            def weighted_average(group):
-                """
-                Function to calculate the weighted average reading of a station-component group.
-                :param group: pandas DataFrame of PEM data for a station-component
-                :return: np array, averaged reading
-                """
-                # Sum the number of stacks column
-                weights = group['Number_of_stacks'].to_list()
-                # Add the weighted average of the readings to the reading column
-                averaged_reading = np.average(group.Reading.to_list(),
-                                              axis=0,
-                                              weights=weights)
-                return averaged_reading
-
-            # Create a new RADTool object ready for de-rotating
-            rad = group.iloc[0]['RAD_tool']
-
-            roll_angle = rad.angle_used  # Roll angle used for de-rotation
-            roll = math.radians(roll_angle)
-
-            # Reset the RADTool object
-            rad.roll_angle = None
-            rad.dip = None
-            rad.R = None
-            rad.angle_used = None
-            rad.derotated = False
-            rad.rotation_type = None
-
-            x_rows = group[group['Component'] == 'X']
-            y_rows = group[group['Component'] == 'Y']
-
-            rotated_x = []
-            rotated_y = []
-
-            if len(x_rows) == len(y_rows):
-                for i, (x_data, y_data) in enumerate(zip(x_rows.itertuples(index=False), y_rows.itertuples(index=False))):
-                    x = [x * math.cos(roll) + y * math.sin(roll) for (x, y) in zip(x_data.Reading, y_data.Reading)]
-                    y = [-(x * math.sin(roll) - y * math.cos(roll)) for (x, y) in zip(x_data.Reading, y_data.Reading)]
-                    rotated_x.append(np.array(x))
-                    rotated_y.append(np.array(y))
-            else:
-                x_pair = weighted_average(x_rows)
-                y_pair = weighted_average(y_rows)
-
-                for x_data in x_rows.itertuples(index=False):
-                    x = [x * math.cos(roll) + y * math.sin(roll) for (x, y) in zip(x_data.Reading, y_pair)]
-                    rotated_x.append(np.array(x))
-                for y_data in y_rows.itertuples(index=False):
-                    y = [-(x * math.sin(roll) - y * math.cos(roll)) for (x, y) in zip(x_pair, y_data.Reading)]
-                    rotated_y.append(np.array(y))
-
-            x_rows.Reading = rotated_x
-            y_rows.Reading = rotated_y
-
-            row = x_rows.append(y_rows)
-            row['RAD_tool'] = row['RAD_tool'].map(lambda p: rad)
-            return row
-
-        # Create a filter for X and Y data only
-        xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
-        filtered_data = self.data[xy_filt]  # Data should have already been filtered by prep_rotation.
-
-        if filtered_data.empty:
-            raise Exception(f"{self.filepath.name} has no eligible XY data for de-rotation.")
-
-        # Rotate the data
-        rotated_data = filtered_data.groupby(['Station', 'RAD_ID'],
-                                             group_keys=False,
-                                             as_index=False).apply(rotate_data)
-
-        self.data[xy_filt] = rotated_data
-        # Remove the rows that were filtered out in filtered_data
-        # self.data.dropna(inplace=True)
-        self.probes['SOA'] = '0'
-        self.prepped_for_rotation = False
-        # self.filepath = self.filepath.with_name(self.filepath.stem + "(unrotated)" + ".PEM")
-        # self.save()
+        if float(soa) != 0.0:
+            self.notes.append(f"<GEN> XY data rotated using an SOA offset of {self.soa}°.")
         return self
 
     def prep_rotation(self, allow_negative_angles=False):
@@ -1972,7 +1827,6 @@ class PEMFile:
         else:
             include_pp = False
 
-        # TODO Find pandas warning near here
         # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
         eligible_data, ineligible_data = self.get_rotation_filtered_data()
 
@@ -3608,11 +3462,12 @@ class RADTool:
                             result.append(f"{self.measured_pp_roll_angle:g}")
                         elif self.rotation_type == 'pp_cleaned':
                             result.append(f"{self.cleaned_pp_roll_angle:g}")
+                        elif self.rotation_type == "soa":
+                            result.append(f"{self.angle_used:g}")
                         else:
                             if self.roll_angle is None:
                                 raise Exception(f"The RAD tool object has been de-rotated, yet no roll_angle exists.")
 
-                            logger.warning(f"No rotation type passed. Using existing roll angle of {self.roll_angle:g}.")
                             result.append(f"{self.roll_angle:g}")
 
                         result.append(f"{self.get_dip():g}")
@@ -3646,19 +3501,21 @@ if __name__ == '__main__':
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-037\DUMP\January 16, 2021\DMP\1338-19-037 XY.PEM"
     # pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
     # pem_files = pem_g.get_pems(folder="TMC", subfolder=r"131-21-37\DATA", file="131-21-37 XY.PEM")
     pem_file = pem_files[0]
-    pem_file.rotate(method="unrotate")
-    pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
-    pem_file.save()
+    # pem_file.rotate(method="unrotate")
+    # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
+    # pem_file.save()
 
     # pem_file = pem_g.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')[0]
     # pem_file.get_dad()
     # pem_file = pem_g.get_pems(client='Kazzinc', number=1)[0]
     # pem_file.to_xyz()
     # prep_pem, _ = pem_file.prep_rotation()
-    # pem = pem_file.rotate_soa(10)
+    # pem_file = pem_file.rotate(method=None, soa=10)
+    pem_file = pem_file.rotate(method="unrotate", soa=1)
     # rotated_pem = prep_pem.rotate('pp')
 
     # pem_file = pemparser.parse(r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\RAW\XY29_29.PEM')

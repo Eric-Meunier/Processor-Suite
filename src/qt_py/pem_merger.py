@@ -165,7 +165,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         def soa_1_changed(soa):
             soa_delta = soa - self.last_soa_1
 
-            self.pf1 = self.pf1.rotate_soa(soa_delta)
+            self.pf1 = self.pf1.rotate(method=None, soa=soa_delta)
             self.plot_profiles(self.pf1, components='all')
 
             self.last_soa_1 = soa
@@ -173,7 +173,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         def soa_2_changed(soa):
             soa_delta = soa - self.last_soa_2
 
-            self.pf2 = self.pf2.rotate_soa(soa_delta)
+            self.pf2 = self.pf2.rotate(method=None, soa=soa_delta)
             self.plot_profiles(self.pf2, components='all')
 
             self.last_soa_2 = soa
