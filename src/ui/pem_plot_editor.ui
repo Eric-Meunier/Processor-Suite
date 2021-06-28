@@ -715,6 +715,7 @@
     <addaction name="actionCopy_Screenshot"/>
     <addaction name="actionSave_Screenshot"/>
     <addaction name="separator"/>
+    <addaction name="actionUn_Delete_All"/>
     <addaction name="actionReset_File"/>
    </widget>
    <addaction name="menuFile"/>
@@ -770,6 +771,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Alt+C</string>
+   </property>
+  </action>
+  <action name="actionUn_Delete_All">
+   <property name="text">
+    <string>Un-Delete All</string>
    </property>
   </action>
  </widget>

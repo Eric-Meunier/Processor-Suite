@@ -254,6 +254,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 for ax in self.mag_profile_axes:
                     ax.hide()
 
+        # Menu
+        self.actionOpen.triggered.connect(self.open_file_dialog)
+        self.actionSave.triggered.connect(self.save)
+        self.actionSave_As.triggered.connect(self.save_as)
+        self.actionUn_Delete_All.triggered.connect(self.undelete_all)
+
         # Shortcuts
         self.actionSave_Screenshot.triggered.connect(self.save_img)
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
@@ -286,11 +292,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.auto_clean_btn.clicked.connect(self.auto_clean)
         self.actionReset_File.triggered.connect(self.reset_file)
         self.number_of_repeats.clicked.connect(self.rename_repeats)
-
-        # Menu
-        self.actionOpen.triggered.connect(self.open_file_dialog)
-        self.actionSave.triggered.connect(self.save)
-        self.actionSave_As.triggered.connect(self.save_as)
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
@@ -1446,6 +1447,18 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.plot_profiles(components=selected_data.Component.unique())
             self.plot_station(self.selected_station, preserve_selection=True)
 
+    def undelete_all(self):
+        """
+        Un-delete all deleted readings.
+        :return: None
+        """
+        # Change the deletion flag
+        self.pem_file.data.loc[:, 'Deleted'] = self.pem_file.data.loc[:, 'Deleted'].map(lambda x: False)
+
+        # Update the data in the pem file object
+        self.plot_profiles(components=self.pem_file.get_components())
+        self.plot_station(self.selected_station, preserve_selection=True)
+
     def change_decay_component_dialog(self, source=None):
         """
         Open a user input window to select the new component to change to.
@@ -2032,8 +2045,8 @@ if __name__ == '__main__':
     # pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
     # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
     # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
-    # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")[0]
-    pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
     editor = PEMPlotEditor()
     # editor.move(0, 0)
