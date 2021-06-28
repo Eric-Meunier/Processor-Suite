@@ -2756,7 +2756,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Create a copy of the PEM file, then update the copy
             new_pem = pem_file.copy()
             new_pem.filepath = Path(save_path)
-            new_pem.save(legacy='legacy' in save_type.lower())
+            new_pem.save(legacy='legacy' in save_type.lower(), processed='processed' in save_type.lower())
 
             self.status_bar.showMessage(f'Save Complete. PEM file saved as {new_pem.filepath.name}', 2000)
 
