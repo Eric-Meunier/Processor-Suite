@@ -62,7 +62,6 @@ __version__ = '0.11.6'
 # TODO load and save files in hole planner
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Fix Gridplanner with new loop
-# TODO Show ZTS in status bar
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Allow dragging in different filetypes at the same time.
 # TODO importing Iscaycruz data should fill the PSAD EPSG
@@ -152,6 +151,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.selection_timebase_label = QLabel()
         self.selection_timebase_label.setMargin(3)
         self.selection_timebase_label.setStyleSheet('color: blue')
+        self.selection_zts_label = QLabel()
+        self.selection_zts_label.setMargin(3)
+        self.selection_zts_label.setStyleSheet('color: blue')
         self.selection_survey_label = QLabel()
         self.selection_survey_label.setMargin(3)
         self.selection_survey_label.setStyleSheet('color: blue')
@@ -175,6 +177,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         self.status_bar.addPermanentWidget(self.selection_files_label, 0)
         self.status_bar.addPermanentWidget(self.selection_timebase_label, 0)
+        self.status_bar.addPermanentWidget(self.selection_zts_label, 0)
         self.status_bar.addPermanentWidget(self.selection_survey_label, 0)
         self.status_bar.addPermanentWidget(self.selection_derotation_label, 0)
         # self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
@@ -798,6 +801,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             if len(pem_files) == 1:
                 file = pem_files[0]
                 timebase = f"Timebase: {file.timebase}ms"
+                zts = f"ZTS: {', '.join(file.data.ZTS.unique().astype(int).astype(str))}"
                 survey_type = f"Survey Type: {file.get_survey_type()}"
                 if file.is_pp():
                     survey_type += " PP"
@@ -807,12 +811,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 else:
                     derotated = ""
             else:
-                timebase = ""
-                survey_type = ""
+                timebase = f"Timebase(s): {', '.join(natsort.os_sorted(np.unique([str(f.timebase) + 'ms' for f in pem_files])))}"
+                zts = f"ZTS: {', '.join(np.unique(np.concatenate([f.data.ZTS.unique().astype(int).astype(str) for f in pem_files])))}"
+                survey_type = f"Survey Type(s): {', '.join(np.unique([f.get_survey_type() for f in pem_files]))}"
                 derotated = ""
 
             self.selection_files_label.setText(f"Selected: {len(pem_files)}")
             self.selection_timebase_label.setText(timebase)
+            self.selection_zts_label.setText(zts)
             self.selection_survey_label.setText(survey_type)
             self.selection_derotation_label.setText(derotated)
 
@@ -1645,6 +1651,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         def reset_selection_labels():
             for label in [self.selection_files_label,
                           self.selection_timebase_label,
+                          self.selection_zts_label,
                           self.selection_survey_label,
                           self.selection_derotation_label]:
                 label.setText("")
@@ -4913,7 +4920,8 @@ def main():
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
+    pem_files = pem_g.get_pems(number=3, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
