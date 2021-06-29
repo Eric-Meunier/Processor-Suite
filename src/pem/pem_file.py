@@ -1322,6 +1322,7 @@ class PEMFile:
 
         for i in range(len(self.data.Reading)):
             self.data.Reading[i] -= self.data.Reading[i][-1]
+            self.data.Reading[i][-1] = np.average(self.data.Reading[i][-7:])
         logger.info(f"Data in {self.filepath.name} offset by last reading - Amplitude information lost")
 
         self.notes.append('<HE3> DECAY SHIFTED TO FORCE LAST CHN = 0')
@@ -3130,7 +3131,7 @@ class PEMSerializer:
         elif survey_type == 'Borehole Fluxgate':
             survey_str = 'BH-Flux'
         elif survey_type == 'SQUID':
-            survey_str = 'SQUID'
+            survey_str = 'S-SQUID'
         else:
             raise ValueError(f"{survey_type} is not a valid survey type.")
 
