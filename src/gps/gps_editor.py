@@ -293,7 +293,7 @@ class TransmitterLoop(BaseGPS):
                 contents = [c.strip().split() for c in gps]
             else:
                 file = open(file, 'rt').readlines()
-                contents = [c.strip().split() for c in file]
+                contents = [re.split(';|,| ', c.strip()) for c in file]
             gps = pd.DataFrame(contents)
         elif file is None:
             logger.warning(f"No GPS passed.")
@@ -485,7 +485,7 @@ class SurveyLine(BaseGPS):
                 contents = [c.strip().split() for c in gps]
             else:
                 file = open(file, 'rt').readlines()
-                contents = [c.strip().split() for c in file]
+                contents = [re.split(';|,| ', c.strip()) for c in file]
             gps = pd.DataFrame(contents)
         elif file is None:
             logger.warning("No GPS passed.")
@@ -649,7 +649,7 @@ class BoreholeCollar(BaseGPS):
                 contents = [c.strip().split() for c in gps]
             else:
                 file = open(file, 'rt').readlines()
-                contents = [c.strip().split() for c in file]
+                contents = [re.split(';|,| ', c.strip()) for c in file]
             gps = pd.DataFrame(contents)
 
         elif file is None:
