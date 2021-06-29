@@ -3254,7 +3254,8 @@ class PEMPrinter:
         self.portrait_fig, ax = plt.subplots(1, 1, num=1, clear=True)
         ax2 = ax.twiny()
         ax2.get_shared_x_axes().join(ax, ax2)
-        plt.yscale('symlog', linthresh=10, linscale=1. / math.log(10), subs=list(np.arange(2, 10, 1)))
+        linscale_width = 1. / math.log(10)
+        plt.yscale('symlog', linthresh=10, linscale=linscale_width, subs=list(np.arange(2, 10, 1)))
 
     def configure_step_fig(self):
         """
