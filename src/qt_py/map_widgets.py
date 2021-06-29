@@ -276,10 +276,10 @@ class TileMapViewer(MapboxViewer):
             raise Exception(f"No Lat/Lon GPS after plotting all PEM files.")
 
         # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
-        # TODO Move mapbox file to AppData folder, add ability to add a token.
         # app_data_dir = Path(os.getenv('APPDATA'))
         # token = open(app_data_dir.joinpath(r"PEMPro\.mapbox", 'r')).read()
-        token = open(".mapbox", 'r').read()
+        app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
+        token = open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
         if not token:
             logger.warning(f"No Mapbox token passed.")
             map_style = "open-street-map"

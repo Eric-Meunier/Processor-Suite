@@ -1526,6 +1526,8 @@ Warnings</string>
     <addaction name="auto_sort_files_cbox"/>
     <addaction name="auto_create_backup_files_cbox"/>
     <addaction name="delete_merged_files_cbox"/>
+    <addaction name="separator"/>
+    <addaction name="actionAdd_Mapbox_Token"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -2073,6 +2075,11 @@ Warnings</string>
   <action name="actionStation_Order">
    <property name="text">
     <string>Station Order</string>
+   </property>
+  </action>
+  <action name="actionAdd_Mapbox_Token">
+   <property name="text">
+    <string>Add Mapbox Token</string>
    </property>
   </action>
  </widget>

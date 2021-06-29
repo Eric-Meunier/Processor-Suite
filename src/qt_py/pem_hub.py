@@ -504,6 +504,22 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         Initializing all actions.
         :return: None
         """
+        def open_logs():
+            log_file = app_data_dir.joinpath('logs.txt')
+            if log_file.exists():
+                os.startfile(str(log_file))
+            else:
+                self.message.critical(self, 'File Not Found', f"'{log_file}' file not found.")
+
+        def add_mapbox_token():
+            token, ok_pressed = QInputDialog.getText(self, "Mapbox Access Token", "Enter Mapbox Access Token:")
+            if ok_pressed and token:
+                app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
+                token_file = open(str(app_data_dir.joinpath(".mapbox")), 'w+')
+                token_file.write(token)
+                token_file.close()
+                self.statusBar().showMessage("Mapbox token updated.", 1500)
+
         # 'File' menu
         self.actionOpenFile.triggered.connect(self.open_file_dialog)
         self.actionSaveFiles.triggered.connect(lambda: self.save_pem_files(selected=False))
@@ -556,14 +572,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionUnpacker.triggered.connect(self.open_unpacker)
         self.actionGPX_Creator.triggered.connect(self.open_gpx_creator)
 
-        # Help menu
-        def open_logs():
-            log_file = app_data_dir.joinpath('logs.txt')
-            if log_file.exists():
-                os.startfile(str(log_file))
-            else:
-                self.message.critical(self, 'File Not Found', f"'{log_file}' file not found.")
+        # Settings menu
+        self.actionAdd_Mapbox_Token.triggered.connect(add_mapbox_token)
 
+        # Help menu
         self.actionView_Logs.triggered.connect(open_logs)
 
     def init_signals(self):
