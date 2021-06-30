@@ -358,6 +358,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         Open, rotate, and plot the PEMFile.
         :param pem_file: borehole PEMFile object
         """
+        # TODO disable un-rotate button when file isn't D7.
 
         def fill_table(stations):
             """

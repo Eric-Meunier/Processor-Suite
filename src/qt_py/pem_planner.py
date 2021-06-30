@@ -14,7 +14,7 @@ import simplekml
 from PySide2 import QtGui, QtCore
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QInputDialog,
                                QLineEdit, QFormLayout, QWidget, QFrame, QPushButton, QGroupBox, QHBoxLayout,
-                               QItemDelegate, QSpinBox,
+                               QItemDelegate, QSpinBox, QDoubleSpinBox,
                                QRadioButton, QCheckBox, QGridLayout, QTableWidget, QTableWidgetItem, QHeaderView)
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ROI import Handle
@@ -180,13 +180,38 @@ class HoleWidget(QWidget):
         self.show_cbox.setChecked(True)
         self.layout().addRow(self.show_cbox)
 
+        self.hole_easting_edit = QDoubleSpinBox()
+        self.hole_easting_edit.setMaximum(1e9)
+        self.hole_easting_edit.setMinimum(-1e9)
+        self.hole_easting_edit.setSuffix("m")
+        self.hole_northing_edit = QDoubleSpinBox()
+        self.hole_northing_edit.setMaximum(1e9)
+        self.hole_northing_edit.setMinimum(-1e9)
+        self.hole_northing_edit.setSuffix("m")
+        self.hole_elevation_edit = QDoubleSpinBox()
+        self.hole_elevation_edit.setMaximum(1e9)
+        self.hole_elevation_edit.setMinimum(-1e9)
+        self.hole_elevation_edit.setSuffix("m")
+        self.hole_azimuth_edit = QDoubleSpinBox()
+        self.hole_azimuth_edit.setMaximum(360)
+        self.hole_azimuth_edit.setMinimum(0)
+        self.hole_azimuth_edit.setSuffix("°")
+        self.hole_dip_edit = QDoubleSpinBox()
+        self.hole_dip_edit.setMaximum(90)
+        self.hole_dip_edit.setMinimum(-90)
+        self.hole_dip_edit.setSuffix("°")
+        self.hole_length_edit = QDoubleSpinBox()
+        self.hole_length_edit.setMaximum(1e9)
+        self.hole_length_edit.setMinimum(0.1)
+        self.hole_length_edit.setSuffix("m")
+
         # Position
         position_gbox = QGroupBox('Position')
         position_gbox.setLayout(QFormLayout())
         position_gbox.setFlat(True)
-        self.hole_easting_edit = QLineEdit(str(int(properties.get('easting'))))
-        self.hole_northing_edit = QLineEdit(str(int(properties.get('northing'))))
-        self.hole_elevation_edit = QLineEdit(str(int(properties.get('elevation'))))
+        self.hole_easting_edit.setValue(float(properties.get('easting')))
+        self.hole_northing_edit.setValue(float(properties.get('northing')))
+        self.hole_elevation_edit.setValue(float(properties.get('elevation')))
         position_gbox.layout().addRow('Easting', self.hole_easting_edit)
         position_gbox.layout().addRow('Northing', self.hole_northing_edit)
         position_gbox.layout().addRow('Elevation\nFrom Loop', self.hole_elevation_edit)
@@ -207,9 +232,9 @@ class HoleWidget(QWidget):
         manual_geometry_frame = QFrame()
         manual_geometry_frame.setLayout(QFormLayout())
         manual_geometry_frame.setContentsMargins(0, 0, 0, 0)
-        self.hole_azimuth_edit = QLineEdit(str(int(properties.get('azimuth'))))
-        self.hole_dip_edit = QLineEdit(str(int(properties.get('dip'))))
-        self.hole_length_edit = QLineEdit(str(int(properties.get('length'))))
+        self.hole_azimuth_edit.setValue(float(properties.get('azimuth')))
+        self.hole_dip_edit.setValue(float(properties.get('dip')))
+        self.hole_length_edit.setValue(float(properties.get('length')))
         manual_geometry_frame.layout().addRow('Azimuth', self.hole_azimuth_edit)
         manual_geometry_frame.layout().addRow('Dip', self.hole_dip_edit)
         manual_geometry_frame.layout().addRow('Length', self.hole_length_edit)
@@ -258,14 +283,6 @@ class HoleWidget(QWidget):
         self.az_validator.setRange(0, 360)
         self.dip_validator = QtGui.QIntValidator()
         self.dip_validator.setRange(0, 90)
-
-        # Set all validators
-        self.hole_easting_edit.setValidator(self.size_validator)
-        self.hole_northing_edit.setValidator(self.size_validator)
-        self.hole_elevation_edit.setValidator(self.int_validator)
-        self.hole_azimuth_edit.setValidator(self.az_validator)
-        self.hole_dip_edit.setValidator(self.dip_validator)
-        self.hole_length_edit.setValidator(self.size_validator)
 
         """Plotting"""
         # Hole collar
@@ -402,12 +419,12 @@ class HoleWidget(QWidget):
     def get_properties(self):
         """Return a dictionary of hole properties"""
         return {
-            'easting': self.hole_easting_edit.text(),
-            'northing': self.hole_northing_edit.text(),
-            'elevation': self.hole_elevation_edit.text(),
-            'azimuth': self.hole_azimuth_edit.text(),
-            'dip': self.hole_dip_edit.text(),
-            'length': self.hole_length_edit.text(),
+            'easting': self.hole_easting_edit.value(),
+            'northing': self.hole_northing_edit.value(),
+            'elevation': self.hole_elevation_edit.value(),
+            'azimuth': self.hole_azimuth_edit.value(),
+            'dip': self.hole_dip_edit.value(),
+            'length': self.hole_length_edit.value(),
         }
 
     def calc_hole_projection(self):
@@ -417,16 +434,16 @@ class HoleWidget(QWidget):
         # Reset the current projection, so there isn't a length error later
         self.projection = self.projection.iloc[0:0]
 
-        x = float(self.hole_easting_edit.text())
-        y = float(self.hole_northing_edit.text())
-        z = float(self.hole_elevation_edit.text())
+        x = float(self.hole_easting_edit.value())
+        y = float(self.hole_northing_edit.value())
+        z = float(self.hole_elevation_edit.value())
         collar = BoreholeCollar([[x, y, z, '0']])  # Float so it doesn't get removed when parsing collar
 
         # Using the manual user-input settings
         if self.manual_geometry_rbtn.isChecked():
-            length = float(self.hole_length_edit.text())
-            azimuth = float(self.hole_azimuth_edit.text())
-            dip = float(self.hole_dip_edit.text())
+            length = float(self.hole_length_edit.value())
+            azimuth = float(self.hole_azimuth_edit.value())
+            dip = float(self.hole_dip_edit.value())
             df = pd.DataFrame({'Depth': [z, length],
                                'Azimuth': [azimuth] * 2,
                                'Dip': [dip] * 2})
@@ -457,7 +474,7 @@ class HoleWidget(QWidget):
 
         # Calculate the length of the cross-section
         if self.manual_geometry_rbtn.isChecked():
-            hole_length = int(self.hole_length_edit.text())
+            hole_length = int(self.hole_length_edit.value())
         else:
             hole_length = int(self.segments.df.Depth.iloc[-1])
         self.section_length = math.ceil(hole_length / 100) * 100  # Nearest 100
@@ -586,10 +603,10 @@ class HoleWidget(QWidget):
         Draw the hole in the plan view.
         """
         # Plot the collar
-        self.hole_collar.setData([int(self.hole_easting_edit.text())], [int(self.hole_northing_edit.text())])
+        self.hole_collar.setData([int(self.hole_easting_edit.value())], [int(self.hole_northing_edit.value())])
 
         # Plot the name
-        self.hole_name.setPos(int(self.hole_easting_edit.text()), int(self.hole_northing_edit.text()))
+        self.hole_name.setPos(int(self.hole_easting_edit.value()), int(self.hole_northing_edit.value()))
 
         if not self.projection.empty:
             # Plot the trace
@@ -995,7 +1012,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         self.add_hole('Hole')
         # TODO Comment out later
-        self.add_loop('Loop')
+        # self.add_loop('Loop')
 
         # Signals
         self.hole_cbox.currentIndexChanged.connect(self.select_hole)
@@ -1748,7 +1765,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         # Pass the mapbox token, for access to better map tiles.
         # If none is passed, it uses the free open street map.
-        token = open(".mapbox", 'r').read()
+        app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
+        token = open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
         if not token:
             logger.warning(f"No Mapbox token passed.")
             map_style = "open-street-map"
