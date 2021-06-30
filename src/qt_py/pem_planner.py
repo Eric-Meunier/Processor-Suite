@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import re
 from pathlib import Path
 
 import geopandas as gpd
@@ -14,7 +15,7 @@ import simplekml
 from PySide2 import QtGui, QtCore
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QInputDialog,
                                QLineEdit, QFormLayout, QWidget, QFrame, QPushButton, QGroupBox, QHBoxLayout,
-                               QItemDelegate, QSpinBox, QDoubleSpinBox,
+                               QItemDelegate, QSpinBox, QDoubleSpinBox, QProgressDialog,
                                QRadioButton, QCheckBox, QGridLayout, QTableWidget, QTableWidgetItem, QHeaderView)
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ROI import Handle
@@ -419,6 +420,7 @@ class HoleWidget(QWidget):
     def get_properties(self):
         """Return a dictionary of hole properties"""
         return {
+            'name': self.hole_name_edit.text(),
             'easting': self.hole_easting_edit.value(),
             'northing': self.hole_northing_edit.value(),
             'elevation': self.hole_elevation_edit.value(),
@@ -863,6 +865,14 @@ class LoopWidget(QWidget):
     def get_angle(self):
         return self.loop_angle_sbox.text()
 
+    def get_properties(self):
+        """Return a dictionary of loop properties"""
+        return {
+            'name': self.loop_name_edit.text(),
+            'coordinates': self.get_loop_coords(),
+            # 'center': self.get_loop_center(),
+        }
+
     def plot_loop_name(self):
         center = self.get_loop_center()
         self.loop_name.setPos(center.x(), center.y())
@@ -992,6 +1002,10 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
         self.plan_view.setMenuEnabled(False)
+
+        # Icons
+        self.actionOpen_Project.setIcon(QtGui.QIcon(str(icons_path.joinpath("open.png"))))
+        self.actionSave_Project.setIcon(QtGui.QIcon(str(icons_path.joinpath("save.png"))))
         self.actionSave_as_KMZ.setIcon(QtGui.QIcon(str(icons_path.joinpath("google_earth.png"))))
         self.actionSave_as_GPX.setIcon(QtGui.QIcon(str(icons_path.joinpath("garmin_file.png"))))
         self.view_map_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("folium.png"))))
@@ -1012,13 +1026,15 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         self.add_hole('Hole')
         # TODO Comment out later
-        # self.add_loop('Loop')
+        self.add_loop('Loop')
 
         # Signals
         self.hole_cbox.currentIndexChanged.connect(self.select_hole)
         self.loop_cbox.currentIndexChanged.connect(self.select_loop)
 
         # Menu
+        self.actionSave_Project.triggered.connect(self.save_project)
+        self.actionOpen_Project.triggered.connect(self.open_project)
         self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
         self.actionSave_as_GPX.triggered.connect(self.save_gpx)
         self.view_map_action.triggered.connect(self.view_map)
@@ -1796,6 +1812,85 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         tile_map.load_page()
         tile_map.show()
+
+    def open_project(self):
+        """
+        Parse a .LFP file and add the holes and loops in the file to the project
+        :return: None
+        """
+        lpf_file, filetype = QFileDialog.getOpenFileName(self, "Loop Planning File", "", "Loop Planning File (*.LPF)")
+
+        if lpf_file:
+            file = open(lpf_file, "r").read()
+            # holes = file.split(">> Hole")
+            holes = re.findall(r">> Hole\n(name:.*\neasting:.*\nnorthing:.*\nelevation:.*\nazimuth:.*\ndip:.*\nlength:.*\n)<<", file)
+            loops = re.findall(r">> Loop\n(name:.*\n(?:c.*\n)+)<<", file)
+
+            progress = QProgressDialog("Opening Project...", "Cancel", 0, len(holes) + len(loops), self)
+            progress.setWindowModality(QtCore.Qt.WindowModal)
+            count = 0
+            progress.show()
+
+            for hole in holes:
+                if progress.wasCanceled():
+                    break
+                properties = dict()
+                for line in hole.split():
+                    key, value = line.split(":")
+                    if key != "name":
+                        value = float(value)
+                    properties[key] = value
+
+                self.add_hole(**properties)
+                count += 1
+                progress.setValue(count)
+
+            for loop in loops:
+                if progress.wasCanceled():
+                    break
+                name = re.search("name:(.*)\n", loop).group(1)
+                coord_str = [re.sub("c\d+:", "", line).split(",") for line in loop.split("\n")[1:-1]]
+                coords = [QtCore.QPointF(float(c[0].strip()), float(c[1].strip())) for c in coord_str]
+
+                self.add_loop(name=name, coords=coords)
+                count += 1
+                progress.setValue(count)
+
+            progress.deleteLater()
+
+    def save_project(self):
+        """
+        Save the project as a .prj file.
+        :return: None
+        """
+        if not self.hole_widgets and not self.loop_widgets:
+            print(f"No holes or loops to save.")
+            return
+
+        save_name, filetype = QFileDialog.getSaveFileName(self, "Project File Name", "", "Loop Planning File (*.LPF)")
+
+        if save_name:
+            result = ''
+            for hole in self.hole_widgets:
+                string = '>> Hole\n'
+                for key, value in hole.get_properties().items():
+                    string += f"{key}:{value}\n"
+                result += string + "<<\n"
+            for loop in self.loop_widgets:
+                string = '>> Loop\n'
+                for key, value in loop.get_properties().items():
+                    if key == "coordinates":
+                        for j, coord in enumerate(value):
+                            string += f"c{j}:{coord.x():.2f}, {coord.y():.2f}\n"
+                    else:
+                        string += f"{key}:{value}\n"
+                result += string + "<<\n"
+
+            with open(str(save_name), "w+") as file:
+                file.write(result)
+
+            os.startfile(save_name)
+            self.statusBar().showMessage("Project file saved.", 1500)
 
     def save_kmz(self):
         """
@@ -3022,19 +3117,21 @@ def main():
     planner = LoopPlanner()
     # planner = GridPlanner()
 
-    hole_data = pd.read_excel(r"C:\_Data\2021\Canadian Palladium\_Planning\Crone_BHEM_Collars.xlsx").dropna()
-    for ind, hole in hole_data.iterrows():
-        planner.add_hole(name=hole["HOLE-ID"],
-                         easting=hole["UTM_E"],
-                         northing=hole["UTM_N"],
-                         length=hole.LENGTH,
-                         azimuth=hole.AZIMUTH,
-                         dip=hole.DIP
-                         )
+    # hole_data = pd.read_excel(r"C:\_Data\2021\Canadian Palladium\_Planning\Crone_BHEM_Collars.xlsx").dropna()
+    # for ind, hole in hole_data.iterrows():
+    #     planner.add_hole(name=hole["HOLE-ID"],
+    #                      easting=hole["UTM_E"],
+    #                      northing=hole["UTM_N"],
+    #                      length=hole.LENGTH,
+    #                      azimuth=hole.AZIMUTH,
+    #                      dip=hole.DIP
+    #                      )
     # planner.gps_system_cbox.setCurrentIndex(2)
     # planner.gps_datum_cbox.setCurrentIndex(1)
     # planner.gps_zone_cbox.setCurrentIndex(16)
     planner.show()
+    # planner.save_project()
+    planner.open_project()
     # tx_file = samples_folder.joinpath(r"Tx Files/Loop.tx")
     # planner.open_tx_file(tx_file)
     # planner.hole_widgets[0].get_dad_file()

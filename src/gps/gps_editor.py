@@ -868,7 +868,7 @@ class BoreholeGeometry(BaseGPS):
 
         self.crs = self.collar.crs
         if not self.crs:
-            logger.info(f"No CRS passed.")
+            logger.debug(f"No CRS passed.")
             if latlon:
                 logger.error(f"Cannot project as latlon without CRS.")
                 return projection
