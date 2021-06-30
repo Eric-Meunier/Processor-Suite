@@ -38,7 +38,7 @@ class MMRFile(PEMFile):
         mmrfile.__dict__ = pemfile.__dict__.copy()
         return mmrfile
 
-    def add_BH_collar(self):
+    def add_BH_collar_manual(self):
         easting = float(input("Enter easting: "))
         northing = float(input("Enter northing: "))
         elevation = float(input("Enter elevation: "))
@@ -88,8 +88,11 @@ class MMRFile(PEMFile):
 
 
 if __name__ == "__main__":
-    lp = "src\\mmr\\MMR LOOP SEPT 23.csv"
-    a = MMRFile.from_pemlike("src\\mmr\\STACK\\Working\\SL12-64FLUXGATE.PEM")
+    lp = "src\\mmr\\SL12-64\\loop2full.txt"
+    col = "src\\mmr\\SL12-64\\SL12-64.csv"
+    dad = "src\\mmr\\SL12-64\\64.DAD"
+    a = MMRFile.from_pemlike("src\\mmr\\SL12-64\\SL12-64FLUXGATE.PEM")
     a.add_loop(lp)
-    a.add_BH_collar
+    a.add_BH_collar(col)
+    a.add_BH_segments(dad)
     pass
