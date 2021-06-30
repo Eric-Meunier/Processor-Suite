@@ -1310,10 +1310,17 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         self.plot_hole()
 
-    def add_hole(self, name=None):
+    def add_hole(self, name=None, easting=None, northing=None, elevation=None, azimuth=None, dip=None, length=None):
         """
         Create tab for a new hole
         :param name: str, name of the hole
+        :param easting: str or float
+        :param northing: str or float
+        :param elevation: str or float
+        :param azimuth: str or float
+        :param dip: str or float
+        :param length: str or float
+        :return: None
         """
 
         def name_changed(widget):
@@ -1357,6 +1364,12 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             else:
                 properties = None
 
+            # Set the property values from the init
+            prop_names = ["easting", "northing", "elevation", "azimuth", "dip", "length"]
+            for i, value in enumerate([easting, northing, elevation, azimuth, dip, length]):
+                if value is not None:
+                    properties[prop_names[i]] = float(value)
+
             # Create the hole widget for the tab
             hole_widget = HoleWidget(properties, self.plan_view, name=name)
             self.hole_widgets.append(hole_widget)
@@ -1385,7 +1398,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             :param widget: Loop widget
             """
             ind = self.loop_widgets.index(widget)
-            self.loop_tab_widget.setTabText(ind, widget.loop_name_edit.text())
+            self.loop_cbox.setItemText(ind, widget.loop_name_edit.text())
 
         def loop_clicked(widget):
             """
@@ -3009,11 +3022,20 @@ def main():
     planner = LoopPlanner()
     # planner = GridPlanner()
 
+    hole_data = pd.read_excel(r"C:\_Data\2021\Canadian Palladium\_Planning\Crone_BHEM_Collars.xlsx").dropna()
+    for ind, hole in hole_data.iterrows():
+        planner.add_hole(name=hole["HOLE-ID"],
+                         easting=hole["UTM_E"],
+                         northing=hole["UTM_N"],
+                         length=hole.LENGTH,
+                         azimuth=hole.AZIMUTH,
+                         dip=hole.DIP
+                         )
     # planner.gps_system_cbox.setCurrentIndex(2)
     # planner.gps_datum_cbox.setCurrentIndex(1)
     # planner.gps_zone_cbox.setCurrentIndex(16)
     planner.show()
-    tx_file = samples_folder.joinpath(r"Tx Files/Loop.tx")
+    # tx_file = samples_folder.joinpath(r"Tx Files/Loop.tx")
     # planner.open_tx_file(tx_file)
     # planner.hole_widgets[0].get_dad_file()
     # planner.hole_az_edit.setText('174')
