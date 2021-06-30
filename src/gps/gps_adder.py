@@ -976,7 +976,8 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
                     file = open(gps, 'rt').readlines()
                     contents = [c.strip().split() for c in file]
                 try:
-                    self.df = pd.DataFrame(contents, columns=["Easting", "Northing", "Elevation", "Unit", "Name"])
+                    self.df = pd.DataFrame(contents,
+                                           columns=["Easting", "Northing", "Elevation", "Unit", "Name"][:len(gps[0])])
                 except ValueError as e:
                     self.show()
                     self.message.critical(self, f"Parsing Error", str(e))
@@ -990,7 +991,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
                     self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
         elif isinstance(gps, list):
             try:
-                self.df = pd.DataFrame(gps, columns=["Easting", "Northing", "Elevation", "Unit", "Name"])
+                self.df = pd.DataFrame(gps, columns=["Easting", "Northing", "Elevation", "Unit", "Name"][:len(gps[0])])
             except ValueError as e:
                 self.show()
                 self.message.critical(self, f"Parsing Error", str(e))
