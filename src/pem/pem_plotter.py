@@ -21,7 +21,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.pem.pem_file import PEMParser, StationConverter
+from src.pem import convert_station
+from src.pem.pem_file import PEMParser
 from src.qt_py.ri_importer import RIFile
 from src.qt_py.custom_qt_widgets import CustomProgressBar
 
@@ -157,7 +158,7 @@ class ProfilePlotter:
             """
             filt = self.pem_file.data['Component'] == component.upper()
             component_data = self.pem_file.data.loc[filt]
-            component_stations = component_data['Station'].map(self.converter.convert_station).unique()
+            component_stations = component_data['Station'].map(convert_station).unique()
             if self.x_min is None:
                 self.x_min = component_stations.min()
             if self.x_max is None:

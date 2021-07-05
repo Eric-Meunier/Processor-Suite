@@ -12,6 +12,7 @@ import pyqtgraph as pg
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QMainWindow, QVBoxLayout, QGridLayout, QMessageBox, QFileDialog,
                                QLabel, QAction, QMenu, QApplication)
+from src.qt_py import icons_path
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -23,12 +24,6 @@ pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 
 __version__ = '0.5'
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath("ui\\icons")
 
 
 class DBPlotter(QMainWindow):

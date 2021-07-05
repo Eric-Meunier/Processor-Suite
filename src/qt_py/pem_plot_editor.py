@@ -16,9 +16,9 @@ from pyqtgraph.Point import Point
 from scipy import spatial
 
 from src.qt_py import icons_path
-from src.pem.pem_file import StationConverter
+from src.pem import convert_station
 from src.ui.pem_plot_editor import Ui_PEMPlotEditor
-from src.logger import Log
+# from src.logger import Log
 
 """
 NOTE: pyqtgraph 0.12.0 creates a bug with QRectF, specifically with decay_mouse_moved, where the event pointer
@@ -87,7 +87,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.status_bar.addPermanentWidget(self.number_of_readings, 0)
         self.status_bar.addPermanentWidget(self.number_of_repeats, 0)
 
-        self.converter = StationConverter()
         self.pem_file = None
         self.fallback_file = None
         self.units = None
@@ -606,7 +605,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.selected_station = self.stations[0]
 
         # Re-calculate the converted station numbers
-        self.pem_file.data['cStation'] = self.pem_file.data.Station.map(self.converter.convert_station)
+        self.pem_file.data['cStation'] = self.pem_file.data.Station.map(convert_station)
 
         # Re-set the limits of the profile plots
         for ax in np.concatenate([self.profile_axes, self.mag_profile_axes]):
@@ -1332,7 +1331,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         ind, comp = self.get_active_component()
         comp_profile_axes = self.get_component_profile(comp)
         comp_stations = self.pem_file.data[self.pem_file.data.Component == comp].Station
-        comp_stations = np.array([self.converter.convert_station(s) for s in comp_stations])
+        comp_stations = np.array([convert_station(s) for s in comp_stations])
 
         # Update the LinearRegionItem for each axes of the current component
         for ax in comp_profile_axes:

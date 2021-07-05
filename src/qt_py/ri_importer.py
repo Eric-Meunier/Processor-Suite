@@ -7,20 +7,9 @@ from pathlib import Path
 from PySide2 import QtCore
 from PySide2.QtWidgets import (QApplication, QWidget, QMessageBox, QAbstractScrollArea, QTableWidgetItem, QHeaderView,
                                QTableWidget, QDialogButtonBox, QVBoxLayout)
+from src.pem import convert_station
 
 logger = logging.getLogger(__name__)
-
-
-def convert_station(station):
-    """
-    Converts a single station name into a number, negative if the stations was S or W
-    :return: Integer station number
-    """
-    if re.match(r"\d+(S|W)", station):
-        station = (-int(re.sub(r"[SW]", "", station.upper())))
-    else:
-        station = (int(re.sub(r"[EN]", "", station.upper())))
-    return station
 
 
 class RIFile:

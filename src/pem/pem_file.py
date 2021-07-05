@@ -12,8 +12,9 @@ import pandas as pd
 from pyproj import CRS
 from scipy.spatial.transform import Rotation as R
 
+from src.pem import convert_station
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
-from src.logger import Log
+# from src.logger import Log
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 
 logger = logging.getLogger(__name__)
@@ -99,33 +100,11 @@ def process_angle(average_angle, angle):
         return angle
 
 
-class StationConverter:
-
-    @staticmethod
-    def convert_station(station):
-        """
-        Converts a single station name into a number, negative if the stations was S or W
-        :return: Integer station number
-        """
-        # Ensure station is a string
-        station = str(station).upper()
-        if re.match(r"-?\d+(S|W)", station):
-            station = (-int(re.sub(r"[SW]", "", station)))
-        else:
-            station = (int(re.sub(r"[EN]", "", station)))
-        return station
-
-    def convert_stations(self, stations):
-        converted_stations = stations.map(self.convert_station)
-        return converted_stations
-
-
 class PEMFile:
     """
     PEM file class
     """
     def __init__(self):
-        self.converter = StationConverter()
         self.format = None
         self.units = None
         self.operator = None
@@ -732,7 +711,7 @@ class PEMFile:
         profile = pd.DataFrame.from_dict(dict(zip(data.Reading.index, data.Reading.values))).T
 
         if converted is True:
-            stations = data.Station.map(self.converter.convert_station)
+            stations = data.Station.map(convert_station)
         else:
             stations = data.Station
 
@@ -774,7 +753,6 @@ class PEMFile:
             tf_row.loc[:, channels] = tf
             return tf_row
 
-        converter = StationConverter()
         line_gps = self.get_line()
         # Filter the GPS to only keep those that are in the data
         line_gps = line_gps[line_gps.Station.isin(self.get_stations(converted=True))]
@@ -786,7 +764,7 @@ class PEMFile:
         readings = pd.DataFrame.from_dict(
             dict(zip(self.data.loc[:, "Reading"].index, self.data.loc[:, "Reading"].values))).T
         data = pd.concat([self.data.loc[:, ["Station", "Component"]], readings], axis=1)
-        data.Station = data.Station.map(converter.convert_station)
+        data.Station = data.Station.map(convert_station)
         data["Line"] = self.line_name
         data["Easting"] = None
         data["Northing"] = None
@@ -809,7 +787,7 @@ class PEMFile:
         """
         stations = self.data.Station.unique()
         if converted:
-            stations = [self.converter.convert_station(station) for station in stations]
+            stations = [convert_station(station) for station in stations]
         return np.array(stations)
 
     def get_gps_extents(self):
@@ -1116,7 +1094,7 @@ class PEMFile:
 
         df['Component'] = pem_data.Component.copy()
         df['Station'] = pem_data.Station.copy()
-        df['c_Station'] = df.Station.map(self.converter.convert_station)  # Used to find corresponding GPS
+        df['c_Station'] = df.Station.map(convert_station)  # Used to find corresponding GPS
 
         # Add the GPS
         df = df.apply(get_station_gps, axis=1)

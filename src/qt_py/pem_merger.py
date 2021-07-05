@@ -11,7 +11,6 @@ from PySide2.QtWidgets import (QApplication, QMainWindow, QFrame, QLineEdit, QLa
                                QPushButton, QAction, QHBoxLayout)
 
 from src.qt_py import icons_path
-from src.pem.pem_file import StationConverter
 from src.ui.pem_merger import Ui_PEMMerger
 
 logger = logging.getLogger(__name__)
@@ -37,7 +36,6 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         self.setWindowTitle('PEM Merger')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'pem_merger.png')))
 
-        self.converter = StationConverter()
         self.pf1 = None
         self.pf2 = None
         self.units = None

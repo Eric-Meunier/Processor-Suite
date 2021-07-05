@@ -27,14 +27,14 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
-from src.qt_py import (icons_path, app_data_dir)
+from src.qt_py import (icons_path, app_data_dir, get_icon)
 from src.qt_py.db_plot import DBPlotter
 from src.geometry.pem_geometry import PEMGeometry
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.gps.gpx_creator import GPXCreator
 from src.mag_field.loop_calculator import LoopCalculator
 from src.mag_field.mag_dec_widget import MagDeclinationCalculator
-from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
+from src.pem.pem_file import PEMFile, PEMParser, DMPParser
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py.custom_qt_widgets import CustomProgressBar
 from src.qt_py.gps_conversion import GPSConversionWidget
@@ -66,56 +66,6 @@ __version__ = '0.11.6'
 # TODO Allow dragging in different filetypes at the same time.
 # TODO Add interactive collar coordinate picker from an Excel file (or csv, or txt). Create table, and select Easting,
 # TODO (cont) Northing, elevation in order?
-
-
-def get_icon(filepath):
-    ext = filepath.suffix.lower()
-    if ext in ['.xls', '.xlsx', '.csv']:
-        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('excel_file.png')))
-        if not (icons_path.joinpath('excel_file.png').exists()):
-            print(f"{icons_path.joinpath('excel_file.png')} does not exist.")
-        icon = QtGui.QIcon(icon_pix)
-    elif ext in ['.rtf', '.docx', '.doc']:
-        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('word_file.png')))
-        if not (icons_path.joinpath('word_file.png').exists()):
-            print(f"{icons_path.joinpath('word_file.png')} does not exist.")
-        icon = QtGui.QIcon(icon_pix)
-    elif ext in ['.log', '.txt', '.xyz', '.seg', '.dad']:
-        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('txt_file.png')))
-        if not (icons_path.joinpath('txt_file.png').exists()):
-            print(f"{icons_path.joinpath('txt_file.png')} does not exist.")
-        icon = QtGui.QIcon(icon_pix)
-    elif ext in ['.pem']:
-        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('crone_logo.png')))
-        if not (icons_path.joinpath('crone_logo.png').exists()):
-            print(f"{icons_path.joinpath('crone_logo.png')} does not exist.")
-        icon = QtGui.QIcon(icon_pix)
-    elif ext in ['.dmp', '.dmp2', '.dmp3', '.dmp4']:
-        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('dmp.png')))
-        if not (icons_path.joinpath('dmp.png').exists()):
-            print(f"{icons_path.joinpath('dmp.png')} does not exist.")
-        icon = QtGui.QIcon(icon_pix)
-    elif ext in ['.gpx', '.gdb']:
-        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('garmin_file.png')))
-        if not (icons_path.joinpath('garmin_file.png').exists()):
-            print(f"{icons_path.joinpath('garmin_file.png')} does not exist.")
-        icon = QtGui.QIcon(icon_pix)
-    elif ext in ['.ssf']:
-        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('ssf_file.png')))
-        if not (icons_path.joinpath('ssf_file.png').exists()):
-            print(f"{icons_path.joinpath('ssf_file.png')} does not exist.")
-        icon = QtGui.QIcon(icon_pix)
-    elif ext in ['.cor']:
-        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('cor_file.png')))
-        if not (icons_path.joinpath('cor_file.png').exists()):
-            print(f"{icons_path.joinpath('cor_file.png')} does not exist.")
-        icon = QtGui.QIcon(icon_pix)
-    else:
-        icon_pix = QtGui.QPixmap(str(icons_path.joinpath('none_file.png')))
-        if not (icons_path.joinpath('none_file.png').exists()):
-            print(f"{icons_path.joinpath('none_file.png')} does not exist.")
-        icon = QtGui.QIcon(icon_pix)
-    return icon
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
@@ -174,7 +124,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.status_bar.addPermanentWidget(dir_frame, 0)
 
         # Widgets
-        self.converter = StationConverter()
         self.file_dialog = QFileDialog()
         self.message = QMessageBox()
         self.error = QErrorMessage()

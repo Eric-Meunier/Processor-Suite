@@ -13,6 +13,7 @@ import utm
 from pyproj import CRS
 from scipy import spatial
 from shapely.geometry import asMultiPoint
+from src.pem import convert_station
 
 logger = logging.getLogger(__name__)
 
@@ -423,19 +424,6 @@ class SurveyLine(BaseGPS):
         :param file: Union (str filepath, dataframe, list), raw GPS data
         :return: DataFrame of the GPS.
         """
-
-        def convert_station(station):
-            """
-            Converts a single station name into a number, negative if the stations was S or W
-            :return: Integer station number
-            """
-            # Ensure station is a string
-            station = str(station).upper()
-            if re.match(r"-?\d+(S|W)", station):
-                station = (-float(re.sub(r"[SW]", "", station)))
-            else:
-                station = (float(re.sub(r"[EN]", "", station)))
-            return int(station)
 
         def has_na(series):
             """

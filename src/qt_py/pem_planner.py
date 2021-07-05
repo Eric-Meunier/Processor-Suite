@@ -1,40 +1,39 @@
 import logging
+import math
 import os
-import sys
 import re
+import sys
 from pathlib import Path
 
 import geopandas as gpd
 import gpxpy
-import math
+import matplotlib as mpl
 import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import pyqtgraph as pg
 import simplekml
 from PySide2 import QtGui, QtCore
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QInputDialog,
                                QLineEdit, QFormLayout, QWidget, QFrame, QPushButton, QGroupBox, QHBoxLayout,
                                QItemDelegate, QSpinBox, QDoubleSpinBox, QProgressDialog,
                                QRadioButton, QCheckBox, QGridLayout, QTableWidget, QTableWidgetItem, QHeaderView)
-import pyqtgraph as pg
-from pyqtgraph.graphicsItems.ROI import Handle
-import matplotlib as mpl
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from pyproj import CRS
 from scipy import spatial
 from shapely.geometry import asMultiPoint
 
-from src.qt_py import (icons_path, app_data_dir)
-from src.logger import Log
-from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.geometry.segment import Segmenter
-from src.qt_py.custom_qt_widgets import NonScientific, PlanMapAxis
+# from src.logger import Log
+from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
+from src.qt_py import (icons_path, app_data_dir)
+from src.qt_py.custom_qt_widgets import NonScientific, PlanMapAxis
 from src.qt_py.map_widgets import TileMapViewer
-from src.ui.loop_planner import Ui_LoopPlanner
 from src.ui.grid_planner import Ui_GridPlanner
+from src.ui.loop_planner import Ui_LoopPlanner
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +44,6 @@ pg.setConfigOption('crashWarning', True)
 
 default_color = (0, 0, 0, 150)
 selection_color = '#1976D2'
-
-# TODO add feature to import loop with corner coordinates (and disable width and height).
 
 
 class SurveyPlanner(QMainWindow):
@@ -3063,7 +3060,7 @@ class LoopROI(pg.PolyLineROI):
             self.stateChanged(finish=finish)
 
 
-class CustomHandle(Handle):
+class CustomHandle(pg.graphicsItems.ROI.Handle):
     """
     Re-implementing Handle to change the size and color (especially when hovering) of the handles.
     """

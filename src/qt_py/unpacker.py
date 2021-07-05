@@ -11,7 +11,7 @@ from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageB
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QLineEdit)
 from pyunpack import Archive
 
-from src.qt_py import icons_path
+from src.qt_py import icons_path, get_icon
 from src.qt_py.db_plot import DBPlotter
 from src.ui.unpacker import Ui_Unpacker
 
@@ -236,38 +236,6 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         :param path: str or Path object, directory path of the folder
         :param project_dir: project directory of the parent widget. Will use this as the default path if given.
         """
-
-        def get_icon(filepath):
-            ext = filepath.suffix.lower()
-
-            if ext in ['.xls', '.xlsx', '.csv']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'excel_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['.rtf', '.docx', '.doc']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'word_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['.log', '.txt', '.xyz', '.seg', '.dad']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'txt_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['.pem']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'crone_logo.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['.dmp', '.dmp2', '.dmp3', '.dmp4']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'dmp.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['.gpx', '.gdb']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'garmin_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['.ssf']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'ssf_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            elif ext in ['.cor']:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'cor_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            else:
-                icon_pix = QtGui.QPixmap(os.path.join(icons_path, 'none_file.png'))
-                icon = QtGui.QIcon(icon_pix)
-            return icon
 
         def add_to_table(file, dir, table, icon):
             """

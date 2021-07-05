@@ -11,25 +11,16 @@ import pandas as pd
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QFileDialog,
                                QErrorMessage, QHeaderView, QApplication)
+from src.qt_py import clear_table
 from src.geometry.pem_geometry import PEMGeometry
 from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXParser
-from src.pem.pem_file import StationConverter
+from src.pem import convert_station
 from src.qt_py.ri_importer import RIFile
 from src.ui.pem_info_widget import Ui_PEMInfoWidget
 
 logger = logging.getLogger(__name__)
-
-
-def clear_table(table):
-    """
-    Clear a given table
-    """
-    table.blockSignals(True)
-    while table.rowCount() > 0:
-        table.removeRow(0)
-    table.blockSignals(False)
 
 
 get_collar_called = 0
@@ -53,7 +44,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.selected_row_info = None
         self.active_table = None
 
-        self.converter = StationConverter()
         self.ri_editor = RIFile()
         self.dialog = QFileDialog()
         self.error = QErrorMessage()
@@ -650,7 +640,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: None
         """
         self.line_table.blockSignals(True)
-        stations = self.get_line().df.Station.map(self.converter.convert_station).to_list()
+        stations = self.get_line().df.Station.map(convert_station).to_list()
         sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
 
         blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')

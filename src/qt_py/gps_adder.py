@@ -12,19 +12,13 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QHeaderView, QInputDialog,
                                QFileDialog)
 
+from src.qt_py import icons_path
 from src.qt_py.custom_qt_widgets import NonScientific
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
-from src.pem.pem_file import StationConverter
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
 
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath('ui\\icons')
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -323,7 +317,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.parent = parent
         self.line = None
         self.selected_row_info = None
-        self.converter = StationConverter()
         self.name_edit = None
 
         # Table
