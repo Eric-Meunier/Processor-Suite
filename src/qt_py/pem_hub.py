@@ -63,7 +63,6 @@ __version__ = '0.11.6'
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Fix Gridplanner with new loop
 # TODO Look into slowness when changing station number and such in pem plot editor
-# TODO Allow dragging in different filetypes at the same time.
 # TODO Add interactive collar coordinate picker from an Excel file (or csv, or txt). Create table, and select Easting,
 # TODO (cont) Northing, elevation in order?
 
@@ -1214,23 +1213,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         file being dragged, and which widget they are being dragged onto.
         :param e: PyQT event
         """
-        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        urls = [Path(url.toLocalFile()) for url in e.mimeData().urls()]
 
         # PEM, DMP, and DUMP folders can be opened with no PEM files currently opened.
-        # PEM files
-        if all([Path(file).suffix.lower() in ['.pem'] for file in urls]):
-            if e.answerRect().intersects(self.table.geometry()):
-                e.acceptProposedAction()
-                return
-
-        # DMP files
-        elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
+        # PEM and DMP files
+        if all([file.suffix.lower() in ['.pem'] or file.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
             if e.answerRect().intersects(self.table.geometry()):
                 e.acceptProposedAction()
                 return
 
         # Dump folder
-        elif len(urls) == 1 and (Path(urls[0]).is_dir() or Path(urls[0]).suffix.lower() in ['.zip', '.7z', '.rar']):
+        elif len(urls) == 1 and (urls[0].is_dir() or urls[0].suffix.lower() in ['.zip', '.7z', '.rar']):
             e.acceptProposedAction()
             return
 
@@ -1246,7 +1239,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                              current_piw.geometry_tab]
 
             # GPS files
-            if all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
+            if all([file.suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
                 if all([e.answerRect().intersects(self.piw_frame.geometry()),
                         current_piw.tabs.currentWidget() in eligible_tabs,
                         self.pem_files]):
@@ -1254,14 +1247,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     return
 
             # RI files
-            elif all([Path(file).suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
+            elif all([file.suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
                 if all([e.answerRect().intersects(self.piw_frame.geometry()),
                         current_piw.tabs.currentWidget() == current_piw.ri_tab,
                         self.pem_files]):
                     e.acceptProposedAction()
                     return
 
-            elif all([Path(file).suffix.lower() in ['.inf', '.log', '.gpx'] for file in urls]):
+            elif all([file.suffix.lower() in ['.inf', '.log', '.gpx'] for file in urls]):
                 if e.answerRect().intersects(self.project_crs_box.geometry()):
                     e.acceptProposedAction()
                     return
@@ -1270,24 +1263,28 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 e.ignore()
 
     def dropEvent(self, e):
-        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        urls = [Path(url.toLocalFile()) for url in e.mimeData().urls()]
 
-        if all([Path(file).suffix.lower() in ['.pem'] for file in urls]):
-            self.add_pem_files(urls)
+        if all([file.suffix.lower() in ['.pem'] or
+                file.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']
+                for file in urls]):
+            pem_files = [url for url in urls if url.suffix.lower() == '.pem']
+            dmp_files = [url for url in urls if url.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']]
+            if pem_files:
+                self.add_pem_files(pem_files)
+            if dmp_files:
+                self.add_dmp_files(dmp_files)
 
-        elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
-            self.add_dmp_files(urls)
-
-        elif all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
+        elif all([file.suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
             self.add_gps_files(urls)
 
-        elif all([Path(file).suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
+        elif all([file.suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
             self.add_ri_file(urls)
 
-        elif all([Path(file).suffix.lower() in ['.inf', '.log'] for file in urls]):
+        elif all([file.suffix.lower() in ['.inf', '.log'] for file in urls]):
             self.read_inf_file(urls[0])
 
-        elif len(urls) == 1 and (Path(urls[0]).is_dir() or Path(urls[0]).suffix.lower() in ['.zip', '.7z', '.rar']):
+        elif len(urls) == 1 and (urls[0].is_dir() or urls[0].suffix.lower() in ['.zip', '.7z', '.rar']):
             self.open_unpacker(folder=urls[0])
 
     def is_opened(self, file):
