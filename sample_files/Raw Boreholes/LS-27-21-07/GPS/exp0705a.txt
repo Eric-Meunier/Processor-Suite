@@ -1,0 +1,21 @@
+Export Version 5.90-65535  5.90-65535 Started.
+Using Export Setup: Crone MSL
+The following files in C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\GPS will be exported:
+    LOOP Limpe Sur.cor
+
+Reading file LOOP Limpe Sur.cor
+File LOOP Limpe Sur.cor read successfully
+
+1 input file(s) read.
+2470 position(s) read.
+A total of 106 feature(s) read or created.
+  Of these, 1  feature(s) have no positions.
+  106 point feature(s) read.
+106 feature(s) exported.
+2 output file(s) written to C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\GPS
+    c:\_data\2021\iscaycruz\borehole\ls-27-21-07\gps\.txt
+    c:\_data\2021\iscaycruz\borehole\ls-27-21-07\gps\loop limpe sur.txt
+
+The file C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\GPS\LOOP Limpe Sur.log contains information on the settings used.
+
+The file C:\ProgramData\Trimble\GPS Pathfinder Office\Config\\expfiles.txt contains a list of the files created.

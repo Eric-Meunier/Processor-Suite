@@ -1,55 +1,56 @@
 import copy
 import csv
 import datetime
+import keyboard
 import logging
+import natsort
 import os
 import re
+import shutil
+import simplekml
+import stopit
 import subprocess
 import sys
 from itertools import groupby
 from pathlib import Path
 
-import keyboard
-import natsort
 import numpy as np
 import pandas as pd
-import simplekml
-import stopit
-import shutil
+import pyqtgraph as pg
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                                QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser,
                                QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
                                QPushButton, QAbstractItemView, QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox,
                                QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem, QShortcut)
-import pyqtgraph as pg
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
-from src.mag_field.mag_dec_widget import MagDeclinationCalculator
-from src.damp.db_plot import DBPlotter
-from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry,
-                                GPSConversionWidget)
-from src.mag_field.loop_calculator import LoopCalculator
+from src.qt_py import (icons_path, app_data_dir)
+from src.qt_py.db_plot import DBPlotter
+from src.geometry.pem_geometry import PEMGeometry
+from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.gps.gpx_creator import GPXCreator
+from src.mag_field.loop_calculator import LoopCalculator
+from src.mag_field.mag_dec_widget import MagDeclinationCalculator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py.custom_qt_widgets import CustomProgressBar
+from src.qt_py.gps_conversion import GPSConversionWidget
 from src.qt_py.derotator import Derotator
+from src.qt_py.extractor_widgets import StationSplitter
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
 from src.qt_py.name_editor import BatchNameEditor
-from src.geometry.pem_geometry import PEMGeometry
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.qt_py.pem_merger import PEMMerger
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
 from src.qt_py.pem_plot_editor import PEMPlotEditor
 from src.qt_py.ri_importer import BatchRIImporter
-from src.qt_py.extractor_widgets import StationSplitter
 from src.qt_py.unpacker import Unpacker
+from src.ui.pdf_plot_printer import Ui_PDFPlotPrinter
 from src.ui.pem_hub import Ui_PEMHub
 from src.ui.plan_map_options import Ui_PlanMapOptions
-from src.ui.pdf_plot_printer import Ui_PDFPlotPrinter
 
 logger = logging.getLogger(__name__)
 
@@ -59,24 +60,12 @@ __version__ = '0.11.6'
 # TODO Add rainbow coloring to final plots?
 # TODO Use savgol to filter data
 # TODO Add ability to remove channels
-# TODO load and save files in hole planner
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Fix Gridplanner with new loop
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Allow dragging in different filetypes at the same time.
-# TODO importing Iscaycruz data should fill the PSAD EPSG
 # TODO Add interactive collar coordinate picker from an Excel file (or csv, or txt). Create table, and select Easting,
 # TODO (cont) Northing, elevation in order?
-
-# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]  # src folder path
-icons_path = application_path.joinpath("ui\\icons")
-# Create the AppData folder used to save temporary data and settings
-app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
-app_data_dir.mkdir(exist_ok=True)
 
 
 def get_icon(filepath):
@@ -3738,7 +3727,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         else:
             return None
 
-
     def read_inf_file(self, inf_file):
         """
         Parses a .INF file to extract the CRS information in ti and set the CRS drop-down values.
@@ -4954,8 +4942,8 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"TMC\Loop G\GPS\L100E_16.gpx")])
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Raw Boreholes\LS-27-21-07\RAW\DDH-LS-27-21-07-in.xlsx")])
     # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
     # mw.add_gps_files(gps_files)
 

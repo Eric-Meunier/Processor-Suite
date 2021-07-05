@@ -10,16 +10,11 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFrame, QLineEdit, QLabel, QMessageBox, QFileDialog,
                                QPushButton, QAction, QHBoxLayout)
 
+from src.qt_py import icons_path
 from src.pem.pem_file import StationConverter
 from src.ui.pem_merger import Ui_PEMMerger
 
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath("ui\\icons")
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')

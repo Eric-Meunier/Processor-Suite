@@ -12,20 +12,14 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QFileDialog,
                                QErrorMessage, QHeaderView, QApplication)
 from src.geometry.pem_geometry import PEMGeometry
-from src.gps.gps_adder import LoopAdder, LineAdder, CollarPicker
+from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
-    GPXEditor
+    GPXParser
 from src.pem.pem_file import StationConverter
 from src.qt_py.ri_importer import RIFile
 from src.ui.pem_info_widget import Ui_PEMInfoWidget
 
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath("ui\\icons")
 
 
 def clear_table(table):
@@ -36,6 +30,7 @@ def clear_table(table):
     while table.rowCount() > 0:
         table.removeRow(0)
     table.blockSignals(False)
+
 
 get_collar_called = 0
 
@@ -354,7 +349,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             :return: str
             """
             merged_file = []
-            gpx_editor = GPXEditor()
+            gpx_editor = GPXParser()
             for file in files:
                 if file.suffix.lower() == '.gpx':
                     # Convert the GPX file to string

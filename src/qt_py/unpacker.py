@@ -11,17 +11,11 @@ from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageB
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QLineEdit)
 from pyunpack import Archive
 
-from src.damp.db_plot import DBPlotter
+from src.qt_py import icons_path
+from src.qt_py.db_plot import DBPlotter
 from src.ui.unpacker import Ui_Unpacker
 
 logger = logging.getLogger(__name__)
-
-# Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath("ui\\icons")
 
 
 class Unpacker(QMainWindow, Ui_Unpacker):
@@ -323,9 +317,9 @@ class Unpacker(QMainWindow, Ui_Unpacker):
             self.dir_edit.setText(str(path))
             self.dir_tree.expand(self.model.index(str(project_dir)))
         else:
-            self.move_dir_tree_to(str(path))
-            self.dir_edit.setText(str(Path(path).parent))
-            self.dir_tree.expand(self.model.index(str(Path(path).parent)))
+            self.move_dir_tree_to(str(path.parent))
+            self.dir_edit.setText(str(path.parent))
+            self.dir_tree.expand(self.model.index(str(path.parent)))
 
         self.change_dir_label()
         self.setWindowTitle(f"Unpacker - {str(path)}")

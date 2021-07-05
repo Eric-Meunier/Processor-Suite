@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" creator="MapSource 6.16.3" version="1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+
+  <metadata>
+    <link href="http://www.garmin.com">
+      <text>Garmin International</text>
+    </link>
+    <time>2021-06-19T22:26:14Z</time>
+    <bounds maxlat="46.802895991131663" maxlon="-76.7243089992553" minlat="46.798750972375274" minlon="-76.730292001739144"/>
+  </metadata>
+
+  <wpt lat="46.798750972375274" lon="-76.7243089992553">
+    <ele>381.48431399999998</ele>
+    <time>2021-06-19T16:39:58Z</time>
+    <name>200 025</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.79891299456358" lon="-76.724492982029915">
+    <ele>381.80053700000002</ele>
+    <time>2021-06-19T16:38:13Z</time>
+    <name>200 050</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.799038974568248" lon="-76.724784001708031">
+    <ele>381.57815599999998</ele>
+    <time>2021-06-19T16:37:15Z</time>
+    <name>200 075</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.799218012019992" lon="-76.725007966160774">
+    <ele>381.52938799999998</ele>
+    <time>2021-06-19T16:36:05Z</time>
+    <name>200 100</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.799340974539518" lon="-76.725237965583801">
+    <ele>381.96032700000001</ele>
+    <time>2021-06-19T16:34:52Z</time>
+    <name>200 125</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.799518000334501" lon="-76.725478023290634">
+    <ele>383.06787100000003</ele>
+    <time>2021-06-19T16:33:41Z</time>
+    <name>200 150</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.799682034179568" lon="-76.725721014663577">
+    <ele>383.72909499999997</ele>
+    <time>2021-06-19T16:31:13Z</time>
+    <name>200 175</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.799854030832648" lon="-76.725956965237856">
+    <ele>389.17480499999999</ele>
+    <time>2021-06-19T16:14:04Z</time>
+    <name>200 200</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.800022004172206" lon="-76.726205991581082">
+    <ele>389.38610799999998</ele>
+    <time>2021-06-19T16:12:46Z</time>
+    <name>200 225</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.800178997218609" lon="-76.726402966305614">
+    <ele>388.08435100000003</ele>
+    <time>2021-06-19T16:11:16Z</time>
+    <name>200 250</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.800320986658335" lon="-76.726680994033813">
+    <ele>389.52053799999999</ele>
+    <time>2021-06-19T16:10:10Z</time>
+    <name>200 275</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.800472028553486" lon="-76.726874029263854">
+    <ele>391.75891100000001</ele>
+    <time>2021-06-19T16:08:40Z</time>
+    <name>200 300</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.800609994679689" lon="-76.727140992879868">
+    <ele>392.08401500000002</ele>
+    <time>2021-06-19T16:07:58Z</time>
+    <name>200 325</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.800780985504389" lon="-76.727380966767669">
+    <ele>393.06890900000002</ele>
+    <time>2021-06-19T16:06:41Z</time>
+    <name>200 350</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.800955999642611" lon="-76.727591017261147">
+    <ele>396.98703</ele>
+    <time>2021-06-19T16:05:01Z</time>
+    <name>200 375</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.801116010174155" lon="-76.727826967835426">
+    <ele>397.69833399999999</ele>
+    <time>2021-06-19T16:04:11Z</time>
+    <name>200 400</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.801293035969138" lon="-76.728038024157286">
+    <ele>397.23013300000002</ele>
+    <time>2021-06-19T16:03:09Z</time>
+    <name>200 425</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.801426978781819" lon="-76.728269029408693">
+    <ele>394.47460899999999</ele>
+    <time>2021-06-19T16:01:06Z</time>
+    <name>200 450</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.801581038162112" lon="-76.728549990803003">
+    <ele>392.867615</ele>
+    <time>2021-06-19T15:59:34Z</time>
+    <name>200 475</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.801742473617196" lon="-76.728726094588637">
+    <ele>384.169677734375</ele>
+    <time>2021-06-19T22:15:43Z</time>
+    <name>200 500</name>
+    <cmt>19-JUN-21 12:15:52</cmt>
+    <desc>19-JUN-21 12:15:52</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.801895778626204" lon="-76.728983838111162">
+    <ele>381.04541015625</ele>
+    <time>2021-06-19T22:15:43Z</time>
+    <name>200 525</name>
+    <cmt>19-JUN-21 12:11:33</cmt>
+    <desc>19-JUN-21 12:11:33</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.802057884633541" lon="-76.729230433702469">
+    <ele>376.9598388671875</ele>
+    <time>2021-06-19T22:15:43Z</time>
+    <name>200 550</name>
+    <cmt>19-JUN-21 12:08:12</cmt>
+    <desc>19-JUN-21 12:08:12</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.80220733396709" lon="-76.729477448388934">
+    <ele>379.6033935546875</ele>
+    <time>2021-06-19T22:15:43Z</time>
+    <name>200 575</name>
+    <cmt>19-JUN-21 12:05:37</cmt>
+    <desc>19-JUN-21 12:05:37</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.802358543500304" lon="-76.729718847200274">
+    <ele>373.3548583984375</ele>
+    <time>2021-06-19T22:15:43Z</time>
+    <name>200 600</name>
+    <cmt>19-JUN-21 12:02:16</cmt>
+    <desc>19-JUN-21 12:02:16</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.802527019754052" lon="-76.729966029524803">
+    <ele>380.80258199999997</ele>
+    <time>2021-06-19T15:52:34Z</time>
+    <name>200 625</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.80267202667892" lon="-76.730145988985896">
+    <ele>380.893036</ele>
+    <time>2021-06-19T15:50:25Z</time>
+    <name>200 650</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="46.802895991131663" lon="-76.730292001739144">
+    <ele>380.55187999999998</ele>
+    <time>2021-06-19T15:40:32Z</time>
+    <name>200 675</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+</gpx>

@@ -1,0 +1,70 @@
+>> Hole
+name:Hole
+easting:599709.0
+northing:4829107.0
+elevation:0.0
+azimuth:0.0
+dip:60.0
+length:400.0
+<<
+>> Hole
+name:EB-21-52
+easting:403703.0
+northing:5141350.0
+elevation:0.0
+azimuth:180.0
+dip:-60.0
+length:284.0
+<<
+>> Hole
+name:EB-21-68
+easting:403679.0
+northing:5141360.0
+elevation:0.0
+azimuth:180.0
+dip:-60.0
+length:383.0
+<<
+>> Hole
+name:EB-21-56
+easting:403770.0
+northing:5141448.0
+elevation:0.0
+azimuth:180.0
+dip:-60.0
+length:320.0
+<<
+>> Hole
+name:EB-21-55
+easting:403703.0
+northing:5141449.0
+elevation:0.0
+azimuth:180.0
+dip:-60.0
+length:311.0
+<<
+>> Hole
+name:EB-20-37
+easting:404500.0
+northing:5141564.0
+elevation:0.0
+azimuth:180.0
+dip:-60.0
+length:230.0
+<<
+>> Hole
+name:EB-20-40
+easting:404398.0
+northing:5141530.0
+elevation:0.0
+azimuth:180.0
+dip:-60.0
+length:239.0
+<<
+>> Loop
+name:Loop
+c0:599459.00, 4828948.78
+c1:599959.00, 4828948.78
+c2:599959.00, 4829448.78
+c3:599459.00, 4829448.78
+<<

@@ -26,6 +26,7 @@ from pyproj import CRS
 from scipy import spatial
 from shapely.geometry import asMultiPoint
 
+from src.qt_py import (icons_path, app_data_dir)
 from src.logger import Log
 from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.geometry.segment import Segmenter
@@ -36,12 +37,6 @@ from src.ui.loop_planner import Ui_LoopPlanner
 from src.ui.grid_planner import Ui_GridPlanner
 
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath("ui\\icons")
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')
@@ -165,6 +160,7 @@ class HoleWidget(QWidget):
         self.projection = pd.DataFrame()
         self.segments = None
         self.section_length = None
+        self.loop = None
 
         if not properties:
             properties = {
@@ -1802,7 +1798,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         # Pass the mapbox token, for access to better map tiles.
         # If none is passed, it uses the free open street map.
-        app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
         token = open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
         if not token:
             logger.warning(f"No Mapbox token passed.")
@@ -2742,7 +2737,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                                                        ))
 
         # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
-        token = open(".mapbox", 'r').read()
+        token = open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
         if not token:
             logger.warning(f"No Mapbox token passed.")
             map_style = "open-street-map"

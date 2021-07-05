@@ -8,17 +8,12 @@ from pathlib import Path
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
 import pyqtgraph as pg
+from src.qt_py import icons_path
 from src.pem.pem_file import PEMFile
 from src.qt_py.custom_qt_widgets import NonScientific
 from src.ui.derotator import Ui_Derotator
 
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath("ui\\icons")
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')

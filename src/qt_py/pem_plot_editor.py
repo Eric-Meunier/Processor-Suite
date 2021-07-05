@@ -9,13 +9,13 @@ import numpy as np
 import pandas as pd
 import pylineclip as lc
 import pyqtgraph as pg
-from pathlib import Path
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
                                QPushButton)
 from pyqtgraph.Point import Point
 from scipy import spatial
 
+from src.qt_py import icons_path
 from src.pem.pem_file import StationConverter
 from src.ui.pem_plot_editor import Ui_PEMPlotEditor
 from src.logger import Log
@@ -29,12 +29,6 @@ will not intersect the area of the QRectF.
 # from pyod.models.knn import KNN
 # from pyod.utils.data import get_outliers_inliers
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath("ui\\icons")
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('background', 'w')

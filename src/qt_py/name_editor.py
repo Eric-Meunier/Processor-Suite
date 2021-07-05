@@ -1,19 +1,10 @@
 import logging
-import os
-import sys
 
-from pathlib import Path
 from PySide2 import QtCore
 from PySide2.QtWidgets import QWidget, QAbstractScrollArea, QTableWidgetItem, QHeaderView
 from src.ui.line_name_editor import Ui_LineNameEditor
 
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath("ui\\icons")
 
 
 class BatchNameEditor(QWidget, Ui_LineNameEditor):
