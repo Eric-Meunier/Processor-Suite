@@ -3760,13 +3760,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         if crs:
             name = crs.name
             logger.debug(F"Setting project CRS to {name}.")
+            self.epsg_edit.setText(str(crs.to_epsg()))
 
             if name == 'WGS 84':
                 datum = 'WGS 1984'
                 system = 'Lat/Lon'
                 zone = None
 
-            elif 'UTM' in name:
+            elif 'UTM' in name and 'NAD' in name:
                 system = 'UTM'
                 sc = name.split(' / ')
                 datum = re.sub(r'\s+', '', sc[0])  # Remove any spaces
@@ -3785,7 +3786,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 north = 'North' if zone[-1] == 'N' else 'South'
                 zone = f'{zone_number} {north}'
             else:
-                logger.info(f"{name} parsing is not currently implemented.")
+                # For all other datums and systems, us the EPSG edit box.
+                self.epsg_rbtn.click()
                 return
 
             self.gps_system_cbox.setCurrentText(system)
@@ -4391,6 +4393,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         self.pem_files = []
         self.ri_files = []
         self.crs = None
+        self.printer = None
 
         self.plan_map_options = PlanMapOptions(parent=self)
         self.message = QMessageBox()
@@ -4504,9 +4507,8 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         if save_dir:
 
             save_dir = os.path.splitext(save_dir)[0]
-            global printer
-            printer = PEMPrinter(**plot_kwargs)
-            printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
+            self.printer = PEMPrinter(**plot_kwargs)
+            self.printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
             self.hide()
         else:
             logger.error(f"No file name passed.")
@@ -4932,8 +4934,8 @@ def main():
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
-    pem_files = pem_g.get_pems(number=3, random=True)
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"LS-27-21-07\RAW\xy_0704.PEM")
+    # pem_files = pem_g.get_pems(number=3, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -4944,7 +4946,7 @@ def main():
     mw.add_pem_files(pem_files)
     # mw.add_dmp_files([dmp_files])
     # mw.table.selectRow(0)
-    mw.table.selectAll()
+    # mw.table.selectAll()
     # mw.open_pem_merger()
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()

@@ -1401,7 +1401,7 @@ class PEMFile:
 
                     new_info = {'roll_angle': roll_angle,
                                 'dip': rad.pp_dip,
-                                'R': 'R1',
+                                'R': 'R2',
                                 'angle_used': roll_angle,
                                 'derotated': True,
                                 'rotation_type': rot_type}
@@ -1628,6 +1628,7 @@ class PEMFile:
                 if filt.any():
                     ch_index = ch_times[filt].index.values[0]
                     ch_numbers.append(ch_index)
+            # print(ch_numbers)
 
         def prepare_rad(group):
             """
@@ -1721,9 +1722,10 @@ class PEMFile:
                             cleaned_pp_roll_angle = math.degrees(
                                 math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx)
                             )
-                            if allow_negative_angles is False:
-                                if cleaned_pp_roll_angle < 0:
-                                    cleaned_pp_roll_angle = cleaned_pp_roll_angle + 360
+
+                            # if allow_negative_angles is False:
+                            if cleaned_pp_roll_angle < 0:
+                                cleaned_pp_roll_angle = cleaned_pp_roll_angle + 360
 
                             pp_rad_info['ppx_cleaned'] = cleaned_PPx
                             pp_rad_info['ppy_cleaned'] = cleaned_PPy
@@ -1734,9 +1736,9 @@ class PEMFile:
                         measured_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) -
                                                               math.atan2(measured_ppy, measured_ppx))
 
-                        if allow_negative_angles is False:
-                            if measured_pp_roll_angle < 0:
-                                measured_pp_roll_angle = measured_pp_roll_angle + 360
+                        # if allow_negative_angles is False:
+                        if measured_pp_roll_angle < 0:
+                            measured_pp_roll_angle = measured_pp_roll_angle + 360
 
                         # Update the RAD Tool object with the new information
                         pp_rad_info['azimuth'] = seg_azimuth
@@ -3496,13 +3498,13 @@ if __name__ == '__main__':
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
     # file = r"C:\_Data\2021\Geoken\Borehole\SAPR-21-005\DUMP\XY.PEM"
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
-    # file = r"C:\_Data\2021\TMC\Soquem\1338-19-037\DUMP\January 16, 2021\DMP\1338-19-037 XY.PEM"
-    # pem_file = pemparser.parse(file)
+    file = r"C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\RAW\xy_0704.PEM"
+    pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
     # pem_files = pem_g.get_pems(folder="TMC", subfolder=r"131-21-37\DATA", file="131-21-37 XY.PEM")
-    pem_file = pem_files[0]
+    # pem_file = pem_files[0]
     # pem_file.rotate(method="unrotate")
     # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
     # pem_file.save()
@@ -3511,9 +3513,9 @@ if __name__ == '__main__':
     # pem_file.get_dad()
     # pem_file = pem_g.get_pems(client='Kazzinc', number=1)[0]
     # pem_file.to_xyz()
-    # prep_pem, _ = pem_file.prep_rotation()
+    pem_file, _ = pem_file.prep_rotation(allow_negative_angles=False)
     # pem_file = pem_file.rotate(method=None, soa=10)
-    pem_file = pem_file.rotate(method="unrotate", soa=1)
+    pem_file = pem_file.rotate(method="pp", soa=1)
     # rotated_pem = prep_pem.rotate('pp')
 
     # pem_file = pemparser.parse(r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\RAW\XY29_29.PEM')

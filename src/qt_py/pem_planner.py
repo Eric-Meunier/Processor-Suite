@@ -1378,7 +1378,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             if self.hole_widgets:
                 properties = self.hole_widgets[self.hole_tab_widget.currentIndex()].get_properties()
             else:
-                properties = None
+                properties = dict()
 
             # Set the property values from the init
             prop_names = ["easting", "northing", "elevation", "azimuth", "dip", "length"]
@@ -1526,9 +1526,13 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         self.add_loop(name=file.name, coords=coords)
 
-    def remove_hole(self, ind):
-        response = QMessageBox.question(self, "Remove Hole", "Are you sure you want to remove this hole?",
-                                        QMessageBox.Yes, QMessageBox.No)
+    def remove_hole(self, ind, prompt=True):
+        if prompt is True:
+            response = QMessageBox.question(self, "Remove Hole", "Are you sure you want to remove this hole?",
+                                            QMessageBox.Yes, QMessageBox.No)
+        else:
+            response = QMessageBox.Yes
+
         if response == QMessageBox.Yes:
             widget = self.hole_widgets[ind]
             widget.remove()
@@ -1536,9 +1540,13 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             self.hole_tab_widget.removeWidget(widget)
             self.hole_cbox.removeItem(ind)
 
-    def remove_loop(self, ind):
-        response = QMessageBox.question(self, "Remove Loop", "Are you sure you want to remove this loop?",
-                                        QMessageBox.Yes, QMessageBox.No)
+    def remove_loop(self, ind, prompt=True):
+        if prompt is True:
+            response = QMessageBox.question(self, "Remove Loop", "Are you sure you want to remove this loop?",
+                                            QMessageBox.Yes, QMessageBox.No)
+        else:
+            response = QMessageBox.Yes
+
         if response == QMessageBox.Yes:
             widget = self.loop_widgets[ind]
             widget.remove()
@@ -1821,6 +1829,13 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         lpf_file, filetype = QFileDialog.getOpenFileName(self, "Loop Planning File", "", "Loop Planning File (*.LPF)")
 
         if lpf_file:
+
+            # Remove existing holes and loops
+            for ind in reversed(range(len(self.hole_widgets))):
+                self.remove_hole(ind, prompt=False)
+            for ind in reversed(range(len(self.loop_widgets))):
+                self.remove_loop(ind, prompt=False)
+
             file = open(lpf_file, "r").read()
             # holes = file.split(">> Hole")
             holes = re.findall(r">> Hole\n(name:.*\neasting:.*\nnorthing:.*\nelevation:.*\nazimuth:.*\ndip:.*\nlength:.*\n)<<", file)

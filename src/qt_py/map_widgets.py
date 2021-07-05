@@ -331,7 +331,7 @@ class Map3DViewer(QMainWindow):
         self.annotations = []
 
         self.setWindowTitle("3D Map Viewer")
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map2.png')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map.png')))
         self.resize(1000, 800)
         layout = QGridLayout()
         self.setLayout(layout)
@@ -508,9 +508,9 @@ class Map3DViewer(QMainWindow):
 
     def copy_img(self):
         QApplication.clipboard().setPixmap(self.grab())
-        self.status_bar.show()
-        self.status_bar.showMessage('Image copied to clipboard.', 1000)
-        QtCore.QTimer.singleShot(1000, lambda: self.status_bar.hide())
+        self.statusBar().show()
+        self.statusBar().showMessage('Image copied to clipboard.', 1000)
+        QtCore.QTimer.singleShot(1000, lambda: self.statusBar().hide())
 
 
 class ContourMapToolbar(NavigationToolbar):
