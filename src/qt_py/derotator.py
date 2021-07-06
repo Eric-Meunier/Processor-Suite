@@ -8,9 +8,8 @@ from pathlib import Path
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
 import pyqtgraph as pg
-from src.qt_py import icons_path
+from src.qt_py import icons_path, NonScientific
 from src.pem.pem_file import PEMFile
-from src.qt_py.custom_qt_widgets import NonScientific
 from src.ui.derotator import Ui_Derotator
 
 logger = logging.getLogger(__name__)

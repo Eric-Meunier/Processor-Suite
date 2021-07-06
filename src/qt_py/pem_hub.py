@@ -27,7 +27,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
-from src.qt_py import (icons_path, app_data_dir, get_icon)
+from src.qt_py import (icons_path, app_data_dir, get_icon, CustomProgressBar)
 from src.qt_py.db_plot import DBPlotter
 from src.geometry.pem_geometry import PEMGeometry
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
@@ -36,7 +36,6 @@ from src.mag_field.loop_calculator import LoopCalculator
 from src.mag_field.mag_dec_widget import MagDeclinationCalculator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser
 from src.pem.pem_plotter import PEMPrinter
-from src.qt_py.custom_qt_widgets import CustomProgressBar
 from src.qt_py.gps_conversion import GPSConversionWidget
 from src.qt_py.derotator import Derotator
 from src.qt_py.extractor_widgets import StationSplitter

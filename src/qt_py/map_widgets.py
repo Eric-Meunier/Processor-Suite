@@ -23,10 +23,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from scipy import interpolate as interp
 
-from src.qt_py import icons_path
+from src.qt_py import icons_path, CustomProgressBar
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import MapPlotter
-from src.qt_py.custom_qt_widgets import CustomProgressBar
 from src.ui.contour_map import Ui_ContourMap
 
 logger = logging.getLogger(__name__)

@@ -30,8 +30,7 @@ from src.geometry.segment import Segmenter
 # from src.logger import Log
 from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.qt_py import (icons_path, app_data_dir)
-from src.qt_py.custom_qt_widgets import NonScientific, PlanMapAxis
+from src.qt_py import (icons_path, app_data_dir, NonScientific, PlanMapAxis)
 from src.qt_py.map_widgets import TileMapViewer
 from src.ui.grid_planner import Ui_GridPlanner
 from src.ui.loop_planner import Ui_LoopPlanner

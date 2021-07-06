@@ -12,8 +12,7 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QHeaderView, QInputDialog,
                                QFileDialog)
 
-from src.qt_py import icons_path
-from src.qt_py.custom_qt_widgets import NonScientific
+from src.qt_py import icons_path, NonScientific
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
