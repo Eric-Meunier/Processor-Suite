@@ -66,18 +66,6 @@ class Ui_GridPlanner(object):
 
         self.gridLayout_2.addWidget(self.label_4, 3, 0, 1, 1)
 
-        self.loop_angle_edit = QLineEdit(self.tx_loop_gbox)
-        self.loop_angle_edit.setObjectName(u"loop_angle_edit")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.loop_angle_edit.sizePolicy().hasHeightForWidth())
-        self.loop_angle_edit.setSizePolicy(sizePolicy1)
-        self.loop_angle_edit.setMinimumSize(QSize(0, 0))
-        self.loop_angle_edit.setMaximumSize(QSize(16777215, 16777215))
-
-        self.gridLayout_2.addWidget(self.loop_angle_edit, 3, 1, 1, 1)
-
         self.label_3 = QLabel(self.tx_loop_gbox)
         self.label_3.setObjectName(u"label_3")
 
@@ -87,22 +75,6 @@ class Ui_GridPlanner(object):
         self.label_2.setObjectName(u"label_2")
 
         self.gridLayout_2.addWidget(self.label_2, 2, 0, 1, 1)
-
-        self.loop_height_edit = QLineEdit(self.tx_loop_gbox)
-        self.loop_height_edit.setObjectName(u"loop_height_edit")
-        sizePolicy1.setHeightForWidth(self.loop_height_edit.sizePolicy().hasHeightForWidth())
-        self.loop_height_edit.setSizePolicy(sizePolicy1)
-
-        self.gridLayout_2.addWidget(self.loop_height_edit, 1, 1, 1, 1)
-
-        self.loop_width_edit = QLineEdit(self.tx_loop_gbox)
-        self.loop_width_edit.setObjectName(u"loop_width_edit")
-        sizePolicy1.setHeightForWidth(self.loop_width_edit.sizePolicy().hasHeightForWidth())
-        self.loop_width_edit.setSizePolicy(sizePolicy1)
-        self.loop_width_edit.setMinimumSize(QSize(0, 0))
-        self.loop_width_edit.setMaximumSize(QSize(16777215, 16777215))
-
-        self.gridLayout_2.addWidget(self.loop_width_edit, 2, 1, 1, 1)
 
         self.label_12 = QLabel(self.tx_loop_gbox)
         self.label_12.setObjectName(u"label_12")
@@ -118,6 +90,9 @@ class Ui_GridPlanner(object):
 
         self.loop_name_edit = QLineEdit(self.tx_loop_gbox)
         self.loop_name_edit.setObjectName(u"loop_name_edit")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.loop_name_edit.sizePolicy().hasHeightForWidth())
         self.loop_name_edit.setSizePolicy(sizePolicy1)
 
@@ -130,6 +105,31 @@ class Ui_GridPlanner(object):
 
         self.gridLayout_2.addWidget(self.include_loop_cbox, 6, 0, 1, 2)
 
+        self.loop_height_sbox = QSpinBox(self.tx_loop_gbox)
+        self.loop_height_sbox.setObjectName(u"loop_height_sbox")
+        self.loop_height_sbox.setMinimum(1)
+        self.loop_height_sbox.setMaximum(10000)
+        self.loop_height_sbox.setSingleStep(10)
+        self.loop_height_sbox.setValue(1000)
+
+        self.gridLayout_2.addWidget(self.loop_height_sbox, 1, 1, 1, 1)
+
+        self.loop_width_sbox = QSpinBox(self.tx_loop_gbox)
+        self.loop_width_sbox.setObjectName(u"loop_width_sbox")
+        self.loop_width_sbox.setMinimum(1)
+        self.loop_width_sbox.setMaximum(10000)
+        self.loop_width_sbox.setSingleStep(10)
+        self.loop_width_sbox.setValue(1000)
+
+        self.gridLayout_2.addWidget(self.loop_width_sbox, 2, 1, 1, 1)
+
+        self.loop_angle_sbox = QSpinBox(self.tx_loop_gbox)
+        self.loop_angle_sbox.setObjectName(u"loop_angle_sbox")
+        self.loop_angle_sbox.setMaximum(360)
+        self.loop_angle_sbox.setSingleStep(5)
+
+        self.gridLayout_2.addWidget(self.loop_angle_sbox, 3, 1, 1, 1)
+
 
         self.verticalLayout.addWidget(self.tx_loop_gbox)
 
@@ -140,20 +140,6 @@ class Ui_GridPlanner(object):
         self.groupBox.setMaximumSize(QSize(16777215, 16777215))
         self.gridLayout_3 = QGridLayout(self.groupBox)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.line_spacing_edit = QLineEdit(self.groupBox)
-        self.line_spacing_edit.setObjectName(u"line_spacing_edit")
-        sizePolicy1.setHeightForWidth(self.line_spacing_edit.sizePolicy().hasHeightForWidth())
-        self.line_spacing_edit.setSizePolicy(sizePolicy1)
-
-        self.gridLayout_3.addWidget(self.line_spacing_edit, 5, 2, 1, 1)
-
-        self.grid_az_edit = QLineEdit(self.groupBox)
-        self.grid_az_edit.setObjectName(u"grid_az_edit")
-        sizePolicy1.setHeightForWidth(self.grid_az_edit.sizePolicy().hasHeightForWidth())
-        self.grid_az_edit.setSizePolicy(sizePolicy1)
-
-        self.gridLayout_3.addWidget(self.grid_az_edit, 2, 2, 1, 1)
-
         self.line_2 = QFrame(self.groupBox)
         self.line_2.setObjectName(u"line_2")
         self.line_2.setFrameShape(QFrame.HLine)
@@ -165,13 +151,6 @@ class Ui_GridPlanner(object):
         self.label_13.setObjectName(u"label_13")
 
         self.gridLayout_3.addWidget(self.label_13, 8, 1, 1, 1)
-
-        self.station_spacing_edit = QLineEdit(self.groupBox)
-        self.station_spacing_edit.setObjectName(u"station_spacing_edit")
-        sizePolicy1.setHeightForWidth(self.station_spacing_edit.sizePolicy().hasHeightForWidth())
-        self.station_spacing_edit.setSizePolicy(sizePolicy1)
-
-        self.gridLayout_3.addWidget(self.station_spacing_edit, 6, 2, 1, 1)
 
         self.grid_name_edit = QLineEdit(self.groupBox)
         self.grid_name_edit.setObjectName(u"grid_name_edit")
@@ -189,13 +168,6 @@ class Ui_GridPlanner(object):
         self.label_10.setObjectName(u"label_10")
 
         self.gridLayout_3.addWidget(self.label_10, 6, 1, 1, 1)
-
-        self.line_length_edit = QLineEdit(self.groupBox)
-        self.line_length_edit.setObjectName(u"line_length_edit")
-        sizePolicy1.setHeightForWidth(self.line_length_edit.sizePolicy().hasHeightForWidth())
-        self.line_length_edit.setSizePolicy(sizePolicy1)
-
-        self.gridLayout_3.addWidget(self.line_length_edit, 4, 2, 1, 1)
 
         self.label_9 = QLabel(self.groupBox)
         self.label_9.setObjectName(u"label_9")
@@ -217,21 +189,6 @@ class Ui_GridPlanner(object):
 
         self.gridLayout_3.addWidget(self.label_5, 1, 1, 1, 1)
 
-        self.grid_northing_edit = QLineEdit(self.groupBox)
-        self.grid_northing_edit.setObjectName(u"grid_northing_edit")
-        sizePolicy1.setHeightForWidth(self.grid_northing_edit.sizePolicy().hasHeightForWidth())
-        self.grid_northing_edit.setSizePolicy(sizePolicy1)
-
-        self.gridLayout_3.addWidget(self.grid_northing_edit, 1, 2, 1, 1)
-
-        self.grid_easting_edit = QLineEdit(self.groupBox)
-        self.grid_easting_edit.setObjectName(u"grid_easting_edit")
-        sizePolicy1.setHeightForWidth(self.grid_easting_edit.sizePolicy().hasHeightForWidth())
-        self.grid_easting_edit.setSizePolicy(sizePolicy1)
-        self.grid_easting_edit.setMaximumSize(QSize(16777215, 16777215))
-
-        self.gridLayout_3.addWidget(self.grid_easting_edit, 0, 2, 1, 1)
-
         self.label_11 = QLabel(self.groupBox)
         self.label_11.setObjectName(u"label_11")
 
@@ -242,12 +199,62 @@ class Ui_GridPlanner(object):
 
         self.gridLayout_3.addWidget(self.label_15, 3, 1, 1, 1)
 
-        self.line_number_edit = QLineEdit(self.groupBox)
-        self.line_number_edit.setObjectName(u"line_number_edit")
-        sizePolicy1.setHeightForWidth(self.line_number_edit.sizePolicy().hasHeightForWidth())
-        self.line_number_edit.setSizePolicy(sizePolicy1)
+        self.grid_easting_sbox = QSpinBox(self.groupBox)
+        self.grid_easting_sbox.setObjectName(u"grid_easting_sbox")
+        self.grid_easting_sbox.setMinimum(-10000000)
+        self.grid_easting_sbox.setMaximum(10000000)
+        self.grid_easting_sbox.setValue(599709)
 
-        self.gridLayout_3.addWidget(self.line_number_edit, 3, 2, 1, 1)
+        self.gridLayout_3.addWidget(self.grid_easting_sbox, 0, 2, 1, 1)
+
+        self.grid_northing_sbox = QSpinBox(self.groupBox)
+        self.grid_northing_sbox.setObjectName(u"grid_northing_sbox")
+        self.grid_northing_sbox.setMinimum(-10000000)
+        self.grid_northing_sbox.setMaximum(10000000)
+        self.grid_northing_sbox.setValue(4829107)
+
+        self.gridLayout_3.addWidget(self.grid_northing_sbox, 1, 2, 1, 1)
+
+        self.grid_az_sbox = QSpinBox(self.groupBox)
+        self.grid_az_sbox.setObjectName(u"grid_az_sbox")
+        self.grid_az_sbox.setMaximum(360)
+
+        self.gridLayout_3.addWidget(self.grid_az_sbox, 2, 2, 1, 1)
+
+        self.line_number_sbox = QSpinBox(self.groupBox)
+        self.line_number_sbox.setObjectName(u"line_number_sbox")
+        self.line_number_sbox.setMinimum(1)
+        self.line_number_sbox.setMaximum(100)
+        self.line_number_sbox.setValue(10)
+
+        self.gridLayout_3.addWidget(self.line_number_sbox, 3, 2, 1, 1)
+
+        self.line_length_sbox = QSpinBox(self.groupBox)
+        self.line_length_sbox.setObjectName(u"line_length_sbox")
+        self.line_length_sbox.setMinimum(1)
+        self.line_length_sbox.setMaximum(10000)
+        self.line_length_sbox.setSingleStep(10)
+        self.line_length_sbox.setValue(1000)
+
+        self.gridLayout_3.addWidget(self.line_length_sbox, 4, 2, 1, 1)
+
+        self.line_spacing_sbox = QSpinBox(self.groupBox)
+        self.line_spacing_sbox.setObjectName(u"line_spacing_sbox")
+        self.line_spacing_sbox.setMinimum(1)
+        self.line_spacing_sbox.setMaximum(10000)
+        self.line_spacing_sbox.setSingleStep(10)
+        self.line_spacing_sbox.setValue(100)
+
+        self.gridLayout_3.addWidget(self.line_spacing_sbox, 5, 2, 1, 1)
+
+        self.station_spacing_sbox = QSpinBox(self.groupBox)
+        self.station_spacing_sbox.setObjectName(u"station_spacing_sbox")
+        self.station_spacing_sbox.setMinimum(1)
+        self.station_spacing_sbox.setMaximum(10000)
+        self.station_spacing_sbox.setSingleStep(10)
+        self.station_spacing_sbox.setValue(50)
+
+        self.gridLayout_3.addWidget(self.station_spacing_sbox, 6, 2, 1, 1)
 
 
         self.verticalLayout.addWidget(self.groupBox)
@@ -359,17 +366,7 @@ class Ui_GridPlanner(object):
         self.status_bar = QStatusBar(GridPlanner)
         self.status_bar.setObjectName(u"status_bar")
         GridPlanner.setStatusBar(self.status_bar)
-        QWidget.setTabOrder(self.loop_height_edit, self.loop_width_edit)
-        QWidget.setTabOrder(self.loop_width_edit, self.loop_angle_edit)
-        QWidget.setTabOrder(self.loop_angle_edit, self.loop_name_edit)
-        QWidget.setTabOrder(self.loop_name_edit, self.grid_easting_edit)
-        QWidget.setTabOrder(self.grid_easting_edit, self.grid_northing_edit)
-        QWidget.setTabOrder(self.grid_northing_edit, self.grid_az_edit)
-        QWidget.setTabOrder(self.grid_az_edit, self.line_number_edit)
-        QWidget.setTabOrder(self.line_number_edit, self.line_length_edit)
-        QWidget.setTabOrder(self.line_length_edit, self.line_spacing_edit)
-        QWidget.setTabOrder(self.line_spacing_edit, self.station_spacing_edit)
-        QWidget.setTabOrder(self.station_spacing_edit, self.grid_name_edit)
+        QWidget.setTabOrder(self.loop_name_edit, self.grid_name_edit)
         QWidget.setTabOrder(self.grid_name_edit, self.plan_view)
 
         self.menubar.addAction(self.menuFile.menuAction())
@@ -398,43 +395,37 @@ class Ui_GridPlanner(object):
         self.actionCopy_Loop_to_Clipboard.setText(QCoreApplication.translate("GridPlanner", u"Copy Loop to Clipboard", None))
         self.tx_loop_gbox.setTitle(QCoreApplication.translate("GridPlanner", u"Tx Loop", None))
         self.label_4.setText(QCoreApplication.translate("GridPlanner", u"Angle", None))
-        self.loop_angle_edit.setText(QCoreApplication.translate("GridPlanner", u"0", None))
         self.label_3.setText(QCoreApplication.translate("GridPlanner", u"Height", None))
         self.label_2.setText(QCoreApplication.translate("GridPlanner", u"Width", None))
-        self.loop_height_edit.setText(QCoreApplication.translate("GridPlanner", u"1000", None))
-        self.loop_width_edit.setText(QCoreApplication.translate("GridPlanner", u"1000", None))
         self.label_12.setText(QCoreApplication.translate("GridPlanner", u"Name", None))
         self.loop_name_edit.setPlaceholderText(QCoreApplication.translate("GridPlanner", u"(Optional)", None))
 #if QT_CONFIG(tooltip)
         self.include_loop_cbox.setToolTip(QCoreApplication.translate("GridPlanner", u"Include the loop when saving a KMZ or GPX file", None))
 #endif // QT_CONFIG(tooltip)
         self.include_loop_cbox.setText(QCoreApplication.translate("GridPlanner", u"Include Loop on Save", None))
+        self.loop_height_sbox.setSuffix(QCoreApplication.translate("GridPlanner", u"m", None))
+        self.loop_width_sbox.setSuffix(QCoreApplication.translate("GridPlanner", u"m", None))
+        self.loop_angle_sbox.setSuffix(QCoreApplication.translate("GridPlanner", u"\u00b0", None))
         self.groupBox.setTitle(QCoreApplication.translate("GridPlanner", u"Grid", None))
-        self.line_spacing_edit.setText(QCoreApplication.translate("GridPlanner", u"100", None))
-        self.line_spacing_edit.setPlaceholderText("")
-        self.grid_az_edit.setText(QCoreApplication.translate("GridPlanner", u"0", None))
-        self.grid_az_edit.setPlaceholderText("")
         self.label_13.setText(QCoreApplication.translate("GridPlanner", u"Name", None))
-        self.station_spacing_edit.setText(QCoreApplication.translate("GridPlanner", u"50", None))
-        self.station_spacing_edit.setPlaceholderText("")
         self.grid_name_edit.setPlaceholderText(QCoreApplication.translate("GridPlanner", u"(Optional)", None))
         self.label_14.setText(QCoreApplication.translate("GridPlanner", u"Line\n"
 "Length", None))
         self.label_10.setText(QCoreApplication.translate("GridPlanner", u"Station\n"
 "Spacing", None))
-        self.line_length_edit.setText(QCoreApplication.translate("GridPlanner", u"1000", None))
         self.label_9.setText(QCoreApplication.translate("GridPlanner", u"Azimuth", None))
         self.label.setText(QCoreApplication.translate("GridPlanner", u"Easting ", None))
         self.label_5.setText(QCoreApplication.translate("GridPlanner", u"Northing", None))
-        self.grid_northing_edit.setText(QCoreApplication.translate("GridPlanner", u"4829107", None))
-        self.grid_northing_edit.setPlaceholderText("")
-        self.grid_easting_edit.setText(QCoreApplication.translate("GridPlanner", u"599709", None))
-        self.grid_easting_edit.setPlaceholderText("")
         self.label_11.setText(QCoreApplication.translate("GridPlanner", u"Line\n"
 "Spacing", None))
         self.label_15.setText(QCoreApplication.translate("GridPlanner", u"Number\n"
 "of Lines", None))
-        self.line_number_edit.setText(QCoreApplication.translate("GridPlanner", u"10", None))
+        self.grid_easting_sbox.setSuffix(QCoreApplication.translate("GridPlanner", u"m", None))
+        self.grid_northing_sbox.setSuffix(QCoreApplication.translate("GridPlanner", u"m", None))
+        self.grid_az_sbox.setSuffix(QCoreApplication.translate("GridPlanner", u"\u00b0", None))
+        self.line_length_sbox.setSuffix(QCoreApplication.translate("GridPlanner", u"m", None))
+        self.line_spacing_sbox.setSuffix(QCoreApplication.translate("GridPlanner", u"m", None))
+        self.station_spacing_sbox.setSuffix(QCoreApplication.translate("GridPlanner", u"m", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("GridPlanner", u"Coordinate System", None))
         self.label_16.setText(QCoreApplication.translate("GridPlanner", u"System:", None))
         self.label_17.setText(QCoreApplication.translate("GridPlanner", u"Zone:", None))

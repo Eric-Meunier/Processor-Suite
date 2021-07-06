@@ -2056,17 +2056,17 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.view_map_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("folium.png"))))
         # self.installEventFilter(self)
 
-        self.loop_height = int(self.loop_height_edit.text())
-        self.loop_width = int(self.loop_width_edit.text())
-        self.loop_angle = int(self.loop_angle_edit.text())
+        self.loop_height = self.loop_height_sbox.value()
+        self.loop_width = self.loop_width_sbox.value()
+        self.loop_angle = self.loop_angle_sbox.value()
 
-        self.grid_easting = int(self.grid_easting_edit.text())
-        self.grid_northing = int(self.grid_northing_edit.text())
-        self.grid_az = int(self.grid_az_edit.text())
-        self.line_number = int(self.line_number_edit.text())
-        self.line_length = int(self.line_length_edit.text())
-        self.station_spacing = int(self.station_spacing_edit.text())
-        self.line_spacing = int(self.line_spacing_edit.text())
+        self.grid_easting = self.grid_easting_sbox.value()
+        self.grid_northing = self.grid_northing_sbox.value()
+        self.grid_az = self.grid_az_sbox.value()
+        self.line_number = self.line_number_sbox.value()
+        self.line_length = self.line_length_sbox.value()
+        self.station_spacing = self.station_spacing_sbox.value()
+        self.line_spacing = self.line_spacing_sbox.value()
 
         self.grid_east_center, self.grid_north_center = 0, 0
         self.lines = []
@@ -2082,29 +2082,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.plan_view.autoRange()
         self.plot_grid()
 
-        # Validators
-        int_validator = QtGui.QIntValidator()
-        size_validator = QtGui.QIntValidator()
-        size_validator.setBottom(1)
-        loop_angle_validator = QtGui.QIntValidator()
-        loop_angle_validator.setRange(0, 360)
-        az_validator = QtGui.QIntValidator()
-        az_validator.setRange(0, 360)
-        dip_validator = QtGui.QIntValidator()
-        dip_validator.setRange(0, 90)
-
-        self.loop_height_edit.setValidator(size_validator)
-        self.loop_width_edit.setValidator(size_validator)
-        self.loop_angle_edit.setValidator(int_validator)
-
-        self.grid_easting_edit.setValidator(int_validator)
-        self.grid_northing_edit.setValidator(int_validator)
-        self.grid_az_edit.setValidator(az_validator)
-        self.line_number_edit.setValidator(size_validator)
-        self.line_length_edit.setValidator(size_validator)
-        self.station_spacing_edit.setValidator(size_validator)
-        self.line_spacing_edit.setValidator(size_validator)
-
         self.init_signals()
         self.init_crs()
 
@@ -2116,9 +2093,8 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             :return: None
             """
             height = self.loop_roi.size()[1]
-            width = self.loop_width_edit.text()
-            width = float(width)
-            logger.info(f"Loop width changed to {width}")
+            width = self.loop_width_sbox.value()
+            logger.debug(f"Loop width changed to {width}")
             self.loop_roi.setSize((width, height))
 
         def change_loop_height():
@@ -2126,10 +2102,9 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             Signal slot: Change the loop ROI dimensions from user input
             :return: None
             """
-            height = self.loop_height_edit.text()
+            height = self.loop_height_sbox.value()
             width = self.loop_roi.size()[0]
-            height = float(height)
-            logger.info(f"Loop height changed to {height}")
+            logger.debug(f"Loop height changed to {height}")
             self.loop_roi.setSize((width, height))
 
         def change_loop_angle():
@@ -2137,8 +2112,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             Signal slot: Change the loop ROI angle from user input
             :return: None
             """
-            angle = self.loop_angle_edit.text()
-            angle = float(angle)
+            angle = self.loop_angle_sbox.value()
             logger.info(f"Loop angle changed to {angle}")
             self.loop_roi.setAngle(angle)
 
@@ -2147,7 +2121,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             Signal slot: Change the grid ROI angle from user input. Converts from azimuth to angle
             :return: None
             """
-            az = int(self.grid_az_edit.text())
+            az = self.grid_az_sbox.value()
             angle = 90 - az
             logger.info(f"Grid angle changed to {az}")
             self.grid_roi.setAngle(angle)
@@ -2157,52 +2131,27 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             Signal slot: Change the grid ROI dimensions from user input
             :return: None
             """
-            self.line_length = int(self.line_length_edit.text())
-            self.line_number = int(self.line_number_edit.text())
-            self.line_spacing = int(self.line_spacing_edit.text())
+            self.line_length = self.line_length_sbox.value()
+            self.line_number = self.line_number_sbox.value()
+            self.line_spacing = self.line_spacing_sbox.value()
             self.grid_roi.setSize((self.line_length, max((self.line_number - 1) * self.line_spacing, 10)))
             logger.info(f"Grid size changed to {self.line_length} x {max((self.line_number - 1) * self.line_spacing, 10)}")
 
         def change_grid_pos():
             """
-            Change the position of the grid ROI based on the input from the grid easting and northing text edits.
+            Change the position of the grid ROI based on the input from the grid easting and northing spin boxes.
             :return: None
             """
 
-            def get_corner(x, y):
-                """
-                Find the bottom-right corner given the center of the grid.
-                :param x: X coordinate of the center point
-                :param y: Y coordinate of the center point
-                :return: X, Y coordinate of the bottom-right corner.
-                """
-                a = 90 - self.grid_roi.angle()
-                w = max((self.line_number - 1) * self.line_spacing, 10)
-                h = self.line_length
+            self.grid_roi.blockSignals(True)
 
-                hypo = math.sqrt(w ** 2 + h ** 2)
-                angle = math.degrees(math.atan(h / w)) + a
-                theta = math.radians(angle)
-                dx = (hypo / 2) * math.cos(theta)
-                dy = (hypo / 2) * math.sin(theta)
-                center = pg.ScatterPlotItem([x + dx], [y - dy], pen='y')
-                self.plan_view.addItem(center)
-                logger.info(f"Corner is at {x + dx}, {y - dy}")
-                return x + dx, y - dy
-
-            x, y = get_corner(int(self.grid_easting_edit.text()), int(self.grid_northing_edit.text()))
-            easting_shift = x - self.grid_easting
-            northing_shift = y - self.grid_northing
-            self.shift_loop(easting_shift, northing_shift)
-            self.grid_easting, self.grid_northing = x, y
-            self.grid_roi.setPos(x, y)
-
-            self.grid_east_center, self.grid_north_center = int(self.grid_easting_edit.text()), int(
-                self.grid_northing_edit.text())
-            logger.info(f"Grid position changed to {self.grid_east_center, self.grid_north_center}")
+            self.grid_east_center, self.grid_north_center = self.grid_easting_sbox.value(), self.grid_northing_sbox.value()
+            self.grid_roi.setPos(self.grid_east_center, self.grid_north_center)
 
             self.plot_grid()
             self.plan_view.autoRange(items=[self.loop_roi, self.grid_roi])
+
+            self.grid_roi.blockSignals(False)
 
         # Menu
         self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
@@ -2215,23 +2164,23 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_loop_to_clipboard)
         self.actionCopy_Grid_to_Clipboard.triggered.connect(self.copy_grid_to_clipboard)
 
-        self.loop_height_edit.editingFinished.connect(change_loop_height)
-        self.loop_width_edit.editingFinished.connect(change_loop_width)
-        self.loop_angle_edit.editingFinished.connect(change_loop_angle)
-        self.grid_az_edit.editingFinished.connect(change_grid_angle)
+        self.loop_height_sbox.valueChanged.connect(change_loop_height)
+        self.loop_width_sbox.valueChanged.connect(change_loop_width)
+        self.loop_angle_sbox.valueChanged.connect(change_loop_angle)
+        self.grid_az_sbox.valueChanged.connect(change_grid_angle)
 
-        self.grid_easting_edit.editingFinished.connect(self.plot_grid)
-        self.grid_easting_edit.editingFinished.connect(change_grid_pos)
-        self.grid_northing_edit.editingFinished.connect(self.plot_grid)
-        self.grid_northing_edit.editingFinished.connect(change_grid_pos)
-        self.grid_az_edit.editingFinished.connect(self.plot_grid)
-        self.line_number_edit.editingFinished.connect(self.plot_grid)
-        self.line_number_edit.editingFinished.connect(change_grid_size)
-        self.line_length_edit.editingFinished.connect(self.plot_grid)
-        self.line_length_edit.editingFinished.connect(change_grid_size)
-        self.station_spacing_edit.editingFinished.connect(self.plot_grid)
-        self.line_spacing_edit.editingFinished.connect(self.plot_grid)
-        self.line_spacing_edit.editingFinished.connect(change_grid_size)
+        self.grid_easting_sbox.valueChanged.connect(self.plot_grid)
+        self.grid_easting_sbox.valueChanged.connect(change_grid_pos)
+        self.grid_northing_sbox.valueChanged.connect(self.plot_grid)
+        self.grid_northing_sbox.valueChanged.connect(change_grid_pos)
+        self.grid_az_sbox.valueChanged.connect(self.plot_grid)
+        self.line_number_sbox.valueChanged.connect(self.plot_grid)
+        self.line_number_sbox.valueChanged.connect(change_grid_size)
+        self.line_length_sbox.valueChanged.connect(self.plot_grid)
+        self.line_length_sbox.valueChanged.connect(change_grid_size)
+        self.station_spacing_sbox.valueChanged.connect(self.plot_grid)
+        self.line_spacing_sbox.valueChanged.connect(self.plot_grid)
+        self.line_spacing_sbox.valueChanged.connect(change_grid_size)
 
     def init_crs(self):
         """
@@ -2376,18 +2325,18 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                 replots the section plot.
                 :return: None
                 """
-                self.loop_width_edit.blockSignals(True)
-                self.loop_height_edit.blockSignals(True)
-                self.loop_angle_edit.blockSignals(True)
+                self.loop_width_sbox.blockSignals(True)
+                self.loop_height_sbox.blockSignals(True)
+                self.loop_angle_sbox.blockSignals(True)
                 x, y = self.loop_roi.pos()
                 w, h = self.loop_roi.size()
                 angle = self.loop_roi.angle()
-                self.loop_width_edit.setText(f"{w:.0f}")
-                self.loop_height_edit.setText(f"{h:.0f}")
-                self.loop_angle_edit.setText(f"{angle:.0f}")
-                self.loop_width_edit.blockSignals(False)
-                self.loop_height_edit.blockSignals(False)
-                self.loop_angle_edit.blockSignals(False)
+                self.loop_width_sbox.setValue(w)
+                self.loop_height_sbox.setValue(h)
+                self.loop_angle_sbox.setValue(angle)
+                self.loop_width_sbox.blockSignals(False)
+                self.loop_height_sbox.blockSignals(False)
+                self.loop_angle_sbox.blockSignals(False)
                 self.plot_grid()
 
             # Create the loop ROI
@@ -2417,17 +2366,17 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                 is moved.
                 :return: None
                 """
-                self.grid_easting_edit.blockSignals(True)
-                self.grid_northing_edit.blockSignals(True)
+                self.grid_easting_sbox.blockSignals(True)
+                self.grid_northing_sbox.blockSignals(True)
 
                 x, y = self.grid_roi.pos()
                 self.grid_easting, self.grid_northing = x, y
                 self.grid_east_center, self.grid_north_center = self.get_grid_center(x, y)
-                self.grid_easting_edit.setText(f"{self.grid_east_center:.0f}")
-                self.grid_northing_edit.setText(f"{self.grid_north_center:.0f}")
+                self.grid_easting_sbox.setValue(self.grid_east_center)
+                self.grid_northing_sbox.setValue(self.grid_north_center)
 
-                self.grid_easting_edit.blockSignals(False)
-                self.grid_northing_edit.blockSignals(False)
+                self.grid_easting_sbox.blockSignals(False)
+                self.grid_northing_sbox.blockSignals(False)
                 self.plot_grid()
 
             # Create the grid
@@ -2507,11 +2456,11 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         center_x, center_y = self.get_grid_center(x, y)
         self.get_grid_corner_coords()
 
-        self.grid_az = int(self.grid_az_edit.text())
-        self.line_length = int(self.line_length_edit.text())
-        self.station_spacing = int(self.station_spacing_edit.text())
-        self.line_spacing = int(self.line_spacing_edit.text())
-        self.line_number = int(self.line_number_edit.text())
+        self.grid_az = self.grid_az_sbox.value()
+        self.line_length = self.line_length_sbox.value()
+        self.station_spacing = self.station_spacing_sbox.value()
+        self.line_spacing = self.line_spacing_sbox.value()
+        self.line_number = self.line_number_sbox.value()
 
         self.lines = []
         # Plotting the stations and lines
