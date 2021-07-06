@@ -136,6 +136,32 @@ class SurveyPlanner(QMainWindow):
         QApplication.clipboard().setPixmap(self.grab())
         self.statusBar().showMessage(F"Image saved to clipboard.", 1500)
 
+    def copy_loop_coords(self, widget):
+        """
+        Copy the loop coordinates to the clipboard.
+        :param widget: Loop widget object
+        """
+        epsg = self.get_epsg()
+        if epsg:
+            crs_str = CRS.from_epsg(self.get_epsg()).name
+        else:
+            crs_str = 'No CRS selected'
+
+        # Create a string from the loop corners
+        result = crs_str + '\n'
+        corners = widget.get_loop_coords()
+        for point in corners:
+            easting = f"{point.x():.0f} E"
+            northing = f"{point.y():.0f} N"
+            result += easting + ', ' + northing + '\n'
+
+        # Add the string to the clipboard
+        cb = QtGui.QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(result, mode=cb.Clipboard)
+
+        self.statusBar().showMessage('Loop corner coordinates copied to clipboard.', 1000)
+
 
 class HoleWidget(QWidget):
     name_changed_sig = QtCore.Signal(str)
@@ -1427,32 +1453,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 else:
                     w.deselect()
 
-        def loop_corners_copied(widget):
-            """
-            Copy the loop coordinates to the clipboard.
-            :param widget: Loop widget object
-            """
-            epsg = self.get_epsg()
-            if epsg:
-                crs_str = CRS.from_epsg(self.get_epsg()).name
-            else:
-                crs_str = 'No CRS selected'
-
-            # Create a string from the loop corners
-            result = crs_str + '\n'
-            corners = widget.get_loop_coords()
-            for point in corners:
-                easting = f"{point.x():.0f} E"
-                northing = f"{point.y():.0f} N"
-                result += easting + ', ' + northing + '\n'
-
-            # Add the string to the clipboard
-            cb = QtGui.QApplication.clipboard()
-            cb.clear(mode=cb.Clipboard)
-            cb.setText(result, mode=cb.Clipboard)
-
-            self.status_bar.showMessage('Loop corner coordinates copied to clipboard.', 1000)
-
         def remove_loop(widget):
             ind = self.loop_widgets.index(widget)
             self.remove_loop(ind)
@@ -1481,7 +1481,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             loop_widget.plot_hole_sig.connect(self.plot_hole)
             loop_widget.loop_roi.sigClicked.connect(lambda: loop_clicked(loop_widget))
             loop_widget.loop_roi.sigRegionChangeStarted.connect(lambda: loop_clicked(loop_widget))
-            loop_widget.copy_loop_btn.clicked.connect(lambda: loop_corners_copied(loop_widget))
+            loop_widget.copy_loop_btn.clicked.connect(lambda: self.copy_loop_coords(loop_widget))
             loop_widget.remove_sig.connect(lambda: remove_loop(loop_widget))
 
             if not self.show_corners_cbox.isChecked():
@@ -2604,7 +2604,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
 
         return grid
 
-    def get_loop_corners(self):
+    def get_loop_coords(self):
         """
         Return the coordinates of the loop corners
         :return: list of (x, y)
@@ -2634,7 +2634,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             crs = CRS.from_epsg(epsg)
 
         # Get the loop data
-        loop = pd.DataFrame(self.get_loop_corners(), columns=['Easting', 'Northing'])
+        loop = pd.DataFrame(self.get_loop_coords(), columns=['Easting', 'Northing'])
         loop = loop.append(loop.iloc[0])  # Close the loop
 
         # Create point objects for each coordinate
