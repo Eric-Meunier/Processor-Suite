@@ -1988,7 +1988,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         Open the MapboxViewer if there's any GPS in any of the opened PEM files.
         """
         if not self.get_crs():
-            self.status_bar.showMessage(f"No CRS selected.", 2000)
+            self.message.information(self, 'Error', 'No CRS selected.')
             return
 
         global tile_map
@@ -1996,7 +1996,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if not self.pem_files:
             logger.warning(f"No PEM files opened.")
-            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            self.status_bar.showMessage(f"No PEM files opened.", 1500)
 
         elif not any([f.has_any_gps() for f in self.pem_files]):
             logger.warning(f"No GPS found in any file.")
@@ -4868,7 +4868,10 @@ def main():
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"LS-27-21-07\RAW\xy_0704.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"LS-27-21-07\RAW\xy_0704.PEM")
+    pem_1 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0616.PEM")
+    pem_2 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0620.PEM")
+    pem_files = [pem_1, pem_2]
     # pem_files = pem_g.get_pems(number=3, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
@@ -4880,15 +4883,15 @@ def main():
     mw.add_pem_files(pem_files)
     # mw.add_dmp_files([dmp_files])
     # mw.table.selectRow(0)
-    # mw.table.selectAll()
-    # mw.open_pem_merger()
+    mw.table.selectAll()
+    mw.open_pem_merger()
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Raw Boreholes\LS-27-21-07\RAW\DDH-LS-27-21-07-in.xlsx")])
     # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
     # mw.add_gps_files(gps_files)

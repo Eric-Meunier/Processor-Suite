@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.ROI import Handle
 import simplekml
 from PySide2 import QtGui, QtCore
 from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QShortcut, QLabel, QMessageBox, QInputDialog,
@@ -3060,7 +3061,7 @@ class LoopROI(pg.PolyLineROI):
             self.stateChanged(finish=finish)
 
 
-class CustomHandle(pg.graphicsItems.ROI.Handle):
+class CustomHandle(Handle):
     """
     Re-implementing Handle to change the size and color (especially when hovering) of the handles.
     """

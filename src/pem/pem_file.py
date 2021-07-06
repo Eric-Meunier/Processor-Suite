@@ -1243,7 +1243,7 @@ class PEMFile:
 
         new_coil_area = coil_area
         assert isinstance(new_coil_area, int), "New coil area is not type int"
-        old_coil_area = self.coil_area
+        old_coil_area = float(self.coil_area)
 
         scale_factor = float(old_coil_area / new_coil_area)
 
@@ -1264,7 +1264,7 @@ class PEMFile:
         assert isinstance(new_current, float), "New current is not type float"
         logger.info(f"Performing current change for {self.filepath.name} to {current}.")
 
-        old_current = self.current
+        old_current = float(self.current)
 
         scale_factor = float(new_current / old_current)
 

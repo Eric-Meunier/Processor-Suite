@@ -1,30 +1,31 @@
 import itertools
 import logging
+# import cartopy.crs as ccrs  # import projections
+# import cartopy.io.img_tiles as cimgt
+# import cartopy.io.shapereader as shpreader
+# from cartopy import feature
+# from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+import math
 import os
 import re
 import sys
-import natsort
-import numpy as np
-import pyqtgraph as pg
-from scipy import stats
+import warnings
 from collections import defaultdict
 from datetime import datetime
 
-import cartopy.crs as ccrs  # import projections
-import cartopy.io.img_tiles as cimgt
-import cartopy.io.shapereader as shpreader
-from cartopy import feature
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-import math
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import natsort
+import numpy as np
+import pyqtgraph as pg
 from matplotlib.backends.backend_pdf import PdfPages
+from scipy import stats
 
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.pem import convert_station
 from src.pem.pem_file import PEMParser
-from src.qt_py.ri_importer import RIFile
 from src.qt_py.custom_qt_widgets import CustomProgressBar
+from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ mpl.rcParams['lines.linewidth'] = 0.5
 # mpl.rcParams['lines.color'] = '#1B2631'
 mpl.rcParams['font.size'] = 9
 
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 line_color = 'black'
 
 
@@ -59,7 +61,6 @@ class ProfilePlotter:
         if not pem_file.is_split():
             pem_file = pem_file.split()
 
-        self.converter = StationConverter()
         self.pem_file = pem_file
         self.figure = figure
 
@@ -649,7 +650,6 @@ class MapPlotter:
     """
 
     def __init__(self):
-        self.converter = StationConverter()
         self.label_buffer = [mpl.patheffects.Stroke(linewidth=1.5, foreground='white'), mpl.patheffects.Normal()]
 
     def plot_loop(self, pem_file, figure, annotate=True, label=True, color='black', zorder=6):

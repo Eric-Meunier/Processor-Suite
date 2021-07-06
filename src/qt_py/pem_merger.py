@@ -180,16 +180,8 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
             else:
                 component = 'Z'
 
-            filt = pem_file.data.Component == component
-
-            if filt.any():
-                data = pem_file.data[filt]
-
-                data.loc[:, 'Reading'] = data.loc[:, 'Reading'] * -1
-
-                pem_file.data[filt] = data
-
-                self.plot_profiles(pem_file, component)
+            pem_file.reverse_component(component)
+            self.plot_profiles(pem_file, component)
 
         def accept_merge():
             merged_pem = self.get_merged_pem()
@@ -591,6 +583,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         pems = [self.pf1, self.pf2]
         merged_pem = pems[0].copy()
         merged_pem.data = pd.concat([pem_file.data for pem_file in pems], axis=0, ignore_index=True)
+        merged_pem.notes = list(np.unique(np.concatenate([pem_file.notes for pem_file in pems])))
         merged_pem.number_of_readings = sum([f.number_of_readings for f in pems])
         merged_pem.is_merged = True
 
