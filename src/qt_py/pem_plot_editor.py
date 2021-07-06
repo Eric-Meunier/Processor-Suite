@@ -200,43 +200,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
             ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
 
-        # # Configure mag axes
-        # for ax in self.mag_profile_axes:
-        #     ax.vb.installEventFilter(self)
-        #     ax.vb.box_select_signal.connect(self.box_select_profile_plot)
-        #     ax.hideButtons()
-        #     ax.setMenuEnabled(False)
-        #     ax.getAxis('left').setWidth(60)
-        #     ax.getAxis('left').enableAutoSIPrefix(enable=False)
-        #
-        #     # Add the vertical selection line
-        #     color = (23, 23, 23, 100)
-        #     font = QtGui.QFont("Helvetica", 10)
-        #     hover_v_line = pg.InfiniteLine(angle=90, movable=False)
-        #     hover_v_line.setPen(color, width=2.)
-        #     selected_v_line = pg.InfiniteLine(angle=90, movable=False)
-        #     selected_v_line.setPen(color, width=2.)
-        #
-        #     # Add the text annotations for the vertical lines
-        #     hover_v_line_text = pg.TextItem("")
-        #     hover_v_line_text.setParentItem(ax.vb)
-        #     hover_v_line_text.setAnchor((0, 0))
-        #     hover_v_line_text.setPos(0, 0)
-        #     hover_v_line_text.setColor(color)
-        #     hover_v_line_text.setFont(font)
-        #
-        #     ax.addItem(hover_v_line, ignoreBounds=True)
-        #     ax.addItem(hover_v_line_text, ignoreBounds=True)
-        #     ax.addItem(selected_v_line, ignoreBounds=True)
-        #
-        #     # Connect the mouse moved signal
-        #     ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
-        #     ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
-        #
-        #     # Add the mag plot into the profile plot
-        #     ax.setXLink(self.x_ax0)
-        #     ax.getAxis("left").setLabel("Total Magnetic Field", units="pT")
-
         """Signals"""
 
         def toggle_mag_plots():

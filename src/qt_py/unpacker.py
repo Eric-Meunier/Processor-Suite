@@ -281,9 +281,9 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.output_path = path
 
         if project_dir:
-            self.move_dir_tree_to(str(path))
-            self.dir_edit.setText(str(path))
-            self.dir_tree.expand(self.model.index(str(project_dir)))
+            self.move_dir_tree_to(str(path.parent))
+            self.dir_edit.setText(str(path.parent))
+            self.dir_tree.expand(self.model.index(str(project_dir.parent)))
         else:
             self.move_dir_tree_to(str(path.parent))
             self.dir_edit.setText(str(path.parent))

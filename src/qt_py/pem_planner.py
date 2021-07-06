@@ -723,12 +723,12 @@ class LoopWidget(QWidget):
         else:
             corners = coords
 
-        self.loop_roi = LoopROI(corners,
-                                scaleSnap=True,
-                                snapSize=5,
-                                closed=True,
-                                pen=pg.mkPen(default_color, width=1.),
-                                )
+        self.loop_roi = PolyLoop(corners,
+                                 scaleSnap=True,
+                                 snapSize=5,
+                                 closed=True,
+                                 pen=pg.mkPen(default_color, width=1.),
+                                 )
         self.loop_roi.hoverPen = pg.mkPen(default_color, width=2.)
         self.loop_roi.setZValue(15)
         self.update_loop_values()
@@ -2370,7 +2370,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         """
 
         def set_loop():
-
             def loop_moved():
                 """
                 Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
@@ -2393,10 +2392,12 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
 
             # Create the loop ROI
             center_x, center_y = self.get_grid_center(self.grid_easting, self.grid_northing)
-            self.loop_roi = LoopROI([center_x - (self.loop_width / 2),
-                                     center_y - (self.loop_height / 2)],
-                                    [self.loop_width, self.loop_height], scaleSnap=True,
-                                    pen=pg.mkPen('m', width=1.5))
+
+            self.loop_roi = RectLoop([center_x - (self.loop_width / 2),
+                                      center_y - (self.loop_height / 2)],
+                                     [self.loop_width, self.loop_height],
+                                     scaleSnap=True,
+                                     pen=pg.mkPen('m', width=1.5))
             self.plan_view.addItem(self.loop_roi)
             self.loop_roi.setZValue(0)
             self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
@@ -2410,7 +2411,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             self.loop_roi.sigRegionChangeFinished.connect(loop_moved)
 
         def set_grid():
-
             def grid_moved():
                 """
                 Signal slot: Update the grid easting and northing text based on the new position of the grid when the ROI
@@ -2431,9 +2431,10 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                 self.plot_grid()
 
             # Create the grid
-            self.grid_roi = LoopROI([self.grid_easting, self.grid_northing],
-                                    [self.line_length, (self.line_number - 1) * self.line_spacing], scaleSnap=True,
-                                    pen=pg.mkPen(None, width=1.5))
+            self.grid_roi = RectLoop([self.grid_easting, self.grid_northing],
+                                     [self.line_length, (self.line_number - 1) * self.line_spacing],
+                                     scaleSnap=True,
+                                     pen=pg.mkPen(None, width=1.5))
             self.grid_roi.setAngle(90)
             self.plan_view.addItem(self.grid_roi)
             self.grid_roi.sigRegionChangeStarted.connect(lambda: self.grid_roi.setPen('b'))
@@ -2497,7 +2498,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
 
         def clear_plots():
             for item in reversed(self.plan_view.items()):
-                if not isinstance(item, LoopROI):
+                if not isinstance(item, RectLoop):
                     self.plan_view.removeItem(item)
 
         clear_plots()
@@ -2951,7 +2952,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.status_bar.showMessage('Grid coordinates copied to clipboard', 1000)
 
 
-class LoopROI(pg.PolyLineROI):
+class PolyLoop(pg.PolyLineROI):
     """
     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
     """
@@ -2971,6 +2972,41 @@ class LoopROI(pg.PolyLineROI):
             return self.pen
 
     def addSegment(self, h1, h2, index=None):
+
+        class CustomSegment(pg.LineSegmentROI):
+            """
+            Reimplement in order to set the hover pen to the same color as the current loop pen color, and disable rotating
+            the segment.
+            """
+
+            # Used internally by PolyLineROI
+            def __init__(self, *args, **kwds):
+                self._parentHovering = False
+                pg.LineSegmentROI.__init__(self, *args, **kwds)
+
+            def setParentHover(self, hover):
+                # set independently of own hover state
+                if self._parentHovering != hover:
+                    self._parentHovering = hover
+                    self._updateHoverColor()
+
+            def _makePen(self):
+                if self.mouseHovering or self._parentHovering:
+                    return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+                else:
+                    return self.pen
+
+            def hoverEvent(self, ev):
+                # accept drags even though we discard them to prevent competition with parent ROI
+                # (unless parent ROI is not movable)
+                if self.parentItem().translatable:
+                    ev.acceptDrags(QtCore.Qt.LeftButton)
+                return pg.LineSegmentROI.hoverEvent(self, ev)
+
+            def setAngle(self, *args, **kwargs):
+                # Disable rotating the line segment
+                pass
+
         seg = CustomSegment(handles=(h1, h2), pen=self.pen, parent=self, movable=False)
         if index is None:
             self.segments.append(seg)
@@ -2984,6 +3020,31 @@ class LoopROI(pg.PolyLineROI):
             h['item'].setAcceptedMouseButtons(h['item'].acceptedMouseButtons() | QtCore.Qt.LeftButton) ## have these handles take left clicks too, so that handles cannot be added on top of other handles
 
     def addHandle(self, info, index=None):
+
+        class CustomHandle(Handle):
+            """
+            Re-implementing Handle to change the size and color (especially when hovering) of the handles.
+            """
+
+            def __init__(self, *args, **kwds):
+                Handle.__init__(self, *args, **kwds)
+                self.pen = pg.mkPen(selection_color, width=1.)
+
+            def hoverEvent(self, ev):
+                hover = False
+                if not ev.isExit():
+                    if ev.acceptDrags(QtCore.Qt.LeftButton):
+                        hover = True
+                    for btn in [QtCore.Qt.LeftButton, QtCore.Qt.RightButton, QtCore.Qt.MidButton]:
+                        if int(self.acceptedMouseButtons() & btn) > 0 and ev.acceptClicks(btn):
+                            hover = True
+
+                if hover:
+                    self.currentPen = pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+                else:
+                    self.currentPen = self.pen
+                self.update()
+
         # Reimplement so a signal can be emitted
         h = CustomHandle(6, typ="r", pen=pg.mkPen(selection_color, width=1.), parent=self)
         h.setPos(info['pos'] * self.state['size'])
@@ -3061,69 +3122,27 @@ class LoopROI(pg.PolyLineROI):
             self.stateChanged(finish=finish)
 
 
-class CustomHandle(Handle):
+class RectLoop(pg.RectROI):
     """
-    Re-implementing Handle to change the size and color (especially when hovering) of the handles.
+    Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
     """
-    def __init__(self, *args, **kwds):
-        Handle.__init__(self, *args, **kwds)
-        self.pen = pg.mkPen(selection_color, width=1.)
 
-    def hoverEvent(self, ev):
-        hover = False
-        if not ev.isExit():
-            if ev.acceptDrags(QtCore.Qt.LeftButton):
-                hover = True
-            for btn in [QtCore.Qt.LeftButton, QtCore.Qt.RightButton, QtCore.Qt.MidButton]:
-                if int(self.acceptedMouseButtons() & btn) > 0 and ev.acceptClicks(btn):
-                    hover = True
-
-        if hover:
-            self.currentPen = pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
-        else:
-            self.currentPen = self.pen
-        self.update()
-
-
-class CustomSegment(pg.LineSegmentROI):
-    """
-    Reimplement in order to set the hover pen to the same color as the current loop pen color, and disable rotating
-    the segment.
-    """
-    # Used internally by PolyLineROI
-    def __init__(self, *args, **kwds):
-        self._parentHovering = False
-        pg.LineSegmentROI.__init__(self, *args, **kwds)
-
-    def setParentHover(self, hover):
-        # set independently of own hover state
-        if self._parentHovering != hover:
-            self._parentHovering = hover
-            self._updateHoverColor()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def _makePen(self):
-        if self.mouseHovering or self._parentHovering:
+        # Generate the pen color for this ROI based on its current state.
+        if self.mouseHovering:
             return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
         else:
             return self.pen
-
-    def hoverEvent(self, ev):
-        # accept drags even though we discard them to prevent competition with parent ROI
-        # (unless parent ROI is not movable)
-        if self.parentItem().translatable:
-            ev.acceptDrags(QtCore.Qt.LeftButton)
-        return pg.LineSegmentROI.hoverEvent(self, ev)
-
-    def setAngle(self, *args, **kwargs):
-        # Disable rotating the line segment
-        pass
 
 
 def main():
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
     app = QApplication(sys.argv)
-    planner = LoopPlanner()
-    # planner = GridPlanner()
+    # planner = LoopPlanner()
+    planner = GridPlanner()
 
     # hole_data = pd.read_excel(r"C:\_Data\2021\Canadian Palladium\_Planning\Crone_BHEM_Collars.xlsx").dropna()
     # for ind, hole in hole_data.iterrows():
@@ -3139,7 +3158,7 @@ def main():
     # planner.gps_zone_cbox.setCurrentIndex(16)
     planner.show()
     # planner.save_project()
-    planner.open_project()
+    # planner.open_project()
     # tx_file = samples_folder.joinpath(r"Tx Files/Loop.tx")
     # planner.open_tx_file(tx_file)
     # planner.hole_widgets[0].get_dad_file()

@@ -1454,7 +1454,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.table.blockSignals(True)
         self.allow_signals = False
         self.table.setUpdatesEnabled(False)  # Suspends the animation of the table getting populated
-        current_crs = self.get_crs()
         # Start the progress bar
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
@@ -1500,6 +1499,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     # Update project CRS
                     pem_crs = pem_file.get_crs()
                     if pem_crs is not None:
+                        current_crs = self.get_crs()
                         if current_crs is None:
                             self.set_crs(pem_crs)
                         else:
