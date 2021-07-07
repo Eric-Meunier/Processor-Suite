@@ -19,7 +19,7 @@ import pandas as pd
 import pyqtgraph as pg
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
-                               QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser,
+                               QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QMenu,
                                QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
                                QPushButton, QAbstractItemView, QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox,
                                QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem, QShortcut)
@@ -450,7 +450,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         def add_mapbox_token():
             token, ok_pressed = QInputDialog.getText(self, "Mapbox Access Token", "Enter Mapbox Access Token:")
             if ok_pressed and token:
-                app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
                 token_file = open(str(app_data_dir.joinpath(".mapbox")), 'w+')
                 token_file.write(token)
                 token_file.close()
@@ -1162,12 +1161,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.menu.popup(QtGui.QCursor.pos())
 
     def eventFilter(self, source, event):
-        # # Clear the selection when clicking away from any file
+        # Clear the selection when clicking away from any file
         if (event.type() == QtCore.QEvent.MouseButtonPress and
                 source is self.table.viewport() and
                 self.table.itemAt(event.pos()) is None):
             pass
-        #     self.table.clearSelection()
 
         if source == self.table:
             # Change the focus to the table so the 'Del' key works
@@ -1190,16 +1188,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     elif event.key() == QtCore.Qt.Key_Escape:
                         self.table.clearSelection()
                         return True
-
-            # # Attempt to side scroll when Shift scrolling, but doesn't work well.
-            # elif event.type() == QtCore.QEvent.Wheel:
-            #     if event.modifiers() == QtCore.Qt.ShiftModifier:
-            #         pos = self.table.horizontalScrollBar().value()
-            #         if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
-            #             self.table.horizontalScrollBar().setValue(pos + 20)
-            #         else:
-            #             self.table.horizontalScrollBar().setValue(pos - 20)
-            #         return True
 
         return super(QWidget, self).eventFilter(source, event)
 
@@ -4595,9 +4583,13 @@ class ChannelTimeViewer(QMainWindow):
         self.df = pd.DataFrame()
         self.text_format = ""
 
+        self.table = pg.TableWidget()
+
         # Format window
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().addWidget(self.table)
+        self.setCentralWidget(self.table)
 
         self.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
         self.resize(600, 600)
@@ -4623,16 +4615,23 @@ class ChannelTimeViewer(QMainWindow):
         self.statusBar().addPermanentWidget(self.units_combo)
         self.statusBar().show()
 
-        # Format table
-        self.table = pg.TableWidget()
-        self.layout().addWidget(self.table)
-        self.setCentralWidget(self.table)
+        # Right-click menu
+        self.table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        # self.table.viewport().installEventFilter(self)
+        self.table.installEventFilter(self)
+        self.menu = QMenu(self.table)
+        delete_action = QAction('Delete', self)
+        delete_action.triggered.connect(self.delete_channel)
+        self.menu.addAction(delete_action)
 
+        # Format table
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setFrameStyle(QFrame.NoFrame)
 
         # Signals
+        self.table.cellDoubleClicked.connect(self.change_remove_flag)
         self.units_combo.currentTextChanged.connect(self.fill_channel_table)
         self.copy_table_action = QShortcut("Ctrl+C", self)
         self.copy_table_action.activated.connect(self.copy_table)
@@ -4643,6 +4642,14 @@ class ChannelTimeViewer(QMainWindow):
         self.close_request.emit(self)
         e.accept()
         self.deleteLater()
+
+    def contextMenuEvent(self, event):
+        print(f"Table right-clicked.")
+        self.menu.popup(QtGui.QCursor.pos())
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Delete:
+            self.delete_channel()
 
     def copy_table(self):
         df = self.df.loc[:, "Start":"Width"].copy()
@@ -4726,6 +4733,36 @@ class ChannelTimeViewer(QMainWindow):
         self.table.resizeRowsToContents()
 
         color_table()
+
+    def delete_channel(self):
+        """
+        Delete a channel from the table and the EM data.
+        :return: None
+        """
+        print("Deleting channels")
+        selected_rows = [model.row() for model in self.table.selectionModel().selectedRows()]
+        if selected_rows:
+            self.pem_file.channel_times = self.pem_file.channel_times.drop(selected_rows).reset_index(drop=True)
+            self.pem_file.number_of_channels = len(self.pem_file.channel_times)
+            self.pem_file.data.Reading = self.pem_file.data.Reading.map(lambda x: np.delete(x, selected_rows))
+            self.fill_channel_table()
+
+    def change_remove_flag(self, row, col):
+        print(f"Changing remove flag of row {row}")
+        self.df.loc[row, "Remove"] = not self.df.loc[row, "Remove"]
+
+        if self.units_combo.currentText() == 'µs':
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] / 1000000
+            self.text_format = '%0.0f'
+        elif self.units_combo.currentText() == 'ms':
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] / 1000
+            self.text_format = '%0.3f'
+        else:
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width']
+            self.text_format = '%0.6f'
+
+        self.pem_file.channel_times = self.df
+        self.fill_channel_table()
 
 
 class SuffixWarningViewer(QMainWindow):
@@ -4864,13 +4901,15 @@ def main():
     # dmp_files = samples_folder.joinpath(r"TMC/1338-18-19/RAW/_16_1338-18-19ppz.dmp2")
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    ch = ChannelTimeViewer(pem_files[0])
+    ch.show()
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"LS-27-21-07\RAW\xy_0704.PEM")
-    pem_1 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0616.PEM")
-    pem_2 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0620.PEM")
-    pem_files = [pem_1, pem_2]
+    # pem_1 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0616.PEM")
+    # pem_2 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0620.PEM")
+    # pem_files = [pem_1, pem_2]
     # pem_files = pem_g.get_pems(number=3, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
@@ -4879,11 +4918,11 @@ def main():
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
-    mw.add_pem_files(pem_files)
+    # mw.add_pem_files(pem_files)
     # mw.add_dmp_files([dmp_files])
     # mw.table.selectRow(0)
-    mw.table.selectAll()
-    mw.open_pem_merger()
+    # mw.table.selectAll()
+    # mw.open_pem_merger()
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()
@@ -4895,7 +4934,7 @@ def main():
     # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
     # mw.add_gps_files(gps_files)
 
-    mw.show()
+    # mw.show()
 
     app.exec_()
 

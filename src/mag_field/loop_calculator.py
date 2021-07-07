@@ -10,7 +10,7 @@ from PySide2 import QtGui, QtCore
 from PySide2.QtWidgets import QMainWindow, QApplication, QComboBox, QShortcut, QFileDialog
 
 from src.logger import Log
-from src.qt_py.custom_qt_widgets import NonScientific
+from src.qt_py import NonScientific
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.ui.loop_calculator import Ui_LoopCalculator
 

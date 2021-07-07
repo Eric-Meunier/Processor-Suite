@@ -24,7 +24,7 @@ from scipy import stats
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.pem import convert_station
 from src.pem.pem_file import PEMParser
-from src.qt_py.custom_qt_widgets import CustomProgressBar
+from src.qt_py import CustomProgressBar
 from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
