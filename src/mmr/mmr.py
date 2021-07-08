@@ -25,6 +25,9 @@ class MMRFile(PEMFile):
         self.mag = None
         self.mag: MagneticFieldCalculator
 
+    def is_fluxgate(self):
+        return True
+
     def __repr__(self):
         s = f"File: {self.filepath} \n" \
             f"Loaded Loop: {self.loop} \n" \
@@ -80,6 +83,7 @@ class MMRFile(PEMFile):
     def calc_harmonics(self):
         pass
 
+    @mutate_attr_catch
     def ontime_channels(self):
         pass
 

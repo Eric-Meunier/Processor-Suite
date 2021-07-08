@@ -1260,6 +1260,24 @@ class PEMFile:
 
         return self
 
+    def remove_channel(self, n: int):
+        """
+        Remove the n_th channel from the PEMFile
+        :return: PEM file object
+        """
+        logger.info(f"Removing channel {n} for {self.filepath.name}.")
+
+        # Only keep the select channels from each reading
+        self.data.Reading = self.data.Reading.map(lambda x: x[~x.index.isin([n])])
+
+        # Create a filter and update the channels table
+        self.channel_times.drop(n, inplace=True)
+        self.channel_times.reset_index(drop=True, inplace=True)
+        # Update the PEM file's number of channels attribute
+        self.number_of_channels = len(self.channel_times)
+
+        return self
+
     def scale_coil_area(self, coil_area):
         """
         Scale the data by a change in coil area
