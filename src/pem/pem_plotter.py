@@ -1249,6 +1249,8 @@ class PlanMap(MapPlotter):
         for pem_file in self.pem_files:
             # Remove files that aren't the same survey type
             if pem_file.get_survey_type() != survey_type:
+                # User should be suggested that all the files loaded in PEMPro should be the same
+                # type of survey
                 logger.warning(
                     f"{pem_file.filepath.name} is not the correct survey type: {pem_file.get_survey_type()} vs "
                     f"{survey_type}")

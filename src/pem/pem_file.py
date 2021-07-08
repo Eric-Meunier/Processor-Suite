@@ -1260,15 +1260,16 @@ class PEMFile:
 
         return self
 
-    def remove_channel(self, n: int):
+    def remove_channels(self, n: [int]):
         """
-        Remove the n_th channel from the PEMFile
+        Remove n channels from the PEMFile
         :return: PEM file object
         """
-        logger.info(f"Removing channel {n} for {self.filepath.name}.")
+        logger.info(f"Removing channel(s) {n} for {self.filepath.name}.")
 
-        # Only keep the select channels from each reading
-        self.data.Reading = self.data.Reading.map(lambda x: x[~x.index.isin([n])])
+        # Delete the channels from each reading
+        for i, r in enumerate(self.data.Reading):
+            self.data.Reading[i] = np.delete(r, n)
 
         # Create a filter and update the channels table
         self.channel_times.drop(n, inplace=True)
