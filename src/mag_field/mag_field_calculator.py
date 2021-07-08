@@ -13,7 +13,8 @@ class MagneticFieldCalculator:
     :param: wire: list or DataFrame of wire (loop) coordinates
     """
 
-    def __init__(self, wire):
+    def __init__(self, wire, closed_loop=True):
+        self.closed_loop = closed_loop
         if isinstance(wire, pd.DataFrame):
             # Ensure the loop is not closed
             wire.drop_duplicates(inplace=True)
