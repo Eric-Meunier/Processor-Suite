@@ -1,8 +1,7 @@
 import pandas as pd
 
 import src.sdxf as sdxf
-from src.pem.pem_file import PEMParser, PEMFile
-
+from src.pem.pem_file import PEMFile
 
 class DXFDrawing:
     def __init__(self):
@@ -27,14 +26,16 @@ class DXFDrawing:
 
         if closed_poly:
             self.drawing.append(sdxf.Line(points=[(xs[0], ys[0]), (xs[-1], ys[-1])], **kwargs))
+        self.features += 1
 
     def save_dxf(self, out_path: str):
         """
         Save the dxfs to out_path, does some error catching
         """
-        assert out_path.endswith(".dxf")
-        self.drawing.saveas(out_path)
-
+        assert out_path.lower().endswith(".dxf")
+        # We don't want to save an empty file
+        if self.features > 0:
+            self.drawing.saveas(out_path)
 
 class PEMDXFDrawing(DXFDrawing):
     def __init__(self):
@@ -46,31 +47,20 @@ class PEMDXFDrawing(DXFDrawing):
         :param pem: PEMFile to plot
         :param kw: passthrough for the dxf calls
         """
-        self.drawing.layers.append(sdxf.Layer(name=f'{pem.loop_name}', color=7, **kw))
+        self.drawing.layers.append(sdxf.Layer(name=f'{pem.loop_name}', color=7))
         if pem.is_mmr():
-            self.add_df(pem.loop.df, closed_poly=False, layer=f'{pem.loop_name}')
+            self.add_df(pem.loop.df, closed_poly=False, layer=f'{pem.loop_name}', **kw)
         else:
-            self.add_df(pem.loop.df, closed_poly=True, layer=f'{pem.loop_name}')
+            self.add_df(pem.loop.df, closed_poly=True, layer=f'{pem.loop_name}', **kw)
 
     def add_surveyline(self, pem: PEMFile, **kw):
         """
         Add the survey borehole or surface line from a PEMFile classed object
         :param pem: PEMFile to plot
-        :param kw:
-        :return:
+        :param kw: passthrough for the dxf calls
         """
-        self.drawing.layers.append(sdxf.Layer(name=f'{pem.line_name}', color=7, **kw))
+        self.drawing.layers.append(sdxf.Layer(name=f'{pem.line_name}', color=7))
         if pem.is_borehole():
-            self.add_df(pem.segments.df, closed_poly=False, layer=f'{pem.loop_name}')
+            self.add_df(pem.segments.df, closed_poly=False, layer=f'{pem.loop_name}', **kw)
         else:
-            self.add_df(pem.line.df, closed_poly=False, layer=f'{pem.loop_name}')
-
-if __name__ == "__main__":
-    from src.pem.pem_file import PEMParser, PEMFile
-    path = r'C:\Users\Norm\Downloads\PEMs for Map\WLF-04-12 ZAv.PEM'
-    apem = PEMParser().parse(path)
-    dxfdraw = DXFDrawing()
-    dxfdraw.add_df(apem.loop.df, True)
-    dxfdraw.save_dxf(r'C:\Users\Norm\Downloads\PEMs for Map\test.dxf')
-
-    pass
+            self.add_df(pem.line.df, closed_poly=False, layer=f'{pem.loop_name}', **kw)
