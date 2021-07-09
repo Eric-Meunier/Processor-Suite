@@ -35,6 +35,7 @@ from src.mag_field.loop_calculator import LoopCalculator
 from src.gps.gpx_creator import GPXCreator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, StationConverter
 from src.pem.pem_plotter import PEMPrinter
+from src.pem.pem_dxf import PEMDXFDrawing
 from src.qt_py.custom_qt_widgets import CustomProgressBar
 from src.qt_py.derotator import Derotator
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
@@ -558,6 +559,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionContour_Map.triggered.connect(self.open_contour_map)
         self.action3D_Map.triggered.connect(self.open_3d_map)
         self.actionGoogle_Earth.triggered.connect(lambda: self.save_as_kmz(save=False))
+        self.actionMake_DXF.triggered.connect(self.make_dxf)
 
         # GPS menu
         self.actionExport_All_GPS.triggered.connect(lambda: self.export_gps(selected=False))
@@ -2455,6 +2457,31 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         global ss
         ss = StationSplitter(pem_file, parent=self)
         ss.show()
+
+    def make_dxf(self):
+        pem_files = self.get_pem_files(selected=True)[0]
+        if not pem_files:
+            logger.warning(f"No PEM files selected.")
+            self.status_bar.showMessage(f"No PEM files selected.", 2000)
+            return
+
+        choices = ("Loop", "Survey Line/Borehole", "Both")
+        choice, ok = QInputDialog.getItem(self, "DXF", "DXF Plot Options", choices, 0, False)
+        # Escape statement
+        if not ok: return
+
+        for pf in pem_files:
+            pf: PEMFile
+            dwg = PEMDXFDrawing()
+            if choice == "Loop" or choice == "Both" and not pf.loop.df.empty:
+                dwg.add_loop(pf)
+            if choice == "Survey Line/Borehole" or choice == "Both":
+                # Check if the pem even has a loaded segment or line
+                if not pf.segments.df.empty or not pf.line.df.empty:
+                    dwg.add_surveyline(pf)
+            # We'll just save it out to the input DIR
+            outpath = os.path.splitext(pf.filepath)[0] + ".dxf"
+            dwg.save_dxf(outpath)
 
     def project_dir_changed(self, model):
         """
