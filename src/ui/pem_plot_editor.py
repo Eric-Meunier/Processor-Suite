@@ -73,6 +73,12 @@ class Ui_PEMPlotEditor(object):
 
         self.verticalLayout_7.addWidget(self.plot_ontime_decays_cbox)
 
+        self.plot_auto_clean_lines_cbox = QCheckBox(self.groupBox_5)
+        self.plot_auto_clean_lines_cbox.setObjectName(u"plot_auto_clean_lines_cbox")
+        self.plot_auto_clean_lines_cbox.setChecked(True)
+
+        self.verticalLayout_7.addWidget(self.plot_auto_clean_lines_cbox)
+
         self.link_x_cbox = QCheckBox(self.groupBox_5)
         self.link_x_cbox.setObjectName(u"link_x_cbox")
         self.link_x_cbox.setFocusPolicy(Qt.NoFocus)
@@ -334,13 +340,25 @@ class Ui_PEMPlotEditor(object):
 
         self.verticalLayout_12.addWidget(self.label_3)
 
-        self.auto_clean_std_sbox = QSpinBox(self.groupBox_2)
+        self.auto_clean_std_sbox = QDoubleSpinBox(self.groupBox_2)
         self.auto_clean_std_sbox.setObjectName(u"auto_clean_std_sbox")
-        self.auto_clean_std_sbox.setMinimum(1)
-        self.auto_clean_std_sbox.setMaximum(1000)
-        self.auto_clean_std_sbox.setValue(10)
+        self.auto_clean_std_sbox.setDecimals(1)
+        self.auto_clean_std_sbox.setMinimum(0.100000000000000)
+        self.auto_clean_std_sbox.setSingleStep(0.100000000000000)
 
         self.verticalLayout_12.addWidget(self.auto_clean_std_sbox)
+
+        self.label_4 = QLabel(self.groupBox_2)
+        self.label_4.setObjectName(u"label_4")
+
+        self.verticalLayout_12.addWidget(self.label_4)
+
+        self.auto_clean_window_sbox = QSpinBox(self.groupBox_2)
+        self.auto_clean_window_sbox.setObjectName(u"auto_clean_window_sbox")
+        self.auto_clean_window_sbox.setMinimum(2)
+        self.auto_clean_window_sbox.setValue(5)
+
+        self.verticalLayout_12.addWidget(self.auto_clean_window_sbox)
 
         self.auto_clean_btn = QPushButton(self.groupBox_2)
         self.auto_clean_btn.setObjectName(u"auto_clean_btn")
@@ -432,6 +450,7 @@ class Ui_PEMPlotEditor(object):
         self.label.setText(QCoreApplication.translate("PEMPlotEditor", u"Decay Options", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
         self.plot_ontime_decays_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot On-Time", None))
+        self.plot_auto_clean_lines_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Auto-Clean Lines", None))
         self.link_x_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Link X-axes", None))
         self.link_y_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Link Y-axes", None))
         self.auto_range_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Auto-Range", None))
@@ -460,6 +479,7 @@ class Ui_PEMPlotEditor(object):
         self.remove_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Del", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Cleaning", None))
         self.label_3.setText(QCoreApplication.translate("PEMPlotEditor", u"Threshold Value", None))
+        self.label_4.setText(QCoreApplication.translate("PEMPlotEditor", u"Window Size", None))
         self.auto_clean_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Auto-Clean", None))
         self.menuFile.setTitle(QCoreApplication.translate("PEMPlotEditor", u"File", None))
     # retranslateUi

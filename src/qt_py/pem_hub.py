@@ -58,7 +58,6 @@ __version__ = '0.11.6'
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Add rainbow coloring to final plots?
 # TODO Use savgol to filter data
-# TODO Add ability to remove channels
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Fix Gridplanner with new loop
 # TODO Look into slowness when changing station number and such in pem plot editor

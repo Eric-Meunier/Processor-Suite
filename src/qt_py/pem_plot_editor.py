@@ -36,6 +36,8 @@ pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 pd.options.mode.chained_assignment = None  # default='warn'
 
+# TODO Change auto clean to have a start and end channel
+
 
 class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
     save_sig = QtCore.Signal(object)
@@ -221,16 +223,23 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
 
         # Checkboxes
-        self.show_average_cbox.toggled.connect(lambda: self.plot_profiles('all'))
-        self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles('all'))
+        self.show_average_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
+        self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
         self.plot_mag_cbox.toggled.connect(toggle_mag_plots)
         self.auto_range_cbox.toggled.connect(self.reset_range)
+
+        self.plot_auto_clean_lines_cbox.toggled.connect(lambda: self.plot_station(self.selected_station,
+                                                                                  preserve_selection=True))
         self.plot_ontime_decays_cbox.toggled.connect(lambda: self.plot_station(self.selected_station,
                                                                                preserve_selection=True))
         self.plot_ontime_decays_cbox.toggled.connect(lambda: self.active_decay_axes[0].autoRange())
 
         self.link_y_cbox.toggled.connect(self.link_decay_y)
         self.link_x_cbox.toggled.connect(self.link_decay_x)
+
+        # Spinboxes
+        self.auto_clean_std_sbox.valueChanged.connect(lambda: self.refresh(components='all', preserve_selection=True))
+        self.auto_clean_window_sbox.valueChanged.connect(lambda: self.refresh(components='all', preserve_selection=True))
 
         # Buttons
         self.change_comp_decay_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='decay'))
@@ -400,9 +409,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Set the units of the decay plots
         self.units = self.pem_file.units
         if self.units == 'pT':
-            self.auto_clean_std_sbox.setValue(50)
-        else:
             self.auto_clean_std_sbox.setValue(10)
+        else:
+            self.auto_clean_std_sbox.setValue(2)
+
+        self.auto_clean_window_sbox.setMaximum(self.pem_file.number_of_channels)
 
         # Add the line name and loop name as the title for the profile plots
         self.x_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[X Component]")
@@ -449,8 +460,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.status_bar.showMessage('Saving file...')
         self.pem_file.data = self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)]
         self.pem_file.save()
-        self.plot_profiles('all')
-        self.plot_station(self.selected_station, preserve_selection=False)
+        self.refresh(components='all', preserve_selection=False)
 
         self.status_bar.showMessage('File saved.', 2000)
         QtCore.QTimer.singleShot(2000, lambda: self.station_text.setText(station_text))
@@ -826,6 +836,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 color = (255, 0, 0, 50)
                 z_value = 1
 
+            # Use a dotted line for readings that are flagged as Overloads
             if row.Overload is True:
                 style = QtCore.Qt.DashDotDotLine
             else:
@@ -892,6 +903,56 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Plot the decays
         self.plotted_decay_data.apply(plot_decay, axis=1)
 
+        if self.plot_auto_clean_lines_cbox.isChecked():
+            window_size = self.auto_clean_window_sbox.value()
+            # Plot the median and auto-clean limits
+            for ax in self.decay_axes:
+                if ax == self.x_decay_plot:
+                    comp_filt = self.plotted_decay_data.Component == "X"
+                elif ax == self.y_decay_plot:
+                    comp_filt = self.plotted_decay_data.Component == "Y"
+                else:
+                    comp_filt = self.plotted_decay_data.Component == "Z"
+
+                median_data = pd.DataFrame.from_records(self.plotted_decay_data[comp_filt].Reading.reset_index(drop=True))
+                if median_data.empty:
+                    continue
+
+                median = median_data.median(axis=0)
+                std = np.array([self.auto_clean_std_sbox.value()] * window_size)
+
+                off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
+                off_time_median = off_time_median_data.median()
+                limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
+
+                median_line = pg.PlotCurveItem(y=median.to_numpy(),
+                                               pen=pg.mkPen("m", width=2.),
+                                               setClickable=False,
+                                               name='median line')
+                thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns),
+                                                 y=off_time_median.to_numpy()[-window_size:] + std,
+                                                 pen=pg.mkPen("m", width=1., style=QtCore.Qt.DashLine),
+                                                 setClickable=False,
+                                                 name='median limit')
+                thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns),
+                                                 y=off_time_median.to_numpy()[-window_size:] - std,
+                                                 pen=pg.mkPen("m", width=1., style=QtCore.Qt.DashLine),
+                                                 setClickable=False,
+                                                 name='median limit')
+                # error_bars = pg.ErrorBarItem(x=data.columns,
+                #                              y=median,
+                #                              height=std,
+                #                              width=0,
+                #                              beam=1,
+                #                              pen=pg.mkPen("b", width=1.))
+                #
+                # error_line = pg.PlotCurveItem(y=median.to_numpy(),
+                #                               pen=pg.mkPen("b", width=1., style=QtCore.Qt.DashLine))
+
+                ax.addItem(median_line)
+                ax.addItem(thresh_line_1)
+                ax.addItem(thresh_line_2)
+
         # Update the plot limits
         for ax in self.decay_axes:
             if self.plot_ontime_decays_cbox.isChecked():
@@ -927,7 +988,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             """
             Update the status bar with information about the selected lines
             """
-            if self.selected_lines:
+            if self.selected_lines and selected_data is not None:
                 decay_selection_text = []
                 # Show the range of reading numbers and reading indexes if multiple decays are selected
                 if len(selected_data) > 1:
@@ -1183,7 +1244,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         if self.active_ax is not None:
             line_distances = []
-            ax_lines = self.active_ax.curves
+            ax_lines = [line for line in self.active_ax.curves if line.name() is None]  # Ignore median lines
             vb = self.active_ax.vb
 
             if not ax_lines:
@@ -1341,9 +1402,16 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         Return the corresponding data of the decay lines that are currently selected
         :return: pandas DataFrame
         """
-        ind = [self.plotted_decay_lines.index(line) for line in self.selected_lines]
-        data = self.plotted_decay_data.iloc[ind]
-        return data
+        ind = []
+        for line in self.selected_lines:
+            if line in self.plotted_decay_lines:
+                ind.append(self.plotted_decay_lines.index(line))
+        if not ind:
+            print(f"Line is not in the list of decay lines.")
+            return
+        else:
+            data = self.plotted_decay_data.iloc[ind]
+            return data
 
     def get_selected_profile_data(self):
         """
@@ -1385,8 +1453,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.loc[selected_data.index] = selected_data
-            self.plot_profiles(components=selected_data.Component.unique())
-            self.plot_station(self.selected_station, preserve_selection=True)
+            self.refresh(components=selected_data.Component.unique(), preserve_selection=True)
 
     def undelete_lines(self):
         """
@@ -1400,8 +1467,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.loc[selected_data.index] = selected_data
-            self.plot_profiles(components=selected_data.Component.unique())
-            self.plot_station(self.selected_station, preserve_selection=True)
+            self.refresh(components=selected_data.Component.unique(), preserve_selection=True)
 
     def undelete_all(self):
         """
@@ -1411,9 +1477,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Change the deletion flag
         self.pem_file.data.loc[:, 'Deleted'] = self.pem_file.data.loc[:, 'Deleted'].map(lambda x: False)
 
-        # Update the data in the pem file object
-        self.plot_profiles(components=self.pem_file.get_components())
-        self.plot_station(self.selected_station, preserve_selection=True)
+        self.refresh()
 
     def change_decay_component_dialog(self, source=None):
         """
@@ -1452,8 +1516,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.plot_profiles(components=[old_comp, new_component])
-            self.plot_station(self.selected_station, preserve_selection=True)
+            self.refresh(components=[old_comp, new_component], preserve_selection=True)
 
     def change_suffix_dialog(self, source=None):
         """
@@ -1490,8 +1553,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Update the data in the pem file object
         self.pem_file.data.iloc[selected_data.index] = selected_data
-        self.plot_profiles(components='all')
-        self.plot_station(self.selected_station, preserve_selection=True)
+        self.refresh()
 
     def change_station(self):
         """
@@ -1548,8 +1610,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.pem_file.data.iloc[selected_data.index] = selected_data
 
             # Update the plots
-            self.plot_profiles(components=selected_data.Component.unique())
-            self.plot_station(self.selected_station)
+            self.refresh(components=selected_data.Component.unique())
 
     def flip_decays(self, source=None):
         """
@@ -1567,8 +1628,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.plot_profiles(components=selected_data.Component.unique())
-            self.plot_station(self.selected_station, preserve_selection=True)
+            self.refresh(components=selected_data.Component.unique(), preserve_selection=True)
 
     def remove_stations(self):
         """
@@ -1581,8 +1641,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.plot_profiles(components=selected_data.Component.unique())
-            self.plot_station(self.selected_station, preserve_selection=True)
+            self.refresh(components=selected_data.Component.unique(), preserve_selection=True)
 
     def cycle_profile_component(self):
         """
@@ -1692,54 +1751,58 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         Automatically detect and delete readings with outlier values.
         """
 
+        def eval_decay(reading, std, median, max_removable):
+            """
+            Evaluate the reading and calculate if it should be flagged for deletion. Will stop deleting when
+            only 2 readings are left. Evaluates in two passes, the first pass is a large sweep of every channel
+            using a high confidence interval, and the second only looks at the last 3 channels and uses a low
+            confidence interval.
+            :param reading: list, decay values for each channel
+            :param std: int, a fixed standard deviation number to be used as a basis for calculating the data cutoff
+            limits
+            :param median: list, the median value of each channel decay value for the given group.
+            :param max_removable: int, the maximum number of readings that can be removed before reaching the
+            limit
+            :return: bool, True if the reading should be deleted.
+            """
+            global count, local_count
+            # if local_count < max_removable:
+            #     # First pass, using 96% confidence interval
+            #     # First pass, using 99% confidence interval
+            #     min_cutoff = median[mask] - std[mask] * 3
+            #     max_cutoff = median[mask] + std[mask] * 3
+            #     if any(reading[mask] < min_cutoff) or any(reading[mask] > max_cutoff):
+            #         count += 1
+            #         local_count += 1
+            #         return True
+            # else:
+            #     logger.info(f"Max removable limit reached.")
+            if local_count < max_removable:
+                # 68, 96, 99
+                # Second pass, looking at the last 5 off-time channels, and using 68% confidence interval
+                min_cutoff = median[mask][-window_size:] - std[mask][-window_size:]
+                max_cutoff = median[mask][-window_size:] + std[mask][-window_size:]
+                if any(reading[mask][-window_size:] < min_cutoff) or any(reading[mask][-window_size:] > max_cutoff):
+                    count += 1
+                    local_count += 1
+                    return True
+            else:
+                logger.info(f"Max removable limit reached.")
+
+            return False
+
         def clean_group(group):
-
-            def eval_decay(reading, std, median, max_removable):
-                """
-                Evaluate the reading and calculate if it should be flagged for deletion. Will stop deleting when
-                only 2 readings are left. Evaluates in two passes, the first pass is a large sweep of every channel
-                using a high confidence interval, and the second only looks at the last 3 channels and uses a low
-                confidence interval.
-                :param reading: list, decay values for each channel
-                :param std: int, a fixed standard deviation number to be used as a basis for calculating the data cutoff
-                limits
-                :param median: list, the median value of each channel decay value for the given group.
-                :param max_removable: int, the maximum number of readings that can be removed before reaching the
-                limit
-                :return: bool, True if the reading should be deleted.
-                """
-                global count, local_count
-                if local_count < max_removable:
-                    # First pass, using 96% confidence interval
-                    min_cutoff = median[mask] - std[mask] * 2
-                    max_cutoff = median[mask] + std[mask] * 2
-                    if any(reading[mask] < min_cutoff) or any(reading[mask] > max_cutoff):
-                        count += 1
-                        local_count += 1
-                        return True
-                else:
-                    logger.info(f"Max removable limit reached.")
-                if local_count < max_removable:
-                    # Second pass, looking at the last 3 off-time channels, and using 68% confidence interval
-                    min_cutoff = median[mask][-3:] - std[mask][-3:]
-                    max_cutoff = median[mask][-3:] + std[mask][-3:]
-                    if any(reading[mask][-3:] < min_cutoff) or any(reading[mask][-3:] > max_cutoff):
-                        count += 1
-                        local_count += 1
-                        return True
-                else:
-                    logger.info(f"Max removable limit reached.")
-
-                return False
-
-            readings = np.array(group.Reading.to_list())
+            readings = np.array(group[~group.Deleted.astype(bool)].Reading.to_list())
             data_std = np.array([threshold_value] * len(readings[0]))
-            data_median = np.median(readings, axis=0)
+            data_median = np.median(group.Reading.to_list(), axis=0)
 
             if len(group.loc[~group.Deleted.astype(bool)]) > 2:
                 global local_count
                 local_count = 0  # The number of readings that have been deleted so far for this group.
                 max_removable = len(group) - 2  # Maximum number of readings that are allowed to be deleted.
+                # Order the group by degree of deviation from the median
+                group["Deviation"] = group.Reading.map(lambda y: abs(y - data_median).sum())
+                group = group.sort_values(by="Deviation", ascending=False).drop("Deviation", axis=1)
                 group.Deleted = group.Reading.map(lambda x: eval_decay(x, data_std, data_median, max_removable))
 
             return group
@@ -1747,18 +1810,20 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         if self.pem_file.is_averaged():
             return
 
-        global count, mask, threshold_value
+        global count, mask, threshold_value, window_size
         count = 0
 
         # Use a fixed standard deviation value for cleaning across all channels
         threshold_value = self.auto_clean_std_sbox.value()
+        window_size = self.auto_clean_window_sbox.value()
 
         # Filter the data to only see readings that aren't already flagged for deletion
-        data = self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)]
+        # data = self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)]
+        data = self.pem_file.data
         # Filter the readings to only consider off-time channels
         mask = np.asarray(~self.pem_file.channel_times.Remove)
         # Clean the data
-        cleaned_data = data.groupby(['Station', 'Component']).apply(clean_group)
+        cleaned_data = data.groupby(['Station', 'Component'], as_index=False).apply(clean_group).reset_index(drop=True)
         # Update the data
         self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)] = cleaned_data
 
@@ -1797,10 +1862,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.pem_file.data.loc[repeats.index] = repeats
 
         # Plot the new data
-        self.plot_profiles(components='all')
-        self.plot_station(self.selected_station, preserve_selection=False)
+        self.refresh(components='all', preserve_selection=False)
 
         self.message.information(self, 'Auto-rename results', f"{len(repeats)} reading(s) automatically renamed.")
+
+    def refresh(self, components='all', preserve_selection=False):
+        self.plot_profiles(components=components)
+        self.plot_station(self.selected_station, preserve_selection=preserve_selection)
 
     def reset_file(self):
         """
@@ -1984,8 +2052,6 @@ class ProfileViewBox(pg.ViewBox):
 
 
 if __name__ == '__main__':
-    # from pyqtgraph.Qt import QtGui, QtCore
-
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser, DMPParser
     from pathlib import Path
@@ -2001,13 +2067,14 @@ if __name__ == '__main__':
     # pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
     # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
     # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
-    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Lac Lessard\RAW\1000_0707.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
     editor = PEMPlotEditor()
     # editor.move(0, 0)
     editor.open(pem_file)
-    # editor.auto_clean()
+    editor.auto_clean()
 
     app.exec_()
 
