@@ -18,12 +18,9 @@ def mutate_attr_catch(ufunc):
 class MMRFile(PEMFile):
     def __init__(self):
         super(MMRFile, self).__init__()
-        self.loop = None
-        self.bh = None
-        self.bhcollar = None
-        self.bhseg = None
-        self.mag = None
-        self.mag: MagneticFieldCalculator
+        self.loop = TransmitterLoop(None)
+        self.bhcollar = BoreholeCollar(None)
+        self.bhseg = BoreholeSegments(None)
 
     def is_fluxgate(self):
         return True

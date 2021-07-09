@@ -69,8 +69,10 @@ class MagneticFieldCalculator:
         u0 = 1.25663706e-6
 
         # Break the wire into segments (differential elements)
-        loop_diff = np.append(np.diff(self.wire, axis=0), [self.wire[0] - self.wire[-1]], axis=0)
-
+        if self.closed_loop:
+            loop_diff = np.append(np.diff(self.wire, axis=0), [self.wire[0] - self.wire[-1]], axis=0)
+        else:
+            loop_diff = np.diff(self.wire, axis=0)
         # Calculate the displacement vector for each segment
         AP = np.array([x, y, z]) - self.wire
         # Create a shifted copy of AP

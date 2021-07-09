@@ -1537,7 +1537,7 @@ class SectionPlot(MapPlotter):
                 self.p2[0], self.p2[1], self.ax.get_ylim()[1] - (1.1 * section_depth))
 
             wire_coords = self.pem_file.get_loop()
-            mag_calculator = MagneticFieldCalculator(wire_coords)
+            mag_calculator = MagneticFieldCalculator(wire_coords, closed_loop=not self.pem_file.is_mmr())
 
             xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)
 

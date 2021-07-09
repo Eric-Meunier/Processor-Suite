@@ -1643,7 +1643,7 @@ class PEMFile:
             loop = self.get_loop(sorted=False, closed=False)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6
-            mag_calc = MagneticFieldCalculator(loop)
+            mag_calc = MagneticFieldCalculator(loop, closed_loop=not self.is_mmr())
 
             # Only keep off-time channels with PP
             ch_times = self.channel_times[~self.channel_times.Remove.astype(bool)]
