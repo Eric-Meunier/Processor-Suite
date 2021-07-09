@@ -67,16 +67,18 @@ class MagneticFieldCalculator:
 
         # Permeability of free space
         u0 = 1.25663706e-6
-
+        pts = np.array([x, y, z])
         # Break the wire into segments (differential elements)
         if self.closed_loop:
             loop_diff = np.append(np.diff(self.wire, axis=0), [self.wire[0] - self.wire[-1]], axis=0)
+            loop_shift = np.append(self.wire[1:], [self.wire[0]], axis=0)
+            AP = pts - self.wire
         else:
-            loop_diff = np.diff(self.wire, axis=0)
-        # Calculate the displacement vector for each segment
-        AP = np.array([x, y, z]) - self.wire
-        # Create a shifted copy of AP
-        BP = np.append(AP[1:], [AP[0]], axis=0)
+            loop_diff = np.append(np.diff(self.wire, axis=0), [self.wire[0] - self.wire[-1]], axis=0)[:-1]
+            loop_shift = np.append(self.wire[1:], [self.wire[0]], axis=0)[:-1]
+            AP = pts - self.wire[:-1]
+
+        BP = pts - loop_shift
 
         # Calculate the square root of the sum of the elements in each row of AP and BP.
         r_AP = np.sqrt((AP ** 2).sum(axis=-1))

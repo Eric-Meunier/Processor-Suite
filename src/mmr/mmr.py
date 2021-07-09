@@ -64,7 +64,6 @@ class MMRFile(PEMFile):
         :param filepath: path to file with the electrode and loop coordinates in realspace
         """
         self.loop = TransmitterLoop(filepath)
-        self.mag = MagneticFieldCalculator(self.loop.df)
 
     @mutate_attr_catch
     def compile_bh(self):
@@ -72,10 +71,9 @@ class MMRFile(PEMFile):
         self.bh = BoreholeGeometry(self.bhcollar, self.bhseg)
 
     def BField(self, x, y, z):
-        self.mag : MagneticFieldCalculator
-        self.mag.calc_total_field(x, y, z)
+        mag = MagneticFieldCalculator(self.loop.df, closed_loop=False)
+        return mag.calc_total_field(x, y, z)
 
-        pass
 
     def calc_harmonics(self):
         pass
@@ -89,11 +87,7 @@ class MMRFile(PEMFile):
 
 
 if __name__ == "__main__":
-    lp = "src\\mmr\\SL12-64\\loop2full.txt"
-    col = "src\\mmr\\SL12-64\\SL12-64.csv"
-    dad = "src\\mmr\\SL12-64\\64.DAD"
-    a = MMRFile.from_pemlike("src\\mmr\\SL12-64\\SL12-64FLUXGATE.PEM")
-    a.add_loop(lp)
-    a.add_BH_collar(col)
-    a.add_BH_segments(dad)
+    import numpy as np
+    a = MMRFile.from_pemlike(r"C:\Users\Norm\Documents\GitHub\Crone\sample_files\MMR\64TOT.PEM")
+    print(a.BField(1, 1, 1))
     pass
