@@ -1083,6 +1083,25 @@ class PEMFile:
         text = ps.serialize(self.copy(), legacy=legacy)
         return text
 
+    def to_headerdf(self):
+        d = self.__dict__
+        for k in d.keys():
+            if d[k] is not None or \
+                    not isinstance(d[k], str) or \
+                    not isinstance(d[k], bool) or \
+                    not isinstance(d[k], float) or \
+                    not isinstance(d[k], int):
+                d.pop(k)
+
+        if self.is_borehole():
+            d['Easting'], d['Northing'], d['Elevation'] = self.collar.df.Easting[0], \
+                                                          self.collar.df.Northing[0], \
+                                                          self.collar.df.Elevation[0]
+        else:
+            d['Easting'], d['Northing'], d['Elevation'] = None, None, None
+        d['Start'], d['End'] = self.data.Station[0], self.data.Station[-1]
+        return pd.DataFrame.from_dict(d)
+
     def to_xyz(self):
         """
         Create a str in XYZ format of the pem file's data
@@ -3523,6 +3542,16 @@ class RADTool:
 
         return ' '.join(result)
 
+def PEM2CSV(apem: PEMFile):
+    """
+    Convert a PEMFile to a pandas CSV
+    :param apem: PEMFile to parse
+    :return: pandas.DataFrame
+    """
+    d = apem.__dict__
+    d.pop('loop')
+    d.pop()
+    df = pd.DataFrame.from_dict()
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter

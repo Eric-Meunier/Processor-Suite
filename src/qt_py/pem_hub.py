@@ -3024,6 +3024,23 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 logger.error(f"Cannot find Google Earth Pro.")
                 self.message.information(self, "Error", "Cannot find Google Earth Pro.")
 
+    def export_pem_headers(self):
+        """
+        We want to convert the PEMs into report friendly information into a single csv
+
+        """
+        pem_files, rows = self.get_pem_files(selected=False)
+        if not pem_files:
+            logger.error(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
+        file_dir = self.file_dialog.getSaveFileName(self, '', str(self.project_dir))
+
+        dfs = [pf.toheaderdf() for pf in pem_files]
+        concated = pd.concat([dfs], axis=0)
+        concated.to_csv(file_dir)
+
     def export_as_xyz(self):
         """
         Save the selected PEM files as XYZ files
