@@ -526,6 +526,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionOpenFile.triggered.connect(self.open_file_dialog)
         self.actionSaveFiles.triggered.connect(lambda: self.save_pem_files(selected=False))
         self.actionExport_As_XYZ.triggered.connect(self.export_as_xyz)
+        self.actionHeader_CSV.triggered.connect(self.export_pem_headers)
         self.actionExport_As_PEM.triggered.connect(lambda: self.export_pem_files(selected=False,
                                                                                  processed=False))
         self.actionExport_Processed_PEM.triggered.connect(lambda: self.export_pem_files(selected=False,
@@ -3035,10 +3036,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        file_dir = self.file_dialog.getSaveFileName(self, '', str(self.project_dir))
+        file_dir = self.file_dialog.getSaveFileName(self, '', str(self.project_dir), 'CSV Files (*.CSV)')[0]
 
-        dfs = [pf.toheaderdf() for pf in pem_files]
-        concated = pd.concat([dfs], axis=0)
+        if file_dir is None:
+            return
+        dfs = [pf.to_headerdf() for pf in pem_files]
+        concated = pd.concat(dfs, axis=0)
+        concated.reset_index(drop=True, inplace=True)
         concated.to_csv(file_dir)
 
     def export_as_xyz(self):

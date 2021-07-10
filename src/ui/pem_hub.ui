@@ -1426,6 +1426,7 @@ Warnings</string>
      <addaction name="actionExport_Processed_PEM"/>
      <addaction name="separator"/>
      <addaction name="actionExport_As_XYZ"/>
+     <addaction name="actionHeader_CSV"/>
     </widget>
     <addaction name="actionOpenFile"/>
     <addaction name="separator"/>
@@ -2086,6 +2087,11 @@ Warnings</string>
   <action name="actionMake_DXF">
    <property name="text">
     <string>Make DXF</string>
+   </property>
+  </action>
+  <action name="actionHeader_CSV">
+   <property name="text">
+    <string>Header CSV</string>
    </property>
   </action>
  </widget>
