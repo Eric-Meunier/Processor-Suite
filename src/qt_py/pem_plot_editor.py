@@ -37,6 +37,10 @@ pg.setConfigOption('crashWarning', True)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # TODO Change auto clean to have a start and end channel
+# TODO update median when cleaning
+# TODO maybe increase starting window size
+# TODO Changing readings to another component produces an error
+# TODO Auto-scale after auto-clean
 
 
 class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
@@ -877,6 +881,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         if preserve_selection is False:
             self.selected_lines.clear()
         else:
+            # TODO shift-undelete error here
             index_of_selected = [self.plotted_decay_lines.index(line) for line in self.selected_lines]
 
         # Clear the plots
@@ -929,12 +934,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                                                pen=pg.mkPen("m", width=2.),
                                                setClickable=False,
                                                name='median line')
-                thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns),
+                thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
                                                  y=off_time_median.to_numpy()[-window_size:] + std,
                                                  pen=pg.mkPen("m", width=1., style=QtCore.Qt.DashLine),
                                                  setClickable=False,
                                                  name='median limit')
-                thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns),
+                thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
                                                  y=off_time_median.to_numpy()[-window_size:] - std,
                                                  pen=pg.mkPen("m", width=1., style=QtCore.Qt.DashLine),
                                                  setClickable=False,
@@ -1031,8 +1036,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     decay_selection_text.append(stack_number)
 
                     # Add the time stamp if it exists
-                    timestamp = selected_decay.Timestamp
-                    if timestamp is not None:
+                    if not pd.isna(selected_decay.Timestamp):
                         date_time = f"Timestamp: {selected_decay.Timestamp.strftime('%b %d - %H:%M:%S')}"
                         decay_selection_text.append(date_time)
 
@@ -1777,6 +1781,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             #         return True
             # else:
             #     logger.info(f"Max removable limit reached.")
+            # TODO count not working,sometimes one reading remains
             if local_count < max_removable:
                 # 68, 96, 99
                 # Second pass, looking at the last 5 off-time channels, and using 68% confidence interval
@@ -1792,6 +1797,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             return False
 
         def clean_group(group):
+            # TODO TMC 0709 data causes error
             readings = np.array(group[~group.Deleted.astype(bool)].Reading.to_list())
             data_std = np.array([threshold_value] * len(readings[0]))
             data_median = np.median(group.Reading.to_list(), axis=0)
@@ -2069,6 +2075,7 @@ if __name__ == '__main__':
     # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Lac Lessard\RAW\1000_0707.PEM")[0]
     pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]  # TODO Test this for ordering worse to best readings
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
     editor = PEMPlotEditor()

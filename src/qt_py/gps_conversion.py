@@ -13,7 +13,7 @@ class GPSConversionWidget(QWidget, Ui_GPSConversion):
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
-        self.setWindowIcon(QtGui.QIcon(icons_path.joinpath("gpx_creator.png")))
+        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("gpx_creator.png"))))
         self.parent = parent
         self.message = QMessageBox()
 

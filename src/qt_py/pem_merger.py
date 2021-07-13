@@ -12,6 +12,7 @@ from PySide2.QtWidgets import (QApplication, QMainWindow, QFrame, QLineEdit, QLa
 
 from src.qt_py import icons_path
 from src.ui.pem_merger import Ui_PEMMerger
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 
 logger = logging.getLogger(__name__)
 
@@ -584,6 +585,24 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         merged_pem = pems[0].copy()
         merged_pem.data = pd.concat([pem_file.data for pem_file in pems], axis=0, ignore_index=True)
         merged_pem.notes = list(np.unique(np.concatenate([pem_file.notes for pem_file in pems])))
+
+        merged_pem.loop = TransmitterLoop(
+            pd.concat([pem_file.get_loop() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
+
+        if self.pf1.is_borehole():
+            if self.pf1.has_collar_gps():
+                merged_pem.collar = self.pf1.collar
+            else:
+                merged_pem.collar = self.pf2.collar
+
+            if self.pf1.has_geometry():
+                merged_pem.segments = self.pf1.segments
+            else:
+                merged_pem.segments = self.pf2.segments
+        else:
+            merged_pem.line = SurveyLine(
+                pd.concat([pem_file.get_line() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
+
         merged_pem.number_of_readings = sum([f.number_of_readings for f in pems])
         merged_pem.is_merged = True
 
@@ -647,18 +666,22 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
+    from src.pem.pem_file import PEMParser
     app = QApplication(sys.argv)
 
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(client='Minera', number=2)
-    pf1 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10xy_0403.PEM')[0]
-    pf2 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10-2xy_0403.PEM')[0]
+    # pf1 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10xy_0403.PEM')[0]
+    # pf2 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10-2xy_0403.PEM')[0]
+    pf1 = PEMParser().parse(r"C:\_Data\2021\TMC\Loop L\RAW\800_0602.PEM")
+    pf2 = PEMParser().parse(r"C:\_Data\2021\TMC\Loop L\RAW\800_J 50-400.PEM")
     # pf1 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 XYT.PEM')[0]
     # pf2 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 ZAv.PEM')[0]
     # pf1 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_02.PEM')[0]
     # pf2 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_03.PEM')[0]
     w = PEMMerger()
     w.open([pf1, pf2])
+    # w.get_merged_pem()
 
     w.show()
 

@@ -63,6 +63,8 @@ __version__ = '0.11.6'
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Add interactive collar coordinate picker from an Excel file (or csv, or txt). Create table, and select Easting,
 # TODO (cont) Northing, elevation in order?
+# TODO Add color to GPS rows for which there is no EM data
+# TODO Bug: Doing "Save As Processed PEM" shouldn't remove the _**** date.
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
@@ -3831,7 +3833,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             return
 
         if not coil_area:
-            default = pem_files[0].coil_area
+            default = int(pem_files[0].coil_area)
             coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", value=default)
             # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", QLineEdit.Normal, default)
             # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", default, -1e6, 1e6, 50)

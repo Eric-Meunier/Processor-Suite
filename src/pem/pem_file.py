@@ -788,7 +788,7 @@ class PEMFile:
         stations = self.data.Station.unique()
         if converted:
             stations = [convert_station(station) for station in stations]
-        return np.array(stations)
+        return np.array(natsort.os_sorted(stations))
 
     def get_gps_extents(self):
         """
@@ -2117,6 +2117,7 @@ class PEMParser:
             # and CDR3 don't count reading numbers the same way.
             df['RAD_tool'] = df['RAD_tool'].map(lambda x: RADTool().from_match(x))
             df.insert(list(df.columns).index('RAD_tool') + 1, 'RAD_ID', df['RAD_tool'].map(lambda x: x.id))
+            df.drop_duplicates(subset="Reading", inplace=True)
             df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float))
             df[['Reading_index',
                 'Gain',
@@ -2450,6 +2451,7 @@ class DMPParser:
 
             # Convert the decay units to nT/s or pT
             factor = 1e9  # Always 1e9 for DMP files?
+            df.drop_duplicates(subset="Reading", inplace=True)
             df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float) * factor)
             df[['Reading_index',
                 'Gain',
@@ -2715,6 +2717,7 @@ class DMPParser:
 
             # Create a data frame from the DMP file
             df = pd.DataFrame(df_data)
+            df.drop_duplicates(subset="data", inplace=True)
             # Convert the columns to the correct data type
             df[['Number_of_Readings',
                 'Number_of_Stacks',
