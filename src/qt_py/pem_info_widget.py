@@ -642,21 +642,33 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table.blockSignals(True)
         stations = self.get_line().df.Station.map(convert_station).to_list()
         sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
+        em_stations = self.pem_file.data.Station.map(convert_station).unique().astype(int)
 
-        blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
+        blue_color, red_color, gray_color = QtGui.QColor('blue'), QtGui.QColor('red'),  QtGui.QColor('grey')
         blue_color.setAlpha(50)
         red_color.setAlpha(50)
+        gray_color.setAlpha(50)
         station_col = self.line_table_columns.index('Station')
 
         for row in range(self.line_table.rowCount()):
             table_value = stations[row]
             sorted_value = sorted_stations[row]
+
+            # Color stations not in the EM
+            if table_value not in em_stations:
+                print(f"{table_value} is not in the EM data.")
+                for col in range(self.line_table.columnCount()):
+                    # if col != station_col:
+                    self.line_table.item(row, col).setBackground(gray_color)
+
+            # Color errors
             if self.line_table.item(row, station_col) and table_value > sorted_value:
                 self.line_table.item(row, station_col).setBackground(blue_color)
             elif self.line_table.item(row, station_col) and table_value < sorted_value:
                 self.line_table.item(row, station_col).setBackground(red_color)
-            else:
-                self.line_table.item(row, station_col).setBackground(QtGui.QColor('white'))
+            # else:
+            #     self.line_table.item(row, station_col).setBackground(QtGui.QColor('white'))
+
         self.line_table.blockSignals(False)
 
     def check_station_duplicates(self):
