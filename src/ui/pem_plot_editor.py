@@ -73,12 +73,6 @@ class Ui_PEMPlotEditor(object):
 
         self.verticalLayout_7.addWidget(self.plot_ontime_decays_cbox)
 
-        self.plot_median_cbox = QCheckBox(self.groupBox_5)
-        self.plot_median_cbox.setObjectName(u"plot_median_cbox")
-        self.plot_median_cbox.setChecked(True)
-
-        self.verticalLayout_7.addWidget(self.plot_median_cbox)
-
         self.plot_auto_clean_lines_cbox = QCheckBox(self.groupBox_5)
         self.plot_auto_clean_lines_cbox.setObjectName(u"plot_auto_clean_lines_cbox")
         self.plot_auto_clean_lines_cbox.setChecked(True)
@@ -470,7 +464,6 @@ class Ui_PEMPlotEditor(object):
         self.label.setText(QCoreApplication.translate("PEMPlotEditor", u"Decay Options", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
         self.plot_ontime_decays_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot On-Time", None))
-        self.plot_median_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Median", None))
         self.plot_auto_clean_lines_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Auto-Clean Lines", None))
         self.link_x_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Link X-axes", None))
         self.link_y_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Link Y-axes", None))
