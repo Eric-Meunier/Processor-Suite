@@ -10,6 +10,7 @@ import gpxpy
 import numpy as np
 import pandas as pd
 import utm
+import chardet
 from pyproj import CRS
 from scipy import spatial
 from shapely.geometry import asMultiPoint
@@ -950,8 +951,12 @@ class GPXParser:
 
     @staticmethod
     def parse_gpx(filepath):
-        gpx_file = open(filepath, 'r')
-        gpx = gpxpy.parse(gpx_file)
+        with open(filepath, 'rb') as byte_file:
+            byte_content = byte_file.read()
+            encoding = chardet.detect(byte_content).get('encoding')
+            logger.info(f"Using {encoding} encoding.")
+            str_contents = byte_content.decode(encoding=encoding)
+        gpx = gpxpy.parse(str_contents)
         gps = []
         errors = []
 

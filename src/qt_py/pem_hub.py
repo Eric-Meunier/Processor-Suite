@@ -60,8 +60,7 @@ __version__ = '0.11.6'
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Add interactive collar coordinate picker from an Excel file (or csv, or txt). Create table, and select Easting,
-# TODO (cont) Northing, elevation in order?
-# TODO Add color to GPS rows for which there is no EM data
+# TODO (cont) Northing, elevation in order?♦
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
@@ -4909,8 +4908,8 @@ def main():
     # ch.show()
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
-    pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L/RAW/800E.PEM")
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"LS-27-21-07\RAW\xy_0704.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L/RAW/800E.PEM")
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"LS-27-21-07\RAW\xy_0704.PEM")
     # pem_1 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0616.PEM")
     # pem_2 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0620.PEM")
     # pem_files = [pem_1, pem_2]
@@ -4936,8 +4935,8 @@ def main():
     # mw.save_pem_file_as()¶
     mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Raw Boreholes\LS-27-21-07\RAW\DDH-LS-27-21-07-in.xlsx")])
-    # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
-    # mw.add_gps_files(gps_files)
+    gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
+    mw.add_gps_files(gps_files)
 
     mw.show()
 
