@@ -11,6 +11,7 @@ import simplekml
 import stopit
 import subprocess
 import sys
+import time
 from itertools import groupby
 from pathlib import Path
 
@@ -19,7 +20,7 @@ import pandas as pd
 import pyqtgraph as pg
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
-                               QHeaderView, QTableWidgetItem, QAction, QMenu, QGridLayout, QTextBrowser, QMenu,
+                               QHeaderView, QTableWidgetItem, QAction, QGridLayout, QTextBrowser, QMenu,
                                QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
                                QPushButton, QAbstractItemView, QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox,
                                QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem, QShortcut)
@@ -31,7 +32,7 @@ from src.qt_py import (icons_path, app_data_dir, get_icon, CustomProgressBar)
 from src.qt_py.db_plot import DBPlotter
 from src.geometry.pem_geometry import PEMGeometry
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
-from src.gps.gpx_creator import GPXCreator
+from src.qt_py.gpx_creator import GPXCreator
 from src.mag_field.loop_calculator import LoopCalculator
 from src.mag_field.mag_dec_widget import MagDeclinationCalculator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser
@@ -571,7 +572,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             elif col == self.table_columns.index('Current'):
                 try:
-                    float(value)
+                    value = float(value)
                 except ValueError:
                     logger.error(f"{value} is not a number.")
                     self.message.critical(self, 'Invalid Value', f"Current must be a number")
@@ -581,7 +582,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             elif col == self.table_columns.index('Coil\nArea'):
                 try:
-                    float(value)
+                    value = float(value)
                 except ValueError:
                     logger.error(f"{value} is not a number.")
                     self.message.critical(self, 'Invalid Value', f"Coil area Must be a number")
@@ -1437,6 +1438,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
+        t = time.time()
+
         count = 0
         parser = PEMParser()
         self.table.blockSignals(True)
@@ -1521,6 +1524,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.table.horizontalHeader().show()
         self.status_bar.showMessage(f"{count} PEM files opened.", 2000)
 
+        print(f"PEM files opened after {time.time() - t:.2f}s.")
         bar.deleteLater()
 
     def add_gps_files(self, gps_files):
@@ -3872,7 +3876,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        default = pem_files[0].current
+        default = float(pem_files[0].current)
         current, ok_pressed = QInputDialog.getDouble(self, "Scale Current", "Current:", default)
         if ok_pressed:
             bar = CustomProgressBar()

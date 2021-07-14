@@ -13,7 +13,7 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
                                QPushButton)
 from pyqtgraph.Point import Point
-from scipy import spatial
+from scipy import spatial, signal
 
 from src.qt_py import icons_path
 from src.pem import convert_station
@@ -410,14 +410,22 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             for ax in self.mag_profile_axes:
                 ax.hide()
 
+        self.auto_clean_std_sbox.blockSignals(True)
+        self.auto_clean_window_sbox.blockSignals(True)
+
         # Set the units of the decay plots
         self.units = self.pem_file.units
         if self.units == 'pT':
             self.auto_clean_std_sbox.setValue(10)
         else:
-            self.auto_clean_std_sbox.setValue(2)
+            self.auto_clean_std_sbox.setValue(1.5)
 
-        self.auto_clean_window_sbox.setMaximum(self.pem_file.number_of_channels)
+        num_offtime_channels = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove])
+        self.auto_clean_window_sbox.setMaximum(num_offtime_channels)
+        self.auto_clean_window_sbox.setValue(int(num_offtime_channels / 2))
+
+        self.auto_clean_std_sbox.blockSignals(False)
+        self.auto_clean_window_sbox.blockSignals(False)
 
         # Add the line name and loop name as the title for the profile plots
         self.x_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[X Component]")
@@ -881,8 +889,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         if preserve_selection is False:
             self.selected_lines.clear()
         else:
-            # TODO shift-undelete error here
-            index_of_selected = [self.plotted_decay_lines.index(line) for line in self.selected_lines]
+            ax_lines = [line for line in self.selected_lines if line.name() is None]  # Ignore median lines
+            index_of_selected = [self.plotted_decay_lines.index(line) for line in ax_lines]
 
         # Clear the plots
         for ax in self.decay_axes:
@@ -908,9 +916,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Plot the decays
         self.plotted_decay_data.apply(plot_decay, axis=1)
 
+        # Plot the median and auto-clean limits
         if self.plot_auto_clean_lines_cbox.isChecked():
             window_size = self.auto_clean_window_sbox.value()
-            # Plot the median and auto-clean limits
             for ax in self.decay_axes:
                 if ax == self.x_decay_plot:
                     comp_filt = self.plotted_decay_data.Component == "X"
@@ -923,27 +931,30 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 if median_data.empty:
                     continue
 
-                median = median_data.median(axis=0)
+                median = median_data.median(axis=0).to_numpy()
+                if self.pem_file.number_of_channels > 10:
+                    median = signal.savgol_filter(median, 5, 2)
                 std = np.array([self.auto_clean_std_sbox.value()] * window_size)
 
                 off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
-                off_time_median = off_time_median_data.median()
+                off_time_median = off_time_median_data.median().to_numpy()
+                if self.pem_file.number_of_channels > 10:
+                    off_time_median = signal.savgol_filter(off_time_median, 5, 2)
                 limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
 
-                median_line = pg.PlotCurveItem(y=median.to_numpy(),
-                                               pen=pg.mkPen("m", width=2.),
-                                               setClickable=False,
-                                               name='median line')
                 thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
-                                                 y=off_time_median.to_numpy()[-window_size:] + std,
+                                                 y=off_time_median[-window_size:] + std,
                                                  pen=pg.mkPen("m", width=1., style=QtCore.Qt.DashLine),
                                                  setClickable=False,
                                                  name='median limit')
                 thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
-                                                 y=off_time_median.to_numpy()[-window_size:] - std,
+                                                 y=off_time_median[-window_size:] - std,
                                                  pen=pg.mkPen("m", width=1., style=QtCore.Qt.DashLine),
                                                  setClickable=False,
                                                  name='median limit')
+                ax.addItem(thresh_line_1)
+                ax.addItem(thresh_line_2)
+
                 # error_bars = pg.ErrorBarItem(x=data.columns,
                 #                              y=median,
                 #                              height=std,
@@ -954,9 +965,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 # error_line = pg.PlotCurveItem(y=median.to_numpy(),
                 #                               pen=pg.mkPen("b", width=1., style=QtCore.Qt.DashLine))
 
-                ax.addItem(median_line)
-                ax.addItem(thresh_line_1)
-                ax.addItem(thresh_line_2)
+                if __name__ == "__main__":
+                    median_line = pg.PlotCurveItem(y=median,
+                                                   pen=pg.mkPen("m", width=2.),
+                                                   setClickable=False,
+                                                   name='median line')
+                    ax.addItem(median_line)
 
         # Update the plot limits
         for ax in self.decay_axes:
@@ -2070,7 +2084,6 @@ if __name__ == '__main__':
     dmp_parser = DMPParser()
     # pem_files = pem_getter.get_pems(random=True, number=1)
 
-    # pem_files = [parser.parse(r'C:\Users\Mortulo\Downloads\Data\Dump\September 16, 2020\DMP\pp-coil.PEM')]
     # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
     # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Lac Lessard\RAW\1000_0707.PEM")[0]

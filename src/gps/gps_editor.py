@@ -1061,7 +1061,8 @@ if __name__ == '__main__':
     # gps_parser = GPSParser()
     gpx_editor = GPXParser()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
-    gpx_file = samples_folder.joinpath(r'GPX files\L77+25_0515.gpx')
+    # gpx_file = samples_folder.joinpath(r'GPX files\L77+25_0515.gpx')
+    gpx_file = samples_folder.joinpath(r'GPX files\2000E_0524.gpx')
 
     result = gpx_editor.get_utm(gpx_file)
 

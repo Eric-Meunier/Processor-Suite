@@ -1896,7 +1896,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             with open(str(save_name), "w+") as file:
                 file.write(result)
 
-            os.startfile(save_name)
+            # os.startfile(save_name)
             self.statusBar().showMessage("Project file saved.", 1500)
 
     def save_kmz(self):
@@ -1963,12 +1963,12 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         if save_dir:
             kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
             kml.savekmz(kmz_save_dir, format=False)
-            try:
-                logger.info(f"Saving {Path(kmz_save_dir).name}.")
-                os.startfile(kmz_save_dir)
-            except OSError:
-                logger.error(f'No application to open {kmz_save_dir}.')
-                pass
+            # try:
+            #     logger.info(f"Saving {Path(kmz_save_dir).name}.")
+            #     os.startfile(kmz_save_dir)
+            # except OSError:
+            #     logger.error(f'No application to open {kmz_save_dir}.')
+            #     pass
 
     def save_gpx(self):
         """
@@ -2026,12 +2026,12 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             with open(save_path, 'w') as f:
                 f.write(gpx.to_xml())
             self.status_bar.showMessage('Save complete.', 2000)
-            try:
-                logger.info(f"Saving {Path(save_path).name}.")
-                os.startfile(save_path)
-            except OSError:
-                logger.error(f'No application to open {save_path}.')
-                pass
+            # try:
+            #     logger.info(f"Saving {Path(save_path).name}.")
+            #     os.startfile(save_path)
+            # except OSError:
+            #     logger.error(f'No application to open {save_path}.')
+            #     pass
         else:
             self.status_bar.showMessage('Cancelled.', 2000)
 

@@ -405,11 +405,12 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         """
         Remove text from station names. Useful for GPX files.
         """
-        add_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to add:")
-        if add_amt:
-            print(f"Adding {add_amt}")
-            self.df.Station.loc[:] = self.df.Station.loc[:] + add_amt
+        trunc_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:")
+        if trunc_amt:
+            print(f"Truncating {trunc_amt}")
+            self.df.Station.loc[:] = self.df.Station.loc[:].map(lambda x: str(x)[trunc_amt:]).astype(int)
             self.df_to_table(self.df)
+            self.plot_table(preserve_limits=True)
 
     def open(self, gps, name=''):
         """

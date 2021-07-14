@@ -73,11 +73,24 @@ class Ui_PEMPlotEditor(object):
 
         self.verticalLayout_7.addWidget(self.plot_ontime_decays_cbox)
 
+        self.plot_median_cbox = QCheckBox(self.groupBox_5)
+        self.plot_median_cbox.setObjectName(u"plot_median_cbox")
+        self.plot_median_cbox.setChecked(True)
+
+        self.verticalLayout_7.addWidget(self.plot_median_cbox)
+
         self.plot_auto_clean_lines_cbox = QCheckBox(self.groupBox_5)
         self.plot_auto_clean_lines_cbox.setObjectName(u"plot_auto_clean_lines_cbox")
         self.plot_auto_clean_lines_cbox.setChecked(True)
 
         self.verticalLayout_7.addWidget(self.plot_auto_clean_lines_cbox)
+
+        self.line_2 = QFrame(self.groupBox_5)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.HLine)
+        self.line_2.setFrameShadow(QFrame.Sunken)
+
+        self.verticalLayout_7.addWidget(self.line_2)
 
         self.link_x_cbox = QCheckBox(self.groupBox_5)
         self.link_x_cbox.setObjectName(u"link_x_cbox")
@@ -256,6 +269,19 @@ class Ui_PEMPlotEditor(object):
         self.verticalLayout_10 = QVBoxLayout(self.groupBox)
         self.verticalLayout_10.setObjectName(u"verticalLayout_10")
         self.verticalLayout_10.setContentsMargins(9, 9, 9, 9)
+        self.plot_mag_cbox = QCheckBox(self.groupBox)
+        self.plot_mag_cbox.setObjectName(u"plot_mag_cbox")
+        self.plot_mag_cbox.setChecked(True)
+
+        self.verticalLayout_10.addWidget(self.plot_mag_cbox)
+
+        self.line_3 = QFrame(self.groupBox)
+        self.line_3.setObjectName(u"line_3")
+        self.line_3.setFrameShape(QFrame.HLine)
+        self.line_3.setFrameShadow(QFrame.Sunken)
+
+        self.verticalLayout_10.addWidget(self.line_3)
+
         self.show_average_cbox = QCheckBox(self.groupBox)
         self.show_average_cbox.setObjectName(u"show_average_cbox")
         self.show_average_cbox.setFocusPolicy(Qt.NoFocus)
@@ -269,12 +295,6 @@ class Ui_PEMPlotEditor(object):
         self.show_scatter_cbox.setChecked(True)
 
         self.verticalLayout_10.addWidget(self.show_scatter_cbox)
-
-        self.plot_mag_cbox = QCheckBox(self.groupBox)
-        self.plot_mag_cbox.setObjectName(u"plot_mag_cbox")
-        self.plot_mag_cbox.setChecked(True)
-
-        self.verticalLayout_10.addWidget(self.plot_mag_cbox)
 
 
         self.verticalLayout_11.addWidget(self.groupBox)
@@ -450,6 +470,7 @@ class Ui_PEMPlotEditor(object):
         self.label.setText(QCoreApplication.translate("PEMPlotEditor", u"Decay Options", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
         self.plot_ontime_decays_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot On-Time", None))
+        self.plot_median_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Median", None))
         self.plot_auto_clean_lines_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Auto-Clean Lines", None))
         self.link_x_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Link X-axes", None))
         self.link_y_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Link Y-axes", None))
@@ -468,9 +489,9 @@ class Ui_PEMPlotEditor(object):
         self.flip_decay_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"+/-", None))
         self.label_2.setText(QCoreApplication.translate("PEMPlotEditor", u"Profile Options", None))
         self.groupBox.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
+        self.plot_mag_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Mag", None))
         self.show_average_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Show Average", None))
         self.show_scatter_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Show Scatter", None))
-        self.plot_mag_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Mag", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Edit", None))
         self.change_comp_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Components", None))
         self.change_profile_suffix_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Suffixes", None))
