@@ -57,15 +57,11 @@ logger = logging.getLogger(__name__)
 __version__ = '0.11.6'
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create a theory vs measured plot (similar to step)
-# TODO Add rainbow coloring to final plots?
-# TODO Use savgol to filter data
 # TODO Change name_editor line_name_editor to not use QtDesigner.
-# TODO Fix Gridplanner with new loop
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Add interactive collar coordinate picker from an Excel file (or csv, or txt). Create table, and select Easting,
 # TODO (cont) Northing, elevation in order?
 # TODO Add color to GPS rows for which there is no EM data
-# TODO Bug: Doing "Save As Processed PEM" shouldn't remove the _**** date.
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
@@ -2698,7 +2694,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Create a copy of the PEM file, then update the copy
             new_pem = pem_file.copy()
             new_pem.filepath = Path(save_path)
-            new_pem.save(legacy='legacy' in save_type.lower(), processed='processed' in save_type.lower())
+            new_pem.save(legacy='legacy' in save_type.lower(), processed='processed' in save_type.lower(), rename=False)
 
             self.status_bar.showMessage(f'Save Complete. PEM file saved as {new_pem.filepath.name}', 2000)
 
@@ -2980,8 +2976,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             logger.error(f"No PEM files opened.")
             return
 
+        rename = False
         # Make sure there's a valid CRS when doing a final export
         if processed is True:
+            rename = True
             crs = self.get_crs()
             if not crs:
                 response = self.message.question(self, 'Invalid CRS',
@@ -3032,7 +3030,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 logger.info(f"Exporting {file_name}.")
 
                 pem_file.filepath = Path(file_dir).joinpath(file_name)
-                pem_file.save(legacy=legacy, processed=processed)
+                pem_file.save(legacy=legacy, processed=processed, rename=rename)
                 dlg += 1
 
         self.fill_pem_list()
@@ -4906,11 +4904,12 @@ def main():
     # dmp_files = samples_folder.joinpath(r"TMC/1338-18-19/RAW/_16_1338-18-19ppz.dmp2")
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
-    ch = ChannelTimeViewer(pem_files[0])
-    ch.show()
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    # ch = ChannelTimeViewer(pem_files[0])
+    # ch.show()
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
+    pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L/RAW/800E.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"LS-27-21-07\RAW\xy_0704.PEM")
     # pem_1 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0616.PEM")
     # pem_2 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0620.PEM")
@@ -4923,10 +4922,11 @@ def main():
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
-    # mw.add_pem_files(pem_files)
+    mw.add_pem_files(pem_files)
     # mw.add_dmp_files([dmp_files])
-    # mw.table.selectRow(0)
+    mw.table.selectRow(0)
     # mw.table.selectAll()
+    # mw.save_pem_file_as()
     # mw.open_pem_merger()
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
@@ -4934,12 +4934,12 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Raw Boreholes\LS-27-21-07\RAW\DDH-LS-27-21-07-in.xlsx")])
     # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
     # mw.add_gps_files(gps_files)
 
-    # mw.show()
+    mw.show()
 
     app.exec_()
 

@@ -1118,7 +1118,7 @@ class PEMFile:
         copy_pem.data.RAD_tool = copy_pem.data.RAD_tool.map(lambda x: copy.deepcopy(x))
         return copy_pem
 
-    def save(self, processed=False, legacy=False, backup=False, tag=''):
+    def save(self, processed=False, legacy=False, backup=False, rename=False, tag=''):
         """
         Save the PEM file to a .PEM file with the same filepath it currently has.
         :param processed: bool, Average, split and de-rotate (if applicable) and save in a legacy format.
@@ -1130,7 +1130,7 @@ class PEMFile:
         """
 
         logger.info(f"Saving {self.filepath.name}. (Legacy: {legacy}. Processed: {processed}. Backup: {backup}. "
-                    f"Tag: {tag})")
+                    f"Rename: {rename}, Tag: {tag})")
 
         # Once legacy is saved once, it will always save as legacy.
         if legacy is True:
@@ -1148,16 +1148,16 @@ class PEMFile:
                         self.prep_rotation()
                     self.rotate('acc')
 
-            # Remove underscore-dates and tags
-            file_name = re.sub(r'_\d{4}', '', re.sub(r'\[-?\w\]', '', self.filepath.name))
-            if not self.is_borehole():
-                file_name = file_name.upper()
-                if file_name.lower()[0] == 'c':
-                    file_name = file_name[1:]
+            if rename is True:
+                # Remove underscore-dates and tags
+                file_name = re.sub(r'_\d{4}', '', re.sub(r'\[-?\w\]', '', self.filepath.name))
+                if not self.is_borehole():
+                    file_name = file_name.upper()
+                    if file_name.lower()[0] == 'c':
+                        file_name = file_name[1:]
 
-            self.filepath = self.filepath.with_name(file_name)
+                self.filepath = self.filepath.with_name(file_name)
 
-        print(f"self.legacy: {self.legacy}")
         text = self.to_string(legacy=any([processed, legacy, self.legacy]))
 
         if backup:
