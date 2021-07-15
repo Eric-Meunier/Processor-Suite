@@ -922,6 +922,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         for row in rows:
             flip_stn_num(row)
 
+        self.color_line_table()
         self.line_table.blockSignals(False)
 
         self.gps_object_changed(self.line_table, refresh=False)
@@ -955,6 +956,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.line_table.setItem(row, self.line_table_columns.index('Station'), item)
             self.gps_object_changed(self.line_table, refresh=False)
 
+        self.color_line_table()
         self.line_table.blockSignals(False)
 
     def calc_distance(self):
