@@ -2,6 +2,7 @@ import logging
 import math
 import os
 import sys
+import chardet
 from collections import OrderedDict
 from copy import deepcopy
 from pathlib import Path
@@ -13,7 +14,7 @@ from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, 
                                QErrorMessage, QHeaderView, QApplication)
 from src.qt_py import clear_table
 from src.geometry.pem_geometry import PEMGeometry
-from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker
+from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXParser
 from src.pem import convert_station
@@ -332,10 +333,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param crs: Proj CRS object for the GPS objects
         """
 
-        def merge_files(files):
+        def merge_files(files, collar=False):
             """
             Merge contents of files into one list
             :param files: list of str, filepaths of text file or GPX files
+            :param collar: bool, if the files are for a collar, which will return a dict if an Excel file is passed.
             :return: str
             """
             merged_file = []
@@ -347,7 +349,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     try:
                         gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(file, as_string=True)
                     except Exception as e:
-                        # self.error.showMessage("GPX Parsing Error", f"The following error occurred parsing the GPX file:\n{e}.")
                         errors.append(str(e))
                         return
                     else:
@@ -357,11 +358,17 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                         contents = pd.read_csv(file, delim_whitespace=False, header=None).to_numpy()
 
                     elif file.suffix.lower() in ['.xlsx', '.xls']:
-                        contents = pd.read_excel(file, delim_whitespace=False, header=None).to_numpy()
+                        contents = pd.read_excel(file, header=None, sheet_name=None, dtype=str)
+                        if collar is True:
+                            return contents
 
                     else:
-                        contents = open(file, mode='rt').readlines()
-                        contents = [c.strip().split() for c in contents]
+                        with open(file, 'rb') as byte_file:
+                            byte_content = byte_file.read()
+                            encoding = chardet.detect(byte_content).get('encoding')
+                            logger.info(f"Using {encoding} encoding.")
+                            str_contents = byte_content.decode(encoding=encoding)
+                            contents = [c.strip().split() for c in str_contents.splitlines()]
 
                 merged_file.extend(contents)
             return merged_file
@@ -369,12 +376,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if not isinstance(files, list):
             files = [files]
 
+        current_tab = self.tabs.currentWidget()
         files = [Path(f) for f in files]
         global crs, errors
         crs = None
         errors = []
 
-        file_contents = merge_files(files)
+        file_contents = merge_files(files, collar=bool(current_tab == self.geometry_tab))
 
         if errors:
             error_str = '\n'.join(errors)
@@ -382,8 +390,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                                                          f"{error_str}")
             if not file_contents:
                 return
-
-        current_tab = self.tabs.currentWidget()
 
         # Add survey line GPS
         if current_tab == self.station_gps_tab:
@@ -474,6 +480,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         Open the CollarPicker (if needed) and add the collarGPS.
         :param collar_content: list of GPS points. If more than 1, uses the CollarPicker widget.
+        :param excel: Bool, whether to open the excel table picker or not for excel files.
         """
 
         def accept_collar(data):
@@ -492,13 +499,18 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 logger.critical(f"{e}.")
                 self.error.showMessage(f"Error adding borehole collar: {str(e)}.")
 
-        if len(collar_content) > 1:
-            global picker
-            picker = CollarPicker()
-            picker.open(collar_content, name="GPX File")
+        global picker
+        if isinstance(collar_content, dict):
+            picker = ExcelTablePicker()
+            picker.open(collar_content)
             picker.accept_sig.connect(accept_collar)
         else:
-            accept_collar(collar_content)
+            if len(collar_content) > 1:
+                picker = CollarPicker()
+                picker.open(collar_content, name="GPX File")
+                picker.accept_sig.connect(accept_collar)
+            else:
+                accept_collar(collar_content)
 
     def fill_info_tab(self):
         """
@@ -644,7 +656,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
         em_stations = self.pem_file.data.Station.map(convert_station).unique().astype(int)
 
-        blue_color, red_color, gray_color = QtGui.QColor('blue'), QtGui.QColor('red'),  QtGui.QColor('grey')
+        blue_color, red_color, gray_color, white_color = QtGui.QColor('blue'), \
+                                                         QtGui.QColor('red'), \
+                                                         QtGui.QColor('grey'), \
+                                                         QtGui.QColor('white')
         blue_color.setAlpha(50)
         red_color.setAlpha(50)
         gray_color.setAlpha(50)
@@ -655,11 +670,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             sorted_value = sorted_stations[row]
 
             # Color stations not in the EM
-            if table_value not in em_stations:
-                print(f"{table_value} is not in the EM data.")
-                for col in range(self.line_table.columnCount()):
-                    # if col != station_col:
-                    self.line_table.item(row, col).setBackground(gray_color)
+            print(f"{table_value} is not in the EM data.")
+            for col in range(self.line_table.columnCount()):
+                # if col != station_col:
+                self.line_table.item(row, col).setBackground(
+                    white_color if table_value in em_stations else gray_color)
 
             # Color errors
             if self.line_table.item(row, station_col) and table_value > sorted_value:

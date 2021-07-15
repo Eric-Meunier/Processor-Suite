@@ -4909,8 +4909,8 @@ def main():
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
     # pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L/RAW/800E.PEM")
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"LS-27-21-07\RAW\xy_0704.PEM")
-    # pem_1 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0616.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"HOLE STE-21-02/RAW/ste-21-02 xy.PEM")
+    pem_files = [pem_parser.parse(r"C:\_Data\2021\TMC\Loop L\RAW\_100_0601.PEM")]
     # pem_2 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0620.PEM")
     # pem_files = [pem_1, pem_2]
     # pem_files = pem_g.get_pems(number=3, random=True)
@@ -4935,8 +4935,9 @@ def main():
     # mw.save_pem_file_as()¶
     mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Raw Boreholes\LS-27-21-07\RAW\DDH-LS-27-21-07-in.xlsx")])
-    gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
-    mw.add_gps_files(gps_files)
+    # gps_files = [samples_folder.joinpath(r"Raw Boreholes/HOLE STE-21-02/RAW/3-Forage_2021_Coordonnées.xlsx")]
+    # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
+    # mw.add_gps_files(gps_files)
 
     mw.show()
 

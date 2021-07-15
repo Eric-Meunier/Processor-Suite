@@ -10,7 +10,7 @@ import pandas as pd
 import pyqtgraph as pg
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QHeaderView, QInputDialog,
-                               QFileDialog)
+                               QFileDialog, QWidget, QVBoxLayout, QLabel, QPushButton, QFrame, QHBoxLayout, QTabWidget)
 
 from src.qt_py import icons_path, NonScientific
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
@@ -1041,18 +1041,24 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
                                   brush=pg.mkBrush('w'),
                                   )
 
-        # Set the X and Y labels
-        if df.Unit.all() == '0':
-            self.plan_view.getAxis('left').setLabel('Northing', units='m')
-            self.plan_view.getAxis('bottom').setLabel('Easting', units='m')
+        if "Unit" in df.columns:
+            # Set the X and Y labels
+            if df.Unit.all() == '0':
+                self.plan_view.getAxis('left').setLabel('Northing', units='m')
+                self.plan_view.getAxis('bottom').setLabel('Easting', units='m')
 
-            self.section_view.setLabel('left', f"Elevation", units='m')
+                self.section_view.setLabel('left', f"Elevation", units='m')
 
-        elif df.Unit.all() == '1':
-            self.plan_view.getAxis('left').setLabel('Northing', units='ft')
-            self.plan_view.getAxis('bottom').setLabel('Easting', units='ft')
+            elif df.Unit.all() == '1':
+                self.plan_view.getAxis('left').setLabel('Northing', units='ft')
+                self.plan_view.getAxis('bottom').setLabel('Easting', units='ft')
 
-            self.section_view.setLabel('left', f"Elevation", units='ft')
+                self.section_view.setLabel('left', f"Elevation", units='ft')
+            else:
+                self.plan_view.getAxis('left').setLabel('Northing', units=None)
+                self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
+
+                self.section_view.setLabel('left', f"Elevation", units=None)
         else:
             self.plan_view.getAxis('left').setLabel('Northing', units=None)
             self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
@@ -1123,6 +1129,115 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             self.section_view.addItem(self.section_ly)
 
 
+class ExcelTablePicker(QWidget):
+    accept_sig = QtCore.Signal(object)
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.setWindowTitle("Excel Table Picker")
+        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("excel_file.png"))))
+        self.setLayout(QVBoxLayout())
+
+        self.content = None
+        self.easting = None
+        self.northing = None
+        self.elevation = None
+        self.click_count = 0
+        self.selected_cells = []
+        self.selection_color = QtGui.QColor('#50C878')
+        # self.selection_color.setAlpha(50)
+
+        self.tables = []
+        self.tabs = QTabWidget()
+        self.layout().addWidget(QLabel("Sequentially click the Easting, Northing, and Elevation cells."))
+        self.layout().addWidget(self.tabs)
+
+        self.selection_text = QLabel("Easting: \nNorthing: \nElevation: ")
+        self.layout().addWidget(self.selection_text)
+
+        self.accept_btn = QPushButton("Accept")
+        self.reset_btn = QPushButton("Reset")
+        self.close_btn = QPushButton("Close")
+        btn_frame = QFrame()
+        btn_frame.setLayout(QHBoxLayout())
+        btn_frame.layout().addWidget(self.accept_btn)
+        btn_frame.layout().addWidget(self.reset_btn)
+        btn_frame.layout().addWidget(self.close_btn)
+        self.layout().addWidget(btn_frame)
+
+        self.accept_btn.clicked.connect(self.accept)
+        self.reset_btn.clicked.connect(self.reset)
+        self.close_btn.clicked.connect(self.close)
+
+    def reset(self):
+        for item in self.selected_cells:
+            item.setBackground(QtGui.QColor("white"))
+
+        for table in self.tables:
+            table.clearSelection()
+
+        self.easting = None
+        self.northing = None
+        self.elevation = None
+        self.selected_cells = []
+        self.click_count = 0
+        self.selection_text.setText("Easting: \nNorthing: \nElevation: ")
+
+    def accept(self):
+        self.accept_sig.emit({"Easting":self.easting, "Northing": self.northing, "Elevation": self.elevation})
+        self.close()
+
+    def cell_clicked(self, row, col):
+        """
+        Signal slot, color the cell and register it's contents when clicked.
+        :param row: Int
+        :param col: Int
+        :return: None
+        """
+        table = self.tables[self.tabs.currentIndex()]
+        item = table.item(row, col)
+        value = item.text()
+        table.item(row, col).setBackground(self.selection_color)
+
+        if self.click_count == 3:
+            self.click_count = 0
+
+        if self.click_count == 0:
+            self.easting = value
+        elif self.click_count == 1:
+            self.northing = value
+        else:
+            self.elevation = value
+
+        self.selection_text.setText(f"Easting: {self.easting or ''}\nNorthing: {self.northing or ''}\n"
+                                    f"Elevation: {self.elevation or ''}")
+        self.click_count += 1
+
+        self.selected_cells.append(item)
+        if len(self.selected_cells) > 3:
+            self.selected_cells[0].setBackground(QtGui.QColor('white'))
+            self.selected_cells.pop(0)
+
+    def open(self, content):
+        """
+        :param content: dict, content of the Excel file (all sheets).
+        :return: None
+        """
+        self.content = content
+
+        for i, (sheet, info) in enumerate(self.content.items()):
+            table = pg.TableWidget()
+            # table.setStyleSheet("selection-background-color: #353535;")
+            table.setStyleSheet("selection-background-color: #50C878;")
+            table.setData(info.replace(np.nan, '', regex=True).to_numpy())
+            table.cellClicked.connect(self.cell_clicked)
+            self.tables.append(table)
+            self.tabs.addTab(table, sheet)
+
+        self.show()
+
+
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
@@ -1138,11 +1253,16 @@ def main():
     # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
     # loop = TransmitterLoop(file)
 
-    mw = LineAdder()
-    file = samples_folder.joinpath(r'GPX files\Loop01 L200_0624.gpx')
+    # mw = LineAdder()
+    mw = ExcelTablePicker()
+    # file = samples_folder.joinpath(r'GPX files\Loop01 L200_0624.gpx')
+    # file = samples_folder.joinpath(r'Raw Boreholes\HOLE STE-21-02\RAW\3-Forage_2021_Coordonnées.xlsx')
+    file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
+    contents = pd.read_excel(file, header=None, sheet_name=None)
+    mw.open(contents)
     # line = SurveyLine(str(file))
 
-    mw.open(file)
+    # mw.open(file)
     mw.show()
 
     app.exec_()

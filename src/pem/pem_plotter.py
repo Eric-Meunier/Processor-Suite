@@ -3267,11 +3267,12 @@ class PEMPrinter:
 if __name__ == '__main__':
     from PySide2.QtWidgets import QApplication
     from src.pem.pem_getter import PEMGetter
+    from src.pem.pem_file import PEMParser
 
     app = QApplication(sys.argv)
     pem_getter = PEMGetter()
-    pem_files = pem_getter.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth", file="2200EAv KBNorth.PEM")
-
+    # pem_files = pem_getter.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth", file="2200EAv KBNorth.PEM")
+    pem_files = [PEMParser().parse(r"C:\_Data\2021\TMC\131-21-38\Final\131-21-38 XYT.PEM")]
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()
@@ -3285,13 +3286,14 @@ if __name__ == '__main__':
     # sp.plot(pem_files[0], figure=fig)
     # plt.show()
 
-    # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    # ax6 = ax5.twiny()
-    # ax6.get_shared_x_axes().join(ax5, ax6)
-    # # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
-    # lin_plot = LINPlotter(pem_files[0], lin_fig)
-    # lin_plot.plot('Z')
-    # plt.show()
+    lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    ax6 = ax5.twiny()
+    ax6.get_shared_x_axes().join(ax5, ax6)
+    # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
+    lin_plot = LINPlotter(pem_files[0], lin_fig)
+    lin_plot.plot('X')
+    lin_plot.plot('Y')
+    plt.show()
 
     # log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
     # ax2 = ax.twiny()
@@ -3301,16 +3303,16 @@ if __name__ == '__main__':
     # log_plot.plot('X')
     # plt.show()
 
-    step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    ax5 = ax4.twiny()
-    ax5.get_shared_x_axes().join(ax4, ax5)
-    # pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01NAv.PEM'
-    # ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01N.RI2'
-    pem = r'C:\_Data\2021\Nantou BF\Surface\Loop 4\Final\16200e.pem'  # Step near 0
-    ri = r'C:\_Data\2021\Nantou BF\Surface\Loop 4\Final\16200E.ri3'
-    step_plot = STEPPlotter(pem, ri, step_fig)
-    step_plot.plot('Z')
-    plt.show()
+    # step_fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    # ax5 = ax4.twiny()
+    # ax5.get_shared_x_axes().join(ax4, ax5)
+    # # pem = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01NAv.PEM'
+    # # ri = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\RI files\246-01N.RI2'
+    # pem = r'C:\_Data\2021\Nantou BF\Surface\Loop 4\Final\16200e.pem'  # Step near 0
+    # ri = r'C:\_Data\2021\Nantou BF\Surface\Loop 4\Final\16200E.ri3'
+    # step_plot = STEPPlotter(pem, ri, step_fig)
+    # step_plot.plot('Z')
+    # plt.show()
 
     # map = GeneralMap(pem_files, fig).get_map()
     # map.show()
