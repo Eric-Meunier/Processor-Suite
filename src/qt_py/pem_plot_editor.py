@@ -416,9 +416,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Set the units of the decay plots
         self.units = self.pem_file.units
         if self.units == 'pT':
-            self.auto_clean_std_sbox.setValue(10)
+            self.auto_clean_std_sbox.setValue(20)
         else:
-            self.auto_clean_std_sbox.setValue(1.5)
+            if self.pem_file.is_borehole():
+                self.auto_clean_std_sbox.setValue(2)
+            else:
+                self.auto_clean_std_sbox.setValue(1.5)
 
         num_offtime_channels = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove])
         self.auto_clean_window_sbox.setMaximum(num_offtime_channels)
@@ -933,13 +936,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                 median = median_data.median(axis=0).to_numpy()
                 if self.pem_file.number_of_channels > 10:
-                    median = signal.savgol_filter(median, 5, 2)
+                    median = signal.savgol_filter(median, 5, 4)
                 std = np.array([self.auto_clean_std_sbox.value()] * window_size)
 
                 off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
                 off_time_median = off_time_median_data.median().to_numpy()
                 if self.pem_file.number_of_channels > 10:
-                    off_time_median = signal.savgol_filter(off_time_median, 5, 2)
+                    off_time_median = signal.savgol_filter(off_time_median, 5, 4)
                 limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
 
                 thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),

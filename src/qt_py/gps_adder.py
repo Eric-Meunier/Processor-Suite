@@ -10,7 +10,8 @@ import pandas as pd
 import pyqtgraph as pg
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QHeaderView, QInputDialog,
-                               QFileDialog, QWidget, QVBoxLayout, QLabel, QPushButton, QFrame, QHBoxLayout, QTabWidget)
+                               QFileDialog, QWidget, QVBoxLayout, QLabel, QPushButton, QFrame, QHBoxLayout, QTabWidget,
+                               QTableWidget)
 
 from src.qt_py import icons_path, NonScientific
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
@@ -1238,6 +1239,148 @@ class ExcelTablePicker(QWidget):
         self.show()
 
 
+class DADSelector(QWidget):
+    accept_sig = QtCore.Signal(object)
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.setWindowTitle("DAD Selector")
+        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("excel_file.png"))))
+        self.setLayout(QVBoxLayout())
+        self.message = QMessageBox()
+
+        self.depths = None
+        self.azimuths = None
+        self.dips = None
+        self.selection_count = 0
+        self.selected_ranges = []
+        self.selection_color = QtGui.QColor('#50C878')
+        # self.selection_color.setAlpha(50)
+
+        self.tables = []
+        self.tabs = QTabWidget()
+        self.layout().addWidget(QLabel(
+            "Sequentially double-click the top cell of the Depth, Azimuth, and Dip cell ranges."))
+        self.layout().addWidget(self.tabs)
+
+        self.selection_text = QLabel("Depth: \nAzimuth: \nDip: ")
+        self.selection_text.setWordWrap(True)
+        self.layout().addWidget(self.selection_text)
+
+        self.accept_btn = QPushButton("Accept")
+        self.reset_btn = QPushButton("Reset")
+        self.close_btn = QPushButton("Close")
+        btn_frame = QFrame()
+        btn_frame.setLayout(QHBoxLayout())
+        btn_frame.layout().addWidget(self.accept_btn)
+        btn_frame.layout().addWidget(self.reset_btn)
+        btn_frame.layout().addWidget(self.close_btn)
+        self.layout().addWidget(btn_frame)
+
+        self.accept_btn.clicked.connect(self.accept)
+        self.reset_btn.clicked.connect(self.reset)
+        self.close_btn.clicked.connect(self.close)
+
+    def reset(self):
+        for range in self.selected_ranges:
+            for item in range:
+                item.setBackground(QtGui.QColor("white"))
+
+        for table in self.tables:
+            table.clearSelection()
+
+        self.depths = None
+        self.azimuths = None
+        self.dips = None
+        self.selected_ranges = []
+        self.selection_count = 0
+        self.selection_text.setText("Depth: \nAzimuth: \nDip: ")
+
+    def accept(self):
+        data = {"Depth": self.depths, "Azimuth": self.azimuths, "Dip": self.dips}
+        df = pd.DataFrame(data, dtype=float)
+        if not all([d == float for d in df.dtypes]):
+            logger.error(f'Data selected are not all numerical values.')
+            self.message.information(self, 'Error', f'The data selected are not all numerical values.')
+        else:
+            self.accept_sig.emit(df)
+            self.close()
+
+    def cell_double_clicked(self, row, col):
+        """
+        Signal slot, range-select all cells below the clicked cell.
+        :return: None
+        """
+        table = self.tables[self.tabs.currentIndex()]
+
+        # Remove the 3rd last selected range
+        if len(self.selected_ranges) == 3:
+            for item in self.selected_ranges[0]:
+                item.setBackground(QtGui.QColor('white'))
+            self.selected_ranges.pop(0)
+
+        values = []
+        selected_range = []
+        for s_row in range(row, table.rowCount()):
+            item = table.item(s_row, col)
+            item.setBackground(self.selection_color)
+            selected_range.append(item)
+            values.append(item.text())
+
+        if self.selection_count == 3:
+            self.selection_count = 0
+
+        if self.selection_count == 0:
+            self.depths = values
+        elif self.selection_count == 1:
+            self.azimuths = values
+        else:
+            self.dips = values
+
+        self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
+                                    f"Dip: {self.dips or ''}")
+        self.selection_count += 1
+        self.selected_ranges.append(selected_range)
+
+    def open(self, filepath):
+        """
+        :param filepath: str or Path, can be an Excel file, CSV, or txt file.
+        :return: None
+        """
+        filepath = Path(filepath)
+
+        if filepath.suffix == '.xlsx' or filepath.suffix == '.xls':
+            content = pd.read_excel(filepath,
+                                    header=None,
+                                    sheet_name=None)
+
+            for i, (sheet, info) in enumerate(content.items()):
+                table = pg.TableWidget()
+                table.setStyleSheet("selection-background-color: #50C878;")
+                table.setData(info.replace(np.nan, '', regex=True).to_numpy())
+                table.cellDoubleClicked.connect(self.cell_double_clicked)
+                self.tables.append(table)
+                self.tabs.addTab(table, str(sheet))
+        else:
+            if filepath.suffix == '.txt' or filepath.suffix == '.dad':
+                content = pd.read_csv(filepath,
+                                      delim_whitespace=True,
+                                      header=None)
+            else:
+                content = pd.read_csv(filepath,
+                                      header=None)
+
+            table = pg.TableWidget()
+            table.setStyleSheet("selection-background-color: #50C878;")
+            table.setData(content.replace(np.nan, '', regex=True).to_numpy())
+            table.cellDoubleClicked.connect(self.cell_double_clicked)
+            self.tables.append(table)
+            self.tabs.addTab(table, filepath.name)
+
+        self.show()
+
+
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
@@ -1254,12 +1397,14 @@ def main():
     # loop = TransmitterLoop(file)
 
     # mw = LineAdder()
-    mw = ExcelTablePicker()
+    # mw = ExcelTablePicker()
+    mw = DADSelector()
+
     # file = samples_folder.joinpath(r'GPX files\Loop01 L200_0624.gpx')
     # file = samples_folder.joinpath(r'Raw Boreholes\HOLE STE-21-02\RAW\3-Forage_2021_Coordonnées.xlsx')
-    file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
-    contents = pd.read_excel(file, header=None, sheet_name=None)
-    mw.open(contents)
+    file = samples_folder.joinpath(r'Raw Boreholes\HOLE STE-21-02\RAW\3-Forage_2021_Déviation.xlsx')
+    # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
+    mw.open(file)
     # line = SurveyLine(str(file))
 
     # mw.open(file)

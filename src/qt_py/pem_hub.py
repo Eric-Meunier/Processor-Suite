@@ -59,8 +59,7 @@ __version__ = '0.11.6'
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Look into slowness when changing station number and such in pem plot editor
-# TODO Add interactive collar coordinate picker from an Excel file (or csv, or txt). Create table, and select Easting,
-# TODO (cont) Northing, elevation in order?♦
+# TODO Add screenshot to PEMGeometry
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):

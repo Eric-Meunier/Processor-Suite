@@ -19,6 +19,7 @@ from src.geometry.segment import Segmenter
 from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
 from src.ui.pem_geometry import Ui_PEMGeometry
+from src.qt_py.gps_adder import DADSelector
 
 logger = logging.getLogger(__name__)
 
@@ -277,11 +278,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             Add the azimuth spline line
             """
             spline_stations = np.linspace(0, depth.iloc[-1], 6)
-            # if len(az) > 11:
-            #     window_len = int(len(az) / 4)
-            #     if int(len(az) / 4) % 2 == 0:
-            #         window_len += 1
-            #     az = savgol_filter(az, window_len, 3)
             spline_az = np.interp(spline_stations, depth, az + self.mag_dec_sbox.value())
             self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
                                                line_color='darkred',
@@ -296,12 +292,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             Add the dip spline line
             """
             spline_stations = np.linspace(0, depth.iloc[-1], 6)
-            # if len(dip) > 11:
-            #     window_len = int(len(dip) / 4)
-            #     if int(len(dip) / 4) % 2 == 0:
-            #         window_len += 1
-            #     dip = savgol_filter(dip, window_len, 3)
-
             spline_dip = np.interp(spline_stations, depth, dip)
 
             self.dip_spline = InteractiveSpline(self.dip_ax, zip(spline_stations, spline_dip),
@@ -671,41 +661,27 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
     def open_dad_file(self, filepath):
         """
         Import and plot a depth-azimuth-dip format file. Can be extentions xlsx, xls, csv, txt, dad.
-        :param filepath: str, filepath of the file to plot
+        :param filepath: str or Path, filepath of the file to plot
         """
-        try:
-            if filepath.endswith('xlsx') or filepath.endswith('xls'):
-                df = pd.read_excel(filepath,
-                                   # delim_whitespace=True,
-                                   usecols=[0, 1, 2],
-                                   names=['Depth', 'Azimuth', 'Dip'],
-                                   header=None,
-                                   dtype=float)
-            else:
-                if filepath.endswith('txt') or filepath.endswith('dad'):
-                    df = pd.read_csv(filepath,
-                                     delim_whitespace=True,
-                                     usecols=[0, 1, 2],
-                                     names=['Depth', 'Azimuth', 'Dip'],
-                                     header=None,
-                                     dtype=float)
-                else:
-                    df = pd.read_csv(filepath,
-                                     # delim_whitespace=True,
-                                     usecols=[0, 1, 2],
-                                     names=['Depth', 'Azimuth', 'Dip'],
-                                     header=None,
-                                     dtype=float)
-        except Exception as e:
-            logger.critical(f"The following error occurred trying to read {Path(filepath).name}:{str(e)}")
-            self.error.showMessage(f"The following error occurred trying to read {Path(filepath).name}:{str(e)}")
+        def accept_file(data_df):
+            try:
+                self.plot_df(data_df, source='dad')
+            except Exception as e:
+                logger.error(f'Error plotting {filepath.name}. {str(e)}.')
+                self.message.critical(self, 'Error',
+                                         f'The following error occurred attempting to plot {filepath.name}: '
+                                         f'\n{str(e)}.')
 
-        else:
-            if all([d == float for d in df.dtypes]):
-                self.plot_df(df, source='dad')
-            else:
-                logger.error(f'Data in {Path(filepath).name} is not float. Make sure there is no header row.')
-                self.message.information(self, 'Error', 'Data returned is not float. Make sure there is no header row.')
+        filepath = Path(filepath)
+        global selector
+        selector = DADSelector()
+        selector.accept_sig.connect(accept_file)
+
+        try:
+            selector.open(filepath)
+        except Exception as e:
+            logger.critical(f"The following error occurred trying to open {filepath.name}:{str(e)}")
+            self.error.showMessage(f"The following error occurred trying to open {filepath.name}:{str(e)}")
 
     def redraw_az_line(self):
         """
@@ -1077,7 +1053,8 @@ if __name__ == '__main__':
     pg = PEMGetter()
     parser = PEMParser()
     # files = pg.get_pems(folder='PEM Rotation', file='_PU-340 XY.PEM')
-    files = pg.get_pems(folder='Raw Boreholes', number=1, random=True, incl='xy')
+    # files = pg.get_pems(folder='Raw Boreholes', number=1, random=True, incl='xy')
+    files = pg.get_pems(file=r"Raw Boreholes\HOLE STE-21-02\RAW\ste-21-02 xy.pem")
     # files = pg.get_pems(folder='Raw Boreholes', file='XY_0410.PEM')
     # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
 
@@ -1085,6 +1062,7 @@ if __name__ == '__main__':
     win.open(files)
     # dad = r'C:\_Data\2020\Iscaycruz\Borehole\SE-20-02A\RAW\gyro.csv'
     # win.open_dad_file(dad)
+
     # win.az_output_combo.setCurrentIndex(1)
     # win.dip_output_combo.setCurrentIndex(1)
     # win.add_dad(r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Segments\BR01.dad')
