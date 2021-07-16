@@ -1501,6 +1501,7 @@ Warnings</string>
     <addaction name="action3D_Map"/>
     <addaction name="separator"/>
     <addaction name="actionGoogle_Earth"/>
+    <addaction name="actionMake_DXF"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -2080,6 +2081,11 @@ Warnings</string>
   <action name="actionAdd_Mapbox_Token">
    <property name="text">
     <string>Add Mapbox Token</string>
+   </property>
+  </action>
+  <action name="actionMake_DXF">
+   <property name="text">
+    <string>Make DXF</string>
    </property>
   </action>
  </widget>

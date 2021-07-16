@@ -13,7 +13,8 @@ class MagneticFieldCalculator:
     :param: wire: list or DataFrame of wire (loop) coordinates
     """
 
-    def __init__(self, wire):
+    def __init__(self, wire, closed_loop=True):
+        self.closed_loop = closed_loop
         if isinstance(wire, pd.DataFrame):
             # Ensure the loop is not closed
             wire.drop_duplicates(inplace=True)
@@ -66,14 +67,18 @@ class MagneticFieldCalculator:
 
         # Permeability of free space
         u0 = 1.25663706e-6
-
+        pts = np.array([x, y, z])
         # Break the wire into segments (differential elements)
-        loop_diff = np.append(np.diff(self.wire, axis=0), [self.wire[0] - self.wire[-1]], axis=0)
+        if self.closed_loop:
+            loop_diff = np.append(np.diff(self.wire, axis=0), [self.wire[0] - self.wire[-1]], axis=0)
+            loop_shift = np.append(self.wire[1:], [self.wire[0]], axis=0)
+            AP = pts - self.wire
+        else:
+            loop_diff = np.append(np.diff(self.wire, axis=0), [self.wire[0] - self.wire[-1]], axis=0)[:-1]
+            loop_shift = np.append(self.wire[1:], [self.wire[0]], axis=0)[:-1]
+            AP = pts - self.wire[:-1]
 
-        # Calculate the displacement vector for each segment
-        AP = np.array([x, y, z]) - self.wire
-        # Create a shifted copy of AP
-        BP = np.append(AP[1:], [AP[0]], axis=0)
+        BP = pts - loop_shift
 
         # Calculate the square root of the sum of the elements in each row of AP and BP.
         r_AP = np.sqrt((AP ** 2).sum(axis=-1))

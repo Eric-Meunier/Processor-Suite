@@ -652,7 +652,7 @@ class MapPlotter:
     def __init__(self):
         self.label_buffer = [mpl.patheffects.Stroke(linewidth=1.5, foreground='white'), mpl.patheffects.Normal()]
 
-    def plot_loop(self, pem_file, figure, annotate=True, label=True, color='black', zorder=6):
+    def plot_loop(self, pem_file, figure, annotate=True, label=True, color='black', zorder=6, is_mmr=False):
         """
         Plot the loop GPS of a pem_file.
         :param pem_file: PEMFile object
@@ -661,6 +661,7 @@ class MapPlotter:
         :param label: bool, add loop label
         :param color: str, line color
         :param zorder: int, order in which to draw the object (higher number draws it on top of lower numbers)
+        :param is_mmr: bool, whether or not to join the first and last points of the loop coordinates
         :return: loop_handle for legend
         """
 
@@ -704,7 +705,7 @@ class MapPlotter:
         ax = figure.axes[0]
         loop = pem_file.loop
         if not loop.df.empty:
-            loop_gps = loop.get_loop(sorted=False, closed=True)
+            loop_gps = loop.get_loop(sorted=False, closed=(not is_mmr))
             eastings, northings = loop_gps.Easting.to_numpy(), loop_gps.Northing.to_numpy()
 
             # Plot the loop
@@ -1249,6 +1250,8 @@ class PlanMap(MapPlotter):
         for pem_file in self.pem_files:
             # Remove files that aren't the same survey type
             if pem_file.get_survey_type() != survey_type:
+                # User should be suggested that all the files loaded in PEMPro should be the same
+                # type of survey
                 logger.warning(
                     f"{pem_file.filepath.name} is not the correct survey type: {pem_file.get_survey_type()} vs "
                     f"{survey_type}")
@@ -1272,7 +1275,8 @@ class PlanMap(MapPlotter):
                     self.loops.append(pem_file.get_loop().to_string())
                     self.loop_handle = self.plot_loop(pem_file, self.figure,
                                                       annotate=self.annotate_loop,
-                                                      label=self.label_loops)
+                                                      label=self.label_loops,
+                                                      is_mmr=pem_file.is_mmr())
 
         self.format_figure()
         return self.figure
@@ -1534,7 +1538,7 @@ class SectionPlot(MapPlotter):
                 self.p2[0], self.p2[1], self.ax.get_ylim()[1] - (1.1 * section_depth))
 
             wire_coords = self.pem_file.get_loop()
-            mag_calculator = MagneticFieldCalculator(wire_coords)
+            mag_calculator = MagneticFieldCalculator(wire_coords, closed_loop=not self.pem_file.is_mmr())
 
             xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)
 

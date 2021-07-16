@@ -38,6 +38,7 @@ from src.mag_field.mag_dec_widget import MagDeclinationCalculator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py.gps_conversion import GPSConversionWidget
+from src.pem.pem_dxf import PEMDXFDrawing
 from src.qt_py.derotator import Derotator
 from src.qt_py.extractor_widgets import StationSplitter
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
@@ -310,7 +311,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.scale_ca_action = QAction("Scale Coil Area", self)
         self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
         self.scale_ca_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('coil.png'))))
-
+        self.mag_offset_action = QAction("Mag Offset", self)
+        self.mag_offset_action.triggered.connect(lambda: self.mag_offset_lastchn(selected=True))
         # Reversing
         self.reverse_x_component_action = QAction("X Polarity", self)
         self.reverse_x_component_action.triggered.connect(
@@ -446,6 +448,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         def add_mapbox_token():
             token, ok_pressed = QInputDialog.getText(self, "Mapbox Access Token", "Enter Mapbox Access Token:")
             if ok_pressed and token:
+                app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
                 token_file = open(str(app_data_dir.joinpath(".mapbox")), 'w+')
                 token_file.write(token)
                 token_file.close()
@@ -488,6 +491,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionContour_Map.triggered.connect(self.open_contour_map)
         self.action3D_Map.triggered.connect(self.open_3d_map)
         self.actionGoogle_Earth.triggered.connect(lambda: self.save_as_kmz(save=False))
+        self.actionMake_DXF.triggered.connect(self.make_dxf)
 
         # GPS menu
         self.actionExport_All_GPS.triggered.connect(lambda: self.export_gps(selected=False))
@@ -566,7 +570,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             elif col == self.table_columns.index('Current'):
                 try:
-                    value = float(value)
+                    float(value)
                 except ValueError:
                     logger.error(f"{value} is not a number.")
                     self.message.critical(self, 'Invalid Value', f"Current must be a number")
@@ -576,7 +580,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             elif col == self.table_columns.index('Coil\nArea'):
                 try:
-                    value = float(value)
+                    float(value)
                 except ValueError:
                     logger.error(f"{value} is not a number.")
                     self.message.critical(self, 'Invalid Value', f"Coil area Must be a number")
@@ -1121,6 +1125,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.menu.addAction(self.split_action)
                 self.menu.addAction(self.scale_current_action)
                 self.menu.addAction(self.scale_ca_action)
+                self.menu.addAction(self.mag_offset_action)
                 self.menu.addSeparator()
 
                 # Add the reverse data menu
@@ -1157,11 +1162,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.menu.popup(QtGui.QCursor.pos())
 
     def eventFilter(self, source, event):
-        # Clear the selection when clicking away from any file
+        # # Clear the selection when clicking away from any file
         if (event.type() == QtCore.QEvent.MouseButtonPress and
                 source is self.table.viewport() and
                 self.table.itemAt(event.pos()) is None):
             pass
+        #     self.table.clearSelection()
 
         if source == self.table:
             # Change the focus to the table so the 'Del' key works
@@ -1185,6 +1191,16 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         self.table.clearSelection()
                         return True
 
+            # # Attempt to side scroll when Shift scrolling, but doesn't work well.
+            # elif event.type() == QtCore.QEvent.Wheel:
+            #     if event.modifiers() == QtCore.Qt.ShiftModifier:
+            #         pos = self.table.horizontalScrollBar().value()
+            #         if event.angleDelta().y() < 0:  # Wheel moved down so scroll to the right
+            #             self.table.horizontalScrollBar().setValue(pos + 20)
+            #         else:
+            #             self.table.horizontalScrollBar().setValue(pos - 20)
+            #         return True
+
         return super(QWidget, self).eventFilter(source, event)
 
     def dragEnterEvent(self, e):
@@ -1196,17 +1212,23 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         file being dragged, and which widget they are being dragged onto.
         :param e: PyQT event
         """
-        urls = [Path(url.toLocalFile()) for url in e.mimeData().urls()]
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
 
         # PEM, DMP, and DUMP folders can be opened with no PEM files currently opened.
-        # PEM and DMP files
-        if all([file.suffix.lower() in ['.pem'] or file.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
+        # PEM files
+        if all([Path(file).suffix.lower() in ['.pem'] for file in urls]):
+            if e.answerRect().intersects(self.table.geometry()):
+                e.acceptProposedAction()
+                return
+
+        # DMP files
+        elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
             if e.answerRect().intersects(self.table.geometry()):
                 e.acceptProposedAction()
                 return
 
         # Dump folder
-        elif len(urls) == 1 and (urls[0].is_dir() or urls[0].suffix.lower() in ['.zip', '.7z', '.rar']):
+        elif len(urls) == 1 and (Path(urls[0]).is_dir() or Path(urls[0]).suffix.lower() in ['.zip', '.7z', '.rar']):
             e.acceptProposedAction()
             return
 
@@ -1222,7 +1244,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                              current_piw.geometry_tab]
 
             # GPS files
-            if all([file.suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
+            if all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
                 if all([e.answerRect().intersects(self.piw_frame.geometry()),
                         current_piw.tabs.currentWidget() in eligible_tabs,
                         self.pem_files]):
@@ -1230,14 +1252,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     return
 
             # RI files
-            elif all([file.suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
+            elif all([Path(file).suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
                 if all([e.answerRect().intersects(self.piw_frame.geometry()),
                         current_piw.tabs.currentWidget() == current_piw.ri_tab,
                         self.pem_files]):
                     e.acceptProposedAction()
                     return
 
-            elif all([file.suffix.lower() in ['.inf', '.log', '.gpx'] for file in urls]):
+            elif all([Path(file).suffix.lower() in ['.inf', '.log', '.gpx'] for file in urls]):
                 if e.answerRect().intersects(self.project_crs_box.geometry()):
                     e.acceptProposedAction()
                     return
@@ -1246,28 +1268,24 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 e.ignore()
 
     def dropEvent(self, e):
-        urls = [Path(url.toLocalFile()) for url in e.mimeData().urls()]
+        urls = [url.toLocalFile() for url in e.mimeData().urls()]
 
-        if all([file.suffix.lower() in ['.pem'] or
-                file.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']
-                for file in urls]):
-            pem_files = [url for url in urls if url.suffix.lower() == '.pem']
-            dmp_files = [url for url in urls if url.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']]
-            if pem_files:
-                self.add_pem_files(pem_files)
-            if dmp_files:
-                self.add_dmp_files(dmp_files)
+        if all([Path(file).suffix.lower() in ['.pem'] for file in urls]):
+            self.add_pem_files(urls)
 
-        elif all([file.suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
+        elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
+            self.add_dmp_files(urls)
+
+        elif all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
             self.add_gps_files(urls)
 
-        elif all([file.suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
+        elif all([Path(file).suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
             self.add_ri_file(urls)
 
-        elif all([file.suffix.lower() in ['.inf', '.log'] for file in urls]):
+        elif all([Path(file).suffix.lower() in ['.inf', '.log'] for file in urls]):
             self.read_inf_file(urls[0])
 
-        elif len(urls) == 1 and (urls[0].is_dir() or urls[0].suffix.lower() in ['.zip', '.7z', '.rar']):
+        elif len(urls) == 1 and (Path(urls[0]).is_dir() or Path(urls[0]).suffix.lower() in ['.zip', '.7z', '.rar']):
             self.open_unpacker(folder=urls[0])
 
     def is_opened(self, file):
@@ -1432,13 +1450,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
 
-        t = time.time()
-
         count = 0
         parser = PEMParser()
         self.table.blockSignals(True)
         self.allow_signals = False
         self.table.setUpdatesEnabled(False)  # Suspends the animation of the table getting populated
+        current_crs = self.get_crs()
         # Start the progress bar
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
@@ -1484,7 +1501,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     # Update project CRS
                     pem_crs = pem_file.get_crs()
                     if pem_crs is not None:
-                        current_crs = self.get_crs()
                         if current_crs is None:
                             self.set_crs(pem_crs)
                         else:
@@ -1518,7 +1534,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.table.horizontalHeader().show()
         self.status_bar.showMessage(f"{count} PEM files opened.", 2000)
 
-        print(f"PEM files opened after {time.time() - t:.2f}s.")
         bar.deleteLater()
 
     def add_gps_files(self, gps_files):
@@ -1974,7 +1989,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         Open the MapboxViewer if there's any GPS in any of the opened PEM files.
         """
         if not self.get_crs():
-            self.message.information(self, 'Error', 'No CRS selected.')
+            self.status_bar.showMessage(f"No CRS selected.", 2000)
             return
 
         global tile_map
@@ -1982,7 +1997,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if not self.pem_files:
             logger.warning(f"No PEM files opened.")
-            self.status_bar.showMessage(f"No PEM files opened.", 1500)
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
 
         elif not any([f.has_any_gps() for f in self.pem_files]):
             logger.warning(f"No GPS found in any file.")
@@ -2375,6 +2390,31 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         ss = StationSplitter(pem_file, parent=self)
         ss.show()
 
+    def make_dxf(self):
+        pem_files = self.get_pem_files(selected=True)[0]
+        if not pem_files:
+            logger.warning(f"No PEM files selected.")
+            self.status_bar.showMessage(f"No PEM files selected.", 2000)
+            return
+
+        choices = ("Loop", "Survey Line/Borehole", "Both")
+        choice, ok = QInputDialog.getItem(self, "DXF", "DXF Plot Options", choices, 0, False)
+        # Escape statement
+        if not ok: return
+
+        for pf in pem_files:
+            pf: PEMFile
+            dwg = PEMDXFDrawing()
+            if choice == "Loop" or choice == "Both" and not pf.loop.df.empty:
+                dwg.add_loop(pf)
+            if choice == "Survey Line/Borehole" or choice == "Both":
+                # Check if the pem even has a loaded segment or line
+                if not pf.segments.df.empty or not pf.line.df.empty:
+                    dwg.add_surveyline(pf)
+            # We'll just save it out to the input DIR
+            outpath = os.path.splitext(pf.filepath)[0] + ".dxf"
+            dwg.save_dxf(outpath)
+
     def project_dir_changed(self, model):
         """
         Signal slot, changes the project director to the path clicked in the project_tree
@@ -2692,7 +2732,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Create a copy of the PEM file, then update the copy
             new_pem = pem_file.copy()
             new_pem.filepath = Path(save_path)
-            new_pem.save(legacy='legacy' in save_type.lower(), processed='processed' in save_type.lower(), rename=False)
+            new_pem.save(legacy='legacy' in save_type.lower(), processed='processed' in save_type.lower())
 
             self.status_bar.showMessage(f'Save Complete. PEM file saved as {new_pem.filepath.name}', 2000)
 
@@ -2974,10 +3014,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             logger.error(f"No PEM files opened.")
             return
 
-        rename = False
         # Make sure there's a valid CRS when doing a final export
         if processed is True:
-            rename = True
             crs = self.get_crs()
             if not crs:
                 response = self.message.question(self, 'Invalid CRS',
@@ -3028,7 +3066,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 logger.info(f"Exporting {file_name}.")
 
                 pem_file.filepath = Path(file_dir).joinpath(file_name)
-                pem_file.save(legacy=legacy, processed=processed, rename=rename)
+                pem_file.save(legacy=legacy, processed=processed)
                 dlg += 1
 
         self.fill_pem_list()
@@ -3661,6 +3699,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         else:
             return None
 
+
     def read_inf_file(self, inf_file):
         """
         Parses a .INF file to extract the CRS information in ti and set the CRS drop-down values.
@@ -3682,14 +3721,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         if crs:
             name = crs.name
             logger.debug(F"Setting project CRS to {name}.")
-            self.epsg_edit.setText(str(crs.to_epsg()))
 
             if name == 'WGS 84':
                 datum = 'WGS 1984'
                 system = 'Lat/Lon'
                 zone = None
 
-            elif 'UTM' in name and 'NAD' in name:
+            elif 'UTM' in name:
                 system = 'UTM'
                 sc = name.split(' / ')
                 datum = re.sub(r'\s+', '', sc[0])  # Remove any spaces
@@ -3708,8 +3746,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 north = 'North' if zone[-1] == 'N' else 'South'
                 zone = f'{zone_number} {north}'
             else:
-                # For all other datums and systems, us the EPSG edit box.
-                self.epsg_rbtn.click()
+                logger.info(f"{name} parsing is not currently implemented.")
                 return
 
             self.gps_system_cbox.setCurrentText(system)
@@ -3833,7 +3870,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             return
 
         if not coil_area:
-            default = int(pem_files[0].coil_area)
+            default = pem_files[0].coil_area
             coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", value=default)
             # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", QLineEdit.Normal, default)
             # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", default, -1e6, 1e6, 50)
@@ -3872,7 +3909,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        default = float(pem_files[0].current)
+        default = pem_files[0].current
         current, ok_pressed = QInputDialog.getDouble(self, "Scale Current", "Current:", default)
         if ok_pressed:
             bar = CustomProgressBar()
@@ -3892,6 +3929,34 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             bar.deleteLater()
             self.status_bar.showMessage(f"Process complete. "
                                         f"Current of {len(pem_files)} PEM files scaled to {current}.", 2000)
+    def mag_offset_lastchn(self, selected=False):
+        """
+        Mag offset to the last channel
+        """
+        pem_files, rows = self.get_pem_files(selected=selected)
+
+        if not pem_files:
+            logger.warning(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+
+        with pg.ProgressDialog(f'Mag offsetting to last channel...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle(f'Mag offset')
+
+            for pem_file, row in zip(pem_files, rows):
+                dlg.setLabelText(f"Mag offsetting data of {pem_file.filepath.name}")
+                pem_file: PEMFile
+                pem_file = pem_file.mag_offset_last()
+                self.refresh_pem(pem_file)
+                dlg += 1
+
+        bar.deleteLater()
+        self.status_bar.showMessage(f"Process complete. "
+                                    f"Mag offset of {len(pem_files)} PEM file(s) complete.", 2000)
 
     def reverse_component_data(self, comp, selected=False):
         """
@@ -3922,6 +3987,36 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. "
                                     f"{comp.upper()} of {len(pem_files)} PEM file(s) reversed.", 2000)
+
+    def offset_mag_last(self, selected=False):
+        """
+        Subtract the last channel from the entire decay
+        This will remove all amplitude information from the PEM!
+        :param selected: bool, only use selected PEMFiles or not.
+        """
+        pem_files, rows = self.get_pem_files(selected=selected)
+
+        if not pem_files:
+            logger.warning(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
+        bar = CustomProgressBar()
+        bar.setMaximum(len(pem_files))
+
+        with pg.ProgressDialog(f'Offsetting readings by last channel...', 0, len(pem_files)) as dlg:
+            dlg.setBar(bar)
+            dlg.setWindowTitle(f'Offsetting reading')
+
+            for pem_file, row in zip(pem_files, rows):
+                dlg.setLabelText(f"Offsetting data of {pem_file.filepath.name} by last channel")
+                pem_file: PEMFile
+                pem_file = pem_file.mag_offset_last()
+                self.refresh_pem(pem_file)
+                dlg += 1
+
+        bar.deleteLater()
+        self.status_bar.showMessage("Mag offset process complete. ", 2000)
 
     def reverse_station_order(self, selected=False):
         pem_files, rows = self.get_pem_files(selected=selected)
@@ -4315,7 +4410,6 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         self.pem_files = []
         self.ri_files = []
         self.crs = None
-        self.printer = None
 
         self.plan_map_options = PlanMapOptions(parent=self)
         self.message = QMessageBox()
@@ -4429,8 +4523,9 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         if save_dir:
 
             save_dir = os.path.splitext(save_dir)[0]
-            self.printer = PEMPrinter(**plot_kwargs)
-            self.printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
+            global printer
+            printer = PEMPrinter(**plot_kwargs)
+            printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
             self.hide()
         else:
             logger.error(f"No file name passed.")
@@ -4584,13 +4679,9 @@ class ChannelTimeViewer(QMainWindow):
         self.df = pd.DataFrame()
         self.text_format = ""
 
-        self.table = pg.TableWidget()
-
         # Format window
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
-        self.layout().addWidget(self.table)
-        self.setCentralWidget(self.table)
 
         self.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
         self.resize(600, 600)
@@ -4616,23 +4707,16 @@ class ChannelTimeViewer(QMainWindow):
         self.statusBar().addPermanentWidget(self.units_combo)
         self.statusBar().show()
 
-        # Right-click menu
-        self.table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-        # self.table.viewport().installEventFilter(self)
-        self.table.installEventFilter(self)
-        self.menu = QMenu(self.table)
-        delete_action = QAction('Delete', self)
-        delete_action.triggered.connect(self.delete_channel)
-        self.menu.addAction(delete_action)
-
         # Format table
+        self.table = pg.TableWidget()
+        self.layout().addWidget(self.table)
+        self.setCentralWidget(self.table)
+
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setFrameStyle(QFrame.NoFrame)
 
         # Signals
-        self.table.cellDoubleClicked.connect(self.change_remove_flag)
         self.units_combo.currentTextChanged.connect(self.fill_channel_table)
         self.copy_table_action = QShortcut("Ctrl+C", self)
         self.copy_table_action.activated.connect(self.copy_table)
@@ -4643,14 +4727,6 @@ class ChannelTimeViewer(QMainWindow):
         self.close_request.emit(self)
         e.accept()
         self.deleteLater()
-
-    def contextMenuEvent(self, event):
-        print(f"Table right-clicked.")
-        self.menu.popup(QtGui.QCursor.pos())
-
-    def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Delete:
-            self.delete_channel()
 
     def copy_table(self):
         df = self.df.loc[:, "Start":"Width"].copy()
@@ -4734,36 +4810,6 @@ class ChannelTimeViewer(QMainWindow):
         self.table.resizeRowsToContents()
 
         color_table()
-
-    def delete_channel(self):
-        """
-        Delete a channel from the table and the EM data.
-        :return: None
-        """
-        print("Deleting channels")
-        selected_rows = [model.row() for model in self.table.selectionModel().selectedRows()]
-        if selected_rows:
-            self.pem_file.channel_times = self.pem_file.channel_times.drop(selected_rows).reset_index(drop=True)
-            self.pem_file.number_of_channels = len(self.pem_file.channel_times)
-            self.pem_file.data.Reading = self.pem_file.data.Reading.map(lambda x: np.delete(x, selected_rows))
-            self.fill_channel_table()
-
-    def change_remove_flag(self, row, col):
-        print(f"Changing remove flag of row {row}")
-        self.df.loc[row, "Remove"] = not self.df.loc[row, "Remove"]
-
-        if self.units_combo.currentText() == 'µs':
-            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] / 1000000
-            self.text_format = '%0.0f'
-        elif self.units_combo.currentText() == 'ms':
-            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] / 1000
-            self.text_format = '%0.3f'
-        else:
-            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width']
-            self.text_format = '%0.6f'
-
-        self.pem_file.channel_times = self.df
-        self.fill_channel_table()
 
 
 class SuffixWarningViewer(QMainWindow):
@@ -4903,16 +4949,10 @@ def main():
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
-    # ch = ChannelTimeViewer(pem_files[0])
-    # ch.show()
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
-    # pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L/RAW/800E.PEM")
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"HOLE STE-21-02/RAW/ste-21-02 xy.PEM")
-    pem_files = [pem_parser.parse(r"C:\_Data\2021\TMC\Loop L\RAW\_100_0601.PEM")]
-    # pem_2 = pem_parser.parse(r"C:\_Data\2021\Iscaycruz\Surface\Champapata\Loop 1\RAW\4N_0620.PEM")
-    # pem_files = [pem_1, pem_2]
-    # pem_files = pem_g.get_pems(number=3, random=True)
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
+    pem_files = pem_g.get_pems(number=3, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -4922,9 +4962,8 @@ def main():
     # mw.open_project_dir()
     mw.add_pem_files(pem_files)
     # mw.add_dmp_files([dmp_files])
-    mw.table.selectRow(0)
-    # mw.table.selectAll()
-    # mw.save_pem_file_as()
+    # mw.table.selectRow(0)
+    mw.table.selectAll()
     # mw.open_pem_merger()
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
@@ -4932,9 +4971,8 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Raw Boreholes\LS-27-21-07\RAW\DDH-LS-27-21-07-in.xlsx")])
-    # gps_files = [samples_folder.joinpath(r"Raw Boreholes/HOLE STE-21-02/RAW/3-Forage_2021_Coordonnées.xlsx")]
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"TMC\Loop G\GPS\L100E_16.gpx")])
     # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
     # mw.add_gps_files(gps_files)
 

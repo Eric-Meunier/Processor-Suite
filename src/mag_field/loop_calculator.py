@@ -258,13 +258,13 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
         self.max_current_power_label.setText(f"{current_by_power:.1f}V")
         self.max_current_label.setText(f"{max_current:.1f}V")
 
-    def calculate_mag(self):
+    def calculate_mag(self, closed_loop=True):
         """
         Calculate and plot the magnetic field strength value of the Z component for a range of distances from the
         loop edge.
         """
         loop_coords = self.get_loop()
-        calculator = MagneticFieldCalculator(loop_coords)
+        calculator = MagneticFieldCalculator(loop_coords, closed_loop=closed_loop)
 
         # TODO At loop edge z component reading is worse than when using elev. of 0.001
         # Create a list of positions that range from 5m from the loop edge (at the loop length half-way point) to 100m

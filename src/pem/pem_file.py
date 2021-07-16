@@ -365,6 +365,12 @@ class PEMFile:
         else:
             return False
 
+    def is_mmr(self):
+        # This is hacky as hell but currently our RX dumps the BH files as type BH-Flux so we just hope the
+        # operator puts mmr or dipole somewhere in the loop name
+        # TODO We need a fileheader survey type for MMR
+        return 'mmr' in self.loop_name.casefold() or 'dipole' in self.loop_name.casefold()
+
     def has_collar_gps(self):
         if self.is_borehole():
             if not self.collar.df.dropna().empty and all(self.collar.df):
@@ -1233,6 +1239,25 @@ class PEMFile:
 
         return self
 
+    def remove_channels(self, n: [int]):
+        """
+        Remove n channels from the PEMFile
+        :return: PEM file object
+        """
+        logger.info(f"Removing channel(s) {n} for {self.filepath.name}.")
+
+        # Delete the channels from each reading
+        for i, r in enumerate(self.data.Reading):
+            self.data.Reading[i] = np.delete(r, n)
+
+        # Create a filter and update the channels table
+        self.channel_times.drop(n, inplace=True)
+        self.channel_times.reset_index(drop=True, inplace=True)
+        # Update the PEM file's number of channels attribute
+        self.number_of_channels = len(self.channel_times)
+
+        return self
+
     def scale_coil_area(self, coil_area):
         """
         Scale the data by a change in coil area
@@ -1290,6 +1315,21 @@ class PEMFile:
         self.total_scale_factor += factor
 
         self.notes.append(f'<HE3> Data scaled by factor of {1 + factor}')
+        return self
+
+    def mag_offset_last(self):
+        """
+        Subtract the last channel from the entire decay
+        This will remove all amplitude information from the PEM!
+        :return: PEMFile object, self with data scaled
+        """
+
+        for i in range(len(self.data.Reading)):
+            self.data.Reading[i] -= self.data.Reading[i][-1]
+            self.data.Reading[i][-1] = np.average(self.data.Reading[i][-7:])
+        logger.info(f"Data in {self.filepath.name} offset by last reading - Amplitude information lost")
+
+        self.notes.append('<HE3> DECAY SHIFTED TO FORCE LAST CHN = 0')
         return self
 
     def reverse_component(self, component):
@@ -1581,7 +1621,7 @@ class PEMFile:
             loop = self.get_loop(sorted=False, closed=False)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6
-            mag_calc = MagneticFieldCalculator(loop)
+            mag_calc = MagneticFieldCalculator(loop, closed_loop=not self.is_mmr())
 
             # Only keep off-time channels with PP
             ch_times = self.channel_times[~self.channel_times.Remove.astype(bool)]
@@ -2953,7 +2993,7 @@ class PEMSerializer:
         elif survey_type == 'Borehole Fluxgate':
             survey_str = 'BH-Flux'
         elif survey_type == 'SQUID':
-            survey_str = 'SQUID'
+            survey_str = 'S-SQUID'
         else:
             raise ValueError(f"{survey_type} is not a valid survey type.")
 

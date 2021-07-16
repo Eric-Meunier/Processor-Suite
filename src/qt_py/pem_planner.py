@@ -1660,6 +1660,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             """
             corners = self.selected_loop.get_loop_coords()
             wire_coords = [(c.x(), c.y(), 0) for c in corners]
+            # TODO This won't catch MMR C Loops because there is no PEMFile to reference
             mag_calculator = MagneticFieldCalculator(wire_coords)
             xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)
             self.ax.quiver(xx, zz, plotx, plotz,
