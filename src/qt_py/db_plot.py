@@ -41,7 +41,7 @@ class DBPlotter(QMainWindow):
 
         # Format the window
         self.setWindowTitle("DB Plot v" + str(__version__))
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'db_plot 32.png')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'db_plot.png')))
         self.resize(800, 700)
         self.setAcceptDrops(True)
 
@@ -80,14 +80,17 @@ class DBPlotter(QMainWindow):
         self.file_menu = QMenu("File", self)
         self.view_menu = QMenu("View", self)
 
-        self.open_file_action = QAction('Open', self.file_menu)
-        self.open_file_action.triggered.connect(self.open_file_dialog)
+        self.openFile_Action = QAction('Open File', self.file_menu)
+        self.openFile_Action.triggered.connect(self.open_file_dialog)
+        self.openFile_Action.setIcon(QtGui.QIcon(str(icons_path.joinpath("open.png"))))
         self.actionSave_Screenshot = QAction("Save Screenshot")
         self.actionSave_Screenshot.setShortcut("Ctrl+S")
+        self.actionSave_Screenshot.triggered.connect(self.save_img)
+        self.actionSave_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("save_as.png"))))
         self.actionCopy_Screenshot = QAction("Copy Screenshot")
         self.actionCopy_Screenshot.setShortcut("Ctrl+C")
-        self.actionSave_Screenshot.triggered.connect(self.save_img)
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
+        self.actionCopy_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("copy.png"))))
 
         self.show_lr_action = QtGui.QAction('Show Sliding Window', self.view_menu, checkable=True)
         self.show_lr_action.setChecked(True)
@@ -99,7 +102,7 @@ class DBPlotter(QMainWindow):
         self.show_symbols_action.setShortcut('s')
         self.show_symbols_action.triggered.connect(toggle_symbols)
 
-        self.file_menu.addAction(self.open_file_action)
+        self.file_menu.addAction(self.openFile_Action)
         self.file_menu.addSeparator()
         self.file_menu.addActions([self.actionCopy_Screenshot, self.actionSave_Screenshot])
         self.view_menu.addAction(self.show_lr_action)

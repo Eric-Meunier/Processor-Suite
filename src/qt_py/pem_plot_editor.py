@@ -337,14 +337,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         else:
             self.cycle_station('up')
 
-    # This was causing the scroll event to occur twice and skip stations as a result
-    # def wheelEvent(self, evt):
-    #     y = evt.angleDelta().y()
-    #     if y < 0:
-    #         self.cycle_station('down')
-    #     else:
-    #         self.cycle_station('up')
-
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
         if all([url.lower().endswith('pem') for url in urls]):

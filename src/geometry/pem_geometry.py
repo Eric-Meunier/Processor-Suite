@@ -20,14 +20,9 @@ from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
 from src.ui.pem_geometry import Ui_PEMGeometry
 from src.qt_py.gps_adder import DADSelector
+from src.qt_py import icons_path
 
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath("ui\\icons")
 
 
 class PEMGeometry(QMainWindow, Ui_PEMGeometry):
@@ -141,7 +136,15 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
         # Signals
         self.actionOpen_Geometry_File.triggered.connect(self.open_file_dialog)
+        self.actionOpen_Geometry_File.setIcon(QtGui.QIcon(str(icons_path.joinpath("open.png"))))
         self.actionAllow_Negative_Azimuth.triggered.connect(lambda: self.plot_tool_values(update=True))
+
+        self.actionSave_Screenshot.setShortcut("Ctrl+S")
+        self.actionSave_Screenshot.triggered.connect(self.save_img)
+        self.actionSave_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.actionCopy_Screenshot.setShortcut("Ctrl+C")
+        self.actionCopy_Screenshot.triggered.connect(self.copy_img)
+        self.actionCopy_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("copy.png"))))
 
         self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.update_plots)
@@ -186,6 +189,18 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             self.open_seg_file(file)
         else:
             self.open_dad_file(file)
+
+    def save_img(self):
+        """Save an image of the window """
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
+        if save_name:
+            self.grab().save(save_name)
+            self.status_bar.showMessage(f"Image saved.", 1500)
+
+    def copy_img(self):
+        """Take an image of the window and copy it to the clipboard"""
+        QApplication.clipboard().setPixmap(self.grab())
+        self.status_bar.showMessage(f"Image saved to clipboard.", 1500)
 
     def open_file_dialog(self):
         """
