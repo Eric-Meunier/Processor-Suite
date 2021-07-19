@@ -59,7 +59,6 @@ __version__ = '0.11.6'
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Look into slowness when changing station number and such in pem plot editor
-# TODO Add calender to PEM/DMP filter
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
@@ -2464,15 +2463,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             # Filter the GPS files by file name
             include_files = strip(self.gps_list_filter.include_files_edit.text().split(','))
-            # logger.info(f"Include files: {include_files}")
             exclude_files = strip(self.gps_list_filter.exclude_files_edit.text().split(','))
-            # logger.info(f"Include files: {exclude_files}")
 
             # Filter the GPS files by folder names
             include_folders = strip(self.gps_list_filter.include_folders_edit.text().split(','))
-            # logger.info(f"Include folders: {include_folders}")
             exclude_folders = strip(self.gps_list_filter.exclude_folders_edit.text().split(','))
-            # logger.info(f"Exclude folders: {exclude_folders}")
+
+            # Filter by date
+            if self.gps_list_filter.date_filter_cbox.isChecked():
+                date = self.gps_list_filter.calendar.selectedDate()
+                date_str = f'_{date.month():02d}{date.day():02d}'
+                filtered_gps = [p for p in filtered_gps if date_str in str(p.name)]
 
             # Inclusive files
             if any(include_files):
@@ -2574,6 +2575,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Filter the PEM files by folder names
             include_folders = strip(self.pem_list_filter.include_folders_edit.text().split(','))
             exclude_folders = strip(self.pem_list_filter.exclude_folders_edit.text().split(','))
+
+            # Filter by date
+            if self.pem_list_filter.date_filter_cbox.isChecked():
+                date = self.pem_list_filter.calendar.selectedDate()
+                date_str = f'_{date.month():02d}{date.day():02d}'
+                filtered_pems = [p for p in filtered_pems if date_str in str(p.name)]
 
             # Inclusive files
             if any(include_files):
@@ -4200,6 +4207,9 @@ class PathFilter(QWidget):
         self.exclude_files_edit = QLineEdit('DTL, exp, Correct' if self.filetype == 'GPS' else '')
         self.exclude_files_edit.setToolTip("Separate items with commas [,]")
 
+        self.date_filter_cbox = QCheckBox("Filter by date")
+        self.calendar = QCalendarWidget()
+
         self.include_folders_edit = QLineEdit('GPS' if self.filetype == 'GPS' else '')
         self.include_folders_edit.setToolTip("Separate items with commas [,]")
 
@@ -4233,6 +4243,8 @@ class PathFilter(QWidget):
         files_gbox.setLayout(QFormLayout())
         files_gbox.layout().addRow(QLabel("Include:"), self.include_files_edit)
         files_gbox.layout().addRow(QLabel("Exclude:"), self.exclude_files_edit)
+        files_gbox.layout().addRow(self.date_filter_cbox)
+        files_gbox.layout().addRow(self.calendar)
 
         self.layout().addRow(files_gbox)
 
@@ -4936,7 +4948,7 @@ def main():
     mw.add_pem_files(pem_files)
     # mw.add_dmp_files([dmp_files])
     # mw.table.selectRow(0)
-    mw.table.selectAll()
+    # mw.table.selectAll()
     # mw.open_pem_merger()
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
@@ -4950,6 +4962,7 @@ def main():
     # mw.add_gps_files(gps_files)
 
     mw.show()
+    mw.pem_list_filter.show()
 
     app.exec_()
 
