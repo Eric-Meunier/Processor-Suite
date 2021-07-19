@@ -57,7 +57,6 @@ logger = logging.getLogger(__name__)
 __version__ = '0.11.6'
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create a theory vs measured plot (similar to step)
-# TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Look into slowness when changing station number and such in pem plot editor
 
 
@@ -3704,11 +3703,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 logger.error(f"{e}.")
                 self.error.showMessage(f"Invalid EPSG code: {str(e)}")
             else:
-                logger.info(f"Project CRS: {crs.name}")
+                logger.debug(f"Project CRS: {crs.name}")
                 return crs
         else:
             return None
-
 
     def read_inf_file(self, inf_file):
         """
@@ -3719,9 +3717,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         coord_sys = crs_dict.get('System')
         coord_zone = crs_dict.get('Zone')
         datum = crs_dict.get('Datum')
-        self.gps_system_cbox.setCurrentText(coord_sys)
-        self.gps_datum_cbox.setCurrentText(datum)
-        self.gps_zone_cbox.setCurrentText(coord_zone)
+        if all([coord_sys in [self.gps_system_cbox.itemText(i) for i in range(self.gps_system_cbox.count())],
+                coord_zone in [self.gps_zone_cbox.itemText(i) for i in range(self.gps_zone_cbox.count())],
+                datum in [self.gps_datum_cbox.itemText(i) for i in range(self.gps_datum_cbox.count())]]):
+            self.gps_system_cbox.setCurrentText(coord_sys)
+            self.gps_datum_cbox.setCurrentText(datum)
+            self.gps_zone_cbox.setCurrentText(coord_zone)
 
     def set_crs(self, crs):
         """
@@ -3730,7 +3731,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         if crs:
             name = crs.name
-            logger.debug(F"Setting project CRS to {name}.")
+            logger.debug(F"Setting project CRS to {name} (EPSG {crs.to_epsg()}).")
+            self.epsg_edit.setText(str(crs.to_epsg()))
 
             if name == 'WGS 84':
                 datum = 'WGS 1984'
@@ -3748,7 +3750,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 elif datum == 'NAD27':
                     datum = 'NAD 1927'
                 else:
-                    logger.error(f"{datum} has not been implemented for PEMPro.")
+                    self.epsg_rbtn.click()
                     return
 
                 zone = sc[1].split(' ')[-1]

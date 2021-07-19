@@ -584,6 +584,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         pems = [self.pf1, self.pf2]
         merged_pem = pems[0].copy()
         merged_pem.data = pd.concat([pem_file.data for pem_file in pems], axis=0, ignore_index=True)
+        merged_pem.number_of_readings = len(merged_pem.data)
         merged_pem.notes = list(np.unique(np.concatenate([pem_file.notes for pem_file in pems])))
 
         merged_pem.loop = TransmitterLoop(
@@ -603,7 +604,6 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
             merged_pem.line = SurveyLine(
                 pd.concat([pem_file.get_line() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
 
-        merged_pem.number_of_readings = sum([f.number_of_readings for f in pems])
         merged_pem.is_merged = True
 
         return merged_pem
