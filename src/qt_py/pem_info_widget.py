@@ -12,7 +12,7 @@ import pandas as pd
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QFileDialog,
                                QErrorMessage, QHeaderView, QApplication)
-from src.qt_py import clear_table
+from src.qt_py import clear_table, read_file
 from src.geometry.pem_geometry import PEMGeometry
 from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
@@ -363,12 +363,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                             return contents
 
                     else:
-                        with open(file, 'rb') as byte_file:
-                            byte_content = byte_file.read()
-                            encoding = chardet.detect(byte_content).get('encoding')
-                            logger.info(f"Using {encoding} encoding.")
-                            str_contents = byte_content.decode(encoding=encoding)
-                            contents = [c.strip().split() for c in str_contents.splitlines()]
+                        contents = read_file(file)
 
                 merged_file.extend(contents)
             return merged_file

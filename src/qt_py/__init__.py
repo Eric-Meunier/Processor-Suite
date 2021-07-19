@@ -1,5 +1,6 @@
 import os
 import sys
+import chardet
 from pathlib import Path
 
 import numpy as np
@@ -7,6 +8,7 @@ import pyqtgraph as pg
 from PySide2 import QtCore
 from PySide2.QtGui import QPixmap, QIcon
 from PySide2.QtWidgets import QProgressBar
+from src.logger import logger
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
 if getattr(sys, 'frozen', False):
@@ -79,6 +81,16 @@ def clear_table(table):
     while table.rowCount() > 0:
         table.removeRow(0)
     table.blockSignals(False)
+
+
+def read_file(file):
+    with open(file, 'rb') as byte_file:
+        byte_content = byte_file.read()
+        encoding = chardet.detect(byte_content).get('encoding')
+        logger.info(f"Using {encoding} encoding for {Path(str(file)).name}.")
+        str_contents = byte_content.decode(encoding=encoding)
+    contents = [c.strip().split() for c in str_contents.splitlines()]
+    return contents
 
 
 class CustomProgressBar(QProgressBar):

@@ -67,9 +67,11 @@ class MapboxViewer(QMainWindow):
         self.save_img_action = QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
         self.save_img_action.triggered.connect(self.save_img)
+        self.save_img_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("save_as.png"))))
         self.copy_image_action = QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
         self.copy_image_action.triggered.connect(self.copy_img)
+        self.copy_image_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("copy.png"))))
 
         self.file_menu = self.menuBar().addMenu('&File')
         self.file_menu.addAction(self.save_img_action)
@@ -558,6 +560,15 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         self.colormap = custom_cmap
 
         """Signals"""
+        self.save_img_action = QAction('Save Image')
+        self.save_img_action.setShortcut("Ctrl+S")
+        self.save_img_action.triggered.connect(self.save_img)
+        self.save_img_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.copy_image_action = QAction('Copy Image')
+        self.copy_image_action.setShortcut("Ctrl+C")
+        self.copy_image_action.triggered.connect(self.copy_img)
+        self.copy_image_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("copy.png"))))
+
         self.channel_spinbox.valueChanged.connect(lambda: self.draw_map(self.figure))
         self.z_rbtn.clicked.connect(lambda: self.draw_map(self.figure))
         self.x_rbtn.clicked.connect(lambda: self.draw_map(self.figure))
@@ -583,6 +594,23 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
     def closeEvent(self, e):
         e.accept()
         self.deleteLater()
+
+    def save_img(self):
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
+                                                           'map.png',
+                                                           'PNG file (*.PNG);; PDF file (*.PDF)'
+                                                           )
+        if save_name:
+            if 'PDF' in save_type:
+                self.map_widget.page().printToPdf(save_name)
+            else:
+                self.grab().save(save_name)
+
+    def copy_img(self):
+        QApplication.clipboard().setPixmap(self.grab())
+        # self.status_bar.show()
+        self.status_bar.showMessage('Image copied to clipboard.', 1000)
+        # QTimer.singleShot(1000, lambda: self.status_bar.hide())
 
     @staticmethod
     def get_figure():

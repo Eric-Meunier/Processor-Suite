@@ -15,6 +15,7 @@ def mutate_attr_catch(ufunc):
         return None
     return wrapper
 
+
 class MMRFile(PEMFile):
     def __init__(self):
         super(MMRFile, self).__init__()
@@ -74,7 +75,6 @@ class MMRFile(PEMFile):
         mag = MagneticFieldCalculator(self.loop.df, closed_loop=False)
         return mag.calc_total_field(x, y, z)
 
-
     def calc_harmonics(self):
         pass
 
@@ -90,4 +90,3 @@ if __name__ == "__main__":
     import numpy as np
     a = MMRFile.from_pemlike(r"C:\Users\Norm\Documents\GitHub\Crone\sample_files\MMR\64TOT.PEM")
     print(a.BField(1, 1, 1))
-    pass

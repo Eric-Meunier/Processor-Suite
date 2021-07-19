@@ -1,7 +1,8 @@
 import pandas as pd
 
-import src.sdxf as sdxf
+import src.dxf.sdxf as sdxf
 from src.pem.pem_file import PEMFile
+
 
 class DXFDrawing:
     def __init__(self):
@@ -21,7 +22,7 @@ class DXFDrawing:
         self.drawing.layers.append(sdxf.Layer(color=7))
         i = 1
         while i < len(xs):
-            self.drawing.append(sdxf.Line(points=[(xs[i], ys[i]), (xs[i-1], ys[i-1])], **kwargs))
+            self.drawing.append(sdxf.Line(points=[(xs[i], ys[i]), (xs[i - 1], ys[i - 1])], **kwargs))
             i += 1
 
         if closed_poly:
@@ -36,6 +37,7 @@ class DXFDrawing:
         # We don't want to save an empty file
         if self.features > 0:
             self.drawing.saveas(out_path)
+
 
 class PEMDXFDrawing(DXFDrawing):
     def __init__(self):

@@ -1317,19 +1317,26 @@ class PEMFile:
         self.notes.append(f'<HE3> Data scaled by factor of {1 + factor}')
         return self
 
-    def mag_offset_last(self):
+    def mag_offset(self):
         """
         Subtract the last channel from the entire decay
         This will remove all amplitude information from the PEM!
         :return: PEMFile object, self with data scaled
         """
 
-        for i in range(len(self.data.Reading)):
-            self.data.Reading[i] -= self.data.Reading[i][-1]
-            self.data.Reading[i][-1] = np.average(self.data.Reading[i][-7:])
+        def substract_mag(reading):
+            off_time_data = np.delete(reading, self.channel_times.Remove)
+            mag = np.average(off_time_data[-3:])
+            offset_data = reading - mag
+            return offset_data
+
+        self.data.Reading = self.data.Reading.map(substract_mag)
+        # for i in range(len(self.data.Reading)):
+        #     self.data.Reading[i] -= self.data.Reading[i][-1]
+        #     self.data.Reading[i][-1] = np.average(self.data.Reading[i][-7:])
         logger.info(f"Data in {self.filepath.name} offset by last reading - Amplitude information lost")
 
-        self.notes.append('<HE3> DECAY SHIFTED TO FORCE LAST CHN = 0')
+        self.notes.append('<HE3> Data shifted to force last chn to zero.')
         return self
 
     def reverse_component(self, component):
@@ -3534,9 +3541,10 @@ if __name__ == '__main__':
     # pem_file.get_dad()
     # pem_file = pem_g.get_pems(client='Kazzinc', number=1)[0]
     # pem_file.to_xyz()
-    pem_file, _ = pem_file.prep_rotation(allow_negative_angles=False)
+    # pem_file, _ = pem_file.prep_rotation(allow_negative_angles=False)
+    pem_file.mag_offset()
     # pem_file = pem_file.rotate(method=None, soa=10)
-    pem_file = pem_file.rotate(method="pp", soa=1)
+    # pem_file = pem_file.rotate(method="pp", soa=1)
     # rotated_pem = prep_pem.rotate('pp')
 
     # pem_file = pemparser.parse(r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\RAW\XY29_29.PEM')

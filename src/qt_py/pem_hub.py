@@ -11,7 +11,6 @@ import simplekml
 import stopit
 import subprocess
 import sys
-import time
 from itertools import groupby
 from pathlib import Path
 
@@ -38,7 +37,7 @@ from src.mag_field.mag_dec_widget import MagDeclinationCalculator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py.gps_conversion import GPSConversionWidget
-from src.pem.pem_dxf import PEMDXFDrawing
+from src.dxf.pem_dxf import PEMDXFDrawing
 from src.qt_py.derotator import Derotator
 from src.qt_py.extractor_widgets import StationSplitter
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
@@ -60,7 +59,7 @@ __version__ = '0.11.6'
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Change name_editor line_name_editor to not use QtDesigner.
 # TODO Look into slowness when changing station number and such in pem plot editor
-# TODO Add screenshot to PEMGeometry
+# TODO Add calender to PEM/DMP filter
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
@@ -311,8 +310,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.scale_ca_action = QAction("Scale Coil Area", self)
         self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
         self.scale_ca_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('coil.png'))))
-        self.mag_offset_action = QAction("Mag Offset", self)
-        self.mag_offset_action.triggered.connect(lambda: self.mag_offset_lastchn(selected=True))
+        # self.mag_offset_action = QAction("Mag Offset", self)
+        # self.mag_offset_action.triggered.connect(lambda: self.mag_offset_lastchn(selected=True))
+
         # Reversing
         self.reverse_x_component_action = QAction("X Polarity", self)
         self.reverse_x_component_action.triggered.connect(
@@ -413,6 +413,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionContour_Map.setIcon(QtGui.QIcon(str(icons_path.joinpath("contour_map.png"))))
         self.action3D_Map.setIcon(QtGui.QIcon(str(icons_path.joinpath("3d_map.png"))))
         self.actionGoogle_Earth.setIcon(QtGui.QIcon(str(icons_path.joinpath("google_earth.png"))))
+        self.actionMake_DXF.setIcon(QtGui.QIcon(str(icons_path.joinpath("dxf.png"))))
 
         self.actionUnpacker.setIcon(QtGui.QIcon(str(icons_path.joinpath("unpacker.png"))))
         self.actionDamping_Box_Plotter.setIcon(QtGui.QIcon(str(icons_path.joinpath("db_plot.png"))))
@@ -476,6 +477,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionSplit_All_PEM_Files.triggered.connect(lambda: self.split_pem_channels(selected=False))
         self.actionScale_All_Currents.triggered.connect(lambda: self.scale_pem_current(selected=False))
         self.actionChange_All_Coil_Areas.triggered.connect(lambda: self.scale_pem_coil_area(selected=False))
+        # self.actionOffset_Mag.triggered.connect(lambda: self.mag_offset_lastchn(selected=False))
 
         self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
         # self.actionAuto_Merge_All_Files.triggered.connect(self.auto_merge_pem_files)
@@ -1125,7 +1127,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.menu.addAction(self.split_action)
                 self.menu.addAction(self.scale_current_action)
                 self.menu.addAction(self.scale_ca_action)
-                self.menu.addAction(self.mag_offset_action)
+                # self.menu.addAction(self.mag_offset_action)
                 self.menu.addSeparator()
 
                 # Add the reverse data menu
@@ -2391,7 +2393,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         ss.show()
 
     def make_dxf(self):
-        pem_files = self.get_pem_files(selected=True)[0]
+        pem_files = self.get_pem_files(selected=False)[0]
         if not pem_files:
             logger.warning(f"No PEM files selected.")
             self.status_bar.showMessage(f"No PEM files selected.", 2000)
@@ -3929,9 +3931,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             bar.deleteLater()
             self.status_bar.showMessage(f"Process complete. "
                                         f"Current of {len(pem_files)} PEM files scaled to {current}.", 2000)
+
     def mag_offset_lastchn(self, selected=False):
         """
-        Mag offset to the last channel
+        Offset the amplitude of the last channel (assumed to be mag) from each channel in the selected PEM files.
         """
         pem_files, rows = self.get_pem_files(selected=selected)
 
@@ -3945,12 +3948,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         with pg.ProgressDialog(f'Mag offsetting to last channel...', 0, len(pem_files)) as dlg:
             dlg.setBar(bar)
-            dlg.setWindowTitle(f'Mag offset')
+            dlg.setWindowTitle(f'Mag Offset')
 
             for pem_file, row in zip(pem_files, rows):
                 dlg.setLabelText(f"Mag offsetting data of {pem_file.filepath.name}")
                 pem_file: PEMFile
-                pem_file = pem_file.mag_offset_last()
+                pem_file = pem_file.mag_offset()
                 self.refresh_pem(pem_file)
                 dlg += 1
 
@@ -3987,36 +3990,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. "
                                     f"{comp.upper()} of {len(pem_files)} PEM file(s) reversed.", 2000)
-
-    def offset_mag_last(self, selected=False):
-        """
-        Subtract the last channel from the entire decay
-        This will remove all amplitude information from the PEM!
-        :param selected: bool, only use selected PEMFiles or not.
-        """
-        pem_files, rows = self.get_pem_files(selected=selected)
-
-        if not pem_files:
-            logger.warning(f"No PEM files opened.")
-            self.status_bar.showMessage(f"No PEM files opened.", 2000)
-            return
-
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
-
-        with pg.ProgressDialog(f'Offsetting readings by last channel...', 0, len(pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle(f'Offsetting reading')
-
-            for pem_file, row in zip(pem_files, rows):
-                dlg.setLabelText(f"Offsetting data of {pem_file.filepath.name} by last channel")
-                pem_file: PEMFile
-                pem_file = pem_file.mag_offset_last()
-                self.refresh_pem(pem_file)
-                dlg += 1
-
-        bar.deleteLater()
-        self.status_bar.showMessage("Mag offset process complete. ", 2000)
 
     def reverse_station_order(self, selected=False):
         pem_files, rows = self.get_pem_files(selected=selected)

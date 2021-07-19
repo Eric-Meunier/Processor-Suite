@@ -13,7 +13,7 @@ from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWid
                                QFileDialog, QWidget, QVBoxLayout, QLabel, QPushButton, QFrame, QHBoxLayout, QTabWidget,
                                QTableWidget)
 
-from src.qt_py import icons_path, NonScientific
+from src.qt_py import icons_path, NonScientific, read_file
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
@@ -967,11 +967,10 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
                     gps, zone, hemisphere, crs, gpx_errors = GPXParser().get_utm(gps, as_string=True)
                     contents = [c.strip().split() for c in gps]
                 else:
-                    file = open(gps, 'rt').readlines()
-                    contents = [c.strip().split() for c in file]
+                    contents = read_file(gps)
                 try:
-                    self.df = pd.DataFrame(contents,
-                                           columns=["Easting", "Northing", "Elevation", "Unit", "Name"][:len(gps[0])])
+                    self.df = pd.DataFrame.from_records(contents)
+                    self.df.columns = ["Easting", "Northing", "Elevation", "Unit", "Name"][:len(self.df.columns)]
                 except ValueError as e:
                     self.show()
                     self.message.critical(self, f"Parsing Error", str(e))
@@ -985,7 +984,8 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
                     self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
         elif isinstance(gps, list):
             try:
-                self.df = pd.DataFrame(gps, columns=["Easting", "Northing", "Elevation", "Unit", "Name"][:len(gps[0])])
+                self.df = pd.DataFrame.from_records(gps)
+                self.df.columns = ["Easting", "Northing", "Elevation", "Unit", "Name"][:len(self.df.columns)]
             except ValueError as e:
                 self.show()
                 self.message.critical(self, f"Parsing Error", str(e))
@@ -1389,8 +1389,8 @@ def main():
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
     pg = PEMGetter()
 
-    # mw = CollarPicker()
-    # file = str(Path(loop_samples_folder).joinpath('LOOP225Gold.txt'))
+    mw = CollarPicker()
+    file = r"C:\_Data\2021\Canadian Palladium\EB-21-68\GPS\LOOP EB-1_0718.txt"
 
     # mw = LoopAdder()
     # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
@@ -1398,16 +1398,16 @@ def main():
 
     # mw = LineAdder()
     # mw = ExcelTablePicker()
-    mw = DADSelector()
+    # mw = DADSelector()
 
     # file = samples_folder.joinpath(r'GPX files\Loop01 L200_0624.gpx')
     # file = samples_folder.joinpath(r'Raw Boreholes\HOLE STE-21-02\RAW\3-Forage_2021_Coordonnées.xlsx')
-    file = samples_folder.joinpath(r'Raw Boreholes\HOLE STE-21-02\RAW\3-Forage_2021_Déviation.xlsx')
+    # file = samples_folder.joinpath(r'Raw Boreholes\HOLE STE-21-02\RAW\3-Forage_2021_Déviation.xlsx')
     # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
-    mw.open(file)
+    # mw.open(file)
     # line = SurveyLine(str(file))
 
-    # mw.open(file)
+    mw.open(file)
     mw.show()
 
     app.exec_()

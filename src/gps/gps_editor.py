@@ -16,6 +16,7 @@ from scipy import spatial
 from shapely.geometry import asMultiPoint
 
 from src.pem import convert_station
+from src.qt_py import read_file
 
 logger = logging.getLogger(__name__)
 
@@ -79,12 +80,7 @@ def parse_gps(file, gps_object):
                 error_msg += '\n'.join(gpx_errors)
             contents = [c.strip().split() for c in gps]
         else:
-            with open(file, 'rb') as byte_file:
-                byte_content = byte_file.read()
-                encoding = chardet.detect(byte_content).get('encoding')
-                logger.info(f"Using {encoding} encoding for {Path(str(file)).name}.")
-                str_contents = byte_content.decode(encoding=encoding)
-            contents = [c.strip().split() for c in str_contents.splitlines()]
+            contents = read_file(file)
         gps = pd.DataFrame(contents)
 
     elif file is None:

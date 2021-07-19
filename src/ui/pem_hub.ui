@@ -2088,6 +2088,11 @@ Warnings</string>
     <string>Make DXF</string>
    </property>
   </action>
+  <action name="actionOffset_Mag">
+   <property name="text">
+    <string>Offset Mag</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>client_edit</tabstop>

@@ -38,13 +38,8 @@ class PEMGetter:
             if not filepath.exists():
                 raise ValueError(f"File {filepath.name} does not exists.")
 
-            logger.info(f'Getting File {filepath.name}.')
-
+            logger.info(f'Getting File {filepath}.')
             pem_file = self.pem_parser.parse(filepath)
-            # except Exception as e:
-            #     logger.error(f"{str(e)}")
-            #     return
-
             pem_files.append(pem_file)
 
         sample_files_dir = Path(__file__).parents[2].joinpath('sample_files')
