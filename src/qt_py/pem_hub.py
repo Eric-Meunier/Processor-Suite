@@ -17,12 +17,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui
+from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                                QHeaderView, QTableWidgetItem, QAction, QGridLayout, QTextBrowser, QMenu,
                                QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
                                QPushButton, QAbstractItemView, QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox,
-                               QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem, QShortcut)
+                               QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem, QShortcut,
+                               QAbstractScrollArea, QTableWidget, QDialogButtonBox)
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
@@ -41,7 +42,6 @@ from src.dxf.pem_dxf import PEMDXFDrawing
 from src.qt_py.derotator import Derotator
 from src.qt_py.extractor_widgets import StationSplitter
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
-from src.qt_py.name_editor import BatchNameEditor
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.qt_py.pem_merger import PEMMerger
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
@@ -3070,12 +3070,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     if response == self.message.No:
                         continue
 
+                pem_file: PEMFile
                 file_name = pem_file.filepath.name
                 pem_file = pem_file.copy()
                 logger.info(f"Exporting {file_name}.")
 
                 pem_file.filepath = Path(file_dir).joinpath(file_name)
-                pem_file.save(legacy=legacy, processed=processed)
+                pem_file.save(legacy=legacy, processed=processed, rename=True)
                 dlg += 1
 
         self.fill_pem_list()
@@ -4920,6 +4921,132 @@ class WarningViewer(QMainWindow):
         self.table.resizeRowsToContents()
 
 
+class BatchNameEditor(QWidget):
+    """
+    Class to bulk rename PEM File line/hole names or file names.
+    """
+    acceptChangesSignal = QtCore.Signal(object)
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.pem_files = []
+        self.kind = None
+
+        self.addEdit = QLineEdit()
+        self.removeEdit = QLineEdit()
+        self.table = QTableWidget()
+        self.table_columns = ['Old Name', 'New Name']
+        self.table.setColumnCount(len(self.table_columns))
+        self.table.setHorizontalHeaderLabels(self.table_columns)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Close)
+        self.button_box.setCenterButtons(True)
+
+        self.setLayout(QFormLayout())
+        self.layout().addRow("Remove:", self.removeEdit)
+        self.layout().addRow("Add:", self.addEdit)
+        self.layout().addRow(self.table)
+        self.layout().addRow(self.button_box)
+
+        self.addEdit.textEdited.connect(self.update_table)
+        self.removeEdit.textEdited.connect(self.update_table)
+        self.button_box.rejected.connect(self.close)
+        self.button_box.accepted.connect(self.accept_changes)
+
+    def open(self, pem_files, kind=None):
+        """
+        Open the pem_files
+        :param pem_files: list, PEMFile objects
+        :param kind: str, either 'Line' to change the line names or 'File' to change file names
+        :return: None
+        """
+        # Reset
+        self.addEdit.setText('[n]')
+        self.removeEdit.setText('')
+        while self.table.rowCount() > 0:
+            self.table.removeRow(0)
+
+        self.pem_files = pem_files
+        self.kind = kind
+
+        if self.kind == 'Line':
+            self.setWindowTitle('Rename lines/holes names')
+        else:
+            self.setWindowTitle('Rename files names')
+
+        for pem_file in self.pem_files:
+            self.add_to_table(pem_file)
+
+        self.show()
+
+    def add_to_table(self, pem_file):
+        """
+        Add the PEM files to the table.
+        :param pem_file: PEMFile object
+        """
+        row_pos = self.table.rowCount()
+        self.table.insertRow(row_pos)
+
+        if self.kind == 'Line':
+            item = QTableWidgetItem(pem_file.line_name)
+            item2 = QTableWidgetItem(pem_file.line_name)
+        elif self.kind == 'File':
+            item = QTableWidgetItem(pem_file.filepath.name)
+            item2 = QTableWidgetItem(pem_file.filepath.name)
+        else:
+            raise ValueError(f'{self.kind} is not a valid option.')
+
+        item.setTextAlignment(QtCore.Qt.AlignCenter)
+        item2.setTextAlignment(QtCore.Qt.AlignCenter)
+
+        self.table.setItem(row_pos, 0, item)
+        self.table.setItem(row_pos, 1, item2)
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
+        elif e.key() == QtCore.Qt.Key_Return:
+            self.accept_changes()
+
+    def update_table(self):
+        """
+        Every time a change is made in the line edits, this function is called and updates the entries in the table
+        """
+        for row in range(self.table.rowCount()):
+            # Split the text based on '[n]'. Anything before it becomes the prefix,
+            # and everything after is added as a suffix
+            if self.kind == 'Line':
+                # Immediately replace what's in the removeEdit object with nothing
+                input = self.table.item(row, 0).text().replace(self.removeEdit.text(), '')
+                suffix = self.addEdit.text().rsplit('[n]')[-1]
+                prefix = self.addEdit.text().rsplit('[n]')[0]
+                output = prefix + input + suffix
+            else:
+                input = self.table.item(row, 0).text().split('.')[0].replace(self.removeEdit.text(), '')
+                ext = '.' + self.table.item(row, 0).text().split('.')[-1]
+                suffix = self.addEdit.text().rsplit('[n]')[-1]
+                prefix = self.addEdit.text().rsplit('[n]')[0]
+                output = prefix + input + suffix + ext
+
+            item = QTableWidgetItem(output)
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.table.setItem(row, 1, item)
+
+    def accept_changes(self):
+        """
+        Create a list of the new names and emit them as a signal
+        """
+        new_names = []
+        for i, pem_file in enumerate(self.pem_files):
+            new_name = self.table.item(i, 1).text()
+            new_names.append(new_name)
+
+        self.acceptChangesSignal.emit(new_names)
+
+
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
@@ -4937,7 +5064,7 @@ def main():
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
-    pem_files = pem_g.get_pems(number=3, random=True)
+    pem_files = pem_g.get_pems(number=1, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -4962,8 +5089,6 @@ def main():
     # mw.add_gps_files(gps_files)
 
     mw.show()
-    mw.pem_list_filter.show()
-
     app.exec_()
 
 

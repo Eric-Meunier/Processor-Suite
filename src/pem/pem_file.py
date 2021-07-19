@@ -3215,7 +3215,7 @@ class RADTool:
                     str(self.angle_used),
                 ])
             else:
-                raise Exception(f"{len(match)} long D7 RAD tool match passed. Should be length of 8 or 11.")
+                raise Exception(f"D7 RAD tool had {len(match)} items (should have 8 or 11).")
 
         elif self.D == 'D5':
             self.x = float(match[1])
@@ -3526,7 +3526,8 @@ if __name__ == '__main__':
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
     # file = r"C:\_Data\2021\Geoken\Borehole\SAPR-21-005\DUMP\XY.PEM"
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
-    file = r"C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\RAW\xy_0704.PEM"
+    # file = r"C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\RAW\xy_0704.PEM"
+    file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\TMC\1338-19-037\DUMP\January 16, 2021\Dump\1338-19-037 XY.PEM"
     pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
@@ -3542,7 +3543,7 @@ if __name__ == '__main__':
     # pem_file = pem_g.get_pems(client='Kazzinc', number=1)[0]
     # pem_file.to_xyz()
     # pem_file, _ = pem_file.prep_rotation(allow_negative_angles=False)
-    pem_file.mag_offset()
+    # pem_file.mag_offset()
     # pem_file = pem_file.rotate(method=None, soa=10)
     # pem_file = pem_file.rotate(method="pp", soa=1)
     # rotated_pem = prep_pem.rotate('pp')
