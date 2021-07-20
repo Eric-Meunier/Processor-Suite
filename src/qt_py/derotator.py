@@ -234,7 +234,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.actionStats.triggered.connect(self.export_stats)
         self.actionShow_Scatter.triggered.connect(self.toggle_scatter)
 
-        self.button_box.accepted.connect(lambda: self.accept_sig.emit(self.rotated_file))
+        self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
 
         self.acc_btn.clicked.connect(self.rotate)
@@ -249,6 +249,11 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         self.change_component_shortcut = QShortcut(QtGui.QKeySequence('c'), self)
         self.change_component_shortcut.activated.connect(self.change_tab)
+
+    def accept(self):
+        self.accept_sig.emit(self.rotated_file)
+        self.close()
+        self.deleteLater()
 
     def eventFilter(self, watched, event):
         if event.type() == QtCore.QEvent.Close:  # Close the viewboxes when the window is closed

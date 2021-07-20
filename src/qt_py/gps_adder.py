@@ -110,7 +110,10 @@ class GPSAdder(QMainWindow):
         :return: None
         """
         self.accept_sig.emit(self.table_to_df().dropna())
-        self.hide()
+        # self.hide()
+
+        self.close()
+        self.deleteLater()
 
     def clear_table(self):
         self.table.blockSignals(True)

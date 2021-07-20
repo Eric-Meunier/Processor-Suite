@@ -2,7 +2,6 @@ import logging
 import math
 import os
 import sys
-import chardet
 from collections import OrderedDict
 from copy import deepcopy
 from pathlib import Path
@@ -13,7 +12,7 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QFileDialog,
                                QErrorMessage, QHeaderView, QApplication)
 from src.qt_py import clear_table, read_file
-from src.geometry.pem_geometry import PEMGeometry
+from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXParser
@@ -49,6 +48,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.dialog = QFileDialog()
         self.error = QErrorMessage()
         self.message = QMessageBox()
+        self.picker = None
+        self.line_adder = None
+        self.loop_adder = None
 
         self.last_stn_gps_shift_amt = 0
         self.last_loop_elev_shift_amt = 0
@@ -426,10 +428,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         def line_accept_sig_wrapper(data):
             self.fill_gps_table(data, self.line_table)
 
-        global line_adder
-        line_adder = LineAdder(parent=self)
-        line_adder.accept_sig.connect(line_accept_sig_wrapper)
-        line_adder.accept_sig.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
+        # global line_adder
+        self.line_adder = LineAdder(parent=self)
+        self.line_adder.accept_sig.connect(line_accept_sig_wrapper)
+        self.line_adder.accept_sig.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
 
         if line_content is None:
             line_content = self.get_line()
@@ -439,7 +441,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             if line.df.empty:
                 self.message.information(self, 'No GPS Found', f"{line.error_msg}.")
             else:
-                line_adder.open(line, name=self.pem_file.line_name)
+                self.line_adder.open(line, name=self.pem_file.line_name)
         except Exception as e:
             logger.critical(str(e))
             self.error.showMessage(f"Error adding line: {str(e)}.")
@@ -454,10 +456,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         def loop_accept_sig_wrapper(data):
             self.fill_gps_table(data, self.loop_table)
 
-        global loop_adder
-        loop_adder = LoopAdder(parent=self)
-        loop_adder.accept_sig.connect(loop_accept_sig_wrapper)
-        loop_adder.accept_sig.connect(lambda: self.gps_object_changed(self.loop_table, refresh=True))
+        # global loop_adder
+        self.loop_adder = LoopAdder(parent=self)
+        self.loop_adder.accept_sig.connect(loop_accept_sig_wrapper)
+        self.loop_adder.accept_sig.connect(lambda: self.gps_object_changed(self.loop_table, refresh=True))
 
         if loop_content is None:
             loop_content = self.get_loop()
@@ -466,7 +468,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             loop = TransmitterLoop(loop_content)
             if loop.df.empty:
                 self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
-            loop_adder.open(loop, name=self.pem_file.loop_name)
+            self.loop_adder.open(loop, name=self.pem_file.loop_name)
         except Exception as e:
             logger.critical(f"{e}.")
             self.error.showMessage(f"Error adding loop: {str(e)}")
@@ -494,16 +496,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 logger.critical(f"{e}.")
                 self.error.showMessage(f"Error adding borehole collar: {str(e)}.")
 
-        global picker
+        # global picker
         if isinstance(collar_content, dict):
-            picker = ExcelTablePicker()
-            picker.open(collar_content)
-            picker.accept_sig.connect(accept_collar)
+            self.picker = ExcelTablePicker()
+            self.picker.open(collar_content)
+            self.picker.accept_sig.connect(accept_collar)
         else:
             if len(collar_content) > 1:
-                picker = CollarPicker()
-                picker.open(collar_content, name="GPX File")
-                picker.accept_sig.connect(accept_collar)
+                self.picker = CollarPicker()
+                self.picker.open(collar_content, name="GPX File")
+                self.picker.accept_sig.connect(accept_collar)
             else:
                 accept_collar(collar_content)
 

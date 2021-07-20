@@ -17,20 +17,20 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
                                QHeaderView, QTableWidgetItem, QAction, QGridLayout, QTextBrowser, QMenu,
                                QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
                                QPushButton, QAbstractItemView, QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox,
                                QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem, QShortcut,
-                               QAbstractScrollArea, QTableWidget, QDialogButtonBox)
+                               QTableWidget, QDialogButtonBox)
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
 from src.qt_py import (icons_path, app_data_dir, get_icon, CustomProgressBar)
 from src.qt_py.db_plot import DBPlotter
-from src.geometry.pem_geometry import PEMGeometry
+from src.qt_py.pem_geometry import PEMGeometry
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.qt_py.gpx_creator import GPXCreator
 from src.mag_field.loop_calculator import LoopCalculator
@@ -123,6 +123,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.calender.setWindowTitle('Select Date')
         self.pem_list_filter = PathFilter('PEM', parent=self)
         self.gps_list_filter = PathFilter('GPS', parent=self)
+
+        self.derotator = None
+        self.pem_geometry = None
+        self.gps_share = None
+        self.pdf_plot_printer = None
 
         # Project tree
         self.project_dir = None
@@ -244,7 +249,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         # Print PDFs
         self.print_plots_action = QAction("Print Plots", self)
         self.print_plots_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('pdf.png'))))
-        self.print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected_files=True))
+        self.print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected=True))
 
         # Extract stations
         self.extract_stations_action = QAction("Stations", self)
@@ -1715,24 +1720,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
 
         def accept_file(rotated_pem):
-            # rotation_note = derotator.rotation_note
-            # if rotation_note is not None:
-            #     rotated_pem.notes.append(rotation_note)
-
             self.pem_files[row] = rotated_pem
             self.refresh_pem(rotated_pem)
-
-            derotator.close()
 
         pem_files, rows = self.get_pem_files(selected=True)
         assert len(pem_files) == 1, 'Can only de-rotate one file at a time.'
 
         pem_file, row = pem_files[0], rows[0]
 
-        global derotator
-        derotator = Derotator(parent=self)
-        derotator.accept_sig.connect(accept_file)
-        derotator.open(pem_file)
+        self.derotator = Derotator(parent=self)
+        self.derotator.accept_sig.connect(accept_file)
+        self.derotator.open(pem_file)
 
     def open_pem_geometry(self):
         """
@@ -1748,10 +1746,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         pem_files, rows = self.get_pem_files(selected=True)
 
-        global pem_geometry
-        pem_geometry = PEMGeometry(parent=self)
-        pem_geometry.accepted_sig.connect(accept_geometry)
-        pem_geometry.open(pem_files)
+        # global pem_geometry
+        self.pem_geometry = PEMGeometry(parent=self)
+        self.pem_geometry.accepted_sig.connect(accept_geometry)
+        self.pem_geometry.open(pem_files)
 
     def open_pem_merger(self):
         """
@@ -1822,25 +1820,24 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             merger.accept_sig.connect(accept_merge)
             merger.open(pem_files)
 
-    def open_pdf_plot_printer(self, selected_files=False):
+    def open_pdf_plot_printer(self, selected=False):
         """
         Open an instance of PDFPlotPrinter, which has all the options for printing plots.
-        :param selected_files: bool, False will pass all opened PEM files, True will only pass selected PEM files
+        :param selected: bool, False will pass all opened PEM files, True will only pass selected PEM files
         """
 
         if not self.pem_files:
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        pem_files, rows = self.get_pem_files(selected=selected_files)
+        pem_files, rows = self.get_pem_files(selected=selected)
 
         # Gather the RI files
         ri_files = []
         for row, pem_file in zip(rows, pem_files):
             ri_files.append(self.pem_info_widgets[row].ri_file)
 
-        global pdf_plot_printer
-        pdf_plot_printer = PDFPlotPrinter(parent=self)
+        self.pdf_plot_printer = PDFPlotPrinter(parent=self)
 
         # Disable plan map creation if no CRS is selected or if the CRS is geographic.
         crs = self.get_crs()
@@ -1853,8 +1850,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.status_bar.showMessage("Cancelled.", 1000)
                 return
             else:
-                pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
-                pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
+                self.pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
+                self.pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
 
         elif crs.is_geographic:
             response = self.message.question(self, 'Geographic CRS',
@@ -1865,15 +1862,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.status_bar.showMessage("Cancelled.", 1000)
                 return
             else:
-                pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
-                pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
+                self.pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
+                self.pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
 
         # Disable the section plots if no file can produce one
         if not any([f.is_borehole() and f.has_all_gps() for f in pem_files]):
-            pdf_plot_printer.make_section_plots_gbox.setChecked(False)
-            pdf_plot_printer.make_section_plots_gbox.setEnabled(False)
+            self.pdf_plot_printer.make_section_plots_gbox.setChecked(False)
+            self.pdf_plot_printer.make_section_plots_gbox.setEnabled(False)
 
-        pdf_plot_printer.open(pem_files, ri_files=ri_files, crs=self.get_crs())
+        self.pdf_plot_printer.open(pem_files, ri_files=ri_files, crs=self.get_crs())
 
     def open_mag_dec(self):
         """
@@ -2209,10 +2206,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         source_index = piws.index(source_widget)
 
-        global gps_share
-        gps_share = GPSShareWidget()
-        gps_share.open(pem_files, source_index)
-        gps_share.accept_sig.connect(share_gps)
+        # global gps_share
+        self.gps_share = GPSShareWidget()
+        self.gps_share.open(pem_files, source_index)
+        self.gps_share.accept_sig.connect(share_gps)
 
     def open_channel_table_viewer(self):
         """
@@ -3047,7 +3044,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         self.status_bar.showMessage(f"Cancelled.", 2000)
                         return
 
-        file_dir = self.file_dialog.getExistingDirectory(self, '', str(self.project_dir))
+        # file_dir = self.file_dialog.getExistingDirectory(self, '', str(self.project_dir))
+        file_dir = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Raw Boreholes\EB-21-52\Final"
         if not file_dir:
             self.status_bar.showMessage('Cancelled.', 2000)
             return
@@ -3719,7 +3717,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         coord_zone = crs_dict.get('Zone')
         datum = crs_dict.get('Datum')
         if all([coord_sys in [self.gps_system_cbox.itemText(i) for i in range(self.gps_system_cbox.count())],
-                coord_zone in [self.gps_zone_cbox.itemText(i) for i in range(self.gps_zone_cbox.count())],
+                # coord_zone in [self.gps_zone_cbox.itemText(i) for i in range(self.gps_zone_cbox.count())],  # Isn't populated until later
                 datum in [self.gps_datum_cbox.itemText(i) for i in range(self.gps_datum_cbox.count())]]):
             self.gps_system_cbox.setCurrentText(coord_sys)
             self.gps_datum_cbox.setCurrentText(datum)
@@ -4400,6 +4398,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         self.ri_files = []
         self.crs = None
 
+        self.printer = None
         self.plan_map_options = PlanMapOptions(parent=self)
         self.message = QMessageBox()
 
@@ -4432,8 +4431,8 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         # elif e.key() == QtCore.Qt.Key_Enter:
         #     self.print_pdfs()
 
-    def close(self):
-        self.hide()
+    # def close(self):
+    #     self.hide()
 
     def open(self, pem_files, ri_files=None, crs=None):
 
@@ -4512,10 +4511,11 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         if save_dir:
 
             save_dir = os.path.splitext(save_dir)[0]
-            global printer
-            printer = PEMPrinter(**plot_kwargs)
-            printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
-            self.hide()
+            # global printer
+            self.printer = PEMPrinter(**plot_kwargs)
+            self.printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
+            # self.hide()
+            self.close()
         else:
             logger.error(f"No file name passed.")
             self.message.critical(self, 'Error', 'Invalid file name')
@@ -4627,8 +4627,11 @@ class GPSShareWidget(QWidget):
                     cbox.setChecked(self.check_all_cbox.isChecked())
 
         self.check_all_cbox.toggled.connect(toggle_all)
-        self.accept_btn.clicked.connect(lambda: self.accept_sig.emit([c.isChecked() for c in self.cboxes]))
-        self.accept_btn.clicked.connect(self.close)
+        self.accept_btn.clicked.connect(self.accept)
+
+    def accept(self):
+        self.accept_sig.emit([c.isChecked() for c in self.cboxes])
+        self.close()
 
     def open(self, pem_files, index_of_source):
         """
@@ -5059,7 +5062,6 @@ def main():
     dmp_parser = DMPParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    # dmp_files = pem_g.get_pems(folder="TMC", subfolder=r"1338-18-19/RAW", file="_16_1338-18-19ppz.dmp2")
     # dmp_files = samples_folder.joinpath(r"TMC/1338-18-19/RAW/_16_1338-18-19ppz.dmp2")
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
@@ -5068,15 +5070,15 @@ def main():
 
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
     # pem_files = pem_g.get_pems(number=1, random=True)
-    pem_files = pem_g.get_pems(folder="Raw Boreholes\HOLE STE-21-02\RAW", number=2)
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=2)
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
     # assert len(pem_files) == len(ri_files)
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
-    mw.add_pem_files(pem_files)
-    # mw.add_dmp_files([dmp_files])
+    # mw.add_pem_files(pem_files)
+    # mw.add_dmp_files(dmp_files)
     # mw.table.selectRow(0)
     # mw.table.selectAll()
     # mw.open_pem_merger()
@@ -5091,7 +5093,42 @@ def main():
     # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
     # mw.add_gps_files(gps_files)
 
+    dmp_files = [samples_folder.joinpath(r"Raw Boreholes\EB-21-52\RAW\xy_0719.dmp2")]
+    dmp_files.extend([samples_folder.joinpath(r"Raw Boreholes\EB-21-52\RAW\z_0719.dmp2")])
+    mw.add_dmp_files(dmp_files)
+    mw.table.selectRow(0)
+    mw.add_gps_files(samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\LOOP EB-1_0718.txt"))
+    mw.stackedWidget.currentWidget().loop_adder.accept()
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    mw.add_gps_files(samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\EB-21-52_0719.txt"))
+    mw.open_pem_geometry()
+    mw.pem_geometry.az_output_combo.setCurrentIndex(1)
+    mw.pem_geometry.dip_output_combo.setCurrentIndex(1)
+    mw.pem_geometry.accept()
+    mw.open_gps_share('all', mw.pem_info_widgets[0])
+    mw.gps_share.accept()
+    mw.open_derotator()
+    mw.derotator.accept()
+
+    mw.open_pem_plot_editor()
+    mw.pem_editor_widgets[0].auto_clean()
+    mw.pem_editor_widgets[0].close()
+    mw.table.selectRow(1)
+    mw.open_pem_plot_editor()
+    mw.pem_editor_widgets[0].auto_clean()
+    mw.pem_editor_widgets[0].close()
+
+    mw.save_pem_files(selected=False)
+
+    mw.export_pem_files(selected=False, processed=True)
+    mw.remove_pem_file()
+    mw.table.selectRow(0)
+    mw.remove_pem_file()
+    mw.add_pem_files([samples_folder.joinpath(r"Raw Boreholes\EB-21-52\Final\xy.pem"),
+                     samples_folder.joinpath(r"Raw Boreholes\EB-21-52\Final\z.pem")])
+
     mw.show()
+    mw.open_pdf_plot_printer(selected=False)
     app.exec_()
 
 

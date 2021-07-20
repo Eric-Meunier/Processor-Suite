@@ -26,7 +26,7 @@ from pyproj import CRS
 from scipy import spatial
 from shapely.geometry import asMultiPoint
 
-from src.geometry.segment import Segmenter
+from src.qt_py.pem_geometry import dad_to_seg
 # from src.logger import Log
 from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
@@ -175,8 +175,6 @@ class HoleWidget(QWidget):
         :param name: str, name of the hole.
         """
         super().__init__()
-        self.segmenter = Segmenter()
-
         layout = QFormLayout()
         self.setLayout(layout)
         self.plan_view = plot_widget
@@ -468,7 +466,7 @@ class HoleWidget(QWidget):
             df = pd.DataFrame({'Depth': [z, length],
                                'Azimuth': [azimuth] * 2,
                                'Dip': [dip] * 2})
-            segments = self.segmenter.dad_to_seg(df)
+            segments = dad_to_seg(df)
         # Using a DAD file
         else:
             if not self.segments:
@@ -595,7 +593,7 @@ class HoleWidget(QWidget):
                     # Flip the dip so down is positive
                     df.Dip = df.Dip * -1
                     # Create a BoreholeSegment object from the DAD file, to more easily calculate the projection
-                    self.segments = self.segmenter.dad_to_seg(df.dropna())
+                    self.segments = dad_to_seg(df.dropna())
                     # Update the hole projection
                     self.calc_hole_projection()
                     # Draw the hole and update the section plot
