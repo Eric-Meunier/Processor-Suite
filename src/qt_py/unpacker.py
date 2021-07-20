@@ -11,7 +11,7 @@ from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageB
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QLineEdit)
 from pyunpack import Archive
 
-from src.qt_py import icons_path, get_icon
+from src.qt_py import icons_path, get_icon, clear_table
 from src.qt_py.db_plot import DBPlotter
 from src.ui.unpacker import Ui_Unpacker
 
@@ -35,6 +35,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.message = QMessageBox()
         self.error = QErrorMessage()
         self.model = QFileSystemModel()
+        self.db_plot = DBPlotter(parent=self)
 
         # Status bar
         dir_frame = QFrame()
@@ -82,7 +83,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
 
                     self.change_dir_label()
 
-        self.accept_btn.clicked.connect(self.accept_changes)
+        self.accept_btn.clicked.connect(self.accept)
         self.dir_tree.clicked.connect(self.change_dir_label)
         self.dir_edit.returnPressed.connect(dir_edit_changed)
         self.open_folder_action.triggered.connect(self.open_file_dialog)
@@ -149,17 +150,9 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.calendar_widget.setSelectedDate(QtCore.QDate.currentDate())
 
     def closeEvent(self, e):
+        self.db_plot.close()
         self.deleteLater()
         e.accept()
-
-    def clear_table(self, table):
-        """
-        Clear a QTableWidget table.
-        :param table: QTableWidget object
-        :return: None
-        """
-        while table.rowCount() > 0:
-            table.removeRow(0)
 
     def reset(self, tables_only=False):
         """
@@ -169,7 +162,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         tables = [self.dump_table, self.damp_table, self.dmp_table, self.gps_table, self.geometry_table,
                   self.other_table]
         for table in tables:
-            self.clear_table(table)
+            clear_table(table)
         if tables_only is False:
             self.dir_edit.setText('')
             self.dir_tree.collapseAll()
@@ -334,15 +327,13 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.show()  # Show here so db_plot can show on-top
         # Plot the damping box files
         if self.open_damp_files_cbox.isChecked() and damp_files:
-            global db_plot
-            db_plot = DBPlotter(parent=self)
-            db_plot.open(damp_files)
-            if db_plot.db_widgets:
-                db_plot.show()
+            self.db_plot.open(damp_files)
+            if self.db_plot.db_widgets:
+                self.db_plot.show()
             else:
                 logger.warning(f"No DB widgets were created.")
 
-    def accept_changes(self):
+    def accept(self):
         """
         Creates a new folder based on the date selected and organizes and copies the files in the tables into the correct
         folders. Also copies the PEM and GPS files to the working folders.
@@ -473,8 +464,8 @@ class Unpacker(QMainWindow, Ui_Unpacker):
 
         # Change the project directory of PEMPro
         self.open_project_folder_sig.emit(new_folder.parents[1])
-
-        self.reset(tables_only=True)
+        self.close()
+        # self.reset(tables_only=True)
 
 
 # Must be in a different file than unpacker.py since it will create circular imports

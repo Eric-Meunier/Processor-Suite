@@ -128,6 +128,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.pem_geometry = None
         self.gps_share = None
         self.pdf_plot_printer = None
+        self.unpacker = None
 
         # Project tree
         self.project_dir = None
@@ -2318,12 +2319,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.project_dir_edit.setText(str(folder_dir))
             self.open_project_dir()
 
-        global unpacker
-        unpacker = Unpacker(parent=self)
-        unpacker.open_project_folder_sig.connect(open_unpacker_dir)
+        # global unpacker
+        self.unpacker = Unpacker(parent=self)
+        self.unpacker.open_project_folder_sig.connect(open_unpacker_dir)
         if folder:
-            unpacker.open_folder(folder, project_dir=self.project_dir)
-        unpacker.show()
+            self.unpacker.open_folder(folder, project_dir=self.project_dir)
+        self.unpacker.show()
 
     def open_gpx_creator(self):
         """Open the GPX Creator"""
@@ -4514,6 +4515,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
             # global printer
             self.printer = PEMPrinter(**plot_kwargs)
             self.printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
+            os.startfile(save_dir + ".PDF")
             # self.hide()
             self.close()
         else:
@@ -5093,42 +5095,48 @@ def main():
     # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
     # mw.add_gps_files(gps_files)
 
-    dmp_files = [samples_folder.joinpath(r"Raw Boreholes\EB-21-52\RAW\xy_0719.dmp2")]
-    dmp_files.extend([samples_folder.joinpath(r"Raw Boreholes\EB-21-52\RAW\z_0719.dmp2")])
-    mw.add_dmp_files(dmp_files)
-    mw.table.selectRow(0)
-    mw.add_gps_files(samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\LOOP EB-1_0718.txt"))
-    mw.stackedWidget.currentWidget().loop_adder.accept()
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    mw.add_gps_files(samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\EB-21-52_0719.txt"))
-    mw.open_pem_geometry()
-    mw.pem_geometry.az_output_combo.setCurrentIndex(1)
-    mw.pem_geometry.dip_output_combo.setCurrentIndex(1)
-    mw.pem_geometry.accept()
-    mw.open_gps_share('all', mw.pem_info_widgets[0])
-    mw.gps_share.accept()
-    mw.open_derotator()
-    mw.derotator.accept()
+    """ Attempting to re-create printing bug """
+    # mw.open_unpacker(folder=samples_folder.joinpath(r"Raw Boreholes\EB-21-52\DUMP\July 20, 2021"))
+    # mw.unpacker.accept()
+    #
+    # dmp_files = [samples_folder.joinpath(r"Raw Boreholes\EB-21-52\RAW\xy_0720.dmp2")]
+    # dmp_files.extend([samples_folder.joinpath(r"Raw Boreholes\EB-21-52\RAW\z_0720.dmp2")])
+    # mw.add_dmp_files(dmp_files)
+    # mw.table.selectRow(0)
+    # mw.add_gps_files(samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\LOOP EB-1_0718.txt"))
+    # mw.stackedWidget.currentWidget().loop_adder.accept()
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.add_gps_files(samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\EB-21-52_0719.txt"))
+    # mw.open_pem_geometry()
+    # mw.pem_geometry.az_output_combo.setCurrentIndex(1)
+    # mw.pem_geometry.dip_output_combo.setCurrentIndex(1)
+    # mw.pem_geometry.accept()
+    # mw.open_gps_share('all', mw.pem_info_widgets[0])
+    # mw.gps_share.accept()
+    # mw.open_derotator()
+    # mw.derotator.accept()
+    #
+    # mw.open_pem_plot_editor()
+    # mw.pem_editor_widgets[0].auto_clean()
+    # mw.pem_editor_widgets[0].close()
+    # mw.table.selectRow(1)
+    # mw.open_pem_plot_editor()
+    # mw.pem_editor_widgets[0].auto_clean()
+    # mw.pem_editor_widgets[0].close()
+    #
+    # mw.save_pem_files(selected=False)
+    #
+    # mw.export_pem_files(selected=False, processed=True)
+    # mw.remove_pem_file()
+    # mw.table.selectRow(0)
+    # mw.remove_pem_file()
+    # mw.add_pem_files([samples_folder.joinpath(r"Raw Boreholes\EB-21-52\Final\xy.pem"),
+    #                  samples_folder.joinpath(r"Raw Boreholes\EB-21-52\Final\z.pem")])
 
-    mw.open_pem_plot_editor()
-    mw.pem_editor_widgets[0].auto_clean()
-    mw.pem_editor_widgets[0].close()
-    mw.table.selectRow(1)
-    mw.open_pem_plot_editor()
-    mw.pem_editor_widgets[0].auto_clean()
-    mw.pem_editor_widgets[0].close()
-
-    mw.save_pem_files(selected=False)
-
-    mw.export_pem_files(selected=False, processed=True)
-    mw.remove_pem_file()
-    mw.table.selectRow(0)
-    mw.remove_pem_file()
-    mw.add_pem_files([samples_folder.joinpath(r"Raw Boreholes\EB-21-52\Final\xy.pem"),
-                     samples_folder.joinpath(r"Raw Boreholes\EB-21-52\Final\z.pem")])
+    """"""
 
     mw.show()
-    mw.open_pdf_plot_printer(selected=False)
+    # mw.open_pdf_plot_printer(selected=False)
     app.exec_()
 
 
