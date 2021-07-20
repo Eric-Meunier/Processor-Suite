@@ -928,13 +928,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                 median = median_data.median(axis=0).to_numpy()
                 if self.pem_file.number_of_channels > 10:
-                    median = signal.savgol_filter(median, 5, 4)
+                    median = signal.savgol_filter(median, 5, 3)
                 std = np.array([self.auto_clean_std_sbox.value()] * window_size)
 
                 off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
                 off_time_median = off_time_median_data.median().to_numpy()
                 if self.pem_file.number_of_channels > 10:
-                    off_time_median = signal.savgol_filter(off_time_median, 5, 4)
+                    off_time_median = signal.savgol_filter(off_time_median, 5, 3)
                 limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
 
                 thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
@@ -1779,18 +1779,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             :return: bool, True if the reading should be deleted.
             """
             global count, local_count
-            # if local_count < max_removable:
-            #     # First pass, using 96% confidence interval
-            #     # First pass, using 99% confidence interval
-            #     min_cutoff = median[mask] - std[mask] * 3
-            #     max_cutoff = median[mask] + std[mask] * 3
-            #     if any(reading[mask] < min_cutoff) or any(reading[mask] > max_cutoff):
-            #         count += 1
-            #         local_count += 1
-            #         return True
-            # else:
-            #     logger.info(f"Max removable limit reached.")
-            # TODO count not working,sometimes one reading remains
+            # TODO count not working, sometimes one reading remains
             if local_count < max_removable:
                 # 68, 96, 99
                 # Second pass, looking at the last 5 off-time channels, and using 68% confidence interval
@@ -1833,12 +1822,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         window_size = self.auto_clean_window_sbox.value()
 
         # Filter the data to only see readings that aren't already flagged for deletion
-        # data = self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)]
-        data = self.pem_file.data
+        data = self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)]
         # Filter the readings to only consider off-time channels
         mask = np.asarray(~self.pem_file.channel_times.Remove)
         # Clean the data
-        cleaned_data = data.groupby(['Station', 'Component'], as_index=False).apply(clean_group).reset_index(drop=True)
+        cleaned_data = data.groupby(['Station', 'Component'], as_index=False, group_keys=False).apply(clean_group)
         # Update the data
         self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)] = cleaned_data
 
@@ -2079,17 +2067,18 @@ if __name__ == '__main__':
     dmp_parser = DMPParser()
     # pem_files = pem_getter.get_pems(random=True, number=1)
 
+    pem_file = PEMParser().parse(r"C:\_Data\2021\Canadian Palladium\_EB-21-55\RAW\55z_0719.PEM")
     # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
     # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Lac Lessard\RAW\1000_0707.PEM")[0]
-    pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]  # TODO Test this for ordering worse to best readings
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
     editor = PEMPlotEditor()
     # editor.move(0, 0)
     editor.open(pem_file)
-    editor.auto_clean()
+    # editor.auto_clean()
 
     app.exec_()
 

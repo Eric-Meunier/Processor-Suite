@@ -465,6 +465,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                                                                                      legacy=True))
         self.actionBackup_Files.triggered.connect(self.backup_files)
         self.actionImport_RI_Files.triggered.connect(self.open_ri_importer)
+        self.actionImport_RI_Files.setShortcut("Ctrl+I")
 
         self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
 
@@ -5066,8 +5067,8 @@ def main():
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
-    pem_files = pem_g.get_pems(number=1, random=True)
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
+    # pem_files = pem_g.get_pems(number=1, random=True)
+    pem_files = pem_g.get_pems(folder="Raw Boreholes\HOLE STE-21-02\RAW", number=2)
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
     # assert len(pem_files) == len(ri_files)
