@@ -339,7 +339,7 @@
          <number>0</number>
         </property>
         <item>
-         <layout class="QHBoxLayout" name="plots_layout"/>
+         <layout class="QtWidgets.QHBoxLayout" name="plots_layout"/>
         </item>
        </layout>
       </widget>

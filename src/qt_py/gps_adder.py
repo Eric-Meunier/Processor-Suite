@@ -8,10 +8,7 @@ import keyboard
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QTableWidgetItem, QHeaderView, QInputDialog,
-                               QFileDialog, QWidget, QVBoxLayout, QLabel, QPushButton, QFrame, QHBoxLayout, QTabWidget,
-                               QTableWidget)
+from PySide2 import QtCore, QtGui, QtWidgets
 
 from src.qt_py import icons_path, NonScientific, read_file
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
@@ -26,7 +23,7 @@ pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 
 
-class GPSAdder(QMainWindow):
+class GPSAdder(QtWidgets.QMainWindow):
     """
     Class to help add station GPS to a PEM file. Helps with files that have missing stations numbers or other
     formatting errors.
@@ -59,7 +56,7 @@ class GPSAdder(QMainWindow):
         self.selection = []
         self.selected_row_info = None
 
-        self.message = QMessageBox()
+        self.message = QtWidgets.QMessageBox()
 
     def closeEvent(self, e):
         e.accept()
@@ -127,7 +124,7 @@ class GPSAdder(QMainWindow):
 
     def open_file_dialog(self):
         default_path = ""
-        file, extension = QFileDialog().getOpenFileName(self, "Open GPS File", default_path, "Text Files (*.TXT);;"
+        file, extension = QtWidgets.QFileDialog().getOpenFileName(self, "Open GPS File", default_path, "Text Files (*.TXT);;"
                                                                                              "CSV Files (*.CSV);;"
                                                                                              "GPX Files (*.GPX)")
         if file:
@@ -149,10 +146,10 @@ class GPSAdder(QMainWindow):
              """
             def series_to_items(x):
                 if isinstance(x, float):
-                    return QTableWidgetItem(f"{x}")
+                    return QtWidgets.QTableWidgetItem(f"{x}")
                     # return QTableWidgetItem(f"{x:.2f}")
                 else:
-                    return QTableWidgetItem(str(x))
+                    return QtWidgets.QTableWidgetItem(str(x))
 
             row_pos = self.table.rowCount()
             # Add a new row to the table
@@ -324,7 +321,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
         # Table
         self.table.setFixedWidth(400)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         # Create the plan and section plots
         self.plan_plot = pg.PlotDataItem(clickable=True)
@@ -409,7 +406,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         """
         Remove text from station names. Useful for GPX files.
         """
-        trunc_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:")
+        trunc_amt, _ = QtWidgets.QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:")
         if trunc_amt:
             print(f"Truncating {trunc_amt}")
             self.df.Station.loc[:] = self.df.Station.loc[:].map(lambda x: str(x)[trunc_amt:]).astype(int)
@@ -652,14 +649,14 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.status_bar.hide()
 
         # Status bar widgets
-        # self.auto_sort_cbox = QCheckBox("Automatically Sort Loop", self)
+        # self.auto_sort_cbox = QtWidgets.QCheckBox("Automatically Sort Loop", self)
         # self.auto_sort_cbox.setChecked(True)
 
         # self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
         # self.status_bar.addPermanentWidget(QLabel(), 1)
 
         self.table.setFixedWidth(400)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         # Create the plan and section plots
         self.plan_plot = pg.PlotDataItem(clickable=True)
@@ -884,7 +881,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.menuSettings.clear()
 
         self.table.setFixedWidth(400)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         # Create the plan and section plots
         self.plan_plot = pg.ScatterPlotItem(clickable=True)
@@ -1133,7 +1130,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             self.section_view.addItem(self.section_ly)
 
 
-class ExcelTablePicker(QWidget):
+class ExcelTablePicker(QtWidgets.QWidget):
     accept_sig = QtCore.Signal(object)
 
     def __init__(self, parent=None):
@@ -1141,7 +1138,7 @@ class ExcelTablePicker(QWidget):
         self.parent = parent
         self.setWindowTitle("Excel Table Picker")
         self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("excel_file.png"))))
-        self.setLayout(QVBoxLayout())
+        self.setLayout(QtWidgets.QVBoxLayout())
 
         self.content = None
         self.easting = None
@@ -1154,17 +1151,17 @@ class ExcelTablePicker(QWidget):
 
         self.tables = []
         self.tabs = QTabWidget()
-        self.layout().addWidget(QLabel("Sequentially click the Easting, Northing, and Elevation cells."))
+        self.layout().addWidget(QtWidgets.QLabel("Sequentially click the Easting, Northing, and Elevation cells."))
         self.layout().addWidget(self.tabs)
 
-        self.selection_text = QLabel("Easting: \nNorthing: \nElevation: ")
+        self.selection_text = QtWidgets.QLabel("Easting: \nNorthing: \nElevation: ")
         self.layout().addWidget(self.selection_text)
 
         self.accept_btn = QPushButton("Accept")
         self.reset_btn = QPushButton("Reset")
         self.close_btn = QPushButton("Close")
-        btn_frame = QFrame()
-        btn_frame.setLayout(QHBoxLayout())
+        btn_frame = QtWidgets.QFrame()
+        btn_frame.setLayout(QtWidgets.QHBoxLayout())
         btn_frame.layout().addWidget(self.accept_btn)
         btn_frame.layout().addWidget(self.reset_btn)
         btn_frame.layout().addWidget(self.close_btn)
@@ -1242,7 +1239,7 @@ class ExcelTablePicker(QWidget):
         self.show()
 
 
-class DADSelector(QWidget):
+class DADSelector(QtWidgets.QWidget):
     accept_sig = QtCore.Signal(object)
 
     def __init__(self, parent=None):
@@ -1250,8 +1247,8 @@ class DADSelector(QWidget):
         self.parent = parent
         self.setWindowTitle("DAD Selector")
         self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("excel_file.png"))))
-        self.setLayout(QVBoxLayout())
-        self.message = QMessageBox()
+        self.setLayout(QtWidgets.QVBoxLayout())
+        self.message = QtWidgets.QMessageBox()
 
         self.depths = None
         self.azimuths = None
@@ -1263,19 +1260,19 @@ class DADSelector(QWidget):
 
         self.tables = []
         self.tabs = QTabWidget()
-        self.layout().addWidget(QLabel(
+        self.layout().addWidget(QtWidgets.QLabel(
             "Sequentially double-click the top cell of the Depth, Azimuth, and Dip cell ranges."))
         self.layout().addWidget(self.tabs)
 
-        self.selection_text = QLabel("Depth: \nAzimuth: \nDip: ")
+        self.selection_text = QtWidgets.QLabel("Depth: \nAzimuth: \nDip: ")
         self.selection_text.setWordWrap(True)
         self.layout().addWidget(self.selection_text)
 
         self.accept_btn = QPushButton("Accept")
         self.reset_btn = QPushButton("Reset")
         self.close_btn = QPushButton("Close")
-        btn_frame = QFrame()
-        btn_frame.setLayout(QHBoxLayout())
+        btn_frame = QtWidgets.QFrame()
+        btn_frame.setLayout(QtWidgets.QHBoxLayout())
         btn_frame.layout().addWidget(self.accept_btn)
         btn_frame.layout().addWidget(self.reset_btn)
         btn_frame.layout().addWidget(self.close_btn)
@@ -1386,7 +1383,7 @@ class DADSelector(QWidget):
 
 def main():
     from src.pem.pem_getter import PEMGetter
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     samples_folder = Path(__file__).absolute().parents[2].joinpath(r'sample_files')
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))

@@ -4,7 +4,7 @@ import sys
 
 import cartopy
 from pathlib import Path
-from PySide2 import QtGui
+from PySide2 import QtGui, QtWidgets
 from PySide2.QtWidgets import (QWidget, QFrame, QMainWindow, QLabel, QPushButton, QFormLayout, QVBoxLayout)
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -71,7 +71,7 @@ class MagDeclinationCalculator(QMainWindow):
         :param str_value: str
         :return None
         """
-        cb = QtGui.QApplication.clipboard()
+        cb = QtGui.QtWidgets.QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
         cb.setText(str_value, mode=cb.Clipboard)
         self.status_bar.showMessage(f"{str_value} copied to clipboard", 1000)

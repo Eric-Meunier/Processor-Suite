@@ -9,9 +9,7 @@ from threading import Timer
 
 import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QWidget, QMainWindow, QVBoxLayout, QGridLayout, QMessageBox, QFileDialog,
-                               QLabel, QAction, QMenu, QApplication)
+from PySide2 import QtCore, QtGui, QtWidgets
 from src.qt_py import icons_path
 
 logging.basicConfig()
@@ -26,14 +24,14 @@ pg.setConfigOption('crashWarning', True)
 __version__ = '0.5'
 
 
-class DBPlotter(QMainWindow):
+class DBPlotter(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
         self.db_files = []
         self.db_widgets = []
-        self.message = QMessageBox()
+        self.message = QtWidgets.QMessageBox()
         self.default_path = None
 
         self.x = 0
@@ -45,12 +43,12 @@ class DBPlotter(QMainWindow):
         self.resize(800, 700)
         self.setAcceptDrops(True)
 
-        self.setLayout(QVBoxLayout())
+        self.setLayout(QtWidgets.QVBoxLayout())
 
         # Create and format a central widget
-        self.widget_layout = QGridLayout()
+        self.widget_layout = QtWidgets.QGridLayout()
         self.widget_layout.setContentsMargins(0, 0, 0, 0)
-        self.widget = QWidget()
+        self.widget = QtWidgets.QWidget()
         self.widget.setLayout(self.widget_layout)
         self.setCentralWidget(self.widget)
 
@@ -77,17 +75,17 @@ class DBPlotter(QMainWindow):
                 for widget in self.db_widgets:
                     widget.plot_widget.removeItem(widget.symbols)
 
-        self.file_menu = QMenu("File", self)
-        self.view_menu = QMenu("View", self)
+        self.file_menu = QtWidgets.QMenu("File", self)
+        self.view_menu = QtWidgets.QMenu("View", self)
 
-        self.openFile_Action = QAction('Open File', self.file_menu)
+        self.openFile_Action = QtWidgets.QAction('Open File', self.file_menu)
         self.openFile_Action.triggered.connect(self.open_file_dialog)
         self.openFile_Action.setIcon(QtGui.QIcon(str(icons_path.joinpath("open.png"))))
-        self.actionSave_Screenshot = QAction("Save Screenshot")
+        self.actionSave_Screenshot = QtWidgets.QAction("Save Screenshot")
         self.actionSave_Screenshot.setShortcut("Ctrl+S")
         self.actionSave_Screenshot.triggered.connect(self.save_img)
         self.actionSave_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("save_as.png"))))
-        self.actionCopy_Screenshot = QAction("Copy Screenshot")
+        self.actionCopy_Screenshot = QtWidgets.QAction("Copy Screenshot")
         self.actionCopy_Screenshot.setShortcut("Ctrl+C")
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
         self.actionCopy_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("copy.png"))))
@@ -148,7 +146,7 @@ class DBPlotter(QMainWindow):
         self.open(urls)
 
     def open_file_dialog(self):
-        files = QFileDialog().getOpenFileNames(self, 'Open Files',
+        files = QtWidgets.QFileDialog().getOpenFileNames(self, 'Open Files',
                                                filter='Damp files (*.log *.txt *.rtf)')[0]
         if files:
             for file in files:
@@ -337,7 +335,7 @@ class DBPlotter(QMainWindow):
         if not self.default_path:
             return
 
-        save_path = QFileDialog().getSaveFileName(self, 'Save File Name',
+        save_path = QtWidgets.QFileDialog().getSaveFileName(self, 'Save File Name',
                                                   str(self.default_path.with_suffix('.png')),
                                                   'PNG Files (*.PNG)')[0]
 
@@ -352,7 +350,7 @@ class DBPlotter(QMainWindow):
         def hide_status_bar():
             self.statusBar().hide()
 
-        QApplication.clipboard().setPixmap(self.grab())
+        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
 
         self.statusBar().show()
         t = Timer(1., hide_status_bar)  # Runs 'hide_status_bar' after 1 second
@@ -360,7 +358,7 @@ class DBPlotter(QMainWindow):
         self.statusBar().showMessage(f"Screen shot copied to clipboard.", 1000)
 
 
-class DBPlot(QMainWindow):
+class DBPlot(QtWidgets.QMainWindow):
     """
     A widget that plots damping box data, with a linear region item that, when moved, updates
     the status bar with information within the region.
@@ -382,7 +380,7 @@ class DBPlot(QMainWindow):
         self.symbols = None
 
         # Format widget
-        self.setLayout(QVBoxLayout())
+        self.setLayout(QtWidgets.QVBoxLayout())
         self.setMinimumHeight(200)
         self.statusBar().show()
 
@@ -410,19 +408,19 @@ class DBPlot(QMainWindow):
         self.plot_widget.getAxis("top").setStyle(showValues=False)
 
         # Status bar
-        self.min_current_label = QLabel()
+        self.min_current_label = QtWidgets.QLabel()
         self.min_current_label.setIndent(4)
-        self.max_current_label = QLabel()
+        self.max_current_label = QtWidgets.QLabel()
         self.max_current_label.setIndent(4)
-        self.delta_current_label = QLabel()
+        self.delta_current_label = QtWidgets.QLabel()
         self.delta_current_label.setIndent(4)
-        self.median_current_label = QLabel()
+        self.median_current_label = QtWidgets.QLabel()
         self.median_current_label.setIndent(4)
-        self.duration_label = QLabel()
+        self.duration_label = QtWidgets.QLabel()
         self.duration_label.setIndent(4)
-        self.rate_of_change_label = QLabel()
+        self.rate_of_change_label = QtWidgets.QLabel()
         self.rate_of_change_label.setIndent(4)
-        self.file_label = QLabel(f"File: {filepath}")
+        self.file_label = QtWidgets.QLabel(f"File: {filepath}")
 
         self.statusBar().addWidget(self.min_current_label)
         self.statusBar().addWidget(self.max_current_label)
@@ -507,7 +505,7 @@ class DBPlot(QMainWindow):
 
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     mw = DBPlotter()
 
     samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files\Damping box files'))

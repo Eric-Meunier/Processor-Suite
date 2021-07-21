@@ -9,9 +9,7 @@ import numpy as np
 import pandas as pd
 import pylineclip as lc
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QApplication, QMainWindow, QInputDialog, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                               QPushButton)
+from PySide2 import QtCore, QtGui, QtWidgets
 from pyqtgraph.Point import Point
 from scipy import spatial, signal
 
@@ -43,7 +41,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 # TODO Auto-scale after auto-clean
 
 
-class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
+class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
     save_sig = QtCore.Signal(object)
     close_sig = QtCore.Signal(object)
     reset_file_sig = QtCore.Signal(object)
@@ -61,25 +59,25 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.resize(1300, 900)
 
         self.setAcceptDrops(True)
-        self.message = QMessageBox()
+        self.message = QtWidgets.QMessageBox()
 
         # Status bar formatting
-        self.station_text = QLabel()
-        self.decay_selection_text = QLabel()
+        self.station_text = QtWidgets.QLabel()
+        self.decay_selection_text = QtWidgets.QLabel()
         self.decay_selection_text.setIndent(20)
         self.decay_selection_text.setStyleSheet('color: blue')
         self.decay_selection_text.hide()
-        self.profile_selection_text = QLabel()
+        self.profile_selection_text = QtWidgets.QLabel()
         self.profile_selection_text.setIndent(20)
         self.profile_selection_text.setStyleSheet('color: #ce4a7e')
         # self.profile_selection_text.setStyleSheet('color: purple')
         self.profile_selection_text.hide()
-        self.file_info_label = QLabel()
+        self.file_info_label = QtWidgets.QLabel()
         self.file_info_label.setIndent(20)
         self.file_info_label.setStyleSheet('color: gray')
-        self.number_of_readings = QLabel()
+        self.number_of_readings = QtWidgets.QLabel()
         self.number_of_readings.setIndent(20)
-        self.number_of_repeats = QPushButton('')
+        self.number_of_repeats = QtWidgets.QPushButton('')
         self.number_of_repeats.setFlat(True)
 
         # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray;}")
@@ -87,7 +85,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         self.status_bar.addWidget(self.station_text, 0)
         self.status_bar.addWidget(self.decay_selection_text, 0)
-        self.status_bar.addWidget(QLabel(), 1)  # Spacer
+        self.status_bar.addWidget(QtWidgets.QLabel(), 1)  # Spacer
         self.status_bar.addWidget(self.profile_selection_text, 0)
         self.status_bar.addPermanentWidget(self.file_info_label, 0)
         self.status_bar.addPermanentWidget(self.number_of_readings, 0)
@@ -348,14 +346,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
     def save_img(self):
         """Save an image of the window """
-        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
+        save_name, save_type = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
         if save_name:
             self.grab().save(save_name)
             self.status_bar.showMessage(f"Image saved.", 1500)
 
     def copy_img(self):
         """Take an image of the window and copy it to the clipboard"""
-        QApplication.clipboard().setPixmap(self.grab())
+        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
         self.status_bar.showMessage(f"Image saved to clipboard.", 1500)
 
     def open(self, pem_file):
@@ -448,7 +446,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         """
         Open files through the file dialog
         """
-        files = QFileDialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem)')
+        files = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem)')
         if files[0] != '':
             file = files[0][0]
             if file.lower().endswith('.pem'):
@@ -477,7 +475,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         """
         Save the PEM file to a new file name
         """
-        file_path = QFileDialog.getSaveFileName(self, '', str(self.pem_file.filepath), 'PEM Files (*.PEM)')[0]
+        file_path = QtWidgets.QFileDialog.getSaveFileName(self, '', str(self.pem_file.filepath), 'PEM Files (*.PEM)')[0]
         if file_path:
             text = self.pem_file.to_string()
             print(text, file=open(str(file_path), 'w+'))
@@ -1501,7 +1499,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             logger.warning(f"No source selected.")
             return
 
-        new_comp, ok_pressed = QInputDialog.getText(self, "Change Component", "New Component:", QLineEdit.Normal)
+        new_comp, ok_pressed = QtWidgets.QInputDialog.getText(self, "Change Component", "New Component:", QtWidgets.QLineEdit.Normal)
         if ok_pressed:
             new_comp = new_comp.upper()
             if new_comp not in ['X', 'Y', 'Z']:
@@ -1540,7 +1538,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             logger.warning(f"No source selected.")
             return
 
-        new_suffix, ok_pressed = QInputDialog.getText(self, "Change Suffix", "New Suffix:")
+        new_suffix, ok_pressed = QtWidgets.QInputDialog.getText(self, "Change Suffix", "New Suffix:")
         if ok_pressed:
             new_suffix = new_suffix.upper()
             if new_suffix not in ['N', 'E', 'S', 'W']:
@@ -1576,7 +1574,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             selected_data = self.get_selected_decay_data()
             selected_station = selected_data.Station.unique()[0]
 
-            new_station, ok_pressed = QInputDialog.getText(self, "Change Station", "New Station:",
+            new_station, ok_pressed = QtWidgets.QInputDialog.getText(self, "Change Station", "New Station:",
                                                            text=selected_station)
 
             if ok_pressed:
@@ -1614,7 +1612,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             return
 
         global shift_amount
-        shift_amount, ok_pressed = QInputDialog.getInt(self, "Shift Stations", "Shift Amount:", value=0)
+        shift_amount, ok_pressed = QtWidgets.QInputDialog.getInt(self, "Shift Stations", "Shift Amount:", value=0)
 
         if ok_pressed and shift_amount != 0:
             # Update the station number in the selected data
@@ -1658,7 +1656,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
     def cycle_profile_component(self):
         """
-        Signal slot, cycle through the profile plots
+        Signal slot, cycle the profile plots to the next component
         """
 
         def get_comp_indexes():
@@ -1682,12 +1680,15 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             if current_ind + 1 > max(comp_indexes):
                 new_ind = min(comp_indexes)
             else:
-                new_ind = comp_indexes[comp_indexes.index(current_ind) + 1]
+                # If the last of the current component was just changed to another component
+                if current_ind not in comp_indexes:
+                    new_ind = min(comp_indexes)
+                else:
+                    new_ind = comp_indexes[comp_indexes.index(current_ind) + 1]
         elif comp_indexes[0] != current_ind:
             new_ind = comp_indexes[0]
         else:
             return
-        # print(f"Cycling profile tab to {new_ind}")
         self.profile_tab_widget.setCurrentIndex(new_ind)
 
     def cycle_station(self, direction):
@@ -2061,7 +2062,7 @@ if __name__ == '__main__':
 
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     pem_g = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()

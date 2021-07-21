@@ -8,9 +8,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QWidget, QTableWidgetItem, QAction, QMessageBox, QItemDelegate, QFileDialog,
-                               QErrorMessage, QHeaderView, QApplication)
+from PySide2 import QtCore, QtGui, QtWidgets
 from src.qt_py import clear_table, read_file
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
@@ -26,7 +24,7 @@ logger = logging.getLogger(__name__)
 get_collar_called = 0
 
 
-class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
+class PEMFileInfoWidget(QtWidgets.QWidget, Ui_PEMInfoWidget):
     refresh_row_signal = QtCore.Signal()  # Send a signal to PEMEditor to refresh its main table.
 
     share_loop_signal = QtCore.Signal(object)
@@ -45,9 +43,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.active_table = None
 
         self.ri_editor = RIFile()
-        self.dialog = QFileDialog()
-        self.error = QErrorMessage()
-        self.message = QMessageBox()
+        self.dialog = QtWidgets.QFileDialog()
+        self.error = QtWidgets.QErrorMessage()
+        self.message = QtWidgets.QMessageBox()
         self.picker = None
         self.line_adder = None
         self.loop_adder = None
@@ -71,7 +69,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Units', 'Station']
         self.loop_table_columns = ['Easting', 'Northing', 'Elevation', 'Units']
 
-        float_delegate = QItemDelegate()  # Must keep this reference or else it is garbage collected
+        float_delegate = QtWidgets.QItemDelegate()  # Must keep this reference or else it is garbage collected
         self.line_table.setItemDelegateForColumn(0, float_delegate)
         self.line_table.setItemDelegateForColumn(1, float_delegate)
         self.line_table.setItemDelegateForColumn(2, float_delegate)
@@ -88,7 +86,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.init_signals()
 
     def init_actions(self):
-        self.loop_table.remove_row_action = QAction("&Remove", self)
+        self.loop_table.remove_row_action = QtWidgets.QAction("&Remove", self)
         self.addAction(self.loop_table.remove_row_action)
         self.loop_table.remove_row_action.triggered.connect(lambda: self.remove_table_row(self.loop_table))
         self.loop_table.remove_row_action.triggered.connect(lambda:
@@ -97,7 +95,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.loop_table.remove_row_action.setShortcut('Del')
         self.loop_table.remove_row_action.setEnabled(False)
 
-        self.line_table.remove_row_action = QAction("&Remove", self)
+        self.line_table.remove_row_action = QtWidgets.QAction("&Remove", self)
         self.addAction(self.line_table.remove_row_action)
         self.line_table.remove_row_action.triggered.connect(lambda: self.remove_table_row(self.line_table))
         self.line_table.remove_row_action.triggered.connect(lambda:
@@ -106,21 +104,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table.remove_row_action.setShortcut('Del')
         self.line_table.remove_row_action.setEnabled(False)
 
-        self.collar_table.remove_row_action = QAction("&Remove", self)
+        self.collar_table.remove_row_action = QtWidgets.QAction("&Remove", self)
         self.addAction(self.collar_table.remove_row_action)
         self.collar_table.remove_row_action.triggered.connect(
             lambda: self.remove_table_row(self.collar_table))
         self.collar_table.remove_row_action.setShortcut('Del')
         self.collar_table.remove_row_action.setEnabled(False)
 
-        self.segments_table.remove_row_action = QAction("&Remove", self)
+        self.segments_table.remove_row_action = QtWidgets.QAction("&Remove", self)
         self.addAction(self.segments_table.remove_row_action)
         self.segments_table.remove_row_action.triggered.connect(
             lambda: self.remove_table_row(self.segments_table))
         self.segments_table.remove_row_action.setShortcut('Del')
         self.segments_table.remove_row_action.setEnabled(False)
 
-        self.ri_table.remove_ri_file_action = QAction("&Remove RI File", self)
+        self.ri_table.remove_ri_file_action = QtWidgets.QAction("&Remove RI File", self)
         self.addAction(self.ri_table.remove_ri_file_action)
         self.ri_table.remove_ri_file_action.triggered.connect(self.remove_ri_file)
         self.ri_table.remove_ri_file_action.setStatusTip("Remove the RI file")
@@ -179,14 +177,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         if not self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.geometry_tab))
-            self.line_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.line_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         elif self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.station_gps_tab))
-            self.segments_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            self.collar_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.segments_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+            self.collar_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
-        self.loop_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.loop_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.Close:
@@ -243,7 +241,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     self.ri_table.clearSelection()
                     return True
 
-        return super(QWidget, self).eventFilter(source, event)
+        return super(QtWidgets.QWidget, self).eventFilter(source, event)
 
     def reset_spinbox(self, spinbox):
         """
@@ -297,7 +295,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             for i, row in enumerate(self.ri_file.data):
                 row_pos = self.ri_table.rowCount()
                 self.ri_table.insertRow(row_pos)
-                items = [QTableWidgetItem(row[key]) for key in self.ri_file.columns]
+                items = [QtWidgets.QTableWidgetItem(row[key]) for key in self.ri_file.columns]
 
                 for m, item in enumerate(items):
                     item.setTextAlignment(QtCore.Qt.AlignCenter)
@@ -554,7 +552,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         }.items()))
 
         for key, value in info.items():
-            key_item = QTableWidgetItem(key)
+            key_item = QtWidgets.QTableWidgetItem(key)
             key_item.setFont(bold_font)
 
             if key == "Probes" or key == "Notes":
@@ -563,7 +561,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     row = self.info_table.rowCount()
                     self.info_table.insertRow(row)
 
-                    value_item = QTableWidgetItem(str(v))
+                    value_item = QtWidgets.QTableWidgetItem(str(v))
                     self.info_table.setItem(row, 1, value_item)
 
                 self.info_table.setSpan(span_row, 0, len(value), 1)
@@ -573,15 +571,15 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 row = self.info_table.rowCount()
                 self.info_table.insertRow(row)
 
-                value_item = QTableWidgetItem(str(value))
+                value_item = QtWidgets.QTableWidgetItem(str(value))
 
                 self.info_table.setItem(row, 0, key_item)
                 self.info_table.setItem(row, 1, value_item)
 
         # Set the column widths
         header = self.info_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
 
     def fill_gps_table(self, data, table):
         """
@@ -599,7 +597,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             :return: None
             """
             def series_to_items(x):
-                item = QTableWidgetItem()
+                item = QtWidgets.QTableWidgetItem()
                 item.setData(QtCore.Qt.EditRole, x)
                 return item
 
@@ -837,7 +835,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 logger.error(f"{station} is not an integer.")
                 return
             else:
-                new_station_item = QTableWidgetItem(str(station + (shift_amount - self.last_stn_gps_shift_amt)))
+                new_station_item = QtWidgets.QTableWidgetItem(str(station + (shift_amount - self.last_stn_gps_shift_amt)))
                 new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.line_table.setItem(row, station_column, new_station_item)
 
@@ -876,7 +874,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 return
 
             new_elevation = elevation + (shift_amount - self.last_loop_elev_shift_amt)
-            new_elevation_item = QTableWidgetItem('{:.2f}'.format(new_elevation))
+            new_elevation_item = QtWidgets.QTableWidgetItem('{:.2f}'.format(new_elevation))
             new_elevation_item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.loop_table.setItem(row, self.loop_table_columns.index('Elevation'), new_elevation_item)
 
@@ -909,7 +907,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             else:
                 return
 
-            new_station_item = QTableWidgetItem(str(station * -1))
+            new_station_item = QtWidgets.QTableWidgetItem(str(station * -1))
             new_station_item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.line_table.setItem(row, station_column, new_station_item)
 
@@ -948,7 +946,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         data_stations = self.pem_file.get_stations(converted=True)
         for row, station in enumerate(data_stations):
-            item = QTableWidgetItem(str(station))
+            item = QtWidgets.QTableWidgetItem(str(station))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.line_table.setItem(row, self.line_table_columns.index('Station'), item)
             self.gps_object_changed(self.line_table, refresh=False)
@@ -1104,7 +1102,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     # cp = CollarPicker(None)
     # cp.show()
 

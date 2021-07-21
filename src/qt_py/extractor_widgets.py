@@ -3,14 +3,12 @@ import os
 import sys
 from pathlib import Path
 
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QWidget, QFileDialog, QApplication, QTableWidgetItem, QHeaderView, QTableWidget,
-                               QPushButton, QGridLayout)
+from PySide2 import QtCore, QtGui, QtWidgets
 
 logger = logging.getLogger(__name__)
 
 
-class StationSplitter(QWidget):
+class StationSplitter(QtWidgets.QWidget):
     """
     Class that will extract selected stations from a PEM File and save them as a new PEM File.
     """
@@ -29,20 +27,20 @@ class StationSplitter(QWidget):
                                      "ui\\icons\\station_splitter.png")
         self.setWindowIcon(QtGui.QIcon(icon_path))
 
-        self.extract_btn = QPushButton('Extract')
-        self.cancel_btn = QPushButton('Cancel')
+        self.extract_btn = QtWidgets.QPushButton('Extract')
+        self.cancel_btn = QtWidgets.QPushButton('Cancel')
         self.extract_btn.clicked.connect(self.extract_selection)
         self.cancel_btn.clicked.connect(self.close)
 
-        self.table = QTableWidget()
+        self.table = QtWidgets.QTableWidget()
         self.table_columns = ['Station']
         self.table.setColumnCount(len(self.table_columns))
         self.table.setHorizontalHeaderLabels(self.table_columns)
         self.table.setAlternatingRowColors(True)
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
 
-        self.layout = QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.layout.addWidget(self.table, 0, 0, 1, 2)
         self.layout.addWidget(self.extract_btn, 1, 0)
@@ -70,7 +68,7 @@ class StationSplitter(QWidget):
         for i, station in enumerate(stations):
             row = i
             self.table.insertRow(row)
-            item = QTableWidgetItem(station)
+            item = QtWidgets.QTableWidgetItem(station)
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, 0, item)
 
@@ -82,7 +80,7 @@ class StationSplitter(QWidget):
 
         if selected_stations:
             default_path = str(self.pem_file.filepath.parent)
-            save_file = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0] + '.PEM'
+            save_file = os.path.splitext(QtWidgets.QFileDialog.getSaveFileName(self, '', default_path)[0])[0] + '.PEM'
             if save_file:
                 new_pem_file = self.pem_file.copy()
                 filt = new_pem_file.data.Station.isin(selected_stations)
@@ -100,7 +98,7 @@ class StationSplitter(QWidget):
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
 
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     pg = PEMGetter()
     files = pg.get_pems(number=1, random=True)
     ss = StationSplitter()

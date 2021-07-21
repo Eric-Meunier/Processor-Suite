@@ -3273,7 +3273,7 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
 
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth", file="2200EAv KBNorth.PEM")
     pem_files = [PEMParser().parse(r"C:\_Data\2021\TMC\131-21-38\Final\131-21-38 XYT.PEM")]

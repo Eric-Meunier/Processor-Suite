@@ -11,10 +11,8 @@ import numpy as np
 import pandas as pd
 import plotly
 import plotly.graph_objects as go
-from PySide2 import QtGui, QtCore
+from PySide2 import QtGui, QtCore, QtWidgets
 from PySide2.QtWebEngineWidgets import QWebEngineView
-from PySide2.QtWidgets import (QApplication, QErrorMessage, QWidget, QFileDialog, QMessageBox, QGridLayout,
-                               QAction, QMainWindow, QHBoxLayout, QShortcut)
 import pyqtgraph as pg
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
@@ -36,7 +34,7 @@ pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 
 
-class MapboxViewer(QMainWindow):
+class MapboxViewer(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         """
@@ -60,15 +58,15 @@ class MapboxViewer(QMainWindow):
         self.status_bar.show()
         # self.resize(1000, 800)
 
-        layout = QHBoxLayout()
+        layout = QtWidgets.QHBoxLayout()
         self.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.save_img_action = QAction('Save Image')
+        self.save_img_action = QtWidgets.QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
         self.save_img_action.triggered.connect(self.save_img)
         self.save_img_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("save_as.png"))))
-        self.copy_image_action = QAction('Copy Image')
+        self.copy_image_action = QtWidgets.QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
         self.copy_image_action.triggered.connect(self.copy_img)
         self.copy_image_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("copy.png"))))
@@ -102,7 +100,7 @@ class MapboxViewer(QMainWindow):
         self.map_widget.setHtml(html)
 
     def save_img(self):
-        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
+        save_name, save_type = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image',
                                                            'map.png',
                                                            'PNG file (*.PNG);; PDF file (*.PDF)'
                                                            )
@@ -113,7 +111,7 @@ class MapboxViewer(QMainWindow):
                 self.grab().save(save_name)
 
     def copy_img(self):
-        QApplication.clipboard().setPixmap(self.grab())
+        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
         # self.status_bar.show()
         self.status_bar.showMessage('Image copied to clipboard.', 1000)
         # QTimer.singleShot(1000, lambda: self.status_bar.hide())
@@ -312,7 +310,7 @@ class TileMapViewer(MapboxViewer):
         self.load_page()
 
 
-class Map3DViewer(QMainWindow):
+class Map3DViewer(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
@@ -328,13 +326,13 @@ class Map3DViewer(QMainWindow):
         self.setWindowTitle("3D Map Viewer")
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, '3d_map.png')))
         self.resize(1000, 800)
-        layout = QGridLayout()
+        layout = QtWidgets.QGridLayout()
         self.setLayout(layout)
 
-        self.save_img_action = QAction('Save Image')
+        self.save_img_action = QtWidgets.QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
         self.save_img_action.triggered.connect(self.save_img)
-        self.copy_image_action = QAction('Copy Image')
+        self.copy_image_action = QtWidgets.QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
         self.copy_image_action.triggered.connect(self.copy_img)
 
@@ -491,7 +489,7 @@ class Map3DViewer(QMainWindow):
         self.load_page()
 
     def save_img(self):
-        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
+        save_name, save_type = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image',
                                                            'map.png',
                                                            'PNG file (*.PNG);; PDF file (*.PDF)'
                                                            )
@@ -502,7 +500,7 @@ class Map3DViewer(QMainWindow):
                 self.grab().save(save_name)
 
     def copy_img(self):
-        QApplication.clipboard().setPixmap(self.grab())
+        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
         self.statusBar().show()
         self.statusBar().showMessage('Image copied to clipboard.', 1000)
         QtCore.QTimer.singleShot(1000, lambda: self.statusBar().hide())
@@ -517,7 +515,7 @@ class ContourMapToolbar(NavigationToolbar):
                  t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
 
 
-class ContourMapViewer(QWidget, Ui_ContourMap):
+class ContourMapViewer(QtWidgets.QWidget, Ui_ContourMap):
     """
     Widget to display contour maps. Filters the given PEMFiles to only include surface surveys. Either all files
     can be un-split, or if there are any split files, it will split the rest. Averages all files.
@@ -530,8 +528,8 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'contour_map.png')))
         self.channel_list_edit.setEnabled(False)
 
-        self.error = QErrorMessage()
-        self.message = QMessageBox()
+        self.error = QtWidgets.QErrorMessage()
+        self.message = QtWidgets.QMessageBox()
         self.map_plotter = MapPlotter()
         self.parent = parent
 
@@ -560,11 +558,11 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         self.colormap = custom_cmap
 
         """Signals"""
-        self.save_img_action = QAction('Save Image')
+        self.save_img_action = QtWidgets.QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
         self.save_img_action.triggered.connect(self.save_img)
         self.save_img_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("save_as.png"))))
-        self.copy_image_action = QAction('Copy Image')
+        self.copy_image_action = QtWidgets.QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
         self.copy_image_action.triggered.connect(self.copy_img)
         self.copy_image_action.setIcon(QtGui.QIcon(str(icons_path.joinpath("copy.png"))))
@@ -596,7 +594,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         self.deleteLater()
 
     def save_img(self):
-        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
+        save_name, save_type = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image',
                                                            'map.png',
                                                            'PNG file (*.PNG);; PDF file (*.PDF)'
                                                            )
@@ -607,7 +605,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
                 self.grab().save(save_name)
 
     def copy_img(self):
-        QApplication.clipboard().setPixmap(self.grab())
+        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
         # self.status_bar.show()
         self.status_bar.showMessage('Image copied to clipboard.', 1000)
         # QTimer.singleShot(1000, lambda: self.status_bar.hide())
@@ -896,7 +894,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         """
         if self.pem_files:
             default_path = self.pem_files[0].filepath.parent.with_suffix(".PDF")
-            path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', str(default_path),
+            path, ext = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Figure', str(default_path),
                                                     'PDF Files (*.PDF);;PNG Files (*.PNG);;JPG Files (*.JPG')
             if path:
                 # Create a new instance of ContourMap
@@ -944,7 +942,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
                 os.startfile(path)
 
 
-class GPSViewer(QMainWindow):
+class GPSViewer(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
@@ -954,7 +952,7 @@ class GPSViewer(QMainWindow):
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'gps_viewer.png')))
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
-        layout = QHBoxLayout()
+        layout = QtWidgets.QHBoxLayout()
         self.plan_view = pg.PlotWidget()
         self.setCentralWidget(self.plan_view)
         self.setLayout(layout)
@@ -995,20 +993,20 @@ class GPSViewer(QMainWindow):
         self.plan_view.showLabel('top', show=False)
 
         # Actions
-        self.save_img_action = QShortcut("Ctrl+S", self)
+        self.save_img_action = QtWidgets.QShortcut("Ctrl+S", self)
         self.save_img_action.activated.connect(self.save_img)
-        self.copy_image_action = QShortcut("Ctrl+C", self)
+        self.copy_image_action = QtWidgets.QShortcut("Ctrl+C", self)
         self.copy_image_action.activated.connect(self.copy_img)
-        self.auto_range_action = QShortcut(" ", self)
+        self.auto_range_action = QtWidgets.QShortcut(" ", self)
         self.auto_range_action.activated.connect(lambda: self.plan_view.autoRange())
 
     def save_img(self):
-        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'gps.png', 'PNG file (*.PNG)')
+        save_name, save_type = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image', 'gps.png', 'PNG file (*.PNG)')
         if save_name:
             self.grab().save(save_name)
 
     def copy_img(self):
-        QApplication.clipboard().setPixmap(self.grab())
+        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
         self.status_bar.show()
         self.status_bar.showMessage('Image copied to clipboard.', 1000)
         QtCore.QTimer.singleShot(1000, lambda: self.status_bar.hide())
@@ -1251,7 +1249,7 @@ class NonScientific(pg.AxisItem):
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
 
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
 
     getter = PEMGetter()
     files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')

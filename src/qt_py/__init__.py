@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pyqtgraph as pg
-from PySide2 import QtCore
+from PySide2 import QtCore, QtWidgets
 from PySide2.QtGui import QPixmap, QIcon
 from PySide2.QtWidgets import QProgressBar
 from src.logger import logger

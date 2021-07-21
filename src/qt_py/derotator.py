@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 # from src.logger import Log
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QMainWindow, QApplication, QMessageBox, QShortcut, QFileDialog)
+from PySide2 import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
 from src.qt_py import icons_path, NonScientific
 from src.pem.pem_file import PEMFile
@@ -26,7 +25,7 @@ acc_color = (0, 0, 255, 100)
 mag_color = (0, 204, 0, 100)
 
 
-class Derotator(QMainWindow, Ui_Derotator):
+class Derotator(QtWidgets.QMainWindow, Ui_Derotator):
     """
     Class that de-rotates XY data of a PEMFile
     """
@@ -45,7 +44,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.setWindowTitle('XY De-rotation')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'derotate.png')))
 
-        self.message = QMessageBox()
+        self.message = QtWidgets.QMessageBox()
 
         self.bad_stations_label.hide()
         self.list.setText('')
@@ -244,10 +243,10 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.unrotate_btn.clicked.connect(self.rotate)
         self.soa_sbox.valueChanged.connect(self.rotate)
 
-        self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
+        self.reset_range_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.reset_range)
 
-        self.change_component_shortcut = QShortcut(QtGui.QKeySequence('c'), self)
+        self.change_component_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence('c'), self)
         self.change_component_shortcut.activated.connect(self.change_tab)
 
     def accept(self):
@@ -275,7 +274,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         """
         Save the stats data frame to a CSV file.
         """
-        save_file = QFileDialog().getSaveFileName(self, 'Save CSV File',
+        save_file = QtWidgets.QFileDialog().getSaveFileName(self, 'Save CSV File',
                                                   str(self.pem_file.filepath.with_suffix('.CSV')),
                                                   'CSV Files (*.CSV)')[0]
         if save_file:
@@ -291,7 +290,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         """
         Export the rotated PEMFile.
         """
-        save_file = QFileDialog().getSaveFileName(self, 'Save PEM File',
+        save_file = QtWidgets.QFileDialog().getSaveFileName(self, 'Save PEM File',
                                                   str(self.pem_file.filepath),
                                                   'PEM Files (*.PEM)')[0]
         if save_file:
@@ -737,7 +736,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 def main():
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser, DMPParser
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
 
     pem_g = PEMGetter()
     parser = PEMParser()

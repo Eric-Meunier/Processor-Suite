@@ -131,7 +131,7 @@
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayout">
+      <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout">
        <property name="spacing">
         <number>6</number>
        </property>

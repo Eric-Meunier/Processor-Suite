@@ -4,9 +4,7 @@ import re
 import sys
 
 from pathlib import Path
-from PySide2 import QtCore
-from PySide2.QtWidgets import (QApplication, QWidget, QMessageBox, QAbstractScrollArea, QTableWidgetItem, QHeaderView,
-                               QTableWidget, QDialogButtonBox, QVBoxLayout)
+from PySide2 import QtCore, QtWidgets
 from src.pem import convert_station
 
 logger = logging.getLogger(__name__)
@@ -71,7 +69,7 @@ class RIFile:
         return profile_data
 
 
-class BatchRIImporter(QWidget):
+class BatchRIImporter(QtWidgets.QWidget):
     """
     Widget that imports multiple RI files. There must be equal number of RI files to PEM Files
     and the line/file name numbers much match up.
@@ -86,26 +84,26 @@ class BatchRIImporter(QWidget):
 
         self.setAcceptDrops(True)
         self.setGeometry(500, 300, 400, 500)
-        self.layout = QVBoxLayout()
+        self.layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.layout)
 
         self.setWindowTitle("RI File Import")
         # self.ri_parser = RIFile()
-        self.message = QMessageBox()
+        self.message = QtWidgets.QMessageBox()
 
-        self.table = QTableWidget()
+        self.table = QtWidgets.QTableWidget()
         columns = ['PEM File', 'RI File']
         self.table.setColumnCount(len(columns))
         self.table.setHorizontalHeaderLabels(columns)
         self.table.setSizeAdjustPolicy(
-            QAbstractScrollArea.AdjustIgnored)
+            QtWidgets.QAbstractScrollArea.AdjustIgnored)
         self.table.setAlternatingRowColors(True)
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
 
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok |
-                                           QDialogButtonBox.Cancel)
+        self.button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok |
+                                                     QtWidgets.QDialogButtonBox.Cancel)
         self.button_box.setCenterButtons(True)
         self.button_box.rejected.connect(self.close)
         self.button_box.accepted.connect(self.accept)
@@ -154,7 +152,7 @@ class BatchRIImporter(QWidget):
         for i, name in enumerate(names):
             row_pos = self.table.rowCount()
             self.table.insertRow(row_pos)
-            item = QTableWidgetItem(name)
+            item = QtWidgets.QTableWidgetItem(name)
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row_pos, 0, item)
 
@@ -178,7 +176,7 @@ class BatchRIImporter(QWidget):
         self.ri_files = sorted(ri_filepaths, key=lambda ri: (int(re.sub(r"\D", "", ri.suffix)), ri))
         for i, filepath in enumerate(self.ri_files):  # Add the RI file names to the table
             name = os.path.basename(filepath)
-            item = QTableWidgetItem(name)
+            item = QtWidgets.QTableWidgetItem(name)
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(i, 1, item)
 
@@ -208,14 +206,14 @@ class BatchRIImporter(QWidget):
         #
         # for i, filepath in enumerate(self.ri_files):  # Add the RI file names to the table
         #     name = os.path.basename(filepath)
-        #     item = QTableWidgetItem(name)
+        #     item = QtWidgets.QTableWidgetItem(name)
         #     item.setTextAlignment(QtCore.Qt.AlignCenter)
         #     self.table.setItem(i, 1, item)
 
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     pg = PEMGetter()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 

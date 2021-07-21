@@ -217,7 +217,7 @@
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout">
+        <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout">
          <property name="leftMargin">
           <number>0</number>
          </property>

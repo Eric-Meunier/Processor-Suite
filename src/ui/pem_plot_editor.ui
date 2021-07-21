@@ -17,7 +17,7 @@
    <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout_3">
+   <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout_3">
     <property name="spacing">
      <number>0</number>
     </property>
@@ -340,7 +340,7 @@
       <property name="frameShadow">
        <enum>QFrame::Sunken</enum>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayout">
+      <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout">
        <property name="spacing">
         <number>0</number>
        </property>

@@ -9,10 +9,7 @@ import mplcursors
 import math
 import numpy as np
 import pandas as pd
-from PySide2 import QtGui, QtCore
-from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import (QMainWindow, QApplication, QShortcut, QFileDialog, QMessageBox, QErrorMessage, QWidget,
-                               QVBoxLayout)
+from PySide2 import QtGui, QtCore, QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from src.mpl.interactive_spline import InteractiveSpline
@@ -86,7 +83,7 @@ def dad_to_seg(df, units='m'):
     return BoreholeSegments(seg)
 
 
-class PEMGeometry(QMainWindow, Ui_PEMGeometry):
+class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
     # plt.style.use('seaborn-white')
     accepted_sig = QtCore.Signal(object)
 
@@ -95,17 +92,17 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.setupUi(self)
 
         self.setWindowTitle('PEM Geometry')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'pem_geometry.png')))
         self.resize(1100, 800)
         # self.status_bar.setStyleSheet("border-top :0.5px solid gray;")
 
-        self.message = QMessageBox()
-        self.error = QErrorMessage()
+        self.message = QtWidgets.QMessageBox()
+        self.error = QtWidgets.QErrorMessage()
         self.error.setWindowTitle('Error')
 
         self.parent = parent
         self.pem_file = None
-        self.dialog = QFileDialog()
+        self.dialog = QtWidgets.QFileDialog()
 
         # Initialize the plot lines
         self.tool_az_line = None
@@ -149,8 +146,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.plots_layout.addWidget(self.canvas)
 
         # Create the polar plot
-        self.polar_widget = QWidget()
-        self.polar_widget.setLayout(QVBoxLayout())
+        self.polar_widget = QtWidgets.QWidget()
+        self.polar_widget.setLayout(QtWidgets.QVBoxLayout())
         self.polar_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.polar_figure = plt.figure()
         self.polar_figure.subplots_adjust(left=0.03, bottom=0.08, right=0.82, top=0.92)
@@ -207,7 +204,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
         self.actionCopy_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("copy.png"))))
 
-        self.reset_range_shortcut = QShortcut(QtGui.QKeySequence(' '), self)
+        self.reset_range_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.update_plots)
 
         self.mag_dec_sbox.valueChanged.connect(self.redraw_az_line)
@@ -253,14 +250,14 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
     def save_img(self):
         """Save an image of the window """
-        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
+        save_name, save_type = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
         if save_name:
             self.grab().save(save_name)
             self.status_bar.showMessage(f"Image saved.", 1500)
 
     def copy_img(self):
         """Take an image of the window and copy it to the clipboard"""
-        QApplication.clipboard().setPixmap(self.grab())
+        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
         self.status_bar.showMessage(f"Image saved to clipboard.", 1500)
 
     def open_file_dialog(self):
@@ -1125,7 +1122,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
 
     pg = PEMGetter()
     parser = PEMParser()

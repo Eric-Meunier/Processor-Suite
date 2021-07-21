@@ -333,7 +333,7 @@
          <property name="frameShadow">
           <enum>QFrame::Sunken</enum>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout">
+         <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout">
           <property name="spacing">
            <number>0</number>
           </property>
@@ -800,7 +800,7 @@
          <property name="frameShadow">
           <enum>QFrame::Sunken</enum>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout_3">
           <property name="leftMargin">
            <number>6</number>
           </property>
@@ -944,7 +944,7 @@ Length</string>
          <property name="frameShadow">
           <enum>QFrame::Sunken</enum>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_4">
+         <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout_4">
           <property name="leftMargin">
            <number>6</number>
           </property>

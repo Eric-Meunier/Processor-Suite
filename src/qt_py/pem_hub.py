@@ -17,13 +17,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QWidget, QMainWindow, QApplication, QDesktopWidget, QMessageBox, QFileDialog,
-                               QHeaderView, QTableWidgetItem, QAction, QGridLayout, QTextBrowser, QMenu,
-                               QFileSystemModel, QHBoxLayout, QInputDialog, QErrorMessage, QLabel, QLineEdit,
-                               QPushButton, QAbstractItemView, QVBoxLayout, QCalendarWidget, QFormLayout, QCheckBox,
-                               QSizePolicy, QFrame, QGroupBox, QComboBox, QListWidgetItem, QShortcut,
-                               QTableWidget, QDialogButtonBox)
+from PySide2 import QtCore, QtGui, QtWidgets
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
@@ -33,7 +27,7 @@ from src.qt_py.db_plot import DBPlotter
 from src.qt_py.pem_geometry import PEMGeometry
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.qt_py.gpx_creator import GPXCreator
-from src.mag_field.loop_calculator import LoopCalculator
+from src.qt_py.loop_calculator import LoopCalculator
 from src.mag_field.mag_dec_widget import MagDeclinationCalculator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser
 from src.pem.pem_plotter import PEMPrinter
@@ -60,7 +54,7 @@ __version__ = '0.11.6'
 # TODO Look into slowness when changing station number and such in pem plot editor
 
 
-class PEMHub(QMainWindow, Ui_PEMHub):
+class PEMHub(QtWidgets.QMainWindow, Ui_PEMHub):
 
     def __init__(self, parent=None):
         super().__init__()
@@ -76,31 +70,31 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.channel_tables = []
 
         # Status bar formatting
-        self.selection_files_label = QLabel()
+        self.selection_files_label = QtWidgets.QLabel()
         self.selection_files_label.setMargin(3)
         self.selection_files_label.setStyleSheet('color: blue')
-        self.selection_timebase_label = QLabel()
+        self.selection_timebase_label = QtWidgets.QLabel()
         self.selection_timebase_label.setMargin(3)
         self.selection_timebase_label.setStyleSheet('color: blue')
-        self.selection_zts_label = QLabel()
+        self.selection_zts_label = QtWidgets.QLabel()
         self.selection_zts_label.setMargin(3)
         self.selection_zts_label.setStyleSheet('color: blue')
-        self.selection_survey_label = QLabel()
+        self.selection_survey_label = QtWidgets.QLabel()
         self.selection_survey_label.setMargin(3)
         self.selection_survey_label.setStyleSheet('color: blue')
-        self.selection_derotation_label = QLabel()
+        self.selection_derotation_label = QtWidgets.QLabel()
         self.selection_derotation_label.setMargin(3)
         self.selection_derotation_label.setStyleSheet('color: blue')
-        self.epsg_label = QLabel()
+        self.epsg_label = QtWidgets.QLabel()
         self.epsg_label.setMargin(3)
 
         # Project directory frame
-        dir_frame = QFrame()
-        dir_frame.setLayout(QHBoxLayout())
+        dir_frame = QtWidgets.QFrame()
+        dir_frame.setLayout(QtWidgets.QHBoxLayout())
         dir_frame.layout().setContentsMargins(3, 0, 3, 0)
         dir_frame.layout().setSpacing(2)
-        label = QLabel('Project Directory:')
-        self.project_dir_edit = QLineEdit('')
+        label = QtWidgets.QLabel('Project Directory:')
+        self.project_dir_edit = QtWidgets.QLineEdit('')
         self.project_dir_edit.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
         self.project_dir_edit.setMinimumWidth(250)
         dir_frame.layout().addWidget(label)
@@ -116,10 +110,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.status_bar.addPermanentWidget(dir_frame, 0)
 
         # Widgets
-        self.file_dialog = QFileDialog()
-        self.message = QMessageBox()
-        self.error = QErrorMessage()
-        self.calender = QCalendarWidget()
+        self.file_dialog = QtWidgets.QFileDialog()
+        self.message = QtWidgets.QMessageBox()
+        self.error = QtWidgets.QErrorMessage()
+        self.calender = QtWidgets.QCalendarWidget()
         self.calender.setWindowTitle('Select Date')
         self.pem_list_filter = PathFilter('PEM', parent=self)
         self.gps_list_filter = PathFilter('GPS', parent=self)
@@ -132,7 +126,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Project tree
         self.project_dir = None
-        self.file_sys_model = QFileSystemModel()
+        self.file_sys_model = QtWidgets.QFileSystemModel()
         self.file_sys_model.setRootPath(QtCore.QDir.rootPath())
         self.project_tree.setModel(self.file_sys_model)
         self.project_tree.setColumnHidden(1, True)
@@ -169,19 +163,19 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             'Repeat\nWarnings'
         ]
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
         for i, col in enumerate(self.table_columns[1:]):
-            header.setSectionResizeMode(i + 1, QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(i + 1, QtWidgets.QHeaderView.ResizeToContents)
         self.table.horizontalHeader().hide()
 
         # Actions
-        self.actionDel_File = QAction("&Remove File", self)
+        self.actionDel_File = QtWidgets.QAction("&Remove File", self)
         self.actionDel_File.setShortcut("Del")
         self.actionDel_File.triggered.connect(self.remove_pem_file)
         self.addAction(self.actionDel_File)
         self.actionDel_File.setEnabled(False)
 
-        # self.merge_action = QAction("&Merge", self)
+        # self.merge_action = QtWidgets.QAction("&Merge", self)
         # self.merge_action.triggered.connect(lambda: self.merge_pem_files(selected=True))
         # self.merge_action.setShortcut("Shift+M")
 
@@ -208,167 +202,167 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Create all the actions
         # Remove, open, and save PEM files
-        self.remove_file_action = QAction("Remove", self)
+        self.remove_file_action = QtWidgets.QAction("Remove", self)
         self.remove_file_action.triggered.connect(self.remove_pem_file)
         self.remove_file_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('remove.png'))))
-        self.open_file_action = QAction("Open", self)
+        self.open_file_action = QtWidgets.QAction("Open", self)
         self.open_file_action.triggered.connect(self.open_in_text_editor)
         self.open_file_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('txt_file.png'))))
-        self.save_file_action = QAction("Save", self)
+        self.save_file_action = QtWidgets.QAction("Save", self)
         self.save_file_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('save.png'))))
         self.save_file_action.triggered.connect(lambda: self.save_pem_files(selected=True))
-        self.save_file_as_action = QAction("Save As...", self)
+        self.save_file_as_action = QtWidgets.QAction("Save As...", self)
         self.save_file_as_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('save_as.png'))))
         self.save_file_as_action.triggered.connect(self.save_pem_file_as)
-        self.copy_to_cliboard_action = QAction("Copy to Clipboard", self)
+        self.copy_to_cliboard_action = QtWidgets.QAction("Copy to Clipboard", self)
         self.copy_to_cliboard_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('copy.png'))))
         self.copy_to_cliboard_action.triggered.connect(self.copy_pems_to_clipboard)
 
         # Exports
-        self.export_pem_action = QAction("PEM", self)
+        self.export_pem_action = QtWidgets.QAction("PEM", self)
         self.export_pem_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('crone_logo.png'))))
         self.export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True, processed=False))
 
-        self.export_dad_action = QAction("DAD", self)
+        self.export_dad_action = QtWidgets.QAction("DAD", self)
         # export_pem_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'export.png')))
         self.export_dad_action.triggered.connect(self.export_dad)
 
-        self.export_gps_action = QAction("GPS", self)
+        self.export_gps_action = QtWidgets.QAction("GPS", self)
         # export_pem_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'export.png')))
         self.export_gps_action.triggered.connect(lambda: self.export_gps(selected=True))
 
         # View channel table
-        self.action_view_channels = QAction("Channel Table", self)
+        self.action_view_channels = QtWidgets.QAction("Channel Table", self)
         self.action_view_channels.setIcon(QtGui.QIcon(str(icons_path.joinpath("table.png"))))
         self.action_view_channels.triggered.connect(self.open_channel_table_viewer)
 
         # Merge PEM files
-        self.merge_action = QAction("Merge", self)
+        self.merge_action = QtWidgets.QAction("Merge", self)
         self.merge_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('pem_merger.png'))))
         self.merge_action.triggered.connect(self.open_pem_merger)
 
         # Print PDFs
-        self.print_plots_action = QAction("Print Plots", self)
+        self.print_plots_action = QtWidgets.QAction("Print Plots", self)
         self.print_plots_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('pdf.png'))))
         self.print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected=True))
 
         # Extract stations
-        self.extract_stations_action = QAction("Stations", self)
+        self.extract_stations_action = QtWidgets.QAction("Stations", self)
         # self.extract_stations_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'station_splitter.png')))
         self.extract_stations_action.triggered.connect(self.open_station_splitter)
 
-        self.extract_x_action = QAction("X Component", self)
+        self.extract_x_action = QtWidgets.QAction("X Component", self)
         self.extract_x_action.triggered.connect(lambda: self.extract_component("X"))
-        self.extract_y_action = QAction("Y Component", self)
+        self.extract_y_action = QtWidgets.QAction("Y Component", self)
         self.extract_y_action.triggered.connect(lambda: self.extract_component("Y"))
-        self.extract_z_action = QAction("Z Component", self)
+        self.extract_z_action = QtWidgets.QAction("Z Component", self)
         self.extract_z_action.triggered.connect(lambda: self.extract_component("Z"))
 
         # Magnetic declination calculator
-        self.calc_mag_dec_action = QAction("Magnetic Declination", self)
+        self.calc_mag_dec_action = QtWidgets.QAction("Magnetic Declination", self)
         self.calc_mag_dec_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('mag_field.png'))))
         self.calc_mag_dec_action.triggered.connect(self.open_mag_dec)
 
         # View GPS
-        self.view_loop_action = QAction("Loop GPS", self)
+        self.view_loop_action = QtWidgets.QAction("Loop GPS", self)
         self.view_loop_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].add_loop())
-        self.view_line_action = QAction("Line GPS", self)
+        self.view_line_action = QtWidgets.QAction("Line GPS", self)
         self.view_line_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].add_line())
 
         # Share GPS
-        self.share_loop_action = QAction("Loop GPS", self)
+        self.share_loop_action = QtWidgets.QAction("Loop GPS", self)
         self.share_loop_action.triggered.connect(lambda: share_gps('loop'))
-        self.share_line_action = QAction("Line GPS", self)
+        self.share_line_action = QtWidgets.QAction("Line GPS", self)
         self.share_line_action.triggered.connect(lambda: share_gps('line'))
-        self.share_collar_action = QAction("Collar GPS", self)
+        self.share_collar_action = QtWidgets.QAction("Collar GPS", self)
         self.share_collar_action.triggered.connect(lambda: share_gps('collar'))
-        self.share_segments_action = QAction("Segments", self)
+        self.share_segments_action = QtWidgets.QAction("Segments", self)
         self.share_segments_action.triggered.connect(lambda: share_gps('segments'))
-        self.share_all_action = QAction("All", self)
+        self.share_all_action = QtWidgets.QAction("All", self)
         self.share_all_action.triggered.connect(lambda: share_gps('all'))
 
-        # self.table.view_3d_section_action = QAction("&View 3D Section", self)
+        # self.table.view_3d_section_action = QtWidgets.QAction("&View 3D Section", self)
         # self.table.view_3d_section_action.setIcon(QtGui.QIcon(os.path.join(icons_path, 'section_3d.png')))
         # self.table.view_3d_section_action.triggered.connect(self.show_section_3d_viewer)
 
         # Plot editor
-        self.open_plot_editor_action = QAction("Plot", self)
+        self.open_plot_editor_action = QtWidgets.QAction("Plot", self)
         self.open_plot_editor_action.triggered.connect(self.open_pem_plot_editor)
         self.open_plot_editor_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('plot_editor.png'))))
 
         # Quick Map
-        self.open_quick_map_action = QAction("Quick Map", self)
+        self.open_quick_map_action = QtWidgets.QAction("Quick Map", self)
         self.open_quick_map_action.triggered.connect(lambda: self.open_quick_map(selected=True))
         self.open_quick_map_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('gps_viewer.png'))))
 
         # Data editing/processing
-        self.average_action = QAction("Average", self)
+        self.average_action = QtWidgets.QAction("Average", self)
         self.average_action.triggered.connect(lambda: self.average_pem_data(selected=True))
         self.average_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('average.png'))))
-        self.split_action = QAction("Split Channels", self)
+        self.split_action = QtWidgets.QAction("Split Channels", self)
         self.split_action.triggered.connect(lambda: self.split_pem_channels(selected=True))
         self.split_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('split.png'))))
-        self.scale_current_action = QAction("Scale Current", self)
+        self.scale_current_action = QtWidgets.QAction("Scale Current", self)
         self.scale_current_action.triggered.connect(lambda: self.scale_pem_current(selected=True))
         self.scale_current_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('current.png'))))
-        self.scale_ca_action = QAction("Scale Coil Area", self)
+        self.scale_ca_action = QtWidgets.QAction("Scale Coil Area", self)
         self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
         self.scale_ca_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('coil.png'))))
-        # self.mag_offset_action = QAction("Mag Offset", self)
+        # self.mag_offset_action = QtWidgets.QAction("Mag Offset", self)
         # self.mag_offset_action.triggered.connect(lambda: self.mag_offset_lastchn(selected=True))
 
         # Reversing
-        self.reverse_x_component_action = QAction("X Polarity", self)
+        self.reverse_x_component_action = QtWidgets.QAction("X Polarity", self)
         self.reverse_x_component_action.triggered.connect(
             lambda: self.reverse_component_data(comp='X', selected=True))
-        self.reverse_y_component_action = QAction("Y Polarity", self)
+        self.reverse_y_component_action = QtWidgets.QAction("Y Polarity", self)
         self.reverse_y_component_action.triggered.connect(
             lambda: self.reverse_component_data(comp='Y', selected=True))
-        self.reverse_z_component_action = QAction("Z Polarity", self)
+        self.reverse_z_component_action = QtWidgets.QAction("Z Polarity", self)
         self.reverse_z_component_action.triggered.connect(
             lambda: self.reverse_component_data(comp='Z', selected=True))
 
-        self.reverse_station_order_action = QAction("Station Order", self)
+        self.reverse_station_order_action = QtWidgets.QAction("Station Order", self)
         self.reverse_station_order_action.triggered.connect(
             lambda: self.reverse_station_order(selected=True))
 
         # Derotation
-        self.derotate_action = QAction("De-rotate XY", self)
+        self.derotate_action = QtWidgets.QAction("De-rotate XY", self)
         self.derotate_action.triggered.connect(self.open_derotator)
         self.derotate_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('derotate.png'))))
 
         # Borehole geometry
-        self.get_geometry_action = QAction("Geometry", self)
+        self.get_geometry_action = QtWidgets.QAction("Geometry", self)
         self.get_geometry_action.triggered.connect(self.open_pem_geometry)
         self.get_geometry_action.setIcon(QtGui.QIcon(str(icons_path.joinpath('pem_geometry.png'))))
 
         # Rename lines and files
-        self.rename_lines_action = QAction("Rename Lines/Holes", self)
+        self.rename_lines_action = QtWidgets.QAction("Rename Lines/Holes", self)
         self.rename_lines_action.triggered.connect(lambda: self.open_name_editor('Line', selected=True))
-        self.rename_files_action = QAction("Rename Files", self)
+        self.rename_files_action = QtWidgets.QAction("Rename Files", self)
         self.rename_files_action.triggered.connect(lambda: self.open_name_editor('File', selected=True))
 
         # Main right-click menu
-        self.menu = QMenu(self.table)
+        self.menu = QtWidgets.QMenu(self.table)
 
         # View menu
-        self.view_menu = QMenu('View', self.menu)
+        self.view_menu = QtWidgets.QMenu('View', self.menu)
         self.view_menu.setIcon(QtGui.QIcon(str(icons_path.joinpath('view.png'))))
 
         # Add the export menu
-        self.export_menu = QMenu('Export...', self.menu)
+        self.export_menu = QtWidgets.QMenu('Export...', self.menu)
         self.export_menu.setIcon(QtGui.QIcon(str(icons_path.joinpath('export.png'))))
 
         # Add the extract menu
-        self.extract_menu = QMenu('Extract...', self.menu)
+        self.extract_menu = QtWidgets.QMenu('Extract...', self.menu)
         self.extract_menu.setIcon(QtGui.QIcon(str(icons_path.joinpath('station_splitter.png'))))
 
         # Share menu
-        self.share_menu = QMenu('Share', self.menu)
+        self.share_menu = QtWidgets.QMenu('Share', self.menu)
         self.share_menu.setIcon(QtGui.QIcon(str(icons_path.joinpath('share_gps.png'))))
 
         # Reverse data menu
-        self.reverse_menu = QMenu('Reverse', self.menu)
+        self.reverse_menu = QtWidgets.QMenu('Reverse', self.menu)
         self.reverse_menu.setIcon(QtGui.QIcon(str(icons_path.joinpath('reverse.png'))))
 
     def init_ui(self):
@@ -378,7 +372,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         def center_window():
             qt_rectangle = self.frameGeometry()
-            center_point = QDesktopWidget().availableGeometry().center()
+            center_point = QtWidgets.QDesktopWidget().availableGeometry().center()
             qt_rectangle.moveCenter(center_point)
             self.move(qt_rectangle.topLeft())
 
@@ -451,7 +445,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.message.critical(self, 'File Not Found', f"'{log_file}' file not found.")
 
         def add_mapbox_token():
-            token, ok_pressed = QInputDialog.getText(self, "Mapbox Access Token", "Enter Mapbox Access Token:")
+            token, ok_pressed = QtWidgets.QInputDialog.getText(self, "Mapbox Access Token", "Enter Mapbox Access Token:")
             if ok_pressed and token:
                 app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
                 token_file = open(str(app_data_dir.joinpath(".mapbox")), 'w+')
@@ -552,7 +546,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         # Keep the old name if the new file name already exists
                         logger.error(f"{e}.")
                         self.message.critical(self, 'File Error', f"{e}.")
-                        item = QTableWidgetItem(str(old_path.name))
+                        item = QtWidgets.QTableWidgetItem(str(old_path.name))
                         item.setTextAlignment(QtCore.Qt.AlignCenter)
                         self.table.setItem(row, col, item)
                     else:
@@ -648,7 +642,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             Change the date in the selected PEM file to that of the calender widget
             :param date: QDate object from the calender widget
             """
-            item = QTableWidgetItem(date.toString('MMMM dd, yyyy'))
+            item = QtWidgets.QTableWidgetItem(date.toString('MMMM dd, yyyy'))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(current_row, current_col, item)
 
@@ -1208,7 +1202,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             #             self.table.horizontalScrollBar().setValue(pos - 20)
             #         return True
 
-        return super(QWidget, self).eventFilter(source, event)
+        return super(QtWidgets.QWidget, self).eventFilter(source, event)
 
     def dragEnterEvent(self, e):
         e.accept()
@@ -1926,7 +1920,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 col = self.table_columns.index('Line/Hole')
 
             for i, row in enumerate(rows):
-                item = QTableWidgetItem(new_names[i])
+                item = QtWidgets.QTableWidgetItem(new_names[i])
                 item.setTextAlignment(QtCore.Qt.AlignCenter)
                 self.table.setItem(row, col, item)
             batch_name_editor.open(pem_files, kind=kind)
@@ -2276,11 +2270,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             Gather and copy PEM, STP, and PDF files to a deliverable folder and compress it to a .ZIP file.
             """
-            folder_name, ok_pressed = QInputDialog.getText(self, "Select Folder Name", "Folder Name:",
+            folder_name, ok_pressed = QtWidgets.QInputDialog.getText(self, "Select Folder Name", "Folder Name:",
                                                            text=self.project_dir.parent.name)
             if ok_pressed and folder_name:
                 path = get_current_path()
-                zip_path = path.joinpath(folder_name)
+                zip_path = path.joinpath(folder_name.strip())
                 if zip_path.exists():
                     response = self.message.question(self, "Existing Directory",
                                                      f"Folder '{folder_name}' already exists. Copy and overwrite files "
@@ -2306,7 +2300,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 shutil.make_archive(str(zip_path), 'zip', str(zip_path))
                 self.status_bar.showMessage(f"{folder_name}.zip created successfully.", 1500)
 
-        menu = QMenu()
+        menu = QtWidgets.QMenu()
         menu.addAction('Run Step', open_step)
         menu.addSeparator()
         menu.addAction('Create Delivery Folder', create_delivery_folder)
@@ -2397,7 +2391,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             return
 
         choices = ("Loop", "Survey Line/Borehole", "Both")
-        choice, ok = QInputDialog.getItem(self, "DXF", "DXF Plot Options", choices, 0, False)
+        choice, ok = QtWidgets.QInputDialog.getItem(self, "DXF", "DXF Plot Options", choices, 0, False)
         # Escape statement
         if not ok: return
 
@@ -2536,7 +2530,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             gps_files = get_filtered_gps()
             for file in gps_files:
                 if file.stem != '.txt':
-                    self.gps_list.addItem(QListWidgetItem(get_icon(file), f"{str(file.relative_to(self.project_dir))}"))
+                    self.gps_list.addItem(QtWidgets.QListWidgetItem(get_icon(file), 
+                                                                    f"{str(file.relative_to(self.project_dir))}"))
 
     def fill_pem_list(self):
         """
@@ -2640,7 +2635,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         else:
             pem_files = get_filtered_pems()
             for file in pem_files:
-                self.pem_list.addItem(QListWidgetItem(get_icon(file), f"{str(file.relative_to(self.project_dir))}"))
+                self.pem_list.addItem(QtWidgets.QListWidgetItem(get_icon(file), 
+                                                                f"{str(file.relative_to(self.project_dir))}"))
 
     def parse_crs(self, filepath):
         """
@@ -2673,7 +2669,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         model = self.file_sys_model.index(str(dir_path))
 
         # Adds a timer or else it doesn't actually scroll to it properly.
-        QtCore.QTimer.singleShot(150, lambda: self.project_tree.scrollTo(model, QAbstractItemView.EnsureVisible))
+        QtCore.QTimer.singleShot(150, lambda: self.project_tree.scrollTo(model, QtWidgets.QAbstractItemView.EnsureVisible))
 
         # Expands the path folder
         self.project_tree.expand(model)
@@ -3045,8 +3041,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         self.status_bar.showMessage(f"Cancelled.", 2000)
                         return
 
-        # file_dir = self.file_dialog.getExistingDirectory(self, '', str(self.project_dir))
-        file_dir = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Raw Boreholes\EB-21-52\Final"
+        file_dir = self.file_dialog.getExistingDirectory(self, '', str(self.project_dir))
+        # file_dir = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Raw Boreholes\EB-21-52\Final"
         if not file_dir:
             self.status_bar.showMessage('Cancelled.', 2000)
             return
@@ -3567,7 +3563,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Set the information into each cell. Columns from First Station and on can't be edited.
         for i, info in enumerate(row_info):
-            item = QTableWidgetItem(str(info))
+            item = QtWidgets.QTableWidgetItem(str(info))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             # Disable editing of columns past First Station and for the date
             if i > self.table_columns.index('Coil\nArea') or i == self.table_columns.index('Date'):
@@ -3883,9 +3879,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if not coil_area:
             default = pem_files[0].coil_area
-            coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", value=default)
-            # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", QLineEdit.Normal, default)
-            # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", default, -1e6, 1e6, 50)
+            coil_area, ok_pressed = QtWidgets.QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", value=default)
+            # coil_area, ok_pressed = QtWidgets.QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", QLineEdit.Normal, default)
+            # coil_area, ok_pressed = QtWidgets.QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", default, -1e6, 1e6, 50)
             if not ok_pressed:
                 return
 
@@ -3922,7 +3918,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             return
 
         default = pem_files[0].current
-        current, ok_pressed = QInputDialog.getDouble(self, "Scale Current", "Current:", default)
+        current, ok_pressed = QtWidgets.QInputDialog.getDouble(self, "Scale Current", "Current:", default)
         if ok_pressed:
             bar = CustomProgressBar()
             bar.setMaximum(len(pem_files))
@@ -4184,12 +4180,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 if line_name:
                     new_name = line_name[0].strip()
 
-            name_item = QTableWidgetItem(new_name)
+            name_item = QtWidgets.QTableWidgetItem(new_name)
             name_item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, line_name_column, name_item)
 
 
-class PathFilter(QWidget):
+class PathFilter(QtWidgets.QWidget):
     accept_sig = QtCore.Signal()
 
     def __init__(self, filetype, parent=None):
@@ -4204,66 +4200,66 @@ class PathFilter(QWidget):
         self.setWindowTitle(f"{filetype} File Filter")
         self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath('filter.png'))))
 
-        self.include_files_edit = QLineEdit()
+        self.include_files_edit = QtWidgets.QLineEdit()
         self.include_files_edit.setToolTip("Separate items with commas [,]")
 
-        self.exclude_files_edit = QLineEdit('DTL, exp, Correct' if self.filetype == 'GPS' else '')
+        self.exclude_files_edit = QtWidgets.QLineEdit('DTL, exp, Correct' if self.filetype == 'GPS' else '')
         self.exclude_files_edit.setToolTip("Separate items with commas [,]")
 
-        self.date_filter_cbox = QCheckBox("Filter by date")
-        self.calendar = QCalendarWidget()
+        self.date_filter_cbox = QtWidgets.QCheckBox("Filter by date")
+        self.calendar = QtWidgets.QCalendarWidget()
 
-        self.include_folders_edit = QLineEdit('GPS' if self.filetype == 'GPS' else '')
+        self.include_folders_edit = QtWidgets.QLineEdit('GPS' if self.filetype == 'GPS' else '')
         self.include_folders_edit.setToolTip("Separate items with commas [,]")
 
-        self.exclude_folders_edit = QLineEdit('DUMP')
+        self.exclude_folders_edit = QtWidgets.QLineEdit('DUMP')
         self.exclude_folders_edit.setToolTip("Separate items with commas [,]")
 
-        self.include_exts_edit = QLineEdit()
+        self.include_exts_edit = QtWidgets.QLineEdit()
         self.include_exts_edit.setToolTip("Separate items with commas [,]")
 
-        self.exclude_exts_edit = QLineEdit()
+        self.exclude_exts_edit = QtWidgets.QLineEdit()
         self.exclude_exts_edit.setToolTip("Separate items with commas [,]")
 
         # Buttons frame
-        frame = QFrame()
-        frame.setLayout(QHBoxLayout())
+        frame = QtWidgets.QFrame()
+        frame.setLayout(QtWidgets.QHBoxLayout())
         frame.setContentsMargins(0, 0, 0, 0)
-        self.accept_btn = QPushButton("&Accept")
+        self.accept_btn = QtWidgets.QPushButton("&Accept")
         self.accept_btn.setShortcut('Return')
-        self.reset_btn = QPushButton("&Reset")
+        self.reset_btn = QtWidgets.QPushButton("&Reset")
 
         frame.layout().addWidget(self.accept_btn)
         frame.layout().addWidget(self.reset_btn)
 
-        self.setLayout(QFormLayout())
+        self.setLayout(QtWidgets.QFormLayout())
         self.layout().setContentsMargins(8, 3, 8, 3)
         self.layout().setHorizontalSpacing(10)
         self.layout().setVerticalSpacing(2)
 
-        files_gbox = QGroupBox('Files')
+        files_gbox = QtWidgets.QGroupBox('Files')
         files_gbox.setAlignment(QtCore.Qt.AlignCenter)
-        files_gbox.setLayout(QFormLayout())
-        files_gbox.layout().addRow(QLabel("Include:"), self.include_files_edit)
-        files_gbox.layout().addRow(QLabel("Exclude:"), self.exclude_files_edit)
+        files_gbox.setLayout(QtWidgets.QFormLayout())
+        files_gbox.layout().addRow(QtWidgets.QLabel("Include:"), self.include_files_edit)
+        files_gbox.layout().addRow(QtWidgets.QLabel("Exclude:"), self.exclude_files_edit)
         files_gbox.layout().addRow(self.date_filter_cbox)
         files_gbox.layout().addRow(self.calendar)
 
         self.layout().addRow(files_gbox)
 
-        folders_gbox = QGroupBox('Folders')
+        folders_gbox = QtWidgets.QGroupBox('Folders')
         folders_gbox.setAlignment(QtCore.Qt.AlignCenter)
-        folders_gbox.setLayout(QFormLayout())
-        folders_gbox.layout().addRow(QLabel("Include:"), self.include_folders_edit)
-        folders_gbox.layout().addRow(QLabel("Exclude:"), self.exclude_folders_edit)
+        folders_gbox.setLayout(QtWidgets.QFormLayout())
+        folders_gbox.layout().addRow(QtWidgets.QLabel("Include:"), self.include_folders_edit)
+        folders_gbox.layout().addRow(QtWidgets.QLabel("Exclude:"), self.exclude_folders_edit)
 
         self.layout().addRow(folders_gbox)
 
-        extensions_gbox = QGroupBox('Extensions')
+        extensions_gbox = QtWidgets.QGroupBox('Extensions')
         extensions_gbox.setAlignment(QtCore.Qt.AlignCenter)
-        extensions_gbox.setLayout(QFormLayout())
-        extensions_gbox.layout().addRow(QLabel("Include:"), self.include_exts_edit)
-        extensions_gbox.layout().addRow(QLabel("Exclude:"), self.exclude_exts_edit)
+        extensions_gbox.setLayout(QtWidgets.QFormLayout())
+        extensions_gbox.layout().addRow(QtWidgets.QLabel("Include:"), self.include_exts_edit)
+        extensions_gbox.layout().addRow(QtWidgets.QLabel("Exclude:"), self.exclude_exts_edit)
 
         self.layout().addRow(extensions_gbox)
 
@@ -4291,7 +4287,7 @@ class PathFilter(QWidget):
         self.hide()
 
 
-class PEMBrowser(QTextBrowser):
+class PEMBrowser(QtWidgets.QTextBrowser):
     close_request = QtCore.Signal(object)
 
     def __init__(self, pem_file):
@@ -4311,7 +4307,7 @@ class PEMBrowser(QTextBrowser):
         self.deleteLater()
 
 
-class FrequencyConverter(QWidget):
+class FrequencyConverter(QtWidgets.QWidget):
     """
     Converts timebase to frequency and vise-versa.
     """
@@ -4321,15 +4317,15 @@ class FrequencyConverter(QWidget):
 
         self.setWindowTitle('Timebase / Frequency Converter')
         self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'freq_timebase_calc.png')))
-        self.layout = QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
 
-        self.timebase_label = QLabel('Timebase (ms)')
-        self.freq_label = QLabel('Frequency (Hz)')
+        self.timebase_label = QtWidgets.QLabel('Timebase (ms)')
+        self.freq_label = QtWidgets.QLabel('Frequency (Hz)')
 
-        self.timebase_edit = QLineEdit()
+        self.timebase_edit = QtWidgets.QLineEdit()
         self.timebase_edit.setValidator(QtGui.QDoubleValidator())
-        self.freq_edit = QLineEdit()
+        self.freq_edit = QtWidgets.QLineEdit()
         self.freq_edit.setValidator(QtGui.QDoubleValidator())
 
         self.layout.addWidget(self.timebase_label, 0, 0)
@@ -4383,7 +4379,7 @@ class FrequencyConverter(QWidget):
         e.accept()
 
 
-class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
+class PDFPlotPrinter(QtWidgets.QWidget, Ui_PDFPlotPrinter):
     """
     Widget to handle printing PDF plots for PEM/RI files.
     """
@@ -4401,7 +4397,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
 
         self.printer = None
         self.plan_map_options = PlanMapOptions(parent=self)
-        self.message = QMessageBox()
+        self.message = QtWidgets.QMessageBox()
 
         self.print_btn.setDefault(True)
         self.print_btn.setFocus()
@@ -4415,7 +4411,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         # Signals
         def get_save_file():
             default_path = self.pem_files[-1].filepath.parent
-            save_dir = QFileDialog().getSaveFileName(self, '', str(default_path), 'PDF Files (*.PDF)')[0]
+            save_dir = QtWidgets.QFileDialog().getSaveFileName(self, '', str(default_path), 'PDF Files (*.PDF)')[0]
 
             if save_dir:
                 logger.info(f"Saving PDFs to {save_dir}.")
@@ -4523,7 +4519,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
             self.message.critical(self, 'Error', 'Invalid file name')
 
 
-class PlanMapOptions(QWidget, Ui_PlanMapOptions):
+class PlanMapOptions(QtWidgets.QWidget, Ui_PlanMapOptions):
     """
     GUI to display checkboxes for display options when creating the final Plan Map PDF. Buttons aren't attached
     to any signals. The state of the checkboxes are read from PEMEditor.
@@ -4582,7 +4578,7 @@ class PlanMapOptions(QWidget, Ui_PlanMapOptions):
             self.close()
 
 
-class GPSShareWidget(QWidget):
+class GPSShareWidget(QtWidgets.QWidget):
     accept_sig = QtCore.Signal(object)
 
     def __init__(self, parent=None):
@@ -4595,26 +4591,26 @@ class GPSShareWidget(QWidget):
         self.setWindowTitle(f"Share GPS")
         self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath('share_gps.png'))))
 
-        self.layout = QFormLayout()
+        self.layout = QtWidgets.QFormLayout()
         self.setLayout(self.layout)
         self.layout.setHorizontalSpacing(100)
         self.layout.setVerticalSpacing(8)
 
         # Create the horizontal line for the header
-        h_line = QFrame()
-        h_line.setFrameShape(QFrame().HLine)
-        h_line.setFrameShadow(QFrame().Sunken)
+        h_line = QtWidgets.QFrame()
+        h_line.setFrameShape(QtWidgets.QFrame().HLine)
+        h_line.setFrameShadow(QtWidgets.QFrame().Sunken)
 
         # Create the header checkbox
-        self.check_all_cbox = QCheckBox()
+        self.check_all_cbox = QtWidgets.QCheckBox()
         self.check_all_cbox.setChecked(True)
         self.check_all_cbox.setToolTip('Check All')
-        self.accept_btn = QPushButton('Accept')
+        self.accept_btn = QtWidgets.QPushButton('Accept')
         self.accept_btn.setShortcut('Return')
         self.accept_btn.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         # Create the header label
-        header_label = QLabel('File')
+        header_label = QtWidgets.QLabel('File')
         header_label.setFont(QtGui.QFont('Arial', 10))
 
         # Add them to the layout
@@ -4643,11 +4639,11 @@ class GPSShareWidget(QWidget):
         """
 
         for i, pem_file in enumerate(pem_files):
-            cbox = QCheckBox()
+            cbox = QtWidgets.QCheckBox()
             cbox.setChecked(True)
             self.cboxes.append(cbox)
 
-            label = QLabel(pem_file.filepath.name)
+            label = QtWidgets.QLabel(pem_file.filepath.name)
             label.setFont(QtGui.QFont('Arial', 10))
             self.layout.insertRow(i + 2, label, cbox)
 
@@ -4658,7 +4654,7 @@ class GPSShareWidget(QWidget):
         self.show()
 
 
-class ChannelTimeViewer(QMainWindow):
+class ChannelTimeViewer(QtWidgets.QMainWindow):
     close_request = QtCore.Signal(object)
 
     def __init__(self, pem_file, parent=None):
@@ -4674,22 +4670,22 @@ class ChannelTimeViewer(QMainWindow):
         self.text_format = ""
 
         # Format window
-        self.setLayout(QVBoxLayout())
+        self.setLayout(QtWidgets.QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
+        self.sizePolicy().setHorizontalPolicy(QtGui.QSizePolicy.Maximum)
         self.resize(600, 600)
         self.setWindowTitle(f"Channel Times - {self.pem_file.filepath.name}")
         self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("table.png"))))
 
         # Status bar
-        self.survey_type_label = QLabel(f" {self.pem_file.get_survey_type()} Survey ")
-        self.timebase_label = QLabel(f" Timebase: {self.pem_file.timebase}ms ")
+        self.survey_type_label = QtWidgets.QLabel(f" {self.pem_file.get_survey_type()} Survey ")
+        self.timebase_label = QtWidgets.QLabel(f" Timebase: {self.pem_file.timebase}ms ")
         off_time_channels = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove.astype(bool)])
         on_time_channels = len(self.pem_file.channel_times[self.pem_file.channel_times.Remove])
-        self.num_channels = QLabel(f" Channels: {on_time_channels} On-Time / {off_time_channels} Off-Time ")
+        self.num_channels = QtWidgets.QLabel(f" Channels: {on_time_channels} On-Time / {off_time_channels} Off-Time ")
 
-        self.units_combo = QComboBox()
+        self.units_combo = QtWidgets.QComboBox()
         self.units_combo.addItem('µs')
         self.units_combo.addItem('ms')
         self.units_combo.addItem('s')
@@ -4706,13 +4702,13 @@ class ChannelTimeViewer(QMainWindow):
         self.layout().addWidget(self.table)
         self.setCentralWidget(self.table)
 
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.table.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
-        self.table.setFrameStyle(QFrame.NoFrame)
+        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        self.table.sizePolicy().setHorizontalPolicy(QtGui.QSizePolicy.Maximum)
+        self.table.setFrameStyle(QtWidgets.QFrame.NoFrame)
 
         # Signals
         self.units_combo.currentTextChanged.connect(self.fill_channel_table)
-        self.copy_table_action = QShortcut("Ctrl+C", self)
+        self.copy_table_action = QtWidgets.QShortcut("Ctrl+C", self)
         self.copy_table_action.activated.connect(self.copy_table)
 
         self.fill_channel_table()
@@ -4806,7 +4802,7 @@ class ChannelTimeViewer(QMainWindow):
         color_table()
 
 
-class SuffixWarningViewer(QMainWindow):
+class SuffixWarningViewer(QtWidgets.QMainWindow):
 
     def __init__(self, pem_file, parent=None):
         super().__init__()
@@ -4823,7 +4819,7 @@ class SuffixWarningViewer(QMainWindow):
 
         self.setWindowTitle(f"Suffix Warnings Viewer - {pem_file.filepath.name}")
 
-        self.setLayout(QVBoxLayout())
+        self.setLayout(QtWidgets.QVBoxLayout())
         self.table = pg.TableWidget()
         self.layout().addWidget(self.table)
         self.setCentralWidget(self.table)
@@ -4832,7 +4828,7 @@ class SuffixWarningViewer(QMainWindow):
         self.show()
 
 
-class WarningViewer(QMainWindow):
+class WarningViewer(QtWidgets.QMainWindow):
     accept_sig = QtCore.Signal(object)
 
     def __init__(self, pem_file, warning_type=None, parent=None):
@@ -4893,19 +4889,19 @@ class WarningViewer(QMainWindow):
             return
 
         # Format that window
-        self.setLayout(QVBoxLayout())
+        self.setLayout(QtWidgets.QVBoxLayout())
 
-        self.widget = QWidget()
-        self.widget.setLayout(QVBoxLayout())
+        self.widget = QtWidgets.QWidget()
+        self.widget.setLayout(QtWidgets.QVBoxLayout())
         self.setCentralWidget(self.widget)
 
         # Add the widgets
         self.table = pg.TableWidget()
         self.table.horizontalHeader().hide()
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         self.widget.layout().addWidget(self.table)
 
-        self.accept_btn = QPushButton('Rename')
+        self.accept_btn = QtWidgets.QPushButton('Rename')
         self.widget.layout().addWidget(self.accept_btn)
 
         self.table.setData(self.warnings.to_dict('index'))
@@ -4929,7 +4925,7 @@ class WarningViewer(QMainWindow):
         self.table.resizeRowsToContents()
 
 
-class BatchNameEditor(QWidget):
+class BatchNameEditor(QtWidgets.QWidget):
     """
     Class to bulk rename PEM File line/hole names or file names.
     """
@@ -4941,19 +4937,19 @@ class BatchNameEditor(QWidget):
         self.pem_files = []
         self.kind = None
 
-        self.addEdit = QLineEdit()
-        self.removeEdit = QLineEdit()
-        self.table = QTableWidget()
+        self.addEdit = QtWidgets.QLineEdit()
+        self.removeEdit = QtWidgets.QLineEdit()
+        self.table = QtWidgets.QTableWidget()
         self.table_columns = ['Old Name', 'New Name']
         self.table.setColumnCount(len(self.table_columns))
         self.table.setHorizontalHeaderLabels(self.table_columns)
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Close)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        self.button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Close)
         self.button_box.setCenterButtons(True)
 
-        self.setLayout(QFormLayout())
+        self.setLayout(QtWidgets.QFormLayout())
         self.layout().addRow("Remove:", self.removeEdit)
         self.layout().addRow("Add:", self.addEdit)
         self.layout().addRow(self.table)
@@ -4999,11 +4995,11 @@ class BatchNameEditor(QWidget):
         self.table.insertRow(row_pos)
 
         if self.kind == 'Line':
-            item = QTableWidgetItem(pem_file.line_name)
-            item2 = QTableWidgetItem(pem_file.line_name)
+            item = QtWidgets.QTableWidgetItem(pem_file.line_name)
+            item2 = QtWidgets.QTableWidgetItem(pem_file.line_name)
         elif self.kind == 'File':
-            item = QTableWidgetItem(pem_file.filepath.name)
-            item2 = QTableWidgetItem(pem_file.filepath.name)
+            item = QtWidgets.QTableWidgetItem(pem_file.filepath.name)
+            item2 = QtWidgets.QTableWidgetItem(pem_file.filepath.name)
         else:
             raise ValueError(f'{self.kind} is not a valid option.')
 
@@ -5039,7 +5035,7 @@ class BatchNameEditor(QWidget):
                 prefix = self.addEdit.text().rsplit('[n]')[0]
                 output = prefix + input + suffix + ext
 
-            item = QTableWidgetItem(output)
+            item = QtWidgets.QTableWidgetItem(output)
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.table.setItem(row, 1, item)
 
@@ -5057,7 +5053,7 @@ class BatchNameEditor(QWidget):
 
 def main():
     from src.pem.pem_getter import PEMGetter
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     mw = PEMHub()
     pem_g = PEMGetter()
     pem_parser = PEMParser()
@@ -5071,7 +5067,7 @@ def main():
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
-    # pem_files = pem_g.get_pems(number=1, random=True)
+    pem_files = pem_g.get_pems(number=1, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=2)
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -5079,7 +5075,7 @@ def main():
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
-    # mw.add_pem_files(pem_files)
+    mw.add_pem_files(pem_files)
     # mw.add_dmp_files(dmp_files)
     # mw.table.selectRow(0)
     # mw.table.selectAll()

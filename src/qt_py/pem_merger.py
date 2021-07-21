@@ -6,9 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QApplication, QMainWindow, QFrame, QLineEdit, QLabel, QMessageBox, QFileDialog,
-                               QPushButton, QAction, QHBoxLayout)
+from PySide2 import QtCore, QtGui, QtWidgets
 
 from src.qt_py import icons_path
 from src.ui.pem_merger import Ui_PEMMerger
@@ -23,7 +21,7 @@ pg.setConfigOption('crashWarning', True)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
-class PEMMerger(QMainWindow, Ui_PEMMerger):
+class PEMMerger(QtWidgets.QMainWindow, Ui_PEMMerger):
     accept_sig = QtCore.Signal(str)
 
     def __init__(self, parent=None):
@@ -31,7 +29,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         self.parent = parent
         self.setupUi(self)
         self.installEventFilter(self)
-        self.message = QMessageBox()
+        self.message = QtWidgets.QMessageBox()
 
         # Format window
         self.setWindowTitle('PEM Merger')
@@ -48,18 +46,18 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         self.last_soa_2 = 0.
 
         self.menuView.addSeparator()
-        self.view_x_action = QAction('X Component')
-        self.view_y_action = QAction('Y Component')
-        self.view_z_action = QAction('Z Component')
+        self.view_x_action = QtWidgets.QAction('X Component')
+        self.view_y_action = QtWidgets.QAction('Y Component')
+        self.view_z_action = QtWidgets.QAction('Z Component')
 
         # Status bar
-        self.save_frame = QFrame()
-        self.save_frame.setLayout(QHBoxLayout())
+        self.save_frame = QtWidgets.QFrame()
+        self.save_frame.setLayout(QtWidgets.QHBoxLayout())
         self.save_frame.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.save_path_label = QLabel('Save Path:')
-        self.save_path_edit = QLineEdit()
-        self.accept_btn = QPushButton('Accept')
+        self.save_path_label = QtWidgets.QLabel('Save Path:')
+        self.save_path_edit = QtWidgets.QLineEdit()
+        self.accept_btn = QtWidgets.QPushButton('Accept')
 
         self.save_frame.layout().addWidget(self.save_path_label)
         self.save_frame.layout().addWidget(self.save_path_edit)
@@ -643,7 +641,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
 
     def save_pem_file(self):
         default_name = str(self.pf1.filepath.with_name(f"{self.pf1.line_name}.PEM"))
-        save_path = QFileDialog.getSaveFileName(self, 'Save PEM File',
+        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save PEM File',
                                                 default_name,
                                                 'PEM Files (*.PEM)')[0]
         if save_path:
@@ -653,21 +651,21 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
 
     def save_img(self):
         default = self.pf1.filepath.parent.joinpath(f"{self.pf1.filepath.stem} & {self.pf2.filepath.stem}")
-        save_file = QFileDialog.getSaveFileName(self, 'Save Image',
+        save_file = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image',
                                                 str(default),
                                                 'PNG Files (*.PNG)')[0]
         if save_file:
             self.grab().save(save_file)
 
     def copy_img(self):
-        QApplication.clipboard().setPixmap(self.grab())
+        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
         self.status_bar.showMessage('Image copied to clipboard.', 1000)
 
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
 
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(client='Minera', number=2)

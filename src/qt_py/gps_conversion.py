@@ -1,5 +1,4 @@
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QWidget, QMessageBox)
+from PySide2 import QtCore, QtGui, QtWidgets
 from pyproj import CRS
 
 from src.qt_py import icons_path
@@ -7,7 +6,7 @@ from src.logger import logger
 from src.ui.gps_conversion import Ui_GPSConversion
 
 
-class GPSConversionWidget(QWidget, Ui_GPSConversion):
+class GPSConversionWidget(QtWidgets.QWidget, Ui_GPSConversion):
     accept_signal = QtCore.Signal(int)
 
     def __init__(self, parent=None):
@@ -15,7 +14,7 @@ class GPSConversionWidget(QWidget, Ui_GPSConversion):
         self.setupUi(self)
         self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("gpx_creator.png"))))
         self.parent = parent
-        self.message = QMessageBox()
+        self.message = QtWidgets.QMessageBox()
 
         self.convert_to_label.setText('')
         self.current_crs_label.setText('')

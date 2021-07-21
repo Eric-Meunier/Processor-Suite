@@ -7,9 +7,7 @@ from pathlib import Path
 import geopandas as gpd
 import gpxpy
 import pandas as pd
-from PySide2 import QtGui
-from PySide2.QtUiTools import loadUiType
-from PySide2.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QAction, QLabel)
+from PySide2 import QtGui, QtWidgets
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
 from src.ui.gpx_creator import Ui_GPXCreator
@@ -23,7 +21,7 @@ else:
 icons_path = application_path.joinpath('ui\\icons')
 
 
-class GPXCreator(QMainWindow, Ui_GPXCreator):
+class GPXCreator(QtWidgets.QMainWindow, Ui_GPXCreator):
     """
     Program to convert a CSV file into a GPX file. The datum of the intput GPS must be NAD 83 or WGS 84.
     Columns of the CSV must be 'Name', 'Comment', 'Easting', 'Northing'.
@@ -36,15 +34,15 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.setWindowIcon(
             QtGui.QIcon(os.path.join(icons_path, 'gpx_creator_4.svg')))
 
-        self.dialog = QFileDialog()
-        self.message = QMessageBox()
+        self.dialog = QtWidgets.QFileDialog()
+        self.message = QtWidgets.QMessageBox()
         self.setAcceptDrops(True)
 
         self.filepath = None
 
         # Status bar
-        self.spacer_label = QLabel()
-        self.epsg_label = QLabel()
+        self.spacer_label = QtWidgets.QLabel()
+        self.epsg_label = QtWidgets.QLabel()
         self.epsg_label.setIndent(5)
 
         # # Format the borders of the items in the status bar
@@ -55,7 +53,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
         # Actions
-        self.del_file = QAction("&Remove Row", self)
+        self.del_file = QtWidgets.QAction("&Remove Row", self)
         self.del_file.setShortcut("Del")
         self.del_file.triggered.connect(self.remove_row)
         self.addAction(self.del_file)
@@ -306,7 +304,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
                 comment = self.table.item(row, 1).text()
 
                 new_name = f"{name} - {comment}"
-                item = QTableWidgetItem(new_name)
+                item = QtWidgets.QTableWidgetItem(new_name)
                 self.table.setItem(row, 0, item)
 
     def open(self, filepath):
@@ -328,7 +326,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
             for row in range(df.shape[0]):
                 for col in range(df.shape[1]):
                     value = df_array[row, col]
-                    item = QTableWidgetItem(str(value))
+                    item = QtWidgets.QTableWidgetItem(str(value))
 
                     self.table.setItem(row, col, item)
 
@@ -444,7 +442,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
 
 
 def main():
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
 
     gpx_creator = GPXCreator()
     gpx_creator.show()
