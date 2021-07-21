@@ -56,9 +56,11 @@ __version__ = '0.11.6'
 
 class PEMHub(QtWidgets.QMainWindow, Ui_PEMHub):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, splash_screen=None):
         super().__init__()
         self.parent = parent
+        if splash_screen:
+            splash_screen.showMessage("Initializing UI")
         self.init_ui()
 
         self.pem_files = []
@@ -69,6 +71,8 @@ class PEMHub(QtWidgets.QMainWindow, Ui_PEMHub):
         self.text_browsers = []
         self.channel_tables = []
 
+        if splash_screen:
+            splash_screen.showMessage("Initializing status bar")
         # Status bar formatting
         self.selection_files_label = QtWidgets.QLabel()
         self.selection_files_label.setMargin(3)
@@ -109,6 +113,8 @@ class PEMHub(QtWidgets.QMainWindow, Ui_PEMHub):
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
         self.status_bar.addPermanentWidget(dir_frame, 0)
 
+        if splash_screen:
+            splash_screen.showMessage("Initializing widgets")
         # Widgets
         self.file_dialog = QtWidgets.QFileDialog()
         self.message = QtWidgets.QMessageBox()
@@ -124,6 +130,8 @@ class PEMHub(QtWidgets.QMainWindow, Ui_PEMHub):
         self.pdf_plot_printer = None
         self.unpacker = None
 
+        if splash_screen:
+            splash_screen.showMessage("Initializing directory")
         # Project tree
         self.project_dir = None
         self.file_sys_model = QtWidgets.QFileSystemModel()
@@ -141,10 +149,18 @@ class PEMHub(QtWidgets.QMainWindow, Ui_PEMHub):
         self.available_pems = []
         self.available_gps = []
 
+        if splash_screen:
+            splash_screen.showMessage("Initializing menus")
         self.init_menus()
+        if splash_screen:
+            splash_screen.showMessage("Initializing signals")
         self.init_signals()
+        if splash_screen:
+            splash_screen.showMessage("Initializing CRS")
         self.init_crs()
 
+        if splash_screen:
+            splash_screen.showMessage("Initializing table")
         # Table
         self.table_columns = [
             'File',
@@ -168,6 +184,8 @@ class PEMHub(QtWidgets.QMainWindow, Ui_PEMHub):
             header.setSectionResizeMode(i + 1, QtWidgets.QHeaderView.ResizeToContents)
         self.table.horizontalHeader().hide()
 
+        if splash_screen:
+            splash_screen.showMessage("Initializing actions")
         # Actions
         self.actionDel_File = QtWidgets.QAction("&Remove File", self)
         self.actionDel_File.setShortcut("Del")
@@ -1885,22 +1903,9 @@ class PEMHub(QtWidgets.QMainWindow, Ui_PEMHub):
 
     def open_db_plot(self):
         """Open the damping box plotter."""
-
         global db_plot
         db_plot = DBPlotter(parent=self)
         db_plot.show()
-
-    # def show_section_3d_viewer(self):
-    #     """
-    #     Opens the 3D Borehole Section Viewer window
-    #     :return: None
-    #     """
-    #     pem_file, row = self.get_selected_pem_files()
-    #     if 'borehole' in pem_file[0].survey_type.lower():
-    #         self.section_3d_viewer = Section3DViewer(pem_file[0], parent=self)
-    #         self.section_3d_viewer.show()
-    #     else:
-    #         self.status_bar.showMessage('Invalid survey type', 2000)
 
     def open_name_editor(self, kind, selected=False):
         """

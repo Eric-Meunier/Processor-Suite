@@ -2,6 +2,7 @@ from src.qt_py.pem_hub import __version__
 import os
 
 spec_file = r"run_pempro.spec"
+print(f"Creating EXE for PEMPro version {__version__}")
 
 """
 Notes:
@@ -17,6 +18,7 @@ def make_spec(spec_file):
 # -*- mode: python ; coding: utf-8 -*-
 
 import sys
+from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files  # this is very helpful
 
 sys.setrecursionlimit(5000)
@@ -43,10 +45,10 @@ a = Analysis(['run.py'],
              datas=collect_data_files('geopandas', subdir='datasets') +  # Required
                    collect_data_files('plotly') +  # Required, much smaller than copying the entire folder
                    [
-                   (r'src\ui\*.ui','ui'), # Places all .ui files in a folder called 'qt_ui'
+                   (r'src\ui\*.py','ui'), # Places all .ui files in a folder called 'qt_ui'
                    (r'src\ui\icons\*.png', r'ui/icons'),  # Places all icon files in a folder called 'icons'
                    (r'src\ui\icons\*.ico', r'ui/icons'),
-                   (r'.mapbox', r'.'),
+                   (str(Path(os.getenv('APPDATA')).joinpath('PEMPro\.mapbox')), r'.'),
                    (r'venv\Lib\site-packages\geomag\WMM.COF', 'geomag'),  # Places a file used for magnetic declination calculation in a 'geomag' folder.
                    # (r"venv\Scripts\pyside2-uic.exe", ".")
                    ],
@@ -71,7 +73,8 @@ exe = EXE(pyz,
           bootloader_ignore_signals=False,
           strip=False,
           upx=False,
-          console=True, icon=r'src/ui/icons/conder.ico')
+          console=True, 
+          icon=r'src/ui/icons/conder.ico')
         ''')
 
         file.write(f"""

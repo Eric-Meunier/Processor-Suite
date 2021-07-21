@@ -7,7 +7,6 @@ import numpy as np
 import pyqtgraph as pg
 from PySide2 import QtCore, QtWidgets
 from PySide2.QtGui import QPixmap, QIcon
-from PySide2.QtWidgets import QProgressBar
 from src.logger import logger
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -93,7 +92,7 @@ def read_file(file):
     return contents
 
 
-class CustomProgressBar(QProgressBar):
+class CustomProgressBar(QtWidgets.QProgressBar):
 
     def __init__(self):
         super().__init__()

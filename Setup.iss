@@ -22,7 +22,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
-OutputBaseFilename=PEMPro installer
+OutputBaseFilename=PEMPro {#MyAppVersion} installer
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

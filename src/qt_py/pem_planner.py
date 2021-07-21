@@ -2870,7 +2870,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             easting = f"{point[0]:.0f} E"
             northing = f"{point[1]:.0f} N"
             result += easting + ', ' + northing + '\n'
-        cb = QtGui.QtWidgets.QApplication.clipboard()
+        cb = QtWidgets.QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
         cb.setText(result, mode=cb.Clipboard)
 
@@ -2890,7 +2890,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             for point in coords:
                 result += f"{point[0]:.0f} E, {point[1]:.0f} N, {point[2]}" + '\n'
             result += '\n'
-        cb = QtGui.QtWidgets.QApplication.clipboard()
+        cb = QtWidgets.QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
         cb.setText(result, mode=cb.Clipboard)
         self.status_bar.showMessage('Grid coordinates copied to clipboard', 1000)
