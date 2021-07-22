@@ -1,20 +1,22 @@
-import time
 import logging
 import sys
-import os
+import time
 from pathlib import Path
-from PySide2 import QtCore, QtGui, QtWidgets
-from src.ui.splash_screen import Ui_SplashScreen
-# from src.qt_py.pem_hub import __version__
 
-__version__ = '0.11.6'
+from PySide2.QtCore import Qt, QTimer
+from PySide2.QtGui import (QColor, QPixmap)
+from PySide2.QtWidgets import (QWidget, QErrorMessage,
+                               QApplication, QGraphicsDropShadowEffect)
+
+from src import __version__, app_data_dir
+from src.ui.splash_screen import Ui_SplashScreen
+
 if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
     icons_path = application_path.joinpath(r"ui\icons")
 else:
     application_path = Path(__file__).absolute().parents[1]
     icons_path = application_path.joinpath(r"PEMPro\src\ui\icons")
-app_data_dir = Path(os.getenv('APPDATA'))
 logger = logging.getLogger(__name__)
 
 
@@ -26,39 +28,38 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
     global error_box
-    error_box = QtWidgets.QErrorMessage()
+    error_box = QErrorMessage()
     error_box.setWindowTitle('Error')
-    error_box.showMessage(open(app_data_dir.joinpath(r'PEMPro\logs.txt'), "w+").read())
+    error_box.showMessage(open(app_data_dir.joinpath(r'logs.txt'), "w+").read())
 
     # sys.exit(1)
 
 
 sys.excepthook = handle_exception
 
-counter = 0
 
-
-class SplashScreen(QtWidgets.QWidget, Ui_SplashScreen):
+class SplashScreen(QWidget, Ui_SplashScreen):
 
     def __init__(self, version):
         super().__init__()
         self.setupUi(self)
-        self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
+        self.setWindowFlag(Qt.FramelessWindowHint)
         self.version_label.setText(f"Version {version}")
-        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_TranslucentBackground)
 
-        self.shadow = QtWidgets.QGraphicsDropShadowEffect(self)
+        self.shadow = QGraphicsDropShadowEffect(self)
         self.shadow.setBlurRadius(20)
         self.shadow.setXOffset(0)
         self.shadow.setXOffset(0)
-        self.shadow.setColor(QtGui.QColor(0, 0, 0, 60))
+        self.shadow.setColor(QColor(0, 0, 0, 60))
         self.frame.setGraphicsEffect(self.shadow)
 
         # Progress bar
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.progress)
-        self.timer.start(35)
+        # self.timer = QTimer()
+        # self.timer.timeout.connect(self.progress)
+        # self.timer.start(35)
 
+        self.counter = 0
         self.show()
 
     def showMessage(self, msg):
@@ -66,23 +67,16 @@ class SplashScreen(QtWidgets.QWidget, Ui_SplashScreen):
         app.processEvents()
 
     def progress(self):
-        global counter
-        self.progressBar.setValue(counter)
-
-        if counter > 100:
-            self.timer.stop()
-
-        counter += 1
+        self.counter += 1
+        self.progressBar.setValue(self.counter)
 
 
 # Splash screen
-app = QtWidgets.QApplication(sys.argv)
+app = QApplication(sys.argv)
 path = icons_path.joinpath(r"crone_logo.png")
-pixmap = QtGui.QPixmap(str(path))
-# splash = QtWidgets.QSplashScreen(pixmap)
+# pixmap = QPixmap(str(path))
+# splash = QSplashScreen(pixmap)
 splash = SplashScreen(__version__)
-# splash.show()
-# color = QtCore.Qt.white
 app.processEvents()
 
 
@@ -93,11 +87,11 @@ def main():
     print(f"Time to import PEMHub: {time.time() - t:.2f}s")
 
     splash.showMessage("Initializing PEMHub")
-    # window = PEMHub(splash_screen=splash)
-    # window.show()
-    # splash.close()
+    window = PEMHub(splash_screen=splash)
+    window.show()
+    splash.close()
 
-    timer = QtCore.QTimer()
+    timer = QTimer()
     timer.timeout.connect(lambda: None)
     timer.start(100)
 

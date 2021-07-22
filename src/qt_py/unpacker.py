@@ -5,7 +5,22 @@ from pathlib import Path
 from shutil import copyfile, rmtree
 
 import py7zr
-from PySide2 import QtCore, QtGui, QtWidgets
+from pandas import DataFrame, options, concat, read_excel, read_csv, read_table, isna
+from pyqtgraph import (LinearRegionItem, mkPen, mkBrush, DateAxisItem, PlotWidget, PlotCurveItem, PlotDataItem,
+                       ProgressDialog, TableWidget, setConfigOptions, setConfigOption, ArrowItem, mkColor, TextItem,
+                       MultiPlotItem, PolyLineROI, ROI, RectROI, LineSegmentROI, ScatterPlotItem, InfiniteLine,
+                       ViewBox, Point)
+from pyqtgraph.graphicsItems.ROI import Handle
+from PySide2.QtGui import (QIcon, QColor, QFont, QIntValidator, QCursor, QKeySequence, QTransform, QBrush, QPen,
+                           QDropEvent)
+from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer, QPointF, QRectF, QDate
+from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction, QErrorMessage,
+                               QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
+                               QCalendarWidget, QFileSystemModel, QHeaderView, QHeaderView, QDesktopWidget,
+                               QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTextBrowser, QDialogButtonBox,
+                               QTableWidget, QShortcut, QSizePolicy, QPushButton, QComboBox, QListWidgetItem,
+                               QAbstractItemView, QCheckBox, QDoubleSpinBox, QProgressDialog, QRadioButton,
+                               QItemDelegate, QSpinBox, QAbstractScrollArea)
 from pyunpack import Archive
 
 from src.qt_py import icons_path, get_icon, clear_table
@@ -15,8 +30,8 @@ from src.ui.unpacker import Ui_Unpacker
 logger = logging.getLogger(__name__)
 
 
-class Unpacker(QtWidgets.QMainWindow, Ui_Unpacker):
-    open_project_folder_sig = QtCore.Signal(object)
+class Unpacker(QMainWindow, Ui_Unpacker):
+    open_project_folder_sig = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -24,24 +39,24 @@ class Unpacker(QtWidgets.QMainWindow, Ui_Unpacker):
         self.setupUi(self)
 
         self.setWindowTitle('Unpacker')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'unpacker_1.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'unpacker_1.png')))
 
         self.setAcceptDrops(True)
 
-        self.dialog = QtWidgets.QFileDialog()
-        self.message = QtWidgets.QMessageBox()
-        self.error = QtWidgets.QErrorMessage()
-        self.model = QtWidgets.QFileSystemModel()
+        self.dialog = QFileDialog()
+        self.message = QMessageBox()
+        self.error = QErrorMessage()
+        self.model = QFileSystemModel()
         self.db_plot = DBPlotter(parent=self)
 
         # Status bar
-        dir_frame = QtWidgets.QFrame()
-        dir_frame.setLayout(QtWidgets.QHBoxLayout())
+        dir_frame = QFrame()
+        dir_frame.setLayout(QHBoxLayout())
         dir_frame.layout().setContentsMargins(2, 0, 2, 0)
 
-        label = QtWidgets.QLabel('Dump Directory:')
-        self.dir_edit = QtWidgets.QLineEdit('')
-        self.accept_btn = QtWidgets.QPushButton('Accept')
+        label = QLabel('Dump Directory:')
+        self.dir_edit = QLineEdit('')
+        self.accept_btn = QPushButton('Accept')
         self.accept_btn.setEnabled(False)
         dir_frame.layout().addWidget(label)
         dir_frame.layout().addWidget(self.dir_edit)
@@ -51,9 +66,9 @@ class Unpacker(QtWidgets.QMainWindow, Ui_Unpacker):
 
         self.input_path = Path()
         self.output_path = Path()
-        self.model.setRootPath(QtCore.QDir.rootPath())
+        self.model.setRootPath(QDir.rootPath())
         self.dir_tree.setModel(self.model)
-        self.dir_tree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.dir_tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.dir_tree.customContextMenuRequested.connect(self.open_context_menu)
         self.move_dir_tree_to(self.model.rootPath())
         self.dir_edit.setText(self.model.rootPath())
@@ -87,12 +102,12 @@ class Unpacker(QtWidgets.QMainWindow, Ui_Unpacker):
         self.reset_action.triggered.connect(self.reset)
 
         # Format the tables
-        self.dump_frame.setLayout(QtWidgets.QVBoxLayout())
-        self.damp_frame.setLayout(QtWidgets.QVBoxLayout())
-        self.dmp_frame.setLayout(QtWidgets.QVBoxLayout())
-        self.gps_frame.setLayout(QtWidgets.QVBoxLayout())
-        self.geometry_frame.setLayout(QtWidgets.QVBoxLayout())
-        self.other_frame.setLayout(QtWidgets.QVBoxLayout())
+        self.dump_frame.setLayout(QVBoxLayout())
+        self.damp_frame.setLayout(QVBoxLayout())
+        self.dmp_frame.setLayout(QVBoxLayout())
+        self.gps_frame.setLayout(QVBoxLayout())
+        self.geometry_frame.setLayout(QVBoxLayout())
+        self.other_frame.setLayout(QVBoxLayout())
         self.dump_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.damp_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.dmp_frame.layout().setContentsMargins(0, 0, 0, 0)
@@ -144,7 +159,7 @@ class Unpacker(QtWidgets.QMainWindow, Ui_Unpacker):
         self.open_folder(url)
 
     def set_current_date(self):
-        self.calendar_widget.setSelectedDate(QtCore.QDate.currentDate())
+        self.calendar_widget.setSelectedDate(QDate.currentDate())
 
     def closeEvent(self, e):
         self.db_plot.close()
@@ -173,8 +188,8 @@ class Unpacker(QtWidgets.QMainWindow, Ui_Unpacker):
         :return: None
         """
         # Adds a timer or else it doesn't actually scroll to it properly.
-        QtCore.QTimer.singleShot(50, lambda: self.dir_tree.scrollTo(self.model.index(path),
-                                                                    QtWidgets.QAbstractItemView.EnsureVisible))
+        QTimer.singleShot(50, lambda: self.dir_tree.scrollTo(self.model.index(path),
+                                                                    QAbstractItemView.EnsureVisible))
         self.dir_tree.setCurrentIndex(self.model.index(path))
 
     def get_current_path(self):
@@ -206,7 +221,7 @@ class Unpacker(QtWidgets.QMainWindow, Ui_Unpacker):
             dump_path = path.joinpath('Dump')
             dump_path.mkdir(parents=True, exist_ok=True)
 
-        menu = QtWidgets.QMenu()
+        menu = QMenu()
         menu.addAction('Add Dump Folder', add_dump_folder)
         menu.exec_(self.dir_tree.viewport().mapToGlobal(position))
 
@@ -239,12 +254,12 @@ class Unpacker(QtWidgets.QMainWindow, Ui_Unpacker):
             table.insertRow(row)
 
             # Add the icon
-            file_item = QtWidgets.QTableWidgetItem(icon, file)
-            dir_item = QtWidgets.QTableWidgetItem(dir)
+            file_item = QTableWidgetItem(icon, file)
+            dir_item = QTableWidgetItem(dir)
 
             # Set the item flag so the item can be drag-and-dropped
-            file_item.setFlags(file_item.flags() ^ QtCore.Qt.ItemIsDropEnabled)
-            dir_item.setFlags(dir_item.flags() ^ QtCore.Qt.ItemIsDropEnabled)
+            file_item.setFlags(file_item.flags() ^ Qt.ItemIsDropEnabled)
+            dir_item.setFlags(dir_item.flags() ^ Qt.ItemIsDropEnabled)
 
             table.setItem(row, 0, file_item)
             table.setItem(row, 1, dir_item)
@@ -466,19 +481,19 @@ class Unpacker(QtWidgets.QMainWindow, Ui_Unpacker):
 
 
 # Must be in a different file than unpacker.py since it will create circular imports
-class UnpackerTable(QtWidgets.QTableWidget):
+class UnpackerTable(QTableWidget):
     """
     Re-implement a QTableWidget object to customize it
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
+        self.setDragDropMode(QAbstractItemView.DragDrop)
         self.setDragEnabled(True)
         self.setDragDropOverwriteMode(False)
-        self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.setDefaultDropAction(QtCore.Qt.MoveAction)
-        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setDefaultDropAction(Qt.MoveAction)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.setColumnCount(2)
         self.setHorizontalHeaderLabels(['File', 'Directory'])
@@ -486,12 +501,12 @@ class UnpackerTable(QtWidgets.QTableWidget):
         self.verticalHeader().hide()
         self.setShowGrid(False)
 
-    def dropEvent(self, event: QtGui.QDropEvent):
+    def dropEvent(self, event: QDropEvent):
         if not event.isAccepted() and event.source() == self:
             drop_row = self.drop_on(event)
 
             rows = sorted(set(item.row() for item in self.selectedItems()))
-            rows_to_move = [[QtWidgets.QTableWidgetItem(self.item(row_index, column_index)) for column_index in range(self.columnCount())]
+            rows_to_move = [[QTableWidgetItem(self.item(row_index, column_index)) for column_index in range(self.columnCount())]
                             for row_index in rows]
             for row_index in reversed(rows):
                 self.removeRow(row_index)
@@ -524,11 +539,11 @@ class UnpackerTable(QtWidgets.QTableWidget):
         elif rect.bottom() - pos.y() < margin:
             return True
         # noinspection PyTypeChecker
-        return rect.contains(pos, True) and not (int(self.model().flags(index)) & QtCore.Qt.ItemIsDropEnabled) and pos.y() >= rect.center().y()
+        return rect.contains(pos, True) and not (int(self.model().flags(index)) & Qt.ItemIsDropEnabled) and pos.y() >= rect.center().y()
 
 
 def main():
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     samples_folder = Path(__file__).parents[2].joinpath(r"sample_files\Unpacker files")
 
     up = Unpacker()

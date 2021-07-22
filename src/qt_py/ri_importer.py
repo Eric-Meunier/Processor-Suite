@@ -2,9 +2,13 @@ import logging
 import os
 import re
 import sys
-
 from pathlib import Path
-from PySide2 import QtCore, QtWidgets
+
+from PySide2.QtCore import Qt, Signal
+from PySide2.QtWidgets import (QMessageBox, QWidget, QVBoxLayout, QApplication, QHeaderView, QTableWidgetItem,
+                               QDialogButtonBox,
+                               QTableWidget, QAbstractScrollArea)
+
 from src.pem import convert_station
 
 logger = logging.getLogger(__name__)
@@ -69,12 +73,12 @@ class RIFile:
         return profile_data
 
 
-class BatchRIImporter(QtWidgets.QWidget):
+class BatchRIImporter(QWidget):
     """
     Widget that imports multiple RI files. There must be equal number of RI files to PEM Files
     and the line/file name numbers much match up.
     """
-    acceptImportSignal = QtCore.Signal(object)
+    acceptImportSignal = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -84,26 +88,26 @@ class BatchRIImporter(QtWidgets.QWidget):
 
         self.setAcceptDrops(True)
         self.setGeometry(500, 300, 400, 500)
-        self.layout = QtWidgets.QVBoxLayout()
+        self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 
         self.setWindowTitle("RI File Import")
         # self.ri_parser = RIFile()
-        self.message = QtWidgets.QMessageBox()
+        self.message = QMessageBox()
 
-        self.table = QtWidgets.QTableWidget()
+        self.table = QTableWidget()
         columns = ['PEM File', 'RI File']
         self.table.setColumnCount(len(columns))
         self.table.setHorizontalHeaderLabels(columns)
         self.table.setSizeAdjustPolicy(
-            QtWidgets.QAbstractScrollArea.AdjustIgnored)
+            QAbstractScrollArea.AdjustIgnored)
         self.table.setAlternatingRowColors(True)
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
 
-        self.button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok |
-                                                     QtWidgets.QDialogButtonBox.Cancel)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok |
+                                                     QDialogButtonBox.Cancel)
         self.button_box.setCenterButtons(True)
         self.button_box.rejected.connect(self.close)
         self.button_box.accepted.connect(self.accept)
@@ -130,9 +134,9 @@ class BatchRIImporter(QtWidgets.QWidget):
         self.deleteLater()
 
     def keyPressEvent(self, e):
-        if e.key() == QtCore.Qt.Key_Escape:
+        if e.key() == Qt.Key_Escape:
             self.close()
-        elif e.key() == QtCore.Qt.Key_Return:
+        elif e.key() == Qt.Key_Return:
             self.accept()
             self.close()
 
@@ -152,8 +156,8 @@ class BatchRIImporter(QtWidgets.QWidget):
         for i, name in enumerate(names):
             row_pos = self.table.rowCount()
             self.table.insertRow(row_pos)
-            item = QtWidgets.QTableWidgetItem(name)
-            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            item = QTableWidgetItem(name)
+            item.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(row_pos, 0, item)
 
         # Try and find any RI files in the same directory as the PEM files
@@ -176,44 +180,14 @@ class BatchRIImporter(QtWidgets.QWidget):
         self.ri_files = sorted(ri_filepaths, key=lambda ri: (int(re.sub(r"\D", "", ri.suffix)), ri))
         for i, filepath in enumerate(self.ri_files):  # Add the RI file names to the table
             name = os.path.basename(filepath)
-            item = QtWidgets.QTableWidgetItem(name)
-            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            item = QTableWidgetItem(name)
+            item.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(i, 1, item)
-
-
-        # # Only for boreholes, match up the RI1 file for Z, and RI2 file for XY
-        # if all([pem_file.is_borehole() for pem_file in self.pem_files]):
-        #     ri_files = [RIFile().open(filepath) for filepath in ri_filepaths]
-        #
-        #     for pem_file in self.pem_files:
-        #         pem_components = sorted(pem_file.get_components())
-        #         pem_name = re.sub('[^0-9]', '', pem_file.line_name)[-4:]
-        #
-        #         for ri_file in ri_files:
-        #             ri_components = sorted(ri_file.get_components())
-        #             ri_name = re.sub('[^0-9]', '', os.path.splitext(os.path.basename(ri_file.filepath))[0])[-4:]
-        #
-        #             if pem_components == ri_components and pem_name == ri_name:
-        #                 self.ri_files.append(ri_file.filepath)
-        #                 ri_files.pop(ri_files.index(ri_file))
-        #                 break
-        #
-        # elif any([pem_file.is_borehole() for pem_file in self.pem_files]):
-        #     self.message.information(None, "Error", "PEM files must either be all borehole or all surface surveys")
-        #
-        # else:
-        #     [self.ri_files.append(ri_filepath) for ri_filepath in ri_filepaths]
-        #
-        # for i, filepath in enumerate(self.ri_files):  # Add the RI file names to the table
-        #     name = os.path.basename(filepath)
-        #     item = QtWidgets.QTableWidgetItem(name)
-        #     item.setTextAlignment(QtCore.Qt.AlignCenter)
-        #     self.table.setItem(i, 1, item)
 
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     pg = PEMGetter()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 

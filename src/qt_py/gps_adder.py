@@ -6,71 +6,76 @@ from pathlib import Path
 
 import keyboard
 import numpy as np
-import pandas as pd
-import pyqtgraph as pg
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import Qt, Signal
+from PySide2.QtGui import QIcon, QColor
+from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QFileDialog, QVBoxLayout, QLabel, QApplication,
+                               QFrame, QHBoxLayout, QHeaderView, QInputDialog, QTableWidgetItem, QPushButton,
+                               QTabWidget)
+from pandas import DataFrame, to_numeric, read_csv, read_excel
+from pyqtgraph import (mkPen, mkBrush, ScatterPlotItem, setConfigOptions, setConfigOption, TableWidget,
+                       PlotDataItem, InfiniteLine)
 
-from src.qt_py import icons_path, NonScientific, read_file
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
+from src.qt_py import icons_path, NonScientific, read_file
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
+setConfigOptions(antialias=True)
+setConfigOption('background', 'w')
+setConfigOption('foreground', 'k')
+setConfigOption('crashWarning', True)
 
 
-class GPSAdder(QtWidgets.QMainWindow):
+class GPSAdder(QMainWindow):
     """
     Class to help add station GPS to a PEM file. Helps with files that have missing stations numbers or other
     formatting errors.
     """
-    accept_sig = QtCore.Signal(object)
+    accept_sig = Signal(object)
 
     def __init__(self):
         super().__init__()
         self.resize(1000, 800)
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'gps_adder.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'gps_adder.png')))
 
         self.df = None
         self.error = False  # For pending errors
 
         # Highlighting
-        self.plan_highlight = pg.PlotDataItem(clickable=True)
+        self.plan_highlight = PlotDataItem(clickable=True)
         self.plan_highlight.sigPointsClicked.connect(self.point_clicked)
         self.plan_highlight.setZValue(2)
-        self.plan_lx = pg.InfiniteLine(movable=False, angle=0, pen=pg.mkPen('b', width=2.))
+        self.plan_lx = InfiniteLine(movable=False, angle=0, pen=mkPen('b', width=2.))
         self.plan_lx.setZValue(0)
-        self.plan_ly = pg.InfiniteLine(movable=False, angle=90, pen=pg.mkPen('b', width=2.))
+        self.plan_ly = InfiniteLine(movable=False, angle=90, pen=mkPen('b', width=2.))
         self.plan_ly.setZValue(0)
-        self.section_highlight = pg.PlotDataItem(clickable=True)
+        self.section_highlight = PlotDataItem(clickable=True)
         self.section_highlight.sigPointsClicked.connect(self.point_clicked)
         self.section_highlight.setZValue(2)
-        self.section_lx = pg.InfiniteLine(movable=False, angle=0, pen=pg.mkPen('b', width=2.))
+        self.section_lx = InfiniteLine(movable=False, angle=0, pen=mkPen('b', width=2.))
         self.section_lx.setZValue(0)
-        self.section_ly = pg.InfiniteLine(movable=False, angle=90, pen=pg.mkPen('b', width=2.))
+        self.section_ly = InfiniteLine(movable=False, angle=90, pen=mkPen('b', width=2.))
         self.section_ly.setZValue(0)
         self.selection = []
         self.selected_row_info = None
 
-        self.message = QtWidgets.QMessageBox()
+        self.message = QMessageBox()
 
     def closeEvent(self, e):
         e.accept()
         self.deleteLater()
 
     def keyPressEvent(self, e):
-        if e.key() == QtCore.Qt.Key_Delete:
+        if e.key() == Qt.Key_Delete:
             self.del_row()
 
-        elif e.key() == QtCore.Qt.Key_Space:  # Reset the plot ranges
+        elif e.key() == Qt.Key_Space:  # Reset the plot ranges
             self.plan_view.autoRange()
             self.section_view.autoRange()
 
-        elif e.key() == QtCore.Qt.Key_Escape:  # Clear the selection
+        elif e.key() == Qt.Key_Escape:  # Clear the selection
             self.table.clearSelection()
             if self.plan_lx in self.plan_view.items():
                 self.plan_view.removeItem(self.plan_highlight)
@@ -124,7 +129,7 @@ class GPSAdder(QtWidgets.QMainWindow):
 
     def open_file_dialog(self):
         default_path = ""
-        file, extension = QtWidgets.QFileDialog().getOpenFileName(self, "Open GPS File", default_path, "Text Files (*.TXT);;"
+        file, extension = QFileDialog().getOpenFileName(self, "Open GPS File", default_path, "Text Files (*.TXT);;"
                                                                                              "CSV Files (*.CSV);;"
                                                                                              "GPX Files (*.GPX)")
         if file:
@@ -146,10 +151,10 @@ class GPSAdder(QtWidgets.QMainWindow):
              """
             def series_to_items(x):
                 if isinstance(x, float):
-                    return QtWidgets.QTableWidgetItem(f"{x}")
+                    return QTableWidgetItem(f"{x}")
                     # return QTableWidgetItem(f"{x:.2f}")
                 else:
-                    return QtWidgets.QTableWidgetItem(str(x))
+                    return QTableWidgetItem(str(x))
 
             row_pos = self.table.rowCount()
             # Add a new row to the table
@@ -158,7 +163,7 @@ class GPSAdder(QtWidgets.QMainWindow):
             items = series.map(series_to_items).to_list()
             # Format each item of the table to be centered
             for m, item in enumerate(items):
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                item.setTextAlignment(Qt.AlignCenter)
                 self.table.setItem(row_pos, m, item)
 
         if df.empty:
@@ -184,7 +189,7 @@ class GPSAdder(QtWidgets.QMainWindow):
                 gps_row.append(self.table.item(row, col).text())
             gps.append(gps_row)
 
-        df = pd.DataFrame(gps, columns=self.df.columns).astype(dtype=self.df.dtypes)
+        df = DataFrame(gps, columns=self.df.columns).astype(dtype=self.df.dtypes)
         return df
 
     def plot_table(self, preserve_limits=False):
@@ -321,19 +326,19 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
         # Table
         self.table.setFixedWidth(400)
-        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         # Create the plan and section plots
-        self.plan_plot = pg.PlotDataItem(clickable=True)
+        self.plan_plot = PlotDataItem(clickable=True)
         self.plan_plot.sigPointsClicked.connect(self.point_clicked)
         self.plan_view.addItem(self.plan_plot)
 
-        self.section_plot = pg.PlotDataItem(clickable=True)
+        self.section_plot = PlotDataItem(clickable=True)
         self.section_plot.sigPointsClicked.connect(self.point_clicked)
         self.section_view.addItem(self.section_plot)
 
-        self.plan_view.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.section_view.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.plan_view.setFocusPolicy(Qt.StrongFocus)
+        self.section_view.setFocusPolicy(Qt.StrongFocus)
 
         # Format the plots
         self.plan_view.setTitle('Plan View')
@@ -385,14 +390,14 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
 
     def keyPressEvent(self, e):
-        if e.key() == QtCore.Qt.Key_Delete:
+        if e.key() == Qt.Key_Delete:
             self.del_row()
 
-        elif e.key() == QtCore.Qt.Key_Space:  # Reset the plot ranges
+        elif e.key() == Qt.Key_Space:  # Reset the plot ranges
             self.plan_view.autoRange()
             self.section_view.autoRange()
 
-        elif e.key() == QtCore.Qt.Key_Escape:  # Clear the selection
+        elif e.key() == Qt.Key_Escape:  # Clear the selection
             self.table.clearSelection()
             if self.plan_lx in self.plan_view.items():
                 self.plan_view.removeItem(self.plan_highlight)
@@ -406,7 +411,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         """
         Remove text from station names. Useful for GPX files.
         """
-        trunc_amt, _ = QtWidgets.QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:")
+        trunc_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:")
         if trunc_amt:
             print(f"Truncating {trunc_amt}")
             self.df.Station.loc[:] = self.df.Station.loc[:].map(lambda x: str(x)[trunc_amt:]).astype(int)
@@ -419,7 +424,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         :param gps: Union [filepath; GPS object; DataFrame], Loop to open
         :param name: str, name of the line
         """
-        errors = pd.DataFrame()
+        errors = DataFrame()
         if isinstance(gps, str) or isinstance(gps, Path):
             if Path(gps).is_file():
                 self.line = SurveyLine(gps)
@@ -443,9 +448,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
             lambda x: f"{x:.2f}")
         # Convert the column dtypes for when the data is created from the table values
-        self.df["Easting"] = pd.to_numeric(self.df["Easting"])
-        self.df["Northing"] = pd.to_numeric(self.df["Northing"])
-        self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
+        self.df["Easting"] = to_numeric(self.df["Easting"])
+        self.df["Northing"] = to_numeric(self.df["Northing"])
+        self.df["Elevation"] = to_numeric(self.df["Elevation"])
         self.df_to_table(self.df)
         self.plot_table()
         self.color_table()
@@ -471,17 +476,17 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy(),
                                symbol='o',
                                symbolSize=8,
-                               symbolPen=pg.mkPen('k', width=1.),
-                               symbolBrush=pg.mkBrush('w'),
-                               pen=pg.mkPen('k', width=1.5)
+                               symbolPen=mkPen('k', width=1.),
+                               symbolBrush=mkBrush('w'),
+                               pen=mkPen('k', width=1.5)
                                )
         # Plot the sections
         self.section_plot.setData(df.Station.to_numpy(), df.Elevation.to_numpy(),
                                   symbol='o',
                                   symbolSize=8,
-                                  symbolPen=pg.mkPen('k', width=1.),
-                                  symbolBrush=pg.mkBrush('w'),
-                                  pen=pg.mkPen('k', width=1.5)
+                                  symbolPen=mkPen('k', width=1.),
+                                  symbolBrush=mkBrush('w'),
+                                  pen=mkPen('k', width=1.5)
                                   )
 
         # Set the X and Y labels
@@ -535,14 +540,14 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.plan_highlight.setData([plan_x], [plan_y],
                                     symbol='o',
                                     symbolSize=10,
-                                    symbolPen=pg.mkPen(color, width=1.5),
-                                    symbolBrush=pg.mkBrush('w'),
+                                    symbolPen=mkPen(color, width=1.5),
+                                    symbolBrush=mkBrush('w'),
                                     )
         # Move the cross hairs and set their color
         self.plan_lx.setPos(plan_y)
-        self.plan_lx.setPen(pg.mkPen(color, width=2.))
+        self.plan_lx.setPen(mkPen(color, width=2.))
         self.plan_ly.setPos(plan_x)
-        self.plan_ly.setPen(pg.mkPen(color, width=2.))
+        self.plan_ly.setPen(mkPen(color, width=2.))
 
         # Plot on the section map
         section_x, section_y = df.loc[row, 'Station'], df.loc[row, 'Elevation']
@@ -551,14 +556,14 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.section_highlight.setData([section_x], [section_y],
                                        symbol='o',
                                        symbolSize=10,
-                                       symbolPen=pg.mkPen(color, width=1.5),
-                                       symbolBrush=pg.mkBrush('w'),
+                                       symbolPen=mkPen(color, width=1.5),
+                                       symbolBrush=mkBrush('w'),
                                        )
         # Move the cross hairs and set their color
         self.section_lx.setPos(section_y)
-        self.section_lx.setPen(pg.mkPen(color, width=1.5))
+        self.section_lx.setPen(mkPen(color, width=1.5))
         self.section_ly.setPos(section_x)
-        self.section_ly.setPen(pg.mkPen(color, width=1.5))
+        self.section_ly.setPen(mkPen(color, width=1.5))
 
         # Add the infinite lines if they haven't been added yet
         if self.plan_lx not in self.plan_view.items():
@@ -585,11 +590,11 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                     station = self.table.item(row, stations_column).text()
                     if station in stations:
                         other_station_index = stations.index(station)
-                        self.table.item(row, stations_column).setForeground(QtGui.QColor('red'))
-                        self.table.item(other_station_index, stations_column).setForeground(QtGui.QColor('red'))
+                        self.table.item(row, stations_column).setForeground(QColor('red'))
+                        self.table.item(other_station_index, stations_column).setForeground(QColor('red'))
                         errors += 1
                     else:
-                        self.table.item(row, stations_column).setForeground(QtGui.QColor('black'))
+                        self.table.item(row, stations_column).setForeground(QColor('black'))
                     stations.append(station)
 
         def color_order():
@@ -605,7 +610,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             reverse = True if (table_stations[0] > table_stations[-1]) else False
             sorted_stations = sorted(sorted_stations, reverse=reverse)
 
-            blue_color, red_color = QtGui.QColor('blue'), QtGui.QColor('red')
+            blue_color, red_color = QColor('blue'), QColor('red')
             blue_color.setAlpha(50)
             red_color.setAlpha(50)
 
@@ -614,7 +619,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                 station_num = table_stations[row]
                 # station_num = re.search('-?\d+', table_stations[row]).group()
                 if not station_num and station_num != 0:
-                    station_item.setBackground(QtGui.QColor('dimgray'))
+                    station_item.setBackground(QColor('dimgray'))
                 else:
                     if int(station_num) > sorted_stations[row]:
                         station_item.setBackground(blue_color)
@@ -623,7 +628,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                         station_item.setBackground(red_color)
                         errors += 1
                     else:
-                        station_item.setBackground(QtGui.QColor('white'))
+                        station_item.setBackground(QColor('white'))
 
         self.table.blockSignals(True)
         global errors
@@ -649,26 +654,26 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.status_bar.hide()
 
         # Status bar widgets
-        # self.auto_sort_cbox = QtWidgets.QCheckBox("Automatically Sort Loop", self)
+        # self.auto_sort_cbox = QCheckBox("Automatically Sort Loop", self)
         # self.auto_sort_cbox.setChecked(True)
 
         # self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
         # self.status_bar.addPermanentWidget(QLabel(), 1)
 
         self.table.setFixedWidth(400)
-        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         # Create the plan and section plots
-        self.plan_plot = pg.PlotDataItem(clickable=True)
+        self.plan_plot = PlotDataItem(clickable=True)
         self.plan_plot.sigPointsClicked.connect(self.point_clicked)
         self.plan_view.addItem(self.plan_plot)
 
-        self.section_plot = pg.PlotDataItem(clickable=True)
+        self.section_plot = PlotDataItem(clickable=True)
         self.section_plot.sigPointsClicked.connect(self.point_clicked)
         self.section_view.addItem(self.section_plot)
 
-        self.plan_view.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.section_view.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.plan_view.setFocusPolicy(Qt.StrongFocus)
+        self.section_view.setFocusPolicy(Qt.StrongFocus)
 
         # Format the plots
         self.plan_view.setTitle('Plan View')
@@ -719,7 +724,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         :param gps: Union (filepath, dataframe), Loop to open
         :param name: str, name of the loop
         """
-        errors = pd.DataFrame()
+        errors = DataFrame()
         if isinstance(gps, str):
             if Path(gps).is_file():
                 self.loop = TransmitterLoop(gps)
@@ -743,9 +748,9 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
             lambda x: f"{x:.2f}")
         # Convert the column dtypes for when the data is created from the table values
-        self.df["Easting"] = pd.to_numeric(self.df["Easting"])
-        self.df["Northing"] = pd.to_numeric(self.df["Northing"])
-        self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
+        self.df["Easting"] = to_numeric(self.df["Easting"])
+        self.df["Northing"] = to_numeric(self.df["Northing"])
+        self.df["Elevation"] = to_numeric(self.df["Elevation"])
         self.df_to_table(self.df)
         self.plot_table()
         self.show()
@@ -772,17 +777,17 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy(),
                                symbol='o',
                                symbolSize=8,
-                               symbolPen=pg.mkPen('k', width=1.),
-                               symbolBrush=pg.mkBrush('w'),
-                               pen=pg.mkPen('k', width=1.5)
+                               symbolPen=mkPen('k', width=1.),
+                               symbolBrush=mkBrush('w'),
+                               pen=mkPen('k', width=1.5)
                                )
         # Plot the sections
         self.section_plot.setData(df.Elevation.to_numpy(),
                                   symbol='o',
                                   symbolSize=8,
-                                  symbolPen=pg.mkPen('k', width=1.),
-                                  symbolBrush=pg.mkBrush('w'),
-                                  pen=pg.mkPen('k', width=1.5)
+                                  symbolPen=mkPen('k', width=1.),
+                                  symbolBrush=mkBrush('w'),
+                                  pen=mkPen('k', width=1.5)
                                   )
 
         # Set the X and Y labels
@@ -832,14 +837,14 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.plan_highlight.setData([plan_x], [plan_y],
                                     symbol='o',
                                     symbolSize=10,
-                                    symbolPen=pg.mkPen(color, width=1.5),
-                                    symbolBrush=pg.mkBrush('w'),
+                                    symbolPen=mkPen(color, width=1.5),
+                                    symbolBrush=mkBrush('w'),
                                     )
         # Move the cross hairs and set their color
         self.plan_lx.setPos(plan_y)
-        self.plan_lx.setPen(pg.mkPen(color, width=2.))
+        self.plan_lx.setPen(mkPen(color, width=2.))
         self.plan_ly.setPos(plan_x)
-        self.plan_ly.setPen(pg.mkPen(color, width=2.))
+        self.plan_ly.setPen(mkPen(color, width=2.))
 
         # Plot on the section map
         section_x, section_y = row, df.loc[row, 'Elevation']
@@ -848,14 +853,14 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.section_highlight.setData([section_x], [section_y],
                                        symbol='o',
                                        symbolSize=10,
-                                       symbolPen=pg.mkPen(color, width=1.5),
-                                       symbolBrush=pg.mkBrush('w'),
+                                       symbolPen=mkPen(color, width=1.5),
+                                       symbolBrush=mkBrush('w'),
                                        )
         # Move the cross hairs and set their color
         self.section_lx.setPos(section_y)
-        self.section_lx.setPen(pg.mkPen(color, width=1.5))
+        self.section_lx.setPen(mkPen(color, width=1.5))
         self.section_ly.setPos(section_x)
-        self.section_ly.setPen(pg.mkPen(color, width=1.5))
+        self.section_ly.setPen(mkPen(color, width=1.5))
 
         # Add the infinite lines if they haven't been added yet
         if self.plan_lx not in self.plan_view.items():
@@ -868,7 +873,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 
 
 class CollarPicker(GPSAdder, Ui_LoopAdder):
-    accept_sig = QtCore.Signal(object)
+    accept_sig = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -881,19 +886,19 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.menuSettings.clear()
 
         self.table.setFixedWidth(400)
-        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         # Create the plan and section plots
-        self.plan_plot = pg.ScatterPlotItem(clickable=True)
+        self.plan_plot = ScatterPlotItem(clickable=True)
         self.plan_plot.sigClicked.connect(self.point_clicked)
         self.plan_view.addItem(self.plan_plot)
 
-        self.section_plot = pg.ScatterPlotItem(clickable=True)
+        self.section_plot = ScatterPlotItem(clickable=True)
         self.section_plot.sigClicked.connect(self.point_clicked)
         self.section_view.addItem(self.section_plot)
 
-        self.plan_view.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.section_view.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.plan_view.setFocusPolicy(Qt.StrongFocus)
+        self.section_view.setFocusPolicy(Qt.StrongFocus)
 
         # Format the plots
         self.plan_view.setTitle('Plan View')
@@ -946,10 +951,10 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
 
     def keyPressEvent(self, e):
         """Re-implement so deselecting cannot be done"""
-        if e.key() == QtCore.Qt.Key_Delete:
+        if e.key() == Qt.Key_Delete:
             self.del_row()
 
-        elif e.key() == QtCore.Qt.Key_Space:  # Reset the plot ranges
+        elif e.key() == Qt.Key_Space:  # Reset the plot ranges
             self.plan_view.autoRange()
             self.section_view.autoRange()
 
@@ -969,7 +974,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
                 else:
                     contents = read_file(gps)
                 try:
-                    self.df = pd.DataFrame.from_records(contents)
+                    self.df = DataFrame.from_records(contents)
                     self.df.columns = ["Easting", "Northing", "Elevation", "Unit", "Name"][:len(self.df.columns)]
                 except ValueError as e:
                     self.show()
@@ -979,12 +984,12 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
                     self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
                         lambda x: f"{x:.2f}")
                     # Convert the column dtypes for when the data is created from the table values
-                    self.df["Easting"] = pd.to_numeric(self.df["Easting"])
-                    self.df["Northing"] = pd.to_numeric(self.df["Northing"])
-                    self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
+                    self.df["Easting"] = to_numeric(self.df["Easting"])
+                    self.df["Northing"] = to_numeric(self.df["Northing"])
+                    self.df["Elevation"] = to_numeric(self.df["Elevation"])
         elif isinstance(gps, list):
             try:
-                self.df = pd.DataFrame.from_records(gps)
+                self.df = DataFrame.from_records(gps)
                 self.df.columns = ["Easting", "Northing", "Elevation", "Unit", "Name"][:len(self.df.columns)]
             except ValueError as e:
                 self.show()
@@ -994,9 +999,9 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
                 self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
                     lambda x: f"{x:.2f}")
                 # Convert the column dtypes for when the data is created from the table values
-                self.df["Easting"] = pd.to_numeric(self.df["Easting"])
-                self.df["Northing"] = pd.to_numeric(self.df["Northing"])
-                self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
+                self.df["Easting"] = to_numeric(self.df["Easting"])
+                self.df["Northing"] = to_numeric(self.df["Northing"])
+                self.df["Elevation"] = to_numeric(self.df["Elevation"])
         else:
             self.df = gps
 
@@ -1031,15 +1036,15 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy(),
                                symbol='o',
                                size=8,
-                               pen=pg.mkPen('k', width=1.),
-                               brush=pg.mkBrush('w'),
+                               pen=mkPen('k', width=1.),
+                               brush=mkBrush('w'),
                                )
         # Plot the sections
         self.section_plot.setData(df.index, df.Elevation.to_numpy(),
                                   symbol='o',
                                   size=8,
-                                  pen=pg.mkPen('k', width=1.),
-                                  brush=pg.mkBrush('w'),
+                                  pen=mkPen('k', width=1.),
+                                  brush=mkBrush('w'),
                                   )
 
         if "Unit" in df.columns:
@@ -1095,14 +1100,14 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.plan_highlight.setData([plan_x], [plan_y],
                                     symbol='o',
                                     symbolSize=10,
-                                    symbolPen=pg.mkPen(color, width=1.5),
-                                    symbolBrush=pg.mkBrush('w'),
+                                    symbolPen=mkPen(color, width=1.5),
+                                    symbolBrush=mkBrush('w'),
                                     )
         # Move the cross hairs and set their color
         self.plan_lx.setPos(plan_y)
-        self.plan_lx.setPen(pg.mkPen(color, width=2.))
+        self.plan_lx.setPen(mkPen(color, width=2.))
         self.plan_ly.setPos(plan_x)
-        self.plan_ly.setPen(pg.mkPen(color, width=2.))
+        self.plan_ly.setPen(mkPen(color, width=2.))
 
         # Plot on the section map
         section_x, section_y = row, df.loc[row, 'Elevation']
@@ -1111,14 +1116,14 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.section_highlight.setData([section_x], [section_y],
                                        symbol='o',
                                        symbolSize=10,
-                                       symbolPen=pg.mkPen(color, width=1.5),
-                                       symbolBrush=pg.mkBrush('w'),
+                                       symbolPen=mkPen(color, width=1.5),
+                                       symbolBrush=mkBrush('w'),
                                        )
         # Move the cross hairs and set their color
         self.section_lx.setPos(section_y)
-        self.section_lx.setPen(pg.mkPen(color, width=1.5))
+        self.section_lx.setPen(mkPen(color, width=1.5))
         self.section_ly.setPos(section_x)
-        self.section_ly.setPen(pg.mkPen(color, width=1.5))
+        self.section_ly.setPen(mkPen(color, width=1.5))
 
         # Add the infinite lines if they haven't been added yet
         if self.plan_lx not in self.plan_view.items():
@@ -1130,15 +1135,15 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             self.section_view.addItem(self.section_ly)
 
 
-class ExcelTablePicker(QtWidgets.QWidget):
-    accept_sig = QtCore.Signal(object)
+class ExcelTablePicker(QWidget):
+    accept_sig = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
         self.setWindowTitle("Excel Table Picker")
-        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("excel_file.png"))))
-        self.setLayout(QtWidgets.QVBoxLayout())
+        self.setWindowIcon(QIcon(str(icons_path.joinpath("excel_file.png"))))
+        self.setLayout(QVBoxLayout())
 
         self.content = None
         self.easting = None
@@ -1146,22 +1151,22 @@ class ExcelTablePicker(QtWidgets.QWidget):
         self.elevation = None
         self.click_count = 0
         self.selected_cells = []
-        self.selection_color = QtGui.QColor('#50C878')
+        self.selection_color = QColor('#50C878')
         # self.selection_color.setAlpha(50)
 
         self.tables = []
         self.tabs = QTabWidget()
-        self.layout().addWidget(QtWidgets.QLabel("Sequentially click the Easting, Northing, and Elevation cells."))
+        self.layout().addWidget(QLabel("Sequentially click the Easting, Northing, and Elevation cells."))
         self.layout().addWidget(self.tabs)
 
-        self.selection_text = QtWidgets.QLabel("Easting: \nNorthing: \nElevation: ")
+        self.selection_text = QLabel("Easting: \nNorthing: \nElevation: ")
         self.layout().addWidget(self.selection_text)
 
         self.accept_btn = QPushButton("Accept")
         self.reset_btn = QPushButton("Reset")
         self.close_btn = QPushButton("Close")
-        btn_frame = QtWidgets.QFrame()
-        btn_frame.setLayout(QtWidgets.QHBoxLayout())
+        btn_frame = QFrame()
+        btn_frame.setLayout(QHBoxLayout())
         btn_frame.layout().addWidget(self.accept_btn)
         btn_frame.layout().addWidget(self.reset_btn)
         btn_frame.layout().addWidget(self.close_btn)
@@ -1173,7 +1178,7 @@ class ExcelTablePicker(QtWidgets.QWidget):
 
     def reset(self):
         for item in self.selected_cells:
-            item.setBackground(QtGui.QColor("white"))
+            item.setBackground(QColor("white"))
 
         for table in self.tables:
             table.clearSelection()
@@ -1217,7 +1222,7 @@ class ExcelTablePicker(QtWidgets.QWidget):
 
         self.selected_cells.append(item)
         if len(self.selected_cells) > 3:
-            self.selected_cells[0].setBackground(QtGui.QColor('white'))
+            self.selected_cells[0].setBackground(QColor('white'))
             self.selected_cells.pop(0)
 
     def open(self, content):
@@ -1228,7 +1233,7 @@ class ExcelTablePicker(QtWidgets.QWidget):
         self.content = content
 
         for i, (sheet, info) in enumerate(self.content.items()):
-            table = pg.TableWidget()
+            table = TableWidget()
             # table.setStyleSheet("selection-background-color: #353535;")
             table.setStyleSheet("selection-background-color: #50C878;")
             table.setData(info.replace(np.nan, '', regex=True).to_numpy())
@@ -1239,40 +1244,40 @@ class ExcelTablePicker(QtWidgets.QWidget):
         self.show()
 
 
-class DADSelector(QtWidgets.QWidget):
-    accept_sig = QtCore.Signal(object)
+class DADSelector(QWidget):
+    accept_sig = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
         self.setWindowTitle("DAD Selector")
-        self.setWindowIcon(QtGui.QIcon(str(icons_path.joinpath("excel_file.png"))))
-        self.setLayout(QtWidgets.QVBoxLayout())
-        self.message = QtWidgets.QMessageBox()
+        self.setWindowIcon(QIcon(str(icons_path.joinpath("excel_file.png"))))
+        self.setLayout(QVBoxLayout())
+        self.message = QMessageBox()
 
         self.depths = None
         self.azimuths = None
         self.dips = None
         self.selection_count = 0
         self.selected_ranges = []
-        self.selection_color = QtGui.QColor('#50C878')
+        self.selection_color = QColor('#50C878')
         # self.selection_color.setAlpha(50)
 
         self.tables = []
         self.tabs = QTabWidget()
-        self.layout().addWidget(QtWidgets.QLabel(
+        self.layout().addWidget(QLabel(
             "Sequentially double-click the top cell of the Depth, Azimuth, and Dip cell ranges."))
         self.layout().addWidget(self.tabs)
 
-        self.selection_text = QtWidgets.QLabel("Depth: \nAzimuth: \nDip: ")
+        self.selection_text = QLabel("Depth: \nAzimuth: \nDip: ")
         self.selection_text.setWordWrap(True)
         self.layout().addWidget(self.selection_text)
 
         self.accept_btn = QPushButton("Accept")
         self.reset_btn = QPushButton("Reset")
         self.close_btn = QPushButton("Close")
-        btn_frame = QtWidgets.QFrame()
-        btn_frame.setLayout(QtWidgets.QHBoxLayout())
+        btn_frame = QFrame()
+        btn_frame.setLayout(QHBoxLayout())
         btn_frame.layout().addWidget(self.accept_btn)
         btn_frame.layout().addWidget(self.reset_btn)
         btn_frame.layout().addWidget(self.close_btn)
@@ -1285,7 +1290,7 @@ class DADSelector(QtWidgets.QWidget):
     def reset(self):
         for range in self.selected_ranges:
             for item in range:
-                item.setBackground(QtGui.QColor("white"))
+                item.setBackground(QColor("white"))
 
         for table in self.tables:
             table.clearSelection()
@@ -1299,7 +1304,7 @@ class DADSelector(QtWidgets.QWidget):
 
     def accept(self):
         data = {"Depth": self.depths, "Azimuth": self.azimuths, "Dip": self.dips}
-        df = pd.DataFrame(data, dtype=float)
+        df = DataFrame(data, dtype=float)
         if not all([d == float for d in df.dtypes]):
             logger.error(f'Data selected are not all numerical values.')
             self.message.information(self, 'Error', f'The data selected are not all numerical values.')
@@ -1317,7 +1322,7 @@ class DADSelector(QtWidgets.QWidget):
         # Remove the 3rd last selected range
         if len(self.selected_ranges) == 3:
             for item in self.selected_ranges[0]:
-                item.setBackground(QtGui.QColor('white'))
+                item.setBackground(QColor('white'))
             self.selected_ranges.pop(0)
 
         values = []
@@ -1351,12 +1356,12 @@ class DADSelector(QtWidgets.QWidget):
         filepath = Path(filepath)
 
         if filepath.suffix == '.xlsx' or filepath.suffix == '.xls':
-            content = pd.read_excel(filepath,
-                                    header=None,
-                                    sheet_name=None)
+            content = read_excel(filepath,
+                                 header=None,
+                                 sheet_name=None)
 
             for i, (sheet, info) in enumerate(content.items()):
-                table = pg.TableWidget()
+                table = TableWidget()
                 table.setStyleSheet("selection-background-color: #50C878;")
                 table.setData(info.replace(np.nan, '', regex=True).to_numpy())
                 table.cellDoubleClicked.connect(self.cell_double_clicked)
@@ -1364,14 +1369,14 @@ class DADSelector(QtWidgets.QWidget):
                 self.tabs.addTab(table, str(sheet))
         else:
             if filepath.suffix == '.txt' or filepath.suffix == '.dad':
-                content = pd.read_csv(filepath,
-                                      delim_whitespace=True,
-                                      header=None)
+                content = read_csv(filepath,
+                                   delim_whitespace=True,
+                                   header=None)
             else:
-                content = pd.read_csv(filepath,
-                                      header=None)
+                content = read_csv(filepath,
+                                   header=None)
 
-            table = pg.TableWidget()
+            table = TableWidget()
             table.setStyleSheet("selection-background-color: #50C878;")
             table.setData(content.replace(np.nan, '', regex=True).to_numpy())
             table.cellDoubleClicked.connect(self.cell_double_clicked)
@@ -1383,7 +1388,7 @@ class DADSelector(QtWidgets.QWidget):
 
 def main():
     from src.pem.pem_getter import PEMGetter
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     samples_folder = Path(__file__).absolute().parents[2].joinpath(r'sample_files')
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))

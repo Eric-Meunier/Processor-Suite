@@ -1,24 +1,25 @@
 import logging
+import math
 import os
 import sys
-import math
-import numpy as np
-import pyqtgraph as pg
-
 from pathlib import Path
-from PySide2 import QtGui, QtCore, QtWidgets
 
-from src.logger import Log
-from src.qt_py import NonScientific
+import numpy as np
+from pyqtgraph import setConfigOptions, setConfigOption
+from PySide2.QtCore import Qt
+from PySide2.QtGui import QIcon, QKeySequence
+from PySide2.QtWidgets import (QMainWindow, QFileDialog, QApplication, QShortcut, QComboBox)
+
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
+from src.qt_py import NonScientific
 from src.ui.loop_calculator import Ui_LoopCalculator
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
+setConfigOptions(antialias=True)
+setConfigOption('background', 'w')
+setConfigOption('foreground', 'k')
+setConfigOption('crashWarning', True)
 
 if getattr(sys, 'frozen', False):
     application_path = Path(sys.executable).parent
@@ -27,16 +28,16 @@ else:
 icons_path = application_path.joinpath("ui\\icons")
 
 
-class LoopCalculator(QtWidgets.QMainWindow, Ui_LoopCalculator):
+class LoopCalculator(QMainWindow, Ui_LoopCalculator):
 
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle(f"Loop Current Calculator")
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'voltmeter.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'voltmeter.png')))
 
         # Add the units option to the status bar
-        self.units_combo = QtWidgets.QComboBox()
+        self.units_combo = QComboBox()
         self.units_combo.addItem("nT/s")
         # self.units_combo.addItem("nT")
         self.units_combo.addItem("pT")
@@ -71,8 +72,8 @@ class LoopCalculator(QtWidgets.QMainWindow, Ui_LoopCalculator):
         self.plot_widget.getAxis('left').enableAutoSIPrefix(enable=False)
         self.plot_widget.setLimits(xMin=-1000, xMax=1000, yMin=-300000, yMax=300000)
         self.plot_widget.setXRange(-200, 200)
-        h_line = pg.InfiniteLine(pos=200000, angle=0, pen=pg.mkPen('r', style=QtCore.Qt.DashLine))
-        h_line2 = pg.InfiniteLine(pos=-200000, angle=0, pen=pg.mkPen('r', style=QtCore.Qt.DashLine))
+        h_line = pg.InfiniteLine(pos=200000, angle=0, pen=pg.mkPen('r', style=Qt.DashLine))
+        h_line2 = pg.InfiniteLine(pos=-200000, angle=0, pen=pg.mkPen('r', style=Qt.DashLine))
         self.plot_widget.addItem(h_line, ignoreBounds=True)
         self.plot_widget.addItem(h_line2, ignoreBounds=True)
 
@@ -129,8 +130,8 @@ class LoopCalculator(QtWidgets.QMainWindow, Ui_LoopCalculator):
         self.current_sbox.valueChanged.connect(self.calculate_mag)
         self.distance_sbox.valueChanged.connect(self.calculate_mag)
 
-        self.save_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
-        self.copy_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+C"), self)
+        self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        self.copy_shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
         self.save_shortcut.activated.connect(self.save_img)
         self.copy_shortcut.activated.connect(self.copy_img)
 
@@ -138,7 +139,7 @@ class LoopCalculator(QtWidgets.QMainWindow, Ui_LoopCalculator):
         self.calculate_mag()
 
     def keyPressEvent(self, evt):
-        if evt.key() == QtCore.Qt.Key_Space:
+        if evt.key() == Qt.Key_Space:
             self.plot_widget.autoRange()
             self.plan_widget.autoRange()
 
@@ -148,13 +149,13 @@ class LoopCalculator(QtWidgets.QMainWindow, Ui_LoopCalculator):
 
     def save_img(self):
         """Save a screenshot of the window """
-        save_name, save_type = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
         if save_name:
             self.grab().save(save_name)
 
     def copy_img(self):
         """Take a screenshot of the window and save it to the clipboard"""
-        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
+        QApplication.clipboard().setPixmap(self.grab())
 
     def get_loop(self):
         """Create a loop (list of coordinates) for the magnetic field calculator"""
@@ -310,7 +311,7 @@ class LoopCalculator(QtWidgets.QMainWindow, Ui_LoopCalculator):
 
 
 if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
 
     lc = LoopCalculator()
     lc.show()

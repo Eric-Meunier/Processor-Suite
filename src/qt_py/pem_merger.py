@@ -4,36 +4,40 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
-import pyqtgraph as pg
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import Qt, Signal, QEvent
+from PySide2.QtGui import QIcon
+from PySide2.QtWidgets import (QMainWindow, QMessageBox, QAction, QFileDialog, QLabel, QApplication, QFrame,
+                               QHBoxLayout, QLineEdit,
+                               QPushButton)
+from pandas import options, concat
+from pyqtgraph import (mkPen, mkBrush, PlotDataItem, setConfigOptions, setConfigOption)
 
+from src.gps.gps_editor import TransmitterLoop, SurveyLine
 from src.qt_py import icons_path
 from src.ui.pem_merger import Ui_PEMMerger
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
-pd.options.mode.chained_assignment = None  # default='warn'
+setConfigOptions(antialias=True)
+setConfigOption('background', 'w')
+setConfigOption('foreground', 'k')
+setConfigOption('crashWarning', True)
+options.mode.chained_assignment = None  # default='warn'
 
 
-class PEMMerger(QtWidgets.QMainWindow, Ui_PEMMerger):
-    accept_sig = QtCore.Signal(str)
+class PEMMerger(QMainWindow, Ui_PEMMerger):
+    accept_sig = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
         self.setupUi(self)
         self.installEventFilter(self)
-        self.message = QtWidgets.QMessageBox()
+        self.message = QMessageBox()
 
         # Format window
         self.setWindowTitle('PEM Merger')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'pem_merger.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_merger.png')))
 
         self.pf1 = None
         self.pf2 = None
@@ -46,18 +50,18 @@ class PEMMerger(QtWidgets.QMainWindow, Ui_PEMMerger):
         self.last_soa_2 = 0.
 
         self.menuView.addSeparator()
-        self.view_x_action = QtWidgets.QAction('X Component')
-        self.view_y_action = QtWidgets.QAction('Y Component')
-        self.view_z_action = QtWidgets.QAction('Z Component')
+        self.view_x_action = QAction('X Component')
+        self.view_y_action = QAction('Y Component')
+        self.view_z_action = QAction('Z Component')
 
         # Status bar
-        self.save_frame = QtWidgets.QFrame()
-        self.save_frame.setLayout(QtWidgets.QHBoxLayout())
+        self.save_frame = QFrame()
+        self.save_frame.setLayout(QHBoxLayout())
         self.save_frame.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.save_path_label = QtWidgets.QLabel('Save Path:')
-        self.save_path_edit = QtWidgets.QLineEdit()
-        self.accept_btn = QtWidgets.QPushButton('Accept')
+        self.save_path_label = QLabel('Save Path:')
+        self.save_path_edit = QLineEdit()
+        self.accept_btn = QPushButton('Accept')
 
         self.save_frame.layout().addWidget(self.save_path_label)
         self.save_frame.layout().addWidget(self.save_path_edit)
@@ -224,14 +228,14 @@ class PEMMerger(QtWidgets.QMainWindow, Ui_PEMMerger):
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
-        if event.key() == QtCore.Qt.Key_C:
+        if event.key() == Qt.Key_C:
             self.cycle_profile_component()
 
-        elif event.key() == QtCore.Qt.Key_Space:
+        elif event.key() == Qt.Key_Space:
             self.reset_range()
 
     def eventFilter(self, watched, event):
-        if event.type() == QtCore.QEvent.Close:
+        if event.type() == QEvent.Close:
             self.deleteLater()
         return super().eventFilter(watched, event)
 
@@ -274,7 +278,7 @@ class PEMMerger(QtWidgets.QMainWindow, Ui_PEMMerger):
                 """
                 for item_list in item_lists:
                     for channel in range(self.channel_bounds[0][0], self.channel_bounds[-1][-1] + 1):
-                        curve = pg.PlotDataItem()
+                        curve = PlotDataItem()
                         item_list.append(curve)
 
                         # Add the curve to the correct plot
@@ -509,12 +513,12 @@ class PEMMerger(QtWidgets.QMainWindow, Ui_PEMMerger):
             if self.actionSymbols.isChecked():
                 symbols = {'symbol': 'o',
                            'symbolSize': 5,
-                           'symbolPen': pg.mkPen(color, width=1.1),
-                           'symbolBrush': pg.mkBrush('w')}
+                           'symbolPen': mkPen(color, width=1.1),
+                           'symbolBrush': mkBrush('w')}
             else:
                 symbols = {'symbol': None}
 
-            curve.setData(x, y, pen=pg.mkPen(color), **symbols)
+            curve.setData(x, y, pen=mkPen(color), **symbols)
 
         if not isinstance(components, np.ndarray):
             # Get the components
@@ -581,12 +585,12 @@ class PEMMerger(QtWidgets.QMainWindow, Ui_PEMMerger):
         """
         pems = [self.pf1, self.pf2]
         merged_pem = pems[0].copy()
-        merged_pem.data = pd.concat([pem_file.data for pem_file in pems], axis=0, ignore_index=True)
+        merged_pem.data = concat([pem_file.data for pem_file in pems], axis=0, ignore_index=True)
         merged_pem.number_of_readings = len(merged_pem.data)
         merged_pem.notes = list(np.unique(np.concatenate([pem_file.notes for pem_file in pems])))
 
         merged_pem.loop = TransmitterLoop(
-            pd.concat([pem_file.get_loop() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
+            concat([pem_file.get_loop() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
 
         if self.pf1.is_borehole():
             if self.pf1.has_collar_gps():
@@ -600,7 +604,7 @@ class PEMMerger(QtWidgets.QMainWindow, Ui_PEMMerger):
                 merged_pem.segments = self.pf2.segments
         else:
             merged_pem.line = SurveyLine(
-                pd.concat([pem_file.get_line() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
+                concat([pem_file.get_line() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
 
         merged_pem.is_merged = True
 
@@ -641,7 +645,7 @@ class PEMMerger(QtWidgets.QMainWindow, Ui_PEMMerger):
 
     def save_pem_file(self):
         default_name = str(self.pf1.filepath.with_name(f"{self.pf1.line_name}.PEM"))
-        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save PEM File',
+        save_path = QFileDialog.getSaveFileName(self, 'Save PEM File',
                                                 default_name,
                                                 'PEM Files (*.PEM)')[0]
         if save_path:
@@ -651,21 +655,21 @@ class PEMMerger(QtWidgets.QMainWindow, Ui_PEMMerger):
 
     def save_img(self):
         default = self.pf1.filepath.parent.joinpath(f"{self.pf1.filepath.stem} & {self.pf2.filepath.stem}")
-        save_file = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image',
+        save_file = QFileDialog.getSaveFileName(self, 'Save Image',
                                                 str(default),
                                                 'PNG Files (*.PNG)')[0]
         if save_file:
             self.grab().save(save_file)
 
     def copy_img(self):
-        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
+        QApplication.clipboard().setPixmap(self.grab())
         self.status_bar.showMessage('Image copied to clipboard.', 1000)
 
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
 
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(client='Minera', number=2)

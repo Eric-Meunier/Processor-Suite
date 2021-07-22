@@ -1,4 +1,4 @@
-from src.qt_py.pem_hub import __version__
+from src import __version__
 import os
 
 spec_file = r"run_pempro.spec"

@@ -7,9 +7,13 @@ import chardet
 from pathlib import Path
 from threading import Timer
 
-import pandas as pd
+from pandas import DataFrame
 import pyqtgraph as pg
-from PySide2 import QtCore, QtGui, QtWidgets
+from pyqtgraph import LinearRegionItem, mkPen, mkBrush, DateAxisItem, PlotWidget, PlotCurveItem, ScatterPlotItem
+from PySide2.QtGui import QIcon
+from PySide2.QtCore import Qt
+from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction,
+                               QFileDialog, QVBoxLayout, QLabel, QApplication)
 from src.qt_py import icons_path
 
 logging.basicConfig()
@@ -24,14 +28,14 @@ pg.setConfigOption('crashWarning', True)
 __version__ = '0.5'
 
 
-class DBPlotter(QtWidgets.QMainWindow):
+class DBPlotter(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
         self.db_files = []
         self.db_widgets = []
-        self.message = QtWidgets.QMessageBox()
+        self.message = QMessageBox()
         self.default_path = None
 
         self.x = 0
@@ -39,16 +43,16 @@ class DBPlotter(QtWidgets.QMainWindow):
 
         # Format the window
         self.setWindowTitle("DB Plot v" + str(__version__))
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'db_plot.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'db_plot.png')))
         self.resize(800, 700)
         self.setAcceptDrops(True)
 
-        self.setLayout(QtWidgets.QVBoxLayout())
+        self.setLayout(QVBoxLayout())
 
         # Create and format a central widget
-        self.widget_layout = QtWidgets.QGridLayout()
+        self.widget_layout = QGridLayout()
         self.widget_layout.setContentsMargins(0, 0, 0, 0)
-        self.widget = QtWidgets.QWidget()
+        self.widget = QWidget()
         self.widget.setLayout(self.widget_layout)
         self.setCentralWidget(self.widget)
 
@@ -75,27 +79,27 @@ class DBPlotter(QtWidgets.QMainWindow):
                 for widget in self.db_widgets:
                     widget.plot_widget.removeItem(widget.symbols)
 
-        self.file_menu = QtWidgets.QMenu("File", self)
-        self.view_menu = QtWidgets.QMenu("View", self)
+        self.file_menu = QMenu("File", self)
+        self.view_menu = QMenu("View", self)
 
-        self.openFile_Action = QtWidgets.QAction('Open File', self.file_menu)
+        self.openFile_Action = QAction('Open File', self.file_menu)
         self.openFile_Action.triggered.connect(self.open_file_dialog)
-        self.openFile_Action.setIcon(QtGui.QIcon(str(icons_path.joinpath("open.png"))))
-        self.actionSave_Screenshot = QtWidgets.QAction("Save Screenshot")
+        self.openFile_Action.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
+        self.actionSave_Screenshot = QAction("Save Screenshot")
         self.actionSave_Screenshot.setShortcut("Ctrl+S")
         self.actionSave_Screenshot.triggered.connect(self.save_img)
-        self.actionSave_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("save_as.png"))))
-        self.actionCopy_Screenshot = QtWidgets.QAction("Copy Screenshot")
+        self.actionSave_Screenshot.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.actionCopy_Screenshot = QAction("Copy Screenshot")
         self.actionCopy_Screenshot.setShortcut("Ctrl+C")
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
-        self.actionCopy_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("copy.png"))))
+        self.actionCopy_Screenshot.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
 
-        self.show_lr_action = QtGui.QAction('Show Sliding Window', self.view_menu, checkable=True)
+        self.show_lr_action = QAction('Show Sliding Window', self.view_menu, checkable=True)
         self.show_lr_action.setChecked(True)
         self.show_lr_action.setShortcut('r')
         self.show_lr_action.triggered.connect(toggle_lrs)
 
-        self.show_symbols_action = QtGui.QAction('Show Symbols', self.view_menu, checkable=True)
+        self.show_symbols_action = QAction('Show Symbols', self.view_menu, checkable=True)
         self.show_symbols_action.setChecked(True)
         self.show_symbols_action.setShortcut('s')
         self.show_symbols_action.triggered.connect(toggle_symbols)
@@ -115,11 +119,11 @@ class DBPlotter(QtWidgets.QMainWindow):
 
     def keyPressEvent(self, event):
         # Remove the widget
-        if event.key() == QtCore.Qt.Key_Delete:
+        if event.key() == Qt.Key_Delete:
             self.remove_file()
 
         # Reset the range of the plots
-        elif event.key() == QtCore.Qt.Key_Space:
+        elif event.key() == Qt.Key_Space:
             if self.db_widgets:
                 for w in self.db_widgets:
                     w.reset_range()
@@ -146,7 +150,7 @@ class DBPlotter(QtWidgets.QMainWindow):
         self.open(urls)
 
     def open_file_dialog(self):
-        files = QtWidgets.QFileDialog().getOpenFileNames(self, 'Open Files',
+        files = QFileDialog().getOpenFileNames(self, 'Open Files',
                                                filter='Damp files (*.log *.txt *.rtf)')[0]
         if files:
             for file in files:
@@ -209,9 +213,9 @@ class DBPlotter(QtWidgets.QMainWindow):
             data = [d.split() for d in data]
 
             # Create a data frame
-            df = pd.DataFrame(data,
-                              columns=['Hours', 'Minutes', 'Seconds', 'Num_samples', 'Current']
-                              ).dropna().astype(int)
+            df = DataFrame(data,
+                           columns=['Hours', 'Minutes', 'Seconds', 'Num_samples', 'Current']
+                           ).dropna().astype(int)
 
             if df.empty:
                 logger.info(f"No data found in {name}")
@@ -335,7 +339,7 @@ class DBPlotter(QtWidgets.QMainWindow):
         if not self.default_path:
             return
 
-        save_path = QtWidgets.QFileDialog().getSaveFileName(self, 'Save File Name',
+        save_path = QFileDialog().getSaveFileName(self, 'Save File Name',
                                                   str(self.default_path.with_suffix('.png')),
                                                   'PNG Files (*.PNG)')[0]
 
@@ -350,7 +354,7 @@ class DBPlotter(QtWidgets.QMainWindow):
         def hide_status_bar():
             self.statusBar().hide()
 
-        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
+        QApplication.clipboard().setPixmap(self.grab())
 
         self.statusBar().show()
         t = Timer(1., hide_status_bar)  # Runs 'hide_status_bar' after 1 second
@@ -358,7 +362,7 @@ class DBPlotter(QtWidgets.QMainWindow):
         self.statusBar().showMessage(f"Screen shot copied to clipboard.", 1000)
 
 
-class DBPlot(QtWidgets.QMainWindow):
+class DBPlot(QMainWindow):
     """
     A widget that plots damping box data, with a linear region item that, when moved, updates
     the status bar with information within the region.
@@ -380,13 +384,13 @@ class DBPlot(QtWidgets.QMainWindow):
         self.symbols = None
 
         # Format widget
-        self.setLayout(QtWidgets.QVBoxLayout())
+        self.setLayout(QVBoxLayout())
         self.setMinimumHeight(200)
         self.statusBar().show()
 
         # Create the plot
-        axis = pg.DateAxisItem(orientation='bottom')
-        self.plot_widget = pg.PlotWidget(axisItems={'bottom': axis})
+        axis = DateAxisItem(orientation='bottom')
+        self.plot_widget = PlotWidget(axisItems={'bottom': axis})
         self.setCentralWidget(self.plot_widget)
 
         # Format the plot
@@ -408,19 +412,19 @@ class DBPlot(QtWidgets.QMainWindow):
         self.plot_widget.getAxis("top").setStyle(showValues=False)
 
         # Status bar
-        self.min_current_label = QtWidgets.QLabel()
+        self.min_current_label = QLabel()
         self.min_current_label.setIndent(4)
-        self.max_current_label = QtWidgets.QLabel()
+        self.max_current_label = QLabel()
         self.max_current_label.setIndent(4)
-        self.delta_current_label = QtWidgets.QLabel()
+        self.delta_current_label = QLabel()
         self.delta_current_label.setIndent(4)
-        self.median_current_label = QtWidgets.QLabel()
+        self.median_current_label = QLabel()
         self.median_current_label.setIndent(4)
-        self.duration_label = QtWidgets.QLabel()
+        self.duration_label = QLabel()
         self.duration_label.setIndent(4)
-        self.rate_of_change_label = QtWidgets.QLabel()
+        self.rate_of_change_label = QLabel()
         self.rate_of_change_label.setIndent(4)
-        self.file_label = QtWidgets.QLabel(f"File: {filepath}")
+        self.file_label = QLabel(f"File: {filepath}")
 
         self.statusBar().addWidget(self.min_current_label)
         self.statusBar().addWidget(self.max_current_label)
@@ -431,11 +435,11 @@ class DBPlot(QtWidgets.QMainWindow):
         self.statusBar().addPermanentWidget(self.file_label)
 
         # Create the linear region item
-        self.lr = pg.LinearRegionItem(
-            brush=pg.mkBrush(color=(51, 153, 255, 20)),
-            hoverBrush=pg.mkBrush(color=(51, 153, 255, 30)),
-            pen=pg.mkPen(color=(0, 25, 51, 100)),
-            hoverPen=pg.mkPen(color=(0, 25, 51, 200)),
+        self.lr = LinearRegionItem(
+            brush=mkBrush(color=(51, 153, 255, 20)),
+            hoverBrush=mkBrush(color=(51, 153, 255, 30)),
+            pen=mkPen(color=(0, 25, 51, 100)),
+            hoverPen=mkPen(color=(0, 25, 51, 200)),
         )
         self.lr.sigRegionChanged.connect(self.lr_moved)
         self.lr.setZValue(-10)
@@ -449,15 +453,15 @@ class DBPlot(QtWidgets.QMainWindow):
         """
         # color = (51, 153, 255)
         color = (153, 51, 255)
-        self.curve = pg.PlotCurveItem(self.data.Time.to_numpy(), self.data.Current.to_numpy(),
-                                      pen=pg.mkPen(color=color, width=2.5),
-                                      )
-        self.symbols = pg.ScatterPlotItem(self.data.Time, self.data.Current,
-                                          symbol='+',
-                                          size=6,
-                                          pen=pg.mkPen(color='w', width=0.1),
-                                          brush=pg.mkBrush(color=color),
-                                          )
+        self.curve = PlotCurveItem(self.data.Time.to_numpy(), self.data.Current.to_numpy(),
+                                   pen=mkPen(color=color, width=2.5),
+                                   )
+        self.symbols = ScatterPlotItem(self.data.Time, self.data.Current,
+                                       symbol='+',
+                                       size=6,
+                                       pen=mkPen(color='w', width=0.1),
+                                       brush=mkBrush(color=color),
+                                       )
         self.plot_widget.addItem(self.curve)
         self.plot_widget.addItem(self.symbols)
         self.plot_widget.addItem(self.lr)
@@ -505,7 +509,7 @@ class DBPlot(QtWidgets.QMainWindow):
 
 
 if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     mw = DBPlotter()
 
     samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files\Damping box files'))

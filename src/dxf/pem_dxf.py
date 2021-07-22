@@ -1,5 +1,4 @@
-import pandas as pd
-
+from pandas import DataFrame
 import src.dxf.sdxf as sdxf
 from src.pem.pem_file import PEMFile
 
@@ -9,7 +8,7 @@ class DXFDrawing:
         self.drawing = sdxf.Drawing()
         self.features = 0
 
-    def add_df(self, df: pd.DataFrame, closed_poly: bool, **kwargs):
+    def add_df(self, df: DataFrame, closed_poly: bool, **kwargs):
         """
         Add a dataframe type object to a DXF
         :param df: dataframe with .Easting and .Northing

@@ -1,21 +1,27 @@
 import copy
 import logging
+import math
 import os
 import re
 import sys
-import math
+
 import keyboard
 import numpy as np
-import pandas as pd
 import pylineclip as lc
-import pyqtgraph as pg
-from PySide2 import QtCore, QtGui, QtWidgets
-from pyqtgraph.Point import Point
+from PySide2.QtCore import Qt, Signal, QEvent, QTimer, QPointF, QRectF
+from PySide2.QtGui import QIcon, QColor, QFont, QTransform, QBrush, QPen
+from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QApplication, QLineEdit,
+                               QInputDialog, QPushButton)
+from pandas import DataFrame, options, isna
+from pyqtgraph import (LinearRegionItem, mkPen, PlotCurveItem, setConfigOptions, setConfigOption, TextItem,
+                       ScatterPlotItem, InfiniteLine,
+                       ViewBox, Point)
 from scipy import spatial, signal
 
-from src.qt_py import icons_path
 from src.pem import convert_station
+from src.qt_py import icons_path
 from src.ui.pem_plot_editor import Ui_PEMPlotEditor
+
 # from src.logger import Log
 
 """
@@ -28,11 +34,11 @@ will not intersect the area of the QRectF.
 # from pyod.utils.data import get_outliers_inliers
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
-pd.options.mode.chained_assignment = None  # default='warn'
+setConfigOptions(antialias=True)
+setConfigOption('background', 'w')
+setConfigOption('foreground', 'k')
+setConfigOption('crashWarning', True)
+options.mode.chained_assignment = None  # default='warn'
 
 # TODO Change auto clean to have a start and end channel
 # TODO update median when cleaning
@@ -41,43 +47,43 @@ pd.options.mode.chained_assignment = None  # default='warn'
 # TODO Auto-scale after auto-clean
 
 
-class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
-    save_sig = QtCore.Signal(object)
-    close_sig = QtCore.Signal(object)
-    reset_file_sig = QtCore.Signal(object)
+class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
+    save_sig = Signal(object)
+    close_sig = Signal(object)
+    reset_file_sig = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
         self.setupUi(self)
-        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.setFocusPolicy(Qt.StrongFocus)
         self.installEventFilter(self)
         self.activateWindow()
         self.setWindowTitle('PEM Plot Editor')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'plot_editor.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'plot_editor.png')))
 
         self.resize(1300, 900)
 
         self.setAcceptDrops(True)
-        self.message = QtWidgets.QMessageBox()
+        self.message = QMessageBox()
 
         # Status bar formatting
-        self.station_text = QtWidgets.QLabel()
-        self.decay_selection_text = QtWidgets.QLabel()
+        self.station_text = QLabel()
+        self.decay_selection_text = QLabel()
         self.decay_selection_text.setIndent(20)
         self.decay_selection_text.setStyleSheet('color: blue')
         self.decay_selection_text.hide()
-        self.profile_selection_text = QtWidgets.QLabel()
+        self.profile_selection_text = QLabel()
         self.profile_selection_text.setIndent(20)
         self.profile_selection_text.setStyleSheet('color: #ce4a7e')
         # self.profile_selection_text.setStyleSheet('color: purple')
         self.profile_selection_text.hide()
-        self.file_info_label = QtWidgets.QLabel()
+        self.file_info_label = QLabel()
         self.file_info_label.setIndent(20)
         self.file_info_label.setStyleSheet('color: gray')
-        self.number_of_readings = QtWidgets.QLabel()
+        self.number_of_readings = QLabel()
         self.number_of_readings.setIndent(20)
-        self.number_of_repeats = QtWidgets.QPushButton('')
+        self.number_of_repeats = QPushButton('')
         self.number_of_repeats.setFlat(True)
 
         # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray;}")
@@ -85,7 +91,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
 
         self.status_bar.addWidget(self.station_text, 0)
         self.status_bar.addWidget(self.decay_selection_text, 0)
-        self.status_bar.addWidget(QtWidgets.QLabel(), 1)  # Spacer
+        self.status_bar.addWidget(QLabel(), 1)  # Spacer
         self.status_bar.addWidget(self.profile_selection_text, 0)
         self.status_bar.addPermanentWidget(self.file_info_label, 0)
         self.status_bar.addPermanentWidget(self.number_of_readings, 0)
@@ -98,7 +104,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
 
         self.line_selected = False
         self.selected_station = None
-        self.selected_data = pd.DataFrame()
+        self.selected_data = DataFrame()
         self.selected_lines = []
         self.deleted_lines = []
         self.selected_profile_stations = np.array([])
@@ -110,7 +116,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
         self.last_active_ax = None  # last_active_ax is always a plotitem object, and never None after the init.
         self.last_active_ax_ind = None  # last_active_ax is always a plotitem object, and never None after the init.
         self.plotted_decay_lines = []
-        self.plotted_decay_data = pd.DataFrame()
+        self.plotted_decay_data = DataFrame()
 
         self.x_decay_plot = self.decay_layout.addPlot(0, 0, title='X Component', viewBox=DecayViewBox())
         self.y_decay_plot = self.decay_layout.addPlot(1, 0, title='Y Component', viewBox=DecayViewBox())
@@ -179,16 +185,16 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
 
             # Add the vertical selection line
             color = (23, 23, 23, 100)
-            font = QtGui.QFont("Helvetica", 10)
+            font = QFont("Helvetica", 10)
             # hover_color = (102, 178, 255, 100)
             # select_color = (51, 51, 255, 100)
-            hover_v_line = pg.InfiniteLine(angle=90, movable=False)
+            hover_v_line = InfiniteLine(angle=90, movable=False)
             hover_v_line.setPen(color, width=2.)
-            selected_v_line = pg.InfiniteLine(angle=90, movable=False)
+            selected_v_line = InfiniteLine(angle=90, movable=False)
             selected_v_line.setPen(color, width=2.)
 
             # Add the text annotations for the vertical lines
-            hover_v_line_text = pg.TextItem("")
+            hover_v_line_text = TextItem("")
             hover_v_line_text.setParentItem(ax.vb)
             hover_v_line_text.setAnchor((0, 0))
             hover_v_line_text.setPos(0, 0)
@@ -262,68 +268,68 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
-        if event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_R:
+        if event.key() == Qt.Key_Delete or event.key() == Qt.Key_R:
             if keyboard.is_pressed("shift"):
                 self.undelete_lines()
             else:
                 self.delete_lines()
 
-        elif event.key() == QtCore.Qt.Key_C:
+        elif event.key() == Qt.Key_C:
             self.cycle_profile_component()
 
         # Cycle through highlighted decays forwards
-        elif event.key() == QtCore.Qt.Key_D or event.key() == QtCore.Qt.RightArrow:
+        elif event.key() == Qt.Key_D or event.key() == Qt.RightArrow:
             self.cycle_selection('up')
 
         # Cycle through highlighted decays backwards
-        elif event.key() == QtCore.Qt.Key_A or event.key() == QtCore.Qt.LeftArrow:
+        elif event.key() == Qt.Key_A or event.key() == Qt.LeftArrow:
             self.cycle_selection('down')
 
         # Cycle through the selection station forwards
-        elif event.key() == QtCore.Qt.Key_W:
+        elif event.key() == Qt.Key_W:
             self.cycle_station('up')
 
         # Cycle through the selection station backwards
-        elif event.key() == QtCore.Qt.Key_S:
+        elif event.key() == Qt.Key_S:
             self.cycle_station('down')
 
         # Flip the decay when the F key is pressed
-        elif event.key() == QtCore.Qt.Key_F:
+        elif event.key() == Qt.Key_F:
             if self.selected_lines:
                 self.flip_decays(source='decay')
 
         # Change the component of the readings to X
-        elif event.key() == QtCore.Qt.Key_X:
+        elif event.key() == Qt.Key_X:
             if self.selected_lines:
                 self.change_component('X', source='decay')
 
         # Change the component of the readings to Y
-        elif event.key() == QtCore.Qt.Key_Y:
+        elif event.key() == Qt.Key_Y:
             if self.selected_lines:
                 self.change_component('Y', source='decay')
 
         # Change the component of the readings to Z
-        elif event.key() == QtCore.Qt.Key_Z:
+        elif event.key() == Qt.Key_Z:
             if self.selected_lines:
                 self.change_component('Z', source='decay')
 
         # Reset the ranges of the plots when the space bar is pressed
-        elif event.key() == QtCore.Qt.Key_Space:
+        elif event.key() == Qt.Key_Space:
             if keyboard.is_pressed('Shift'):
                 self.zoom_to_offtime()
             else:
                 self.reset_range()
 
         # Clear the selected decays when the Escape key is pressed
-        elif event.key() == QtCore.Qt.Key_Escape:
+        elif event.key() == Qt.Key_Escape:
             self.clear_selection()
 
     def eventFilter(self, watched, event):
-        if event.type() == QtCore.QEvent.GraphicsSceneWheel:
+        if event.type() == QEvent.GraphicsSceneWheel:
             # print(f"Wheel event")
             self.pyqtgraphWheelEvent(event)
             return True
-        elif event.type() == QtCore.QEvent.Close:
+        elif event.type() == QEvent.Close:
             event.accept()
             self.deleteLater()
         return super().eventFilter(watched, event)
@@ -346,14 +352,14 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
 
     def save_img(self):
         """Save an image of the window """
-        save_name, save_type = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
         if save_name:
             self.grab().save(save_name)
             self.status_bar.showMessage(f"Image saved.", 1500)
 
     def copy_img(self):
         """Take an image of the window and copy it to the clipboard"""
-        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
+        QApplication.clipboard().setPixmap(self.grab())
         self.status_bar.showMessage(f"Image saved to clipboard.", 1500)
 
     def open(self, pem_file):
@@ -446,7 +452,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
         """
         Open files through the file dialog
         """
-        files = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem)')
+        files = QFileDialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem)')
         if files[0] != '':
             file = files[0][0]
             if file.lower().endswith('.pem'):
@@ -468,20 +474,20 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
         self.refresh(components='all', preserve_selection=False)
 
         self.status_bar.showMessage('File saved.', 2000)
-        QtCore.QTimer.singleShot(2000, lambda: self.station_text.setText(station_text))
+        QTimer.singleShot(2000, lambda: self.station_text.setText(station_text))
         self.save_sig.emit(self.pem_file)
 
     def save_as(self):
         """
         Save the PEM file to a new file name
         """
-        file_path = QtWidgets.QFileDialog.getSaveFileName(self, '', str(self.pem_file.filepath), 'PEM Files (*.PEM)')[0]
+        file_path = QFileDialog.getSaveFileName(self, '', str(self.pem_file.filepath), 'PEM Files (*.PEM)')[0]
         if file_path:
             text = self.pem_file.to_string()
             print(text, file=open(str(file_path), 'w+'))
 
             self.status_bar.showMessage(f'File saved to {file_path}', 2000)
-            QtCore.QTimer.singleShot(2000, lambda: self.station_text.setText(station_text))
+            QTimer.singleShot(2000, lambda: self.station_text.setText(station_text))
 
     def update_file(self):
 
@@ -699,7 +705,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
                 x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
                 ax.plot(x=x, y=y,
-                        pen=pg.mkPen('k', width=1.))
+                        pen=mkPen('k', width=1.))
 
             def plot_scatters(df, ax):
                 """
@@ -710,8 +716,8 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
                 """
                 x, y = df.index.to_numpy(), df.to_numpy()
 
-                scatter = pg.ScatterPlotItem(x=x, y=y,
-                                             pen=pg.mkPen('k', width=1.),
+                scatter = ScatterPlotItem(x=x, y=y,
+                                             pen=mkPen('k', width=1.),
                                              symbol='o',
                                              size=2,
                                              brush='w',
@@ -746,7 +752,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
                     # Save the mag curves so they can be toggled easily.
                     x, y = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
                     for ax in self.mag_profile_axes:
-                        mag_plot_item = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen('1DD219', width=2.))
+                        mag_plot_item = PlotCurveItem(x=x, y=y, pen=mkPen('1DD219', width=2.))
                         ax.getAxis("left").setLabel("Total Magnetic Field", units="pT")
                         ax.addItem(mag_plot_item)
 
@@ -843,11 +849,11 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
 
             # Use a dotted line for readings that are flagged as Overloads
             if row.Overload is True:
-                style = QtCore.Qt.DashDotDotLine
+                style = Qt.DashDotDotLine
             else:
-                style = QtCore.Qt.SolidLine
+                style = Qt.SolidLine
 
-            pen = pg.mkPen(color, width=1., style=style)
+            pen = mkPen(color, width=1., style=style)
 
             # Remove the on-time channels if the checkbox is checked
             if self.plot_ontime_decays_cbox.isChecked():
@@ -856,7 +862,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
                 y = row.Reading[~self.pem_file.channel_times.Remove]
 
             # Create and configure the line item
-            decay_line = pg.PlotCurveItem(y=y,
+            decay_line = PlotCurveItem(y=y,
                                           pen=pen,
                                           )
             decay_line.setClickable(True, width=5)
@@ -864,7 +870,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
             decay_line.sigClicked.connect(self.decay_line_clicked)
 
             # Add the line at y=0
-            ax.addLine(y=0, pen=pg.mkPen('k', width=0.15))
+            ax.addLine(y=0, pen=mkPen('k', width=0.15))
             # Plot the decay
             ax.addItem(decay_line)
             # Add the plot item to the list of plotted items
@@ -920,7 +926,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
                 else:
                     comp_filt = self.plotted_decay_data.Component == "Z"
 
-                median_data = pd.DataFrame.from_records(self.plotted_decay_data[comp_filt].Reading.reset_index(drop=True))
+                median_data = DataFrame.from_records(self.plotted_decay_data[comp_filt].Reading.reset_index(drop=True))
                 if median_data.empty:
                     continue
 
@@ -935,32 +941,32 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
                     off_time_median = signal.savgol_filter(off_time_median, 5, 3)
                 limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
 
-                thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+                thresh_line_1 = PlotCurveItem(x=list(limits_data.columns[-window_size:]),
                                                  y=off_time_median[-window_size:] + std,
-                                                 pen=pg.mkPen("m", width=1., style=QtCore.Qt.DashLine),
+                                                 pen=mkPen("m", width=1., style=Qt.DashLine),
                                                  setClickable=False,
                                                  name='median limit')
-                thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+                thresh_line_2 = PlotCurveItem(x=list(limits_data.columns[-window_size:]),
                                                  y=off_time_median[-window_size:] - std,
-                                                 pen=pg.mkPen("m", width=1., style=QtCore.Qt.DashLine),
+                                                 pen=mkPen("m", width=1., style=Qt.DashLine),
                                                  setClickable=False,
                                                  name='median limit')
                 ax.addItem(thresh_line_1)
                 ax.addItem(thresh_line_2)
 
-                # error_bars = pg.ErrorBarItem(x=data.columns,
+                # error_bars = ErrorBarItem(x=data.columns,
                 #                              y=median,
                 #                              height=std,
                 #                              width=0,
                 #                              beam=1,
-                #                              pen=pg.mkPen("b", width=1.))
+                #                              pen=mkPen("b", width=1.))
                 #
-                # error_line = pg.PlotCurveItem(y=median.to_numpy(),
-                #                               pen=pg.mkPen("b", width=1., style=QtCore.Qt.DashLine))
+                # error_line = PlotCurveItem(y=median.to_numpy(),
+                #                               pen=mkPen("b", width=1., style=Qt.DashLine))
 
                 if __name__ == "__main__":
-                    median_line = pg.PlotCurveItem(y=median,
-                                                   pen=pg.mkPen("m", width=2.),
+                    median_line = PlotCurveItem(y=median,
+                                                   pen=mkPen("m", width=2.),
                                                    setClickable=False,
                                                    name='median line')
                     ax.addItem(median_line)
@@ -1043,7 +1049,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
                     decay_selection_text.append(stack_number)
 
                     # Add the time stamp if it exists
-                    if not pd.isna(selected_decay.Timestamp):
+                    if not isna(selected_decay.Timestamp):
                         date_time = f"Timestamp: {selected_decay.Timestamp.strftime('%b %d - %H:%M:%S')}"
                         decay_selection_text.append(date_time)
 
@@ -1091,9 +1097,9 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
 
             # Change the line style if the reading is overloaded
             if overload is True:
-                style = QtCore.Qt.DashDotDotLine
+                style = Qt.DashDotDotLine
             else:
-                style = QtCore.Qt.SolidLine
+                style = Qt.SolidLine
 
             # Colors for the lines if they selected
             if line in self.selected_lines:
@@ -1238,7 +1244,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
             view = vb.viewRect()
             nx = (point.x() + view.x()) / view.width()
             ny = (point.y() + view.y()) / view.height()
-            return QtCore.QPointF(nx, ny)
+            return QPointF(nx, ny)
 
         self.active_ax = None
 
@@ -1271,7 +1277,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
                 xi, yi = line.xData, line.yData
                 interp_xi = np.linspace(xi.min(), xi.max(), 100)
                 interp_yi = np.interp(interp_xi, xi, yi)  # Interp for when the mouse in between two points
-                line_qpoints = [normalize(QtCore.QPointF(x, y)) for x, y in zip(interp_xi, interp_yi)]
+                line_qpoints = [normalize(QPointF(x, y)) for x, y in zip(interp_xi, interp_yi)]
                 line_points = np.array([(p.x(), p.y()) for p in line_qpoints])
 
                 # logger.info(f"Line data pos: {np.average([p[0] for p in line_points]):.2f}, "
@@ -1289,7 +1295,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
             for line in ax_lines:
                 if line == self.nearest_decay:
                     line_color = line.opts.get('pen').color()
-                    line.setShadowPen(pg.mkPen(line_color, width=2.5, cosmetic=True))
+                    line.setShadowPen(mkPen(line_color, width=2.5, cosmetic=True))
                 else:
                     line.setShadowPen(None)
 
@@ -1499,7 +1505,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
             logger.warning(f"No source selected.")
             return
 
-        new_comp, ok_pressed = QtWidgets.QInputDialog.getText(self, "Change Component", "New Component:", QtWidgets.QLineEdit.Normal)
+        new_comp, ok_pressed = QInputDialog.getText(self, "Change Component", "New Component:", QLineEdit.Normal)
         if ok_pressed:
             new_comp = new_comp.upper()
             if new_comp not in ['X', 'Y', 'Z']:
@@ -1538,7 +1544,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
             logger.warning(f"No source selected.")
             return
 
-        new_suffix, ok_pressed = QtWidgets.QInputDialog.getText(self, "Change Suffix", "New Suffix:")
+        new_suffix, ok_pressed = QInputDialog.getText(self, "Change Suffix", "New Suffix:")
         if ok_pressed:
             new_suffix = new_suffix.upper()
             if new_suffix not in ['N', 'E', 'S', 'W']:
@@ -1574,7 +1580,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
             selected_data = self.get_selected_decay_data()
             selected_station = selected_data.Station.unique()[0]
 
-            new_station, ok_pressed = QtWidgets.QInputDialog.getText(self, "Change Station", "New Station:",
+            new_station, ok_pressed = QInputDialog.getText(self, "Change Station", "New Station:",
                                                            text=selected_station)
 
             if ok_pressed:
@@ -1612,7 +1618,7 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
             return
 
         global shift_amount
-        shift_amount, ok_pressed = QtWidgets.QInputDialog.getInt(self, "Shift Stations", "Shift Amount:", value=0)
+        shift_amount, ok_pressed = QInputDialog.getInt(self, "Shift Stations", "Shift Amount:", value=0)
 
         if ok_pressed and shift_amount != 0:
             # Update the station number in the selected data
@@ -1888,19 +1894,19 @@ class PEMPlotEditor(QtWidgets.QMainWindow, Ui_PEMPlotEditor):
             self.status_bar.showMessage('File reset.', 1000)
 
 
-class DecayViewBox(pg.ViewBox):
+class DecayViewBox(ViewBox):
     """
     Custom ViewBox for the decay plots. Allows box selecting, box-zoom when shift is held, and mouse wheel when shift
     is held does mouse wheel zoom
     """
-    box_select_signal = QtCore.Signal(object)
+    box_select_signal = Signal(object)
 
     def __init__(self, *args, **kwds):
-        pg.ViewBox.__init__(self, *args, **kwds)
-        self.setFocusPolicy(QtCore.Qt.NoFocus)
+        ViewBox.__init__(self, *args, **kwds)
+        self.setFocusPolicy(Qt.NoFocus)
         # self.setMouseMode(self.RectMode)
-        brush = QtGui.QBrush(QtGui.QColor('blue'))
-        pen = QtGui.QPen(brush, 1)
+        brush = QBrush(QColor('blue'))
+        pen = QPen(brush, 1)
         # self.rbScaleBox.setPen(pen)
         self.rbScaleBox.setBrush(brush)
         self.rbScaleBox.setOpacity(0.2)
@@ -1917,7 +1923,7 @@ class DecayViewBox(pg.ViewBox):
 
             if ev.isFinish():  # This is the final move in the drag; change the view scale now
                 self.rbScaleBox.hide()
-                ax = QtCore.QRectF(Point(ev.buttonDownPos(ev.button())), Point(pos))
+                ax = QRectF(Point.Point(ev.buttonDownPos(ev.button())), Point.Point(pos))
                 ax = self.childGroup.mapRectFromParent(ax)
                 self.showAxRect(ax)
                 self.axHistoryPointer += 1
@@ -1927,13 +1933,13 @@ class DecayViewBox(pg.ViewBox):
                 self.updateScaleBox(ev.buttonDownPos(), ev.pos())
 
         else:
-            if ev.button() == QtCore.Qt.LeftButton:
+            if ev.button() == Qt.LeftButton:
                 ev.accept()
                 if ev.isFinish():  # This is the final move in the drag
                     # Hide the rectangle
                     self.rbScaleBox.hide()
                     # Create a rectangle object from the click-and-drag rectangle
-                    rect = QtCore.QRectF(Point(ev.buttonDownPos(ev.button())), Point(pos))
+                    rect = QRectF(Point.Point(ev.buttonDownPos(ev.button())), Point.Point(pos))
                     # Convert the coordinates to the same as the data
                     rect = self.childGroup.mapRectFromParent(rect)
                     # Emit the signal to select the lines that intersect the rect
@@ -1942,7 +1948,7 @@ class DecayViewBox(pg.ViewBox):
                     # update shape of scale box
                     self.updateScaleBox(ev.buttonDownPos(), ev.pos())
             else:
-                pg.ViewBox.mouseDragEvent(self, ev)
+                ViewBox.mouseDragEvent(self, ev)
 
     def wheelEvent(self, ev, axis=None):
 
@@ -1959,7 +1965,7 @@ class DecayViewBox(pg.ViewBox):
                 arr = np.array(
                     [[tr.m11(), tr.m12(), tr.m13()], [tr.m21(), tr.m22(), tr.m23()], [tr.m31(), tr.m32(), tr.m33()]])
                 inv = numpy.linalg.inv(arr)
-                return QtGui.QTransform(inv[0, 0], inv[0, 1], inv[0, 2], inv[1, 0], inv[1, 1], inv[1, 2], inv[2, 0],
+                return QTransform(inv[0, 0], inv[0, 1], inv[0, 2], inv[1, 0], inv[1, 1], inv[1, 2], inv[2, 0],
                                         inv[2, 1])
             except ImportError:
                 inv = tr.inverted()
@@ -1975,7 +1981,7 @@ class DecayViewBox(pg.ViewBox):
                 mask = self.state['mouseEnabled'][:]
             s = 1.02 ** (ev.delta() * self.state['wheelScaleFactor'])  # actual scaling factor
             s = [(None if m is False else s) for m in mask]
-            center = Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
+            center = Point.Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
 
             self._resetTarget()
             self.scaleBy(s, center)
@@ -1983,20 +1989,20 @@ class DecayViewBox(pg.ViewBox):
             self.sigRangeChangedManually.emit(mask)
 
 
-class ProfileViewBox(pg.ViewBox):
+class ProfileViewBox(ViewBox):
     """
     Custom ViewBox for profile plots. Click and drag creates a linear region selector.
     """
-    box_select_signal = QtCore.Signal(object, object)
-    box_select_started_signal = QtCore.Signal()
+    box_select_signal = Signal(object, object)
+    box_select_started_signal = Signal()
 
     def __init__(self, *args, **kwds):
-        pg.ViewBox.__init__(self, *args, **kwds)
+        ViewBox.__init__(self, *args, **kwds)
         color = r'#ce4a7e'
-        brush = QtGui.QBrush(QtGui.QColor(color))
-        pen = QtGui.QPen(brush, 1)
+        brush = QBrush(QColor(color))
+        pen = QPen(brush, 1)
 
-        self.lr = pg.LinearRegionItem([-100, 100], movable=False, pen=pg.mkPen('k'))
+        self.lr = LinearRegionItem([-100, 100], movable=False, pen=mkPen('k'))
         self.lr.setZValue(-10)
         self.lr.setBrush(brush)
         self.lr.setOpacity(0.5)
@@ -2004,7 +2010,7 @@ class ProfileViewBox(pg.ViewBox):
         self.addItem(self.lr)
 
     def mouseDragEvent(self, ev, axis=None):
-        if ev.button() == QtCore.Qt.LeftButton:
+        if ev.button() == Qt.LeftButton:
             ev.accept()
             range = [self.mapToView(ev.buttonDownPos()).x(), self.mapToView(ev.pos()).x()]
 
@@ -2014,7 +2020,7 @@ class ProfileViewBox(pg.ViewBox):
             self.box_select_signal.emit(range, ev.start)
             ev.accept()
         else:
-            pg.ViewBox.mouseDragEvent(self, ev)
+            ViewBox.mouseDragEvent(self, ev)
 
     def wheelEvent(self, ev, axis=None):
 
@@ -2031,7 +2037,7 @@ class ProfileViewBox(pg.ViewBox):
                 arr = np.array(
                     [[tr.m11(), tr.m12(), tr.m13()], [tr.m21(), tr.m22(), tr.m23()], [tr.m31(), tr.m32(), tr.m33()]])
                 inv = numpy.linalg.inv(arr)
-                return QtGui.QTransform(inv[0, 0], inv[0, 1], inv[0, 2], inv[1, 0], inv[1, 1], inv[1, 2], inv[2, 0],
+                return QTransform(inv[0, 0], inv[0, 1], inv[0, 2], inv[1, 0], inv[1, 1], inv[1, 2], inv[2, 0],
                                         inv[2, 1])
             except ImportError:
                 inv = tr.inverted()
@@ -2047,7 +2053,7 @@ class ProfileViewBox(pg.ViewBox):
                 mask = self.state['mouseEnabled'][:]
             s = 1.02 ** (ev.delta() * self.state['wheelScaleFactor'])  # actual scaling factor
             s = [(None if m is False else s) for m in mask]
-            center = Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
+            center = Point.Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
 
             self._resetTarget()
             self.scaleBy(s, center)
@@ -2062,16 +2068,16 @@ if __name__ == '__main__':
 
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     pem_g = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()
     # pem_files = pem_getter.get_pems(random=True, number=1)
 
-    pem_file = PEMParser().parse(r"C:\_Data\2021\Canadian Palladium\_EB-21-55\RAW\55z_0719.PEM")
+    # pem_file = PEMParser().parse(r"C:\_Data\2021\Canadian Palladium\_EB-21-55\RAW\55z_0719.PEM")
     # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
     # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
-    # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Lac Lessard\RAW\1000_0707.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Lac Lessard\RAW\1000_0707.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]  # TODO Test this for ordering worse to best readings
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]

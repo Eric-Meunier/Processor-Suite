@@ -1,23 +1,25 @@
 import logging
+import math
 import os
 import sys
 from pathlib import Path
-from scipy.signal import savgol_filter
 
 import matplotlib.pyplot as plt
 import mplcursors
-import math
 import numpy as np
-import pandas as pd
-from PySide2 import QtGui, QtCore, QtWidgets
+from PySide2.QtCore import Qt, Signal
+from PySide2.QtGui import QIcon, QKeySequence
+from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QErrorMessage,
+                               QFileDialog, QVBoxLayout, QApplication, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from pandas import DataFrame, Series, read_csv, concat
 
+from src.gps.gps_editor import BoreholeSegments
 from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
-from src.ui.pem_geometry import Ui_PEMGeometry
-from src.qt_py.gps_adder import DADSelector
-from src.gps.gps_editor import BoreholeSegments
 from src.qt_py import icons_path
+from src.qt_py.gps_adder import DADSelector
+from src.ui.pem_geometry import Ui_PEMGeometry
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,7 @@ def dad_to_seg(df, units='m'):
     i_depth = np.arange(depth[0], depth[-1] + 1)
     i_azimuth = np.interp(i_depth, depth, azimuth)
     i_dip = np.interp(i_depth, depth, dip)
-    df = pd.DataFrame(zip(i_depth, i_azimuth, i_dip), columns=df.columns)
+    df = DataFrame(zip(i_depth, i_azimuth, i_dip), columns=df.columns)
 
     # Create the segment data frame
     seg = df.head(0).copy()
@@ -83,26 +85,26 @@ def dad_to_seg(df, units='m'):
     return BoreholeSegments(seg)
 
 
-class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
+class PEMGeometry(QMainWindow, Ui_PEMGeometry):
     # plt.style.use('seaborn-white')
-    accepted_sig = QtCore.Signal(object)
+    accepted_sig = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
 
         self.setWindowTitle('PEM Geometry')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'pem_geometry.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
         self.resize(1100, 800)
         # self.status_bar.setStyleSheet("border-top :0.5px solid gray;")
 
-        self.message = QtWidgets.QMessageBox()
-        self.error = QtWidgets.QErrorMessage()
+        self.message = QMessageBox()
+        self.error = QErrorMessage()
         self.error.setWindowTitle('Error')
 
         self.parent = parent
         self.pem_file = None
-        self.dialog = QtWidgets.QFileDialog()
+        self.dialog = QFileDialog()
 
         # Initialize the plot lines
         self.tool_az_line = None
@@ -142,12 +144,12 @@ class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
         self.figure, (self.mag_ax, self.dip_ax, self.roll_ax) = plt.subplots(1, 3, sharey=True)
         self.figure.subplots_adjust(left=0.07, bottom=0.08, right=0.94, top=0.92)
         self.canvas = FigureCanvas(self.figure)
-        self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.canvas.setFocusPolicy(Qt.StrongFocus)
         self.plots_layout.addWidget(self.canvas)
 
         # Create the polar plot
-        self.polar_widget = QtWidgets.QWidget()
-        self.polar_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.polar_widget = QWidget()
+        self.polar_widget.setLayout(QVBoxLayout())
         self.polar_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.polar_figure = plt.figure()
         self.polar_figure.subplots_adjust(left=0.03, bottom=0.08, right=0.82, top=0.92)
@@ -160,7 +162,7 @@ class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
         self.polar_ax.set_xticks(np.pi / 180. * np.linspace(0, 360, 24, endpoint=False))
 
         self.polar_canvas = FigureCanvas(self.polar_figure)
-        self.polar_canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.polar_canvas.setFocusPolicy(Qt.StrongFocus)
         self.polar_widget.layout().addWidget(self.polar_canvas)
         self.polar_plot_layout.addWidget(self.polar_canvas)
 
@@ -194,17 +196,17 @@ class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
 
         # Signals
         self.actionOpen_Geometry_File.triggered.connect(self.open_file_dialog)
-        self.actionOpen_Geometry_File.setIcon(QtGui.QIcon(str(icons_path.joinpath("open.png"))))
+        self.actionOpen_Geometry_File.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
         self.actionAllow_Negative_Azimuth.triggered.connect(lambda: self.plot_tool_values(update=True))
 
         self.actionSave_Screenshot.setShortcut("Ctrl+S")
         self.actionSave_Screenshot.triggered.connect(self.save_img)
-        self.actionSave_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.actionSave_Screenshot.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
         self.actionCopy_Screenshot.setShortcut("Ctrl+C")
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
-        self.actionCopy_Screenshot.setIcon(QtGui.QIcon(str(icons_path.joinpath("copy.png"))))
+        self.actionCopy_Screenshot.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
 
-        self.reset_range_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(' '), self)
+        self.reset_range_shortcut = QShortcut(QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.update_plots)
 
         self.mag_dec_sbox.valueChanged.connect(self.redraw_az_line)
@@ -250,14 +252,14 @@ class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
 
     def save_img(self):
         """Save an image of the window """
-        save_name, save_type = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
         if save_name:
             self.grab().save(save_name)
             self.status_bar.showMessage(f"Image saved.", 1500)
 
     def copy_img(self):
         """Take an image of the window and copy it to the clipboard"""
-        QtWidgets.QApplication.clipboard().setPixmap(self.grab())
+        QApplication.clipboard().setPixmap(self.grab())
         self.status_bar.showMessage(f"Image saved to clipboard.", 1500)
 
     def open_file_dialog(self):
@@ -294,7 +296,7 @@ class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
 
         # Merge the data of the pem files
         if len(pem_files) > 1:
-            self.pem_file.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
+            self.pem_file.data = concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
 
             # # Use the first geometry where the segments aren't empty (if any)
             # for file in pem_files:
@@ -334,7 +336,7 @@ class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
         xi = np.arange(0, max(az_depth.max(), dip_depth.max() + 1), 1)
         i_az = np.interp(xi, az_depth, az)
         i_dip = np.interp(xi, dip_depth, dip)
-        dad_df = pd.DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
+        dad_df = DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
 
         seg = dad_to_seg(dad_df, units=self.pem_file.get_gps_units())
         self.accepted_sig.emit(seg)
@@ -536,7 +538,7 @@ class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
         filt = (self.pem_file.data.Component == 'X') | (self.pem_file.data.Component == 'Y')
         data = self.pem_file.data[filt]
 
-        self.df = pd.DataFrame({'Station': data.Station.astype(int),
+        self.df = DataFrame({'Station': data.Station.astype(int),
                                 'RAD_tool': data.RAD_tool,
                                 'RAD_ID': data.RAD_ID})
         # Only keep unique RAD IDs and unique stations
@@ -544,7 +546,7 @@ class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
         self.df.drop_duplicates(subset=['Station'], inplace=True)
         self.df.sort_values(by='Station', inplace=True)
 
-        az, dip, depth = pd.Series(dtype=float), pd.Series(dtype=float), pd.Series(dtype=float)
+        az, dip, depth = Series(dtype=float), Series(dtype=float), Series(dtype=float)
         if self.pem_file.has_d7() and self.pem_file.has_xy():
             self.plot_tool_values(update=False)
 
@@ -725,11 +727,11 @@ class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
         Import and plot a .seg file
         :param filepath: str, filepath of the file to plot
         """
-        df = pd.read_csv(filepath,
-                         delim_whitespace=True,
-                         usecols=[1, 2, 5],
-                         names=['Azimuth', 'Dip', 'Depth'],
-                         dtype=float)
+        df = read_csv(filepath,
+                      delim_whitespace=True,
+                      usecols=[1, 2, 5],
+                      names=['Azimuth', 'Dip', 'Depth'],
+                      dtype=float)
         self.plot_df(df, source='seg')
 
     def open_dad_file(self, filepath):
@@ -1122,7 +1124,7 @@ class PEMGeometry(QtWidgets.QMainWindow, Ui_PEMGeometry):
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
 
     pg = PEMGetter()
     parser = PEMParser()
