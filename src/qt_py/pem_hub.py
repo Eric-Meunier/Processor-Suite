@@ -15,12 +15,13 @@ from itertools import groupby
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pyqtgraph as pg
 from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor
 from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction, QErrorMessage,
                                QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
-                               QCalendarWidget, QFileSystemModel, QHeaderView, QHeaderView, QDesktopWidget,
+                               QCalendarWidget, QFileSystemModel, QDoubleSpinBox, QHeaderView, QDesktopWidget,
                                QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTextBrowser, QDialogButtonBox,
                                QTableWidget, QShortcut, QSizePolicy, QPushButton, QComboBox, QListWidgetItem,
                                QAbstractItemView, QCheckBox)
@@ -4324,52 +4325,46 @@ class FrequencyConverter(QWidget):
         self.timebase_label = QLabel('Timebase (ms)')
         self.freq_label = QLabel('Frequency (Hz)')
 
-        self.timebase_edit = QLineEdit()
-        self.timebase_edit.setValidator(QtGui.QDoubleValidator())
-        self.freq_edit = QLineEdit()
-        self.freq_edit.setValidator(QtGui.QDoubleValidator())
+        self.timebase_sbox = QDoubleSpinBox()
+        self.timebase_sbox.setMaximum(10000)
+        self.freq_sbox = QDoubleSpinBox()
+        self.freq_sbox.setMaximum(10000)
 
         self.layout.addWidget(self.timebase_label, 0, 0)
-        self.layout.addWidget(self.timebase_edit, 0, 1)
+        self.layout.addWidget(self.timebase_sbox, 0, 1)
         self.layout.addWidget(self.freq_label, 2, 0)
-        self.layout.addWidget(self.freq_edit, 2, 1)
+        self.layout.addWidget(self.freq_sbox, 2, 1)
 
         def convert_freq_to_timebase():
-            self.freq_edit.blockSignals(True)
-            self.timebase_edit.blockSignals(True)
-            self.timebase_edit.setText('')
+            self.freq_sbox.blockSignals(True)
+            self.timebase_sbox.blockSignals(True)
 
-            freq = self.freq_edit.text()
-            if freq:
-                freq = float(freq)
-                if freq == 0.:
-                    self.timebase_edit.setText(f"")
-                else:
-                    timebase = (1 / freq) * (1000 / 4)
-                    self.timebase_edit.setText(f"{timebase:.2f}")
+            freq = self.freq_sbox.value()
+            if freq == 0.:
+                self.timebase_sbox.setValue(0.)
+            else:
+                timebase = (1 / freq) * (1000 / 4)
+                self.timebase_sbox.setValue(timebase)
 
-            self.freq_edit.blockSignals(False)
-            self.timebase_edit.blockSignals(False)
+            self.freq_sbox.blockSignals(False)
+            self.timebase_sbox.blockSignals(False)
 
         def convert_timebase_to_freq():
-            self.freq_edit.blockSignals(True)
-            self.timebase_edit.blockSignals(True)
-            self.freq_edit.setText('')
+            self.freq_sbox.blockSignals(True)
+            self.timebase_sbox.blockSignals(True)
 
-            timebase = self.timebase_edit.text()
-            if timebase:
-                timebase = float(timebase)
-                if timebase == 0.:
-                    self.freq_edit.setText(f"")
-                else:
-                    freq = (1 / (4 * timebase / 1000))
-                    self.freq_edit.setText(f"{freq:.2f}")
+            timebase = self.timebase_sbox.value()
+            if timebase == 0.:
+                self.freq_sbox.setValue(0.)
+            else:
+                freq = (1 / (4 * timebase / 1000))
+                self.freq_sbox.setValue(freq)
 
-            self.freq_edit.blockSignals(False)
-            self.timebase_edit.blockSignals(False)
+            self.freq_sbox.blockSignals(False)
+            self.timebase_sbox.blockSignals(False)
 
-        self.timebase_edit.textEdited.connect(convert_timebase_to_freq)
-        self.freq_edit.textEdited.connect(convert_freq_to_timebase)
+        self.timebase_sbox.valueChanged.connect(convert_timebase_to_freq)
+        self.freq_sbox.valueChanged.connect(convert_freq_to_timebase)
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Escape:
