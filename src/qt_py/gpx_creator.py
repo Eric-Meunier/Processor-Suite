@@ -4,23 +4,18 @@ import os
 import sys
 from pathlib import Path
 
+import pandas as pd
 import geopandas as gpd
 import gpxpy
 from PySide2.QtGui import QIcon, QIntValidator
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QAction, QFileDialog, QLabel, QApplication, QTableWidgetItem)
-from pandas import read_csv, read_excel
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
 
+from src.qt_py import icons_path
 from src.ui.gpx_creator import Ui_GPXCreator
 
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath('ui\\icons')
 
 
 class GPXCreator(QMainWindow, Ui_GPXCreator):
@@ -33,8 +28,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.parent = parent
         self.setupUi(self)
         self.setWindowTitle("GPX Creator")
-        self.setWindowIcon(
-            QIcon(os.path.join(icons_path, 'gpx_creator_4.svg')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'gpx_creator_4.svg')))
 
         self.dialog = QFileDialog()
         self.message = QMessageBox()
@@ -335,9 +329,9 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.filepath = Path(filepath)
 
         if str(self.filepath).endswith('csv'):
-            data = read_csv(filepath)
+            data = pd.read_csv(filepath)
         elif str(self.filepath).endswith('xlsx'):
-            data = read_excel(filepath)
+            data = pd.read_excel(filepath)
         else:
             self.message.critical(self, 'Invalid file type', f"{self.filepath.name} is not a valid file.")
             return

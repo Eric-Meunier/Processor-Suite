@@ -5,22 +5,11 @@ from pathlib import Path
 from shutil import copyfile, rmtree
 
 import py7zr
-from pandas import DataFrame, options, concat, read_excel, read_csv, read_table, isna
-from pyqtgraph import (LinearRegionItem, mkPen, mkBrush, DateAxisItem, PlotWidget, PlotCurveItem, PlotDataItem,
-                       ProgressDialog, TableWidget, setConfigOptions, setConfigOption, ArrowItem, mkColor, TextItem,
-                       MultiPlotItem, PolyLineROI, ROI, RectROI, LineSegmentROI, ScatterPlotItem, InfiniteLine,
-                       ViewBox, Point)
-from pyqtgraph.graphicsItems.ROI import Handle
-from PySide2.QtGui import (QIcon, QColor, QFont, QIntValidator, QCursor, QKeySequence, QTransform, QBrush, QPen,
-                           QDropEvent)
-from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer, QPointF, QRectF, QDate
-from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction, QErrorMessage,
+from PySide2.QtCore import Qt, QDir, Signal, QTimer, QDate
+from PySide2.QtGui import (QIcon, QDropEvent)
+from PySide2.QtWidgets import (QMainWindow, QMessageBox, QMenu, QErrorMessage,
                                QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
-                               QCalendarWidget, QFileSystemModel, QHeaderView, QHeaderView, QDesktopWidget,
-                               QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTextBrowser, QDialogButtonBox,
-                               QTableWidget, QShortcut, QSizePolicy, QPushButton, QComboBox, QListWidgetItem,
-                               QAbstractItemView, QCheckBox, QDoubleSpinBox, QProgressDialog, QRadioButton,
-                               QItemDelegate, QSpinBox, QAbstractScrollArea)
+                               QFileSystemModel, QTableWidgetItem, QTableWidget, QPushButton, QAbstractItemView)
 from pyunpack import Archive
 
 from src.qt_py import icons_path, get_icon, clear_table

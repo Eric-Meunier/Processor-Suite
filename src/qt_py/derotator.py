@@ -4,13 +4,12 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
+import pyqtgraph as pg
 # from src.logger import Log
 from PySide2.QtCore import Signal, QEvent
 from PySide2.QtGui import QIcon, QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QApplication, QShortcut)
-from pandas import DataFrame
-from pyqtgraph import (mkPen, mkBrush, PlotCurveItem, ScatterPlotItem,
-                       InfiniteLine, PlotDataItem, setConfigOptions, setConfigOption)
 
 from src.pem.pem_file import PEMFile
 from src.qt_py import icons_path, NonScientific
@@ -18,10 +17,10 @@ from src.ui.derotator import Ui_Derotator
 
 logger = logging.getLogger(__name__)
 
-setConfigOptions(antialias=True)
-setConfigOption('background', 'w')
-setConfigOption('foreground', 'k')
-setConfigOption('crashWarning', True)
+pg.setConfigOptions(antialias=True)
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+pg.setConfigOption('crashWarning', True)
 
 symbol_size = 6
 cpp_color = (0, 153, 153, 100)
@@ -82,17 +81,17 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.dev_ax = self.deviation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
         self.dev_ax.setLabel('top', 'Angle Deviation From PP Rotation Angle (Degrees)')
         self.dev_ax.setLabel('left', 'Station', units=None)
-        v_line = InfiniteLine(pos=0, angle=90, pen=mkPen("k", width=0.5))
+        v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
         self.dev_ax_legend = self.dev_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
         self.dev_ax_legend.setParent(self.deviation_view)
-        self.acc_dev_curve = PlotCurveItem(pen=mkPen(acc_color, width=2), name="Accelerometer")
-        self.acc_dev_scatter = ScatterPlotItem(pen=mkPen(acc_color, width=2),
+        self.acc_dev_curve = pg.PlotCurveItem(pen=pg.mkPen(acc_color, width=2), name="Accelerometer")
+        self.acc_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen(acc_color, width=2),
                                                size=symbol_size,
-                                               brush=mkBrush("w"))
-        self.mag_dev_curve = PlotCurveItem(pen=mkPen(mag_color, width=2), name="Magnetometer")
-        self.mag_dev_scatter = ScatterPlotItem(pen=mkPen(mag_color, width=2),
+                                               brush=pg.mkBrush("w"))
+        self.mag_dev_curve = pg.PlotCurveItem(pen=pg.mkPen(mag_color, width=2), name="Magnetometer")
+        self.mag_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mag_color, width=2),
                                                size=symbol_size,
-                                               brush=mkBrush("w"))
+                                               brush=pg.mkBrush("w"))
 
         for item in [self.acc_dev_curve, self.acc_dev_scatter, self.mag_dev_curve, self.mag_dev_scatter, v_line]:
             self.dev_ax.addItem(item)
@@ -101,12 +100,12 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.dip_ax = self.tool_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
         self.dip_ax.setLabel('top', 'Dip Angle (Degrees)')
         self.dip_ax.setLabel('left', 'Station', units=None)
-        v_line = InfiniteLine(pos=0, angle=90, pen=mkPen("k", width=0.5))
+        v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
         self.dip_ax.addItem(v_line)
         self.dip_ax.setLimits(xMin=-90, xMax=0)
         self.dip_ax.setXRange(-90, 0)
-        self.dip_curve = PlotCurveItem(pen=mkPen(acc_color, width=2), name="Dip")
-        self.dip_scatter = ScatterPlotItem(pen=mkPen(acc_color, width=2), brush="w", size=symbol_size)
+        self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen(acc_color, width=2), name="Dip")
+        self.dip_scatter = pg.ScatterPlotItem(pen=pg.mkPen(acc_color, width=2), brush="w", size=symbol_size)
         self.dip_ax.addItem(self.dip_curve)
         self.dip_ax.addItem(self.dip_scatter)
 
@@ -116,8 +115,8 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.mag_ax.setLabel('left', 'Station', units=None)
         self.mag_ax.getAxis("left").setWidth(30)
         self.mag_ax.getAxis("right").setWidth(10)
-        self.mag_curve = PlotCurveItem(pen=mkPen(mag_color, width=2), name="Magnetic Field Strength")
-        self.mag_scatter = ScatterPlotItem(pen=mkPen(mag_color, width=2), brush="w", size=symbol_size)
+        self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen(mag_color, width=2), name="Magnetic Field Strength")
+        self.mag_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mag_color, width=2), brush="w", size=symbol_size)
         self.mag_ax.addItem(self.mag_curve)
         self.mag_ax.addItem(self.mag_scatter)
 
@@ -127,29 +126,29 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.rot_ax_legend.setParent(self.rotation_view)
         self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees')
         self.rot_ax.setLabel('left', 'Station', units=None)
-        self.cpp_rot_curve = PlotCurveItem(pen=mkPen(cpp_color, width=2.), name='Cleaned PP')
-        self.cpp_rot_scatter = ScatterPlotItem(pen=mkPen(cpp_color, width=2.),
+        self.cpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(cpp_color, width=2.), name='Cleaned PP')
+        self.cpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(cpp_color, width=2.),
                                                symbol='o',
                                                brush="w",
                                                size=symbol_size)
-        self.mpp_rot_curve = PlotCurveItem(pen=mkPen(mpp_color, width=2.), name='Measured PP')
-        self.mpp_rot_scatter = ScatterPlotItem(pen=mkPen(mpp_color, width=2.),
+        self.mpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(mpp_color, width=2.), name='Measured PP')
+        self.mpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mpp_color, width=2.),
                                                symbol='o',
                                                brush="w",
                                                size=symbol_size)
-        self.acc_rot_curve = PlotCurveItem(pen=mkPen(acc_color, width=2.), name='Accelerometer')
-        self.acc_rot_scatter = ScatterPlotItem(pen=mkPen(acc_color, width=2.),
+        self.acc_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(acc_color, width=2.), name='Accelerometer')
+        self.acc_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(acc_color, width=2.),
                                                symbol='o',
                                                brush="w",
                                                size=symbol_size)
-        self.mag_rot_curve = PlotCurveItem(pen=mkPen(mag_color, width=2.), name='Magnetometer')
-        self.mag_rot_scatter = ScatterPlotItem(pen=mkPen(mag_color, width=2.),
+        self.mag_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(mag_color, width=2.), name='Magnetometer')
+        self.mag_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mag_color, width=2.),
                                                symbol='o',
                                                brush="w",
                                                size=symbol_size)
-        self.tool_rot_curve = PlotCurveItem(pen=mkPen((32, 32, 32, 200), width=2.),
+        self.tool_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((32, 32, 32, 200), width=2.),
                                             name='Tool (Unknown Sensor)')
-        self.tool_rot_scatter = ScatterPlotItem(pen=mkPen((32, 32, 32, 200), width=2.),
+        self.tool_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((32, 32, 32, 200), width=2.),
                                                 symbol='o',
                                                 brush="w",
                                                 size=symbol_size)
@@ -161,21 +160,21 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.pp_ax.setLabel('top', 'Primary Pulse Response', units='nT/s')
         self.pp_ax.setLabel('left', 'Station', units=None)
 
-        self.cleaned_pp_curve = PlotDataItem(pen=mkPen(cpp_color, width=2), name='Cleaned')
-        self.cleaned_pp_scatter = ScatterPlotItem(symbol='o',
-                                                  pen=mkPen(cpp_color, width=2),
+        self.cleaned_pp_curve = pg.PlotDataItem(pen=pg.mkPen(cpp_color, width=2), name='Cleaned')
+        self.cleaned_pp_scatter = pg.ScatterPlotItem(symbol='o',
+                                                  pen=pg.mkPen(cpp_color, width=2),
                                                   brush='w',
                                                   size=symbol_size)
 
-        self.measured_pp_curve = PlotDataItem(pen=mkPen(mpp_color, width=2), name='Measured')
-        self.measured_pp_scatter = ScatterPlotItem(symbol='o',
-                                                   pen=mkPen(mpp_color, width=2),
+        self.measured_pp_curve = pg.PlotDataItem(pen=pg.mkPen(mpp_color, width=2), name='Measured')
+        self.measured_pp_scatter = pg.ScatterPlotItem(symbol='o',
+                                                   pen=pg.mkPen(mpp_color, width=2),
                                                    brush='w',
                                                    size=symbol_size)
 
-        self.theory_pp_curve = PlotDataItem(pen=mkPen((32, 32, 32, 100), width=2), name='Theory')
-        self.theory_pp_scatter = ScatterPlotItem(symbol='o',
-                                                 pen=mkPen((32, 32, 32, 100), width=2),
+        self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen((32, 32, 32, 100), width=2), name='Theory')
+        self.theory_pp_scatter = pg.ScatterPlotItem(symbol='o',
+                                                 pen=pg.mkPen((32, 32, 32, 100), width=2),
                                                  brush='w',
                                                  size=symbol_size)
 
@@ -309,7 +308,7 @@ class Derotator(QMainWindow, Ui_Derotator):
     def get_stats(self):
         """
         Create a data frame with relevant information about de-rotation.
-        :return: pandas DataFrame object
+        :return: pandas pd.DataFrame object
         """
 
         def get_stats(reading):
@@ -330,7 +329,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         stats = []
         self.pem_file.data.apply(get_stats, axis=1)
-        df = DataFrame(stats,
+        df = pd.DataFrame(stats,
                        columns=['Station', 'Segment Azimuth', 'Segment Dip',
                                 'X Position', 'Y Position', 'Z Position',
                                 'PPx Theory', 'PPy Theory', 'PPz Theory',
@@ -369,7 +368,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         def fill_table(stations):
             """
             Fill the stations list with the ineligible readings
-            :param stations: DataFrame of ineligible readings
+            :param stations: pd.DataFrame of ineligible readings
             """
             list = []
             for s in stations.itertuples():
@@ -411,7 +410,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                 ppxy_cleaned = data.RAD_tool.map(lambda x: x.ppxy_cleaned)
                 data.assign(PPXY_cleaned=ppxy_cleaned)
 
-                ppxy_cleaned_df = DataFrame([ppxy_cleaned, stations]).T
+                ppxy_cleaned_df = pd.DataFrame([ppxy_cleaned, stations]).T
                 ppxy_cleaned_df.rename(columns={"RAD_tool": "PPXY_cleaned"}, inplace=True)
                 ppxy_cleaned_avg_df = ppxy_cleaned_df.groupby("Station", as_index=False).mean()
 
@@ -424,7 +423,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             ppxy_measured = data.RAD_tool.map(lambda x: x.ppxy_measured)
             data.assign(PPXY_measured=ppxy_measured)
 
-            ppxy_measured_df = DataFrame([ppxy_measured, stations]).T
+            ppxy_measured_df = pd.DataFrame([ppxy_measured, stations]).T
             ppxy_measured_df.rename(columns={"RAD_tool": "PPXY_measured"}, inplace=True)
             ppxy_measured_avg_df = ppxy_measured_df.groupby("Station", as_index=False).mean()
 
@@ -437,7 +436,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             ppxy_theory = data.RAD_tool.map(lambda x: x.ppxy_theory)
             data.assign(PPXY_theory=ppxy_theory)
 
-            ppxy_theory_df = DataFrame([ppxy_theory, stations]).T
+            ppxy_theory_df = pd.DataFrame([ppxy_theory, stations]).T
             ppxy_theory_df.rename(columns={"RAD_tool": "PPXY_theory"}, inplace=True)
             ppxy_theory_avg_df = ppxy_theory_df.groupby("Station", as_index=False).mean()
 
@@ -557,14 +556,14 @@ class Derotator(QMainWindow, Ui_Derotator):
             def plot_lines(df, ax):
                 """
                 Plot the lines on the pyqtgraph ax for a given channel
-                :param df: DataFrame of filtered data
+                :param df: pd.DataFrame of filtered data
                 :param ax: pyqtgraph PlotItem
                 """
                 df = df.groupby('Station').mean()
                 x, y = df.to_numpy(), df.index.to_numpy()
 
                 ax.plot(x=x, y=y,
-                        pen=mkPen((0, 0, 0, 200), width=0.8))
+                        pen=pg.mkPen((0, 0, 0, 200), width=0.8))
 
             profile_data = processed_pem.get_profile_data(component, converted=True, incl_deleted=False)
             if profile_data.empty:
@@ -603,8 +602,8 @@ class Derotator(QMainWindow, Ui_Derotator):
                 mag_deviation = mag_deviation + 360
 
             # Calculate the average deviation for the curve line
-            acc_dev_df = DataFrame([acc_deviation, acc_df.Station]).T
-            mag_dev_df = DataFrame([mag_deviation, mag_df.Station]).T
+            acc_dev_df = pd.DataFrame([acc_deviation, acc_df.Station]).T
+            mag_dev_df = pd.DataFrame([mag_deviation, mag_df.Station]).T
             acc_avg_df = acc_dev_df.groupby("Station", as_index=False).mean()
             mag_avg_df = mag_dev_df.groupby("Station", as_index=False).mean()
 

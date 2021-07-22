@@ -23,9 +23,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from pandas import DataFrame, read_excel, read_csv, read_table
 from pyproj import CRS
-from pyqtgraph import (mkPen, mkBrush, PlotCurveItem, PlotDataItem,
-                       setConfigOptions, setConfigOption, ArrowItem, mkColor, TextItem,
-                       MultiPlotItem, PolyLineROI, ROI, RectROI, LineSegmentROI, ScatterPlotItem)
+import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ROI import Handle
 from scipy import spatial
 from shapely.geometry import asMultiPoint
@@ -42,10 +40,10 @@ from src.ui.loop_planner import Ui_LoopPlanner
 
 logger = logging.getLogger(__name__)
 
-setConfigOptions(antialias=True)
-setConfigOption('background', 'w')
-setConfigOption('foreground', 'k')
-setConfigOption('crashWarning', True)
+pg.setConfigOptions(antialias=True)
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+pg.setConfigOption('crashWarning', True)
 
 default_color = (0, 0, 0, 150)
 selection_color = '#1976D2'
@@ -309,32 +307,32 @@ class HoleWidget(QWidget):
 
         """Plotting"""
         # Hole collar
-        self.hole_collar = ScatterPlotItem(clickable=True,
-                                           pen=mkPen(default_color, width=1.),
+        self.hole_collar = pg.ScatterPlotItem(clickable=True,
+                                           pen=pg.mkPen(default_color, width=1.),
                                            symbol='o',
-                                           brush=mkBrush('w'),
+                                           brush=pg.mkBrush('w'),
                                            )
         self.hole_collar.setZValue(5)
 
         # Hole trace
-        self.hole_trace = PlotCurveItem(clickable=True, pen=mkPen(default_color, width=1.))
+        self.hole_trace = pg.PlotCurveItem(clickable=True, pen=pg.mkPen(default_color, width=1.))
         self.hole_trace.setZValue(4)
 
         # The end bar
-        self.hole_end = ArrowItem(headLen=0,
+        self.hole_end = pg.ArrowItem(headLen=0,
                                   tailLen=0,
                                   tailWidth=15,
-                                  pen=mkPen(default_color, width=1.),
+                                  pen=pg.mkPen(default_color, width=1.),
                                   )
         self.hole_end.setZValue(5)
 
         # Hole name
-        self.hole_name = TextItem(name, anchor=(-0.15, 0.5), color=(0, 0, 0, 150))
+        self.hole_name = pg.TextItem(name, anchor=(-0.15, 0.5), color=(0, 0, 0, 150))
         self.hole_name.setZValue(100)
 
         # Add a single section line to be used by all holes
-        self.section_extent_line = PlotDataItem(width=1,
-                                                pen=mkPen(color=0.5,
+        self.section_extent_line = pg.PlotDataItem(width=1,
+                                                pen=pg.mkPen(color=0.5,
                                                           style=Qt.DashLine))
         self.hole_end.setZValue(1)
 
@@ -403,30 +401,30 @@ class HoleWidget(QWidget):
         self.hole_length_edit.editingFinished.connect(self.draw_hole)
 
     def select(self):
-        self.hole_collar.setPen(mkPen(selection_color, width=1.5))
+        self.hole_collar.setPen(pg.mkPen(selection_color, width=1.5))
         self.hole_collar.setSize(12)
         self.hole_collar.setZValue(10)
 
-        self.hole_trace.setPen(mkPen(selection_color, width=1.5))
-        self.hole_trace.setShadowPen(mkPen('w', width=3.))
+        self.hole_trace.setPen(pg.mkPen(selection_color, width=1.5))
+        self.hole_trace.setShadowPen(pg.mkPen('w', width=3.))
         self.hole_trace.setZValue(9)
 
-        self.hole_end.setPen(mkPen(selection_color, width=1.5))
+        self.hole_end.setPen(pg.mkPen(selection_color, width=1.5))
 
         self.hole_name.setColor(selection_color)
         if self.show_cbox.isChecked():
             self.section_extent_line.show()
 
     def deselect(self):
-        self.hole_collar.setPen(mkPen(default_color, width=1.))
+        self.hole_collar.setPen(pg.mkPen(default_color, width=1.))
         self.hole_collar.setSize(11)
         self.hole_collar.setZValue(5)
 
-        self.hole_trace.setPen(mkPen(default_color, width=1.))
+        self.hole_trace.setPen(pg.mkPen(default_color, width=1.))
         self.hole_trace.setShadowPen(None)
         self.hole_trace.setZValue(4)
 
-        self.hole_end.setPen(mkPen(default_color, width=1.))
+        self.hole_end.setPen(pg.mkPen(default_color, width=1.))
 
         self.hole_name.setColor(default_color)
         if self.show_cbox.isChecked():
@@ -758,14 +756,14 @@ class LoopWidget(QWidget):
                                  scaleSnap=True,
                                  snapSize=5,
                                  closed=True,
-                                 pen=mkPen(default_color, width=1.),
+                                 pen=pg.mkPen(default_color, width=1.),
                                  )
-        self.loop_roi.hoverPen = mkPen(default_color, width=2.)
+        self.loop_roi.hoverPen = pg.mkPen(default_color, width=2.)
         self.loop_roi.setZValue(15)
         self.update_loop_values()
 
         # Add loop name
-        self.loop_name = TextItem(name, anchor=(0.5, 0.5), color=(0, 0, 0, 100))
+        self.loop_name = pg.TextItem(name, anchor=(0.5, 0.5), color=(0, 0, 0, 100))
         self.loop_name.setZValue(0)
 
         # Add the items to the plot
@@ -821,7 +819,7 @@ class LoopWidget(QWidget):
         self.is_selected = True
 
     def deselect(self):
-        self.loop_roi.setPen(mkPen(default_color), width=1.)
+        self.loop_roi.setPen(pg.mkPen(default_color), width=1.)
         self.loop_name.setColor(default_color)
         for label in self.corner_labels:
             label.hide()
@@ -987,7 +985,7 @@ class LoopWidget(QWidget):
 
         corners = self.get_loop_coords()
         for i, corner in enumerate(corners):
-            label = TextItem(str(i + 1), color=mkColor(selection_color))
+            label = pg.TextItem(str(i + 1), color=pg.mkColor(selection_color))
             label.setPos(corner)
             self.corner_labels.append(label)
             self.plan_view.addItem(label, ignoreBounds=True)
@@ -1000,7 +998,7 @@ class LoopWidget(QWidget):
             p2 = self.loop_roi.mapSceneToParent(p2[1])
             x, y = ((p2.x() - p1.x()) / 2) + p1.x(), ((p2.y() - p1.y()) / 2) + p1.y()
             dist = spatial.distance.euclidean((p1.x(), p1.y()), (p2.x(), p2.y()))
-            label = TextItem(f"{dist:.0f}m", color=mkColor(default_color))
+            label = pg.TextItem(f"{dist:.0f}m", color=pg.mkColor(default_color))
             label.setPos(x, y)
             self.segment_labels.append(label)
             self.plan_view.addItem(label, ignoreBounds=True)
@@ -2086,7 +2084,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
         # Plots
-        self.grid_lines_plot = MultiPlotItem()
+        self.grid_lines_plot = pg.MultiPlotItem()
         self.grid_lines_plot.setZValue(1)
         self.init_plan_view()
 
@@ -2358,7 +2356,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                                       center_y - (self.loop_height / 2)],
                                      [self.loop_width, self.loop_height],
                                      scaleSnap=True,
-                                     pen=mkPen('m', width=1.5))
+                                     pen=pg.mkPen('m', width=1.5))
             self.plan_view.addItem(self.loop_roi)
             self.loop_roi.setZValue(0)
             self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
@@ -2395,7 +2393,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             self.grid_roi = RectLoop([self.grid_easting, self.grid_northing],
                                      [self.line_length, (self.line_number - 1) * self.line_spacing],
                                      scaleSnap=True,
-                                     pen=mkPen(None, width=1.5))
+                                     pen=pg.mkPen(None, width=1.5))
             self.grid_roi.setAngle(90)
             self.plan_view.addItem(self.grid_roi)
             self.grid_roi.sigRegionChangeStarted.connect(lambda: self.grid_roi.setPen('b'))
@@ -2508,7 +2506,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             station_xs, station_ys, station_names = [], [], []
 
             x_start, y_start = transform_line_start(x, y, i * self.line_spacing)
-            station_text = TextItem(text=line_name, color='b', angle=text_angle,
+            station_text = pg.TextItem(text=line_name, color='b', angle=text_angle,
                                     rotateAxis=(0, 1),
                                     anchor=text_anchor)
             station_text.setPos(x_start, y_start)
@@ -2523,16 +2521,16 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                 station_ys.append(station_y)
             self.lines[i]['station_coords'] = list(zip(station_xs, station_ys, station_names))
 
-            line_plot = PlotDataItem(station_xs, station_ys, pen='b')
+            line_plot = pg.PlotDataItem(station_xs, station_ys, pen='b')
             line_plot.setZValue(1)
-            stations_plot = ScatterPlotItem(station_xs, station_ys, pen='b', brush='w')
+            stations_plot = pg.ScatterPlotItem(station_xs, station_ys, pen='b', brush='w')
             stations_plot.setZValue(2)
 
             self.plan_view.addItem(line_plot)
             self.plan_view.addItem(stations_plot)
 
         # Plot a symbol at the center of the grid
-        grid_center = ScatterPlotItem([center_x], [center_y], pen='b', symbol='+')
+        grid_center = pg.ScatterPlotItem([center_x], [center_y], pen='b', symbol='+')
         grid_center.setZValue(1)
         self.plan_view.addItem(grid_center)
 
@@ -2569,7 +2567,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         corners = [c1, c2, c3, c4]
 
         # self.grid_stations_plot.addPoints([coord[0] for coord in corners],
-        #                        [coord[1] for coord in corners], pen=mkPen(width=3, color='r'))
+        #                        [coord[1] for coord in corners], pen=pg.mkPen(width=3, color='r'))
         return corners
 
     def get_grid_center(self, x, y):
@@ -2913,7 +2911,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.status_bar.showMessage('Grid coordinates copied to clipboard', 1000)
 
 
-class PolyLoop(PolyLineROI):
+class PolyLoop(pg.PolyLineROI):
     """
     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
     """
@@ -2928,22 +2926,22 @@ class PolyLoop(PolyLineROI):
         # Generate the pen color for this ROI based on its current state.
         if self.mouseHovering:
             # print(f"Mouse hovering")
-            return mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+            return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
         else:
             return self.pen
 
     def addSegment(self, h1, h2, index=None):
 
-        class CustomSegment(LineSegmentROI):
+        class CustomSegment(pg.LineSegmentROI):
             """
             Reimplement in order to set the hover pen to the same color as the current loop pen color, and disable rotating
             the segment.
             """
 
-            # Used internally by PolyLineROI
+            # Used internally by pg.PolyLineROI
             def __init__(self, *args, **kwds):
                 self._parentHovering = False
-                LineSegmentROI.__init__(self, *args, **kwds)
+                pg.LineSegmentROI.__init__(self, *args, **kwds)
 
             def setParentHover(self, hover):
                 # set independently of own hover state
@@ -2953,7 +2951,7 @@ class PolyLoop(PolyLineROI):
 
             def _makePen(self):
                 if self.mouseHovering or self._parentHovering:
-                    return mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+                    return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
                 else:
                     return self.pen
 
@@ -2962,7 +2960,7 @@ class PolyLoop(PolyLineROI):
                 # (unless parent ROI is not movable)
                 if self.parentItem().translatable:
                     ev.acceptDrags(Qt.LeftButton)
-                return LineSegmentROI.hoverEvent(self, ev)
+                return pg.LineSegmentROI.hoverEvent(self, ev)
 
             def setAngle(self, *args, **kwargs):
                 # Disable rotating the line segment
@@ -2990,7 +2988,7 @@ class PolyLoop(PolyLineROI):
 
             def __init__(self, *args, **kwds):
                 Handle.__init__(self, *args, **kwds)
-                self.pen = mkPen(selection_color, width=1.)
+                self.pen = pg.mkPen(selection_color, width=1.)
 
             def hoverEvent(self, ev):
                 hover = False
@@ -3002,13 +3000,13 @@ class PolyLoop(PolyLineROI):
                             hover = True
 
                 if hover:
-                    self.currentPen = mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+                    self.currentPen = pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
                 else:
                     self.currentPen = self.pen
                 self.update()
 
         # Reimplement so a signal can be emitted
-        h = CustomHandle(6, typ="r", pen=mkPen(selection_color, width=1.), parent=self)
+        h = CustomHandle(6, typ="r", pen=pg.mkPen(selection_color, width=1.), parent=self)
         h.setPos(info['pos'] * self.state['size'])
         info['item'] = h
 
@@ -3026,7 +3024,7 @@ class PolyLoop(PolyLineROI):
 
     def removeHandle(self, handle, updateSegments=True):
         self.sigHandleRemoved.emit(handle)
-        ROI.removeHandle(self, handle)
+        pg.ROI.removeHandle(self, handle)
         handle.sigRemoveRequested.disconnect(self.removeHandle)
 
         if not updateSegments:
@@ -3084,7 +3082,7 @@ class PolyLoop(PolyLineROI):
             self.stateChanged(finish=finish)
 
 
-class RectLoop(RectROI):
+class RectLoop(pg.RectROI):
     """
     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
     """
@@ -3095,7 +3093,7 @@ class RectLoop(RectROI):
     def _makePen(self):
         # Generate the pen color for this ROI based on its current state.
         if self.mouseHovering:
-            return mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+            return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
         else:
             return self.pen
 

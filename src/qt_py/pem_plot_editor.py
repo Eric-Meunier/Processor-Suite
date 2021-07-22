@@ -6,6 +6,7 @@ import re
 import sys
 
 import keyboard
+import pyqtgraph as pg
 import numpy as np
 import pylineclip as lc
 from PySide2.QtCore import Qt, Signal, QEvent, QTimer, QPointF, QRectF
@@ -13,9 +14,6 @@ from PySide2.QtGui import QIcon, QColor, QFont, QTransform, QBrush, QPen
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QApplication, QLineEdit,
                                QInputDialog, QPushButton)
 from pandas import DataFrame, options, isna
-from pyqtgraph import (LinearRegionItem, mkPen, PlotCurveItem, setConfigOptions, setConfigOption, TextItem,
-                       ScatterPlotItem, InfiniteLine,
-                       ViewBox, Point)
 from scipy import spatial, signal
 
 from src.pem import convert_station
@@ -34,10 +32,10 @@ will not intersect the area of the QRectF.
 # from pyod.utils.data import get_outliers_inliers
 logger = logging.getLogger(__name__)
 
-setConfigOptions(antialias=True)
-setConfigOption('background', 'w')
-setConfigOption('foreground', 'k')
-setConfigOption('crashWarning', True)
+pg.setConfigOptions(antialias=True)
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+pg.setConfigOption('crashWarning', True)
 options.mode.chained_assignment = None  # default='warn'
 
 # TODO Change auto clean to have a start and end channel
@@ -188,13 +186,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             font = QFont("Helvetica", 10)
             # hover_color = (102, 178, 255, 100)
             # select_color = (51, 51, 255, 100)
-            hover_v_line = InfiniteLine(angle=90, movable=False)
+            hover_v_line = pg.InfiniteLine(angle=90, movable=False)
             hover_v_line.setPen(color, width=2.)
-            selected_v_line = InfiniteLine(angle=90, movable=False)
+            selected_v_line = pg.InfiniteLine(angle=90, movable=False)
             selected_v_line.setPen(color, width=2.)
 
             # Add the text annotations for the vertical lines
-            hover_v_line_text = TextItem("")
+            hover_v_line_text = pg.TextItem("")
             hover_v_line_text.setParentItem(ax.vb)
             hover_v_line_text.setAnchor((0, 0))
             hover_v_line_text.setPos(0, 0)
@@ -705,7 +703,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
                 ax.plot(x=x, y=y,
-                        pen=mkPen('k', width=1.))
+                        pen=pg.mkPen('k', width=1.))
 
             def plot_scatters(df, ax):
                 """
@@ -716,8 +714,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 """
                 x, y = df.index.to_numpy(), df.to_numpy()
 
-                scatter = ScatterPlotItem(x=x, y=y,
-                                             pen=mkPen('k', width=1.),
+                scatter = pg.ScatterPlotItem(x=x, y=y,
+                                             pen=pg.mkPen('k', width=1.),
                                              symbol='o',
                                              size=2,
                                              brush='w',
@@ -752,7 +750,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     # Save the mag curves so they can be toggled easily.
                     x, y = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
                     for ax in self.mag_profile_axes:
-                        mag_plot_item = PlotCurveItem(x=x, y=y, pen=mkPen('1DD219', width=2.))
+                        mag_plot_item = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen('1DD219', width=2.))
                         ax.getAxis("left").setLabel("Total Magnetic Field", units="pT")
                         ax.addItem(mag_plot_item)
 
@@ -853,7 +851,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             else:
                 style = Qt.SolidLine
 
-            pen = mkPen(color, width=1., style=style)
+            pen = pg.mkPen(color, width=1., style=style)
 
             # Remove the on-time channels if the checkbox is checked
             if self.plot_ontime_decays_cbox.isChecked():
@@ -862,7 +860,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 y = row.Reading[~self.pem_file.channel_times.Remove]
 
             # Create and configure the line item
-            decay_line = PlotCurveItem(y=y,
+            decay_line = pg.PlotCurveItem(y=y,
                                           pen=pen,
                                           )
             decay_line.setClickable(True, width=5)
@@ -870,7 +868,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             decay_line.sigClicked.connect(self.decay_line_clicked)
 
             # Add the line at y=0
-            ax.addLine(y=0, pen=mkPen('k', width=0.15))
+            ax.addLine(y=0, pen=pg.mkPen('k', width=0.15))
             # Plot the decay
             ax.addItem(decay_line)
             # Add the plot item to the list of plotted items
@@ -941,14 +939,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     off_time_median = signal.savgol_filter(off_time_median, 5, 3)
                 limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
 
-                thresh_line_1 = PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+                thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
                                                  y=off_time_median[-window_size:] + std,
-                                                 pen=mkPen("m", width=1., style=Qt.DashLine),
+                                                 pen=pg.mkPen("m", width=1., style=Qt.DashLine),
                                                  setClickable=False,
                                                  name='median limit')
-                thresh_line_2 = PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+                thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
                                                  y=off_time_median[-window_size:] - std,
-                                                 pen=mkPen("m", width=1., style=Qt.DashLine),
+                                                 pen=pg.mkPen("m", width=1., style=Qt.DashLine),
                                                  setClickable=False,
                                                  name='median limit')
                 ax.addItem(thresh_line_1)
@@ -959,14 +957,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 #                              height=std,
                 #                              width=0,
                 #                              beam=1,
-                #                              pen=mkPen("b", width=1.))
+                #                              pen=pg.mkPen("b", width=1.))
                 #
-                # error_line = PlotCurveItem(y=median.to_numpy(),
-                #                               pen=mkPen("b", width=1., style=Qt.DashLine))
+                # error_line = pg.PlotCurveItem(y=median.to_numpy(),
+                #                               pen=pg.mkPen("b", width=1., style=Qt.DashLine))
 
                 if __name__ == "__main__":
-                    median_line = PlotCurveItem(y=median,
-                                                   pen=mkPen("m", width=2.),
+                    median_line = pg.PlotCurveItem(y=median,
+                                                   pen=pg.mkPen("m", width=2.),
                                                    setClickable=False,
                                                    name='median line')
                     ax.addItem(median_line)
@@ -1131,7 +1129,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.highlight_lines()
         self.selected_profile_stations = np.array([])
 
-        # Hide the LinearRegionItem in each profile axes
+        # Hide the pg.LinearRegionItem in each profile axes
         for ax in self.profile_axes:
             ax.vb.lr.hide()
 
@@ -1295,7 +1293,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             for line in ax_lines:
                 if line == self.nearest_decay:
                     line_color = line.opts.get('pen').color()
-                    line.setShadowPen(mkPen(line_color, width=2.5, cosmetic=True))
+                    line.setShadowPen(pg.mkPen(line_color, width=2.5, cosmetic=True))
                 else:
                     line.setShadowPen(None)
 
@@ -1317,7 +1315,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         def intersects_rect(line):
             """
             Uses cohen-sutherland algorithm to find if a line intersects the rectangle at any point.
-            :param line: PlotCurveItem
+            :param line: pg.PlotCurveItem
             :return: bool
             """
             xi, yi = line.xData, line.yData
@@ -1374,7 +1372,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         comp_stations = self.pem_file.data[self.pem_file.data.Component == comp].Station
         comp_stations = np.array([convert_station(s) for s in comp_stations])
 
-        # Update the LinearRegionItem for each axes of the current component
+        # Update the pg.LinearRegionItem for each axes of the current component
         for ax in comp_profile_axes:
             ax.vb.lr.setRegion((x0, x1))
             ax.vb.lr.show()
@@ -1894,15 +1892,15 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.status_bar.showMessage('File reset.', 1000)
 
 
-class DecayViewBox(ViewBox):
+class DecayViewBox(pg.ViewBox):
     """
-    Custom ViewBox for the decay plots. Allows box selecting, box-zoom when shift is held, and mouse wheel when shift
+    Custom pg.ViewBox for the decay plots. Allows box selecting, box-zoom when shift is held, and mouse wheel when shift
     is held does mouse wheel zoom
     """
     box_select_signal = Signal(object)
 
     def __init__(self, *args, **kwds):
-        ViewBox.__init__(self, *args, **kwds)
+        pg.ViewBox.__init__(self, *args, **kwds)
         self.setFocusPolicy(Qt.NoFocus)
         # self.setMouseMode(self.RectMode)
         brush = QBrush(QColor('blue'))
@@ -1923,7 +1921,7 @@ class DecayViewBox(ViewBox):
 
             if ev.isFinish():  # This is the final move in the drag; change the view scale now
                 self.rbScaleBox.hide()
-                ax = QRectF(Point.Point(ev.buttonDownPos(ev.button())), Point.Point(pos))
+                ax = QRectF(pg.Point.pg.Point(ev.buttonDownPos(ev.button())), pg.Point.pg.Point(pos))
                 ax = self.childGroup.mapRectFromParent(ax)
                 self.showAxRect(ax)
                 self.axHistoryPointer += 1
@@ -1939,7 +1937,7 @@ class DecayViewBox(ViewBox):
                     # Hide the rectangle
                     self.rbScaleBox.hide()
                     # Create a rectangle object from the click-and-drag rectangle
-                    rect = QRectF(Point.Point(ev.buttonDownPos(ev.button())), Point.Point(pos))
+                    rect = QRectF(pg.Point.pg.Point(ev.buttonDownPos(ev.button())), pg.Point.pg.Point(pos))
                     # Convert the coordinates to the same as the data
                     rect = self.childGroup.mapRectFromParent(rect)
                     # Emit the signal to select the lines that intersect the rect
@@ -1948,7 +1946,7 @@ class DecayViewBox(ViewBox):
                     # update shape of scale box
                     self.updateScaleBox(ev.buttonDownPos(), ev.pos())
             else:
-                ViewBox.mouseDragEvent(self, ev)
+                pg.ViewBox.mouseDragEvent(self, ev)
 
     def wheelEvent(self, ev, axis=None):
 
@@ -1981,7 +1979,7 @@ class DecayViewBox(ViewBox):
                 mask = self.state['mouseEnabled'][:]
             s = 1.02 ** (ev.delta() * self.state['wheelScaleFactor'])  # actual scaling factor
             s = [(None if m is False else s) for m in mask]
-            center = Point.Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
+            center = pg.Point.pg.Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
 
             self._resetTarget()
             self.scaleBy(s, center)
@@ -1989,20 +1987,20 @@ class DecayViewBox(ViewBox):
             self.sigRangeChangedManually.emit(mask)
 
 
-class ProfileViewBox(ViewBox):
+class ProfileViewBox(pg.ViewBox):
     """
-    Custom ViewBox for profile plots. Click and drag creates a linear region selector.
+    Custom pg.ViewBox for profile plots. Click and drag creates a linear region selector.
     """
     box_select_signal = Signal(object, object)
     box_select_started_signal = Signal()
 
     def __init__(self, *args, **kwds):
-        ViewBox.__init__(self, *args, **kwds)
+        pg.ViewBox.__init__(self, *args, **kwds)
         color = r'#ce4a7e'
         brush = QBrush(QColor(color))
         pen = QPen(brush, 1)
 
-        self.lr = LinearRegionItem([-100, 100], movable=False, pen=mkPen('k'))
+        self.lr = pg.LinearRegionItem([-100, 100], movable=False, pen=pg.mkPen('k'))
         self.lr.setZValue(-10)
         self.lr.setBrush(brush)
         self.lr.setOpacity(0.5)
@@ -2014,13 +2012,13 @@ class ProfileViewBox(ViewBox):
             ev.accept()
             range = [self.mapToView(ev.buttonDownPos()).x(), self.mapToView(ev.pos()).x()]
 
-            # update region of the LinearRegionItem
+            # update region of the pg.LinearRegionItem
             self.lr.show()
             # self.lr.setRegion(range)  # Doesn't seem to be required.
             self.box_select_signal.emit(range, ev.start)
             ev.accept()
         else:
-            ViewBox.mouseDragEvent(self, ev)
+            pg.ViewBox.mouseDragEvent(self, ev)
 
     def wheelEvent(self, ev, axis=None):
 
@@ -2053,7 +2051,7 @@ class ProfileViewBox(ViewBox):
                 mask = self.state['mouseEnabled'][:]
             s = 1.02 ** (ev.delta() * self.state['wheelScaleFactor'])  # actual scaling factor
             s = [(None if m is False else s) for m in mask]
-            center = Point.Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
+            center = pg.Point.pg.Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
 
             self._resetTarget()
             self.scaleBy(s, center)

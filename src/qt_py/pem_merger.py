@@ -4,13 +4,12 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pyqtgraph as pg
+import pandas as pd
 from PySide2.QtCore import Qt, Signal, QEvent
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QAction, QFileDialog, QLabel, QApplication, QFrame,
-                               QHBoxLayout, QLineEdit,
-                               QPushButton)
-from pandas import options, concat
-from pyqtgraph import (mkPen, mkBrush, PlotDataItem, setConfigOptions, setConfigOption)
+                               QHBoxLayout, QLineEdit, QPushButton)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine
 from src.qt_py import icons_path
@@ -18,11 +17,11 @@ from src.ui.pem_merger import Ui_PEMMerger
 
 logger = logging.getLogger(__name__)
 
-setConfigOptions(antialias=True)
-setConfigOption('background', 'w')
-setConfigOption('foreground', 'k')
-setConfigOption('crashWarning', True)
-options.mode.chained_assignment = None  # default='warn'
+pg.setConfigOptions(antialias=True)
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+pg.setConfigOption('crashWarning', True)
+pd.options.mode.chained_assignment = None  # default='warn'
 
 
 class PEMMerger(QMainWindow, Ui_PEMMerger):
@@ -278,7 +277,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
                 """
                 for item_list in item_lists:
                     for channel in range(self.channel_bounds[0][0], self.channel_bounds[-1][-1] + 1):
-                        curve = PlotDataItem()
+                        curve = pg.PlotDataItem()
                         item_list.append(curve)
 
                         # Add the curve to the correct plot
@@ -513,12 +512,12 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
             if self.actionSymbols.isChecked():
                 symbols = {'symbol': 'o',
                            'symbolSize': 5,
-                           'symbolPen': mkPen(color, width=1.1),
-                           'symbolBrush': mkBrush('w')}
+                           'symbolPen': pg.mkPen(color, width=1.1),
+                           'symbolBrush': pg.mkBrush('w')}
             else:
                 symbols = {'symbol': None}
 
-            curve.setData(x, y, pen=mkPen(color), **symbols)
+            curve.setData(x, y, pen=pg.mkPen(color), **symbols)
 
         if not isinstance(components, np.ndarray):
             # Get the components
@@ -585,12 +584,12 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         """
         pems = [self.pf1, self.pf2]
         merged_pem = pems[0].copy()
-        merged_pem.data = concat([pem_file.data for pem_file in pems], axis=0, ignore_index=True)
+        merged_pem.data = pd.concat([pem_file.data for pem_file in pems], axis=0, ignore_index=True)
         merged_pem.number_of_readings = len(merged_pem.data)
         merged_pem.notes = list(np.unique(np.concatenate([pem_file.notes for pem_file in pems])))
 
         merged_pem.loop = TransmitterLoop(
-            concat([pem_file.get_loop() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
+            pd.concat([pem_file.get_loop() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
 
         if self.pf1.is_borehole():
             if self.pf1.has_collar_gps():
@@ -604,7 +603,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
                 merged_pem.segments = self.pf2.segments
         else:
             merged_pem.line = SurveyLine(
-                concat([pem_file.get_line() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
+                pd.concat([pem_file.get_line() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
 
         merged_pem.is_merged = True
 

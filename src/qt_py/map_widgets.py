@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import natsort
 import numpy as np
 import pandas as pd
+import pyqtgraph as pg
 import plotly
 import plotly.graph_objects as go
 from PySide2.QtCore import Qt, QTimer
@@ -21,8 +22,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from pyqtgraph import (mkPen, mkBrush, PlotWidget, ProgressDialog, PlotDataItem, TextItem, setConfigOptions,
-                       setConfigOption, AxisItem)
 from scipy import interpolate as interp
 
 from src.gps.gps_editor import BoreholeGeometry
@@ -32,10 +31,10 @@ from src.ui.contour_map import Ui_ContourMap
 
 logger = logging.getLogger(__name__)
 
-setConfigOptions(antialias=True)
-setConfigOption('background', 'w')
-setConfigOption('foreground', 'k')
-setConfigOption('crashWarning', True)
+pg.setConfigOptions(antialias=True)
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+pg.setConfigOption('crashWarning', True)
 
 
 class MapboxViewer(QMainWindow):
@@ -244,7 +243,7 @@ class TileMapViewer(MapboxViewer):
         bar = CustomProgressBar()
         bar.setMaximum(len(self.pem_files))
 
-        with ProgressDialog("Plotting PEM Files", 0, len(self.pem_files)) as dlg:
+        with pg.ProgressDialog("Plotting PEM Files", 0, len(self.pem_files)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle("Plotting PEM Files")
 
@@ -957,7 +956,7 @@ class GPSViewer(QMainWindow):
         self.setFocusPolicy(Qt.StrongFocus)
 
         layout = QHBoxLayout()
-        self.plan_view = PlotWidget()
+        self.plan_view = pg.PlotWidget()
         self.setCentralWidget(self.plan_view)
         self.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
@@ -1031,7 +1030,7 @@ class GPSViewer(QMainWindow):
 
             def add_loop_annotation(row):
                 """Add the loop number annotation"""
-                text_item = TextItem(str(row.name), color=loop_color, border=None, fill=None, anchor=(0.5, 0.5))
+                text_item = pg.TextItem(str(row.name), color=loop_color, border=None, fill=None, anchor=(0.5, 0.5))
                 self.plan_view.addItem(text_item, ignoreBounds=True)
                 text_item.setPos(row.Easting, row.Northing)
                 text_item.setParentItem(loop_item)
@@ -1048,9 +1047,9 @@ class GPSViewer(QMainWindow):
                 self.loops.append(loop_str)
 
                 # Plot the loop line
-                loop_item = PlotDataItem(clickable=True,
+                loop_item = pg.PlotDataItem(clickable=True,
                                             name=pem_file.loop_name,
-                                            pen=mkPen(loop_color, width=1.)
+                                            pen=pg.mkPen(loop_color, width=1.)
                                             )
                 loop_item.setZValue(-1)
                 loop_item.setData(loop.Easting, loop.Northing)
@@ -1062,7 +1061,7 @@ class GPSViewer(QMainWindow):
 
                 # Plot the loop name annotation
                 center = pem_file.loop.get_center()
-                text_item = TextItem(str(pem_file.loop_name),
+                text_item = pg.TextItem(str(pem_file.loop_name),
                                         color=loop_color,
                                         anchor=(0.5, 0.5),
                                         )
@@ -1077,7 +1076,7 @@ class GPSViewer(QMainWindow):
             # Removed, creates too much lag
             def add_station_annotation(row):
                 """Add the station name annotation"""
-                text_item = TextItem(str(row.Station),
+                text_item = pg.TextItem(str(row.Station),
                                         color=line_color,
                                         anchor=(0, 0.5),
                                         rotateAxis=(row.Easting, row.Northing),
@@ -1099,13 +1098,13 @@ class GPSViewer(QMainWindow):
             if not line.empty and line_str not in self.lines:
                 self.lines.append(line_str)
 
-                line_item = PlotDataItem(clickable=True,
+                line_item = pg.PlotDataItem(clickable=True,
                                             name=pem_file.line_name,
                                             symbol='o',
                                             symbolSize=5,
-                                            symbolPen=mkPen(line_color, width=1.),
-                                            symbolBrush=mkBrush('w'),
-                                            pen=mkPen(line_color, width=1.)
+                                            symbolPen=pg.mkPen(line_color, width=1.),
+                                            symbolBrush=pg.mkBrush('w'),
+                                            pen=pg.mkPen(line_color, width=1.)
                                             )
                 line_item.setData(line.Easting, line.Northing)
                 line_item.setZValue(1)
@@ -1116,7 +1115,7 @@ class GPSViewer(QMainWindow):
                 # line.apply(add_station_annotation, axis=1)
 
                 # Add the line name annotation
-                text_item = TextItem(str(pem_file.line_name),
+                text_item = pg.TextItem(str(pem_file.line_name),
                                         color=line_color,
                                         anchor=(1, 0.5),
                                         )
@@ -1133,13 +1132,13 @@ class GPSViewer(QMainWindow):
                 if collar.to_string() not in self.collars:
                     self.collars.append(collar.to_string())
 
-                    collar_item = PlotDataItem(clickable=True,
+                    collar_item = pg.PlotDataItem(clickable=True,
                                                   name=pem_file.line_name,
                                                   symbol='o',
                                                   symbolSize=10,
-                                                  symbolPen=mkPen(hole_color, width=1.),
-                                                  symbolBrush=mkBrush('w'),
-                                                  pen=mkPen(hole_color, width=1.5)
+                                                  symbolPen=pg.mkPen(hole_color, width=1.),
+                                                  symbolBrush=pg.mkBrush('w'),
+                                                  pen=pg.mkPen(hole_color, width=1.5)
                                                   )
                     collar_item.setZValue(2)
                     # Don't plot the collar here
@@ -1147,7 +1146,7 @@ class GPSViewer(QMainWindow):
                     self.plan_view.addItem(collar_item)
 
                     # Add the hole name annotation
-                    text_item = TextItem(f"{pem_file.line_name}",
+                    text_item = pg.TextItem(f"{pem_file.line_name}",
                                             color=hole_color,
                                             anchor=name_anchor,
                                             # anchor=anchor,
@@ -1163,13 +1162,13 @@ class GPSViewer(QMainWindow):
                 if proj.to_string() not in self.traces:
                     self.traces.append(proj.to_string())
 
-                    trace_item = PlotDataItem(clickable=True,
+                    trace_item = pg.PlotDataItem(clickable=True,
                                                  name=pem_file.line_name,
                                                  symbol='o',
                                                  symbolSize=2.5,
-                                                 symbolPen=mkPen(hole_color, width=1.),
-                                                 symbolBrush=mkBrush(hole_color),
-                                                 pen=mkPen(hole_color, width=1.1)
+                                                 symbolPen=pg.mkPen(hole_color, width=1.),
+                                                 symbolBrush=pg.mkBrush(hole_color),
+                                                 pen=pg.mkPen(hole_color, width=1.1)
                                                  )
 
                     trace_item.setData(proj.Easting, proj.Northing)
@@ -1178,7 +1177,7 @@ class GPSViewer(QMainWindow):
 
                     # Add the depth annotation
                     # Add the line name annotation
-                    text_item = TextItem(f"{proj.iloc[-1].Relative_depth:g} m",
+                    text_item = pg.TextItem(f"{proj.iloc[-1].Relative_depth:g} m",
                                             color=hole_color,
                                             anchor=depth_anchor,
                                             # angle=angle
@@ -1219,7 +1218,7 @@ class GPSViewer(QMainWindow):
         bar = CustomProgressBar()
         bar.setMaximum(len(self.pem_files))
 
-        with ProgressDialog("Plotting PEM files", 0, len(self.pem_files)) as dlg:
+        with pg.ProgressDialog("Plotting PEM files", 0, len(self.pem_files)) as dlg:
             dlg.setWindowTitle("Plotting PEM files")
             dlg.setBar(bar)
 
@@ -1239,7 +1238,7 @@ class GPSViewer(QMainWindow):
                 dlg += 1
 
 
-class NonScientific(AxisItem):
+class NonScientific(pg.AxisItem):
     def __init__(self, *args, **kwargs):
         super(NonScientific, self).__init__(*args, **kwargs)
 

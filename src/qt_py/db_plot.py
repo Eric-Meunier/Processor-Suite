@@ -7,9 +7,8 @@ import chardet
 from pathlib import Path
 from threading import Timer
 
-from pandas import DataFrame
+import pandas as pd
 import pyqtgraph as pg
-from pyqtgraph import LinearRegionItem, mkPen, mkBrush, DateAxisItem, PlotWidget, PlotCurveItem, ScatterPlotItem
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction,
@@ -213,7 +212,7 @@ class DBPlotter(QMainWindow):
             data = [d.split() for d in data]
 
             # Create a data frame
-            df = DataFrame(data,
+            df = pd.DataFrame(data,
                            columns=['Hours', 'Minutes', 'Seconds', 'Num_samples', 'Current']
                            ).dropna().astype(int)
 
@@ -389,8 +388,8 @@ class DBPlot(QMainWindow):
         self.statusBar().show()
 
         # Create the plot
-        axis = DateAxisItem(orientation='bottom')
-        self.plot_widget = PlotWidget(axisItems={'bottom': axis})
+        axis = pg.DateAxisItem(orientation='bottom')
+        self.plot_widget = pg.PlotWidget(axisItems={'bottom': axis})
         self.setCentralWidget(self.plot_widget)
 
         # Format the plot
@@ -435,11 +434,11 @@ class DBPlot(QMainWindow):
         self.statusBar().addPermanentWidget(self.file_label)
 
         # Create the linear region item
-        self.lr = LinearRegionItem(
-            brush=mkBrush(color=(51, 153, 255, 20)),
-            hoverBrush=mkBrush(color=(51, 153, 255, 30)),
-            pen=mkPen(color=(0, 25, 51, 100)),
-            hoverPen=mkPen(color=(0, 25, 51, 200)),
+        self.lr = pg.LinearRegionItem(
+            brush=pg.mkBrush(color=(51, 153, 255, 20)),
+            hoverBrush=pg.mkBrush(color=(51, 153, 255, 30)),
+            pen=pg.mkPen(color=(0, 25, 51, 100)),
+            hoverPen=pg.mkPen(color=(0, 25, 51, 200)),
         )
         self.lr.sigRegionChanged.connect(self.lr_moved)
         self.lr.setZValue(-10)
@@ -453,14 +452,14 @@ class DBPlot(QMainWindow):
         """
         # color = (51, 153, 255)
         color = (153, 51, 255)
-        self.curve = PlotCurveItem(self.data.Time.to_numpy(), self.data.Current.to_numpy(),
-                                   pen=mkPen(color=color, width=2.5),
+        self.curve = pg.PlotCurveItem(self.data.Time.to_numpy(), self.data.Current.to_numpy(),
+                                   pen=pg.mkPen(color=color, width=2.5),
                                    )
-        self.symbols = ScatterPlotItem(self.data.Time, self.data.Current,
+        self.symbols = pg.ScatterPlotItem(self.data.Time, self.data.Current,
                                        symbol='+',
                                        size=6,
-                                       pen=mkPen(color='w', width=0.1),
-                                       brush=mkBrush(color=color),
+                                       pen=pg.mkPen(color='w', width=0.1),
+                                       brush=pg.mkBrush(color=color),
                                        )
         self.plot_widget.addItem(self.curve)
         self.plot_widget.addItem(self.symbols)

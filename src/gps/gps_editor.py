@@ -203,7 +203,7 @@ class BaseGPS:
             self.df = df
             return self
         elif self.df.empty:
-            logger.info('GPS dataframe is empty.')
+            logger.info('GPS pd.DataFrame is empty.')
             self.df = df
             return self
 
@@ -233,7 +233,7 @@ class BaseGPS:
             self.df = df
             return self
         elif self.df.empty:
-            logger.info('GPS dataframe is empty.')
+            logger.info('GPS pd.DataFrame is empty.')
             self.df = df
             return self
 
@@ -267,7 +267,7 @@ class BaseGPS:
             self.df = df
             return self
         elif self.df.empty:
-            logger.info('GPS dataframe is empty.')
+            logger.info('GPS pd.DataFrame is empty.')
             self.df = df
             return self
 
@@ -301,7 +301,7 @@ class BaseGPS:
             self.df = df
             return self
         elif self.df.empty:
-            logger.info('GPS dataframe is empty.')
+            logger.info('GPS pd.DataFrame is empty.')
             self.df = df
             return self
 
@@ -341,7 +341,7 @@ class BaseGPS:
             self.df = df
             return self
         elif self.df.empty:
-            logger.info('GPS dataframe is empty.')
+            logger.info('GPS pd.DataFrame is empty.')
             self.df = df
             return self
 
@@ -369,7 +369,7 @@ class TransmitterLoop(BaseGPS):
 
     def __init__(self, loop, cull_loop=True, crs=None):
         """
-        :param loop: Union (str, dataframe, list) filepath of a text file OR a data frame/list containing loop GPS
+        :param loop: Union (str, pd.DataFrame, list) filepath of a text file OR a data frame/list containing loop GPS
         """
         super().__init__()
         self.crs = crs
@@ -383,8 +383,8 @@ class TransmitterLoop(BaseGPS):
     def parse_loop_gps(file):
         """
         Parse a text file or data frame for loop GPS.
-        :param file: Union (str filepath, dataframe, list), text containing GPS data
-        :return: DataFrame of the GPS.
+        :param file: Union (str filepath, pd.DataFrame, list), text containing GPS data
+        :return: pd.DataFrame of the GPS.
         """
         if isinstance(file, TransmitterLoop):
             logger.info(f"SurveyLine passed.")
@@ -411,7 +411,7 @@ class TransmitterLoop(BaseGPS):
     def get_sorted_loop(self):
         """
         Sorts the loop to be counter-clockwise.
-        :return: pandas DataFrame of sorted loop coordinates
+        :return: pandas pd.DataFrame of sorted loop coordinates
         """
         def get_angle(dx, dy):
             return (math.atan2(dy, dx) + 2.0 * math.pi) % (2.0 * math.pi)
@@ -456,7 +456,7 @@ class SurveyLine(BaseGPS):
 
     def __init__(self, line, crs=None):
         """
-        :param line: Union (str, dataframe, list) filepath of a text file OR a data frame/list containing line GPS
+        :param line: Union (str, pd.DataFrame, list) filepath of a text file OR a data frame/list containing line GPS
         """
         super().__init__()
         self.crs = crs
@@ -467,8 +467,8 @@ class SurveyLine(BaseGPS):
     def parse_station_gps(file):
         """
         Parse a text file or data frame for station GPS.
-        :param file: Union (str filepath, dataframe, list), raw GPS data
-        :return: DataFrame of the GPS.
+        :param file: Union (str filepath, pd.DataFrame, list), raw GPS data
+        :return: pd.DataFrame of the GPS.
         """
 
         if isinstance(file, SurveyLine):
@@ -521,7 +521,7 @@ class SurveyLine(BaseGPS):
         """
         Sorts the points in the survey line by distance. Chooses one end of the line, and uses that point to
         calculate the distance of each other point from that point, then sorts.
-        :return: pandas DataFrame of the sorted line GPS
+        :return: pandas pd.DataFrame of the sorted line GPS
         """
 
         def calc_distance(point, end_point):
@@ -566,7 +566,7 @@ class BoreholeCollar(BaseGPS):
 
     def __init__(self, hole, crs=None):
         """
-        :param hole: Union (str filepath, dataframe, list), GPS data
+        :param hole: Union (str filepath, pd.DataFrame, list), GPS data
         """
         super().__init__()
         self.crs = crs
@@ -577,8 +577,8 @@ class BoreholeCollar(BaseGPS):
     def parse_collar(file):
         """
         Parse a text file for collar GPS. Returns the first match found.
-        :param file: Union (str filepath, dataframe, list), GPS data. If list is passed, should be a nested list.
-        :return: Pandas DataFrame of the GPS.
+        :param file: Union (str filepath, pd.DataFrame, list), GPS data. If list is passed, should be a nested list.
+        :return: Pandas pd.DataFrame of the GPS.
         """
         if isinstance(file, BoreholeCollar):
             logger.info(f"SurveyLine passed.")
@@ -604,7 +604,7 @@ class BoreholeSegments(BaseGPS):
 
     def __init__(self, segments):
         """
-        :param segments: Union (str filepath, dataframe, list), GPS data
+        :param segments: Union (str filepath, pd.DataFrame, list), GPS data
         """
         super().__init__()
         self.df, self.errors, self.error_msg = self.parse_segments(segments)
@@ -614,8 +614,8 @@ class BoreholeSegments(BaseGPS):
     def parse_segments(file):
         """
         Parse a text file for geometry segments.
-        :param file: Union (str filepath, dataframe, list), GPS data
-        :return: Pandas DataFrame of the segments.
+        :param file: Union (str filepath, pd.DataFrame, list), GPS data
+        :return: Pandas pd.DataFrame of the segments.
         """
         empty_gps = pd.DataFrame(columns=[
             'Azimuth',
@@ -719,7 +719,7 @@ class BoreholeGeometry(BaseGPS):
         :param num_segments: Desired number of segments to be output
         :param stations: list, stations to use for interpolation to ensure they are in the segments
         :param latlon: bool, whether to return the projection as latlon
-        :return: pandas DataFrame: Projected easting, northing, elevation, and relative depth from collar
+        :return: pandas pd.DataFrame: Projected easting, northing, elevation, and relative depth from collar
         """
         # Create the data frame
         projection = gpd.GeoDataFrame(columns=['Easting', 'Northing', 'Elevation', 'Relative_depth'])

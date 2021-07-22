@@ -15,9 +15,7 @@ from itertools import groupby
 from pathlib import Path
 
 import numpy as np
-from pandas import DataFrame
-from pyqtgraph import (LinearRegionItem, mkPen, mkBrush, DateAxisItem, PlotWidget, PlotCurveItem, ScatterPlotItem,
-                        ProgressDialog, TableWidget)
+import pyqtgraph as pg
 from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor
 from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction, QErrorMessage,
@@ -633,7 +631,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             def accept_change(data):
                 """
                 Signal slot, update the station names of the PEM file.
-                :param data: DataFrame of the data with the stations re-named.
+                :param data: pd.DataFrame of the data with the stations re-named.
                 """
                 pem_file.data = data
                 self.refresh_pem(pem_file)
@@ -1352,7 +1350,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar = CustomProgressBar()
         bar.setMaximum(len(dmp_files))
 
-        with ProgressDialog("Converting DMP Files...", 0, len(dmp_files)) as dlg:
+        with pg.ProgressDialog("Converting DMP Files...", 0, len(dmp_files)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle("Converting DMP Files")
 
@@ -1477,7 +1475,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
 
-        with ProgressDialog("Opening PEMs Files...", 0, len(pem_files), busyCursor=False) as dlg:
+        with pg.ProgressDialog("Opening PEMs Files...", 0, len(pem_files), busyCursor=False) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle('Opening PEM Files')
 
@@ -2037,7 +2035,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             bar = CustomProgressBar()
             bar.setMaximum(len(self.pem_files))
 
-            with ProgressDialog("Converting DMP Files...", 0, len(self.pem_files)) as dlg:
+            with pg.ProgressDialog("Converting DMP Files...", 0, len(self.pem_files)) as dlg:
                 dlg.setBar(bar)
                 dlg.setWindowTitle("Converting DMP Files")
 
@@ -2104,7 +2102,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             bar = CustomProgressBar()
             bar.setMaximum(len(pem_files))
 
-            with ProgressDialog('Sharing GPS...', 0, len(pem_info_widgets)) as dlg:
+            with pg.ProgressDialog('Sharing GPS...', 0, len(pem_info_widgets)) as dlg:
                 dlg.setBar(bar)
                 dlg.setWindowTitle('Sharing GPS')
 
@@ -2345,7 +2343,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         bar = CustomProgressBar()
         bar.setMaximum(len(self.pem_files))
-        with ProgressDialog("Plotting PEM Files...", 0, 1) as dlg:
+        with pg.ProgressDialog("Plotting PEM Files...", 0, 1) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle("Plotting PEM Files")
             contour_map = ContourMapViewer(parent=self)
@@ -2705,7 +2703,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
 
-        with ProgressDialog('Saving PEM Files...', 0, len(pem_files)) as dlg:
+        with pg.ProgressDialog('Saving PEM Files...', 0, len(pem_files)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle('Saving PEM Files')
 
@@ -2813,7 +2811,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         for pem_file in sorted(pem_files, key=lambda x: x.get_date(), reverse=True):
             info.append(pem_file.get_clipboard_info())
 
-        df = DataFrame(info)
+        df = pd.DataFrame(info)
         df.to_clipboard(excel=True, index=False, header=False)
         self.status_bar.showMessage(f"Information copied to clipboard", 1500)
 
@@ -2981,7 +2979,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             bar = CustomProgressBar()
             bar.setMaximum(len(pem_files))
 
-            with ProgressDialog("Exporting XYZ Files...", 0, len(pem_files)) as dlg:
+            with pg.ProgressDialog("Exporting XYZ Files...", 0, len(pem_files)) as dlg:
                 dlg.setBar(bar)
                 dlg.setWindowTitle('Exporting XYZ Files')
 
@@ -3052,7 +3050,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
-        with ProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
+        with pg.ProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle('Exporting PEM Files')
 
@@ -3110,7 +3108,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         if export_folder:
             bar = CustomProgressBar()
             bar.setMaximum(len(pem_files))
-            with ProgressDialog("Exporting GPS...", 0, len(pem_files)) as dlg:
+            with pg.ProgressDialog("Exporting GPS...", 0, len(pem_files)) as dlg:
                 dlg.setBar(bar)
                 dlg.setWindowTitle('Exporting GPS')
 
@@ -3204,7 +3202,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
-        with ProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
+        with pg.ProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle('Exporting PEM Files')
 
@@ -3792,7 +3790,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
 
-        with ProgressDialog('Averaging PEM Files...', 0, len(pem_files)) as dlg:
+        with pg.ProgressDialog('Averaging PEM Files...', 0, len(pem_files)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle('Averaging PEM Files')
 
@@ -3847,7 +3845,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar = CustomProgressBar()
         bar.setMaximum(len(filt_list))
 
-        with ProgressDialog('Splitting PEM Files...', 0, len(filt_list)) as dlg:
+        with pg.ProgressDialog('Splitting PEM Files...', 0, len(filt_list)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle('Splitting PEM File Channels')
 
@@ -3891,7 +3889,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
 
-        with ProgressDialog('Scaling PEM File Coil Area...', 0, len(pem_files)) as dlg:
+        with pg.ProgressDialog('Scaling PEM File Coil Area...', 0, len(pem_files)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle('Scaling PEM File Coil Area')
 
@@ -3926,7 +3924,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             bar = CustomProgressBar()
             bar.setMaximum(len(pem_files))
 
-            with ProgressDialog('Scaling PEM File Current...', 0, len(pem_files)) as dlg:
+            with pg.ProgressDialog('Scaling PEM File Current...', 0, len(pem_files)) as dlg:
                 dlg.setBar(bar)
                 dlg.setWindowTitle('Scaling PEM File Current')
 
@@ -3955,7 +3953,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
 
-        with ProgressDialog(f'Mag offsetting to last channel...', 0, len(pem_files)) as dlg:
+        with pg.ProgressDialog(f'Mag offsetting to last channel...', 0, len(pem_files)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle(f'Mag Offset')
 
@@ -3986,7 +3984,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
 
-        with ProgressDialog(f'Reversing {comp} Component Polarity...', 0, len(pem_files)) as dlg:
+        with pg.ProgressDialog(f'Reversing {comp} Component Polarity...', 0, len(pem_files)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle(f'Reversing {comp} Component Polarity')
 
@@ -4011,7 +4009,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         bar = CustomProgressBar()
         bar.setMaximum(len(pem_files))
 
-        with ProgressDialog('Reversing Station Order...', 0, len(pem_files)) as dlg:
+        with pg.ProgressDialog('Reversing Station Order...', 0, len(pem_files)) as dlg:
             dlg.setBar(bar)
             dlg.setWindowTitle('Reversing Station Order')
 
@@ -4669,7 +4667,7 @@ class ChannelTimeViewer(QMainWindow):
         super().__init__()
         self.pem_file = pem_file
         self.parent = parent
-        self.df = DataFrame()
+        self.df = pd.DataFrame()
         self.text_format = ""
 
         # Format window
@@ -4701,7 +4699,7 @@ class ChannelTimeViewer(QMainWindow):
         self.statusBar().show()
 
         # Format table
-        self.table = TableWidget()
+        self.table = pg.TableWidget()
         self.layout().addWidget(self.table)
         self.setCentralWidget(self.table)
 
@@ -4823,7 +4821,7 @@ class SuffixWarningViewer(QMainWindow):
         self.setWindowTitle(f"Suffix Warnings Viewer - {pem_file.filepath.name}")
 
         self.setLayout(QVBoxLayout())
-        self.table = TableWidget()
+        self.table = pg.TableWidget()
         self.layout().addWidget(self.table)
         self.setCentralWidget(self.table)
 
@@ -4899,7 +4897,7 @@ class WarningViewer(QMainWindow):
         self.setCentralWidget(self.widget)
 
         # Add the widgets
-        self.table = TableWidget()
+        self.table = pg.TableWidget()
         self.table.horizontalHeader().hide()
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.widget.layout().addWidget(self.table)

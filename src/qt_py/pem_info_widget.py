@@ -7,11 +7,11 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from PySide2.QtCore import Qt, Signal, QEvent
 from PySide2.QtGui import QColor, QFont
 from PySide2.QtWidgets import (QMessageBox, QWidget, QAction, QErrorMessage,
                                QFileDialog, QApplication, QHeaderView, QTableWidgetItem, QItemDelegate)
-from pandas import read_csv, read_excel
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXParser
@@ -359,10 +359,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                         contents = [c.strip().split() for c in gps]
                 else:
                     if file.suffix.lower() == '.csv':
-                        contents = read_csv(file, delim_whitespace=False, header=None).to_numpy()
+                        contents = pd.read_csv(file, delim_whitespace=False, header=None).to_numpy()
 
                     elif file.suffix.lower() in ['.xlsx', '.xls']:
-                        contents = read_excel(file, header=None, sheet_name=None, dtype=str)
+                        contents = pd.read_excel(file, header=None, sheet_name=None, dtype=str)
                         if collar is True:
                             return contents
 

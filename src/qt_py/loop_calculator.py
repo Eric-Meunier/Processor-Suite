@@ -2,30 +2,23 @@ import logging
 import math
 import os
 import sys
-from pathlib import Path
 
 import numpy as np
-from pyqtgraph import setConfigOptions, setConfigOption
+import pyqtgraph as pg
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon, QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QFileDialog, QApplication, QShortcut, QComboBox)
 
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.qt_py import NonScientific
+from src.qt_py import NonScientific, icons_path
 from src.ui.loop_calculator import Ui_LoopCalculator
 
 logger = logging.getLogger(__name__)
 
-setConfigOptions(antialias=True)
-setConfigOption('background', 'w')
-setConfigOption('foreground', 'k')
-setConfigOption('crashWarning', True)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath("ui\\icons")
+pg.setConfigOptions(antialias=True)
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+pg.setConfigOption('crashWarning', True)
 
 
 class LoopCalculator(QMainWindow, Ui_LoopCalculator):

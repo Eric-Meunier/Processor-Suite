@@ -7,12 +7,12 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import mplcursors
 import numpy as np
+import pandas as pd
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QIcon, QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QErrorMessage,
                                QFileDialog, QVBoxLayout, QApplication, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from pandas import DataFrame, Series, read_csv, concat
 
 from src.gps.gps_editor import BoreholeSegments
 from src.mpl.interactive_spline import InteractiveSpline
@@ -27,9 +27,9 @@ logger = logging.getLogger(__name__)
 def dad_to_seg(df, units='m'):
     """
     Create a segment data frame from a DAD data frame. DAD data is split into 1m intervals.
-    :param df: pandas DataFrame with Depth, Azimuth, Dip columns
+    :param df: pandas pd.DataFrame with Depth, Azimuth, Dip columns
     :param units: str, units of the segments, either 'm' or 'ft'
-    :return: pandas DataFrame with Azimuth, Dip, segment length, unit, and depth columns
+    :return: pandas pd.DataFrame with Azimuth, Dip, segment length, unit, and depth columns
     """
     if units == 'm' or units is None:
         units = 2
@@ -46,7 +46,7 @@ def dad_to_seg(df, units='m'):
     i_depth = np.arange(depth[0], depth[-1] + 1)
     i_azimuth = np.interp(i_depth, depth, azimuth)
     i_dip = np.interp(i_depth, depth, dip)
-    df = DataFrame(zip(i_depth, i_azimuth, i_dip), columns=df.columns)
+    df = pd.DataFrame(zip(i_depth, i_azimuth, i_dip), columns=df.columns)
 
     # Create the segment data frame
     seg = df.head(0).copy()
@@ -296,7 +296,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
         # Merge the data of the pem files
         if len(pem_files) > 1:
-            self.pem_file.data = concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
+            self.pem_file.data = pd.concat([pem_file.data for pem_file in pem_files], axis=0, ignore_index=True)
 
             # # Use the first geometry where the segments aren't empty (if any)
             # for file in pem_files:
@@ -336,7 +336,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         xi = np.arange(0, max(az_depth.max(), dip_depth.max() + 1), 1)
         i_az = np.interp(xi, az_depth, az)
         i_dip = np.interp(xi, dip_depth, dip)
-        dad_df = DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
+        dad_df = pd.DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
 
         seg = dad_to_seg(dad_df, units=self.pem_file.get_gps_units())
         self.accepted_sig.emit(seg)
@@ -538,7 +538,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         filt = (self.pem_file.data.Component == 'X') | (self.pem_file.data.Component == 'Y')
         data = self.pem_file.data[filt]
 
-        self.df = DataFrame({'Station': data.Station.astype(int),
+        self.df = pd.DataFrame({'Station': data.Station.astype(int),
                                 'RAD_tool': data.RAD_tool,
                                 'RAD_ID': data.RAD_ID})
         # Only keep unique RAD IDs and unique stations
@@ -546,7 +546,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.df.drop_duplicates(subset=['Station'], inplace=True)
         self.df.sort_values(by='Station', inplace=True)
 
-        az, dip, depth = Series(dtype=float), Series(dtype=float), Series(dtype=float)
+        az, dip, depth = pd.Series(dtype=float), pd.Series(dtype=float), pd.Series(dtype=float)
         if self.pem_file.has_d7() and self.pem_file.has_xy():
             self.plot_tool_values(update=False)
 
@@ -659,7 +659,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
     def plot_df(self, df, source):
         """
         Plot a dataframe from a .seg or .dad file.
-        :param df: DataFrame object with an Azimuth, Dip, and Depth column
+        :param df: pd.DataFrame object with an Azimuth, Dip, and Depth column
         :param source: str, file source of the df, either 'seg' or 'dad'
         """
         if df.empty:
@@ -727,7 +727,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         Import and plot a .seg file
         :param filepath: str, filepath of the file to plot
         """
-        df = read_csv(filepath,
+        df = pd.read_csv(filepath,
                       delim_whitespace=True,
                       usecols=[1, 2, 5],
                       names=['Azimuth', 'Dip', 'Depth'],

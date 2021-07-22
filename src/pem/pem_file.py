@@ -3516,7 +3516,8 @@ class RADTool:
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
-
+    import time
+    import timeit
     sample_folder = Path(__file__).parents[2].joinpath("sample_files")
 
     dparser = DMPParser()
@@ -3527,12 +3528,10 @@ if __name__ == '__main__':
     # file = r"C:\_Data\2021\Geoken\Borehole\SAPR-21-005\DUMP\XY.PEM"
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
     # file = r"C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\RAW\xy_0704.PEM"
-    file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\TMC\1338-19-037\DUMP\January 16, 2021\Dump\1338-19-037 XY.PEM"
-    pem_file = pemparser.parse(file)
     # pem_files = pem_g.get_pems(random=True, number=1)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
-    # pem_files = pem_g.get_pems(folder="TMC", subfolder=r"131-21-37\DATA", file="131-21-37 XY.PEM")
+
     # pem_file = pem_files[0]
     # pem_file.rotate(method="unrotate")
     # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
