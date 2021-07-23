@@ -59,7 +59,6 @@ logger = logging.getLogger(__name__)
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Look into slowness when changing station number and such in pem plot editor
-# TODO Rename folders in PEMPro
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):

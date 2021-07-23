@@ -1921,7 +1921,7 @@ class DecayViewBox(pg.ViewBox):
 
             if ev.isFinish():  # This is the final move in the drag; change the view scale now
                 self.rbScaleBox.hide()
-                ax = QRectF(pg.Point.pg.Point(ev.buttonDownPos(ev.button())), pg.Point.pg.Point(pos))
+                ax = QRectF(pg.Point(ev.buttonDownPos(ev.button())), pg.Point(pos))
                 ax = self.childGroup.mapRectFromParent(ax)
                 self.showAxRect(ax)
                 self.axHistoryPointer += 1
@@ -1937,7 +1937,7 @@ class DecayViewBox(pg.ViewBox):
                     # Hide the rectangle
                     self.rbScaleBox.hide()
                     # Create a rectangle object from the click-and-drag rectangle
-                    rect = QRectF(pg.Point.pg.Point(ev.buttonDownPos(ev.button())), pg.Point.pg.Point(pos))
+                    rect = QRectF(pg.Point(ev.buttonDownPos(ev.button())), pg.Point(pos))
                     # Convert the coordinates to the same as the data
                     rect = self.childGroup.mapRectFromParent(rect)
                     # Emit the signal to select the lines that intersect the rect
@@ -1979,7 +1979,7 @@ class DecayViewBox(pg.ViewBox):
                 mask = self.state['mouseEnabled'][:]
             s = 1.02 ** (ev.delta() * self.state['wheelScaleFactor'])  # actual scaling factor
             s = [(None if m is False else s) for m in mask]
-            center = pg.Point.pg.Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
+            center = pg.Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
 
             self._resetTarget()
             self.scaleBy(s, center)
@@ -2051,7 +2051,7 @@ class ProfileViewBox(pg.ViewBox):
                 mask = self.state['mouseEnabled'][:]
             s = 1.02 ** (ev.delta() * self.state['wheelScaleFactor'])  # actual scaling factor
             s = [(None if m is False else s) for m in mask]
-            center = pg.Point.pg.Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
+            center = pg.Point(invertQTransform(self.childGroup.transform()).map(ev.pos()))
 
             self._resetTarget()
             self.scaleBy(s, center)
