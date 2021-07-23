@@ -11,7 +11,7 @@ import pyqtgraph as pg
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QIcon, QColor
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QFileDialog, QVBoxLayout, QLabel, QApplication,
-                               QFrame, QHBoxLayout, QHeaderView, QInputDialog, QPushButton, QTabWidget)
+                               QFrame, QHBoxLayout, QHeaderView, QInputDialog, QPushButton, QTabWidget, QTableWidgetItem)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
 from src.qt_py import icons_path, NonScientific, read_file
@@ -149,10 +149,10 @@ class GPSAdder(QMainWindow):
              """
             def series_to_items(x):
                 if isinstance(x, float):
-                    return Qpg.TableWidgetItem(f"{x}")
+                    return QTableWidgetItem(f"{x}")
                     # return Qpg.TableWidgetItem(f"{x:.2f}")
                 else:
-                    return Qpg.TableWidgetItem(str(x))
+                    return QTableWidgetItem(str(x))
 
             row_pos = self.table.rowCount()
             # Add a new row to the table

@@ -59,6 +59,7 @@ logger = logging.getLogger(__name__)
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Look into slowness when changing station number and such in pem plot editor
+# TODO Rename folders in PEMPro
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
@@ -1260,7 +1261,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                              current_piw.geometry_tab]
 
             # GPS files
-            if all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
+            if all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx', '.xlsx', '.xls'] for file in urls]):
                 if all([e.answerRect().intersects(self.piw_frame.geometry()),
                         current_piw.tabs.currentWidget() in eligible_tabs,
                         self.pem_files]):
@@ -1292,7 +1293,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
             self.add_dmp_files(urls)
 
-        elif all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx'] for file in urls]):
+        elif all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx', '.xlsx', '.xls'] for file in urls]):
             self.add_gps_files(urls)
 
         elif all([Path(file).suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
@@ -1564,6 +1565,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             gps_files = [gps_files]
 
         gps_files = [Path(file) for file in gps_files]
+        logger.info(f"Opening GPS files {', '.join([f.name for f in gps_files])}")
         crs = pem_info_widget.open_gps_files(gps_files)
 
         # Set the project CRS if a .inf or .log file is in the directory and the project CRS is currently empty
@@ -2255,15 +2257,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param position: QPoint, position of mouse at time of right-click
         """
 
-        def get_current_path():
-            index = self.project_tree.currentIndex()
-            index_item = self.file_sys_model.index(index.row(), 0, index.parent())
-            path = self.file_sys_model.filePath(index_item)
-            return Path(path)
-
         def open_step():
             # Open the Step window at the selected location in the project tree
-            path = get_current_path()
+            path = self.get_current_path()
 
             os.chdir(str(path))
             os.system('cmd /c "step"')
@@ -2275,7 +2271,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             folder_name, ok_pressed = QInputDialog.getText(self, "Select Folder Name", "Folder Name:",
                                                            text=self.project_dir.parent.name)
             if ok_pressed and folder_name:
-                path = get_current_path()
+                path = self.get_current_path()
                 zip_path = path.joinpath(folder_name.strip())
                 if zip_path.exists():
                     response = self.message.question(self, "Existing Directory",
@@ -2302,10 +2298,22 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 shutil.make_archive(str(zip_path), 'zip', str(zip_path))
                 self.status_bar.showMessage(f"{folder_name}.zip created successfully.", 1500)
 
+        def rename():
+            """
+            Rename the selected folder. Folders usually can't be renamed normally when PEMPro is still open.
+            :return: None
+            """
+            folder_name, ok_pressed = QInputDialog.getText(self, "Select Folder Name", "Folder Name:",
+                                                           text=self.project_dir.name)
+            if ok_pressed and folder_name:
+                path = self.get_current_path()
+                path.rename(path.with_name(folder_name))
+
         menu = QMenu()
         menu.addAction('Run Step', open_step)
         menu.addSeparator()
         menu.addAction('Create Delivery Folder', create_delivery_folder)
+        menu.addAction('Rename Folder', rename)
         menu.exec_(self.project_tree.viewport().mapToGlobal(position))
 
     def open_unpacker(self, folder=None):
@@ -3425,9 +3433,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 # Color the background based on the value
                 color = QColor(colors[row][0] * 255,
-                                     colors[row][1] * 255,
-                                     colors[row][2] * 255,
-                                     alpha)
+                               colors[row][1] * 255,
+                               colors[row][2] * 255,
+                               alpha)
                 item.setBackground(color)
 
                 count += 1

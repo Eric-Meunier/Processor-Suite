@@ -5,8 +5,7 @@ from pathlib import Path
 
 from PySide2.QtCore import Qt, QTimer
 from PySide2.QtGui import (QColor, QPixmap)
-from PySide2.QtWidgets import (QWidget, QErrorMessage,
-                               QApplication, QGraphicsDropShadowEffect)
+from PySide2.QtWidgets import (QWidget, QErrorMessage, QProgressBar, QApplication, QGraphicsDropShadowEffect)
 
 from src import __version__, app_data_dir
 from src.ui.splash_screen import Ui_SplashScreen
@@ -60,15 +59,17 @@ class SplashScreen(QWidget, Ui_SplashScreen):
         # self.timer.start(35)
 
         self.counter = 0
+        self.progressBar.setMaximum(10)
         self.show()
 
     def showMessage(self, msg):
         self.message_label.setText(msg)
-        app.processEvents()
+        self.progress()
 
     def progress(self):
         self.counter += 1
         self.progressBar.setValue(self.counter)
+        app.processEvents()
 
 
 # Splash screen
@@ -81,7 +82,7 @@ app.processEvents()
 
 
 def main():
-    splash.showMessage("Importing PEMHub")
+    splash.showMessage("Loading modules...")
     t = time.time()
     from src.qt_py.pem_hub import PEMHub
     print(f"Time to import PEMHub: {time.time() - t:.2f}s")

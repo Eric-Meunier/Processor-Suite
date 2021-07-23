@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "PEMPro"
-#define MyAppVersion "11.6"
+#define MyAppVersion "0.12.0"
 #define MyAppPublisher "Crone Geophysics & Exploration Ltd."
 #define MyAppURL "https://www.cronegeophysics.com/"
 #define MyAppExeName "PEMPro.exe"
@@ -34,8 +34,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\Eric\PycharmProjects\PEMPro\dist\PEMPro V0.11.6\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Eric\PycharmProjects\PEMPro\dist\PEMPro V0.11.6\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\Eric\PycharmProjects\PEMPro\dist\PEMPro V0.12.0\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\Eric\PycharmProjects\PEMPro\dist\PEMPro V0.12.0\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
