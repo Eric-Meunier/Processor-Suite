@@ -45,6 +45,7 @@ class SplashScreen(QWidget, Ui_SplashScreen):
         self.setWindowFlag(Qt.FramelessWindowHint)
         self.version_label.setText(f"Version {version}")
         self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setWindowTitle(f"PEMPro {version}")
 
         self.shadow = QGraphicsDropShadowEffect(self)
         self.shadow.setBlurRadius(20)

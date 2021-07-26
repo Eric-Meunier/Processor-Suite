@@ -1462,6 +1462,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         (i.e. from True > False or False > True). The station is then re-plotted. Line highlight is preserved.
         """
         selected_data = self.get_selected_decay_data()
+        if selected_data is None:
+            return
+
         if not selected_data.empty:
             # Change the deletion flag
             selected_data.loc[:, 'Deleted'] = selected_data.loc[:, 'Deleted'].map(lambda x: not x)

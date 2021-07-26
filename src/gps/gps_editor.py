@@ -845,6 +845,7 @@ class GPXParser:
             for waypoint in gpx.waypoints:
                 # name = re.sub(r'\s', '_', waypoint.name)
                 name = re.sub(r'\W', '', waypoint.name)
+                name = re.sub(r"[^nsewNSEW\d]", "", name)
                 if not all([waypoint.latitude, waypoint.longitude, waypoint.elevation]):
                     points_str = ', '.join([str(waypoint.latitude), str(waypoint.longitude), str(waypoint.elevation)])
                     logger.warning(F"Skipping point {name} as the GPS is incomplete.")

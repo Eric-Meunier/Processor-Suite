@@ -4941,7 +4941,8 @@ class BatchNameEditor(QWidget):
         self.kind = None
 
         self.addEdit = QLineEdit()
-        self.removeEdit = QLineEdit()
+        self.replaceEdit = QLineEdit()
+        self.withEdit = QLineEdit()
         self.table = QTableWidget()
         self.table_columns = ['Old Name', 'New Name']
         self.table.setColumnCount(len(self.table_columns))
@@ -4953,13 +4954,19 @@ class BatchNameEditor(QWidget):
         self.button_box.setCenterButtons(True)
 
         self.setLayout(QFormLayout())
-        self.layout().addRow("Remove:", self.removeEdit)
+        self.layout().addRow("Replace:", self.replaceEdit)
+        self.layout().addRow("With:", self.withEdit)
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        self.layout().addRow(line)
         self.layout().addRow("Add:", self.addEdit)
         self.layout().addRow(self.table)
         self.layout().addRow(self.button_box)
 
         self.addEdit.textEdited.connect(self.update_table)
-        self.removeEdit.textEdited.connect(self.update_table)
+        self.replaceEdit.textEdited.connect(self.update_table)
+        self.withEdit.textEdited.connect(self.update_table)
         self.button_box.rejected.connect(self.close)
         self.button_box.accepted.connect(self.accept_changes)
 
@@ -4972,7 +4979,8 @@ class BatchNameEditor(QWidget):
         """
         # Reset
         self.addEdit.setText('[n]')
-        self.removeEdit.setText('')
+        self.replaceEdit.setText('')
+        self.withEdit.setText('')
         while self.table.rowCount() > 0:
             self.table.removeRow(0)
 
@@ -5025,18 +5033,16 @@ class BatchNameEditor(QWidget):
         for row in range(self.table.rowCount()):
             # Split the text based on '[n]'. Anything before it becomes the prefix,
             # and everything after is added as a suffix
+            name = Path(re.sub(re.escape(self.replaceEdit.text()),
+                               re.escape(self.withEdit.text()),
+                               self.table.item(row, 0).text()))
+            suffix = self.addEdit.text().rsplit('[n]')[-1]
+            prefix = self.addEdit.text().rsplit('[n]')[0]
             if self.kind == 'Line':
                 # Immediately replace what's in the removeEdit object with nothing
-                input = self.table.item(row, 0).text().replace(self.removeEdit.text(), '')
-                suffix = self.addEdit.text().rsplit('[n]')[-1]
-                prefix = self.addEdit.text().rsplit('[n]')[0]
-                output = prefix + input + suffix
+                output = prefix + str(name) + suffix
             else:
-                input = self.table.item(row, 0).text().split('.')[0].replace(self.removeEdit.text(), '')
-                ext = '.' + self.table.item(row, 0).text().split('.')[-1]
-                suffix = self.addEdit.text().rsplit('[n]')[-1]
-                prefix = self.addEdit.text().rsplit('[n]')[0]
-                output = prefix + input + suffix + ext
+                output = str(name.with_name(prefix + str(name) + suffix))
 
             item = QTableWidgetItem(output)
             item.setTextAlignment(Qt.AlignCenter)
@@ -5070,7 +5076,7 @@ def main():
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
-    pem_files = pem_g.get_pems(number=1, random=True)
+    pem_files = pem_g.get_pems(number=3, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=2)
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -5086,7 +5092,7 @@ def main():
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()
-    # mw.open_name_editor('Line', selected=False)
+    mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
