@@ -19,9 +19,9 @@ def make_spec(spec_file):
 
 import sys
 from pathlib import Path
-from PyInstaller.utils.hooks import collect_data_files, collect_all  # this is very helpful
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-plotly_datas, plotly_binaries, plotly_hidden_imports = collect_all("plotly")
+# plotly_datas, plotly_binaries, plotly_hidden_imports = collect_all("plotly")
 
 sys.setrecursionlimit(5000)
 block_cipher = None
@@ -34,28 +34,25 @@ paths = [
 ]
 
 binaries = []
-#  binaries.extend(plotly_binaries)
 
 hidden_imports = [
     'fiona._shim',  # Required
     'fiona.schema',  # Required
     'PySide2.QtXml',  # Required
 ]
-#  hidden_imports.extend(plotly_hidden_imports)
+hidden_imports.extend(collect_submodules("plotly"))  # Required, or will get "No module named 'plotly.validators.scattermapbox'"
 
 a = Analysis(['run.py'],
              pathex=paths, # add all your paths
              binaries=binaries, # add the dlls you may need
              datas=collect_data_files('geopandas', subdir='datasets') +  # Required
-                   plotly_datas +  # Required, much smaller than copying the entire folder
-                   # collect_data_files('plotly') +  # Required, much smaller than copying the entire folder
+                   collect_data_files('plotly') +  # Required, much smaller than copying the entire folder
                    [
                    (r'src\ui\*.py','ui'), # Places all .ui files in a folder called 'qt_ui'
                    (r'src\ui\icons\*.png', r'ui/icons'),  # Places all icon files in a folder called 'icons'
                    (r'src\ui\icons\*.ico', r'ui/icons'),
                    (str(Path(os.getenv('APPDATA')).joinpath('PEMPro\.mapbox')), r'.'),
                    (r'venv\Lib\site-packages\geomag\WMM.COF', 'geomag'),  # Places a file used for magnetic declination calculation in a 'geomag' folder.
-                   # (r'venv\Lib\site-packages\plotly', 'plotly'), 
                    ],
              hiddenimports=hidden_imports,
              hookspath=[],
@@ -78,7 +75,7 @@ exe = EXE(pyz,
           bootloader_ignore_signals=False,
           strip=False,
           upx=False,
-          console=True, 
+          console=False, 
           icon=r'src/ui/icons/conder.ico')
         ''')
 

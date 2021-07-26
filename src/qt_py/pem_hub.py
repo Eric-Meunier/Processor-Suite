@@ -539,6 +539,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         # Help menu
         self.actionView_Logs.triggered.connect(open_logs)
 
+        self.enable_menus(False)
+
     def init_signals(self):
         """
         Initializing all signals.
@@ -1510,6 +1512,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     # Fill the shared header text boxes and move the project directory
                     if not self.pem_files:
                         share_header(pem_file)
+                        self.enable_menus(True)
                         # self.piw_frame.show()
                     if self.project_dir_edit.text() == '':
                         self.move_dir_tree_to(pem_file.filepath.parent)
@@ -1601,6 +1604,20 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         pem_info_widget = self.stackedWidget.currentWidget()
         pem_info_widget.open_ri_file(ri_file)
 
+    def enable_menus(self, enable):
+        """
+        Enable/Disable menus which required PEM files
+        """
+        self.actionSaveFiles.setEnabled(enable)
+        self.menuExport_Files.setEnabled(enable)
+        self.actionBackup_Files.setEnabled(enable)
+        self.actionImport_RI_Files.setEnabled(enable)
+        self.actionPrint_Plots_to_PDF.setEnabled(enable)
+
+        self.menuPEM.setEnabled(enable)
+        self.menuGPS.setEnabled(enable)
+        self.menuMap.setEnabled(enable)
+
     def remove_pem_file(self, rows=None):
         """
         Removes PEM files from the main table, along with any associated widgets.
@@ -1612,6 +1629,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.gps_system_cbox.setCurrentText('')
             self.gps_zone_cbox.setCurrentText('')
             self.gps_datum_cbox.setCurrentText('')
+            self.epsg_edit.setText("")
 
         def reset_selection_labels():
             for label in [self.selection_files_label,
@@ -1641,6 +1659,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.grid_edit.setText('')
             self.loop_edit.setText('')
             reset_crs()
+            self.enable_menus(False)
         else:
             # Only color the number columns if there are PEM files left
             self.color_table_numbers()
