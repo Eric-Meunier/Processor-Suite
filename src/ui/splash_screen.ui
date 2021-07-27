@@ -76,9 +76,9 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>60</y>
-        <width>141</width>
-        <height>91</height>
+        <y>10</y>
+        <width>51</width>
+        <height>41</height>
        </rect>
       </property>
       <property name="text">
@@ -86,6 +86,9 @@
       </property>
       <property name="pixmap">
        <pixmap>icons/crone_logo.png</pixmap>
+      </property>
+      <property name="scaledContents">
+       <bool>true</bool>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>

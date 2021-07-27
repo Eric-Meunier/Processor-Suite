@@ -924,7 +924,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 else:
                     comp_filt = self.plotted_decay_data.Component == "Z"
 
-                median_data = DataFrame.from_records(self.plotted_decay_data[comp_filt].Reading.reset_index(drop=True))
+                # Ignore deleted data when calculating median
+                existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted]
+                median_data = DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
                 if median_data.empty:
                     continue
 
@@ -1803,10 +1805,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             return False
 
         def clean_group(group):
-            # TODO TMC 0709 data causes error
             readings = np.array(group[~group.Deleted.astype(bool)].Reading.to_list())
             data_std = np.array([threshold_value] * len(readings[0]))
-            data_median = np.median(group.Reading.to_list(), axis=0)
+            data_median = np.median(group[~group.Deleted].Reading.to_list(), axis=0)
 
             if len(group.loc[~group.Deleted.astype(bool)]) > 2:
                 global local_count
