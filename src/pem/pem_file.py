@@ -1061,6 +1061,29 @@ class PEMFile:
         text = ps.serialize(self.copy(), legacy=legacy)
         return text
 
+    def to_headerdf(self):
+        # We have to use deepcopy to avoid mutating the object
+        d = {}
+        kd = self.__dict__
+        for k in kd.keys():
+            if kd[k] is None or \
+                    isinstance(kd[k], str) or \
+                    isinstance(kd[k], bool) or \
+                    isinstance(kd[k], float) or \
+                    isinstance(kd[k], int):
+                d[k] = self.__dict__[k]
+
+        if self.is_borehole() and not self.collar.df.empty:
+            d['Easting'], d['Northing'], d['Elevation'] = self.collar.df.Easting[0], \
+                                                          self.collar.df.Northing[0], \
+                                                          self.collar.df.Elevation[0]
+        else:
+            d['Easting'], d['Northing'], d['Elevation'] = None, None, None
+        # Hope to god the last station is the last station in the survey
+        d['Start'], d['End'] = self.data.Station[0], self.data.Station[len(self.data.Station) - 1]
+        df = pd.DataFrame(d, index=[0])
+        return df
+
     def to_xyz(self):
         """
         Create a str in XYZ format of the pem file's data
@@ -3513,6 +3536,16 @@ class RADTool:
 
         return ' '.join(result)
 
+def PEM2CSV(apem: PEMFile):
+    """
+    Convert a PEMFile to a pandas CSV
+    :param apem: PEMFile to parse
+    :return: pandas.DataFrame
+    """
+    d = apem.__dict__
+    d.pop('loop')
+    d.pop()
+    df = pd.DataFrame.from_dict()
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
