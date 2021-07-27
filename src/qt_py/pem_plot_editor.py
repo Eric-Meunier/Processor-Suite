@@ -10,9 +10,9 @@ import pyqtgraph as pg
 import numpy as np
 import pylineclip as lc
 from PySide2.QtCore import Qt, Signal, QEvent, QTimer, QPointF, QRectF
-from PySide2.QtGui import QIcon, QColor, QFont, QTransform, QBrush, QPen
+from PySide2.QtGui import QIcon, QColor, QFont, QTransform, QBrush, QPen, QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QApplication, QLineEdit,
-                               QInputDialog, QPushButton)
+                               QInputDialog, QPushButton, QShortcut)
 from pandas import DataFrame, options, isna
 from scipy import spatial, signal
 
@@ -217,6 +217,15 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             else:
                 for ax in self.mag_profile_axes:
                     ax.hide()
+
+        def select_all_stations():
+            print(f"Selecting all stations")
+            stations = self.pem_file.get_stations(converted=True)
+            self.box_select_profile_plot((stations.min(), stations.max()), start=False)
+
+        # Actions
+        self.select_all_action = QShortcut(QKeySequence("Ctrl+A"), self)
+        self.select_all_action.activated.connect(select_all_stations)
 
         # Menu
         self.actionOpen.triggered.connect(self.open_file_dialog)
@@ -691,7 +700,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             for ax in axes:
                 ax.clearPlots()
 
-        def plot_lin(profile_data, axes):
+        def plot_lin(profile_data, theory_data, axes):
 
             def plot_lines(df, ax):
                 """
@@ -723,6 +732,18 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                 ax.addItem(scatter)
 
+            def plot_theory_pp(df, ax):
+                """
+                Plot the theoretical PP values
+                :param df: DataFrame
+                :param ax: pyqtgraph PlotItem for the PP frame
+                :return: None
+                """
+                pp_plot_item = pg.PlotCurveItem(x=df.Station.to_numpy(), y=df[component].to_numpy(),
+                                                pen=pg.mkPen('b', width=1.5, style=Qt.DotLine),
+                                                name="PP Theory")
+                ax.addItem(pp_plot_item)
+
             # Plotting
             for i, bounds in enumerate(channel_bounds):
                 ax = axes[i]
@@ -741,6 +762,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                         plot_lines(data, ax)
                     if self.show_scatter_cbox.isChecked():
                         plot_scatters(data, ax)
+            plot_theory_pp(theory_data, axes[0])
 
             # Plot the mag profile if available. Disable the plot mag button if it's not applicable.
             if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
@@ -772,6 +794,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Calculate the lin plot axes channel bounds
         channel_bounds = file.get_channel_bounds()
 
+        theory_data = self.pem_file.get_theory_pp()
+
         for component in components:
             profile_data = file.get_profile_data(component,
                                                  averaged=False,
@@ -789,7 +813,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             else:
                 axes = self.z_layout_axes
 
-            plot_lin(profile_data, axes)
+            plot_lin(profile_data, theory_data, axes)
 
     def plot_station(self, station, preserve_selection=False):
         """
@@ -2076,10 +2100,8 @@ if __name__ == '__main__':
     dmp_parser = DMPParser()
     # pem_files = pem_getter.get_pems(random=True, number=1)
 
-    # pem_file = PEMParser().parse(r"C:\_Data\2021\Canadian Palladium\_EB-21-55\RAW\55z_0719.PEM")
-    # pem_files, errors = dmp_parser.parse_dmp2(r'C:\_Data\2020\Raglan\Surface\West Boundary\RAW\xyz_25.DMP2')
-    # pem_file = parser.parse(samples_folder.joinpath(r'TMC holes\1338-18-19\RAW\XY_16.PEM'))
-    pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Lac Lessard\RAW\1000_0707.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Boreholes", file=r"SR-15-04 Z.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]  # TODO Test this for ordering worse to best readings
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]

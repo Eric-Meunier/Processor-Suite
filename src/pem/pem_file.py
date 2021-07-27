@@ -1036,6 +1036,81 @@ class PEMFile:
         # row.to_clipboard(excel=True, header=False, index=False)
         # print(f"Row information copied to clipboard.")
 
+    def get_theory_pp(self):
+        """
+        Calculate the theoretical PP value for each station
+        :return: DataFrame
+        """
+        if not self.has_all_gps():
+            return pd.DataFrame()
+
+        stations = list(self.get_stations(converted=True))
+        pps = []
+        borehole = self.is_borehole()
+        loop = self.get_loop(sorted=False, closed=False)
+        mag_calc = MagneticFieldCalculator(loop, closed_loop=not self.is_mmr())
+
+        if borehole:
+            segments = self.get_segments()
+            dips = segments.Dip
+            depths = segments.Depth
+            azimuths = segments.Azimuth
+            geometry = BoreholeGeometry(self.collar, self.segments)
+            proj = geometry.get_projection(stations=self.get_stations(converted=True))
+        else:
+            azimuths = self.line.get_azimuths()
+
+        # Use the segment azimuth and dip of the next segment (as per Bill's cross)
+        # Find the next station. If it's the last station, re-use the last station.
+        for station in stations:
+            station_ind = stations.index(station)
+            # Re-use the last station if it's the current index
+            if stations.index(station) == len(stations) - 1:
+                next_station = convert_station(station)
+            else:
+                next_station = convert_station(stations[station_ind + 1])
+
+            # Calculate the dip and azimuth at the next station, interpolating in case the station
+            # is not in the segments.
+            if borehole:
+                dip = np.interp(int(next_station), depths, dips)
+                azimuth = np.interp(int(next_station), depths, azimuths)
+
+                # Find the location in 3D space of the station
+                filt = proj.loc[:, 'Relative_depth'] == float(station)
+                x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
+                                      proj[filt].iloc[0]['Northing'], \
+                                      proj[filt].iloc[0]['Elevation']
+            else:
+                dip = 0
+                azimuth = np.interp(int(next_station), stations, azimuths)
+
+                filt = self.line.df.loc[:, 'Station'] == float(station)
+                x_pos, y_pos, z_pos = self.line.df[filt].iloc[0]['Easting'], \
+                                      self.line.df[filt].iloc[0]['Northing'], \
+                                      self.line.df[filt].iloc[0]['Elevation']
+
+            # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
+            Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
+                                                   amps=self.current,
+                                                   out_units='nT/s',
+                                                   ramp=self.ramp / 10 ** 6)
+            # Rotate the theoretical values into the same frame of reference used with boreholes/surface lines
+            rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
+
+            # Rotate the theoretical values by the azimuth/dip
+            if borehole:
+                r = R.from_euler('YZ', [90 - dip, azimuth], degrees=True)
+            else:
+                r = R.from_euler('YZ', [dip, azimuth], degrees=True)
+
+            rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
+            pps.append(rT)
+
+        df = pd.DataFrame.from_records(pps, columns=["X", "Y", "Z"])
+        df["Station"] = stations
+        return df
+
     def set_crs(self, crs):
         """
         Set the CRS of all GPS objects
@@ -1612,7 +1687,7 @@ class PEMFile:
             self.notes.append(f"<GEN> XY data rotated using an SOA offset of {self.soa}°.")
         return self
 
-    def prep_rotation(self, allow_negative_angles=False):
+    def prep_rotation(self):
         """
         Prepare the PEM file for probe de-rotation by updating the RAD tool objects with all calculations needed for
         any eligible de-rotation method.
@@ -3536,16 +3611,6 @@ class RADTool:
 
         return ' '.join(result)
 
-def PEM2CSV(apem: PEMFile):
-    """
-    Convert a PEMFile to a pandas CSV
-    :param apem: PEMFile to parse
-    :return: pandas.DataFrame
-    """
-    d = apem.__dict__
-    d.pop('loop')
-    d.pop()
-    df = pd.DataFrame.from_dict()
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
@@ -3563,9 +3628,10 @@ if __name__ == '__main__':
     # file = r"C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\RAW\xy_0704.PEM"
     # pem_files = pem_g.get_pems(random=True, number=1)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
+    pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
 
-    # pem_file = pem_files[0]
+    pem_file = pem_files[0]
+    pem_file.get_theory_pp()
     # pem_file.rotate(method="unrotate")
     # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
     # pem_file.save()

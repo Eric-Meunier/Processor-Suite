@@ -558,6 +558,28 @@ class SurveyLine(BaseGPS):
 
         return df
 
+    def get_azimuths(self):
+        """
+        Return the azimuth angle between each GPS point.
+        :return: DataFrame
+        """
+        assert not self.df.empty, f"Line GPS is empty."
+
+        gps = sorted(self.df.to_numpy(), key=lambda x: x[-1])  # Sorted by station number
+        azimuths = []
+        for ind, point in enumerate(gps):
+            # Repeat the last azimuth for the last point
+            if ind == len(gps) - 1:
+                azimuths.append(azimuths[-1])
+                break
+
+            next_point = gps[ind + 1]
+            angle = math.degrees(math.atan2(next_point[1] - point[1], next_point[0] - point[0]))
+            azimuth = 90 - angle
+            azimuths.append(azimuth)
+
+        return azimuths
+
 
 class BoreholeCollar(BaseGPS):
     """

@@ -492,7 +492,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.pp_btn.setEnabled(False)
 
         try:
-            self.pem_file, ineligible_stations = self.pem_file.prep_rotation(allow_negative_angles=True)
+            self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
         except Exception as e:
             # Common exception will be that there is no eligible data
             logger.error(str(e))

@@ -112,9 +112,9 @@ class DBPlotter(QMainWindow):
         self.menuBar().addMenu(self.file_menu)
         self.menuBar().addMenu(self.view_menu)
 
-    def closeEvent(self, e):
-        e.accept()
-        self.deleteLater()
+    # def closeEvent(self, e):
+    #     e.accept()
+        # self.deleteLater()
 
     def keyPressEvent(self, event):
         # Remove the widget
