@@ -80,7 +80,7 @@ def parse_gps(file, gps_object):
                 error_msg += '\n'.join(gpx_errors)
             contents = [c.strip().split() for c in gps]
         else:
-            contents = read_file(file)
+            contents = read_file(file, as_list=True)
         gps = pd.DataFrame(contents)
 
     elif file is None:

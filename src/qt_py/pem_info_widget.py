@@ -367,7 +367,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                             return contents
 
                     else:
-                        contents = read_file(file)
+                        contents = read_file(file, as_list=True)
 
                 merged_file.extend(contents)
             return merged_file

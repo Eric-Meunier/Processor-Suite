@@ -970,7 +970,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
                     gps, zone, hemisphere, crs, gpx_errors = GPXParser().get_utm(gps, as_string=True)
                     contents = [c.strip().split() for c in gps]
                 else:
-                    contents = read_file(gps)
+                    contents = read_file(gps, as_list=True)
                 try:
                     self.df = pd.DataFrame.from_records(contents)
                     self.df.columns = ["Easting", "Northing", "Elevation", "Unit", "Name"][:len(self.df.columns)]

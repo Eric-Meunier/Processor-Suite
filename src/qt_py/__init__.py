@@ -77,13 +77,14 @@ def clear_table(table):
     table.blockSignals(False)
 
 
-def read_file(file):
+def read_file(file, as_list=False):
     with open(file, 'rb') as byte_file:
         byte_content = byte_file.read()
         encoding = chardet.detect(byte_content).get('encoding')
         logger.info(f"Using {encoding} encoding for {Path(str(file)).name}.")
-        str_contents = byte_content.decode(encoding=encoding)
-    contents = [c.strip().split() for c in str_contents.splitlines()]
+        contents = byte_content.decode(encoding=encoding)
+    if as_list is True:
+        contents = [c.strip().split() for c in contents.splitlines()]
     return contents
 
 

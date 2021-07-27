@@ -13,7 +13,7 @@ from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction,
                                QFileDialog, QVBoxLayout, QLabel, QApplication)
-from src.qt_py import icons_path
+from src.qt_py import icons_path, read_file
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -232,11 +232,7 @@ class DBPlotter(QMainWindow):
         for file in db_files:
             name = Path(file).name
             logger.info(f"Parsing file {name}.")
-            with open(file, 'rb') as byte_file:
-                byte_content = byte_file.read()
-                encoding = chardet.detect(byte_content).get('encoding')
-                logger.info(f"Using {encoding} encoding.")
-                str_contents = byte_content.decode(encoding=encoding)
+            str_contents = read_file(file, as_list=False)
 
             # Try to create a DBPlot for each 'read' command found
             reads = re.split(r'read ', str_contents)
@@ -514,7 +510,8 @@ if __name__ == '__main__':
     samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files\Damping box files'))
 
     # files = str(Path(samples_folder).joinpath('YAT-Log-20201106-165508_box231.txt'))
-    files = str(Path(samples_folder).joinpath('Date error/0511_May11Dampingbox232Voltage.txt'))
+    # files = str(Path(samples_folder).joinpath('Date error/0511_May11Dampingbox232Voltage.txt'))
+    files = str(Path(samples_folder).joinpath('0724_238-20210724 (no data error).log'))
     # files = str(Path(samples_folder).joinpath('Date error/16_Damp Box 222 Current 01.16.2021.txt'))
     mw.open(files)
     mw.show()

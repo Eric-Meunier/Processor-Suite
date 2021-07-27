@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from PySide2.QtCore import Qt, QTimer
-from PySide2.QtGui import (QColor, QPixmap)
+from PySide2.QtGui import (QColor, QIcon)
 from PySide2.QtWidgets import (QWidget, QErrorMessage, QProgressBar, QApplication, QGraphicsDropShadowEffect)
 
 from src import __version__, app_data_dir
@@ -46,6 +46,7 @@ class SplashScreen(QWidget, Ui_SplashScreen):
         self.version_label.setText(f"Version {version}")
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setWindowTitle(f"PEMPro {version}")
+        self.setWindowIcon(QIcon(str(icons_path.joinpath("conder.ico"))))
 
         self.shadow = QGraphicsDropShadowEffect(self)
         self.shadow.setBlurRadius(20)
