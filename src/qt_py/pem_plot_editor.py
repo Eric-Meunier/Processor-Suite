@@ -219,7 +219,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     ax.hide()
 
         def select_all_stations():
-            print(f"Selecting all stations")
             stations = self.pem_file.get_stations(converted=True)
             self.box_select_profile_plot((stations.min(), stations.max()), start=False)
 
@@ -762,7 +761,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                         plot_lines(data, ax)
                     if self.show_scatter_cbox.isChecked():
                         plot_scatters(data, ax)
-            plot_theory_pp(theory_data, axes[0])
+
+            if not theory_data.empty:
+                plot_theory_pp(theory_data, axes[0])
 
             # Plot the mag profile if available. Disable the plot mag button if it's not applicable.
             if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):

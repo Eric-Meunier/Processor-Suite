@@ -5132,7 +5132,7 @@ def main():
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()
-    mw.open_name_editor('Line', selected=False)
+    # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)

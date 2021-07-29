@@ -668,8 +668,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             table_value = stations[row]
             sorted_value = sorted_stations[row]
 
-            # Color stations not in the EM
-            print(f"{table_value} is not in the EM data.")
             for col in range(self.line_table.columnCount()):
                 # if col != station_col:
                 self.line_table.item(row, col).setBackground(
